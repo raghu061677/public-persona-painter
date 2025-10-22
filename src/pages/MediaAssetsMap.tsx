@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -32,7 +31,9 @@ export default function MediaAssetsMap() {
   const [filteredAssets, setFilteredAssets] = useState<MediaAsset[]>([]);
   const [locationSearch, setLocationSearch] = useState("");
   const [areaSearch, setAreaSearch] = useState("");
-  const mapRef = useRef<any>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const markersRef = useRef<L.Marker[]>([]);
 
   useEffect(() => {
     fetchAssets();
@@ -41,6 +42,18 @@ export default function MediaAssetsMap() {
   useEffect(() => {
     filterAssets();
   }, [locationSearch, areaSearch, assets]);
+
+  useEffect(() => {
+    if (filteredAssets.length > 0 && mapContainerRef.current && !mapRef.current) {
+      initializeMap();
+    }
+  }, [filteredAssets]);
+
+  useEffect(() => {
+    if (mapRef.current) {
+      updateMarkers();
+    }
+  }, [filteredAssets]);
 
   const fetchAssets = async () => {
     const { data, error } = await supabase
@@ -80,6 +93,71 @@ export default function MediaAssetsMap() {
     setFilteredAssets(filtered);
   };
 
+  const initializeMap = () => {
+    if (!mapContainerRef.current || filteredAssets.length === 0) return;
+
+    // Create map
+    mapRef.current = L.map(mapContainerRef.current).setView(
+      [filteredAssets[0].latitude, filteredAssets[0].longitude],
+      12
+    );
+
+    // Add tile layer
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(mapRef.current);
+
+    // Add markers
+    updateMarkers();
+  };
+
+  const updateMarkers = () => {
+    if (!mapRef.current) return;
+
+    // Clear existing markers
+    markersRef.current.forEach((marker) => marker.remove());
+    markersRef.current = [];
+
+    // Add new markers
+    filteredAssets.forEach((asset) => {
+      const marker = L.marker([asset.latitude, asset.longitude])
+        .bindPopup(`
+          <div style="min-width: 200px;">
+            <h3 style="font-weight: 600; font-size: 1rem; margin-bottom: 8px;">${asset.location}</h3>
+            <div style="font-size: 0.875rem; line-height: 1.5;">
+              <p><strong>Area:</strong> ${asset.area}</p>
+              <p><strong>City:</strong> ${asset.city}</p>
+              <p><strong>Type:</strong> ${asset.media_type}</p>
+              <p><strong>Dimensions:</strong> ${asset.dimensions}</p>
+              <p><strong>Rate:</strong> ₹${asset.card_rate?.toLocaleString("en-IN")}</p>
+              <p><strong>Status:</strong> <span style="color: ${
+                asset.status === "Available" ? "#16a34a" : "#dc2626"
+              }">${asset.status}</span></p>
+            </div>
+          </div>
+        `)
+        .addTo(mapRef.current!);
+
+      markersRef.current.push(marker);
+    });
+
+    // Fit map to markers if we have any
+    if (markersRef.current.length > 0) {
+      const group = L.featureGroup(markersRef.current);
+      mapRef.current.fitBounds(group.getBounds().pad(0.1));
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, []);
+
   return (
     <div className="flex flex-col h-screen bg-background">
       <div className="flex-none px-6 py-6 border-b border-border">
@@ -96,7 +174,7 @@ export default function MediaAssetsMap() {
               Asset Locations ({filteredAssets.length})
             </h2>
             <p className="text-sm text-muted-foreground">
-              Filter assets by location or area. Click on any marker or cluster to see details.
+              Filter assets by location or area. Click on any marker to see details.
             </p>
           </div>
 
@@ -119,62 +197,7 @@ export default function MediaAssetsMap() {
 
       <div className="flex-1 relative">
         {filteredAssets.length > 0 ? (
-          <MapContainer
-            center={[
-              filteredAssets[0].latitude,
-              filteredAssets[0].longitude,
-            ]}
-            zoom={12}
-            style={{ height: "100%", width: "100%" }}
-            ref={mapRef}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            {filteredAssets.map((asset) => (
-              <Marker
-                key={asset.id}
-                position={[asset.latitude, asset.longitude]}
-              >
-                <Popup>
-                  <div className="space-y-2 min-w-[200px]">
-                    <h3 className="font-semibold text-base">{asset.location}</h3>
-                    <div className="space-y-1 text-sm">
-                      <p>
-                        <span className="font-medium">Area:</span> {asset.area}
-                      </p>
-                      <p>
-                        <span className="font-medium">City:</span> {asset.city}
-                      </p>
-                      <p>
-                        <span className="font-medium">Type:</span> {asset.media_type}
-                      </p>
-                      <p>
-                        <span className="font-medium">Dimensions:</span> {asset.dimensions}
-                      </p>
-                      <p>
-                        <span className="font-medium">Rate:</span> ₹
-                        {asset.card_rate?.toLocaleString("en-IN")}
-                      </p>
-                      <p>
-                        <span className="font-medium">Status:</span>{" "}
-                        <span
-                          className={
-                            asset.status === "Available"
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }
-                        >
-                          {asset.status}
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
+          <div ref={mapContainerRef} className="absolute inset-0" />
         ) : (
           <div className="flex items-center justify-center h-full">
             <p className="text-muted-foreground">

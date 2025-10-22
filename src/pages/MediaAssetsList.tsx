@@ -89,7 +89,7 @@ export default function MediaAssetsList() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="w-full px-4 sm:px-6 py-6 sm:py-8 space-y-6 max-w-[1920px] mx-auto">
+      <div className="w-full px-4 sm:px-6 py-6 sm:py-8 space-y-6">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
@@ -184,8 +184,10 @@ export default function MediaAssetsList() {
           </Card>
         </div>
 
-        {/* Table Section */}
-        <MediaAssetsTable assets={assets} onRefresh={fetchAssets} />
+        {/* Table Section with full width */}
+        <div className="w-full">
+          <MediaAssetsTable assets={assets} onRefresh={fetchAssets} />
+        </div>
       </div>
     </div>
   );

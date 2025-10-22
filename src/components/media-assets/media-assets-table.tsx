@@ -69,6 +69,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { formatCurrency } from "@/utils/mediaAssets";
+import "./media-assets-table.css";
 
 interface Asset {
   id: string;
@@ -551,11 +552,12 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
           </Card>
         )}
 
-        <Card className="overflow-hidden border-2">
+        <Card className="overflow-hidden border-2 shadow-lg">
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            {/* Horizontal scroll wrapper with custom scrollbar */}
+            <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-500px)] custom-scrollbar">
               <Table>
-                <TableHeader className="bg-muted/50">
+                <TableHeader className="bg-muted/50 sticky top-0 z-10">
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id} className="hover:bg-transparent">
                       {headerGroup.headers.map((header) => (
@@ -572,7 +574,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                         className="hover:bg-muted/50 transition-colors"
                       >
                         {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id} className="whitespace-nowrap px-2 py-3">
+                          <TableCell key={cell.id} className="whitespace-nowrap px-4 py-3">
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </TableCell>
                         ))}

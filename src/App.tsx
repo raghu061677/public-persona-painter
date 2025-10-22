@@ -26,6 +26,7 @@ import InvoicesList from "./pages/InvoicesList";
 import ExpensesList from "./pages/ExpensesList";
 import ReportsDashboard from "./pages/ReportsDashboard";
 import VacantMediaReport from "./pages/VacantMediaReport";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -62,6 +63,7 @@ const App = () => (
             <Route path="/finance/expenses" element={<AppLayout><ExpensesList /></AppLayout>} />
             <Route path="/reports" element={<AppLayout><ReportsDashboard /></AppLayout>} />
             <Route path="/reports/vacant-media" element={<AppLayout><VacantMediaReport /></AppLayout>} />
+            <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
             
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />

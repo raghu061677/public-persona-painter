@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { NavLink } from "react-router-dom";
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const MENU_SECTIONS = [
   {
@@ -57,88 +56,93 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
   };
 
   return (
-    <aside
-      className={cn(
-        "h-screen transition-all duration-300 bg-sidebar-background border-r border-sidebar-border flex flex-col",
-        open ? "w-60" : "w-16"
-      )}
-    >
-      {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b border-sidebar-border">
-        <Button variant="ghost" size="icon" onClick={toggle} className="shrink-0">
-          <Menu className="w-5 h-5" />
-        </Button>
-        {open && (
-          <span className="text-lg font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            Go-Ads
-          </span>
+    <>
+      <aside
+        className={cn(
+          "h-screen transition-all duration-300 bg-sidebar-background border-r border-sidebar-border flex flex-col",
+          open ? "w-60" : "w-16"
         )}
-      </div>
-      
-      {/* Navigation */}
-      <ScrollArea className="flex-1 px-3 py-4">
-        <nav className="space-y-6">
-          {MENU_SECTIONS.map((section) => (
-            <div key={section.title}>
-              {open && (
-                <button
-                  onClick={() => toggleSection(section.title)}
-                  className="flex items-center justify-between w-full px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
-                >
-                  <span>{section.title}</span>
-                  {expandedSections.includes(section.title) ? (
-                    <ChevronDown className="w-3 h-3" />
-                  ) : (
-                    <ChevronRight className="w-3 h-3" />
-                  )}
-                </button>
-              )}
-              
-              {(open ? expandedSections.includes(section.title) : true) && (
-                <div className="mt-1 space-y-0.5">
-                  {section.items.map(({ label, icon: Icon, path }) => (
-                    <NavLink
-                      key={path}
-                      to={path}
-                      className={({ isActive }) =>
-                        cn(
-                          "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                          "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                          isActive
-                            ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                            : "text-sidebar-foreground"
-                        )
-                      }
-                    >
-                      <Icon className="w-4 h-4 shrink-0" />
-                      {open && <span className="truncate">{label}</span>}
-                    </NavLink>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 p-4 border-b border-sidebar-border">
+          <Button variant="ghost" size="icon" onClick={toggle} className="shrink-0">
+            <Menu className="w-5 h-5" />
+          </Button>
+          {open && (
+            <span className="text-lg font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              Go-Ads
+            </span>
+          )}
+        </div>
+        
+        {/* Navigation */}
+        <ScrollArea className="flex-1 px-3 py-4">
+          <nav className="space-y-6">
+            {MENU_SECTIONS.map((section) => (
+              <div key={section.title}>
+                {open && (
+                  <button
+                    onClick={() => toggleSection(section.title)}
+                    className="flex items-center justify-between w-full px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                  >
+                    <span>{section.title}</span>
+                    {expandedSections.includes(section.title) ? (
+                      <ChevronDown className="w-3 h-3" />
+                    ) : (
+                      <ChevronRight className="w-3 h-3" />
+                    )}
+                  </button>
+                )}
+                
+                {(open ? expandedSections.includes(section.title) : true) && (
+                  <div className="mt-1 space-y-0.5">
+                    {section.items.map(({ label, icon: Icon, path }) => (
+                      <NavLink
+                        key={path}
+                        to={path}
+                        className={({ isActive }) =>
+                          cn(
+                            "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                            "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                            isActive
+                              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                              : "text-sidebar-foreground"
+                          )
+                        }
+                      >
+                        <Icon className="w-4 h-4 shrink-0" />
+                        {open && <span className="truncate">{label}</span>}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
 
-          {/* Settings at bottom of nav */}
-          <div className="pt-4 border-t border-sidebar-border">
-            <NavLink
-              to="/settings"
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground"
-                )
-              }
-            >
-              <Settings className="w-4 h-4 shrink-0" />
-              {open && <span className="truncate">Settings</span>}
-            </NavLink>
-          </div>
-        </nav>
-      </ScrollArea>
-    </aside>
+            {/* Settings at bottom of nav */}
+            <div className="pt-4 border-t border-sidebar-border">
+              <NavLink
+                to="/settings"
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    isActive
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground"
+                  )
+                }
+              >
+                <Settings className="w-4 h-4 shrink-0" />
+                {open && <span className="truncate">Settings</span>}
+              </NavLink>
+            </div>
+          </nav>
+        </ScrollArea>
+      </aside>
+      
+      {/* Main content area */}
+      {children}
+    </>
   );
 }

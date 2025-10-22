@@ -140,6 +140,144 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_items: {
+        Row: {
+          area: string
+          asset_id: string
+          base_rent: number | null
+          card_rate: number
+          city: string
+          created_at: string | null
+          dimensions: string
+          gst_amount: number
+          id: string
+          location: string
+          media_type: string
+          mounting_charges: number | null
+          plan_id: string
+          printing_charges: number | null
+          sales_price: number
+          subtotal: number
+          total_with_gst: number
+        }
+        Insert: {
+          area: string
+          asset_id: string
+          base_rent?: number | null
+          card_rate: number
+          city: string
+          created_at?: string | null
+          dimensions: string
+          gst_amount: number
+          id?: string
+          location: string
+          media_type: string
+          mounting_charges?: number | null
+          plan_id: string
+          printing_charges?: number | null
+          sales_price: number
+          subtotal: number
+          total_with_gst: number
+        }
+        Update: {
+          area?: string
+          asset_id?: string
+          base_rent?: number | null
+          card_rate?: number
+          city?: string
+          created_at?: string | null
+          dimensions?: string
+          gst_amount?: number
+          id?: string
+          location?: string
+          media_type?: string
+          mounting_charges?: number | null
+          plan_id?: string
+          printing_charges?: number | null
+          sales_price?: number
+          subtotal?: number
+          total_with_gst?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_items_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plans: {
+        Row: {
+          client_id: string
+          client_name: string
+          created_at: string | null
+          created_by: string
+          duration_days: number
+          end_date: string
+          grand_total: number
+          gst_amount: number
+          gst_percent: number
+          id: string
+          notes: string | null
+          plan_name: string
+          plan_type: Database["public"]["Enums"]["plan_type"]
+          share_token: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["plan_status"]
+          total_amount: number
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          client_name: string
+          created_at?: string | null
+          created_by: string
+          duration_days: number
+          end_date: string
+          grand_total?: number
+          gst_amount?: number
+          gst_percent?: number
+          id: string
+          notes?: string | null
+          plan_name: string
+          plan_type?: Database["public"]["Enums"]["plan_type"]
+          share_token?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["plan_status"]
+          total_amount?: number
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          client_name?: string
+          created_at?: string | null
+          created_by?: string
+          duration_days?: number
+          end_date?: string
+          grand_total?: number
+          gst_amount?: number
+          gst_percent?: number
+          id?: string
+          notes?: string | null
+          plan_name?: string
+          plan_type?: Database["public"]["Enums"]["plan_type"]
+          share_token?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["plan_status"]
+          total_amount?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -190,6 +328,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_share_token: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -203,6 +342,8 @@ export type Database = {
       media_asset_status: "Available" | "Booked" | "Blocked" | "Maintenance"
       media_category: "OOH" | "DOOH" | "Transit"
       ownership_type: "own" | "rented"
+      plan_status: "Draft" | "Sent" | "Approved" | "Rejected" | "Converted"
+      plan_type: "Quotation" | "Proposal" | "Estimate"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -334,6 +475,8 @@ export const Constants = {
       media_asset_status: ["Available", "Booked", "Blocked", "Maintenance"],
       media_category: ["OOH", "DOOH", "Transit"],
       ownership_type: ["own", "rented"],
+      plan_status: ["Draft", "Sent", "Approved", "Rejected", "Converted"],
+      plan_type: ["Quotation", "Proposal", "Estimate"],
     },
   },
 } as const

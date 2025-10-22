@@ -45,7 +45,27 @@ export function calculatePlanItemTotals(
 }
 
 /**
- * Generate plan ID in format PLAN-YYYYMM-XXXX
+ * Generate plan ID in format PLAN-YYYY-Month-XXX
+ * Calls database function to get next sequential ID
+ */
+export async function generatePlanIdFromDB(supabase: any): Promise<string> {
+  const { data, error } = await supabase.rpc('generate_plan_id');
+  
+  if (error) {
+    console.error('Error generating plan ID:', error);
+    // Fallback to client-side generation if DB function fails
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.toLocaleString('en-US', { month: 'long' });
+    const random = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+    return `PLAN-${year}-${month}-${random}`;
+  }
+  
+  return data;
+}
+
+/**
+ * Legacy: Generate plan ID in format PLAN-YYYYMM-XXXX
  */
 export function generatePlanId(): string {
   const now = new Date();

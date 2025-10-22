@@ -14,6 +14,155 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_assets: {
+        Row: {
+          area: string
+          asset_id: string
+          assigned_at: string | null
+          campaign_id: string
+          card_rate: number
+          city: string
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          latitude: number | null
+          location: string
+          longitude: number | null
+          media_type: string
+          mounter_name: string | null
+          mounting_charges: number | null
+          photos: Json | null
+          printing_charges: number | null
+          status: Database["public"]["Enums"]["asset_installation_status"]
+        }
+        Insert: {
+          area: string
+          asset_id: string
+          assigned_at?: string | null
+          campaign_id: string
+          card_rate: number
+          city: string
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          latitude?: number | null
+          location: string
+          longitude?: number | null
+          media_type: string
+          mounter_name?: string | null
+          mounting_charges?: number | null
+          photos?: Json | null
+          printing_charges?: number | null
+          status?: Database["public"]["Enums"]["asset_installation_status"]
+        }
+        Update: {
+          area?: string
+          asset_id?: string
+          assigned_at?: string | null
+          campaign_id?: string
+          card_rate?: number
+          city?: string
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          latitude?: number | null
+          location?: string
+          longitude?: number | null
+          media_type?: string
+          mounter_name?: string | null
+          mounting_charges?: number | null
+          photos?: Json | null
+          printing_charges?: number | null
+          status?: Database["public"]["Enums"]["asset_installation_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          assigned_to: string | null
+          campaign_name: string
+          client_id: string
+          client_name: string
+          created_at: string | null
+          created_by: string
+          end_date: string
+          grand_total: number
+          gst_amount: number
+          gst_percent: number
+          id: string
+          notes: string | null
+          plan_id: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["campaign_status"]
+          total_amount: number
+          total_assets: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          campaign_name: string
+          client_id: string
+          client_name: string
+          created_at?: string | null
+          created_by: string
+          end_date: string
+          grand_total: number
+          gst_amount: number
+          gst_percent: number
+          id: string
+          notes?: string | null
+          plan_id?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["campaign_status"]
+          total_amount: number
+          total_assets?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          campaign_name?: string
+          client_id?: string
+          client_name?: string
+          created_at?: string | null
+          created_by?: string
+          end_date?: string
+          grand_total?: number
+          gst_amount?: number
+          gst_percent?: number
+          id?: string
+          notes?: string | null
+          plan_id?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["campaign_status"]
+          total_amount?: number
+          total_assets?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
@@ -379,6 +528,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_campaign_id: { Args: never; Returns: string }
+      generate_plan_id: { Args: never; Returns: string }
       generate_share_token: { Args: never; Returns: string }
       has_role: {
         Args: {
@@ -390,6 +541,19 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      asset_installation_status:
+        | "Pending"
+        | "Assigned"
+        | "Mounted"
+        | "PhotoUploaded"
+        | "Verified"
+      campaign_status:
+        | "Planned"
+        | "Assigned"
+        | "InProgress"
+        | "PhotoUploaded"
+        | "Verified"
+        | "Completed"
       media_asset_status: "Available" | "Booked" | "Blocked" | "Maintenance"
       media_category: "OOH" | "DOOH" | "Transit"
       ownership_type: "own" | "rented"
@@ -523,6 +687,21 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      asset_installation_status: [
+        "Pending",
+        "Assigned",
+        "Mounted",
+        "PhotoUploaded",
+        "Verified",
+      ],
+      campaign_status: [
+        "Planned",
+        "Assigned",
+        "InProgress",
+        "PhotoUploaded",
+        "Verified",
+        "Completed",
+      ],
       media_asset_status: ["Available", "Booked", "Blocked", "Maintenance"],
       media_category: ["OOH", "DOOH", "Transit"],
       ownership_type: ["own", "rented"],

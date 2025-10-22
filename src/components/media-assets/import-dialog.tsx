@@ -92,18 +92,39 @@ export function ImportDialog({ onImportComplete }: ImportDialogProps) {
             }
           });
 
-          // Check if record already exists
-          const { data: existing } = await supabase
+          // Check for duplicates based on ID, or location+coordinates
+          let query = supabase
             .from('media_assets')
-            .select('id')
+            .select('id, location, latitude, longitude');
+
+          // Check by ID first
+          const { data: existingById } = await query
             .eq('id', asset.id)
             .maybeSingle();
 
-          if (existing) {
-            skippedDetails.push(`${asset.id}`);
-            console.log(`Row ${rowNum}: Skipped - Record already exists (ID: ${asset.id})`);
+          if (existingById) {
+            skippedDetails.push(`${asset.id} (duplicate ID)`);
+            console.log(`Row ${rowNum}: Skipped - Duplicate ID (${asset.id})`);
             skippedCount++;
             continue;
+          }
+
+          // Check by location AND coordinates (if both are present)
+          if (asset.location && asset.latitude && asset.longitude) {
+            const { data: existingByLocation } = await supabase
+              .from('media_assets')
+              .select('id, location, latitude, longitude')
+              .eq('location', asset.location)
+              .eq('latitude', asset.latitude)
+              .eq('longitude', asset.longitude)
+              .maybeSingle();
+
+            if (existingByLocation) {
+              skippedDetails.push(`${asset.id} (duplicate location+coordinates: ${asset.location})`);
+              console.log(`Row ${rowNum}: Skipped - Duplicate location and coordinates (${asset.location} at ${asset.latitude}, ${asset.longitude})`);
+              skippedCount++;
+              continue;
+            }
           }
 
           // Insert only if it doesn't exist

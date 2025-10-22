@@ -11,15 +11,15 @@ const Hero = () => {
         <img 
           src={heroImage} 
           alt="OOH advertising displays in modern cityscape" 
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover opacity-10"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-background/95 via-background/80 to-background/60" />
+        <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-secondary/30" />
       </div>
       
       {/* Animated background elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-20 left-20 w-64 h-64 bg-gradient-primary rounded-full opacity-20 blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-gradient-to-r from-accent/30 to-primary/30 rounded-full opacity-30 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-20 left-20 w-64 h-64 bg-gradient-primary rounded-full opacity-10 blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-gradient-to-r from-accent/20 to-primary/20 rounded-full opacity-15 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
       </div>
 
       <div className="relative z-10 container mx-auto px-6 text-center">

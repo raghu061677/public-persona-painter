@@ -37,7 +37,7 @@ const Features = () => {
   ];
 
   return (
-    <section className="py-24 bg-gradient-subtle">
+    <section className="py-24 bg-secondary/30">
       <div className="container mx-auto px-6">
         {/* Header */}
         <div className="text-center mb-16">
@@ -57,7 +57,7 @@ const Features = () => {
         {/* Core Features */}
         <div className="grid lg:grid-cols-3 gap-8 mb-16">
           {coreFeatures.map((feature, index) => (
-            <Card key={index} className="group hover:shadow-elegant transition-spring border-0 bg-card/50 backdrop-blur-sm">
+            <Card key={index} className="group hover:shadow-elegant transition-spring border bg-card backdrop-blur-sm">
               <CardContent className="p-8">
                 <div className="mb-6">
                   <img 
@@ -88,7 +88,7 @@ const Features = () => {
         {/* Additional Features Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {additionalFeatures.map((feature, index) => (
-            <Card key={index} className="group hover:shadow-card transition-smooth border-0 bg-card/30 backdrop-blur-sm">
+            <Card key={index} className="group hover:shadow-card transition-smooth border bg-card/80 backdrop-blur-sm">
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
                   <div className="p-3 bg-gradient-primary rounded-xl shadow-card group-hover:shadow-glow transition-smooth">

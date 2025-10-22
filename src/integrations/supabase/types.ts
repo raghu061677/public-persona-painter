@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_daily: {
+        Row: {
+          created_at: string | null
+          date: string
+          expenses_by_category: Json | null
+          fy: string
+          occupancy: Json | null
+          revenue_by_city: Json | null
+          revenue_by_client: Json | null
+          totals: Json | null
+          updated_at: string | null
+          vacant_by_city: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          expenses_by_category?: Json | null
+          fy: string
+          occupancy?: Json | null
+          revenue_by_city?: Json | null
+          revenue_by_client?: Json | null
+          totals?: Json | null
+          updated_at?: string | null
+          vacant_by_city?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          expenses_by_category?: Json | null
+          fy?: string
+          occupancy?: Json | null
+          revenue_by_city?: Json | null
+          revenue_by_client?: Json | null
+          totals?: Json | null
+          updated_at?: string | null
+          vacant_by_city?: Json | null
+        }
+        Relationships: []
+      }
       campaign_assets: {
         Row: {
           area: string
@@ -213,6 +252,198 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      estimations: {
+        Row: {
+          client_id: string
+          client_name: string
+          created_at: string | null
+          created_by: string
+          estimation_date: string
+          gst_amount: number
+          gst_percent: number
+          id: string
+          items: Json | null
+          notes: string | null
+          plan_id: string | null
+          status: Database["public"]["Enums"]["estimation_status"]
+          sub_total: number
+          total_amount: number
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          client_name: string
+          created_at?: string | null
+          created_by: string
+          estimation_date: string
+          gst_amount: number
+          gst_percent?: number
+          id: string
+          items?: Json | null
+          notes?: string | null
+          plan_id?: string | null
+          status?: Database["public"]["Enums"]["estimation_status"]
+          sub_total: number
+          total_amount: number
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          client_name?: string
+          created_at?: string | null
+          created_by?: string
+          estimation_date?: string
+          gst_amount?: number
+          gst_percent?: number
+          id?: string
+          items?: Json | null
+          notes?: string | null
+          plan_id?: string | null
+          status?: Database["public"]["Enums"]["estimation_status"]
+          sub_total?: number
+          total_amount?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estimations_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          campaign_id: string | null
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at: string | null
+          gst_amount: number
+          gst_percent: number
+          id: string
+          invoice_url: string | null
+          notes: string | null
+          paid_date: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          total_amount: number
+          updated_at: string | null
+          vendor_name: string
+        }
+        Insert: {
+          amount: number
+          campaign_id?: string | null
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at?: string | null
+          gst_amount: number
+          gst_percent?: number
+          id: string
+          invoice_url?: string | null
+          notes?: string | null
+          paid_date?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          total_amount: number
+          updated_at?: string | null
+          vendor_name: string
+        }
+        Update: {
+          amount?: number
+          campaign_id?: string | null
+          category?: Database["public"]["Enums"]["expense_category"]
+          created_at?: string | null
+          gst_amount?: number
+          gst_percent?: number
+          id?: string
+          invoice_url?: string | null
+          notes?: string | null
+          paid_date?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          total_amount?: number
+          updated_at?: string | null
+          vendor_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          balance_due: number
+          client_id: string
+          client_name: string
+          created_at: string | null
+          created_by: string
+          due_date: string
+          estimation_id: string | null
+          gst_amount: number
+          gst_percent: number
+          id: string
+          invoice_date: string
+          items: Json | null
+          notes: string | null
+          payments: Json | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          sub_total: number
+          total_amount: number
+          updated_at: string | null
+        }
+        Insert: {
+          balance_due: number
+          client_id: string
+          client_name: string
+          created_at?: string | null
+          created_by: string
+          due_date: string
+          estimation_id?: string | null
+          gst_amount: number
+          gst_percent?: number
+          id: string
+          invoice_date: string
+          items?: Json | null
+          notes?: string | null
+          payments?: Json | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          sub_total: number
+          total_amount: number
+          updated_at?: string | null
+        }
+        Update: {
+          balance_due?: number
+          client_id?: string
+          client_name?: string
+          created_at?: string | null
+          created_by?: string
+          due_date?: string
+          estimation_id?: string | null
+          gst_amount?: number
+          gst_percent?: number
+          id?: string
+          invoice_date?: string
+          items?: Json | null
+          notes?: string | null
+          payments?: Json | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          sub_total?: number
+          total_amount?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_estimation_id_fkey"
+            columns: ["estimation_id"]
+            isOneToOne: false
+            referencedRelation: "estimations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       media_assets: {
         Row: {
@@ -529,8 +760,12 @@ export type Database = {
     }
     Functions: {
       generate_campaign_id: { Args: never; Returns: string }
+      generate_estimation_id: { Args: never; Returns: string }
+      generate_expense_id: { Args: never; Returns: string }
+      generate_invoice_id: { Args: never; Returns: string }
       generate_plan_id: { Args: never; Returns: string }
       generate_share_token: { Args: never; Returns: string }
+      get_financial_year: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -554,9 +789,18 @@ export type Database = {
         | "PhotoUploaded"
         | "Verified"
         | "Completed"
+      estimation_status: "Draft" | "Sent" | "Approved" | "Rejected"
+      expense_category:
+        | "Printing"
+        | "Mounting"
+        | "Transport"
+        | "Electricity"
+        | "Other"
+      invoice_status: "Draft" | "Sent" | "Paid" | "Overdue" | "Cancelled"
       media_asset_status: "Available" | "Booked" | "Blocked" | "Maintenance"
       media_category: "OOH" | "DOOH" | "Transit"
       ownership_type: "own" | "rented"
+      payment_status: "Pending" | "Paid"
       plan_status: "Draft" | "Sent" | "Approved" | "Rejected" | "Converted"
       plan_type: "Quotation" | "Proposal" | "Estimate"
     }
@@ -702,9 +946,19 @@ export const Constants = {
         "Verified",
         "Completed",
       ],
+      estimation_status: ["Draft", "Sent", "Approved", "Rejected"],
+      expense_category: [
+        "Printing",
+        "Mounting",
+        "Transport",
+        "Electricity",
+        "Other",
+      ],
+      invoice_status: ["Draft", "Sent", "Paid", "Overdue", "Cancelled"],
       media_asset_status: ["Available", "Booked", "Blocked", "Maintenance"],
       media_category: ["OOH", "DOOH", "Transit"],
       ownership_type: ["own", "rented"],
+      payment_status: ["Pending", "Paid"],
       plan_status: ["Draft", "Sent", "Approved", "Rejected", "Converted"],
       plan_type: ["Quotation", "Proposal", "Estimate"],
     },

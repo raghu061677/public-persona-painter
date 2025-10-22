@@ -9,21 +9,29 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
-import { User, Shield, Key } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { User, Shield, Key, Palette, Upload, Image as ImageIcon } from "lucide-react";
 
 export default function Settings() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [roles, setRoles] = useState<string[]>([]);
   const [username, setUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [orgSettings, setOrgSettings] = useState<any>(null);
+  const [organizationName, setOrganizationName] = useState("");
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [heroPreview, setHeroPreview] = useState<string | null>(null);
+  const isAdmin = roles.includes("admin");
 
   useEffect(() => {
     loadUserData();
+    loadOrgSettings();
   }, []);
 
   const loadUserData = async () => {
@@ -59,6 +67,26 @@ export default function Settings() {
       console.error("Error loading user data:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadOrgSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("organization_settings")
+        .select("*")
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setOrgSettings(data);
+        setOrganizationName(data.organization_name || "");
+        if (data.logo_url) setLogoPreview(data.logo_url);
+        if (data.hero_image_url) setHeroPreview(data.hero_image_url);
+      }
+    } catch (error) {
+      console.error("Error loading organization settings:", error);
     }
   };
 
@@ -133,6 +161,111 @@ export default function Settings() {
     }
   };
 
+  const handleFileUpload = async (file: File, bucketName: string, fileType: 'logo' | 'hero') => {
+    if (!isAdmin) {
+      toast({
+        title: "Permission denied",
+        description: "Only admins can upload branding assets.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${fileType}-${Date.now()}.${fileExt}`;
+      const filePath = fileName;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from(bucketName)
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(filePath);
+
+      // Update organization settings
+      const updateData = fileType === 'logo' 
+        ? { logo_url: publicUrl }
+        : { hero_image_url: publicUrl };
+
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { error: updateError } = await supabase
+        .from("organization_settings")
+        .update({ ...updateData, updated_by: user?.id })
+        .eq("id", orgSettings.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Upload successful",
+        description: `${fileType === 'logo' ? 'Logo' : 'Hero image'} has been updated.`,
+      });
+
+      // Update preview
+      if (fileType === 'logo') {
+        setLogoPreview(publicUrl);
+      } else {
+        setHeroPreview(publicUrl);
+      }
+
+      loadOrgSettings();
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleUpdateOrgSettings = async () => {
+    if (!isAdmin) {
+      toast({
+        title: "Permission denied",
+        description: "Only admins can update organization settings.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { error } = await supabase
+        .from("organization_settings")
+        .update({
+          organization_name: organizationName,
+          updated_by: user?.id,
+        })
+        .eq("id", orgSettings.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Settings updated",
+        description: "Organization settings have been updated successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const getInitials = (email?: string) => {
     if (!email) return "U";
     return email.substring(0, 2).toUpperCase();
@@ -157,8 +290,16 @@ export default function Settings() {
 
       <Separator />
 
-      {/* Profile Section */}
-      <Card>
+      <Tabs defaultValue="profile" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="branding">Branding</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
+        </TabsList>
+
+        {/* Profile Tab */}
+        <TabsContent value="profile" className="space-y-6">
+          <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <User className="h-5 w-5" />
@@ -216,9 +357,111 @@ export default function Settings() {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
 
-      {/* Password Section */}
-      <Card>
+        {/* Branding Tab */}
+        <TabsContent value="branding" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Palette className="h-5 w-5" />
+                <CardTitle>Organization Branding</CardTitle>
+              </div>
+              <CardDescription>
+                Upload your logo and hero images for dashboards, invoices, and templates
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div>
+                <Label htmlFor="org-name">Organization Name</Label>
+                <Input
+                  id="org-name"
+                  value={organizationName}
+                  onChange={(e) => setOrganizationName(e.target.value)}
+                  placeholder="Enter organization name"
+                  className="mt-2"
+                  disabled={!isAdmin}
+                />
+              </div>
+
+              {/* Logo Upload */}
+              <div className="space-y-3">
+                <Label>Company Logo</Label>
+                <p className="text-sm text-muted-foreground">
+                  Used in dashboard header, invoices, PPT, and Excel exports
+                </p>
+                {logoPreview && (
+                  <div className="border rounded-lg p-4 bg-muted/50">
+                    <img
+                      src={logoPreview}
+                      alt="Logo preview"
+                      className="max-h-24 object-contain"
+                    />
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileUpload(file, 'logos', 'logo');
+                    }}
+                    disabled={!isAdmin || uploading}
+                    className="cursor-pointer"
+                  />
+                  <Upload className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+
+              {/* Hero Image Upload */}
+              <div className="space-y-3">
+                <Label>Hero Section Image</Label>
+                <p className="text-sm text-muted-foreground">
+                  Used in landing page hero section
+                </p>
+                {heroPreview && (
+                  <div className="border rounded-lg overflow-hidden">
+                    <img
+                      src={heroPreview}
+                      alt="Hero image preview"
+                      className="w-full h-48 object-cover"
+                    />
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileUpload(file, 'hero-images', 'hero');
+                    }}
+                    disabled={!isAdmin || uploading}
+                    className="cursor-pointer"
+                  />
+                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+
+              {isAdmin && (
+                <Button onClick={handleUpdateOrgSettings} disabled={updating || uploading}>
+                  {updating || uploading ? "Updating..." : "Save Settings"}
+                </Button>
+              )}
+
+              {!isAdmin && (
+                <p className="text-sm text-muted-foreground">
+                  Only administrators can update branding settings.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Security Tab */}
+        <TabsContent value="security" className="space-y-6">
+          <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Key className="h-5 w-5" />
@@ -259,6 +502,8 @@ export default function Settings() {
           </Button>
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

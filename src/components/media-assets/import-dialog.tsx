@@ -47,11 +47,6 @@ export function ImportDialog({ onImportComplete }: ImportDialogProps) {
             return isNaN(num) ? defaultVal : num;
           };
 
-          // Helper function to parse integer values (rounds decimals)
-          const parseInt = (value: any, defaultVal: number = 0): number => {
-            return Math.round(parseNumeric(value, defaultVal));
-          };
-
           const asset = {
             id: row.id || row.ID || row['Asset ID'],
             media_type: row.media_type || row['Media Type'],
@@ -61,7 +56,7 @@ export function ImportDialog({ onImportComplete }: ImportDialogProps) {
             district: row.district || row.District,
             state: row.state || row.State,
             dimensions: row.dimensions || row.Dimensions,
-            total_sqft: parseInt(row.total_sqft || row['Total Sqft'] || row['Total Sq Ft'], 0),
+            total_sqft: parseNumeric(row.total_sqft || row['Total Sqft'] || row['Total Sq Ft'], 0),
             card_rate: parseNumeric(row.card_rate || row['Card Rate'], 0),
             base_rent: parseNumeric(row.base_rent || row['Base Rent'], 0),
             gst_percent: parseNumeric(row.gst_percent || row['GST %'] || row['GST Percent'], 18),

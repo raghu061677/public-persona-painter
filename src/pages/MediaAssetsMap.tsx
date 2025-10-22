@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -133,50 +132,48 @@ export default function MediaAssetsMap() {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            <MarkerClusterGroup chunkedLoading>
-              {filteredAssets.map((asset) => (
-                <Marker
-                  key={asset.id}
-                  position={[asset.latitude, asset.longitude]}
-                >
-                  <Popup>
-                    <div className="space-y-2 min-w-[200px]">
-                      <h3 className="font-semibold text-base">{asset.location}</h3>
-                      <div className="space-y-1 text-sm">
-                        <p>
-                          <span className="font-medium">Area:</span> {asset.area}
-                        </p>
-                        <p>
-                          <span className="font-medium">City:</span> {asset.city}
-                        </p>
-                        <p>
-                          <span className="font-medium">Type:</span> {asset.media_type}
-                        </p>
-                        <p>
-                          <span className="font-medium">Dimensions:</span> {asset.dimensions}
-                        </p>
-                        <p>
-                          <span className="font-medium">Rate:</span> ₹
-                          {asset.card_rate?.toLocaleString("en-IN")}
-                        </p>
-                        <p>
-                          <span className="font-medium">Status:</span>{" "}
-                          <span
-                            className={
-                              asset.status === "Available"
-                                ? "text-green-600"
-                                : "text-red-600"
-                            }
-                          >
-                            {asset.status}
-                          </span>
-                        </p>
-                      </div>
+            {filteredAssets.map((asset) => (
+              <Marker
+                key={asset.id}
+                position={[asset.latitude, asset.longitude]}
+              >
+                <Popup>
+                  <div className="space-y-2 min-w-[200px]">
+                    <h3 className="font-semibold text-base">{asset.location}</h3>
+                    <div className="space-y-1 text-sm">
+                      <p>
+                        <span className="font-medium">Area:</span> {asset.area}
+                      </p>
+                      <p>
+                        <span className="font-medium">City:</span> {asset.city}
+                      </p>
+                      <p>
+                        <span className="font-medium">Type:</span> {asset.media_type}
+                      </p>
+                      <p>
+                        <span className="font-medium">Dimensions:</span> {asset.dimensions}
+                      </p>
+                      <p>
+                        <span className="font-medium">Rate:</span> ₹
+                        {asset.card_rate?.toLocaleString("en-IN")}
+                      </p>
+                      <p>
+                        <span className="font-medium">Status:</span>{" "}
+                        <span
+                          className={
+                            asset.status === "Available"
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }
+                        >
+                          {asset.status}
+                        </span>
+                      </p>
                     </div>
-                  </Popup>
-                </Marker>
-              ))}
-            </MarkerClusterGroup>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
           </MapContainer>
         ) : (
           <div className="flex items-center justify-center h-full">

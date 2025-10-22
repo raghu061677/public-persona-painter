@@ -134,21 +134,21 @@ export function ImportDialog({ onImportComplete }: ImportDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
-          <Upload className="mr-2 h-4 w-4" />
+        <Button variant="outline" size="default" className="gap-2">
+          <Upload className="h-4 w-4" />
           Import
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Import Media Assets</DialogTitle>
-          <DialogDescription>
-            Upload an Excel file (.xlsx) with media asset data. The file should have columns for ID, Media Type, Location, City, etc.
+          <DialogTitle className="text-2xl">Import Media Assets</DialogTitle>
+          <DialogDescription className="text-base">
+            Upload an Excel file (.xlsx) with your media asset inventory data
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-            <FileSpreadsheet className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+        <div className="space-y-4 py-4">
+          <div className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-8 text-center hover:border-primary/50 hover:bg-muted/20 transition-all duration-200">
+            <FileSpreadsheet className="h-16 w-16 mx-auto mb-4 text-primary/60" />
             <input
               ref={fileInputRef}
               type="file"
@@ -157,18 +157,23 @@ export function ImportDialog({ onImportComplete }: ImportDialogProps) {
               className="hidden"
               id="file-upload"
             />
-            <label htmlFor="file-upload">
+            <label htmlFor="file-upload" className="cursor-pointer">
               <Button
                 type="button"
                 variant="outline"
+                size="lg"
                 disabled={isImporting}
                 onClick={() => fileInputRef.current?.click()}
+                className="mb-3"
               >
-                {isImporting ? "Importing..." : "Choose File"}
+                {isImporting ? "Importing..." : "Choose Excel File"}
               </Button>
             </label>
-            <p className="text-sm text-muted-foreground mt-2">
-              Supports .xlsx and .xls files
+            <p className="text-sm text-muted-foreground">
+              Supports .xlsx and .xls formats
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Existing records will be skipped automatically
             </p>
           </div>
         </div>

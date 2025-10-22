@@ -42,6 +42,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Filter,
+  Layers,
 } from "lucide-react";
 import { DndProvider, useDrag, useDrop, type XYCoord } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -456,21 +457,28 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
   return (
     <>
       <DndProvider backend={HTML5Backend}>
-        <Collapsible className="mb-4">
-          <Card>
-            <CardHeader className="p-4 border-b">
+        <Collapsible className="mb-4" defaultOpen>
+          <Card className="border-2 hover:border-primary/20 transition-colors duration-200">
+            <CardHeader className="p-4 sm:p-6 bg-muted/30">
               <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between w-full cursor-pointer">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-5 w-5" />
-                    <CardTitle className="text-lg">Filters</CardTitle>
+                <div className="flex items-center justify-between w-full cursor-pointer group">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      <Filter className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg font-semibold">Advanced Filters</CardTitle>
+                      <p className="text-xs text-muted-foreground mt-0.5">Refine your search results</p>
+                    </div>
                   </div>
-                  <span className="text-sm text-primary hover:underline">Toggle</span>
+                  <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80">
+                    Toggle Filters
+                  </Button>
                 </div>
               </CollapsibleTrigger>
             </CardHeader>
             <CollapsibleContent>
-              <CardContent className="p-4 flex items-center gap-4 flex-wrap">
+              <CardContent className="p-4 sm:p-6 flex items-end gap-4 flex-wrap bg-card">
                 <div className="relative">
                   <Label>Location</Label>
                   <Input
@@ -522,20 +530,31 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
         </Collapsible>
 
         {selectedAssetIds.length > 0 && (
-          <div className="mb-4">
-            <Button onClick={() => setIsPlanModalOpen(true)}>
-              Add {selectedAssetIds.length} Asset(s) to Plan
-            </Button>
-          </div>
+          <Card className="mb-4 bg-primary/5 border-primary/20">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
+                  <span className="text-lg font-bold text-primary-foreground">{selectedAssetIds.length}</span>
+                </div>
+                <div>
+                  <p className="font-semibold">Assets Selected</p>
+                  <p className="text-sm text-muted-foreground">Ready to add to a plan</p>
+                </div>
+              </div>
+              <Button onClick={() => setIsPlanModalOpen(true)} size="lg">
+                Add to Plan
+              </Button>
+            </CardContent>
+          </Card>
         )}
 
-        <Card>
+        <Card className="overflow-hidden border-2">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-muted/50">
                   {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id}>
+                    <TableRow key={headerGroup.id} className="hover:bg-transparent">
                       {headerGroup.headers.map((header) => (
                         <DraggableHeader key={header.id} header={header} table={table} />
                       ))}
@@ -545,9 +564,12 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                 <TableBody>
                   {table.getRowModel().rows?.length ? (
                     table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
+                      <TableRow 
+                        key={row.id}
+                        className="hover:bg-muted/50 transition-colors"
+                      >
                         {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id} className="whitespace-nowrap px-2 py-1">
+                          <TableCell key={cell.id} className="whitespace-nowrap px-2 py-3">
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </TableCell>
                         ))}
@@ -555,8 +577,12 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={table.getAllColumns().length} className="h-24 text-center">
-                        No results.
+                      <TableCell colSpan={table.getAllColumns().length} className="h-32 text-center">
+                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                          <Layers className="h-12 w-12 opacity-20" />
+                          <p className="text-lg font-medium">No assets found</p>
+                          <p className="text-sm">Try adjusting your filters</p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )}
@@ -564,19 +590,19 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
               </Table>
             </div>
           </CardContent>
-          <CardContent className="p-4 border-t">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
-                {table.getFilteredRowModel().rows.length} rows
+          <CardContent className="p-4 border-t bg-muted/20">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm text-muted-foreground font-medium">
+                Showing {table.getRowModel().rows.length} of {table.getFilteredRowModel().rows.length} total assets
               </div>
-              <div className="flex items-center space-x-6 lg:space-x-8">
+              <div className="flex items-center space-x-4 lg:space-x-8">
                 <div className="flex items-center space-x-2">
-                  <p className="text-sm font-medium">Rows per page</p>
+                  <p className="text-sm font-medium">Rows</p>
                   <Select
                     value={`${table.getState().pagination.pageSize}`}
                     onValueChange={handlePageSizeChange}
                   >
-                    <SelectTrigger className="h-8 w-[70px]">
+                    <SelectTrigger className="h-9 w-[70px] bg-background">
                       <SelectValue placeholder={table.getState().pagination.pageSize} />
                     </SelectTrigger>
                     <SelectContent side="top">
@@ -588,13 +614,13 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+                <div className="flex w-[120px] items-center justify-center text-sm font-medium">
                   Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
                 </div>
                 <div className="flex items-center space-x-2">
                   <Button
                     variant="outline"
-                    className="hidden h-8 w-8 p-0 lg:flex"
+                    className="hidden h-9 w-9 p-0 lg:flex"
                     onClick={() => table.setPageIndex(0)}
                     disabled={!table.getCanPreviousPage()}
                   >
@@ -603,7 +629,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                   </Button>
                   <Button
                     variant="outline"
-                    className="h-8 w-8 p-0"
+                    className="h-9 w-9 p-0"
                     onClick={() => table.previousPage()}
                     disabled={!table.getCanPreviousPage()}
                   >
@@ -612,7 +638,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                   </Button>
                   <Button
                     variant="outline"
-                    className="h-8 w-8 p-0"
+                    className="h-9 w-9 p-0"
                     onClick={() => table.nextPage()}
                     disabled={!table.getCanNextPage()}
                   >
@@ -621,7 +647,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                   </Button>
                   <Button
                     variant="outline"
-                    className="hidden h-8 w-8 p-0 lg:flex"
+                    className="hidden h-9 w-9 p-0 lg:flex"
                     onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                     disabled={!table.getCanNextPage()}
                   >

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,11 +14,28 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { computeTotalSqft, buildSearchTokens } from "@/utils/mediaAssets";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
+
+const CITY_CODES = [
+  { label: "Hyderabad", value: "HYD" },
+  { label: "Karimnagar", value: "KNR" },
+  { label: "Husnabad", value: "HSB" },
+  { label: "Sircilla", value: "SRL" },
+];
+
+const MEDIA_TYPE_CODES = [
+  { label: "Bus Shelter", value: "BSQ", fullName: "Bus Shelter" },
+  { label: "Billboard", value: "BB", fullName: "Billboard" },
+  { label: "Unipole", value: "UNP", fullName: "Unipole" },
+  { label: "Cantilever", value: "CNT", fullName: "Cantilever" },
+];
 
 export default function MediaAssetNew() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [cityCode, setCityCode] = useState("");
+  const [mediaTypeCode, setMediaTypeCode] = useState("");
   const [formData, setFormData] = useState({
     id: "",
     media_type: "",
@@ -51,6 +68,75 @@ export default function MediaAssetNew() {
     municipal_authority: "",
     is_public: true,
   });
+
+  // Auto-populate city and media_type when codes are selected
+  useEffect(() => {
+    if (cityCode) {
+      const cityLabel = CITY_CODES.find(c => c.value === cityCode)?.label || "";
+      updateField('city', cityLabel);
+    }
+  }, [cityCode]);
+
+  useEffect(() => {
+    if (mediaTypeCode) {
+      const mediaTypeLabel = MEDIA_TYPE_CODES.find(m => m.value === mediaTypeCode)?.fullName || "";
+      updateField('media_type', mediaTypeLabel);
+    }
+  }, [mediaTypeCode]);
+
+  const generateAssetId = async () => {
+    if (!cityCode || !mediaTypeCode) {
+      toast({
+        title: "Missing Information",
+        description: "Please select both City and Media Type first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGenerating(true);
+    try {
+      // Query existing assets with the same city and media type pattern
+      const pattern = `${cityCode}-${mediaTypeCode}-%`;
+      const { data, error } = await supabase
+        .from('media_assets')
+        .select('id')
+        .ilike('id', pattern)
+        .order('id', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+
+      let nextSerial = 1;
+      if (data && data.length > 0) {
+        // Extract the serial number from the last ID
+        const lastId = data[0].id;
+        const parts = lastId.split('-');
+        if (parts.length === 3) {
+          const lastSerial = parseInt(parts[2], 10);
+          nextSerial = lastSerial + 1;
+        }
+      }
+
+      const paddedSerial = String(nextSerial).padStart(4, '0');
+      const generatedId = `${cityCode}-${mediaTypeCode}-${paddedSerial}`;
+      
+      updateField('id', generatedId);
+      
+      toast({
+        title: "ID Generated",
+        description: `Asset ID: ${generatedId}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,6 +213,68 @@ export default function MediaAssetNew() {
         <h1 className="text-3xl font-bold mb-8">Add New Media Asset</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* ID Generator */}
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                Auto-Generate Asset ID
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="cityCode">City *</Label>
+                  <Select value={cityCode} onValueChange={setCityCode}>
+                    <SelectTrigger id="cityCode">
+                      <SelectValue placeholder="Select city" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CITY_CODES.map(city => (
+                        <SelectItem key={city.value} value={city.value}>
+                          {city.label} ({city.value})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="mediaTypeCode">Media Type *</Label>
+                  <Select value={mediaTypeCode} onValueChange={setMediaTypeCode}>
+                    <SelectTrigger id="mediaTypeCode">
+                      <SelectValue placeholder="Select media type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MEDIA_TYPE_CODES.map(type => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label} ({type.value})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <Button 
+                type="button" 
+                onClick={generateAssetId} 
+                disabled={generating || !cityCode || !mediaTypeCode}
+                className="w-full"
+                variant="gradient"
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                {generating ? "Generating..." : "Generate Asset ID"}
+              </Button>
+
+              {formData.id && (
+                <div className="p-4 bg-background rounded-lg border-2 border-primary">
+                  <Label className="text-xs text-muted-foreground">Generated Asset ID</Label>
+                  <p className="text-2xl font-bold text-primary mt-1">{formData.id}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Basic Information */}
           <Card>
             <CardHeader>
@@ -134,31 +282,12 @@ export default function MediaAssetNew() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="id">Asset ID *</Label>
-                <Input
-                  id="id"
-                  required
-                  value={formData.id}
-                  onChange={(e) => updateField('id', e.target.value)}
-                  placeholder="e.g., HYD-BB-0001"
-                />
-              </div>
-              <div>
-                <Label htmlFor="media_type">Media Type *</Label>
-                <Input
-                  id="media_type"
-                  required
-                  value={formData.media_type}
-                  onChange={(e) => updateField('media_type', e.target.value)}
-                  placeholder="e.g., Unipole, Billboard"
-                />
-              </div>
-              <div>
-                <Label htmlFor="media_id">Media ID</Label>
+                <Label htmlFor="media_id">Media ID (Optional)</Label>
                 <Input
                   id="media_id"
                   value={formData.media_id}
                   onChange={(e) => updateField('media_id', e.target.value)}
+                  placeholder="Custom reference ID"
                 />
               </div>
               <div>
@@ -222,6 +351,8 @@ export default function MediaAssetNew() {
                   required
                   value={formData.city}
                   onChange={(e) => updateField('city', e.target.value)}
+                  placeholder="Auto-filled from city selection"
+                  disabled={!!cityCode}
                 />
               </div>
               <div>

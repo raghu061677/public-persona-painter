@@ -253,6 +253,53 @@ export type Database = {
         }
         Relationships: []
       }
+      email_logs: {
+        Row: {
+          ai_parsed_data: Json | null
+          body_preview: string | null
+          created_at: string | null
+          error_message: string | null
+          gmail_message_id: string
+          id: string
+          lead_id: string | null
+          parsing_status: string | null
+          sender_email: string
+          subject: string | null
+        }
+        Insert: {
+          ai_parsed_data?: Json | null
+          body_preview?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          gmail_message_id: string
+          id?: string
+          lead_id?: string | null
+          parsing_status?: string | null
+          sender_email: string
+          subject?: string | null
+        }
+        Update: {
+          ai_parsed_data?: Json | null
+          body_preview?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          gmail_message_id?: string
+          id?: string
+          lead_id?: string | null
+          parsing_status?: string | null
+          sender_email?: string
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       estimations: {
         Row: {
           client_id: string
@@ -444,6 +491,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      leads: {
+        Row: {
+          company: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          location: string | null
+          metadata: Json | null
+          name: string
+          phone: string | null
+          raw_message: string | null
+          requirement: string | null
+          source: string
+          status: string
+          synced_to_zoho: boolean | null
+          updated_at: string | null
+          zoho_lead_id: string | null
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          location?: string | null
+          metadata?: Json | null
+          name: string
+          phone?: string | null
+          raw_message?: string | null
+          requirement?: string | null
+          source: string
+          status?: string
+          synced_to_zoho?: boolean | null
+          updated_at?: string | null
+          zoho_lead_id?: string | null
+        }
+        Update: {
+          company?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          location?: string | null
+          metadata?: Json | null
+          name?: string
+          phone?: string | null
+          raw_message?: string | null
+          requirement?: string | null
+          source?: string
+          status?: string
+          synced_to_zoho?: boolean | null
+          updated_at?: string | null
+          zoho_lead_id?: string | null
+        }
+        Relationships: []
       }
       media_assets: {
         Row: {
@@ -753,6 +854,56 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      whatsapp_logs: {
+        Row: {
+          campaign_id: string | null
+          content_type: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          lead_id: string | null
+          media_url: string | null
+          message_body: string | null
+          message_type: string
+          phone_number: string
+          status: string | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          content_type?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          lead_id?: string | null
+          media_url?: string | null
+          message_body?: string | null
+          message_type: string
+          phone_number: string
+          status?: string | null
+        }
+        Update: {
+          campaign_id?: string | null
+          content_type?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          lead_id?: string | null
+          media_url?: string | null
+          message_body?: string | null
+          message_type?: string
+          phone_number?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

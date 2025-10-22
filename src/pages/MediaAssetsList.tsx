@@ -8,30 +8,17 @@ import { toast } from "@/hooks/use-toast";
 import { MediaAssetsTable } from "@/components/media-assets/media-assets-table";
 import { ImportDialog } from "@/components/media-assets/import-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function MediaAssetsList() {
   const navigate = useNavigate();
   const [assets, setAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { isAdmin } = useAuth();
 
   useEffect(() => {
-    checkAdminStatus();
     fetchAssets();
   }, []);
-
-  const checkAdminStatus = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
-      setIsAdmin(!!data);
-    }
-  };
 
   const fetchAssets = async () => {
     setLoading(true);

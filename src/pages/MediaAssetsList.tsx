@@ -33,9 +33,9 @@ export default function MediaAssetsList() {
   const [isAdmin, setIsAdmin] = useState(false);
   
   // Filter states
-  const [cityFilter, setCityFilter] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
-  const [mediaTypeFilter, setMediaTypeFilter] = useState<string>("");
+  const [cityFilter, setCityFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [mediaTypeFilter, setMediaTypeFilter] = useState<string>("all");
 
   useEffect(() => {
     checkAdminStatus();
@@ -93,9 +93,9 @@ export default function MediaAssetsList() {
   };
 
   const filteredAssets = assets.filter(asset => {
-    if (cityFilter && asset.city !== cityFilter) return false;
-    if (statusFilter && asset.status !== statusFilter) return false;
-    if (mediaTypeFilter && asset.media_type !== mediaTypeFilter) return false;
+    if (cityFilter && cityFilter !== "all" && asset.city !== cityFilter) return false;
+    if (statusFilter && statusFilter !== "all" && asset.status !== statusFilter) return false;
+    if (mediaTypeFilter && mediaTypeFilter !== "all" && asset.media_type !== mediaTypeFilter) return false;
     return true;
   });
 
@@ -226,7 +226,7 @@ export default function MediaAssetsList() {
                   <SelectValue placeholder="All Cities" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Cities</SelectItem>
+                  <SelectItem value="all">All Cities</SelectItem>
                   {cities.map(city => (
                     <SelectItem key={city} value={city}>{city}</SelectItem>
                   ))}
@@ -241,7 +241,7 @@ export default function MediaAssetsList() {
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Statuses</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
                   {statuses.map(status => (
                     <SelectItem key={status} value={status}>{status}</SelectItem>
                   ))}
@@ -256,7 +256,7 @@ export default function MediaAssetsList() {
                   <SelectValue placeholder="All Types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Types</SelectItem>
+                  <SelectItem value="all">All Types</SelectItem>
                   {mediaTypes.map(type => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}

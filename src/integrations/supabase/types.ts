@@ -202,6 +202,39 @@ export type Database = {
           },
         ]
       }
+      client_audit_log: {
+        Row: {
+          action: string
+          changed_fields: Json | null
+          client_id: string
+          created_at: string | null
+          id: string
+          new_values: Json | null
+          old_values: Json | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          changed_fields?: Json | null
+          client_id: string
+          created_at?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          changed_fields?: Json | null
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           address: string | null
@@ -943,7 +976,33 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      clients_basic: {
+        Row: {
+          city: string | null
+          company: string | null
+          created_at: string | null
+          id: string | null
+          name: string | null
+          state: string | null
+        }
+        Insert: {
+          city?: string | null
+          company?: string | null
+          created_at?: string | null
+          id?: string | null
+          name?: string | null
+          state?: string | null
+        }
+        Update: {
+          city?: string | null
+          company?: string | null
+          created_at?: string | null
+          id?: string | null
+          name?: string | null
+          state?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       generate_campaign_id: { Args: never; Returns: string }
@@ -962,7 +1021,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "sales" | "finance" | "operations"
       asset_installation_status:
         | "Pending"
         | "Assigned"
@@ -1117,7 +1176,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "sales", "finance", "operations"],
       asset_installation_status: [
         "Pending",
         "Assigned",

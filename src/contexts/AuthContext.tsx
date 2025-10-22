@@ -9,6 +9,9 @@ interface AuthContextType {
   session: Session | null;
   roles: AppRole[];
   isAdmin: boolean;
+  isSales: boolean;
+  isFinance: boolean;
+  isOperations: boolean;
   hasRole: (role: AppRole) => boolean;
   loading: boolean;
 }
@@ -80,11 +83,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isAdmin = roles.includes('admin');
+  const isSales = roles.includes('sales');
+  const isFinance = roles.includes('finance');
+  const isOperations = roles.includes('operations');
   
   const hasRole = (role: AppRole) => roles.includes(role);
 
   return (
-    <AuthContext.Provider value={{ user, session, roles, isAdmin, hasRole, loading }}>
+    <AuthContext.Provider value={{ user, session, roles, isAdmin, isSales, isFinance, isOperations, hasRole, loading }}>
       {children}
     </AuthContext.Provider>
   );

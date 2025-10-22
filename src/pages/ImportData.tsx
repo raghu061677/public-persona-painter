@@ -1,59 +1,62 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Upload } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FileSpreadsheet, Users } from "lucide-react";
 
 export default function ImportData() {
+  const navigate = useNavigate();
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Import Data</h1>
-        <p className="text-muted-foreground mt-2">
-          Import data from Excel, CSV, or other formats
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Import Data</h1>
+          <p className="text-muted-foreground mt-1">
+            Bulk import data from CSV or Excel files.
+          </p>
+        </div>
       </div>
 
-      <div className="grid gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Import Media Assets</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5" />
+              Import Media Assets
+            </CardTitle>
             <CardDescription>
-              Upload an Excel or CSV file with media asset details
+              Upload a list of media assets. The system will auto-generate IDs in format CITY-MEDIATYPE-XXXX.
+              Required fields: city, mediaType, location, area.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Asset File
+            <Button 
+              onClick={() => navigate('/admin/media-assets/import')}
+              className="w-full"
+            >
+              Go to Media Assets Import
             </Button>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Import Clients</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Import Clients
+            </CardTitle>
             <CardDescription>
-              Bulk import client information from a spreadsheet
+              Upload a list of clients. Required fields: name, email, phone, company.
+              Coming soon.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Client File
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Import Campaigns</CardTitle>
-            <CardDescription>
-              Import campaign data with associated assets
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Campaign File
+            <Button 
+              disabled
+              variant="outline"
+              className="w-full"
+            >
+              Coming Soon
             </Button>
           </CardContent>
         </Card>

@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "@/providers/ThemeProvider";
+import AppLayout from "@/layouts/AppLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -30,37 +32,43 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/admin/clients" element={<ClientsList />} />
-          <Route path="/admin/media-assets" element={<MediaAssetsList />} />
-          <Route path="/admin/media-assets/new" element={<MediaAssetNew />} />
-          <Route path="/admin/media-assets/:id" element={<MediaAssetDetail />} />
-          <Route path="/admin/media-assets-map" element={<MediaAssetsMap />} />
-          <Route path="/admin/plans" element={<PlansList />} />
-          <Route path="/admin/plans/new" element={<PlanNew />} />
-          <Route path="/admin/plans/:id" element={<PlanDetail />} />
-          <Route path="/admin/plans/:id/share/:shareToken" element={<PlanShare />} />
-          <Route path="/admin/campaigns" element={<CampaignsList />} />
-          <Route path="/admin/campaigns/:id" element={<CampaignDetail />} />
-          <Route path="/mobile/upload/:campaignId/:assetId" element={<MobileUpload />} />
-          <Route path="/finance" element={<FinanceDashboard />} />
-          <Route path="/finance/estimations" element={<EstimationsList />} />
-          <Route path="/finance/invoices" element={<InvoicesList />} />
-          <Route path="/finance/expenses" element={<ExpensesList />} />
-          <Route path="/reports" element={<ReportsDashboard />} />
-          <Route path="/reports/vacant-media" element={<VacantMediaReport />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <ThemeProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/admin/plans/:id/share/:shareToken" element={<PlanShare />} />
+            <Route path="/mobile/upload/:campaignId/:assetId" element={<MobileUpload />} />
+            
+            {/* Protected routes with layout */}
+            <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
+            <Route path="/admin/clients" element={<AppLayout><ClientsList /></AppLayout>} />
+            <Route path="/admin/media-assets" element={<AppLayout><MediaAssetsList /></AppLayout>} />
+            <Route path="/admin/media-assets/new" element={<AppLayout><MediaAssetNew /></AppLayout>} />
+            <Route path="/admin/media-assets/:id" element={<AppLayout><MediaAssetDetail /></AppLayout>} />
+            <Route path="/admin/media-assets-map" element={<AppLayout><MediaAssetsMap /></AppLayout>} />
+            <Route path="/admin/plans" element={<AppLayout><PlansList /></AppLayout>} />
+            <Route path="/admin/plans/new" element={<AppLayout><PlanNew /></AppLayout>} />
+            <Route path="/admin/plans/:id" element={<AppLayout><PlanDetail /></AppLayout>} />
+            <Route path="/admin/campaigns" element={<AppLayout><CampaignsList /></AppLayout>} />
+            <Route path="/admin/campaigns/:id" element={<AppLayout><CampaignDetail /></AppLayout>} />
+            <Route path="/finance" element={<AppLayout><FinanceDashboard /></AppLayout>} />
+            <Route path="/finance/estimations" element={<AppLayout><EstimationsList /></AppLayout>} />
+            <Route path="/finance/invoices" element={<AppLayout><InvoicesList /></AppLayout>} />
+            <Route path="/finance/expenses" element={<AppLayout><ExpensesList /></AppLayout>} />
+            <Route path="/reports" element={<AppLayout><ReportsDashboard /></AppLayout>} />
+            <Route path="/reports/vacant-media" element={<AppLayout><VacantMediaReport /></AppLayout>} />
+            
+            {/* Catch-all */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

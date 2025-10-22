@@ -468,81 +468,88 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
   return (
     <>
       <DndProvider backend={HTML5Backend}>
-        {/* Filters Section - Always Visible */}
-        <Card className="border-2 mb-4">
-          <CardHeader className="p-4 sm:p-6 bg-muted/20 border-b">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Filter className="h-5 w-5 text-primary" />
-              </div>
-              <CardTitle className="text-lg font-semibold">Filters</CardTitle>
-              <Button 
-                variant="link" 
-                size="sm" 
-                className="ml-auto text-primary"
-                onClick={() => {
-                  table.getColumn("location")?.setFilterValue("");
-                  table.getColumn("area")?.setFilterValue("");
-                  table.getColumn("media_type")?.setFilterValue("");
-                }}
-              >
-                Clear All
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-end gap-4 flex-wrap">
-              <div className="flex-1 min-w-[200px]">
-                <Label className="text-sm font-medium mb-2">Location</Label>
-                <Input
-                  placeholder="Search location..."
-                  value={(table.getColumn("location")?.getFilterValue() as string) ?? ""}
-                  onChange={handleLocationFilterChange}
-                  className="w-full"
-                />
-              </div>
-              <div className="flex-1 min-w-[200px]">
-                <Label className="text-sm font-medium mb-2">Area</Label>
-                <Input
-                  placeholder="Search area..."
-                  value={(table.getColumn("area")?.getFilterValue() as string) ?? ""}
-                  onChange={handleAreaFilterChange}
-                  className="w-full"
-                />
-              </div>
-              <div className="flex-1 min-w-[200px]">
-                <Label className="text-sm font-medium mb-2">Media Type</Label>
-                <Select
-                  value={(table.getColumn("media_type")?.getFilterValue() as string) ?? "all"}
-                  onValueChange={handleMediaTypeFilterChange}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select Media Type" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover z-50">
-                    <SelectItem value="all">All Media Types</SelectItem>
-                    {mediaTypes.map((m) => (
-                      <SelectItem key={m} value={m}>
-                        {m}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex-shrink-0">
-                <Label className="text-sm font-medium mb-2 opacity-0 select-none">.</Label>
-                <div>
-                  <ColumnVisibilityButton
-                    allColumns={allColumnsForVisibilityButton}
-                    visibleKeys={visibleKeys}
-                    onChange={setVisibleKeys}
-                    onReset={resetColumnPrefs}
-                  />
+        {/* Collapsible Filters Section */}
+        <Collapsible>
+          <Card className="border-2 mb-4">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="p-4 cursor-pointer hover:bg-muted/20 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Filter className="h-5 w-5 text-primary" />
+                    </div>
+                    <CardTitle className="text-lg font-semibold">Filters & Columns</CardTitle>
+                  </div>
+                  <Button variant="ghost" size="sm">
+                    Toggle
+                  </Button>
                 </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="p-4 sm:p-6 border-t">
+                <div className="flex items-end gap-4 flex-wrap">
+                  <div className="flex-1 min-w-[200px]">
+                    <Label className="text-sm font-medium mb-2">Location</Label>
+                    <Input
+                      placeholder="Search location..."
+                      value={(table.getColumn("location")?.getFilterValue() as string) ?? ""}
+                      onChange={handleLocationFilterChange}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-[200px]">
+                    <Label className="text-sm font-medium mb-2">Area</Label>
+                    <Input
+                      placeholder="Search area..."
+                      value={(table.getColumn("area")?.getFilterValue() as string) ?? ""}
+                      onChange={handleAreaFilterChange}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-[200px]">
+                    <Label className="text-sm font-medium mb-2">Media Type</Label>
+                    <Select
+                      value={(table.getColumn("media_type")?.getFilterValue() as string) ?? "all"}
+                      onValueChange={handleMediaTypeFilterChange}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select Media Type" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        <SelectItem value="all">All Media Types</SelectItem>
+                        {mediaTypes.map((m) => (
+                          <SelectItem key={m} value={m}>
+                            {m}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        table.getColumn("location")?.setFilterValue("");
+                        table.getColumn("area")?.setFilterValue("");
+                        table.getColumn("media_type")?.setFilterValue("");
+                      }}
+                    >
+                      Clear Filters
+                    </Button>
+                    <ColumnVisibilityButton
+                      allColumns={allColumnsForVisibilityButton}
+                      visibleKeys={visibleKeys}
+                      onChange={setVisibleKeys}
+                      onReset={resetColumnPrefs}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
 
         {selectedAssetIds.length > 0 && (
           <Card className="mb-4 bg-primary/5 border-primary/20">
@@ -565,45 +572,47 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
 
         <Card className="overflow-hidden border-2 shadow-lg">
           <CardContent className="p-0">
-            {/* Horizontal scroll wrapper with custom scrollbar */}
-            <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-500px)] custom-scrollbar">
-              <Table>
-                <TableHeader className="bg-muted/50 sticky top-0 z-10">
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id} className="hover:bg-transparent">
-                      {headerGroup.headers.map((header) => (
-                        <DraggableHeader key={header.id} header={header} table={table} />
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows?.length ? (
-                    table.getRowModel().rows.map((row) => (
-                      <TableRow 
-                        key={row.id}
-                        className="hover:bg-muted/50 transition-colors"
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id} className="whitespace-nowrap px-4 py-3">
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
+            {/* Enhanced horizontal scroll wrapper */}
+            <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-400px)] custom-scrollbar relative">
+              <div className="min-w-max">
+                <Table>
+                  <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                        {headerGroup.headers.map((header) => (
+                          <DraggableHeader key={header.id} header={header} table={table} />
                         ))}
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={table.getAllColumns().length} className="h-32 text-center">
-                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                          <Layers className="h-12 w-12 opacity-20" />
-                          <p className="text-lg font-medium">No assets found</p>
-                          <p className="text-sm">Try adjusting your filters</p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows?.length ? (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow 
+                          key={row.id}
+                          className="hover:bg-muted/50 transition-colors"
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id} className="whitespace-nowrap px-4 py-3">
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={table.getAllColumns().length} className="h-32 text-center">
+                          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                            <Layers className="h-12 w-12 opacity-20" />
+                            <p className="text-lg font-medium">No assets found</p>
+                            <p className="text-sm">Try adjusting your filters</p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           </CardContent>
           <CardContent className="p-4 border-t bg-muted/20">

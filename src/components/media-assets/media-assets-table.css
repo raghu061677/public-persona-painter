@@ -27,3 +27,15 @@
 .custom-scrollbar::-webkit-scrollbar-corner {
   background: hsl(var(--muted));
 }
+
+/* Ensure table displays all columns with proper width */
+.custom-scrollbar table {
+  table-layout: auto;
+  width: max-content;
+  min-width: 100%;
+}
+
+.custom-scrollbar th,
+.custom-scrollbar td {
+  min-width: max-content;
+}

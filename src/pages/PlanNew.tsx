@@ -40,7 +40,7 @@ export default function PlanNew() {
   const [assetPricing, setAssetPricing] = useState<Record<string, any>>({});
   
   const [formData, setFormData] = useState({
-    id: generatePlanId(),
+    id: "",
     client_id: "",
     client_name: "",
     plan_name: "",
@@ -54,7 +54,15 @@ export default function PlanNew() {
   useEffect(() => {
     fetchClients();
     fetchAvailableAssets();
+    generateNewPlanId();
   }, []);
+
+  const generateNewPlanId = async () => {
+    const { data } = await supabase.rpc('generate_plan_id');
+    if (data) {
+      setFormData(prev => ({ ...prev, id: data }));
+    }
+  };
 
   const fetchClients = async () => {
     const { data } = await supabase

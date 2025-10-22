@@ -15,6 +15,9 @@ import PlansList from "./pages/PlansList";
 import PlanNew from "./pages/PlanNew";
 import PlanDetail from "./pages/PlanDetail";
 import PlanShare from "./pages/PlanShare";
+import CampaignsList from "./pages/CampaignsList";
+import CampaignDetail from "./pages/CampaignDetail";
+import MobileUpload from "./pages/MobileUpload";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +41,9 @@ const App = () => (
           <Route path="/admin/plans/new" element={<PlanNew />} />
           <Route path="/admin/plans/:id" element={<PlanDetail />} />
           <Route path="/admin/plans/:id/share/:shareToken" element={<PlanShare />} />
+          <Route path="/admin/campaigns" element={<CampaignsList />} />
+          <Route path="/admin/campaigns/:id" element={<CampaignDetail />} />
+          <Route path="/mobile/upload/:campaignId/:assetId" element={<MobileUpload />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

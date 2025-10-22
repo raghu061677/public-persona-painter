@@ -187,10 +187,12 @@ export default function MediaAssetsList() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => navigate('/admin/import')}>
-            <Upload className="mr-2 h-4 w-4" />
-            Import
-          </Button>
+          {isAdmin && (
+            <Button variant="outline" onClick={() => navigate('/admin/media-assets/import')}>
+              <Upload className="mr-2 h-4 w-4" />
+              Import Excel
+            </Button>
+          )}
           {isAdmin && (
             <Button onClick={() => navigate('/admin/media-assets/new')}>
               <Plus className="mr-2 h-4 w-4" />

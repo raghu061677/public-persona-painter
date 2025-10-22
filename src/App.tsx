@@ -12,6 +12,7 @@ import MediaAssetsList from "./pages/MediaAssetsList";
 import MediaAssetNew from "./pages/MediaAssetNew";
 import MediaAssetDetail from "./pages/MediaAssetDetail";
 import MediaAssetsMap from "./pages/MediaAssetsMap";
+import MediaAssetsImport from "./pages/MediaAssetsImport";
 import ClientsList from "./pages/ClientsList";
 import PlansList from "./pages/PlansList";
 import PlanNew from "./pages/PlanNew";
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/admin/clients" element={<AppLayout><ClientsList /></AppLayout>} />
             <Route path="/admin/media-assets" element={<AppLayout><MediaAssetsList /></AppLayout>} />
             <Route path="/admin/media-assets/new" element={<AppLayout><MediaAssetNew /></AppLayout>} />
+            <Route path="/admin/media-assets/import" element={<AppLayout><MediaAssetsImport /></AppLayout>} />
             <Route path="/admin/media-assets/:id" element={<AppLayout><MediaAssetDetail /></AppLayout>} />
             <Route path="/admin/media-assets-map" element={<AppLayout><MediaAssetsMap /></AppLayout>} />
             <Route path="/admin/plans" element={<AppLayout><PlansList /></AppLayout>} />

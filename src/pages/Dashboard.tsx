@@ -1,13 +1,24 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { User, Session } from "@supabase/supabase-js";
-import { LogOut, User as UserIcon } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  Package,
+  FileText,
+  Megaphone,
+  DollarSign,
+  BarChart3,
+  LogOut,
+  Menu,
+  UserIcon,
+} from "lucide-react";
 
 interface Profile {
   id: string;
@@ -25,8 +36,54 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const menuItems = [
+    {
+      title: "Dashboard",
+      icon: LayoutDashboard,
+      href: "/dashboard",
+      description: "Overview and KPIs"
+    },
+    {
+      title: "Clients",
+      icon: Users,
+      href: "/admin/clients",
+      description: "Manage client database"
+    },
+    {
+      title: "Media Assets",
+      icon: Package,
+      href: "/admin/media-assets",
+      description: "Inventory management"
+    },
+    {
+      title: "Plans",
+      icon: FileText,
+      href: "/admin/plans",
+      description: "Quotations & proposals"
+    },
+    {
+      title: "Campaigns",
+      icon: Megaphone,
+      href: "/admin/campaigns",
+      description: "Active campaigns"
+    },
+    {
+      title: "Finance",
+      icon: DollarSign,
+      href: "/finance",
+      description: "Invoices & payments"
+    },
+    {
+      title: "Reports",
+      icon: BarChart3,
+      href: "/reports",
+      description: "Analytics & insights"
+    },
+  ];
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -121,76 +178,69 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
-          </Button>
+    <div className="min-h-screen bg-background">
+      {/* Top Navigation */}
+      <nav className="border-b bg-card">
+        <div className="container mx-auto px-6">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gradient-primary rounded-lg" />
+              <span className="text-xl font-bold">Go-Ads 360°</span>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="hidden md:block text-right">
+                <p className="text-sm font-medium">{profile?.username || user?.email}</p>
+                <div className="flex gap-1 justify-end">
+                  {roles.map((role) => (
+                    <Badge key={role} variant="secondary" className="text-xs">
+                      {role}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div className="container mx-auto px-6 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Welcome back, {profile?.username || 'User'}!</h1>
+          <p className="text-muted-foreground">
+            Your complete OOH media management platform
+          </p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Profile Information</CardTitle>
-            <CardDescription>Your account details and settings</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={profile?.avatar_url || ""} />
-                <AvatarFallback>
-                  <UserIcon className="h-10 w-10" />
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h3 className="text-xl font-semibold">
-                  {profile?.username || "User"}
-                </h3>
-                <p className="text-sm text-muted-foreground">{user?.email}</p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Roles</Label>
-              <div className="flex gap-2">
-                {roles.map((role) => (
-                  <Badge key={role} variant="secondary">
-                    {role}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>User ID</Label>
-              <p className="text-sm text-muted-foreground font-mono">{user?.id}</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Account Created</Label>
-              <p className="text-sm text-muted-foreground">
-                {user?.created_at
-                  ? new Date(user.created_at).toLocaleDateString()
-                  : "N/A"}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Welcome to Go-Ads</CardTitle>
-            <CardDescription>Your digital marketing solutions platform</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              This is your dashboard where you can manage your campaigns, track analytics,
-              and configure your advertising settings.
-            </p>
-          </CardContent>
-        </Card>
+        {/* Module Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link to={item.href} key={item.title}>
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                  <CardHeader>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <Icon className="h-6 w-6 text-primary" />
+                      </div>
+                    </div>
+                    <CardTitle className="text-lg">{item.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      {item.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

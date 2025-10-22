@@ -18,6 +18,12 @@ import PlanShare from "./pages/PlanShare";
 import CampaignsList from "./pages/CampaignsList";
 import CampaignDetail from "./pages/CampaignDetail";
 import MobileUpload from "./pages/MobileUpload";
+import FinanceDashboard from "./pages/FinanceDashboard";
+import EstimationsList from "./pages/EstimationsList";
+import InvoicesList from "./pages/InvoicesList";
+import ExpensesList from "./pages/ExpensesList";
+import ReportsDashboard from "./pages/ReportsDashboard";
+import VacantMediaReport from "./pages/VacantMediaReport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +50,12 @@ const App = () => (
           <Route path="/admin/campaigns" element={<CampaignsList />} />
           <Route path="/admin/campaigns/:id" element={<CampaignDetail />} />
           <Route path="/mobile/upload/:campaignId/:assetId" element={<MobileUpload />} />
+          <Route path="/finance" element={<FinanceDashboard />} />
+          <Route path="/finance/estimations" element={<EstimationsList />} />
+          <Route path="/finance/invoices" element={<InvoicesList />} />
+          <Route path="/finance/expenses" element={<ExpensesList />} />
+          <Route path="/reports" element={<ReportsDashboard />} />
+          <Route path="/reports/vacant-media" element={<VacantMediaReport />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

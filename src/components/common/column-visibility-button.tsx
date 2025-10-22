@@ -54,9 +54,12 @@ export default function ColumnVisibilityButton({
               <RotateCcw className="h-3 w-3" />
             </Button>
           </div>
-          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
             {allColumns.map((column) => (
-              <div key={column.key} className="flex items-center space-x-2">
+              <div 
+                key={column.key} 
+                className="flex items-center space-x-2 py-1 hover:bg-muted/50 rounded px-2 -mx-2"
+              >
                 <Checkbox
                   id={`col-${column.key}`}
                   checked={visibleKeys.includes(column.key)}
@@ -64,12 +67,15 @@ export default function ColumnVisibilityButton({
                 />
                 <label
                   htmlFor={`col-${column.key}`}
-                  className="text-sm font-normal cursor-pointer flex-1"
+                  className="text-sm font-normal cursor-pointer flex-1 leading-none"
                 >
                   {column.label}
                 </label>
               </div>
             ))}
+          </div>
+          <div className="pt-3 border-t text-xs text-muted-foreground">
+            {visibleKeys.length} of {allColumns.length} columns visible
           </div>
         </div>
       </PopoverContent>

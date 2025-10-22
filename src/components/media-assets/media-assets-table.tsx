@@ -410,9 +410,20 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
   const allColumnsForVisibilityButton = useMemo(() => {
     return table.getAllLeafColumns().map((c) => {
       const header = c.columnDef.header;
+      // Convert header to readable label
+      let label = typeof header === "string" ? header : c.id;
+      
+      // If no custom header, convert column id to readable format
+      if (label === c.id) {
+        label = c.id
+          .split('_')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+      }
+      
       return {
         key: c.id,
-        label: typeof header === "string" ? header : c.id,
+        label: label,
       };
     });
   }, [table]);

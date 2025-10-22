@@ -40,6 +40,18 @@ export function ImportDialog({ onImportComplete }: ImportDialogProps) {
 
       for (const row of jsonData as any[]) {
         try {
+          // Helper function to safely parse numeric values
+          const parseNumeric = (value: any, defaultVal: number = 0): number => {
+            if (value === null || value === undefined || value === '') return defaultVal;
+            const num = parseFloat(String(value).replace(/,/g, ''));
+            return isNaN(num) ? defaultVal : num;
+          };
+
+          // Helper function to parse integer values (rounds decimals)
+          const parseInt = (value: any, defaultVal: number = 0): number => {
+            return Math.round(parseNumeric(value, defaultVal));
+          };
+
           const asset = {
             id: row.id || row.ID || row['Asset ID'],
             media_type: row.media_type || row['Media Type'],
@@ -49,26 +61,40 @@ export function ImportDialog({ onImportComplete }: ImportDialogProps) {
             district: row.district || row.District,
             state: row.state || row.State,
             dimensions: row.dimensions || row.Dimensions,
-            total_sqft: parseFloat(row.total_sqft || row['Total Sqft'] || 0),
-            card_rate: parseFloat(row.card_rate || row['Card Rate'] || 0),
-            base_rent: parseFloat(row.base_rent || row['Base Rent'] || 0),
-            gst_percent: parseFloat(row.gst_percent || row['GST %'] || 18),
+            total_sqft: parseInt(row.total_sqft || row['Total Sqft'] || row['Total Sq Ft'], 0),
+            card_rate: parseNumeric(row.card_rate || row['Card Rate'], 0),
+            base_rent: parseNumeric(row.base_rent || row['Base Rent'], 0),
+            gst_percent: parseNumeric(row.gst_percent || row['GST %'] || row['GST Percent'], 18),
             status: row.status || row.Status || 'Available',
             category: row.category || row.Category || 'OOH',
+            illumination: row.illumination || row.Illumination || null,
+            direction: row.direction || row.Direction || null,
+            latitude: parseNumeric(row.latitude || row.Latitude, null),
+            longitude: parseNumeric(row.longitude || row.Longitude, null),
+            ownership: row.ownership || row.Ownership || 'own',
+            printing_charges: parseNumeric(row.printing_charges || row['Printing Charges'], 0),
+            mounting_charges: parseNumeric(row.mounting_charges || row['Mounting Charges'], 0),
           };
+
+          // Remove null/undefined values to prevent database errors
+          Object.keys(asset).forEach(key => {
+            if (asset[key as keyof typeof asset] === null || asset[key as keyof typeof asset] === undefined) {
+              delete asset[key as keyof typeof asset];
+            }
+          });
 
           const { error } = await supabase
             .from('media_assets')
             .upsert(asset, { onConflict: 'id' });
 
           if (error) {
-            console.error('Error importing asset:', error);
+            console.error(`Row ${jsonData.indexOf(row) + 1}: Failed - ${error.message}`);
             errorCount++;
           } else {
             successCount++;
           }
-        } catch (err) {
-          console.error('Error processing row:', err);
+        } catch (err: any) {
+          console.error(`Row ${jsonData.indexOf(row) + 1}: Error - ${err.message}`);
           errorCount++;
         }
       }

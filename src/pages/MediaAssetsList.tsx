@@ -89,7 +89,7 @@ export default function MediaAssetsList() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <div className="w-full px-4 sm:px-6 py-6 sm:py-8 space-y-6 max-w-[1920px] mx-auto">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
@@ -100,7 +100,15 @@ export default function MediaAssetsList() {
               Manage your complete outdoor advertising inventory
             </p>
           </div>
-          <div className="flex gap-2 w-full sm:w-auto">
+          <div className="flex gap-2 w-full sm:w-auto flex-wrap">
+            <Button 
+              variant="outline"
+              onClick={() => navigate('/admin/media-assets/map')}
+              className="flex-1 sm:flex-none"
+            >
+              <MapPin className="mr-2 h-4 w-4" />
+              Map View
+            </Button>
             {isAdmin && (
               <>
                 <ImportDialog onImportComplete={fetchAssets} />

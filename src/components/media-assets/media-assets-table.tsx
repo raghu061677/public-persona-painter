@@ -478,53 +478,56 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
               </CollapsibleTrigger>
             </CardHeader>
             <CollapsibleContent>
-              <CardContent className="p-4 sm:p-6 flex items-end gap-4 flex-wrap bg-card">
-                <div className="relative">
-                  <Label>Location</Label>
-                  <Input
-                    placeholder="Search location..."
-                    value={(table.getColumn("location")?.getFilterValue() as string) ?? ""}
-                    onChange={handleLocationFilterChange}
-                    className="max-w-sm"
-                  />
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex-1 min-w-[200px]">
+                    <Label>Location</Label>
+                    <Input
+                      placeholder="Search location..."
+                      value={(table.getColumn("location")?.getFilterValue() as string) ?? ""}
+                      onChange={handleLocationFilterChange}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-[200px]">
+                    <Label>Area</Label>
+                    <Input
+                      placeholder="Search area..."
+                      value={(table.getColumn("area")?.getFilterValue() as string) ?? ""}
+                      onChange={handleAreaFilterChange}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-[200px]">
+                    <Label>Media Type</Label>
+                    <Select
+                      value={(table.getColumn("media_type")?.getFilterValue() as string) ?? "all"}
+                      onValueChange={handleMediaTypeFilterChange}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select Media Type" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        <SelectItem value="all">All Media Types</SelectItem>
+                        {mediaTypes.map((m) => (
+                          <SelectItem key={m} value={m}>
+                            {m}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex-shrink-0 ml-auto">
+                    <Label className="opacity-0 select-none">Actions</Label>
+                    <div>
+                      <ColumnVisibilityButton
+                        allColumns={allColumnsForVisibilityButton}
+                        visibleKeys={visibleKeys}
+                        onChange={setVisibleKeys}
+                        onReset={resetColumnPrefs}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="relative">
-                  <Label>Area</Label>
-                  <Input
-                    placeholder="Search area..."
-                    value={(table.getColumn("area")?.getFilterValue() as string) ?? ""}
-                    onChange={handleAreaFilterChange}
-                    className="max-w-sm"
-                  />
-                </div>
-                <div>
-                  <Label>Media Type</Label>
-                  <Select
-                    value={(table.getColumn("media_type")?.getFilterValue() as string) ?? "all"}
-                    onValueChange={handleMediaTypeFilterChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Media Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Media Types</SelectItem>
-                      {mediaTypes.map((m) => (
-                        <SelectItem key={m} value={m}>
-                          {m}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="ml-auto">
-                  <ColumnVisibilityButton
-                    allColumns={allColumnsForVisibilityButton}
-                    visibleKeys={visibleKeys}
-                    onChange={setVisibleKeys}
-                    onReset={resetColumnPrefs}
-                  />
-                </div>
-              </CardContent>
             </CollapsibleContent>
           </Card>
         </Collapsible>

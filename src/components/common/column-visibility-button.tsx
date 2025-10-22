@@ -41,7 +41,7 @@ export default function ColumnVisibilityButton({
           Columns
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-56" align="end">
+      <PopoverContent className="w-56 bg-popover z-50" align="end">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="font-medium text-sm">Toggle Columns</h4>

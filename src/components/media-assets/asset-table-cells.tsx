@@ -3,14 +3,18 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Eye, Edit, Copy, Trash2, MoreHorizontal } from "lucide-react";
+import { Eye, Edit, Copy, Trash2, MoreHorizontal, Map, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface Asset {
   id: string;
   image_urls?: string[];
+  latitude?: number;
+  longitude?: number;
+  google_street_view_url?: string;
   [key: string]: any;
 }
 
@@ -41,7 +45,19 @@ export function ActionCell({
   onDelete 
 }: any) {
   const navigate = useNavigate();
-  const assetId = row.original.id;
+  const asset = row.original;
+  const assetId = asset.id;
+  const hasLocation = asset.latitude && asset.longitude;
+  const hasStreetView = asset.google_street_view_url;
+
+  const openStreetView = () => {
+    if (hasStreetView) {
+      window.open(asset.google_street_view_url, '_blank');
+    } else if (hasLocation) {
+      const streetViewUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${asset.latitude},${asset.longitude}`;
+      window.open(streetViewUrl, '_blank');
+    }
+  };
 
   return (
     <div className="flex items-center justify-end gap-2">
@@ -51,10 +67,10 @@ export function ActionCell({
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="bg-popover z-50 min-w-[160px]">
           <DropdownMenuItem onClick={() => navigate(`/admin/media-assets/${assetId}`)}>
             <Eye className="mr-2 h-4 w-4" />
-            View
+            View Details
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => navigate(`/admin/media-assets/edit/${assetId}`)}>
             <Edit className="mr-2 h-4 w-4" />
@@ -64,9 +80,28 @@ export function ActionCell({
             <Copy className="mr-2 h-4 w-4" />
             Duplicate
           </DropdownMenuItem>
+          
+          <DropdownMenuSeparator />
+          
+          <DropdownMenuItem 
+            onClick={() => navigate('/admin/media-assets/map')}
+          >
+            <Map className="mr-2 h-4 w-4" />
+            View on Map
+          </DropdownMenuItem>
+          
+          {(hasLocation || hasStreetView) && (
+            <DropdownMenuItem onClick={openStreetView}>
+              <MapPin className="mr-2 h-4 w-4" />
+              Street View
+            </DropdownMenuItem>
+          )}
+          
+          <DropdownMenuSeparator />
+          
           <DropdownMenuItem 
             onClick={() => onDelete(assetId)}
-            className="text-destructive"
+            className="text-destructive focus:text-destructive"
           >
             <Trash2 className="mr-2 h-4 w-4" />
             Delete

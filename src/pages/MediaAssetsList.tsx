@@ -27,8 +27,9 @@ export default function MediaAssetsList() {
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
+        .eq('role', 'admin')
         .maybeSingle();
-      setIsAdmin(data?.role === 'admin');
+      setIsAdmin(!!data);
     }
   };
 

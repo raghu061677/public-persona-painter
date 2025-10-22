@@ -36,29 +36,52 @@ export default function ColumnVisibilityButton({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Columns3 className="mr-2 h-4 w-4" />
-          Columns
+        <Button variant="outline" size="sm" className="gap-2">
+          <Columns3 className="h-4 w-4" />
+          Columns ({visibleKeys.length}/{allColumns.length})
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-56 bg-popover z-50" align="end">
+      <PopoverContent className="w-64 bg-popover z-50" align="end">
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="font-medium text-sm">Toggle Columns</h4>
+          <div className="flex items-center justify-between border-b pb-3">
+            <h4 className="font-semibold text-sm">Toggle Columns</h4>
             <Button
               variant="ghost"
               size="sm"
               onClick={onReset}
-              className="h-8 px-2"
+              className="h-7 px-2 text-xs"
+              title="Reset to Default"
             >
-              <RotateCcw className="h-3 w-3" />
+              <RotateCcw className="h-3 w-3 mr-1" />
+              Reset
             </Button>
           </div>
-          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+          
+          <div className="space-y-2 border-b pb-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start h-8 text-xs font-normal"
+              onClick={() => onChange(allColumns.map(c => c.key))}
+            >
+              Select All
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start h-8 text-xs font-normal"
+              onClick={() => onChange(allColumns.filter(c => c.key === 'select' || c.key === 'actions').map(c => c.key))}
+            >
+              Deselect All
+            </Button>
+          </div>
+          
+          <div className="space-y-1 max-h-[350px] overflow-y-auto pr-2">
             {allColumns.map((column) => (
               <div 
                 key={column.key} 
-                className="flex items-center space-x-2 py-1 hover:bg-muted/50 rounded px-2 -mx-2"
+                className="flex items-center space-x-2 py-1.5 hover:bg-muted/50 rounded px-2 -mx-2 cursor-pointer"
+                onClick={() => handleToggle(column.key)}
               >
                 <Checkbox
                   id={`col-${column.key}`}
@@ -74,7 +97,8 @@ export default function ColumnVisibilityButton({
               </div>
             ))}
           </div>
-          <div className="pt-3 border-t text-xs text-muted-foreground">
+          
+          <div className="pt-2 border-t text-xs text-muted-foreground text-center">
             {visibleKeys.length} of {allColumns.length} columns visible
           </div>
         </div>

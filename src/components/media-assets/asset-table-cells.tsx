@@ -1,12 +1,5 @@
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Eye, Edit, Copy, Trash2, MoreHorizontal, Map, MapPin } from "lucide-react";
+import { Eye, Edit, Trash2, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface Asset {
@@ -48,10 +41,9 @@ export function ActionCell({
   const asset = row.original;
   const assetId = asset.id;
   const hasLocation = asset.latitude && asset.longitude;
-  const hasStreetView = asset.google_street_view_url;
 
   const openStreetView = () => {
-    if (hasStreetView) {
+    if (asset.google_street_view_url) {
       window.open(asset.google_street_view_url, '_blank');
     } else if (hasLocation) {
       const streetViewUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${asset.latitude},${asset.longitude}`;
@@ -61,53 +53,47 @@ export function ActionCell({
 
   return (
     <div className="flex items-center justify-end gap-2">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="bg-popover z-50 min-w-[160px]">
-          <DropdownMenuItem onClick={() => navigate(`/admin/media-assets/${assetId}`)}>
-            <Eye className="mr-2 h-4 w-4" />
-            View Details
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => navigate(`/admin/media-assets/edit/${assetId}`)}>
-            <Edit className="mr-2 h-4 w-4" />
-            Edit
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => navigate(`/admin/media-assets/new?duplicate=${assetId}`)}>
-            <Copy className="mr-2 h-4 w-4" />
-            Duplicate
-          </DropdownMenuItem>
-          
-          <DropdownMenuSeparator />
-          
-          <DropdownMenuItem 
-            onClick={() => navigate('/admin/media-assets/map')}
-          >
-            <Map className="mr-2 h-4 w-4" />
-            View on Map
-          </DropdownMenuItem>
-          
-          {(hasLocation || hasStreetView) && (
-            <DropdownMenuItem onClick={openStreetView}>
-              <MapPin className="mr-2 h-4 w-4" />
-              Street View
-            </DropdownMenuItem>
-          )}
-          
-          <DropdownMenuSeparator />
-          
-          <DropdownMenuItem 
-            onClick={() => onDelete(assetId)}
-            className="text-destructive focus:text-destructive"
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => navigate(`/admin/media-assets/${assetId}`)}
+        title="View Details"
+      >
+        <Eye className="h-4 w-4" />
+      </Button>
+      
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => navigate(`/admin/media-assets/edit/${assetId}`)}
+        title="Edit"
+      >
+        <Edit className="h-4 w-4" />
+      </Button>
+      
+      {hasLocation && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={openStreetView}
+          title="Street View"
+        >
+          <MapPin className="h-4 w-4" />
+        </Button>
+      )}
+      
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+        onClick={() => onDelete(assetId)}
+        title="Delete"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
     </div>
   );
 }

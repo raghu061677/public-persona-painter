@@ -413,25 +413,32 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
   );
 
   const allColumnsForVisibilityButton = useMemo(() => {
-    return table.getAllLeafColumns().map((c) => {
-      const header = c.columnDef.header;
-      // Convert header to readable label
-      let label = typeof header === "string" ? header : c.id;
-      
-      // If no custom header, convert column id to readable format
-      if (label === c.id) {
-        label = c.id
-          .split('_')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ');
-      }
-      
-      return {
-        key: c.id,
-        label: label,
-      };
-    });
-  }, [table]);
+    return columns
+      .filter((c) => {
+        // Only include columns that can be hidden
+        const col = table.getColumn(c.id || (c as any).accessorKey);
+        return col?.getCanHide() !== false;
+      })
+      .map((c) => {
+        const colId = c.id || (c as any).accessorKey;
+        const header = c.header;
+        // Convert header to readable label
+        let label = typeof header === "string" ? header : colId;
+        
+        // If no custom header, convert column id to readable format
+        if (label === colId) {
+          label = colId
+            .split('_')
+            .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+        }
+        
+        return {
+          key: colId,
+          label: label,
+        };
+      });
+  }, [columns, table]);
 
   const selectedAssetIds = useMemo(() => {
     return table.getSelectedRowModel().rows.map((row) => row.original.id);

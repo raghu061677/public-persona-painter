@@ -38,8 +38,13 @@ export function ImportDialog({ onImportComplete }: ImportDialogProps) {
       let successCount = 0;
       let errorCount = 0;
       let skippedCount = 0;
+      const errorDetails: string[] = [];
+      const skippedDetails: string[] = [];
+
+      console.log(`Starting import of ${jsonData.length} rows...`);
 
       for (const row of jsonData as any[]) {
+        const rowNum = jsonData.indexOf(row) + 1;
         try {
           // Helper function to safely parse numeric values
           const parseNumeric = (value: any, defaultVal: number = 0): number => {
@@ -48,8 +53,16 @@ export function ImportDialog({ onImportComplete }: ImportDialogProps) {
             return isNaN(num) ? defaultVal : num;
           };
 
+          const assetId = row.id || row.ID || row['Asset ID'];
+          
+          if (!assetId) {
+            errorDetails.push(`Row ${rowNum}: Missing Asset ID`);
+            errorCount++;
+            continue;
+          }
+
           const asset = {
-            id: row.id || row.ID || row['Asset ID'],
+            id: assetId,
             media_type: row.media_type || row['Media Type'],
             location: row.location || row.Location,
             area: row.area || row.Area,
@@ -87,7 +100,8 @@ export function ImportDialog({ onImportComplete }: ImportDialogProps) {
             .maybeSingle();
 
           if (existing) {
-            console.log(`Row ${jsonData.indexOf(row) + 1}: Skipped - Record already exists (ID: ${asset.id})`);
+            skippedDetails.push(`${asset.id}`);
+            console.log(`Row ${rowNum}: Skipped - Record already exists (ID: ${asset.id})`);
             skippedCount++;
             continue;
           }
@@ -98,20 +112,48 @@ export function ImportDialog({ onImportComplete }: ImportDialogProps) {
             .insert(asset);
 
           if (error) {
-            console.error(`Row ${jsonData.indexOf(row) + 1}: Failed - ${error.message}`);
+            errorDetails.push(`Row ${rowNum} (${asset.id}): ${error.message}`);
+            console.error(`Row ${rowNum}: Failed - ${error.message}`, asset);
             errorCount++;
           } else {
+            console.log(`Row ${rowNum}: Successfully imported (ID: ${asset.id})`);
             successCount++;
           }
         } catch (err: any) {
-          console.error(`Row ${jsonData.indexOf(row) + 1}: Error - ${err.message}`);
+          errorDetails.push(`Row ${rowNum}: ${err.message}`);
+          console.error(`Row ${rowNum}: Error - ${err.message}`, row);
           errorCount++;
         }
       }
 
+      console.log('Import Summary:', { successCount, skippedCount, errorCount });
+      if (errorDetails.length > 0) {
+        console.error('Failed imports:', errorDetails);
+      }
+      if (skippedDetails.length > 0) {
+        console.log('Skipped assets:', skippedDetails);
+      }
+
+      const totalProcessed = successCount + skippedCount + errorCount;
+      
       toast({
         title: "Import Complete",
-        description: `Successfully imported ${successCount} assets. ${skippedCount} skipped (already exist). ${errorCount} errors.`,
+        description: (
+          <div className="space-y-1">
+            <p>✅ Imported: {successCount}</p>
+            {skippedCount > 0 && <p>⏭️ Skipped: {skippedCount} (already exist)</p>}
+            {errorCount > 0 && <p>❌ Failed: {errorCount}</p>}
+            <p className="text-xs text-muted-foreground mt-2">
+              Processed {totalProcessed} of {jsonData.length} rows
+            </p>
+            {errorCount > 0 && (
+              <p className="text-xs text-destructive mt-1">
+                Check console for error details
+              </p>
+            )}
+          </div>
+        ),
+        variant: errorCount > 0 ? "destructive" : "default",
       });
 
       setIsOpen(false);

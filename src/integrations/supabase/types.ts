@@ -14,6 +14,132 @@ export type Database = {
   }
   public: {
     Tables: {
+      media_assets: {
+        Row: {
+          ad_tax: number | null
+          area: string
+          base_margin: number | null
+          base_rent: number | null
+          card_rate: number
+          category: Database["public"]["Enums"]["media_category"]
+          city: string
+          concession_fee: number | null
+          created_at: string | null
+          created_by: string | null
+          dimensions: string
+          direction: string | null
+          district: string | null
+          electricity: number | null
+          faces: Json | null
+          google_street_view_url: string | null
+          gst_percent: number | null
+          id: string
+          illumination: string | null
+          image_urls: string[] | null
+          images: Json | null
+          is_multi_face: boolean | null
+          is_public: boolean | null
+          latitude: number | null
+          location: string
+          longitude: number | null
+          maintenance: number | null
+          media_id: string | null
+          media_type: string
+          mounting_charges: number | null
+          municipal_authority: string | null
+          ownership: Database["public"]["Enums"]["ownership_type"] | null
+          printing_charges: number | null
+          search_tokens: string[] | null
+          state: string | null
+          status: Database["public"]["Enums"]["media_asset_status"]
+          total_sqft: number | null
+          updated_at: string | null
+          vendor_details: Json | null
+        }
+        Insert: {
+          ad_tax?: number | null
+          area: string
+          base_margin?: number | null
+          base_rent?: number | null
+          card_rate: number
+          category?: Database["public"]["Enums"]["media_category"]
+          city: string
+          concession_fee?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          dimensions: string
+          direction?: string | null
+          district?: string | null
+          electricity?: number | null
+          faces?: Json | null
+          google_street_view_url?: string | null
+          gst_percent?: number | null
+          id: string
+          illumination?: string | null
+          image_urls?: string[] | null
+          images?: Json | null
+          is_multi_face?: boolean | null
+          is_public?: boolean | null
+          latitude?: number | null
+          location: string
+          longitude?: number | null
+          maintenance?: number | null
+          media_id?: string | null
+          media_type: string
+          mounting_charges?: number | null
+          municipal_authority?: string | null
+          ownership?: Database["public"]["Enums"]["ownership_type"] | null
+          printing_charges?: number | null
+          search_tokens?: string[] | null
+          state?: string | null
+          status?: Database["public"]["Enums"]["media_asset_status"]
+          total_sqft?: number | null
+          updated_at?: string | null
+          vendor_details?: Json | null
+        }
+        Update: {
+          ad_tax?: number | null
+          area?: string
+          base_margin?: number | null
+          base_rent?: number | null
+          card_rate?: number
+          category?: Database["public"]["Enums"]["media_category"]
+          city?: string
+          concession_fee?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          dimensions?: string
+          direction?: string | null
+          district?: string | null
+          electricity?: number | null
+          faces?: Json | null
+          google_street_view_url?: string | null
+          gst_percent?: number | null
+          id?: string
+          illumination?: string | null
+          image_urls?: string[] | null
+          images?: Json | null
+          is_multi_face?: boolean | null
+          is_public?: boolean | null
+          latitude?: number | null
+          location?: string
+          longitude?: number | null
+          maintenance?: number | null
+          media_id?: string | null
+          media_type?: string
+          mounting_charges?: number | null
+          municipal_authority?: string | null
+          ownership?: Database["public"]["Enums"]["ownership_type"] | null
+          printing_charges?: number | null
+          search_tokens?: string[] | null
+          state?: string | null
+          status?: Database["public"]["Enums"]["media_asset_status"]
+          total_sqft?: number | null
+          updated_at?: string | null
+          vendor_details?: Json | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -74,6 +200,9 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      media_asset_status: "Available" | "Booked" | "Blocked" | "Maintenance"
+      media_category: "OOH" | "DOOH" | "Transit"
+      ownership_type: "own" | "rented"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -202,6 +331,9 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      media_asset_status: ["Available", "Booked", "Blocked", "Maintenance"],
+      media_category: ["OOH", "DOOH", "Transit"],
+      ownership_type: ["own", "rented"],
     },
   },
 } as const

@@ -37,6 +37,7 @@ export function ImportDialog({ onImportComplete }: ImportDialogProps) {
 
       let successCount = 0;
       let errorCount = 0;
+      let skippedCount = 0;
 
       for (const row of jsonData as any[]) {
         try {
@@ -78,9 +79,23 @@ export function ImportDialog({ onImportComplete }: ImportDialogProps) {
             }
           });
 
+          // Check if record already exists
+          const { data: existing } = await supabase
+            .from('media_assets')
+            .select('id')
+            .eq('id', asset.id)
+            .maybeSingle();
+
+          if (existing) {
+            console.log(`Row ${jsonData.indexOf(row) + 1}: Skipped - Record already exists (ID: ${asset.id})`);
+            skippedCount++;
+            continue;
+          }
+
+          // Insert only if it doesn't exist
           const { error } = await supabase
             .from('media_assets')
-            .upsert(asset, { onConflict: 'id' });
+            .insert(asset);
 
           if (error) {
             console.error(`Row ${jsonData.indexOf(row) + 1}: Failed - ${error.message}`);
@@ -96,7 +111,7 @@ export function ImportDialog({ onImportComplete }: ImportDialogProps) {
 
       toast({
         title: "Import Complete",
-        description: `Successfully imported ${successCount} assets. ${errorCount} errors.`,
+        description: `Successfully imported ${successCount} assets. ${skippedCount} skipped (already exist). ${errorCount} errors.`,
       });
 
       setIsOpen(false);

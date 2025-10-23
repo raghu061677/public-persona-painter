@@ -3,30 +3,18 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { AssetDetails } from "@/components/media-assets/asset-details";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function MediaAssetDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [asset, setAsset] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    checkAdminStatus();
     fetchAsset();
   }, [id]);
-
-  const checkAdminStatus = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      setIsAdmin(data?.role === 'admin');
-    }
-  };
 
   const fetchAsset = async () => {
     setLoading(true);

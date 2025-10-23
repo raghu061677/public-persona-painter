@@ -20,12 +20,13 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function ClientsList() {
+  const { isAdmin } = useAuth();
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     id: "",
@@ -38,21 +39,8 @@ export default function ClientsList() {
   });
 
   useEffect(() => {
-    checkAdminStatus();
     fetchClients();
   }, []);
-
-  const checkAdminStatus = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
-      setIsAdmin(data?.role === 'admin');
-    }
-  };
 
   const fetchClients = async () => {
     setLoading(true);

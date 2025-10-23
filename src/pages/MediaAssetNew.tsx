@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { computeTotalSqft, buildSearchTokens } from "@/utils/mediaAssets";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, Sparkles, Upload, X } from "lucide-react";
 
 const CITY_CODES = [
   { label: "Hyderabad", value: "HYD" },
@@ -34,8 +34,11 @@ export default function MediaAssetNew() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [cityCode, setCityCode] = useState("");
   const [mediaTypeCode, setMediaTypeCode] = useState("");
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     id: "",
     media_type: "",
@@ -138,6 +141,49 @@ export default function MediaAssetNew() {
     }
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setSelectedImages(prev => [...prev, ...files]);
+
+    // Create preview URLs
+    const newPreviewUrls = files.map(file => URL.createObjectURL(file));
+    setImagePreviewUrls(prev => [...prev, ...newPreviewUrls]);
+  };
+
+  const removeImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    URL.revokeObjectURL(imagePreviewUrls[index]);
+    setImagePreviewUrls(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadImages = async (assetId: string) => {
+    if (selectedImages.length === 0) return [];
+
+    const uploadedUrls: string[] = [];
+
+    for (const file of selectedImages) {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${assetId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      
+      const { error: uploadError, data } = await supabase.storage
+        .from('hero-images')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('hero-images')
+        .getPublicUrl(fileName);
+
+      uploadedUrls.push(publicUrl);
+    }
+
+    return uploadedUrls;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -145,6 +191,11 @@ export default function MediaAssetNew() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
+
+      // Upload images first if any
+      setUploading(true);
+      const imageUrls = await uploadImages(formData.id);
+      setUploading(false);
 
       // Compute total sqft and search tokens
       const total_sqft = computeTotalSqft(formData.dimensions);
@@ -158,6 +209,7 @@ export default function MediaAssetNew() {
 
       const { error } = await supabase.from('media_assets').insert({
         ...formData,
+        image_urls: imageUrls,
         total_sqft,
         search_tokens,
         created_by: user.id,
@@ -191,6 +243,7 @@ export default function MediaAssetNew() {
       });
     } finally {
       setLoading(false);
+      setUploading(false);
     }
   };
 
@@ -482,6 +535,59 @@ export default function MediaAssetNew() {
             </CardContent>
           </Card>
 
+          {/* Image Upload */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Asset Images</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="image-upload" className="cursor-pointer">
+                  <div className="border-2 border-dashed rounded-lg p-8 hover:border-primary transition-colors text-center">
+                    <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Click to upload or drag and drop
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      PNG, JPG, WEBP up to 10MB each
+                    </p>
+                  </div>
+                  <Input
+                    id="image-upload"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleImageSelect}
+                  />
+                </Label>
+              </div>
+
+              {imagePreviewUrls.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {imagePreviewUrls.map((url, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={url}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg border"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeImage(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Actions */}
           <div className="flex justify-end gap-4">
             <Button
@@ -491,8 +597,8 @@ export default function MediaAssetNew() {
             >
               Cancel
             </Button>
-            <Button type="submit" variant="gradient" disabled={loading}>
-              {loading ? "Creating..." : "Create Asset"}
+            <Button type="submit" variant="gradient" disabled={loading || uploading}>
+              {uploading ? "Uploading Images..." : loading ? "Creating..." : "Create Asset"}
             </Button>
           </div>
         </form>

@@ -12,7 +12,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Eye, Trash2 } from "lucide-react";
+import { Plus, Search, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { getPlanStatusColor, formatDate } from "@/utils/plans";
 import { toast } from "@/hooks/use-toast";
@@ -55,7 +62,7 @@ export default function PlansList() {
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       setIsAdmin(data?.role === 'admin');
     }
   };
@@ -107,6 +114,57 @@ export default function PlansList() {
       toast({
         title: "Success",
         description: "Plan deleted successfully",
+      });
+      fetchPlans();
+    }
+  };
+
+  const handleShare = async (plan: any) => {
+    let shareToken = plan.share_token;
+    
+    if (!shareToken) {
+      const { data } = await supabase.rpc('generate_share_token');
+      shareToken = data;
+      
+      await supabase
+        .from('plans')
+        .update({ share_token: shareToken })
+        .eq('id', plan.id);
+    }
+
+    const shareUrl = `${window.location.origin}/admin/plans/${plan.id}/share/${shareToken}`;
+    await navigator.clipboard.writeText(shareUrl);
+    
+    toast({
+      title: "Public Link Copied",
+      description: "Share link copied to clipboard",
+    });
+  };
+
+  const handleCopy = async (id: string) => {
+    await navigator.clipboard.writeText(id);
+    toast({
+      title: "Copied",
+      description: "Plan ID copied to clipboard",
+    });
+  };
+
+  const handleBlock = async (id: string) => {
+    const { error } = await supabase
+      .from('plans')
+      .update({ status: 'Rejected' })
+      .eq('id', id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reject plan",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Plan rejected successfully",
       });
       fetchPlans();
     }
@@ -198,15 +256,44 @@ export default function PlansList() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {isAdmin && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(plan.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            {isAdmin && (
+                              <>
+                                <DropdownMenuItem onClick={() => handleDelete(plan.id)}>
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleBlock(plan.id)}>
+                                  <Ban className="mr-2 h-4 w-4" />
+                                  Reject
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                              </>
+                            )}
+                            <DropdownMenuItem onClick={() => handleCopy(plan.id)}>
+                              <Copy className="mr-2 h-4 w-4" />
+                              Copy ID
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleShare(plan)}>
+                              <Share2 className="mr-2 h-4 w-4" />
+                              Share
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleShare(plan)}>
+                              <ExternalLink className="mr-2 h-4 w-4" />
+                              Public Link
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate(`/admin/plans/${plan.id}`)}>
+                              <Activity className="mr-2 h-4 w-4" />
+                              Activity
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>

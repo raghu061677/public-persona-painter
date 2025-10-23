@@ -22,7 +22,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Share2, Trash2, Copy, Rocket } from "lucide-react";
+import { ArrowLeft, Share2, Trash2, Copy, Rocket, MoreVertical, Ban, Activity, ExternalLink, Download, FileText } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { getPlanStatusColor, formatDate } from "@/utils/plans";
 import { generateCampaignId } from "@/utils/campaigns";
@@ -56,7 +63,7 @@ export default function PlanDetail() {
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       setIsAdmin(data?.role === 'admin');
     }
   };
@@ -110,9 +117,38 @@ export default function PlanDetail() {
     await navigator.clipboard.writeText(shareUrl);
     
     toast({
-      title: "Link Copied",
+      title: "Public Link Copied",
       description: "Share link copied to clipboard",
     });
+  };
+
+  const handleCopyId = async () => {
+    await navigator.clipboard.writeText(plan.id);
+    toast({
+      title: "Copied",
+      description: "Plan ID copied to clipboard",
+    });
+  };
+
+  const handleBlock = async () => {
+    const { error } = await supabase
+      .from('plans')
+      .update({ status: 'Rejected' })
+      .eq('id', id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reject plan",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Plan rejected successfully",
+      });
+      fetchPlan();
+    }
   };
 
   const handleDelete = async () => {
@@ -310,14 +346,58 @@ export default function PlanDetail() {
                   </DialogContent>
                 </Dialog>
               )}
-              <Button variant="outline" size="sm" onClick={generateShareLink}>
-                <Share2 className="mr-2 h-4 w-4" />
-                Share Link
-              </Button>
-              <Button variant="destructive" size="sm" onClick={handleDelete}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <MoreVertical className="mr-2 h-4 w-4" />
+                    Actions
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={handleDelete}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleBlock}>
+                    <Ban className="mr-2 h-4 w-4" />
+                    Reject
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleCopyId}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy ID
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={generateShareLink}>
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Share
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={generateShareLink}>
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Public Link
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <Activity className="mr-2 h-4 w-4" />
+                    Activity
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download PPTx
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Photos
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Quotation, PI, WO
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )}
         </div>

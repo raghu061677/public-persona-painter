@@ -152,6 +152,16 @@ export default function MediaAssetEdit() {
     setFormData((prev: any) => ({ ...prev, [field]: value }));
   };
 
+  // Auto-calculate total_sqft when dimensions change
+  useEffect(() => {
+    if (formData?.dimensions) {
+      const calculatedSqft = computeTotalSqft(formData.dimensions);
+      if (calculatedSqft !== formData.total_sqft) {
+        setFormData((prev: any) => ({ ...prev, total_sqft: calculatedSqft }));
+      }
+    }
+  }, [formData?.dimensions]);
+
   if (fetching) {
     return (
       <div className="flex-1 space-y-4 p-4 sm:p-8 pt-6">

@@ -1,21 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Combobox } from "@/components/ui/combobox";
+import { VendorDetailsForm } from "@/components/media-assets/vendor-details-form";
 import { toast } from "@/hooks/use-toast";
-import { computeTotalSqft, buildSearchTokens } from "@/utils/mediaAssets";
-import { ArrowLeft, Save } from "lucide-react";
+import { parseDimensions, buildSearchTokens } from "@/utils/mediaAssets";
+import { ArrowLeft, Save, Image as ImageIcon, Calendar as CalendarIcon, ExternalLink } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { format } from "date-fns";
+
+type ImageField = 'geoTaggedPhoto' | 'newspaperPhoto' | 'trafficPhoto1' | 'trafficPhoto2';
 
 export default function MediaAssetEdit() {
   const { id } = useParams();
@@ -23,6 +25,19 @@ export default function MediaAssetEdit() {
   const { isAdmin } = useAuth();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [municipalAuthorities, setMunicipalAuthorities] = useState<{ label: string; value: string }[]>([]);
+  const [imageFiles, setImageFiles] = useState<Record<ImageField, File | null>>({
+    geoTaggedPhoto: null,
+    newspaperPhoto: null,
+    trafficPhoto1: null,
+    trafficPhoto2: null,
+  });
+  const [imagePreviews, setImagePreviews] = useState<Record<ImageField, string>>({
+    geoTaggedPhoto: '',
+    newspaperPhoto: '',
+    trafficPhoto1: '',
+    trafficPhoto2: '',
+  });
   const [formData, setFormData] = useState<any>(null);
 
   useEffect(() => {
@@ -37,6 +52,52 @@ export default function MediaAssetEdit() {
     }
     fetchAsset();
   }, [id, isAdmin]);
+
+  // Fetch municipal authorities
+  useEffect(() => {
+    async function fetchAuthorities() {
+      const { data } = await supabase
+        .from('media_assets')
+        .select('municipal_authority')
+        .not('municipal_authority', 'is', null)
+        .limit(100);
+      
+      if (data) {
+        const unique = Array.from(new Set(data.map(d => d.municipal_authority).filter(Boolean)));
+        setMunicipalAuthorities(unique.map(auth => ({ label: auth as string, value: auth as string })));
+      }
+    }
+    fetchAuthorities();
+  }, []);
+
+  // Auto-update total_sqft when dimensions change
+  useEffect(() => {
+    if (formData?.dimensions) {
+      const parsed = parseDimensions(formData.dimensions);
+      if (parsed.totalSqft !== formData.total_sqft) {
+        setFormData((prev: any) => ({ 
+          ...prev, 
+          total_sqft: parsed.totalSqft,
+          is_multi_face: parsed.isMultiFace,
+          faces: parsed.faces,
+        }));
+      }
+    }
+  }, [formData?.dimensions]);
+
+  // Auto-update Street View URL when lat/lng changes
+  useEffect(() => {
+    if (formData) {
+      const lat = parseFloat(formData.latitude);
+      const lng = parseFloat(formData.longitude);
+      if (!isNaN(lat) && !isNaN(lng) && lat && lng) {
+        const url = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}&heading=-45&pitch=0&fov=80`;
+        if (formData.google_street_view_url !== url) {
+          setFormData((prev: any) => ({ ...prev, google_street_view_url: url }));
+        }
+      }
+    }
+  }, [formData?.latitude, formData?.longitude]);
 
   const fetchAsset = async () => {
     setFetching(true);
@@ -54,6 +115,17 @@ export default function MediaAssetEdit() {
       });
       navigate('/admin/media-assets');
     } else {
+      // Load existing images into previews
+      if (data.images) {
+        const newPreviews: any = {};
+        Object.keys(imageFiles).forEach((key) => {
+          if (data.images[key]?.url) {
+            newPreviews[key] = data.images[key].url;
+          }
+        });
+        setImagePreviews(prev => ({ ...prev, ...newPreviews }));
+      }
+
       // Convert numeric values to strings for form inputs
       const formattedData = {
         ...data,
@@ -69,10 +141,58 @@ export default function MediaAssetEdit() {
         ad_tax: data.ad_tax?.toString() || "",
         electricity: data.electricity?.toString() || "",
         maintenance: data.maintenance?.toString() || "",
+        vendor_details: data.vendor_details || {},
+        consumer_name: data.consumer_name || "",
+        service_number: data.service_number || "",
+        unique_service_number: data.unique_service_number || "",
+        ero: data.ero || "",
+        section_name: data.section_name || "",
       };
       setFormData(formattedData);
     }
     setFetching(false);
+  };
+
+  const handleImageSelect = (file: File, field: ImageField) => {
+    if (!file) return;
+    const localUrl = URL.createObjectURL(file);
+    
+    setImageFiles(prev => ({ ...prev, [field]: file }));
+    setImagePreviews(prev => ({ ...prev, [field]: localUrl }));
+  };
+
+  const uploadImages = async (assetId: string) => {
+    const imageData: any = { ...(formData.images || {}) };
+    
+    for (const key of Object.keys(imageFiles) as ImageField[]) {
+      const file = imageFiles[key];
+      if (file) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${assetId}/${key}_${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('hero-images')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('hero-images')
+          .getPublicUrl(fileName);
+
+        imageData[key] = {
+          url: publicUrl,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+        };
+      }
+    }
+    
+    return imageData;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -83,8 +203,10 @@ export default function MediaAssetEdit() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Compute total sqft and search tokens
-      const total_sqft = computeTotalSqft(formData.dimensions);
+      // Upload any new images
+      const images = await uploadImages(formData.id);
+
+      const parsed = parseDimensions(formData.dimensions);
       const search_tokens = buildSearchTokens([
         formData.id,
         formData.media_id,
@@ -97,22 +219,23 @@ export default function MediaAssetEdit() {
         .from('media_assets')
         .update({
           media_type: formData.media_type,
-          media_id: formData.media_id,
+          media_id: formData.media_id || null,
           status: formData.status,
           category: formData.category,
           location: formData.location,
           area: formData.area,
           city: formData.city,
-          district: formData.district,
-          state: formData.state,
+          district: formData.district || null,
+          state: formData.state || null,
           latitude: formData.latitude ? parseFloat(formData.latitude) : null,
           longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-          direction: formData.direction,
-          google_street_view_url: formData.google_street_view_url,
+          direction: formData.direction || null,
+          google_street_view_url: formData.google_street_view_url || null,
           dimensions: formData.dimensions,
-          total_sqft,
-          illumination: formData.illumination,
-          is_multi_face: formData.is_multi_face,
+          total_sqft: parsed.totalSqft,
+          illumination: formData.illumination || null,
+          is_multi_face: parsed.isMultiFace,
+          faces: parsed.faces,
           card_rate: parseFloat(formData.card_rate),
           base_rent: formData.base_rent ? parseFloat(formData.base_rent) : null,
           base_margin: formData.base_margin ? parseFloat(formData.base_margin) : null,
@@ -124,8 +247,10 @@ export default function MediaAssetEdit() {
           electricity: formData.electricity ? parseFloat(formData.electricity) : null,
           maintenance: formData.maintenance ? parseFloat(formData.maintenance) : null,
           ownership: formData.ownership,
-          municipal_authority: formData.municipal_authority,
+          municipal_authority: formData.municipal_authority || null,
           is_public: formData.is_public,
+          vendor_details: formData.ownership === 'rented' ? formData.vendor_details : null,
+          images: images,
           search_tokens,
         })
         .eq('id', id);
@@ -152,15 +277,36 @@ export default function MediaAssetEdit() {
     setFormData((prev: any) => ({ ...prev, [field]: value }));
   };
 
-  // Auto-calculate total_sqft when dimensions change
-  useEffect(() => {
-    if (formData?.dimensions) {
-      const calculatedSqft = computeTotalSqft(formData.dimensions);
-      if (calculatedSqft !== formData.total_sqft) {
-        setFormData((prev: any) => ({ ...prev, total_sqft: calculatedSqft }));
-      }
-    }
-  }, [formData?.dimensions]);
+  const ImageUploader = ({ field, label }: { field: ImageField; label: string }) => {
+    const fileRef = useRef<HTMLInputElement>(null);
+    const imgUrl = imagePreviews[field];
+
+    return (
+      <div className="space-y-2">
+        <Label>{label}</Label>
+        <input
+          type="file"
+          ref={fileRef}
+          onChange={(e) => e.target.files && handleImageSelect(e.target.files[0], field)}
+          className="hidden"
+          accept="image/*"
+        />
+        <div
+          className="relative aspect-video w-full border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary"
+          onClick={() => fileRef.current?.click()}
+        >
+          {imgUrl ? (
+            <img src={imgUrl} alt={label} className="object-cover w-full h-full rounded-md" />
+          ) : (
+            <>
+              <ImageIcon className="h-8 w-8 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground mt-1">Click to upload</p>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   if (fetching) {
     return (
@@ -176,21 +322,29 @@ export default function MediaAssetEdit() {
     return null;
   }
 
+  const showPowerFields = formData.illumination && ['Frontlit', 'Backlit', 'Digital'].includes(formData.illumination);
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-6 py-8 max-w-4xl">
-        <Button
-          variant="ghost"
-          onClick={() => navigate(`/admin/media-assets/${id}`)}
-          className="mb-6"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Details
+    <form onSubmit={handleSubmit} className="container mx-auto px-6 py-8 max-w-6xl">
+      <header className="flex items-center justify-between pb-4 mb-4 border-b">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" onClick={() => navigate(`/admin/media-assets/${id}`)} type="button">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Edit Media Asset</h1>
+            <p className="text-sm text-muted-foreground font-mono">{formData.id}</p>
+          </div>
+        </div>
+        <Button type="submit" disabled={loading}>
+          <Save className="mr-2 h-4 w-4" />
+          {loading ? 'Saving...' : 'Save Changes'}
         </Button>
+      </header>
 
-        <h1 className="text-3xl font-bold mb-8">Edit Media Asset - {formData.id}</h1>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* LEFT COLUMN */}
+        <div className="lg:col-span-2 space-y-8">
           {/* Basic Information */}
           <Card>
             <CardHeader>
@@ -198,25 +352,46 @@ export default function MediaAssetEdit() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="media_id">Media ID</Label>
-                <Input
-                  id="media_id"
-                  value={formData.media_id || ""}
-                  onChange={(e) => updateField('media_id', e.target.value)}
-                  placeholder="Custom reference ID"
-                />
+                <Label>Asset ID</Label>
+                <Input value={formData.id} readOnly disabled />
               </div>
               <div>
-                <Label htmlFor="media_type">Media Type *</Label>
-                <Input
-                  id="media_type"
-                  required
-                  value={formData.media_type}
-                  onChange={(e) => updateField('media_type', e.target.value)}
-                />
+                <Label>Municipal Ref. ID</Label>
+                <Input value={formData.media_id} onChange={(e) => updateField('media_id', e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="status">Status</Label>
+                <Label>Media Type *</Label>
+                <Input required value={formData.media_type} onChange={(e) => updateField('media_type', e.target.value)} />
+              </div>
+              <div>
+                <Label>Category</Label>
+                <Select value={formData.category} onValueChange={(v) => updateField('category', v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="OOH">OOH</SelectItem>
+                    <SelectItem value="DOOH">DOOH</SelectItem>
+                    <SelectItem value="Transit">Transit</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Illumination</Label>
+                <Select value={formData.illumination || ''} onValueChange={(v) => updateField('illumination', v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Non-lit">Non-lit</SelectItem>
+                    <SelectItem value="Frontlit">Frontlit</SelectItem>
+                    <SelectItem value="Backlit">Backlit</SelectItem>
+                    <SelectItem value="Digital">Digital</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Status</Label>
                 <Select value={formData.status} onValueChange={(v) => updateField('status', v)}>
                   <SelectTrigger>
                     <SelectValue />
@@ -226,19 +401,6 @@ export default function MediaAssetEdit() {
                     <SelectItem value="Booked">Booked</SelectItem>
                     <SelectItem value="Blocked">Blocked</SelectItem>
                     <SelectItem value="Maintenance">Maintenance</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="category">Category</Label>
-                <Select value={formData.category} onValueChange={(v) => updateField('category', v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="OOH">OOH</SelectItem>
-                    <SelectItem value="DOOH">DOOH</SelectItem>
-                    <SelectItem value="Transit">Transit</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -252,84 +414,49 @@ export default function MediaAssetEdit() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <Label htmlFor="location">Location *</Label>
-                <Input
-                  id="location"
-                  required
-                  value={formData.location}
-                  onChange={(e) => updateField('location', e.target.value)}
-                />
+                <Label>Location *</Label>
+                <Input required value={formData.location} onChange={(e) => updateField('location', e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="area">Area *</Label>
-                <Input
-                  id="area"
-                  required
-                  value={formData.area}
-                  onChange={(e) => updateField('area', e.target.value)}
-                />
+                <Label>Area *</Label>
+                <Input required value={formData.area} onChange={(e) => updateField('area', e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="city">City *</Label>
-                <Input
-                  id="city"
-                  required
-                  value={formData.city}
-                  onChange={(e) => updateField('city', e.target.value)}
-                />
+                <Label>City *</Label>
+                <Input required value={formData.city} onChange={(e) => updateField('city', e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="district">District</Label>
-                <Input
-                  id="district"
-                  value={formData.district || ""}
-                  onChange={(e) => updateField('district', e.target.value)}
-                />
+                <Label>District</Label>
+                <Input value={formData.district || ''} onChange={(e) => updateField('district', e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="state">State</Label>
-                <Input
-                  id="state"
-                  value={formData.state || ""}
-                  onChange={(e) => updateField('state', e.target.value)}
-                />
+                <Label>State</Label>
+                <Input value={formData.state || ''} onChange={(e) => updateField('state', e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="latitude">Latitude</Label>
-                <Input
-                  id="latitude"
-                  type="number"
-                  step="any"
-                  value={formData.latitude}
-                  onChange={(e) => updateField('latitude', e.target.value)}
-                />
+                <Label>Latitude</Label>
+                <Input type="number" step="any" value={formData.latitude} onChange={(e) => updateField('latitude', e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="longitude">Longitude</Label>
-                <Input
-                  id="longitude"
-                  type="number"
-                  step="any"
-                  value={formData.longitude}
-                  onChange={(e) => updateField('longitude', e.target.value)}
-                />
+                <Label>Longitude</Label>
+                <Input type="number" step="any" value={formData.longitude} onChange={(e) => updateField('longitude', e.target.value)} />
               </div>
               <div className="md:col-span-2">
-                <Label htmlFor="direction">Direction</Label>
-                <Input
-                  id="direction"
-                  value={formData.direction || ""}
-                  onChange={(e) => updateField('direction', e.target.value)}
-                  placeholder="e.g., Towards City Center"
-                />
+                <Label>Direction</Label>
+                <Input value={formData.direction || ''} onChange={(e) => updateField('direction', e.target.value)} placeholder="e.g., Towards City Center" />
               </div>
               <div className="md:col-span-2">
-                <Label htmlFor="google_street_view_url">Google Street View URL</Label>
-                <Input
-                  id="google_street_view_url"
-                  value={formData.google_street_view_url || ""}
-                  onChange={(e) => updateField('google_street_view_url', e.target.value)}
-                />
+                <Label>Google Street View URL</Label>
+                <div className="flex gap-2">
+                  <Input value={formData.google_street_view_url || ''} onChange={(e) => updateField('google_street_view_url', e.target.value)} />
+                  {formData.google_street_view_url && (
+                    <Button variant="ghost" size="icon" asChild type="button">
+                      <a href={formData.google_street_view_url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -341,179 +468,177 @@ export default function MediaAssetEdit() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="dimensions">Dimensions (W x H ft) *</Label>
-                <Input
-                  id="dimensions"
-                  required
-                  value={formData.dimensions}
-                  onChange={(e) => updateField('dimensions', e.target.value)}
-                  placeholder="e.g., 40x20"
-                />
-                {formData.dimensions && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Total: {computeTotalSqft(formData.dimensions)} sq ft
-                  </p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="illumination">Illumination</Label>
-                <Input
-                  id="illumination"
-                  value={formData.illumination || ""}
-                  onChange={(e) => updateField('illumination', e.target.value)}
-                  placeholder="e.g., Frontlit, Backlit"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Pricing */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Pricing & Costs</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="card_rate">Card Rate (₹/month) *</Label>
-                <Input
-                  id="card_rate"
-                  type="number"
-                  required
-                  value={formData.card_rate}
-                  onChange={(e) => updateField('card_rate', e.target.value)}
+                <Label>Dimensions (WxH) *</Label>
+                <Input 
+                  required 
+                  value={formData.dimensions} 
+                  onChange={(e) => updateField('dimensions', e.target.value)} 
+                  placeholder="e.g., 40x20 or 25x5-12x3 for multi-face"
                 />
               </div>
               <div>
-                <Label htmlFor="base_rent">Base Rent (₹)</Label>
-                <Input
-                  id="base_rent"
-                  type="number"
-                  value={formData.base_rent}
-                  onChange={(e) => updateField('base_rent', e.target.value)}
-                />
+                <Label>Total Sq.Ft</Label>
+                <Input value={formData.total_sqft || 0} readOnly disabled />
               </div>
-              <div>
-                <Label htmlFor="base_margin">Base Margin (%)</Label>
-                <Input
-                  id="base_margin"
-                  type="number"
-                  value={formData.base_margin}
-                  onChange={(e) => updateField('base_margin', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="gst_percent">GST (%)</Label>
-                <Input
-                  id="gst_percent"
-                  type="number"
-                  value={formData.gst_percent}
-                  onChange={(e) => updateField('gst_percent', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="printing_charges">Printing Charges (₹)</Label>
-                <Input
-                  id="printing_charges"
-                  type="number"
-                  value={formData.printing_charges}
-                  onChange={(e) => updateField('printing_charges', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="mounting_charges">Mounting Charges (₹)</Label>
-                <Input
-                  id="mounting_charges"
-                  type="number"
-                  value={formData.mounting_charges}
-                  onChange={(e) => updateField('mounting_charges', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="concession_fee">Concession Fee (₹)</Label>
-                <Input
-                  id="concession_fee"
-                  type="number"
-                  value={formData.concession_fee}
-                  onChange={(e) => updateField('concession_fee', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="ad_tax">Ad Tax (₹)</Label>
-                <Input
-                  id="ad_tax"
-                  type="number"
-                  value={formData.ad_tax}
-                  onChange={(e) => updateField('ad_tax', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="electricity">Electricity (₹)</Label>
-                <Input
-                  id="electricity"
-                  type="number"
-                  value={formData.electricity}
-                  onChange={(e) => updateField('electricity', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="maintenance">Maintenance (₹)</Label>
-                <Input
-                  id="maintenance"
-                  type="number"
-                  value={formData.maintenance}
-                  onChange={(e) => updateField('maintenance', e.target.value)}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Ownership */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Ownership</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="ownership">Ownership Type</Label>
-                <Select value={formData.ownership} onValueChange={(v) => updateField('ownership', v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="own">Own</SelectItem>
-                    <SelectItem value="vendor">Vendor</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {formData.ownership === 'own' && (
-                <div>
-                  <Label htmlFor="municipal_authority">Municipal Authority</Label>
-                  <Input
-                    id="municipal_authority"
-                    value={formData.municipal_authority || ""}
-                    onChange={(e) => updateField('municipal_authority', e.target.value)}
-                  />
+              
+              {formData.is_multi_face && formData.faces?.length > 0 && (
+                <div className="md:col-span-2 space-y-2 rounded-lg border p-4 bg-muted/50">
+                  <h4 className="font-medium text-sm">Face Breakdown</h4>
+                  {formData.faces.map((face: any, index: number) => (
+                    <div key={index} className="flex justify-between items-center text-sm p-2 rounded-md bg-background">
+                      <span>{face.label}</span>
+                      <span>{face.width}ft x {face.height}ft</span>
+                      <span className="font-semibold">{(face.width * face.height).toFixed(2)} sq.ft</span>
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate(`/admin/media-assets/${id}`)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              <Save className="mr-2 h-4 w-4" />
-              {loading ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        </form>
+          {/* Financials */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Financials & Ownership</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <Label>Ownership</Label>
+                <Select value={formData.ownership || 'own'} onValueChange={(v) => updateField('ownership', v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="own">Own</SelectItem>
+                    <SelectItem value="rented">Rented</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {formData.ownership === 'own' && (
+                <div>
+                  <Label>Municipal Authority</Label>
+                  <Combobox
+                    options={municipalAuthorities}
+                    value={formData.municipal_authority || ''}
+                    onChange={(v) => updateField('municipal_authority', v)}
+                    placeholder="Select or create..."
+                  />
+                </div>
+              )}
+              <div>
+                <Label>Card Rate (₹/month) *</Label>
+                <Input type="number" required value={formData.card_rate} onChange={(e) => updateField('card_rate', e.target.value)} />
+              </div>
+              <div>
+                <Label>Base Rent (₹)</Label>
+                <Input type="number" value={formData.base_rent} onChange={(e) => updateField('base_rent', e.target.value)} />
+              </div>
+              <div>
+                <Label>Base Margin (%)</Label>
+                <Input type="number" value={formData.base_margin} onChange={(e) => updateField('base_margin', e.target.value)} />
+              </div>
+              <div>
+                <Label>GST (%)</Label>
+                <Input type="number" value={formData.gst_percent} onChange={(e) => updateField('gst_percent', e.target.value)} />
+              </div>
+              <div>
+                <Label>Printing Charges (₹)</Label>
+                <Input type="number" value={formData.printing_charges} onChange={(e) => updateField('printing_charges', e.target.value)} />
+              </div>
+              <div>
+                <Label>Mounting Charges (₹)</Label>
+                <Input type="number" value={formData.mounting_charges} onChange={(e) => updateField('mounting_charges', e.target.value)} />
+              </div>
+              <div>
+                <Label>Concession Fee (₹)</Label>
+                <Input type="number" value={formData.concession_fee} onChange={(e) => updateField('concession_fee', e.target.value)} />
+              </div>
+              <div>
+                <Label>Ad Tax (₹)</Label>
+                <Input type="number" value={formData.ad_tax} onChange={(e) => updateField('ad_tax', e.target.value)} />
+              </div>
+              <div>
+                <Label>Electricity (₹)</Label>
+                <Input type="number" value={formData.electricity} onChange={(e) => updateField('electricity', e.target.value)} />
+              </div>
+              <div>
+                <Label>Maintenance (₹)</Label>
+                <Input type="number" value={formData.maintenance} onChange={(e) => updateField('maintenance', e.target.value)} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Vendor Details (if rented) */}
+          {formData.ownership === 'rented' && (
+            <VendorDetailsForm
+              value={formData.vendor_details}
+              onChange={(vendorDetails) => updateField('vendor_details', vendorDetails)}
+            />
+          )}
+
+          {/* Power Details (conditional) */}
+          {showPowerFields && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Power Details</CardTitle>
+                <CardDescription>Electricity connection details for illuminated assets</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <Label>Consumer Name</Label>
+                  <Input value={formData.consumer_name} onChange={(e) => updateField('consumer_name', e.target.value)} />
+                </div>
+                <div>
+                  <Label>Service Number</Label>
+                  <Input value={formData.service_number} onChange={(e) => updateField('service_number', e.target.value)} />
+                </div>
+                <div>
+                  <Label>Unique Service Number</Label>
+                  <Input value={formData.unique_service_number} onChange={(e) => updateField('unique_service_number', e.target.value)} />
+                </div>
+                <div>
+                  <Label>ERO</Label>
+                  <Input value={formData.ero} onChange={(e) => updateField('ero', e.target.value)} />
+                </div>
+                <div>
+                  <Label>Section Name</Label>
+                  <Input value={formData.section_name} onChange={(e) => updateField('section_name', e.target.value)} />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* RIGHT COLUMN */}
+        <div className="lg:col-span-1 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Status & Visibility</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <Label>Visible on Public Site</Label>
+                  <p className="text-xs text-muted-foreground">Show on public map</p>
+                </div>
+                <Switch checked={formData.is_public ?? true} onCheckedChange={(checked) => updateField('is_public', checked)} />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Proof & Site Images</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <ImageUploader field="geoTaggedPhoto" label="Geo Tagged Photo" />
+              <ImageUploader field="newspaperPhoto" label="Newspaper Photo" />
+              <ImageUploader field="trafficPhoto1" label="Traffic Photo 1" />
+              <ImageUploader field="trafficPhoto2" label="Traffic Photo 2" />
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </form>
   );
 }

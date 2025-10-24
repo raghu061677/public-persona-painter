@@ -1,20 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Combobox } from "@/components/ui/combobox";
+import { VendorDetailsForm } from "@/components/media-assets/vendor-details-form";
 import { toast } from "@/hooks/use-toast";
-import { computeTotalSqft, buildSearchTokens } from "@/utils/mediaAssets";
-import { ArrowLeft, Sparkles, Upload, X } from "lucide-react";
+import { parseDimensions, buildSearchTokens } from "@/utils/mediaAssets";
+import { ArrowLeft, Sparkles, Image as ImageIcon, Calendar as CalendarIcon, ExternalLink } from "lucide-react";
+import { format } from "date-fns";
 
 const CITY_CODES = [
   { label: "Hyderabad", value: "HYD" },
@@ -30,15 +30,28 @@ const MEDIA_TYPE_CODES = [
   { label: "Cantilever", value: "CNT", fullName: "Cantilever" },
 ];
 
+type ImageField = 'geoTaggedPhoto' | 'newspaperPhoto' | 'trafficPhoto1' | 'trafficPhoto2';
+
 export default function MediaAssetNew() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [cityCode, setCityCode] = useState("");
   const [mediaTypeCode, setMediaTypeCode] = useState("");
-  const [selectedImages, setSelectedImages] = useState<File[]>([]);
-  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
+  const [municipalAuthorities, setMunicipalAuthorities] = useState<{ label: string; value: string }[]>([]);
+  const [imageFiles, setImageFiles] = useState<Record<ImageField, File | null>>({
+    geoTaggedPhoto: null,
+    newspaperPhoto: null,
+    trafficPhoto1: null,
+    trafficPhoto2: null,
+  });
+  const [imagePreviews, setImagePreviews] = useState<Record<ImageField, string>>({
+    geoTaggedPhoto: '',
+    newspaperPhoto: '',
+    trafficPhoto1: '',
+    trafficPhoto2: '',
+  });
+  
   const [formData, setFormData] = useState({
     id: "",
     media_type: "",
@@ -70,6 +83,17 @@ export default function MediaAssetNew() {
     ownership: "own",
     municipal_authority: "",
     is_public: true,
+    vendor_details: {},
+    // Power fields
+    consumer_name: "",
+    service_number: "",
+    unique_service_number: "",
+    ero: "",
+    section_name: "",
+    // Date fields
+    site_photo_date: null as Date | null,
+    site_end_date: null as Date | null,
+    available_from: null as Date | null,
   });
 
   // Auto-populate city and media_type when codes are selected
@@ -87,6 +111,48 @@ export default function MediaAssetNew() {
     }
   }, [mediaTypeCode]);
 
+  // Fetch municipal authorities
+  useEffect(() => {
+    async function fetchAuthorities() {
+      const { data } = await supabase
+        .from('media_assets')
+        .select('municipal_authority')
+        .not('municipal_authority', 'is', null)
+        .limit(100);
+      
+      if (data) {
+        const unique = Array.from(new Set(data.map(d => d.municipal_authority).filter(Boolean)));
+        setMunicipalAuthorities(unique.map(auth => ({ label: auth as string, value: auth as string })));
+      }
+    }
+    fetchAuthorities();
+  }, []);
+
+  // Auto-update Street View URL when lat/lng changes
+  useEffect(() => {
+    const lat = parseFloat(formData.latitude);
+    const lng = parseFloat(formData.longitude);
+    if (!isNaN(lat) && !isNaN(lng) && lat && lng) {
+      const url = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}&heading=-45&pitch=0&fov=80`;
+      if (formData.google_street_view_url !== url) {
+        setFormData(prev => ({ ...prev, google_street_view_url: url }));
+      }
+    }
+  }, [formData.latitude, formData.longitude]);
+
+  // Parse dimensions and update faces/sqft
+  useEffect(() => {
+    if (formData.dimensions) {
+      const parsed = parseDimensions(formData.dimensions);
+      setFormData(prev => ({
+        ...prev,
+        is_multi_face: parsed.isMultiFace,
+        faces: parsed.faces,
+        total_sqft: parsed.totalSqft,
+      }) as any);
+    }
+  }, [formData.dimensions]);
+
   const generateAssetId = async () => {
     if (!cityCode || !mediaTypeCode) {
       toast({
@@ -99,7 +165,6 @@ export default function MediaAssetNew() {
 
     setGenerating(true);
     try {
-      // Query existing assets with the same city and media type pattern
       const pattern = `${cityCode}-${mediaTypeCode}-%`;
       const { data, error } = await supabase
         .from('media_assets')
@@ -112,7 +177,6 @@ export default function MediaAssetNew() {
 
       let nextSerial = 1;
       if (data && data.length > 0) {
-        // Extract the serial number from the last ID
         const lastId = data[0].id;
         const parts = lastId.split('-');
         if (parts.length === 3) {
@@ -141,47 +205,46 @@ export default function MediaAssetNew() {
     }
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setSelectedImages(prev => [...prev, ...files]);
-
-    // Create preview URLs
-    const newPreviewUrls = files.map(file => URL.createObjectURL(file));
-    setImagePreviewUrls(prev => [...prev, ...newPreviewUrls]);
-  };
-
-  const removeImage = (index: number) => {
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
-    URL.revokeObjectURL(imagePreviewUrls[index]);
-    setImagePreviewUrls(prev => prev.filter((_, i) => i !== index));
+  const handleImageSelect = (file: File, field: ImageField) => {
+    if (!file) return;
+    const localUrl = URL.createObjectURL(file);
+    
+    setImageFiles(prev => ({ ...prev, [field]: file }));
+    setImagePreviews(prev => ({ ...prev, [field]: localUrl }));
   };
 
   const uploadImages = async (assetId: string) => {
-    if (selectedImages.length === 0) return [];
+    const imageData: any = {};
+    
+    for (const key of Object.keys(imageFiles) as ImageField[]) {
+      const file = imageFiles[key];
+      if (file) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${assetId}/${key}_${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('hero-images')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
-    const uploadedUrls: string[] = [];
+        if (uploadError) throw uploadError;
 
-    for (const file of selectedImages) {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${assetId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      
-      const { error: uploadError, data } = await supabase.storage
-        .from('hero-images')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
+        const { data: { publicUrl } } = supabase.storage
+          .from('hero-images')
+          .getPublicUrl(fileName);
 
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('hero-images')
-        .getPublicUrl(fileName);
-
-      uploadedUrls.push(publicUrl);
+        imageData[key] = {
+          url: publicUrl,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+        };
+      }
     }
-
-    return uploadedUrls;
+    
+    return imageData;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -192,13 +255,10 @@ export default function MediaAssetNew() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Upload images first if any
-      setUploading(true);
-      const imageUrls = await uploadImages(formData.id);
-      setUploading(false);
+      // Upload images
+      const images = await uploadImages(formData.id);
 
-      // Compute total sqft and search tokens
-      const total_sqft = computeTotalSqft(formData.dimensions);
+      const parsed = parseDimensions(formData.dimensions);
       const search_tokens = buildSearchTokens([
         formData.id,
         formData.media_id,
@@ -208,14 +268,25 @@ export default function MediaAssetNew() {
       ]);
 
       const { error } = await supabase.from('media_assets').insert({
-        ...formData,
-        image_urls: imageUrls,
-        total_sqft,
-        search_tokens,
-        created_by: user.id,
-        // Convert string numbers to actual numbers
+        id: formData.id,
+        media_type: formData.media_type,
+        media_id: formData.media_id || null,
+        status: formData.status,
+        category: formData.category,
+        location: formData.location,
+        area: formData.area,
+        city: formData.city,
+        district: formData.district || null,
+        state: formData.state || null,
         latitude: formData.latitude ? parseFloat(formData.latitude) : null,
         longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+        direction: formData.direction || null,
+        google_street_view_url: formData.google_street_view_url || null,
+        dimensions: formData.dimensions,
+        total_sqft: parsed.totalSqft,
+        illumination: formData.illumination || null,
+        is_multi_face: parsed.isMultiFace,
+        faces: parsed.faces,
         card_rate: parseFloat(formData.card_rate),
         base_rent: formData.base_rent ? parseFloat(formData.base_rent) : null,
         base_margin: formData.base_margin ? parseFloat(formData.base_margin) : null,
@@ -226,6 +297,13 @@ export default function MediaAssetNew() {
         ad_tax: formData.ad_tax ? parseFloat(formData.ad_tax) : null,
         electricity: formData.electricity ? parseFloat(formData.electricity) : null,
         maintenance: formData.maintenance ? parseFloat(formData.maintenance) : null,
+        ownership: formData.ownership,
+        municipal_authority: formData.municipal_authority || null,
+        is_public: formData.is_public,
+        vendor_details: formData.ownership === 'rented' ? formData.vendor_details : null,
+        images: images,
+        search_tokens,
+        created_by: user.id,
       } as any);
 
       if (error) throw error;
@@ -243,7 +321,6 @@ export default function MediaAssetNew() {
       });
     } finally {
       setLoading(false);
-      setUploading(false);
     }
   };
 
@@ -251,80 +328,103 @@ export default function MediaAssetNew() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-6 py-8 max-w-4xl">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/admin/media-assets')}
-          className="mb-6"
+  const ImageUploader = ({ field, label }: { field: ImageField; label: string }) => {
+    const fileRef = useRef<HTMLInputElement>(null);
+    const imgUrl = imagePreviews[field];
+
+    return (
+      <div className="space-y-2">
+        <Label>{label}</Label>
+        <input
+          type="file"
+          ref={fileRef}
+          onChange={(e) => e.target.files && handleImageSelect(e.target.files[0], field)}
+          className="hidden"
+          accept="image/*"
+        />
+        <div
+          className="relative aspect-video w-full border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary"
+          onClick={() => fileRef.current?.click()}
         >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to List
+          {imgUrl ? (
+            <img src={imgUrl} alt={label} className="object-cover w-full h-full rounded-md" />
+          ) : (
+            <>
+              <ImageIcon className="h-8 w-8 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground mt-1">Click to upload</p>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const showPowerFields = formData.illumination && ['Frontlit', 'Backlit', 'Digital'].includes(formData.illumination);
+
+  return (
+    <form onSubmit={handleSubmit} className="container mx-auto px-6 py-8 max-w-6xl">
+      <header className="flex items-center justify-between pb-4 mb-4 border-b">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" onClick={() => navigate('/admin/media-assets')} type="button">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Create Media Asset</h1>
+            {formData.id && <p className="text-sm text-muted-foreground font-mono">{formData.id}</p>}
+          </div>
+        </div>
+        <Button type="submit" disabled={loading || !formData.id}>
+          {loading ? 'Saving...' : 'Create Asset'}
         </Button>
+      </header>
 
-        <h1 className="text-3xl font-bold mb-8">Add New Media Asset</h1>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* ID Generator */}
-          <Card className="border-primary/20 bg-primary/5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* LEFT COLUMN */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* Auto-Generate ID */}
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                Auto-Generate Asset ID
-              </CardTitle>
+              <CardTitle>Auto-Generate Asset ID</CardTitle>
+              <CardDescription>Select city and media type to generate a unique ID</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="cityCode">City *</Label>
-                  <Select value={cityCode} onValueChange={setCityCode}>
-                    <SelectTrigger id="cityCode">
-                      <SelectValue placeholder="Select city" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CITY_CODES.map(city => (
-                        <SelectItem key={city.value} value={city.value}>
-                          {city.label} ({city.value})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="mediaTypeCode">Media Type *</Label>
-                  <Select value={mediaTypeCode} onValueChange={setMediaTypeCode}>
-                    <SelectTrigger id="mediaTypeCode">
-                      <SelectValue placeholder="Select media type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MEDIA_TYPE_CODES.map(type => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label} ({type.value})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label>City *</Label>
+                <Select value={cityCode} onValueChange={setCityCode}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select city..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CITY_CODES.map(c => (
+                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              
-              <Button 
-                type="button" 
-                onClick={generateAssetId} 
-                disabled={generating || !cityCode || !mediaTypeCode}
-                className="w-full"
-                variant="gradient"
-              >
-                <Sparkles className="mr-2 h-4 w-4" />
-                {generating ? "Generating..." : "Generate Asset ID"}
-              </Button>
-
-              {formData.id && (
-                <div className="p-4 bg-background rounded-lg border-2 border-primary">
-                  <Label className="text-xs text-muted-foreground">Generated Asset ID</Label>
-                  <p className="text-2xl font-bold text-primary mt-1">{formData.id}</p>
-                </div>
-              )}
+              <div>
+                <Label>Media Type *</Label>
+                <Select value={mediaTypeCode} onValueChange={setMediaTypeCode}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MEDIA_TYPE_CODES.map(m => (
+                      <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-end">
+                <Button 
+                  type="button" 
+                  onClick={generateAssetId} 
+                  disabled={!cityCode || !mediaTypeCode || generating}
+                  className="w-full"
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  {generating ? 'Generating...' : 'Generate ID'}
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -335,16 +435,46 @@ export default function MediaAssetNew() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="media_id">Media ID (Optional)</Label>
-                <Input
-                  id="media_id"
-                  value={formData.media_id}
-                  onChange={(e) => updateField('media_id', e.target.value)}
-                  placeholder="Custom reference ID"
-                />
+                <Label>Asset ID</Label>
+                <Input value={formData.id} readOnly disabled />
               </div>
               <div>
-                <Label htmlFor="status">Status</Label>
+                <Label>Municipal Ref. ID</Label>
+                <Input value={formData.media_id} onChange={(e) => updateField('media_id', e.target.value)} />
+              </div>
+              <div>
+                <Label>Media Type</Label>
+                <Input value={formData.media_type} readOnly disabled />
+              </div>
+              <div>
+                <Label>Category</Label>
+                <Select value={formData.category} onValueChange={(v) => updateField('category', v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="OOH">OOH</SelectItem>
+                    <SelectItem value="DOOH">DOOH</SelectItem>
+                    <SelectItem value="Transit">Transit</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Illumination</Label>
+                <Select value={formData.illumination} onValueChange={(v) => updateField('illumination', v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Non-lit">Non-lit</SelectItem>
+                    <SelectItem value="Frontlit">Frontlit</SelectItem>
+                    <SelectItem value="Backlit">Backlit</SelectItem>
+                    <SelectItem value="Digital">Digital</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Status</Label>
                 <Select value={formData.status} onValueChange={(v) => updateField('status', v)}>
                   <SelectTrigger>
                     <SelectValue />
@@ -354,19 +484,6 @@ export default function MediaAssetNew() {
                     <SelectItem value="Booked">Booked</SelectItem>
                     <SelectItem value="Blocked">Blocked</SelectItem>
                     <SelectItem value="Maintenance">Maintenance</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="category">Category</Label>
-                <Select value={formData.category} onValueChange={(v) => updateField('category', v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="OOH">OOH</SelectItem>
-                    <SelectItem value="DOOH">DOOH</SelectItem>
-                    <SelectItem value="Transit">Transit</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -380,69 +497,49 @@ export default function MediaAssetNew() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <Label htmlFor="location">Location *</Label>
-                <Input
-                  id="location"
-                  required
-                  value={formData.location}
-                  onChange={(e) => updateField('location', e.target.value)}
-                />
+                <Label>Location *</Label>
+                <Input required value={formData.location} onChange={(e) => updateField('location', e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="area">Area *</Label>
-                <Input
-                  id="area"
-                  required
-                  value={formData.area}
-                  onChange={(e) => updateField('area', e.target.value)}
-                />
+                <Label>Area *</Label>
+                <Input required value={formData.area} onChange={(e) => updateField('area', e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="city">City *</Label>
-                <Input
-                  id="city"
-                  required
-                  value={formData.city}
-                  onChange={(e) => updateField('city', e.target.value)}
-                  placeholder="Auto-filled from city selection"
-                  disabled={!!cityCode}
-                />
+                <Label>City</Label>
+                <Input value={formData.city} readOnly disabled />
               </div>
               <div>
-                <Label htmlFor="district">District</Label>
-                <Input
-                  id="district"
-                  value={formData.district}
-                  onChange={(e) => updateField('district', e.target.value)}
-                />
+                <Label>District</Label>
+                <Input value={formData.district} onChange={(e) => updateField('district', e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="state">State</Label>
-                <Input
-                  id="state"
-                  value={formData.state}
-                  onChange={(e) => updateField('state', e.target.value)}
-                />
+                <Label>State</Label>
+                <Input value={formData.state} onChange={(e) => updateField('state', e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="latitude">Latitude</Label>
-                <Input
-                  id="latitude"
-                  type="number"
-                  step="any"
-                  value={formData.latitude}
-                  onChange={(e) => updateField('latitude', e.target.value)}
-                />
+                <Label>Latitude</Label>
+                <Input type="number" step="any" value={formData.latitude} onChange={(e) => updateField('latitude', e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="longitude">Longitude</Label>
-                <Input
-                  id="longitude"
-                  type="number"
-                  step="any"
-                  value={formData.longitude}
-                  onChange={(e) => updateField('longitude', e.target.value)}
-                />
+                <Label>Longitude</Label>
+                <Input type="number" step="any" value={formData.longitude} onChange={(e) => updateField('longitude', e.target.value)} />
+              </div>
+              <div className="md:col-span-2">
+                <Label>Direction</Label>
+                <Input value={formData.direction} onChange={(e) => updateField('direction', e.target.value)} placeholder="e.g., Towards City Center" />
+              </div>
+              <div className="md:col-span-2">
+                <Label>Google Street View URL</Label>
+                <div className="flex gap-2">
+                  <Input value={formData.google_street_view_url} readOnly placeholder="Auto-generated from Lat/Lng" />
+                  {formData.google_street_view_url && (
+                    <Button variant="ghost" size="icon" asChild type="button">
+                      <a href={formData.google_street_view_url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -454,133 +551,27 @@ export default function MediaAssetNew() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="dimensions">Dimensions (W x H ft) *</Label>
-                <Input
-                  id="dimensions"
-                  required
-                  value={formData.dimensions}
-                  onChange={(e) => updateField('dimensions', e.target.value)}
-                  placeholder="e.g., 40x20"
-                />
-                {formData.dimensions && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Total: {computeTotalSqft(formData.dimensions)} sq ft
-                  </p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="illumination">Illumination</Label>
-                <Input
-                  id="illumination"
-                  value={formData.illumination}
-                  onChange={(e) => updateField('illumination', e.target.value)}
-                  placeholder="e.g., Frontlit, Backlit"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Pricing */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Pricing & Costs</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="card_rate">Card Rate (₹/month) *</Label>
-                <Input
-                  id="card_rate"
-                  type="number"
-                  required
-                  value={formData.card_rate}
-                  onChange={(e) => updateField('card_rate', e.target.value)}
+                <Label>Dimensions (WxH) *</Label>
+                <Input 
+                  required 
+                  value={formData.dimensions} 
+                  onChange={(e) => updateField('dimensions', e.target.value)} 
+                  placeholder="e.g., 40x20 or 25x5-12x3 for multi-face"
                 />
               </div>
               <div>
-                <Label htmlFor="base_rent">Base Rent (₹)</Label>
-                <Input
-                  id="base_rent"
-                  type="number"
-                  value={formData.base_rent}
-                  onChange={(e) => updateField('base_rent', e.target.value)}
-                />
+                <Label>Total Sq.Ft</Label>
+                <Input value={(formData as any).total_sqft || 0} readOnly disabled />
               </div>
-              <div>
-                <Label htmlFor="gst_percent">GST (%)</Label>
-                <Input
-                  id="gst_percent"
-                  type="number"
-                  value={formData.gst_percent}
-                  onChange={(e) => updateField('gst_percent', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="printing_charges">Printing Charges (₹)</Label>
-                <Input
-                  id="printing_charges"
-                  type="number"
-                  value={formData.printing_charges}
-                  onChange={(e) => updateField('printing_charges', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="mounting_charges">Mounting Charges (₹)</Label>
-                <Input
-                  id="mounting_charges"
-                  type="number"
-                  value={formData.mounting_charges}
-                  onChange={(e) => updateField('mounting_charges', e.target.value)}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Image Upload */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Asset Images</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="image-upload" className="cursor-pointer">
-                  <div className="border-2 border-dashed rounded-lg p-8 hover:border-primary transition-colors text-center">
-                    <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Click to upload or drag and drop
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      PNG, JPG, WEBP up to 10MB each
-                    </p>
-                  </div>
-                  <Input
-                    id="image-upload"
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={handleImageSelect}
-                  />
-                </Label>
-              </div>
-
-              {imagePreviewUrls.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {imagePreviewUrls.map((url, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={url}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg border"
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => removeImage(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+              
+              {(formData as any).is_multi_face && (formData as any).faces?.length > 0 && (
+                <div className="md:col-span-2 space-y-2 rounded-lg border p-4 bg-muted/50">
+                  <h4 className="font-medium text-sm">Face Breakdown</h4>
+                  {(formData as any).faces.map((face: any, index: number) => (
+                    <div key={index} className="flex justify-between items-center text-sm p-2 rounded-md bg-background">
+                      <span>{face.label}</span>
+                      <span>{face.width}ft x {face.height}ft</span>
+                      <span className="font-semibold">{(face.width * face.height).toFixed(2)} sq.ft</span>
                     </div>
                   ))}
                 </div>
@@ -588,21 +579,206 @@ export default function MediaAssetNew() {
             </CardContent>
           </Card>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate('/admin/media-assets')}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" variant="gradient" disabled={loading || uploading}>
-              {uploading ? "Uploading Images..." : loading ? "Creating..." : "Create Asset"}
-            </Button>
-          </div>
-        </form>
+          {/* Financials */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Financials & Ownership</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <Label>Ownership</Label>
+                <Select value={formData.ownership} onValueChange={(v) => updateField('ownership', v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="own">Own</SelectItem>
+                    <SelectItem value="rented">Rented</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {formData.ownership === 'own' && (
+                <div>
+                  <Label>Municipal Authority</Label>
+                  <Combobox
+                    options={municipalAuthorities}
+                    value={formData.municipal_authority}
+                    onChange={(v) => updateField('municipal_authority', v)}
+                    placeholder="Select or create..."
+                  />
+                </div>
+              )}
+              <div>
+                <Label>Card Rate (₹/month) *</Label>
+                <Input type="number" required value={formData.card_rate} onChange={(e) => updateField('card_rate', e.target.value)} />
+              </div>
+              <div>
+                <Label>Base Rent (₹)</Label>
+                <Input type="number" value={formData.base_rent} onChange={(e) => updateField('base_rent', e.target.value)} />
+              </div>
+              <div>
+                <Label>Base Margin (%)</Label>
+                <Input type="number" value={formData.base_margin} onChange={(e) => updateField('base_margin', e.target.value)} />
+              </div>
+              <div>
+                <Label>GST (%)</Label>
+                <Input type="number" value={formData.gst_percent} onChange={(e) => updateField('gst_percent', e.target.value)} />
+              </div>
+              <div>
+                <Label>Printing Charges (₹)</Label>
+                <Input type="number" value={formData.printing_charges} onChange={(e) => updateField('printing_charges', e.target.value)} />
+              </div>
+              <div>
+                <Label>Mounting Charges (₹)</Label>
+                <Input type="number" value={formData.mounting_charges} onChange={(e) => updateField('mounting_charges', e.target.value)} />
+              </div>
+              <div>
+                <Label>Concession Fee (₹)</Label>
+                <Input type="number" value={formData.concession_fee} onChange={(e) => updateField('concession_fee', e.target.value)} />
+              </div>
+              <div>
+                <Label>Ad Tax (₹)</Label>
+                <Input type="number" value={formData.ad_tax} onChange={(e) => updateField('ad_tax', e.target.value)} />
+              </div>
+              <div>
+                <Label>Electricity (₹)</Label>
+                <Input type="number" value={formData.electricity} onChange={(e) => updateField('electricity', e.target.value)} />
+              </div>
+              <div>
+                <Label>Maintenance (₹)</Label>
+                <Input type="number" value={formData.maintenance} onChange={(e) => updateField('maintenance', e.target.value)} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Vendor Details (if rented) */}
+          {formData.ownership === 'rented' && (
+            <VendorDetailsForm
+              value={formData.vendor_details as any}
+              onChange={(vendorDetails) => updateField('vendor_details', vendorDetails)}
+            />
+          )}
+
+          {/* Power Details (conditional) */}
+          {showPowerFields && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Power Details</CardTitle>
+                <CardDescription>Electricity connection details for illuminated assets</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <Label>Consumer Name</Label>
+                  <Input value={formData.consumer_name} onChange={(e) => updateField('consumer_name', e.target.value)} />
+                </div>
+                <div>
+                  <Label>Service Number</Label>
+                  <Input value={formData.service_number} onChange={(e) => updateField('service_number', e.target.value)} />
+                </div>
+                <div>
+                  <Label>Unique Service Number</Label>
+                  <Input value={formData.unique_service_number} onChange={(e) => updateField('unique_service_number', e.target.value)} />
+                </div>
+                <div>
+                  <Label>ERO</Label>
+                  <Input value={formData.ero} onChange={(e) => updateField('ero', e.target.value)} />
+                </div>
+                <div>
+                  <Label>Section Name</Label>
+                  <Input value={formData.section_name} onChange={(e) => updateField('section_name', e.target.value)} />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* RIGHT COLUMN */}
+        <div className="lg:col-span-1 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Status & Visibility</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <Label>Visible on Public Site</Label>
+                  <p className="text-xs text-muted-foreground">Show on public map</p>
+                </div>
+                <Switch checked={formData.is_public} onCheckedChange={(checked) => updateField('is_public', checked)} />
+              </div>
+              
+              <div>
+                <Label>Next Available From</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal" type="button">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.available_from ? format(formData.available_from, 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={formData.available_from || undefined}
+                      onSelect={(date) => updateField('available_from', date || null)}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div>
+                <Label>Site End Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal" type="button">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.site_end_date ? format(formData.site_end_date, 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={formData.site_end_date || undefined}
+                      onSelect={(date) => updateField('site_end_date', date || null)}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div>
+                <Label>Site Photo Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal" type="button">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.site_photo_date ? format(formData.site_photo_date, 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={formData.site_photo_date || undefined}
+                      onSelect={(date) => updateField('site_photo_date', date || null)}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Proof & Site Images</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <ImageUploader field="geoTaggedPhoto" label="Geo Tagged Photo" />
+              <ImageUploader field="newspaperPhoto" label="Newspaper Photo" />
+              <ImageUploader field="trafficPhoto1" label="Traffic Photo 1" />
+              <ImageUploader field="trafficPhoto2" label="Traffic Photo 2" />
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </form>
   );
 }

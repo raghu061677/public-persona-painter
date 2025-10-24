@@ -1,32 +1,56 @@
 // Utility functions for media assets
 
 /**
- * Parse dimensions string into width and height
- * Supports formats: "40x20", "40 X 20", "40*20", "40 x 20"
+ * Parse dimensions string supporting single and multi-face formats
+ * Single face: "40x20", "40 X 20"
+ * Multi-face: "25x5 - 12x3", "40x20-30x10"
  */
-export function parseDimensions(dimensions: string): { w: number; h: number } {
+export function parseDimensions(dimensions: string): {
+  faces: Array<{ width: number; height: number; label: string }>;
+  totalSqft: number;
+  isMultiFace: boolean;
+} {
   if (!dimensions || typeof dimensions !== 'string') {
-    return { w: 0, h: 0 };
+    return { faces: [], totalSqft: 0, isMultiFace: false };
   }
-  
+
   const cleaned = dimensions.trim();
-  // Match numbers with optional decimals separated by x, X, *, or ×
-  const separators = /[xX*×\s]+/;
-  const parts = cleaned.split(separators).filter(p => p).map(p => parseFloat(p.trim()));
   
-  if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1]) && parts[0] > 0 && parts[1] > 0) {
-    return { w: parts[0], h: parts[1] };
+  // Split by dash or hyphen to detect multi-face
+  const faceStrings = cleaned.split(/\s*[-–—]\s*/).filter(f => f.trim());
+  
+  if (faceStrings.length === 0) {
+    return { faces: [], totalSqft: 0, isMultiFace: false };
   }
-  
-  return { w: 0, h: 0 };
+
+  const faces = faceStrings.map((faceStr, index) => {
+    const separators = /[xX*×\s]+/;
+    const parts = faceStr.split(separators).filter(p => p).map(p => parseFloat(p.trim()));
+    
+    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1]) && parts[0] > 0 && parts[1] > 0) {
+      return {
+        width: parts[0],
+        height: parts[1],
+        label: faceStrings.length > 1 ? `Face ${index + 1}` : 'Main Face'
+      };
+    }
+    return null;
+  }).filter((f): f is { width: number; height: number; label: string } => f !== null);
+
+  const totalSqft = faces.reduce((sum, face) => sum + (face.width * face.height), 0);
+
+  return {
+    faces,
+    totalSqft: Math.round(totalSqft),
+    isMultiFace: faces.length > 1
+  };
 }
 
 /**
  * Compute total square feet from dimensions string
  */
 export function computeTotalSqft(dimensions: string): number {
-  const { w, h } = parseDimensions(dimensions);
-  return Math.round(w * h);
+  return parseDimensions(dimensions).totalSqft;
 }
 
 /**

@@ -589,12 +589,14 @@ export type Database = {
           category: Database["public"]["Enums"]["media_category"]
           city: string
           concession_fee: number | null
+          consumer_name: string | null
           created_at: string | null
           created_by: string | null
           dimensions: string
           direction: string | null
           district: string | null
           electricity: number | null
+          ero: string | null
           faces: Json | null
           google_street_view_url: string | null
           gst_percent: number | null
@@ -615,9 +617,12 @@ export type Database = {
           ownership: Database["public"]["Enums"]["ownership_type"] | null
           printing_charges: number | null
           search_tokens: string[] | null
+          section_name: string | null
+          service_number: string | null
           state: string | null
           status: Database["public"]["Enums"]["media_asset_status"]
           total_sqft: number | null
+          unique_service_number: string | null
           updated_at: string | null
           vendor_details: Json | null
         }
@@ -630,12 +635,14 @@ export type Database = {
           category?: Database["public"]["Enums"]["media_category"]
           city: string
           concession_fee?: number | null
+          consumer_name?: string | null
           created_at?: string | null
           created_by?: string | null
           dimensions: string
           direction?: string | null
           district?: string | null
           electricity?: number | null
+          ero?: string | null
           faces?: Json | null
           google_street_view_url?: string | null
           gst_percent?: number | null
@@ -656,9 +663,12 @@ export type Database = {
           ownership?: Database["public"]["Enums"]["ownership_type"] | null
           printing_charges?: number | null
           search_tokens?: string[] | null
+          section_name?: string | null
+          service_number?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["media_asset_status"]
           total_sqft?: number | null
+          unique_service_number?: string | null
           updated_at?: string | null
           vendor_details?: Json | null
         }
@@ -671,12 +681,14 @@ export type Database = {
           category?: Database["public"]["Enums"]["media_category"]
           city?: string
           concession_fee?: number | null
+          consumer_name?: string | null
           created_at?: string | null
           created_by?: string | null
           dimensions?: string
           direction?: string | null
           district?: string | null
           electricity?: number | null
+          ero?: string | null
           faces?: Json | null
           google_street_view_url?: string | null
           gst_percent?: number | null
@@ -697,9 +709,12 @@ export type Database = {
           ownership?: Database["public"]["Enums"]["ownership_type"] | null
           printing_charges?: number | null
           search_tokens?: string[] | null
+          section_name?: string | null
+          service_number?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["media_asset_status"]
           total_sqft?: number | null
+          unique_service_number?: string | null
           updated_at?: string | null
           vendor_details?: Json | null
         }

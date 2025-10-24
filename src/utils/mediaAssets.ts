@@ -2,14 +2,19 @@
 
 /**
  * Parse dimensions string into width and height
- * Supports formats: "40x20", "40 X 20", "40*20"
+ * Supports formats: "40x20", "40 X 20", "40*20", "40 x 20"
  */
 export function parseDimensions(dimensions: string): { w: number; h: number } {
-  const cleaned = dimensions.toLowerCase().trim();
-  const separators = /[x*×]/;
-  const parts = cleaned.split(separators).map(p => parseFloat(p.trim()));
+  if (!dimensions || typeof dimensions !== 'string') {
+    return { w: 0, h: 0 };
+  }
   
-  if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+  const cleaned = dimensions.trim();
+  // Match numbers with optional decimals separated by x, X, *, or ×
+  const separators = /[xX*×\s]+/;
+  const parts = cleaned.split(separators).filter(p => p).map(p => parseFloat(p.trim()));
+  
+  if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1]) && parts[0] > 0 && parts[1] > 0) {
     return { w: parts[0], h: parts[1] };
   }
   

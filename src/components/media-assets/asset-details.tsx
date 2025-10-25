@@ -96,18 +96,30 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
       </div>
 
       {/* Image Gallery */}
-      {asset.image_urls && asset.image_urls.length > 0 && (
+      {((asset.image_urls && asset.image_urls.length > 0) || (asset.images && Object.keys(asset.images).length > 0)) && (
         <Card>
           <CardHeader>
             <CardTitle>Images</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {asset.image_urls.map((url: string, index: number) => (
-                <div key={index} className="aspect-square rounded-lg overflow-hidden border">
+              {/* Display from image_urls array */}
+              {asset.image_urls && asset.image_urls.map((url: string, index: number) => (
+                <div key={`url-${index}`} className="aspect-square rounded-lg overflow-hidden border">
                   <img 
                     src={url} 
                     alt={`Asset ${index + 1}`}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                    onClick={() => window.open(url, '_blank')}
+                  />
+                </div>
+              ))}
+              {/* Display from images JSONB object */}
+              {asset.images && Object.entries(asset.images).map(([key, url]: [string, any], index: number) => (
+                <div key={`img-${key}`} className="aspect-square rounded-lg overflow-hidden border">
+                  <img 
+                    src={url} 
+                    alt={key}
                     className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
                     onClick={() => window.open(url, '_blank')}
                   />

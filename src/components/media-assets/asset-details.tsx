@@ -114,17 +114,21 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
                   />
                 </div>
               ))}
-              {/* Display from images JSONB object */}
-              {asset.images && Object.entries(asset.images).map(([key, url]: [string, any], index: number) => (
-                <div key={`img-${key}`} className="aspect-square rounded-lg overflow-hidden border">
-                  <img 
-                    src={url} 
-                    alt={key}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                    onClick={() => window.open(url, '_blank')}
-                  />
-                </div>
-              ))}
+              {/* Display from images JSONB object - extract url from nested structure */}
+              {asset.images && Object.entries(asset.images).map(([key, imageData]: [string, any]) => {
+                const imageUrl = imageData?.url || imageData;
+                if (!imageUrl) return null;
+                return (
+                  <div key={`img-${key}`} className="aspect-square rounded-lg overflow-hidden border">
+                    <img 
+                      src={imageUrl} 
+                      alt={imageData?.name || key}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                      onClick={() => window.open(imageUrl, '_blank')}
+                    />
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>

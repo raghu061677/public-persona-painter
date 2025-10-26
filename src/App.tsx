@@ -18,6 +18,7 @@ import MediaAssetsImport from "./pages/MediaAssetsImport";
 import ClientsList from "./pages/ClientsList";
 import PlansList from "./pages/PlansList";
 import PlanNew from "./pages/PlanNew";
+import PlanEdit from "./pages/PlanEdit";
 import PlanDetail from "./pages/PlanDetail";
 import PlanShare from "./pages/PlanShare";
 import CampaignsList from "./pages/CampaignsList";
@@ -63,6 +64,7 @@ const App = () => (
             <Route path="/admin/media-assets-map" element={<AppLayout><MediaAssetsMap /></AppLayout>} />
             <Route path="/admin/plans" element={<AppLayout><PlansList /></AppLayout>} />
             <Route path="/admin/plans/new" element={<AppLayout><PlanNew /></AppLayout>} />
+            <Route path="/admin/plans/edit/:id" element={<AppLayout><PlanEdit /></AppLayout>} />
             <Route path="/admin/plans/:id" element={<AppLayout><PlanDetail /></AppLayout>} />
             <Route path="/admin/campaigns" element={<AppLayout><CampaignsList /></AppLayout>} />
             <Route path="/admin/campaigns/:id" element={<AppLayout><CampaignDetail /></AppLayout>} />

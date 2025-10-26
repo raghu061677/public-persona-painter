@@ -765,6 +765,9 @@ export type Database = {
           city: string
           created_at: string | null
           dimensions: string
+          discount_amount: number | null
+          discount_type: string | null
+          discount_value: number | null
           gst_amount: number
           id: string
           location: string
@@ -784,6 +787,9 @@ export type Database = {
           city: string
           created_at?: string | null
           dimensions: string
+          discount_amount?: number | null
+          discount_type?: string | null
+          discount_value?: number | null
           gst_amount: number
           id?: string
           location: string
@@ -803,6 +809,9 @@ export type Database = {
           city?: string
           created_at?: string | null
           dimensions?: string
+          discount_amount?: number | null
+          discount_type?: string | null
+          discount_value?: number | null
           gst_amount?: number
           id?: string
           location?: string

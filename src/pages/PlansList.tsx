@@ -265,6 +265,10 @@ export default function PlansList() {
                           <DropdownMenuContent align="end" className="w-48">
                             {isAdmin && (
                               <>
+                                <DropdownMenuItem onClick={() => navigate(`/admin/plans/edit/${plan.id}`)}>
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleDelete(plan.id)}>
                                   <Trash2 className="mr-2 h-4 w-4" />
                                   Delete

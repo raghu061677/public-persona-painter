@@ -354,6 +354,11 @@ export default function PlanDetail() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={() => navigate(`/admin/plans/edit/${id}`)}>
+                    <Activity className="mr-2 h-4 w-4" />
+                    Edit Plan
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleDelete}>
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete

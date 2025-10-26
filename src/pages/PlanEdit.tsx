@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,8 @@ import { AssetSelectionTable } from "@/components/plans/AssetSelectionTable";
 import { SelectedAssetsTable } from "@/components/plans/SelectedAssetsTable";
 import { PlanSummaryCard } from "@/components/plans/PlanSummaryCard";
 
-export default function PlanNew() {
+export default function PlanEdit() {
+  const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
@@ -43,9 +44,9 @@ export default function PlanNew() {
     client_id: "",
     client_name: "",
     plan_name: "",
-    plan_type: "Quotation",
+    plan_type: "Quotation" as "Quotation" | "Proposal" | "Estimate",
     start_date: new Date(),
-    end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+    end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     gst_percent: "18",
     notes: "",
   });
@@ -53,13 +54,51 @@ export default function PlanNew() {
   useEffect(() => {
     fetchClients();
     fetchAvailableAssets();
-    generateNewPlanId();
-  }, []);
+    fetchPlan();
+  }, [id]);
 
-  const generateNewPlanId = async () => {
-    const { data } = await supabase.rpc('generate_plan_id');
-    if (data) {
-      setFormData(prev => ({ ...prev, id: data }));
+  const fetchPlan = async () => {
+    const { data: plan } = await supabase
+      .from('plans')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (plan) {
+      setFormData({
+        id: plan.id,
+        client_id: plan.client_id,
+        client_name: plan.client_name,
+        plan_name: plan.plan_name,
+        plan_type: plan.plan_type,
+        start_date: new Date(plan.start_date),
+        end_date: new Date(plan.end_date),
+        gst_percent: plan.gst_percent.toString(),
+        notes: plan.notes || "",
+      });
+
+      // Fetch plan items
+      const { data: items } = await supabase
+        .from('plan_items')
+        .select('*')
+        .eq('plan_id', id);
+
+      if (items) {
+        const selected = new Set(items.map(i => i.asset_id));
+        setSelectedAssets(selected);
+
+        const pricing: Record<string, any> = {};
+        items.forEach(item => {
+          pricing[item.asset_id] = {
+            sales_price: item.sales_price,
+            printing_charges: item.printing_charges || 0,
+            mounting_charges: item.mounting_charges || 0,
+            discount_type: item.discount_type || 'Percent',
+            discount_value: item.discount_value || 0,
+          };
+        });
+        setAssetPricing(pricing);
+      }
     }
   };
 
@@ -152,7 +191,6 @@ export default function PlanNew() {
           : discountValue;
         
         const netPrice = salesPrice - discountAmount;
-        const itemTotal = netPrice + (pricing.printing_charges || 0) + (pricing.mounting_charges || 0);
         
         subtotal += salesPrice + (pricing.printing_charges || 0) + (pricing.mounting_charges || 0);
         totalDiscount += discountAmount;
@@ -196,11 +234,10 @@ export default function PlanNew() {
       const totals = calculateTotals();
       const { netTotal, gstAmount, grandTotal } = totals;
 
-      // Create plan
-      const { data: plan, error: planError } = await supabase
+      // Update plan
+      const { error: planError } = await supabase
         .from('plans')
-        .insert({
-          id: formData.id,
+        .update({
           client_id: formData.client_id,
           client_name: formData.client_name,
           plan_name: formData.plan_name,
@@ -208,20 +245,23 @@ export default function PlanNew() {
           start_date: formData.start_date.toISOString().split('T')[0],
           end_date: formData.end_date.toISOString().split('T')[0],
           duration_days: durationDays,
-          status: 'Draft',
           total_amount: netTotal,
           gst_percent: parseFloat(formData.gst_percent),
           gst_amount: gstAmount,
           grand_total: grandTotal,
           notes: formData.notes,
-          created_by: user.id,
-        } as any)
-        .select()
-        .single();
+        })
+        .eq('id', id);
 
       if (planError) throw planError;
 
-      // Create plan items
+      // Delete existing plan items
+      await supabase
+        .from('plan_items')
+        .delete()
+        .eq('plan_id', id);
+
+      // Create new plan items
       const items = Array.from(selectedAssets).map(assetId => {
         const asset = availableAssets.find(a => a.id === assetId);
         const pricing = assetPricing[assetId];
@@ -242,7 +282,7 @@ export default function PlanNew() {
         const totalWithGst = subtotal + itemGst;
 
         return {
-          plan_id: formData.id,
+          plan_id: id,
           asset_id: assetId,
           location: asset.location,
           city: asset.city,
@@ -271,9 +311,9 @@ export default function PlanNew() {
 
       toast({
         title: "Success",
-        description: "Plan created successfully",
+        description: "Plan updated successfully",
       });
-      navigate(`/admin/plans/${formData.id}`);
+      navigate(`/admin/plans/${id}`);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -296,14 +336,14 @@ export default function PlanNew() {
       <div className="container mx-auto px-6 py-8 max-w-6xl">
         <Button
           variant="ghost"
-          onClick={() => navigate('/admin/plans')}
+          onClick={() => navigate(`/admin/plans/${id}`)}
           className="mb-6"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Plans
+          Back to Plan
         </Button>
 
-        <h1 className="text-3xl font-bold mb-8">Create New Plan</h1>
+        <h1 className="text-3xl font-bold mb-8">Edit Plan</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Info */}
@@ -342,7 +382,7 @@ export default function PlanNew() {
               </div>
               <div>
                 <Label>Plan Type</Label>
-                <Select value={formData.plan_type} onValueChange={(v) => setFormData(prev => ({ ...prev, plan_type: v }))}>
+                <Select value={formData.plan_type} onValueChange={(v: "Quotation" | "Proposal" | "Estimate") => setFormData(prev => ({ ...prev, plan_type: v }))}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -479,12 +519,12 @@ export default function PlanNew() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate('/admin/plans')}
+              onClick={() => navigate(`/admin/plans/${id}`)}
             >
               Cancel
             </Button>
             <Button type="submit" variant="gradient" disabled={loading}>
-              {loading ? "Creating..." : "Create Plan"}
+              {loading ? "Updating..." : "Update Plan"}
             </Button>
           </div>
         </form>

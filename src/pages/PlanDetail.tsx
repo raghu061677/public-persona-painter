@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Share2, Trash2, Copy, Rocket, MoreVertical, Ban, Activity, ExternalLink, Download, FileText } from "lucide-react";
+import { ArrowLeft, Share2, Trash2, Copy, Rocket, MoreVertical, Ban, Activity, ExternalLink, Download, FileText, Plus, X, FileSpreadsheet, FileImage } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +34,9 @@ import { formatCurrency } from "@/utils/mediaAssets";
 import { getPlanStatusColor, formatDate } from "@/utils/plans";
 import { generateCampaignId } from "@/utils/campaigns";
 import { toast } from "@/hooks/use-toast";
+import { exportPlanToPPT, exportPlanToExcel, exportPlanToPDF } from "@/utils/planExports";
+import { ExportOptionsDialog, ExportOptions } from "@/components/plans/ExportOptionsDialog";
+import { AddAssetsDialog } from "@/components/plans/AddAssetsDialog";
 
 export default function PlanDetail() {
   const { id } = useParams();
@@ -43,6 +46,10 @@ export default function PlanDetail() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showConvertDialog, setShowConvertDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showAddAssetsDialog, setShowAddAssetsDialog] = useState(false);
+  const [exportingPPT, setExportingPPT] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
   const [campaignData, setCampaignData] = useState({
     campaign_name: "",
     start_date: "",
@@ -171,6 +178,173 @@ export default function PlanDetail() {
         description: "Plan deleted successfully",
       });
       navigate('/admin/plans');
+    }
+  };
+
+  const handleRemoveAsset = async (itemId: string, assetId: string) => {
+    if (!confirm("Remove this asset from the plan?")) return;
+
+    try {
+      // Delete from plan_items
+      const { error } = await supabase
+        .from('plan_items')
+        .delete()
+        .eq('id', itemId);
+
+      if (error) throw error;
+
+      // Recalculate plan totals
+      const updatedItems = planItems.filter(item => item.id !== itemId);
+      const subtotal = updatedItems.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+      const gstAmount = (subtotal * plan.gst_percent) / 100;
+      const grandTotal = subtotal + gstAmount;
+
+      await supabase
+        .from('plans')
+        .update({
+          total_amount: subtotal,
+          gst_amount: gstAmount,
+          grand_total: grandTotal,
+        })
+        .eq('id', id);
+
+      toast({
+        title: "Success",
+        description: "Asset removed from plan",
+      });
+
+      fetchPlan();
+      fetchPlanItems();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddAssets = async (assets: any[]) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Create plan items for new assets
+      const newPlanItems = assets.map(asset => ({
+        plan_id: id,
+        asset_id: asset.id,
+        location: asset.location,
+        city: asset.city,
+        area: asset.area,
+        media_type: asset.media_type,
+        dimensions: asset.dimensions,
+        card_rate: asset.card_rate,
+        base_rent: asset.base_rent,
+        sales_price: asset.card_rate,
+        printing_charges: asset.printing_charges || 0,
+        mounting_charges: asset.mounting_charges || 0,
+        discount_type: 'Percent',
+        discount_value: 0,
+        discount_amount: 0,
+        subtotal: asset.card_rate,
+        gst_amount: (asset.card_rate * plan.gst_percent) / 100,
+        total_with_gst: asset.card_rate * (1 + plan.gst_percent / 100),
+      }));
+
+      const { error } = await supabase
+        .from('plan_items')
+        .insert(newPlanItems);
+
+      if (error) throw error;
+
+      // Recalculate plan totals
+      const allItems = [...planItems, ...newPlanItems];
+      const subtotal = allItems.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+      const gstAmount = (subtotal * plan.gst_percent) / 100;
+      const grandTotal = subtotal + gstAmount;
+
+      await supabase
+        .from('plans')
+        .update({
+          total_amount: subtotal,
+          gst_amount: gstAmount,
+          grand_total: grandTotal,
+        })
+        .eq('id', id);
+
+      toast({
+        title: "Success",
+        description: `${assets.length} asset(s) added to plan`,
+      });
+
+      fetchPlan();
+      fetchPlanItems();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportPPT = async () => {
+    setExportingPPT(true);
+    try {
+      await exportPlanToPPT(plan, planItems);
+      toast({
+        title: "Success",
+        description: "Plan exported to PowerPoint",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to export PPT",
+        variant: "destructive",
+      });
+    } finally {
+      setExportingPPT(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    setExportingExcel(true);
+    try {
+      await exportPlanToExcel(plan, planItems);
+      toast({
+        title: "Success",
+        description: "Plan exported to Excel",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to export Excel",
+        variant: "destructive",
+      });
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
+  const handleExportPDF = async (options: ExportOptions) => {
+    try {
+      await exportPlanToPDF(
+        plan,
+        planItems,
+        options.optionType,
+        { organization_name: "Go-Ads 360°" },
+        options.termsAndConditions
+      );
+      toast({
+        title: "Success",
+        description: "Document exported successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to export document",
+        variant: "destructive",
+      });
     }
   };
 
@@ -365,7 +539,7 @@ export default function PlanDetail() {
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleBlock}>
                     <Ban className="mr-2 h-4 w-4" />
-                    Reject
+                    Block
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleCopyId}>
@@ -385,19 +559,15 @@ export default function PlanDetail() {
                     <Activity className="mr-2 h-4 w-4" />
                     Activity
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download PPTx
+                  <DropdownMenuItem onClick={handleExportPPT} disabled={exportingPPT}>
+                    <FileImage className="mr-2 h-4 w-4" />
+                    {exportingPPT ? "Exporting..." : "Download PPTx"}
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download Photos
+                  <DropdownMenuItem onClick={handleExportExcel} disabled={exportingExcel}>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    {exportingExcel ? "Exporting..." : "Download Excel"}
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download Excel
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowExportDialog(true)}>
                     <FileText className="mr-2 h-4 w-4" />
                     Quotation, PI, WO
                   </DropdownMenuItem>
@@ -476,13 +646,24 @@ export default function PlanDetail() {
 
         {/* Plan Items */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Selected Assets ({planItems.length})</CardTitle>
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAddAssetsDialog(true)}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Assets
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
+                  {isAdmin && <TableHead className="w-12"></TableHead>}
                   <TableHead>Asset ID</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>City</TableHead>
@@ -495,6 +676,17 @@ export default function PlanDetail() {
               <TableBody>
                 {planItems.map((item) => (
                   <TableRow key={item.id}>
+                    {isAdmin && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveAsset(item.id, item.asset_id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    )}
                     <TableCell className="font-medium">{item.asset_id}</TableCell>
                     <TableCell>{item.location}</TableCell>
                     <TableCell>{item.city}</TableCell>
@@ -526,6 +718,19 @@ export default function PlanDetail() {
           <p>Created: {new Date(plan.created_at).toLocaleString()}</p>
           <p>Last updated: {new Date(plan.updated_at).toLocaleString()}</p>
         </div>
+        <ExportOptionsDialog
+          open={showExportDialog}
+          onClose={() => setShowExportDialog(false)}
+          onExport={handleExportPDF}
+          clientName={plan.client_name}
+        />
+
+        <AddAssetsDialog
+          open={showAddAssetsDialog}
+          onClose={() => setShowAddAssetsDialog(false)}
+          existingAssetIds={planItems.map(item => item.asset_id)}
+          onAddAssets={handleAddAssets}
+        />
       </div>
     </div>
   );

@@ -4,9 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Edit, Copy, Trash2, MapPin } from "lucide-react";
-import { formatCurrency, getStatusColor } from "@/utils/mediaAssets";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, Edit, Copy, Trash2, Zap, Wrench, Receipt, History } from "lucide-react";
+import { getStatusColor } from "@/utils/mediaAssets";
 import { toast } from "@/hooks/use-toast";
+import { AssetOverviewTab } from "./asset-overview-tab";
+import { AssetPowerBillsTab } from "./asset-power-bills-tab";
+import { AssetMaintenanceTab } from "./asset-maintenance-tab";
+import { AssetBookingHistoryTab } from "./asset-booking-history-tab";
 
 interface AssetDetailsProps {
   asset: any;
@@ -134,209 +139,40 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Location Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              Location
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <p className="text-sm text-muted-foreground">Address</p>
-              <p className="font-medium">{asset.location}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Area</p>
-                <p className="font-medium">{asset.area}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">City</p>
-                <p className="font-medium">{asset.city}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">District</p>
-                <p className="font-medium">{asset.district || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">State</p>
-                <p className="font-medium">{asset.state || 'N/A'}</p>
-              </div>
-            </div>
-            {asset.direction && (
-              <div>
-                <p className="text-sm text-muted-foreground">Direction</p>
-                <p className="font-medium">{asset.direction}</p>
-              </div>
-            )}
-            {asset.latitude && asset.longitude && (
-              <div>
-                <p className="text-sm text-muted-foreground">Coordinates</p>
-                <p className="font-medium">
-                  {asset.latitude}, {asset.longitude}
-                </p>
-              </div>
-            )}
-            {asset.google_street_view_url && (
-              <div>
-                <p className="text-sm text-muted-foreground">Street View</p>
-                <a 
-                  href={asset.google_street_view_url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  View on Google Maps
-                </a>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Tabs for different sections */}
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="power-bills">
+            <Zap className="mr-2 h-4 w-4" />
+            Power Bills
+          </TabsTrigger>
+          <TabsTrigger value="maintenance">
+            <Wrench className="mr-2 h-4 w-4" />
+            Maintenance
+          </TabsTrigger>
+          <TabsTrigger value="booking-history">
+            <History className="mr-2 h-4 w-4" />
+            Booking History
+          </TabsTrigger>
+        </TabsList>
 
-        {/* Specifications Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Specifications</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Media Type</p>
-                <p className="font-medium">{asset.media_type}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Dimensions</p>
-                <p className="font-medium">{asset.dimensions}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Area</p>
-                <p className="font-medium">{asset.total_sqft} sq ft</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Category</p>
-                <p className="font-medium">{asset.category}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Illumination</p>
-                <p className="font-medium">{asset.illumination || 'N/A'}</p>
-              </div>
-              {asset.media_id && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Media ID</p>
-                  <p className="font-medium">{asset.media_id}</p>
-                </div>
-              )}
-            </div>
-            {asset.is_multi_face && (
-              <div className="mt-4">
-                <Badge variant="secondary">Multi-Face</Badge>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <TabsContent value="overview" className="mt-6">
+          <AssetOverviewTab asset={asset} />
+        </TabsContent>
 
-        {/* Pricing Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Pricing</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Card Rate</p>
-                <p className="font-medium text-lg">{formatCurrency(asset.card_rate)}/month</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Base Rent</p>
-                <p className="font-medium">{formatCurrency(asset.base_rent)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">GST</p>
-                <p className="font-medium">{asset.gst_percent}%</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Base Margin</p>
-                <p className="font-medium">{asset.base_margin || 0}%</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <TabsContent value="power-bills" className="mt-6">
+          <AssetPowerBillsTab assetId={asset.id} isAdmin={isAdmin} />
+        </TabsContent>
 
-        {/* Additional Costs Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Additional Costs</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Printing</p>
-                <p className="font-medium">{formatCurrency(asset.printing_charges)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Mounting</p>
-                <p className="font-medium">{formatCurrency(asset.mounting_charges)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Concession Fee</p>
-                <p className="font-medium">{formatCurrency(asset.concession_fee)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Ad Tax</p>
-                <p className="font-medium">{formatCurrency(asset.ad_tax)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Electricity</p>
-                <p className="font-medium">{formatCurrency(asset.electricity)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Maintenance</p>
-                <p className="font-medium">{formatCurrency(asset.maintenance)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <TabsContent value="maintenance" className="mt-6">
+          <AssetMaintenanceTab assetId={asset.id} isAdmin={isAdmin} />
+        </TabsContent>
 
-        {/* Ownership Card */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Ownership</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Type</p>
-                <p className="font-medium capitalize">{asset.ownership}</p>
-              </div>
-              {asset.ownership === 'own' && asset.municipal_authority && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Municipal Authority</p>
-                  <p className="font-medium">{asset.municipal_authority}</p>
-                </div>
-              )}
-              {asset.vendor_details && Object.keys(asset.vendor_details).length > 0 && (
-                <>
-                  {asset.vendor_details.name && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Vendor Name</p>
-                      <p className="font-medium">{asset.vendor_details.name}</p>
-                    </div>
-                  )}
-                  {asset.vendor_details.contact && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Vendor Contact</p>
-                      <p className="font-medium">{asset.vendor_details.contact}</p>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        <TabsContent value="booking-history" className="mt-6">
+          <AssetBookingHistoryTab assetId={asset.id} />
+        </TabsContent>
+      </Tabs>
 
       {/* Footer Metadata */}
       <div className="pt-6 border-t text-sm text-muted-foreground space-y-1">

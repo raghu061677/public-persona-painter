@@ -53,6 +53,189 @@ export type Database = {
         }
         Relationships: []
       }
+      asset_expenses: {
+        Row: {
+          amount: number
+          asset_id: string
+          category: string
+          created_at: string | null
+          created_by: string | null
+          description: string
+          expense_date: string
+          id: string
+          notes: string | null
+          payment_date: string | null
+          payment_status: string | null
+          receipt_url: string | null
+          updated_at: string | null
+          vendor_name: string | null
+        }
+        Insert: {
+          amount?: number
+          asset_id: string
+          category: string
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          expense_date: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_status?: string | null
+          receipt_url?: string | null
+          updated_at?: string | null
+          vendor_name?: string | null
+        }
+        Update: {
+          amount?: number
+          asset_id?: string
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_status?: string | null
+          receipt_url?: string | null
+          updated_at?: string | null
+          vendor_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_maintenance: {
+        Row: {
+          asset_id: string
+          attachments: Json | null
+          cost: number | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          maintenance_date: string
+          maintenance_type: string
+          notes: string | null
+          status: string | null
+          updated_at: string | null
+          vendor_name: string | null
+        }
+        Insert: {
+          asset_id: string
+          attachments?: Json | null
+          cost?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          maintenance_date: string
+          maintenance_type: string
+          notes?: string | null
+          status?: string | null
+          updated_at?: string | null
+          vendor_name?: string | null
+        }
+        Update: {
+          asset_id?: string
+          attachments?: Json | null
+          cost?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          maintenance_date?: string
+          maintenance_type?: string
+          notes?: string | null
+          status?: string | null
+          updated_at?: string | null
+          vendor_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_maintenance_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_power_bills: {
+        Row: {
+          asset_id: string
+          bill_amount: number
+          bill_month: string
+          bill_url: string | null
+          consumer_name: string | null
+          created_at: string | null
+          created_by: string | null
+          ero: string | null
+          id: string
+          notes: string | null
+          paid_amount: number | null
+          payment_date: string | null
+          payment_status: string | null
+          section_name: string | null
+          service_number: string | null
+          unique_service_number: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          asset_id: string
+          bill_amount?: number
+          bill_month: string
+          bill_url?: string | null
+          consumer_name?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          ero?: string | null
+          id?: string
+          notes?: string | null
+          paid_amount?: number | null
+          payment_date?: string | null
+          payment_status?: string | null
+          section_name?: string | null
+          service_number?: string | null
+          unique_service_number?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          asset_id?: string
+          bill_amount?: number
+          bill_month?: string
+          bill_url?: string | null
+          consumer_name?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          ero?: string | null
+          id?: string
+          notes?: string | null
+          paid_amount?: number | null
+          payment_date?: string | null
+          payment_status?: string | null
+          section_name?: string | null
+          service_number?: string | null
+          unique_service_number?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_power_bills_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_assets: {
         Row: {
           area: string

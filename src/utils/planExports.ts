@@ -140,13 +140,13 @@ export async function exportPlanToPPT(
     });
 
     const summaryData = [
-      ["Plan ID", plan.id],
-      ["Client", plan.client_name],
-      ["Duration", `${plan.duration_days} days`],
-      ["Start Date", new Date(plan.start_date).toLocaleDateString()],
-      ["End Date", new Date(plan.end_date).toLocaleDateString()],
-      ["Total Assets", `${planItems.length} sites`],
-      ["Total Amount", `₹${plan.grand_total.toLocaleString()}`],
+      [{ text: "Plan ID" }, { text: plan.id }],
+      [{ text: "Client" }, { text: plan.client_name }],
+      [{ text: "Duration" }, { text: `${plan.duration_days} days` }],
+      [{ text: "Start Date" }, { text: new Date(plan.start_date).toLocaleDateString() }],
+      [{ text: "End Date" }, { text: new Date(plan.end_date).toLocaleDateString() }],
+      [{ text: "Total Assets" }, { text: `${planItems.length} sites` }],
+      [{ text: "Total Amount" }, { text: `₹${plan.grand_total.toLocaleString()}` }],
     ];
 
     summarySlide.addTable(summaryData, {
@@ -198,15 +198,15 @@ export async function exportPlanToPPT(
 
       // Asset properties
       const properties = [
-        ["Location", assetDetail.location],
-        ["Area", assetDetail.area],
-        ["City", assetDetail.city],
-        ["Media Type", assetDetail.media_type],
-        ["Dimensions", assetDetail.dimensions],
-        ["Total SQFT", assetDetail.total_sqft?.toString() || "N/A"],
-        ["Direction", assetDetail.direction || "N/A"],
-        ["Illumination", assetDetail.illumination || "N/A"],
-        ["Monthly Rate", `₹${item.sales_price.toLocaleString()}`],
+        [{ text: "Location" }, { text: assetDetail.location }],
+        [{ text: "Area" }, { text: assetDetail.area }],
+        [{ text: "City" }, { text: assetDetail.city }],
+        [{ text: "Media Type" }, { text: assetDetail.media_type }],
+        [{ text: "Dimensions" }, { text: assetDetail.dimensions }],
+        [{ text: "Total SQFT" }, { text: assetDetail.total_sqft?.toString() || "N/A" }],
+        [{ text: "Direction" }, { text: assetDetail.direction || "N/A" }],
+        [{ text: "Illumination" }, { text: assetDetail.illumination || "N/A" }],
+        [{ text: "Monthly Rate" }, { text: `₹${item.sales_price.toLocaleString()}` }],
       ];
 
       slide.addTable(properties, {

@@ -33,7 +33,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Search, Sparkles, MoreVertical, Pencil, Trash2, Download, ArrowUpDown, ChevronLeft, ChevronRight, BarChart3 } from "lucide-react";
+import { Plus, Search, Sparkles, MoreVertical, Pencil, Trash2, Download, ArrowUpDown, ChevronLeft, ChevronRight, BarChart3, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -624,7 +624,12 @@ export default function ClientsList() {
                 paginatedClients.map((client) => (
                   <TableRow key={client.id}>
                     <TableCell className="font-medium">{client.id}</TableCell>
-                    <TableCell>{client.name}</TableCell>
+                    <TableCell 
+                      className="hover:underline cursor-pointer text-primary font-medium"
+                      onClick={() => navigate(`/admin/clients/${client.id}`)}
+                    >
+                      {client.name}
+                    </TableCell>
                     <TableCell>{client.company || '-'}</TableCell>
                     <TableCell>{client.email || '-'}</TableCell>
                     <TableCell>{client.phone || '-'}</TableCell>
@@ -638,6 +643,10 @@ export default function ClientsList() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => navigate(`/admin/clients/${client.id}`)}>
+                              <FileText className="mr-2 h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => navigate(`/admin/clients/${client.id}/analytics`)}>
                               <BarChart3 className="mr-2 h-4 w-4" />
                               View Analytics

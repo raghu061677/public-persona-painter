@@ -95,22 +95,50 @@ export default function PlansList() {
 
   const fetchPlans = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    
+    // Fetch plans
+    const { data: plansData, error: plansError } = await supabase
       .from('plans')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error) {
+    if (plansError) {
       toast({
         title: "Error",
         description: "Failed to fetch plans",
         variant: "destructive",
       });
-    } else {
-      setPlans(data || []);
+      setLoading(false);
+      return;
     }
+
+    // Fetch plan items with asset SQFT data for each plan
+    const plansWithSqft = await Promise.all(
+      (plansData || []).map(async (plan) => {
+        const { data: items } = await supabase
+          .from('plan_items')
+          .select(`
+            asset_id,
+            media_assets!inner(total_sqft)
+          `)
+          .eq('plan_id', plan.id);
+
+        // Calculate total SQFT by summing all asset SQFT values
+        const totalSqft = items?.reduce((sum, item) => {
+          const sqft = (item as any).media_assets?.total_sqft || 0;
+          return sum + Number(sqft);
+        }, 0) || 0;
+
+        return {
+          ...plan,
+          total_sqft: totalSqft
+        };
+      })
+    );
+
+    setPlans(plansWithSqft);
+    setGlobalSearchFiltered(plansWithSqft);
     setLoading(false);
-    setGlobalSearchFiltered(data || []);
   };
 
   const filteredPlans = globalSearchFiltered.filter(plan => {
@@ -481,7 +509,9 @@ export default function PlansList() {
                         {plan.end_date ? new Date(plan.end_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }).replace(/ /g, '') : '-'}
                       </TableCell>
                       <TableCell className={`${getCellClassName()}`}>{plan.duration_days}</TableCell>
-                      <TableCell className={`${getCellClassName()}`}>-</TableCell>
+                      <TableCell className={`text-right font-medium ${getCellClassName()}`}>
+                        {plan.total_sqft ? plan.total_sqft.toFixed(2) : '0'}
+                      </TableCell>
                       <TableCell className={`text-right font-medium ${getCellClassName()}`}>
                         {formatCurrencyUtil(plan.grand_total, settings.currencyFormat, settings.currencySymbol, settings.compactNumbers)}
                       </TableCell>

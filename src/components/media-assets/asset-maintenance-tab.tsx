@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Wrench } from "lucide-react";
+import { Wrench } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
+import { AddMaintenanceDialog } from "./AddMaintenanceDialog";
 
 interface AssetMaintenanceTabProps {
   assetId: string;
@@ -75,10 +75,7 @@ export function AssetMaintenanceTab({ assetId, isAdmin }: AssetMaintenanceTabPro
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Maintenance History</h3>
         {isAdmin && (
-          <Button size="sm">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Maintenance
-          </Button>
+          <AddMaintenanceDialog assetId={assetId} onSuccess={fetchMaintenance} />
         )}
       </div>
 

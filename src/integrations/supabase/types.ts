@@ -469,6 +469,36 @@ export type Database = {
         }
         Relationships: []
       }
+      code_counters: {
+        Row: {
+          counter_key: string
+          counter_type: string
+          created_at: string | null
+          current_value: number
+          id: string
+          period: string
+          updated_at: string | null
+        }
+        Insert: {
+          counter_key: string
+          counter_type: string
+          created_at?: string | null
+          current_value?: number
+          id?: string
+          period: string
+          updated_at?: string | null
+        }
+        Update: {
+          counter_key?: string
+          counter_type?: string
+          created_at?: string | null
+          current_value?: number
+          id?: string
+          period?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       email_logs: {
         Row: {
           ai_parsed_data: Json | null
@@ -1219,6 +1249,14 @@ export type Database = {
       generate_plan_id: { Args: never; Returns: string }
       generate_share_token: { Args: never; Returns: string }
       get_financial_year: { Args: never; Returns: string }
+      get_next_code_number: {
+        Args: {
+          p_counter_key: string
+          p_counter_type: string
+          p_period: string
+        }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

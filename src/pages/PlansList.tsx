@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -13,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket } from "lucide-react";
+import { Plus, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket, Download } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,10 +20,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { formatCurrency } from "@/utils/mediaAssets";
-import { getPlanStatusColor, formatDate } from "@/utils/plans";
+import { getPlanStatusColor, formatDate as formatPlanDate } from "@/utils/plans";
 import { toast } from "@/hooks/use-toast";
 import { TableFilters } from "@/components/common/table-filters";
+import { BulkActionsDropdown, commonBulkActions } from "@/components/common/bulk-actions-dropdown";
+import { useTableSettings, formatCurrency as formatCurrencyUtil, formatDate as formatDateUtil } from "@/hooks/use-table-settings";
+import { useTableDensity } from "@/hooks/use-table-density";
+import { Checkbox } from "@/components/ui/checkbox";
+import { highlightText } from "@/components/common/global-search";
 
 export default function PlansList() {
   const navigate = useNavigate();
@@ -33,6 +36,25 @@ export default function PlansList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [selectedPlans, setSelectedPlans] = useState<Set<string>>(new Set());
+  const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
+
+  const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("plans");
+  const { 
+    settings, 
+    updateSettings, 
+    resetSettings,
+    isReady: settingsReady 
+  } = useTableSettings("plans");
+
+  // Auto-refresh
+  useEffect(() => {
+    if (!settingsReady || settings.autoRefreshInterval === 0) return;
+    const interval = setInterval(() => {
+      fetchPlans();
+    }, settings.autoRefreshInterval * 1000);
+    return () => clearInterval(interval);
+  }, [settings.autoRefreshInterval, settingsReady]);
 
   useEffect(() => {
     checkAdminStatus();
@@ -87,9 +109,10 @@ export default function PlansList() {
       setPlans(data || []);
     }
     setLoading(false);
+    setGlobalSearchFiltered(data || []);
   };
 
-  const filteredPlans = plans.filter(plan => {
+  const filteredPlans = globalSearchFiltered.filter(plan => {
     // Search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -180,6 +203,47 @@ export default function PlansList() {
         description: "Plan rejected successfully",
       });
       fetchPlans();
+    }
+  };
+
+  const handleBulkAction = async (actionId: string) => {
+    const selectedIds = Array.from(selectedPlans);
+    
+    if (actionId === "delete") {
+      const { error } = await supabase
+        .from("plans")
+        .delete()
+        .in("id", selectedIds);
+
+      if (error) throw error;
+      
+      fetchPlans();
+      setSelectedPlans(new Set());
+    } else if (actionId === "export") {
+      const selectedData = filteredPlans.filter(p => selectedIds.includes(p.id));
+      const XLSX = await import("xlsx");
+      const ws = XLSX.utils.json_to_sheet(selectedData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Plans");
+      XLSX.writeFile(wb, "plans-export.xlsx");
+    }
+  };
+
+  const togglePlanSelection = (id: string) => {
+    const newSelection = new Set(selectedPlans);
+    if (newSelection.has(id)) {
+      newSelection.delete(id);
+    } else {
+      newSelection.add(id);
+    }
+    setSelectedPlans(newSelection);
+  };
+
+  const toggleAllPlans = () => {
+    if (selectedPlans.size === filteredPlans.length) {
+      setSelectedPlans(new Set());
+    } else {
+      setSelectedPlans(new Set(filteredPlans.map(p => p.id)));
     }
   };
 
@@ -274,6 +338,30 @@ export default function PlansList() {
         </div>
 
         {/* Filters */}
+        {selectedPlans.size > 0 && (
+          <Card className="mb-4 bg-primary/5 border-primary/20">
+            <CardContent className="p-4 flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
+                  <span className="text-lg font-bold text-primary-foreground">{selectedPlans.size}</span>
+                </div>
+                <div>
+                  <p className="font-semibold">Plans Selected</p>
+                  <p className="text-sm text-muted-foreground">Ready for bulk actions</p>
+                </div>
+              </div>
+              <BulkActionsDropdown
+                selectedCount={selectedPlans.size}
+                actions={[
+                  { ...commonBulkActions.export, id: "export", label: "Export Selected" },
+                  commonBulkActions.delete,
+                ]}
+                onAction={handleBulkAction}
+              />
+            </CardContent>
+          </Card>
+        )}
+
         <TableFilters
           filters={[
             {
@@ -302,6 +390,7 @@ export default function PlansList() {
             setFilterStatus("");
           }}
           allColumns={[
+            { key: "select", label: "Select" },
             { key: "id", label: "Plan ID" },
             { key: "client", label: "Client Name" },
             { key: "type", label: "Plan Type" },
@@ -311,9 +400,19 @@ export default function PlansList() {
             { key: "created", label: "Created" },
             { key: "actions", label: "Actions" },
           ]}
-          visibleColumns={["id", "client", "type", "status", "duration", "total", "created", "actions"]}
+          visibleColumns={["select", "id", "client", "type", "status", "duration", "total", "created", "actions"]}
           onColumnVisibilityChange={() => {}}
           onResetColumns={() => {}}
+          density={density}
+          onDensityChange={setDensity}
+          tableKey="plans"
+          enableGlobalSearch
+          searchableData={plans}
+          searchableKeys={["id", "client_name", "plan_name", "plan_type", "status"]}
+          onGlobalSearchFilter={setGlobalSearchFiltered}
+          settings={settings}
+          onUpdateSettings={updateSettings}
+          onResetSettings={resetSettings}
         />
 
         {/* Table Card */}
@@ -324,21 +423,27 @@ export default function PlansList() {
           <CardContent className="p-0">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="font-semibold">Plan ID</TableHead>
-                  <TableHead className="font-semibold">Client Name</TableHead>
-                  <TableHead className="font-semibold">Plan Type</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
-                  <TableHead className="font-semibold">Duration</TableHead>
-                  <TableHead className="text-right font-semibold">Grand Total</TableHead>
-                  <TableHead className="font-semibold">Created</TableHead>
-                  <TableHead className="text-right font-semibold">Actions</TableHead>
+                <TableRow className={`bg-muted/50 ${getRowClassName()}`}>
+                  <TableHead className={getCellClassName()}>
+                    <Checkbox
+                      checked={selectedPlans.size === filteredPlans.length && filteredPlans.length > 0}
+                      onCheckedChange={toggleAllPlans}
+                    />
+                  </TableHead>
+                  <TableHead className={`font-semibold ${getCellClassName()}`}>Plan ID</TableHead>
+                  <TableHead className={`font-semibold ${getCellClassName()}`}>Client Name</TableHead>
+                  <TableHead className={`font-semibold ${getCellClassName()}`}>Plan Type</TableHead>
+                  <TableHead className={`font-semibold ${getCellClassName()}`}>Status</TableHead>
+                  <TableHead className={`font-semibold ${getCellClassName()}`}>Duration</TableHead>
+                  <TableHead className={`text-right font-semibold ${getCellClassName()}`}>Grand Total</TableHead>
+                  <TableHead className={`font-semibold ${getCellClassName()}`}>Created</TableHead>
+                  <TableHead className={`text-right font-semibold ${getCellClassName()}`}>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
+                {loading || !settingsReady ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12">
+                    <TableCell colSpan={9} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2">
                         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                         <p className="text-muted-foreground">Loading plans...</p>
@@ -347,7 +452,7 @@ export default function PlansList() {
                   </TableRow>
                 ) : filteredPlans.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12">
+                    <TableCell colSpan={9} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2">
                         <FileText className="h-12 w-12 text-muted-foreground/50" />
                         <p className="text-muted-foreground font-medium">No plans found</p>
@@ -361,27 +466,35 @@ export default function PlansList() {
                   filteredPlans.map((plan) => (
                     <TableRow 
                       key={plan.id} 
-                      className="hover:bg-muted/50 cursor-pointer transition-colors"
+                      className={`hover:bg-muted/50 cursor-pointer transition-colors ${getRowClassName()}`}
                       onClick={() => navigate(`/admin/plans/${plan.id}`)}
                     >
-                      <TableCell className="font-medium text-primary">{plan.id}</TableCell>
-                      <TableCell className="font-medium">{plan.client_name}</TableCell>
-                      <TableCell>
+                      <TableCell className={getCellClassName()} onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedPlans.has(plan.id)}
+                          onCheckedChange={() => togglePlanSelection(plan.id)}
+                        />
+                      </TableCell>
+                      <TableCell className={`font-medium text-primary ${getCellClassName()}`}>{plan.id}</TableCell>
+                      <TableCell className={`font-medium ${getCellClassName()}`}>{plan.client_name}</TableCell>
+                      <TableCell className={getCellClassName()}>
                         <Badge variant="outline" className="font-normal">
                           {plan.plan_type}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className={getCellClassName()}>
                         <Badge className={getPlanStatusColor(plan.status)}>
                           {plan.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{plan.duration_days} days</TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {formatCurrency(plan.grand_total)}
+                      <TableCell className={`text-muted-foreground ${getCellClassName()}`}>{plan.duration_days} days</TableCell>
+                      <TableCell className={`text-right font-semibold ${getCellClassName()}`}>
+                        {formatCurrencyUtil(plan.grand_total, settings.currencyFormat, settings.currencySymbol, settings.compactNumbers)}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{formatDate(plan.created_at)}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className={`text-muted-foreground ${getCellClassName()}`}>
+                        {formatDateUtil(plan.created_at, settings.dateFormat, settings.showTimestamps)}
+                      </TableCell>
+                      <TableCell className={`text-right ${getCellClassName()}`}>
                         <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                           <Button
                             variant="ghost"

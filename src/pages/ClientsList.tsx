@@ -34,7 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Search, Sparkles, MoreVertical, Pencil, Trash2, Download, ArrowUpDown, ChevronLeft, ChevronRight, BarChart3, FileText, Mail, X } from "lucide-react";
+import { Plus, Sparkles, MoreVertical, Pencil, Trash2, Download, ArrowUpDown, ChevronLeft, ChevronRight, BarChart3, FileText, Mail, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,8 +43,10 @@ import { DeleteClientDialog } from "@/components/clients/DeleteClientDialog";
 import { z } from "zod";
 import * as XLSX from 'xlsx';
 import { TableFilters } from "@/components/common/table-filters";
-import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import { Card, CardContent } from "@/components/ui/card";
+import { BulkActionsDropdown, commonBulkActions } from "@/components/common/bulk-actions-dropdown";
+import { useTableSettings, formatDate as formatDateUtil } from "@/hooks/use-table-settings";
+import { useTableDensity } from "@/hooks/use-table-density";
 
 const INDIAN_STATES = [
   { code: "AP", name: "Andhra Pradesh" },
@@ -111,14 +113,13 @@ export default function ClientsList() {
   const [deletingClient, setDeletingClient] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
   
-  // Filtering and sorting states
+  // Filtering states (kept for backward compatibility)
   const [filterState, setFilterState] = useState<string>("");
   const [filterCity, setFilterCity] = useState<string>("");
   const [sortField, setSortField] = useState<string>("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  
-  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   
@@ -127,6 +128,23 @@ export default function ClientsList() {
   const [bulkUpdateDialogOpen, setBulkUpdateDialogOpen] = useState(false);
   const [bulkEmailDialogOpen, setBulkEmailDialogOpen] = useState(false);
   const [bulkUpdateData, setBulkUpdateData] = useState({ state: "", city: "" });
+
+  const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("clients");
+  const { 
+    settings, 
+    updateSettings, 
+    resetSettings,
+    isReady: settingsReady 
+  } = useTableSettings("clients");
+
+  // Auto-refresh
+  useEffect(() => {
+    if (!settingsReady || settings.autoRefreshInterval === 0) return;
+    const interval = setInterval(() => {
+      fetchClients();
+    }, settings.autoRefreshInterval * 1000);
+    return () => clearInterval(interval);
+  }, [settings.autoRefreshInterval, settingsReady]);
   
   const [formData, setFormData] = useState({
     id: "",
@@ -160,6 +178,30 @@ export default function ClientsList() {
       setClients(data || []);
     }
     setLoading(false);
+    setGlobalSearchFiltered(data || []);
+  };
+
+  const handleBulkAction = async (actionId: string) => {
+    const selectedIds = Array.from(selectedClients);
+    
+    if (actionId === "delete") {
+      const { error } = await supabase
+        .from("clients")
+        .delete()
+        .in("id", selectedIds);
+
+      if (error) throw error;
+      
+      fetchClients();
+      setSelectedClients(new Set());
+    } else if (actionId === "export") {
+      const selectedData = globalSearchFiltered.filter(c => selectedIds.includes(c.id));
+      const XLSX = await import("xlsx");
+      const ws = XLSX.utils.json_to_sheet(selectedData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Clients");
+      XLSX.writeFile(wb, "clients-export.xlsx");
+    }
   };
 
   const generateClientId = async () => {

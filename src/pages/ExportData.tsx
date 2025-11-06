@@ -2,73 +2,214 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Download, FileSpreadsheet, FileText, File, Database } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { Download, FileSpreadsheet, Users, Calendar, Receipt } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
+
+declare module "jspdf" {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 
 export default function ExportData() {
-  const [loading, setLoading] = useState<string | null>(null);
+  const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set());
+  const [dateRange, setDateRange] = useState({ start: "", end: "" });
+  const [exportFormat, setExportFormat] = useState<"excel" | "csv" | "pdf">("excel");
+  const [isExporting, setIsExporting] = useState(false);
+  const [progress, setProgress] = useState(0);
 
-  const handleExport = async (tableName: string, fileName: string) => {
-    setLoading(tableName);
-    try {
-      const { data, error } = await supabase.from(tableName as any).select('*');
+  const modules = [
+    { id: "media_assets", label: "Media Assets", icon: Database, table: "media_assets" },
+    { id: "clients", label: "Clients", icon: FileText, table: "clients" },
+    { id: "plans", label: "Plans", icon: FileSpreadsheet, table: "plans" },
+    { id: "campaigns", label: "Campaigns", icon: File, table: "campaigns" },
+    { id: "invoices", label: "Invoices", icon: FileText, table: "invoices" },
+    { id: "expenses", label: "Expenses", icon: FileSpreadsheet, table: "expenses" },
+  ];
 
-      if (error) throw error;
+  const toggleModule = (moduleId: string) => {
+    const newSelection = new Set(selectedModules);
+    if (newSelection.has(moduleId)) {
+      newSelection.delete(moduleId);
+    } else {
+      newSelection.add(moduleId);
+    }
+    setSelectedModules(newSelection);
+  };
 
-      if (!data || data.length === 0) {
-        toast({
-          variant: "destructive",
-          title: "No Data Found",
-          description: `There is no data in the ${tableName} table to export.`,
+  const toggleAllModules = () => {
+    if (selectedModules.size === modules.length) {
+      setSelectedModules(new Set());
+    } else {
+      setSelectedModules(new Set(modules.map(m => m.id)));
+    }
+  };
+
+  const fetchModuleData = async (tableName: string) => {
+    let query = supabase.from(tableName as any).select('*');
+
+    if (dateRange.start) {
+      query = query.gte('created_at', dateRange.start);
+    }
+    if (dateRange.end) {
+      query = query.lte('created_at', dateRange.end);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error(`Error fetching ${tableName}:`, error);
+      return [];
+    }
+
+    return data || [];
+  };
+
+  const exportToExcel = async (allData: Record<string, any[]>) => {
+    const wb = XLSX.utils.book_new();
+
+    Object.entries(allData).forEach(([moduleName, data]) => {
+      if (data.length > 0) {
+        const ws = XLSX.utils.json_to_sheet(data);
+        const maxWidth = data.reduce((w, r) => 
+          Math.max(w, ...Object.values(r).map(v => String(v || "").length)), 10);
+        ws['!cols'] = Object.keys(data[0] || {}).map(() => ({ wch: Math.min(maxWidth, 50) }));
+        XLSX.utils.book_append_sheet(wb, ws, moduleName);
+      }
+    });
+
+    const filename = `export_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, filename);
+  };
+
+  const exportToCSV = async (allData: Record<string, any[]>) => {
+    Object.entries(allData).forEach(([moduleName, data]) => {
+      if (data.length > 0) {
+        const ws = XLSX.utils.json_to_sheet(data);
+        const csv = XLSX.utils.sheet_to_csv(ws);
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${moduleName}_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
+    });
+  };
+
+  const exportToPDF = async (allData: Record<string, any[]>) => {
+    const doc = new jsPDF();
+    let yPosition = 20;
+
+    doc.setFontSize(18);
+    doc.text("Data Export Report", 14, yPosition);
+    yPosition += 10;
+
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, yPosition);
+    yPosition += 5;
+
+    if (dateRange.start || dateRange.end) {
+      doc.text(`Date Range: ${dateRange.start || 'N/A'} to ${dateRange.end || 'N/A'}`, 14, yPosition);
+      yPosition += 10;
+    } else {
+      yPosition += 10;
+    }
+
+    Object.entries(allData).forEach(([moduleName, data], index) => {
+      if (data.length > 0) {
+        if (index > 0) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        doc.setFontSize(14);
+        doc.text(moduleName.toUpperCase(), 14, yPosition);
+        yPosition += 10;
+
+        const headers = Object.keys(data[0]);
+        const rows = data.map(item => headers.map(h => String(item[h] || '-')));
+
+        doc.autoTable({
+          startY: yPosition,
+          head: [headers],
+          body: rows,
+          styles: { fontSize: 8, cellPadding: 2 },
+          headStyles: { fillColor: [30, 64, 175] },
         });
-        return;
+      }
+    });
+
+    doc.save(`export_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  const handleExport = async () => {
+    if (selectedModules.size === 0) {
+      toast({
+        title: "No Modules Selected",
+        description: "Please select at least one module to export",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsExporting(true);
+    setProgress(0);
+
+    try {
+      const allData: Record<string, any[]> = {};
+      const selectedModulesList = modules.filter(m => selectedModules.has(m.id));
+      const progressIncrement = 100 / selectedModulesList.length;
+
+      for (const module of selectedModulesList) {
+        const data = await fetchModuleData(module.table);
+        allData[module.label] = data;
+        setProgress(prev => Math.min(prev + progressIncrement, 90));
       }
 
-      // Process data for Excel compatibility
-      const processedData = data.map((item: any) => {
-        const newItem: { [key: string]: any } = {};
-        for (const key in item) {
-          const value = item[key];
-          // Convert dates to readable format
-          if (value && typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}T/)) {
-            newItem[key] = new Date(value).toLocaleString();
-          } 
-          // Flatten JSON objects
-          else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-            for (const subKey in value) {
-              newItem[`${key}_${subKey}`] = value[subKey];
-            }
-          }
-          // Convert arrays to strings
-          else if (Array.isArray(value)) {
-            newItem[key] = value.join(', ');
-          }
-          else {
-            newItem[key] = value;
-          }
-        }
-        return newItem;
-      });
+      if (exportFormat === "excel") {
+        await exportToExcel(allData);
+      } else if (exportFormat === "csv") {
+        await exportToCSV(allData);
+      } else if (exportFormat === "pdf") {
+        await exportToPDF(allData);
+      }
 
-      const worksheet = XLSX.utils.json_to_sheet(processedData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, tableName);
-      XLSX.writeFile(workbook, `${fileName}.xlsx`);
+      setProgress(100);
 
+      const totalRecords = Object.values(allData).reduce((sum, data) => sum + data.length, 0);
+      
       toast({
         title: "Export Successful",
-        description: `Exported ${data.length} records from ${tableName}.`,
+        description: `Exported ${totalRecords} records from ${selectedModules.size} module(s)`,
       });
-    } catch (error: any) {
-      console.error(`Error exporting ${tableName}:`, error);
+    } catch (error) {
+      console.error("Export error:", error);
       toast({
-        variant: "destructive",
         title: "Export Failed",
-        description: error.message || `Could not export data from ${tableName}.`,
+        description: "An error occurred during export",
+        variant: "destructive",
       });
     } finally {
-      setLoading(null);
+      setTimeout(() => {
+        setIsExporting(false);
+        setProgress(0);
+      }, 1000);
     }
   };
 
@@ -76,137 +217,153 @@ export default function ExportData() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Export Data</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Export Center</h1>
           <p className="text-muted-foreground mt-1">
-            Download your data in Excel (.xlsx) format.
+            Export data from multiple modules with custom filters and formats
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileSpreadsheet className="h-5 w-5" />
-              Export Media Assets
-            </CardTitle>
-            <CardDescription>
-              Download the complete list of all media assets in the system.
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Select Modules</CardTitle>
+                <CardDescription>Choose which modules to export</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={toggleAllModules}>
+                {selectedModules.size === modules.length ? "Deselect All" : "Select All"}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            <Button 
-              onClick={() => handleExport("media_assets", "media-assets-export")}
-              disabled={loading === "media_assets"}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              {loading === "media_assets" ? "Exporting..." : "Export Assets"}
-            </Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {modules.map((module) => {
+                const Icon = module.icon;
+                return (
+                  <div
+                    key={module.id}
+                    className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
+                      selectedModules.has(module.id)
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:bg-muted/50"
+                    }`}
+                    onClick={() => toggleModule(module.id)}
+                  >
+                    <Checkbox
+                      checked={selectedModules.has(module.id)}
+                      onCheckedChange={() => toggleModule(module.id)}
+                    />
+                    <Icon className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-medium">{module.label}</span>
+                  </div>
+                );
+              })}
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Export Clients
-            </CardTitle>
-            <CardDescription>
-              Download the complete list of all your clients.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              onClick={() => handleExport("clients", "clients-export")}
-              disabled={loading === "clients"}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              {loading === "clients" ? "Exporting..." : "Export Clients"}
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="grid md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Date Range (Optional)</CardTitle>
+              <CardDescription>Filter by creation date</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="start-date">Start Date</Label>
+                <Input
+                  id="start-date"
+                  type="date"
+                  value={dateRange.start}
+                  onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="end-date">End Date</Label>
+                <Input
+                  id="end-date"
+                  type="date"
+                  value={dateRange.end}
+                  onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Export Format</CardTitle>
+              <CardDescription>Choose your preferred export format</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Format</Label>
+                <Select value={exportFormat} onValueChange={(value: any) => setExportFormat(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="excel">Excel (.xlsx)</SelectItem>
+                    <SelectItem value="csv">CSV (.csv)</SelectItem>
+                    <SelectItem value="pdf">PDF (.pdf)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="pt-4">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Excel:</strong> Best for data analysis with multiple sheets<br />
+                  <strong>CSV:</strong> Lightweight, one file per module<br />
+                  <strong>PDF:</strong> Print-friendly format
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Export Campaigns
-            </CardTitle>
-            <CardDescription>
-              Download all campaign data including dates and status.
-            </CardDescription>
+            <CardTitle>Export Summary</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button 
-              onClick={() => handleExport("campaigns", "campaigns-export")}
-              disabled={loading === "campaigns"}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              {loading === "campaigns" ? "Exporting..." : "Export Campaigns"}
-            </Button>
-          </CardContent>
-        </Card>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Selected Modules:</span>
+                <span className="font-medium">{selectedModules.size} / {modules.length}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Date Range:</span>
+                <span className="font-medium">
+                  {dateRange.start || dateRange.end 
+                    ? `${dateRange.start || 'All'} to ${dateRange.end || 'All'}`
+                    : "All Time"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Format:</span>
+                <span className="font-medium uppercase">{exportFormat}</span>
+              </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileSpreadsheet className="h-5 w-5" />
-              Export Plans
-            </CardTitle>
-            <CardDescription>
-              Download all plans/quotations with client details.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              onClick={() => handleExport("plans", "plans-export")}
-              disabled={loading === "plans"}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              {loading === "plans" ? "Exporting..." : "Export Plans"}
-            </Button>
-          </CardContent>
-        </Card>
+              {isExporting && (
+                <div className="space-y-2">
+                  <Progress value={progress} className="w-full" />
+                  <p className="text-xs text-center text-muted-foreground">
+                    Exporting... {Math.round(progress)}%
+                  </p>
+                </div>
+              )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Receipt className="h-5 w-5" />
-              Export Invoices
-            </CardTitle>
-            <CardDescription>
-              Download all invoice data with payment status.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              onClick={() => handleExport("invoices", "invoices-export")}
-              disabled={loading === "invoices"}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              {loading === "invoices" ? "Exporting..." : "Export Invoices"}
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Receipt className="h-5 w-5" />
-              Export Expenses
-            </CardTitle>
-            <CardDescription>
-              Download all expense records and vendor payments.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              onClick={() => handleExport("expenses", "expenses-export")}
-              disabled={loading === "expenses"}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              {loading === "expenses" ? "Exporting..." : "Export Expenses"}
-            </Button>
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={handleExport}
+                disabled={isExporting || selectedModules.size === 0}
+              >
+                <Download className="mr-2 h-5 w-5" />
+                {isExporting ? "Exporting..." : "Export Data"}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -34,6 +34,7 @@ import PhotoLibrary from "./pages/PhotoLibrary";
 import ImportData from "./pages/ImportData";
 import ExportData from "./pages/ExportData";
 import Settings from "./pages/Settings";
+import CodeManagement from "./pages/CodeManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -77,6 +78,7 @@ const App = () => (
             <Route path="/admin/photo-library" element={<AppLayout><PhotoLibrary /></AppLayout>} />
             <Route path="/admin/import" element={<AppLayout><ImportData /></AppLayout>} />
             <Route path="/admin/export" element={<AppLayout><ExportData /></AppLayout>} />
+            <Route path="/admin/code-management" element={<AppLayout><CodeManagement /></AppLayout>} />
             <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
             
             {/* Catch-all */}

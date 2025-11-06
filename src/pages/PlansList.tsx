@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket, Download, Sparkles, ChevronDown } from "lucide-react";
+import { Plus, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket, Download, Sparkles, ChevronDown, Info } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +28,12 @@ import { useTableSettings, formatCurrency as formatCurrencyUtil, formatDate as f
 import { useTableDensity } from "@/hooks/use-table-density";
 import { Checkbox } from "@/components/ui/checkbox";
 import { highlightText } from "@/components/common/global-search";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function PlansList() {
   const navigate = useNavigate();
@@ -119,19 +125,30 @@ export default function PlansList() {
           .from('plan_items')
           .select(`
             asset_id,
-            media_assets!inner(total_sqft)
+            dimensions,
+            media_assets!inner(total_sqft, media_type, location)
           `)
           .eq('plan_id', plan.id);
 
-        // Calculate total SQFT by summing all asset SQFT values
-        const totalSqft = items?.reduce((sum, item) => {
-          const sqft = (item as any).media_assets?.total_sqft || 0;
-          return sum + Number(sqft);
-        }, 0) || 0;
+        // Calculate total SQFT and create breakdown data
+        const sqftBreakdown = items?.map(item => {
+          const asset = (item as any).media_assets;
+          const sqft = asset?.total_sqft || 0;
+          return {
+            asset_id: item.asset_id,
+            dimensions: item.dimensions,
+            media_type: asset?.media_type || 'Unknown',
+            location: asset?.location || 'Unknown',
+            sqft: Number(sqft)
+          };
+        }) || [];
+
+        const totalSqft = sqftBreakdown.reduce((sum, item) => sum + item.sqft, 0);
 
         return {
           ...plan,
-          total_sqft: totalSqft
+          total_sqft: totalSqft,
+          sqft_breakdown: sqftBreakdown
         };
       })
     );
@@ -509,8 +526,71 @@ export default function PlansList() {
                         {plan.end_date ? new Date(plan.end_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }).replace(/ /g, '') : '-'}
                       </TableCell>
                       <TableCell className={`${getCellClassName()}`}>{plan.duration_days}</TableCell>
-                      <TableCell className={`text-right font-medium ${getCellClassName()}`}>
-                        {plan.total_sqft ? plan.total_sqft.toFixed(2) : '0'}
+                      <TableCell className={`text-right ${getCellClassName()}`}>
+                        <TooltipProvider>
+                          <Tooltip delayDuration={200}>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center gap-1.5 cursor-help">
+                                <span className="font-medium">
+                                  {plan.total_sqft ? plan.total_sqft.toFixed(2) : '0'}
+                                </span>
+                                {plan.sqft_breakdown && plan.sqft_breakdown.length > 0 && (
+                                  <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                                )}
+                              </div>
+                            </TooltipTrigger>
+                            {plan.sqft_breakdown && plan.sqft_breakdown.length > 0 && (
+                              <TooltipContent 
+                                side="left" 
+                                align="start"
+                                className="max-w-sm p-4 bg-popover border shadow-lg"
+                              >
+                                <div className="space-y-3">
+                                  <div className="flex items-center justify-between pb-2 border-b">
+                                    <p className="font-semibold text-sm">SQFT Breakdown</p>
+                                    <Badge variant="secondary" className="text-xs">
+                                      {plan.sqft_breakdown.length} {plan.sqft_breakdown.length === 1 ? 'Asset' : 'Assets'}
+                                    </Badge>
+                                  </div>
+                                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                                    {plan.sqft_breakdown.map((asset: any, idx: number) => (
+                                      <div 
+                                        key={idx} 
+                                        className="flex items-start justify-between gap-3 py-2 px-2 rounded-md hover:bg-muted/50 transition-colors"
+                                      >
+                                        <div className="flex-1 min-w-0">
+                                          <p className="font-medium text-xs text-primary truncate">
+                                            {asset.asset_id}
+                                          </p>
+                                          <p className="text-xs text-muted-foreground truncate">
+                                            {asset.media_type}
+                                          </p>
+                                          <p className="text-xs text-muted-foreground mt-0.5">
+                                            {asset.dimensions}
+                                          </p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                          <p className="font-semibold text-xs">
+                                            {asset.sqft.toFixed(2)} sq.ft
+                                          </p>
+                                          <p className="text-xs text-muted-foreground">
+                                            {((asset.sqft / plan.total_sqft) * 100).toFixed(1)}%
+                                          </p>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <div className="flex items-center justify-between pt-2 border-t">
+                                    <p className="text-sm font-semibold">Total SQFT:</p>
+                                    <p className="text-sm font-bold text-primary">
+                                      {plan.total_sqft.toFixed(2)} sq.ft
+                                    </p>
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
                       </TableCell>
                       <TableCell className={`text-right font-medium ${getCellClassName()}`}>
                         {formatCurrencyUtil(plan.grand_total, settings.currencyFormat, settings.currencySymbol, settings.compactNumbers)}

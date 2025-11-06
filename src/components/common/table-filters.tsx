@@ -17,6 +17,8 @@ import { Button } from "@/components/ui/button";
 import { Filter, X, LayoutList } from "lucide-react";
 import ColumnVisibilityButton from "./column-visibility-button";
 import { TableDensity } from "@/hooks/use-table-density";
+import { FilterPresets } from "./filter-presets";
+import { GlobalSearch } from "./global-search";
 
 export interface FilterConfig {
   key: string;
@@ -39,6 +41,13 @@ interface TableFiltersProps {
   // Density props
   density?: TableDensity;
   onDensityChange?: (density: TableDensity) => void;
+  // Filter presets
+  tableKey?: string;
+  // Global search
+  enableGlobalSearch?: boolean;
+  searchableData?: any[];
+  searchableKeys?: string[];
+  onGlobalSearchFilter?: (filtered: any[]) => void;
 }
 
 export function TableFilters({
@@ -52,6 +61,11 @@ export function TableFilters({
   onResetColumns,
   density,
   onDensityChange,
+  tableKey,
+  enableGlobalSearch = false,
+  searchableData = [],
+  searchableKeys = [],
+  onGlobalSearchFilter,
 }: TableFiltersProps) {
   const hasActiveFilters = Object.values(filterValues).some(v => v !== "");
 
@@ -81,7 +95,31 @@ export function TableFilters({
           </CardHeader>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <CardContent className="p-4 sm:p-6 border-t">
+          {/* Global Search */}
+          {enableGlobalSearch && onGlobalSearchFilter && (
+            <CardContent className="p-4 sm:p-6 border-t">
+              <GlobalSearch
+                data={searchableData}
+                searchableKeys={searchableKeys}
+                onFilteredData={onGlobalSearchFilter}
+              />
+            </CardContent>
+          )}
+          
+          <CardContent className="p-4 sm:p-6 border-t">{tableKey && (
+              <div className="mb-4 flex justify-end">
+                <FilterPresets
+                  tableKey={tableKey}
+                  currentFilters={filterValues}
+                  onApplyPreset={(filters) => {
+                    Object.entries(filters).forEach(([key, value]) => {
+                      onFilterChange(key, value);
+                    });
+                  }}
+                />
+              </div>
+            )}
+
             <div className="flex items-end gap-4 flex-wrap">
               {/* Dynamic Filters */}
               {filters.map((filter) => (

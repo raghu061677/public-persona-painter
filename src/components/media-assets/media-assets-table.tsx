@@ -50,6 +50,8 @@ import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import { useTableDensity } from "@/hooks/use-table-density";
 import ColumnVisibilityButton from "@/components/common/column-visibility-button";
 import { TableFilters } from "@/components/common/table-filters";
+import { BulkActionsDropdown, commonBulkActions } from "@/components/common/bulk-actions-dropdown";
+import { highlightText } from "@/components/common/global-search";
 import {
   useReactTable,
   getCoreRowModel,
@@ -186,6 +188,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+  const [globalSearchFiltered, setGlobalSearchFiltered] = useState<Asset[]>(assets);
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState<string | null>(null);
@@ -221,6 +224,32 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
     setAssetToDelete(null);
   };
 
+  const handleBulkAction = async (actionId: string) => {
+    const selectedIds = table.getSelectedRowModel().rows.map(row => row.original.id);
+    
+    if (actionId === "delete") {
+      const { error } = await supabase
+        .from("media_assets")
+        .delete()
+        .in("id", selectedIds);
+
+      if (error) throw error;
+      
+      onRefresh();
+      table.resetRowSelection();
+    } else if (actionId === "export") {
+      const selectedAssets = table.getSelectedRowModel().rows.map(row => row.original);
+      // Export logic here - you can use existing export utilities
+      const XLSX = await import("xlsx");
+      const ws = XLSX.utils.json_to_sheet(selectedAssets);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Assets");
+      XLSX.writeFile(wb, "media-assets-export.xlsx");
+    } else if (actionId === "addToPlan") {
+      setIsPlanModalOpen(true);
+    }
+  };
+
   const columns: ColumnDef<Asset>[] = useMemo(
     () => [
       {
@@ -245,14 +274,17 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
       {
         accessorKey: "id",
         header: "Asset ID",
-        cell: ({ row }) => (
-          <button
-            onClick={() => navigate(`/admin/media-assets/${row.original.id}`)}
-            className="hover:underline font-mono text-xs text-left"
-          >
-            {row.original.id}
-          </button>
-        ),
+        cell: ({ row, table }) => {
+          const globalFilter = (table.getState() as any).globalFilter || "";
+          return (
+            <button
+              onClick={() => navigate(`/admin/media-assets/${row.original.id}`)}
+              className="hover:underline font-mono text-xs text-left"
+            >
+              {highlightText(row.original.id, globalFilter)}
+            </button>
+          );
+        },
       },
       {
         id: "images",
@@ -260,19 +292,29 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
         cell: ImageCell,
         enableSorting: false,
       },
-      { accessorKey: "media_id", header: "Municipal ID" },
+      { 
+        accessorKey: "media_id", 
+        header: "Municipal ID",
+        cell: ({ row, table }) => {
+          const globalFilter = (table.getState() as any).globalFilter || "";
+          return row.original.media_id ? highlightText(row.original.media_id, globalFilter) : "-";
+        },
+      },
       {
         accessorKey: "location",
         header: "Location / Landmark",
-        cell: ({ row }) => (
-          <button
-            onClick={() => navigate(`/admin/media-assets/${row.original.id}`)}
-            className="hover:underline w-48 truncate block text-left"
-            title={row.original.location}
-          >
-            {row.original.location}
-          </button>
-        ),
+        cell: ({ row, table }) => {
+          const globalFilter = (table.getState() as any).globalFilter || "";
+          return (
+            <button
+              onClick={() => navigate(`/admin/media-assets/${row.original.id}`)}
+              className="hover:underline w-48 truncate block text-left"
+              title={row.original.location}
+            >
+              {highlightText(row.original.location, globalFilter)}
+            </button>
+          );
+        },
       },
       { accessorKey: "area", header: "Area" },
       { accessorKey: "city", header: "City" },
@@ -355,7 +397,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
   }, [visibleKeys, allColumnKeys]);
 
   const table = useReactTable({
-    data: assets,
+    data: globalSearchFiltered,
     columns,
     state: {
       sorting,
@@ -363,7 +405,8 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
       columnOrder,
       columnFilters,
       rowSelection,
-    },
+      globalFilter: "", // For tracking in cells
+    } as any,
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
@@ -523,23 +566,34 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
           onResetColumns={resetColumnPrefs}
           density={density}
           onDensityChange={setDensity}
+          tableKey="media-assets"
+          enableGlobalSearch
+          searchableData={assets}
+          searchableKeys={["id", "media_id", "location", "area", "city", "media_type", "status"]}
+          onGlobalSearchFilter={setGlobalSearchFiltered}
         />
 
         {selectedAssetIds.length > 0 && (
           <Card className="mb-4 bg-primary/5 border-primary/20">
-            <CardContent className="p-4 flex items-center justify-between">
+            <CardContent className="p-4 flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
                   <span className="text-lg font-bold text-primary-foreground">{selectedAssetIds.length}</span>
                 </div>
                 <div>
                   <p className="font-semibold">Assets Selected</p>
-                  <p className="text-sm text-muted-foreground">Ready to add to a plan</p>
+                  <p className="text-sm text-muted-foreground">Ready for bulk actions</p>
                 </div>
               </div>
-              <Button onClick={() => setIsPlanModalOpen(true)} size="lg">
-                Add to Plan
-              </Button>
+              <BulkActionsDropdown
+                selectedCount={selectedAssetIds.length}
+                actions={[
+                  commonBulkActions.addToPlan,
+                  commonBulkActions.export,
+                  commonBulkActions.delete,
+                ]}
+                onAction={handleBulkAction}
+              />
             </CardContent>
           </Card>
         )}

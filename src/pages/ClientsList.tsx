@@ -25,10 +25,20 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
-import { Plus, Search, Sparkles } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Plus, Search, Sparkles, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { EditClientDialog } from "@/components/clients/EditClientDialog";
+import { DeleteClientDialog } from "@/components/clients/DeleteClientDialog";
+import { z } from "zod";
 
 const INDIAN_STATES = [
   { code: "AP", name: "Andhra Pradesh" },
@@ -69,6 +79,19 @@ const INDIAN_STATES = [
   { code: "PY", name: "Puducherry" },
 ];
 
+// Add client validation schema
+const addClientSchema = z.object({
+  id: z.string().min(1, "Client ID is required"),
+  name: z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name must be less than 100 characters"),
+  email: z.string().trim().email("Invalid email address").max(255).optional().or(z.literal("")),
+  phone: z.string().trim().regex(/^[0-9]{10}$/, "Phone must be exactly 10 digits").optional().or(z.literal("")),
+  company: z.string().trim().max(100).optional().or(z.literal("")),
+  gst_number: z.string().trim().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST number format").optional().or(z.literal("")),
+  state: z.string().min(1, "State is required"),
+  city: z.string().trim().max(50).optional().or(z.literal("")),
+});
+
+
 export default function ClientsList() {
   const { isAdmin } = useAuth();
   const [clients, setClients] = useState<any[]>([]);
@@ -76,6 +99,11 @@ export default function ClientsList() {
   const [generating, setGenerating] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<any>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deletingClient, setDeletingClient] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     id: "",
     name: "",
@@ -140,16 +168,51 @@ export default function ClientsList() {
     }
   };
 
+  const validateForm = (): boolean => {
+    try {
+      addClientSchema.parse(formData);
+      setFormErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const errors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            errors[err.path[0] as string] = err.message;
+          }
+        });
+        setFormErrors(errors);
+      }
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!validateForm()) {
+      toast({
+        title: "Validation Error",
+        description: "Please fix the errors in the form",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     const { error } = await supabase
       .from('clients')
       .insert({
-        ...formData,
+        id: formData.id,
+        name: formData.name.trim(),
+        email: formData.email?.trim() || null,
+        phone: formData.phone?.trim() || null,
+        company: formData.company?.trim() || null,
+        gst_number: formData.gst_number?.trim() || null,
+        state: formData.state,
+        city: formData.city?.trim() || null,
         created_by: user.id,
       } as any);
 
@@ -165,17 +228,44 @@ export default function ClientsList() {
         description: "Client created successfully",
       });
       setIsDialogOpen(false);
-      setFormData({
-        id: "",
-        name: "",
-        email: "",
-        phone: "",
-        company: "",
-        gst_number: "",
-        state: "",
-        city: "",
-      });
+      resetForm();
       fetchClients();
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      id: "",
+      name: "",
+      email: "",
+      phone: "",
+      company: "",
+      gst_number: "",
+      state: "",
+      city: "",
+    });
+    setFormErrors({});
+  };
+
+  const handleEdit = (client: any) => {
+    setEditingClient(client);
+    setEditDialogOpen(true);
+  };
+
+  const handleDelete = (client: any) => {
+    setDeletingClient(client);
+    setDeleteDialogOpen(true);
+  };
+
+  const updateField = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear error when user types
+    if (formErrors[field]) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
     }
   };
 
@@ -207,16 +297,19 @@ export default function ClientsList() {
                   Add Client
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>Add New Client</DialogTitle>
+                  <DialogDescription>
+                    Create a new client record. Fields marked with * are required.
+                  </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>State *</Label>
-                      <Select value={formData.state} onValueChange={(value) => setFormData(prev => ({ ...prev, state: value }))}>
-                        <SelectTrigger>
+                      <Select value={formData.state} onValueChange={(value) => updateField('state', value)}>
+                        <SelectTrigger className={formErrors.state ? "border-destructive" : ""}>
                           <SelectValue placeholder="Select state..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -227,6 +320,7 @@ export default function ClientsList() {
                           ))}
                         </SelectContent>
                       </Select>
+                      {formErrors.state && <p className="text-sm text-destructive mt-1">{formErrors.state}</p>}
                     </div>
                     <div className="flex items-end">
                       <Button
@@ -256,43 +350,55 @@ export default function ClientsList() {
                     <Input
                       required
                       value={formData.name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                      onChange={(e) => updateField('name', e.target.value)}
+                      className={formErrors.name ? "border-destructive" : ""}
                     />
+                    {formErrors.name && <p className="text-sm text-destructive mt-1">{formErrors.name}</p>}
                   </div>
                   <div>
                     <Label>Email</Label>
                     <Input
                       type="email"
                       value={formData.email}
-                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                      onChange={(e) => updateField('email', e.target.value)}
+                      className={formErrors.email ? "border-destructive" : ""}
                     />
+                    {formErrors.email && <p className="text-sm text-destructive mt-1">{formErrors.email}</p>}
                   </div>
                   <div>
                     <Label>Phone</Label>
                     <Input
                       value={formData.phone}
-                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                      onChange={(e) => updateField('phone', e.target.value.replace(/\D/g, ''))}
+                      placeholder="10 digit number"
+                      maxLength={10}
+                      className={formErrors.phone ? "border-destructive" : ""}
                     />
+                    {formErrors.phone && <p className="text-sm text-destructive mt-1">{formErrors.phone}</p>}
                   </div>
                   <div>
                     <Label>Company</Label>
                     <Input
                       value={formData.company}
-                      onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
+                      onChange={(e) => updateField('company', e.target.value)}
                     />
                   </div>
                   <div>
                     <Label>GST Number</Label>
                     <Input
                       value={formData.gst_number}
-                      onChange={(e) => setFormData(prev => ({ ...prev, gst_number: e.target.value }))}
+                      onChange={(e) => updateField('gst_number', e.target.value.toUpperCase())}
+                      placeholder="22AAAAA0000A1Z5"
+                      maxLength={15}
+                      className={formErrors.gst_number ? "border-destructive" : ""}
                     />
+                    {formErrors.gst_number && <p className="text-sm text-destructive mt-1">{formErrors.gst_number}</p>}
                   </div>
                   <div>
                     <Label>City</Label>
                     <Input
                       value={formData.city}
-                      onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                      onChange={(e) => updateField('city', e.target.value)}
                     />
                   </div>
                   <div className="flex justify-end gap-2">
@@ -331,18 +437,19 @@ export default function ClientsList() {
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>City</TableHead>
+                {isAdmin && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-8">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : filteredClients.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-8">
                     No clients found
                   </TableCell>
                 </TableRow>
@@ -355,12 +462,52 @@ export default function ClientsList() {
                     <TableCell>{client.email || '-'}</TableCell>
                     <TableCell>{client.phone || '-'}</TableCell>
                     <TableCell>{client.city || '-'}</TableCell>
+                    {isAdmin && (
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEdit(client)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDelete(client)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
         </div>
+
+        {/* Edit Dialog */}
+        <EditClientDialog
+          client={editingClient}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          onClientUpdated={fetchClients}
+        />
+
+        {/* Delete Dialog */}
+        <DeleteClientDialog
+          client={deletingClient}
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onClientDeleted={fetchClients}
+        />
       </div>
     </div>
   );

@@ -14,8 +14,9 @@ import {
 } from "@/components/ui/collapsible";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Filter, X } from "lucide-react";
+import { Filter, X, LayoutList } from "lucide-react";
 import ColumnVisibilityButton from "./column-visibility-button";
+import { TableDensity } from "@/hooks/use-table-density";
 
 export interface FilterConfig {
   key: string;
@@ -35,6 +36,9 @@ interface TableFiltersProps {
   visibleColumns: string[];
   onColumnVisibilityChange: (keys: string[]) => void;
   onResetColumns: () => void;
+  // Density props
+  density?: TableDensity;
+  onDensityChange?: (density: TableDensity) => void;
 }
 
 export function TableFilters({
@@ -46,6 +50,8 @@ export function TableFilters({
   visibleColumns,
   onColumnVisibilityChange,
   onResetColumns,
+  density,
+  onDensityChange,
 }: TableFiltersProps) {
   const hasActiveFilters = Object.values(filterValues).some(v => v !== "");
 
@@ -110,7 +116,7 @@ export function TableFilters({
               ))}
 
               {/* Action Buttons */}
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {hasActiveFilters && (
                   <Button
                     variant="outline"
@@ -121,6 +127,21 @@ export function TableFilters({
                     Clear Filters
                   </Button>
                 )}
+                
+                {density && onDensityChange && (
+                  <Select value={density} onValueChange={onDensityChange}>
+                    <SelectTrigger className="w-[140px]">
+                      <LayoutList className="h-4 w-4 mr-2" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="compact">Compact</SelectItem>
+                      <SelectItem value="normal">Normal</SelectItem>
+                      <SelectItem value="comfortable">Comfortable</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+                
                 <ColumnVisibilityButton
                   allColumns={allColumns}
                   visibleKeys={visibleColumns}

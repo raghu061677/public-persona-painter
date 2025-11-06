@@ -47,6 +47,7 @@ import {
 import { DndProvider, useDrag, useDrop, type XYCoord } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
+import { useTableDensity } from "@/hooks/use-table-density";
 import ColumnVisibilityButton from "@/components/common/column-visibility-button";
 import { TableFilters } from "@/components/common/table-filters";
 import {
@@ -344,6 +345,8 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
     "actions",
   ]);
 
+  const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("media-assets");
+
   const columnVisibility: VisibilityState = useMemo(() => {
     return allColumnKeys.reduce((acc, key) => {
       acc[key] = visibleKeys.includes(key);
@@ -518,6 +521,8 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
           visibleColumns={visibleKeys}
           onColumnVisibilityChange={setVisibleKeys}
           onResetColumns={resetColumnPrefs}
+          density={density}
+          onDensityChange={setDensity}
         />
 
         {selectedAssetIds.length > 0 && (
@@ -559,10 +564,10 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                       table.getRowModel().rows.map((row) => (
                         <TableRow 
                           key={row.id}
-                          className="hover:bg-muted/50 transition-colors"
+                          className={`hover:bg-muted/50 transition-colors ${getRowClassName()}`}
                         >
                           {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id} className="whitespace-nowrap px-4 py-3">
+                            <TableCell key={cell.id} className={`whitespace-nowrap ${getCellClassName()}`}>
                               {flexRender(cell.column.columnDef.cell, cell.getContext())}
                             </TableCell>
                           ))}

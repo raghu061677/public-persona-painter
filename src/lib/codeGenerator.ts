@@ -94,7 +94,7 @@ export async function generateMediaAssetCode(
  * Example: PLAN-202511-0007
  */
 export async function generatePlanCode(): Promise<string> {
-  const period = getCurrentPeriod();
+  const period = getCurrentPeriod(); // Returns YYYYMM format (e.g., "202511")
   const sequence = await getNextSequence('PLAN', 'default', period);
   
   return `PLAN-${period}-${padNumber(sequence)}`;

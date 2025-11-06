@@ -24,6 +24,14 @@ interface MediaAsset {
   dimensions: string;
   card_rate: number;
   status: string;
+  image_urls?: string[];
+  images?: {
+    frontView?: string;
+    backView?: string;
+    leftView?: string;
+    rightView?: string;
+    [key: string]: string | undefined;
+  };
 }
 
 export default function MediaAssetsMap() {
@@ -120,22 +128,55 @@ export default function MediaAssetsMap() {
 
     // Add new markers
     filteredAssets.forEach((asset) => {
-      const marker = L.marker([asset.latitude, asset.longitude])
-        .bindPopup(`
-          <div style="min-width: 200px;">
-            <h3 style="font-weight: 600; font-size: 1rem; margin-bottom: 8px;">${asset.location}</h3>
-            <div style="font-size: 0.875rem; line-height: 1.5;">
-              <p><strong>Area:</strong> ${asset.area}</p>
-              <p><strong>City:</strong> ${asset.city}</p>
-              <p><strong>Type:</strong> ${asset.media_type}</p>
-              <p><strong>Dimensions:</strong> ${asset.dimensions}</p>
-              <p><strong>Rate:</strong> ₹${asset.card_rate?.toLocaleString("en-IN")}</p>
-              <p><strong>Status:</strong> <span style="color: ${
-                asset.status === "Available" ? "#16a34a" : "#dc2626"
-              }">${asset.status}</span></p>
+      // Get the first available image URL
+      let imageUrl = "";
+      // Try image_urls array first
+      if (asset.image_urls && asset.image_urls.length > 0) {
+        imageUrl = asset.image_urls[0];
+      } 
+      // Then try images object
+      else if (asset.images) {
+        const imageKeys = ['frontView', 'backView', 'leftView', 'rightView'];
+        for (const key of imageKeys) {
+          if (asset.images[key]) {
+            imageUrl = asset.images[key]!;
+            break;
+          }
+        }
+      }
+
+      const popupContent = `
+        <div style="min-width: 250px; max-width: 300px;">
+          ${imageUrl ? `
+            <div style="margin-bottom: 12px;">
+              <img src="${imageUrl}" alt="${asset.location}" 
+                   style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px;" 
+                   onerror="this.style.display='none'" />
             </div>
+          ` : ''}
+          <h3 style="font-weight: 600; font-size: 1rem; margin-bottom: 8px;">${asset.location}</h3>
+          <div style="font-size: 0.875rem; line-height: 1.5;">
+            <p><strong>Area:</strong> ${asset.area}</p>
+            <p><strong>City:</strong> ${asset.city}</p>
+            <p><strong>Type:</strong> ${asset.media_type}</p>
+            <p><strong>Dimensions:</strong> ${asset.dimensions}</p>
+            <p><strong>Rate:</strong> ₹${asset.card_rate?.toLocaleString("en-IN")}</p>
+            <p><strong>Status:</strong> <span style="color: ${
+              asset.status === "Available" ? "#16a34a" : "#dc2626"
+            }">${asset.status}</span></p>
           </div>
-        `)
+          <div style="margin-top: 12px;">
+            <a href="/admin/media-assets/${asset.id}" 
+               style="color: #1e40af; text-decoration: none; font-weight: 500; font-size: 0.875rem;"
+               target="_blank">
+              View Details →
+            </a>
+          </div>
+        </div>
+      `;
+
+      const marker = L.marker([asset.latitude, asset.longitude])
+        .bindPopup(popupContent)
         .addTo(mapRef.current!);
 
       markersRef.current.push(marker);

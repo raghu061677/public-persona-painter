@@ -48,6 +48,7 @@ import { DndProvider, useDrag, useDrop, type XYCoord } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import ColumnVisibilityButton from "@/components/common/column-visibility-button";
+import { TableFilters } from "@/components/common/table-filters";
 import {
   useReactTable,
   getCoreRowModel,
@@ -465,91 +466,59 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
     );
   }
 
+  const filterConfigs: any[] = [
+    {
+      key: "location",
+      label: "Location",
+      type: "text",
+      placeholder: "Search location...",
+    },
+    {
+      key: "area",
+      label: "Area",
+      type: "text",
+      placeholder: "Search area...",
+    },
+    {
+      key: "media_type",
+      label: "Media Type",
+      type: "select",
+      options: [{ value: "", label: "All Media Types" }, ...mediaTypes.map(t => ({ value: t, label: t }))],
+    },
+  ];
+
+  const filterValues = {
+    location: (table.getColumn("location")?.getFilterValue() as string) ?? "",
+    area: (table.getColumn("area")?.getFilterValue() as string) ?? "",
+    media_type: (table.getColumn("media_type")?.getFilterValue() as string) ?? "",
+  };
+
+  const handleFilterChange = (key: string, value: string) => {
+    if (key === "location") handleLocationFilterChange({ target: { value } } as any);
+    else if (key === "area") handleAreaFilterChange({ target: { value } } as any);
+    else if (key === "media_type") handleMediaTypeFilterChange(value);
+  };
+
+  const handleClearFilters = () => {
+    table.getColumn("location")?.setFilterValue("");
+    table.getColumn("area")?.setFilterValue("");
+    table.getColumn("media_type")?.setFilterValue("");
+  };
+
   return (
     <>
       <DndProvider backend={HTML5Backend}>
-        {/* Collapsible Filters Section */}
-        <Collapsible>
-          <Card className="border-2 mb-4">
-            <CollapsibleTrigger asChild>
-              <CardHeader className="p-4 cursor-pointer hover:bg-muted/20 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Filter className="h-5 w-5 text-primary" />
-                    </div>
-                    <CardTitle className="text-lg font-semibold">Filters & Columns</CardTitle>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    Toggle
-                  </Button>
-                </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="p-4 sm:p-6 border-t">
-                <div className="flex items-end gap-4 flex-wrap">
-                  <div className="flex-1 min-w-[200px]">
-                    <Label className="text-sm font-medium mb-2">Location</Label>
-                    <Input
-                      placeholder="Search location..."
-                      value={(table.getColumn("location")?.getFilterValue() as string) ?? ""}
-                      onChange={handleLocationFilterChange}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-[200px]">
-                    <Label className="text-sm font-medium mb-2">Area</Label>
-                    <Input
-                      placeholder="Search area..."
-                      value={(table.getColumn("area")?.getFilterValue() as string) ?? ""}
-                      onChange={handleAreaFilterChange}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-[200px]">
-                    <Label className="text-sm font-medium mb-2">Media Type</Label>
-                    <Select
-                      value={(table.getColumn("media_type")?.getFilterValue() as string) ?? "all"}
-                      onValueChange={handleMediaTypeFilterChange}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select Media Type" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover z-50">
-                        <SelectItem value="all">All Media Types</SelectItem>
-                        {mediaTypes.map((m) => (
-                          <SelectItem key={m} value={m}>
-                            {m}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => {
-                        table.getColumn("location")?.setFilterValue("");
-                        table.getColumn("area")?.setFilterValue("");
-                        table.getColumn("media_type")?.setFilterValue("");
-                      }}
-                    >
-                      Clear Filters
-                    </Button>
-                    <ColumnVisibilityButton
-                      allColumns={allColumnsForVisibilityButton}
-                      visibleKeys={visibleKeys}
-                      onChange={setVisibleKeys}
-                      onReset={resetColumnPrefs}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
+        {/* Import TableFilters component */}
+        <TableFilters
+          filters={filterConfigs}
+          filterValues={filterValues}
+          onFilterChange={handleFilterChange}
+          onClearFilters={handleClearFilters}
+          allColumns={allColumnsForVisibilityButton}
+          visibleColumns={visibleKeys}
+          onColumnVisibilityChange={setVisibleKeys}
+          onResetColumns={resetColumnPrefs}
+        />
 
         {selectedAssetIds.length > 0 && (
           <Card className="mb-4 bg-primary/5 border-primary/20">

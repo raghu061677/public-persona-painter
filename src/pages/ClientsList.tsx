@@ -42,6 +42,9 @@ import { EditClientDialog } from "@/components/clients/EditClientDialog";
 import { DeleteClientDialog } from "@/components/clients/DeleteClientDialog";
 import { z } from "zod";
 import * as XLSX from 'xlsx';
+import { TableFilters } from "@/components/common/table-filters";
+import { useColumnPrefs } from "@/hooks/use-column-prefs";
+import { Card, CardContent } from "@/components/ui/card";
 
 const INDIAN_STATES = [
   { code: "AP", name: "Andhra Pradesh" },
@@ -636,45 +639,69 @@ export default function ClientsList() {
           </div>
         )}
 
-        {/* Filters and Actions */}
-        <div className="mb-6 space-y-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search clients..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+        {/* Filters and Columns */}
+        <TableFilters
+          filters={[
+            {
+              key: "search",
+              label: "Search",
+              type: "text",
+              placeholder: "Search clients by name, email, company, ID...",
+            },
+            {
+              key: "state",
+              label: "State",
+              type: "select",
+              options: uniqueStates.map(state => ({
+                value: state,
+                label: INDIAN_STATES.find(s => s.code === state)?.name || state
+              })),
+            },
+            {
+              key: "city",
+              label: "City",
+              type: "select",
+              options: uniqueCities.map(city => ({ value: city, label: city })),
+            },
+          ]}
+          filterValues={{
+            search: searchTerm,
+            state: filterState,
+            city: filterCity,
+          }}
+          onFilterChange={(key, value) => {
+            if (key === "search") setSearchTerm(value);
+            else if (key === "state") setFilterState(value);
+            else if (key === "city") setFilterCity(value);
+          }}
+          onClearFilters={() => {
+            setSearchTerm("");
+            setFilterState("");
+            setFilterCity("");
+          }}
+          allColumns={[
+            { key: "select", label: "Select" },
+            { key: "id", label: "Client ID" },
+            { key: "name", label: "Name" },
+            { key: "company", label: "Company" },
+            { key: "email", label: "Email" },
+            { key: "phone", label: "Phone" },
+            { key: "city", label: "City" },
+            { key: "state", label: "State" },
+            { key: "gst", label: "GST Number" },
+            { key: "actions", label: "Actions" },
+          ]}
+          visibleColumns={["select", "id", "name", "company", "email", "phone", "city", "state", "actions"]}
+          onColumnVisibilityChange={() => {}}
+          onResetColumns={() => {}}
+        />
+
+        <Card className="mb-4">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Showing {paginatedClients.length} of {filteredAndSortedClients.length} clients
+              {(searchTerm || filterState || filterCity) && ` (filtered from ${clients.length} total)`}
             </div>
-            
-            <Select value={filterState || "all"} onValueChange={(value) => setFilterState(value === "all" ? "" : value)}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Filter by State" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All States</SelectItem>
-                {uniqueStates.map(state => (
-                  <SelectItem key={state} value={state}>
-                    {INDIAN_STATES.find(s => s.code === state)?.name || state}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filterCity || "all"} onValueChange={(value) => setFilterCity(value === "all" ? "" : value)}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Filter by City" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Cities</SelectItem>
-                {uniqueCities.map(city => (
-                  <SelectItem key={city} value={city}>{city}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
             <Button 
               variant="outline" 
               onClick={exportToExcel}
@@ -683,13 +710,8 @@ export default function ClientsList() {
               <Download className="mr-2 h-4 w-4" />
               Export to Excel
             </Button>
-          </div>
-
-          <div className="text-sm text-muted-foreground">
-            Showing {paginatedClients.length} of {filteredAndSortedClients.length} clients
-            {(searchTerm || filterState || filterCity) && ` (filtered from ${clients.length} total)`}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         <div className="bg-card rounded-lg border">
           <Table>

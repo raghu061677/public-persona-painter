@@ -18,12 +18,15 @@ import { formatCurrency } from "@/utils/mediaAssets";
 import { getCampaignStatusColor } from "@/utils/campaigns";
 import { formatDate } from "@/utils/plans";
 import { toast } from "@/hooks/use-toast";
+import { TableFilters } from "@/components/common/table-filters";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function CampaignsList() {
   const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -82,14 +85,24 @@ export default function CampaignsList() {
   };
 
   const filteredCampaigns = campaigns.filter(campaign => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      campaign.id?.toLowerCase().includes(term) ||
-      campaign.client_name?.toLowerCase().includes(term) ||
-      campaign.campaign_name?.toLowerCase().includes(term)
-    );
+    // Search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      const matchesSearch = (
+        campaign.id?.toLowerCase().includes(term) ||
+        campaign.client_name?.toLowerCase().includes(term) ||
+        campaign.campaign_name?.toLowerCase().includes(term)
+      );
+      if (!matchesSearch) return false;
+    }
+    
+    // Status filter
+    if (filterStatus && campaign.status !== filterStatus) return false;
+    
+    return true;
   });
+  
+  const uniqueStatuses = Array.from(new Set(campaigns.map(c => c.status).filter(Boolean)));
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this campaign?")) return;
@@ -126,17 +139,48 @@ export default function CampaignsList() {
           </div>
         </div>
 
-        <div className="mb-6">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search campaigns..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
+        {/* Filters */}
+        <TableFilters
+          filters={[
+            {
+              key: "search",
+              label: "Search",
+              type: "text",
+              placeholder: "Search by Campaign ID, client, or campaign name...",
+            },
+            {
+              key: "status",
+              label: "Status",
+              type: "select",
+              options: uniqueStatuses.map(s => ({ value: s, label: s })),
+            },
+          ]}
+          filterValues={{
+            search: searchTerm,
+            status: filterStatus,
+          }}
+          onFilterChange={(key, value) => {
+            if (key === "search") setSearchTerm(value);
+            else if (key === "status") setFilterStatus(value);
+          }}
+          onClearFilters={() => {
+            setSearchTerm("");
+            setFilterStatus("");
+          }}
+          allColumns={[
+            { key: "id", label: "Campaign ID" },
+            { key: "client", label: "Client" },
+            { key: "campaign", label: "Campaign" },
+            { key: "period", label: "Period" },
+            { key: "status", label: "Status" },
+            { key: "assets", label: "Assets" },
+            { key: "total", label: "Total" },
+            { key: "actions", label: "Actions" },
+          ]}
+          visibleColumns={["id", "client", "campaign", "period", "status", "assets", "total", "actions"]}
+          onColumnVisibilityChange={() => {}}
+          onResetColumns={() => {}}
+        />
 
         <div className="bg-card rounded-lg border">
           <Table>

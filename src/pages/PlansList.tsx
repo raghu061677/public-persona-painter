@@ -24,12 +24,14 @@ import {
 import { formatCurrency } from "@/utils/mediaAssets";
 import { getPlanStatusColor, formatDate } from "@/utils/plans";
 import { toast } from "@/hooks/use-toast";
+import { TableFilters } from "@/components/common/table-filters";
 
 export default function PlansList() {
   const navigate = useNavigate();
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -88,14 +90,24 @@ export default function PlansList() {
   };
 
   const filteredPlans = plans.filter(plan => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      plan.id?.toLowerCase().includes(term) ||
-      plan.client_name?.toLowerCase().includes(term) ||
-      plan.plan_name?.toLowerCase().includes(term)
-    );
+    // Search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      const matchesSearch = (
+        plan.id?.toLowerCase().includes(term) ||
+        plan.client_name?.toLowerCase().includes(term) ||
+        plan.plan_name?.toLowerCase().includes(term)
+      );
+      if (!matchesSearch) return false;
+    }
+    
+    // Status filter
+    if (filterStatus && plan.status !== filterStatus) return false;
+    
+    return true;
   });
+  
+  const uniqueStatuses = Array.from(new Set(plans.map(p => p.status).filter(Boolean)));
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this plan?")) return;
@@ -261,20 +273,48 @@ export default function PlansList() {
           </Card>
         </div>
 
-        {/* Search Bar */}
-        <Card className="mb-6">
-          <CardContent className="p-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by Plan ID, client name, or plan name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-11"
-              />
-            </div>
-          </CardContent>
-        </Card>
+        {/* Filters */}
+        <TableFilters
+          filters={[
+            {
+              key: "search",
+              label: "Search",
+              type: "text",
+              placeholder: "Search by Plan ID, client name, or plan name...",
+            },
+            {
+              key: "status",
+              label: "Status",
+              type: "select",
+              options: uniqueStatuses.map(s => ({ value: s, label: s })),
+            },
+          ]}
+          filterValues={{
+            search: searchTerm,
+            status: filterStatus,
+          }}
+          onFilterChange={(key, value) => {
+            if (key === "search") setSearchTerm(value);
+            else if (key === "status") setFilterStatus(value);
+          }}
+          onClearFilters={() => {
+            setSearchTerm("");
+            setFilterStatus("");
+          }}
+          allColumns={[
+            { key: "id", label: "Plan ID" },
+            { key: "client", label: "Client Name" },
+            { key: "type", label: "Plan Type" },
+            { key: "status", label: "Status" },
+            { key: "duration", label: "Duration" },
+            { key: "total", label: "Grand Total" },
+            { key: "created", label: "Created" },
+            { key: "actions", label: "Actions" },
+          ]}
+          visibleColumns={["id", "client", "type", "status", "duration", "total", "created", "actions"]}
+          onColumnVisibilityChange={() => {}}
+          onResetColumns={() => {}}
+        />
 
         {/* Table Card */}
         <Card>

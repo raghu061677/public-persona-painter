@@ -39,6 +39,8 @@ import Settings from "./pages/Settings";
 import CodeManagement from "./pages/CodeManagement";
 import PowerBillsDashboard from "./pages/PowerBillsDashboard";
 import PowerBillsAnalytics from "./pages/PowerBillsAnalytics";
+import AuditLogs from "./pages/AuditLogs";
+import VendorsManagement from "./pages/VendorsManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -87,6 +89,8 @@ const App = () => (
             <Route path="/admin/code-management" element={<AppLayout><CodeManagement /></AppLayout>} />
             <Route path="/admin/power-bills" element={<AppLayout><PowerBillsDashboard /></AppLayout>} />
             <Route path="/admin/power-bills-analytics" element={<AppLayout><PowerBillsAnalytics /></AppLayout>} />
+            <Route path="/admin/audit-logs" element={<AppLayout><AuditLogs /></AppLayout>} />
+            <Route path="/admin/vendors" element={<AppLayout><VendorsManagement /></AppLayout>} />
             <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
             
             {/* Catch-all */}

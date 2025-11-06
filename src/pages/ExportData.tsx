@@ -170,6 +170,20 @@ export default function ExportData() {
 
     setIsExporting(true);
     setProgress(0);
+    
+    // Log export operation
+    const { logAudit } = await import('@/utils/auditLog');
+    await logAudit({
+      action: 'export_data',
+      resourceType: 'export',
+      details: {
+        modules: Array.from(selectedModules).map(id => 
+          modules.find(m => m.id === id)?.label
+        ),
+        format: exportFormat,
+        date_range: dateRange,
+      },
+    });
 
     try {
       const allData: Record<string, any[]> = {};

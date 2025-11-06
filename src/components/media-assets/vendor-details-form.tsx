@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 interface VendorDetails {
+  id?: string;
   name?: string;
   contact?: string;
   email?: string;
@@ -17,6 +18,7 @@ interface VendorDetails {
 interface VendorDetailsFormProps {
   value: VendorDetails;
   onChange: (value: VendorDetails) => void;
+  onVendorSelect?: (vendorId: string) => void;
 }
 
 export function VendorDetailsForm({ value, onChange }: VendorDetailsFormProps) {

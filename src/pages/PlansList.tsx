@@ -334,16 +334,16 @@ export default function PlansList() {
               <FileText className="h-8 w-8 text-primary" />
               <h1 className="text-2xl font-bold tracking-tight">Plan List</h1>
             </div>
-            {isAdmin && (
-              <div className="flex items-center gap-3">
-                <Button
-                  onClick={() => setShowTemplatesDialog(true)}
-                  variant="outline"
-                  className="border-blue-600 text-blue-600 hover:bg-blue-50"
-                >
-                  <FolderOpen className="mr-2 h-4 w-4" />
-                  Templates
-                </Button>
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={() => setShowTemplatesDialog(true)}
+                variant="outline"
+                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+              >
+                <FolderOpen className="mr-2 h-4 w-4" />
+                Templates
+              </Button>
+              {isAdmin && (
                 <Button
                   onClick={() => {
                     toast({
@@ -356,15 +356,15 @@ export default function PlansList() {
                   <Sparkles className="mr-2 h-4 w-4" />
                   Create With AI
                 </Button>
-                <Button
-                  onClick={() => navigate('/admin/plans/new')}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Plan
-                </Button>
-              </div>
-            )}
+              )}
+              <Button
+                onClick={() => navigate('/admin/plans/new')}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Plan
+              </Button>
+            </div>
           </div>
         </div>
 

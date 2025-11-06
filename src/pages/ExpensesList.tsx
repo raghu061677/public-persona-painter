@@ -12,7 +12,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Zap, Receipt, ExternalLink } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Plus, Search, Zap, Receipt, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { formatINR } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
 import { format } from "date-fns";
@@ -26,6 +36,11 @@ export default function ExpensesList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [activeTab, setActiveTab] = useState("regular");
+  const [editingBill, setEditingBill] = useState<any>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [billToDelete, setBillToDelete] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     checkAdminStatus();
@@ -114,6 +129,53 @@ export default function ExpensesList() {
       default:
         return 'outline';
     }
+  };
+
+  const handleEditBill = (bill: any) => {
+    setEditingBill(bill);
+    setEditDialogOpen(true);
+  };
+
+  const handleDeleteClick = (bill: any) => {
+    setBillToDelete(bill);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!billToDelete) return;
+
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('asset_power_bills')
+        .delete()
+        .eq('id', billToDelete.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Power bill deleted successfully",
+      });
+
+      fetchPowerBills();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete power bill",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+      setBillToDelete(null);
+    }
+  };
+
+  const handleBillUpdated = () => {
+    fetchPowerBills();
+    setEditDialogOpen(false);
+    setEditingBill(null);
   };
 
   return (
@@ -230,18 +292,19 @@ export default function ExpensesList() {
                     <TableHead>Payment Date</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Receipt</TableHead>
+                    {isAdmin && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8">
+                      <TableCell colSpan={isAdmin ? 10 : 9} className="text-center py-8">
                         Loading...
                       </TableCell>
                     </TableRow>
                   ) : filteredPowerBills.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8">
+                      <TableCell colSpan={isAdmin ? 10 : 9} className="text-center py-8">
                         No power bills found
                       </TableCell>
                     </TableRow>
@@ -283,6 +346,26 @@ export default function ExpensesList() {
                             <span className="text-muted-foreground text-sm">No receipt</span>
                           )}
                         </TableCell>
+                        {isAdmin && (
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditBill(bill)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteClick(bill)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))
                   )}
@@ -291,6 +374,39 @@ export default function ExpensesList() {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Edit Dialog */}
+        <PowerBillExpenseDialog
+          mode="edit"
+          billToEdit={editingBill}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          onBillAdded={handleBillUpdated}
+        />
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Power Bill</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this power bill for{' '}
+                <strong>{billToDelete?.asset_id}</strong>?
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteConfirm}
+                disabled={deleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleting ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

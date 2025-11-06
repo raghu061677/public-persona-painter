@@ -27,16 +27,29 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { toast } from "@/hooks/use-toast";
-import { Zap, Calendar as CalendarIcon, Loader2, Upload, X } from "lucide-react";
+import { Zap, Calendar as CalendarIcon, Loader2, Upload, X, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 interface PowerBillExpenseDialogProps {
   onBillAdded?: () => void;
+  billToEdit?: any;
+  mode?: 'add' | 'edit';
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function PowerBillExpenseDialog({ onBillAdded }: PowerBillExpenseDialogProps) {
-  const [open, setOpen] = useState(false);
+export function PowerBillExpenseDialog({ 
+  onBillAdded, 
+  billToEdit, 
+  mode = 'add',
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange
+}: PowerBillExpenseDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange || setInternalOpen;
   const [loading, setLoading] = useState(false);
   const [assets, setAssets] = useState<any[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
@@ -44,6 +57,7 @@ export function PowerBillExpenseDialog({ onBillAdded }: PowerBillExpenseDialogPr
   const [paymentDate, setPaymentDate] = useState<Date>();
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
+  const [existingReceiptUrl, setExistingReceiptUrl] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     asset_id: "",
@@ -61,8 +75,40 @@ export function PowerBillExpenseDialog({ onBillAdded }: PowerBillExpenseDialogPr
   useEffect(() => {
     if (open) {
       fetchAssets();
+      if (mode === 'edit' && billToEdit) {
+        populateEditData();
+      }
     }
-  }, [open]);
+  }, [open, billToEdit, mode]);
+
+  const populateEditData = () => {
+    if (!billToEdit) return;
+    
+    setFormData({
+      asset_id: billToEdit.asset_id || "",
+      consumer_name: billToEdit.consumer_name || "",
+      service_number: billToEdit.service_number || "",
+      unique_service_number: billToEdit.unique_service_number || "",
+      section_name: billToEdit.section_name || "",
+      ero: billToEdit.ero || "",
+      bill_amount: billToEdit.bill_amount?.toString() || "",
+      paid_amount: billToEdit.paid_amount?.toString() || "",
+      payment_status: billToEdit.payment_status || "Pending",
+      notes: billToEdit.notes || "",
+    });
+    
+    if (billToEdit.bill_month) {
+      setBillMonth(new Date(billToEdit.bill_month));
+    }
+    
+    if (billToEdit.payment_date) {
+      setPaymentDate(new Date(billToEdit.payment_date));
+    }
+    
+    if (billToEdit.bill_url) {
+      setExistingReceiptUrl(billToEdit.bill_url);
+    }
+  };
 
   const fetchAssets = async () => {
     const { data, error } = await supabase
@@ -140,6 +186,7 @@ export function PowerBillExpenseDialog({ onBillAdded }: PowerBillExpenseDialogPr
     setPaymentDate(undefined);
     setSelectedAsset(null);
     setReceiptFile(null);
+    setExistingReceiptUrl(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -187,7 +234,7 @@ export function PowerBillExpenseDialog({ onBillAdded }: PowerBillExpenseDialogPr
       // Format bill_month as YYYY-MM-01
       const formattedBillMonth = format(billMonth, 'yyyy-MM-01');
 
-      const { error } = await supabase.from('asset_power_bills').insert({
+      const billData = {
         asset_id: formData.asset_id,
         consumer_name: formData.consumer_name || null,
         service_number: formData.service_number || null,
@@ -199,16 +246,32 @@ export function PowerBillExpenseDialog({ onBillAdded }: PowerBillExpenseDialogPr
         bill_month: formattedBillMonth,
         payment_date: paymentDate ? format(paymentDate, 'yyyy-MM-dd') : null,
         payment_status: formData.payment_status,
-        bill_url: receiptUrl,
+        bill_url: receiptUrl || existingReceiptUrl,
         notes: formData.notes || null,
-        created_by: user.id,
-      });
+        ...(mode === 'add' && { created_by: user.id }),
+      };
+
+      let error;
+      if (mode === 'edit' && billToEdit) {
+        const result = await supabase
+          .from('asset_power_bills')
+          .update(billData)
+          .eq('id', billToEdit.id);
+        error = result.error;
+      } else {
+        const result = await supabase
+          .from('asset_power_bills')
+          .insert(billData);
+        error = result.error;
+      }
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Power bill expense added successfully",
+        description: mode === 'edit' 
+          ? "Power bill updated successfully"
+          : "Power bill expense added successfully",
       });
 
       resetForm();
@@ -234,17 +297,23 @@ export function PowerBillExpenseDialog({ onBillAdded }: PowerBillExpenseDialogPr
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          <Zap className="mr-2 h-4 w-4" />
-          Add Power Bill
-        </Button>
-      </DialogTrigger>
+      {mode === 'add' && (
+        <DialogTrigger asChild>
+          <Button size="sm" variant="outline">
+            <Zap className="mr-2 h-4 w-4" />
+            Add Power Bill
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add Power Bill Expense</DialogTitle>
+          <DialogTitle>
+            {mode === 'edit' ? 'Edit Power Bill' : 'Add Power Bill Expense'}
+          </DialogTitle>
           <DialogDescription>
-            Record power bill payment for a media asset
+            {mode === 'edit' 
+              ? 'Update power bill payment details'
+              : 'Record power bill payment for a media asset'}
           </DialogDescription>
         </DialogHeader>
 
@@ -419,6 +488,19 @@ export function PowerBillExpenseDialog({ onBillAdded }: PowerBillExpenseDialogPr
             {/* Receipt Upload */}
             <div className="space-y-2">
               <Label htmlFor="receipt">Payment Receipt (Proof of Payment)</Label>
+              {existingReceiptUrl && !receiptFile && (
+                <div className="p-2 bg-muted rounded-md flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">Current receipt attached</p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.open(existingReceiptUrl, '_blank')}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Input
                   id="receipt"
@@ -440,7 +522,7 @@ export function PowerBillExpenseDialog({ onBillAdded }: PowerBillExpenseDialogPr
               </div>
               {receiptFile && (
                 <p className="text-sm text-muted-foreground">
-                  Selected: {receiptFile.name}
+                  New file: {receiptFile.name}
                 </p>
               )}
             </div>
@@ -471,12 +553,12 @@ export function PowerBillExpenseDialog({ onBillAdded }: PowerBillExpenseDialogPr
               {loading || uploadingReceipt ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {uploadingReceipt ? "Uploading..." : "Adding..."}
+                  {uploadingReceipt ? "Uploading..." : mode === 'edit' ? "Updating..." : "Adding..."}
                 </>
               ) : (
                 <>
                   <Zap className="mr-2 h-4 w-4" />
-                  Add Power Bill
+                  {mode === 'edit' ? 'Update Power Bill' : 'Add Power Bill'}
                 </>
               )}
             </Button>

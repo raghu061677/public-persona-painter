@@ -30,6 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
+import { ClientDocuments } from "@/components/clients/ClientDocuments";
 
 interface Client {
   id: string;
@@ -392,13 +393,14 @@ export default function ClientDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="plans">Plans ({plans.length})</TabsTrigger>
-          <TabsTrigger value="campaigns">Campaigns ({campaigns.length})</TabsTrigger>
-          <TabsTrigger value="invoices">Invoices ({invoices.length})</TabsTrigger>
-          <TabsTrigger value="activity">Activity Log</TabsTrigger>
-        </TabsList>
+              <TabsList>
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="plans">Plans ({plans.length})</TabsTrigger>
+                <TabsTrigger value="campaigns">Campaigns ({campaigns.length})</TabsTrigger>
+                <TabsTrigger value="invoices">Invoices ({invoices.length})</TabsTrigger>
+                <TabsTrigger value="documents">Documents</TabsTrigger>
+                <TabsTrigger value="activity">Activity Log</TabsTrigger>
+              </TabsList>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4">
@@ -811,6 +813,11 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Documents Tab */}
+        <TabsContent value="documents">
+          <ClientDocuments clientId={id!} clientName={client?.name || ''} />
         </TabsContent>
 
         {/* Activity Log Tab */}

@@ -8,7 +8,10 @@ export type AuditAction =
   | 'generate_id'
   | 'role_change'
   | 'bulk_delete'
-  | 'bulk_update';
+  | 'bulk_update'
+  | 'document_upload'
+  | 'document_download'
+  | 'document_delete';
 
 export type ResourceType = 
   | 'media_asset'
@@ -19,7 +22,8 @@ export type ResourceType =
   | 'expense'
   | 'vendor'
   | 'user_role'
-  | 'export';
+  | 'export'
+  | 'client_documents';
 
 interface AuditLogParams {
   action: AuditAction;

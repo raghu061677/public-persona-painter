@@ -418,6 +418,54 @@ export type Database = {
         }
         Relationships: []
       }
+      client_documents: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          document_name: string
+          document_type: Database["public"]["Enums"]["document_type"]
+          file_name: string
+          file_path: string
+          file_size: number
+          id: string
+          mime_type: string
+          notes: string | null
+          updated_at: string | null
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          document_name: string
+          document_type: Database["public"]["Enums"]["document_type"]
+          file_name: string
+          file_path: string
+          file_size: number
+          id?: string
+          mime_type: string
+          notes?: string | null
+          updated_at?: string | null
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          document_name?: string
+          document_type?: Database["public"]["Enums"]["document_type"]
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          id?: string
+          mime_type?: string
+          notes?: string | null
+          updated_at?: string | null
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           address: string | null
@@ -1313,6 +1361,16 @@ export type Database = {
         | "PhotoUploaded"
         | "Verified"
         | "Completed"
+      document_type:
+        | "KYC"
+        | "GST_Certificate"
+        | "PAN_Card"
+        | "Aadhar_Card"
+        | "Company_Registration"
+        | "Contract"
+        | "Agreement"
+        | "Invoice"
+        | "Other"
       estimation_status: "Draft" | "Sent" | "Approved" | "Rejected"
       expense_category:
         | "Printing"
@@ -1469,6 +1527,17 @@ export const Constants = {
         "PhotoUploaded",
         "Verified",
         "Completed",
+      ],
+      document_type: [
+        "KYC",
+        "GST_Certificate",
+        "PAN_Card",
+        "Aadhar_Card",
+        "Company_Registration",
+        "Contract",
+        "Agreement",
+        "Invoice",
+        "Other",
       ],
       estimation_status: ["Draft", "Sent", "Approved", "Rejected"],
       expense_category: [

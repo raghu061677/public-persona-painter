@@ -33,12 +33,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Search, Sparkles, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, Sparkles, MoreVertical, Pencil, Trash2, Download, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { EditClientDialog } from "@/components/clients/EditClientDialog";
 import { DeleteClientDialog } from "@/components/clients/DeleteClientDialog";
 import { z } from "zod";
+import * as XLSX from 'xlsx';
 
 const INDIAN_STATES = [
   { code: "AP", name: "Andhra Pradesh" },
@@ -104,6 +105,17 @@ export default function ClientsList() {
   const [deletingClient, setDeletingClient] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  
+  // Filtering and sorting states
+  const [filterState, setFilterState] = useState<string>("");
+  const [filterCity, setFilterCity] = useState<string>("");
+  const [sortField, setSortField] = useState<string>("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  
   const [formData, setFormData] = useState({
     id: "",
     name: "",
@@ -269,15 +281,93 @@ export default function ClientsList() {
     }
   };
 
-  const filteredClients = clients.filter(client => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      client.name?.toLowerCase().includes(term) ||
-      client.email?.toLowerCase().includes(term) ||
-      client.company?.toLowerCase().includes(term)
-    );
-  });
+  // Get unique states and cities for filters
+  const uniqueStates = Array.from(new Set(clients.map(c => c.state).filter(Boolean))).sort();
+  const uniqueCities = Array.from(new Set(clients.map(c => c.city).filter(Boolean))).sort();
+
+  // Filter and sort clients
+  const filteredAndSortedClients = clients
+    .filter(client => {
+      // Search term filter
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        const matchesSearch = 
+          client.name?.toLowerCase().includes(term) ||
+          client.email?.toLowerCase().includes(term) ||
+          client.company?.toLowerCase().includes(term) ||
+          client.id?.toLowerCase().includes(term);
+        if (!matchesSearch) return false;
+      }
+      
+      // State filter
+      if (filterState && client.state !== filterState) return false;
+      
+      // City filter
+      if (filterCity && client.city !== filterCity) return false;
+      
+      return true;
+    })
+    .sort((a, b) => {
+      let aVal = a[sortField] || "";
+      let bVal = b[sortField] || "";
+      
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      
+      if (sortOrder === "asc") {
+        return aVal > bVal ? 1 : -1;
+      } else {
+        return aVal < bVal ? 1 : -1;
+      }
+    });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredAndSortedClients.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedClients = filteredAndSortedClients.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterState, filterCity]);
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
+  };
+
+  const exportToExcel = () => {
+    const exportData = filteredAndSortedClients.map(client => ({
+      'Client ID': client.id,
+      'Name': client.name,
+      'Company': client.company || '-',
+      'Email': client.email || '-',
+      'Phone': client.phone || '-',
+      'City': client.city || '-',
+      'State': client.state || '-',
+      'GST Number': client.gst_number || '-',
+      'Created At': new Date(client.created_at).toLocaleDateString()
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Clients");
+    
+    // Auto-size columns
+    const maxWidth = exportData.reduce((w, r) => Math.max(w, ...Object.values(r).map(v => String(v).length)), 10);
+    ws['!cols'] = Object.keys(exportData[0] || {}).map(() => ({ wch: maxWidth }));
+    
+    XLSX.writeFile(wb, `clients_export_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    toast({
+      title: "Export Successful",
+      description: `Exported ${exportData.length} clients to Excel`,
+    });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -415,15 +505,58 @@ export default function ClientsList() {
           )}
         </div>
 
-        <div className="mb-6">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search clients..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+        {/* Filters and Actions */}
+        <div className="mb-6 space-y-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search clients..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <Select value={filterState} onValueChange={setFilterState}>
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Filter by State" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All States</SelectItem>
+                {uniqueStates.map(state => (
+                  <SelectItem key={state} value={state}>
+                    {INDIAN_STATES.find(s => s.code === state)?.name || state}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={filterCity} onValueChange={setFilterCity}>
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Filter by City" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Cities</SelectItem>
+                {uniqueCities.map(city => (
+                  <SelectItem key={city} value={city}>{city}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Button 
+              variant="outline" 
+              onClick={exportToExcel}
+              disabled={filteredAndSortedClients.length === 0}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export to Excel
+            </Button>
+          </div>
+
+          <div className="text-sm text-muted-foreground">
+            Showing {paginatedClients.length} of {filteredAndSortedClients.length} clients
+            {(searchTerm || filterState || filterCity) && ` (filtered from ${clients.length} total)`}
           </div>
         </div>
 
@@ -431,12 +564,44 @@ export default function ClientsList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Company</TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort('id')}
+                >
+                  <div className="flex items-center gap-2">
+                    ID
+                    {sortField === 'id' && <ArrowUpDown className="h-4 w-4" />}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort('name')}
+                >
+                  <div className="flex items-center gap-2">
+                    Name
+                    {sortField === 'name' && <ArrowUpDown className="h-4 w-4" />}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort('company')}
+                >
+                  <div className="flex items-center gap-2">
+                    Company
+                    {sortField === 'company' && <ArrowUpDown className="h-4 w-4" />}
+                  </div>
+                </TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
-                <TableHead>City</TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort('city')}
+                >
+                  <div className="flex items-center gap-2">
+                    City
+                    {sortField === 'city' && <ArrowUpDown className="h-4 w-4" />}
+                  </div>
+                </TableHead>
                 {isAdmin && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
@@ -447,14 +612,14 @@ export default function ClientsList() {
                     Loading...
                   </TableCell>
                 </TableRow>
-              ) : filteredClients.length === 0 ? (
+              ) : paginatedClients.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-8">
                     No clients found
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredClients.map((client) => (
+                paginatedClients.map((client) => (
                   <TableRow key={client.id}>
                     <TableCell className="font-medium">{client.id}</TableCell>
                     <TableCell>{client.name}</TableCell>
@@ -492,6 +657,35 @@ export default function ClientsList() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-6">
+            <div className="text-sm text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Edit Dialog */}
         <EditClientDialog

@@ -456,13 +456,25 @@ export default function PlansList() {
 
         {/* Bulk Actions Toolbar */}
         {selectedPlans.size > 0 && (
-          <div className="mb-4">
+          <div className="mb-4 flex items-center gap-3">
             <BulkActionsToolbar
               selectedIds={selectedPlans}
               onClearSelection={() => setSelectedPlans(new Set())}
               onRefresh={fetchPlans}
               allPlans={plans}
             />
+            {selectedPlans.size >= 2 && (
+              <Button
+                onClick={() => {
+                  const planIds = Array.from(selectedPlans).join(',');
+                  navigate(`/admin/plans-compare?plans=${planIds}`);
+                }}
+                variant="outline"
+                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+              >
+                Compare Selected Plans
+              </Button>
+            )}
           </div>
         )}
 

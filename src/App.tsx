@@ -42,6 +42,7 @@ import PowerBillsDashboard from "./pages/PowerBillsDashboard";
 import PowerBillsAnalytics from "./pages/PowerBillsAnalytics";
 import AuditLogs from "./pages/AuditLogs";
 import VendorsManagement from "./pages/VendorsManagement";
+import PlanComparison from "./pages/PlanComparison";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -77,6 +78,7 @@ const App = () => (
             <Route path="/admin/plans/new" element={<AppLayout><PlanNew /></AppLayout>} />
             <Route path="/admin/plans/edit/:id" element={<AppLayout><PlanEdit /></AppLayout>} />
             <Route path="/admin/plans/:id" element={<AppLayout><PlanDetail /></AppLayout>} />
+            <Route path="/admin/plans-compare" element={<AppLayout><PlanComparison /></AppLayout>} />
             <Route path="/admin/campaigns" element={<AppLayout><CampaignsList /></AppLayout>} />
             <Route path="/admin/campaigns/:id" element={<AppLayout><CampaignDetail /></AppLayout>} />
             <Route path="/finance" element={<AppLayout><FinanceDashboard /></AppLayout>} />

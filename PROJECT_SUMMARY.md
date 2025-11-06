@@ -87,16 +87,28 @@ Go-Ads 360° is a comprehensive SaaS platform for Out-of-Home (OOH) media manage
   - `/admin/plans/edit/:id` - Edit plan
   - `/admin/plans/:id` - View plan details
   - `/admin/plans/:id/share/:shareToken` - Public sharing link
+  - `/admin/plans-compare` - Compare multiple plans side-by-side 🆕
 
 - **CRUD Operations**:
-  - ✅ **CREATE**: Create new media plans with asset selection
+  - ✅ **CREATE**: Create new media plans with asset selection and automatic prorata calculations
   - ✅ **READ**: List, search, filter, and view plan details
-  - ✅ **UPDATE**: Edit plan details, assets, and pricing
+  - ✅ **UPDATE**: Edit plan details, assets, and pricing with prorata adjustments
   - ✅ **DELETE**: Remove plans with confirmation
 
 - **Features**:
   - Interactive plan builder
   - Asset selection with real-time availability
+  - **Prorata Calculations** 🆕:
+    - Automatic rate calculation based on campaign duration
+    - Formula: (Monthly Rate ÷ 30) × Duration Days
+    - Visual tooltips showing calculation breakdown
+    - Override capability for negotiated rates
+  - **Plan Comparison Tool** 🆕:
+    - Side-by-side comparison of multiple plans
+    - Financial metrics comparison (totals, GST, cost per day, cost per asset)
+    - Asset breakdown with cities and media types
+    - Duration and campaign period comparison
+    - Compare button appears when 2+ plans selected
   - Dynamic pricing calculations
   - Discount management (percent/flat)
   - GST calculations (18% default)
@@ -113,13 +125,14 @@ Go-Ads 360° is a comprehensive SaaS platform for Out-of-Home (OOH) media manage
     - Bulk status update (Draft, Sent, Approved, Rejected, Converted)
     - Bulk export to Excel
   - Public sharing links for client approval
-  - SQFT breakdown calculations
+  - SQFT breakdown calculations with tooltips
   - Multiple export formats (Excel, PDF, PPT)
   - Print-ready work orders
   - Status workflow (Draft → Sent → Approved → Converted)
   - Real-time updates via Supabase subscriptions
   - Advanced filtering and search
   - Column visibility preferences
+  - Edit button with tooltips in actions column
 
 ### 6. **Campaigns Management**
 - **Routes**:
@@ -278,8 +291,9 @@ Expense Recording → Reports
 ### Immediate Priorities
 1. ✅ Plan templates system (COMPLETED)
 2. ✅ Bulk operations for plans (COMPLETED)
-3. 🔄 Ensure all CRUD operations are visible to admin users
-4. 🔄 Test all functionality end-to-end
+3. ✅ Plan comparison feature (COMPLETED)
+4. ✅ Prorata calculations based on campaign duration (COMPLETED)
+5. 🔄 Test all functionality end-to-end
 
 ### Future Enhancements
 1. Real-time collaboration features
@@ -297,12 +311,13 @@ Expense Recording → Reports
 
 ## 📊 Key Metrics
 
-- **Total Pages**: 40+
+- **Total Pages**: 41+
 - **Database Tables**: 19
 - **Storage Buckets**: 4
 - **Edge Functions**: 3 (rate-suggester, fetch-tgspdcl-bill, fetch-monthly-power-bills)
 - **User Roles**: 4 (Admin, Sales, Operations, Finance)
 - **CRUD Modules**: 3 fully implemented (Media Assets, Clients, Plans)
+- **Advanced Features**: Prorata calculations, Plan comparison, Templates, Bulk operations
 
 ---
 
@@ -315,7 +330,9 @@ Expense Recording → Reports
    - Plans: `/admin/plans` (list), `/admin/plans/new` (create), `/admin/plans/edit/:id` (edit)
    - Clients: `/admin/clients` (list), `/admin/clients/new` (create)
    
-3. **Templates**: Access via "Templates" button on Plans list page (admin only)
+3. **Templates**: Access via "Templates" button on Plans list page
+4. **Plan Comparison**: Select 2+ plans and click "Compare Selected Plans" button
+5. **Prorata**: Monthly rates are automatically calculated based on campaign duration (Monthly Rate ÷ 30 × Days)
 
 ---
 
@@ -388,9 +405,18 @@ Expense Recording → Reports
    - Delete multiple plans
    - Update status for multiple plans
    - Export selected plans to Excel
+3. Select 2+ plans and click "Compare Selected Plans" to view side-by-side comparison
+
+### Understanding Prorata Calculations
+1. Monthly rates are entered in Media Assets (card_rate field)
+2. When creating/editing plans, rates are automatically calculated:
+   - Formula: (Monthly Rate ÷ 30) × Campaign Duration Days
+   - Example: ₹30,000/month for 15 days = (30,000 ÷ 30) × 15 = ₹15,000
+3. Hover over rates to see calculation breakdown
+4. Override calculated rates for negotiated pricing
 
 ---
 
 **Last Updated**: November 6, 2024
-**Version**: 3.0
-**Status**: Production Ready with recent template & bulk operations enhancements
+**Version**: 3.1
+**Status**: Production Ready with prorata calculations & plan comparison features

@@ -33,6 +33,7 @@ interface SelectedAssetsTableProps {
   assetPricing: Record<string, any>;
   onRemove: (assetId: string) => void;
   onPricingUpdate: (assetId: string, field: string, value: any) => void;
+  durationDays?: number;
 }
 
 export function SelectedAssetsTable({
@@ -40,6 +41,7 @@ export function SelectedAssetsTable({
   assetPricing,
   onRemove,
   onPricingUpdate,
+  durationDays = 30,
 }: SelectedAssetsTableProps) {
   const [loadingRates, setLoadingRates] = useState<Set<string>>(new Set());
 
@@ -101,8 +103,8 @@ export function SelectedAssetsTable({
           <TableRow>
             <TableHead>Asset ID</TableHead>
             <TableHead>Location</TableHead>
-            <TableHead>Card Rate</TableHead>
-            <TableHead className="w-40">Negotiated Rate</TableHead>
+            <TableHead>Monthly Rate</TableHead>
+            <TableHead className="w-40">Prorata ({durationDays}d)</TableHead>
             <TableHead className="w-32">Discount</TableHead>
             <TableHead className="w-24">Type</TableHead>
             <TableHead className="w-32">Printing</TableHead>
@@ -121,7 +123,12 @@ export function SelectedAssetsTable({
           ) : (
             assets.map((asset) => {
               const pricing = assetPricing[asset.id] || {};
-              const salesPrice = pricing.sales_price || 0;
+              const monthlyRate = asset.card_rate || 0; // Monthly rate from media asset
+              
+              // Calculate prorata based on days (Monthly Rate / 30 * Duration Days)
+              const prorataRate = (monthlyRate / 30) * durationDays;
+              const salesPrice = pricing.sales_price || prorataRate;
+              
               const discountType = pricing.discount_type || 'Percent';
               const discountValue = pricing.discount_value || 0;
               const printing = pricing.printing_charges || 0;
@@ -138,15 +145,47 @@ export function SelectedAssetsTable({
                 <TableRow key={asset.id}>
                   <TableCell className="font-medium">{asset.id}</TableCell>
                   <TableCell className="text-sm">{asset.location}</TableCell>
-                  <TableCell className="text-sm">{formatCurrency(asset.card_rate)}</TableCell>
+                  <TableCell className="text-sm">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="cursor-help">
+                            <span className="font-medium">{formatCurrency(monthlyRate)}</span>
+                            <span className="text-xs text-muted-foreground block">per month</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="space-y-1">
+                            <p className="font-semibold">Prorata Calculation:</p>
+                            <p className="text-xs">Monthly: {formatCurrency(monthlyRate)}</p>
+                            <p className="text-xs">Per Day: {formatCurrency(monthlyRate / 30)}</p>
+                            <p className="text-xs font-semibold text-primary">
+                              {durationDays} days: {formatCurrency(prorataRate)}
+                            </p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      <Input
-                        type="number"
-                        value={salesPrice}
-                        onChange={(e) => onPricingUpdate(asset.id, 'sales_price', parseFloat(e.target.value) || 0)}
-                        className="h-9"
-                      />
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Input
+                              type="number"
+                              value={salesPrice}
+                              onChange={(e) => onPricingUpdate(asset.id, 'sales_price', parseFloat(e.target.value) || 0)}
+                              className="h-9"
+                              placeholder={prorataRate.toFixed(0)}
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">Auto-calculated: {formatCurrency(prorataRate)}</p>
+                            <p className="text-xs text-muted-foreground">Override if negotiated</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>

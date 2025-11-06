@@ -163,10 +163,14 @@ export default function PlanNew() {
       setAssetPricing(newPricing);
     } else {
       newSelected.add(assetId);
+      // Calculate prorata based on duration (Monthly Rate / 30 * Duration Days)
+      const monthlyRate = asset.card_rate || 0;
+      const prorataRate = (monthlyRate / 30) * calculateDurationDays(formData.start_date, formData.end_date);
+      
       setAssetPricing(prev => ({
         ...prev,
         [assetId]: {
-          sales_price: asset.card_rate,
+          sales_price: prorataRate,
           printing_charges: asset.printing_charges || 0,
           mounting_charges: asset.mounting_charges || 0,
           discount_type: 'Percent',
@@ -489,6 +493,7 @@ export default function PlanNew() {
                     assetPricing={assetPricing}
                     onRemove={removeAsset}
                     onPricingUpdate={updateAssetPricing}
+                    durationDays={durationDays}
                   />
                 </CardContent>
               </Card>

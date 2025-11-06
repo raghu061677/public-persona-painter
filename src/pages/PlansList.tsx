@@ -62,7 +62,7 @@ export default function PlansList() {
   // Define all columns
   const allColumns = [
     { key: "select", label: "Select" },
-    { key: "id", label: "Project ID" },
+    { key: "id", label: "Plan ID" },
     { key: "employee", label: "Employee" },
     { key: "client", label: "Customer Name" },
     { key: "display", label: "Display" },
@@ -385,7 +385,7 @@ export default function PlansList() {
               <div className="flex-1 flex items-center gap-2">
                 <input
                   type="text"
-                  placeholder="Filter by Project Id, Employee..."
+                  placeholder="Filter by Plan ID, Customer Name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="flex-1 h-10 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -481,7 +481,7 @@ export default function PlansList() {
                     </TableHead>
                   )}
                   {visibleColumns.includes("id") && (
-                    <TableHead className={`font-semibold ${getCellClassName()}`}>Project Id</TableHead>
+                    <TableHead className={`font-semibold ${getCellClassName()}`}>Plan ID</TableHead>
                   )}
                   {visibleColumns.includes("employee") && (
                     <TableHead className={`font-semibold ${getCellClassName()}`}>Employee</TableHead>

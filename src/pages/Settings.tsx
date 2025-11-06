@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Shield, Key, Palette, Upload, Image, Hash } from "lucide-react";
+import { User, Shield, Key, Palette, Upload, Image, Hash, Zap } from "lucide-react";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -343,26 +343,49 @@ export default function Settings() {
           </Card>
 
           {isAdmin && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Hash className="h-5 w-5" />
-                  <CardTitle>Code Management</CardTitle>
-                </div>
-                <CardDescription>
-                  Monitor and manage automatic code generation
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  View counter sequences, generation history, and statistics for all entity codes (Assets, Plans, Campaigns, Clients, Invoices, etc.)
-                </p>
-                <Button onClick={() => navigate('/admin/code-management')} variant="outline">
-                  <Hash className="mr-2 h-4 w-4" />
-                  Open Code Management
-                </Button>
-              </CardContent>
-            </Card>
+            <>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Hash className="h-5 w-5" />
+                    <CardTitle>Code Management</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Monitor and manage automatic code generation
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    View counter sequences, generation history, and statistics for all entity codes (Assets, Plans, Campaigns, Clients, Invoices, etc.)
+                  </p>
+                  <Button onClick={() => navigate('/admin/code-management')} variant="outline">
+                    <Hash className="mr-2 h-4 w-4" />
+                    Open Code Management
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-5 w-5" />
+                    <CardTitle>Power Bills Dashboard</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Bulk fetch and manage electricity bills for all assets
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Fetch TGSPDCL bills for multiple media assets at once, view total dues, and track payment status across your entire inventory.
+                  </p>
+                  <Button onClick={() => navigate('/admin/power-bills')} variant="outline">
+                    <Zap className="mr-2 h-4 w-4" />
+                    Open Power Bills
+                  </Button>
+                </CardContent>
+              </Card>
+            </>
           )}
         </TabsContent>
 

@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { PowerBillFetchDialog } from "./PowerBillFetchDialog";
+import { ManualBillDialog } from "./ManualBillDialog";
 
 interface AssetPowerBillsTabProps {
   assetId: string;
@@ -71,10 +70,10 @@ export function AssetPowerBillsTab({ assetId, asset, isAdmin }: AssetPowerBillsT
               defaultServiceNumber={asset?.service_number}
               onBillFetched={fetchPowerBills}
             />
-            <Button size="sm" variant="outline">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Manual Bill
-            </Button>
+            <ManualBillDialog
+              assetId={assetId}
+              onBillAdded={fetchPowerBills}
+            />
           </div>
         )}
       </div>

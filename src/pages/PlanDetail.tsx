@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { getPlanStatusColor, formatDate } from "@/utils/plans";
-import { generateCampaignId } from "@/utils/campaigns";
+import { generateCampaignCode } from "@/lib/codeGenerator";
 import { toast } from "@/hooks/use-toast";
 import { exportPlanToPPT, exportPlanToExcel, exportPlanToPDF } from "@/utils/planExports";
 import { ExportOptionsDialog, ExportOptions } from "@/components/plans/ExportOptionsDialog";
@@ -353,8 +353,9 @@ export default function PlanDetail() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Generate campaign ID
-      const campaignId = await generateCampaignId(supabase);
+      // Generate campaign ID based on start date
+      const startDate = campaignData.start_date ? new Date(campaignData.start_date) : new Date(plan.start_date);
+      const campaignId = await generateCampaignCode(startDate);
 
       // Create campaign
       const { data: campaign, error: campaignError } = await supabase

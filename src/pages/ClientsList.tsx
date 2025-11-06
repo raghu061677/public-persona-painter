@@ -33,7 +33,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Search, Sparkles, MoreVertical, Pencil, Trash2, Download, ArrowUpDown, ChevronLeft, ChevronRight, BarChart3, FileText } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Search, Sparkles, MoreVertical, Pencil, Trash2, Download, ArrowUpDown, ChevronLeft, ChevronRight, BarChart3, FileText, Mail, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -117,6 +118,12 @@ export default function ClientsList() {
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  
+  // Bulk operations states
+  const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set());
+  const [bulkUpdateDialogOpen, setBulkUpdateDialogOpen] = useState(false);
+  const [bulkEmailDialogOpen, setBulkEmailDialogOpen] = useState(false);
+  const [bulkUpdateData, setBulkUpdateData] = useState({ state: "", city: "" });
   
   const [formData, setFormData] = useState({
     id: "",
@@ -342,6 +349,97 @@ export default function ClientsList() {
     }
   };
 
+  // Bulk operations handlers
+  const toggleClientSelection = (clientId: string) => {
+    const newSelected = new Set(selectedClients);
+    if (newSelected.has(clientId)) {
+      newSelected.delete(clientId);
+    } else {
+      newSelected.add(clientId);
+    }
+    setSelectedClients(newSelected);
+  };
+
+  const toggleAllClients = () => {
+    if (selectedClients.size === paginatedClients.length) {
+      setSelectedClients(new Set());
+    } else {
+      setSelectedClients(new Set(paginatedClients.map(c => c.id)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedClients(new Set());
+  };
+
+  const bulkExportToExcel = () => {
+    const selectedClientsData = clients.filter(c => selectedClients.has(c.id));
+    const exportData = selectedClientsData.map(client => ({
+      'Client ID': client.id,
+      'Name': client.name,
+      'Company': client.company || '-',
+      'Email': client.email || '-',
+      'Phone': client.phone || '-',
+      'City': client.city || '-',
+      'State': client.state || '-',
+      'GST Number': client.gst_number || '-',
+      'Created At': new Date(client.created_at).toLocaleDateString()
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Selected Clients");
+    
+    const maxWidth = exportData.reduce((w, r) => Math.max(w, ...Object.values(r).map(v => String(v).length)), 10);
+    ws['!cols'] = Object.keys(exportData[0] || {}).map(() => ({ wch: maxWidth }));
+    
+    XLSX.writeFile(wb, `clients_bulk_export_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    toast({
+      title: "Export Successful",
+      description: `Exported ${exportData.length} selected clients to Excel`,
+    });
+    
+    clearSelection();
+  };
+
+  const handleBulkUpdate = async () => {
+    if (!bulkUpdateData.state && !bulkUpdateData.city) {
+      toast({
+        title: "No Changes",
+        description: "Please select at least one field to update",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const updates: any = {};
+    if (bulkUpdateData.state) updates.state = bulkUpdateData.state;
+    if (bulkUpdateData.city) updates.city = bulkUpdateData.city;
+
+    const { error } = await supabase
+      .from('clients')
+      .update(updates)
+      .in('id', Array.from(selectedClients));
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update clients",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: `Updated ${selectedClients.size} clients successfully`,
+      });
+      setBulkUpdateDialogOpen(false);
+      setBulkUpdateData({ state: "", city: "" });
+      clearSelection();
+      fetchClients();
+    }
+  };
+
   const exportToExcel = () => {
     const exportData = filteredAndSortedClients.map(client => ({
       'Client ID': client.id,
@@ -507,6 +605,37 @@ export default function ClientsList() {
           )}
         </div>
 
+        {/* Bulk Actions Bar */}
+        {selectedClients.size > 0 && (
+          <div className="mb-4 bg-primary/10 border border-primary/20 rounded-lg p-4">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">
+                  {selectedClients.size} client{selectedClients.size !== 1 ? 's' : ''} selected
+                </span>
+                <Button variant="ghost" size="sm" onClick={clearSelection}>
+                  <X className="h-4 w-4 mr-1" />
+                  Clear
+                </Button>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={bulkExportToExcel}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export Selected
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setBulkEmailDialogOpen(true)}>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Send Email
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setBulkUpdateDialogOpen(true)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Update Fields
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Filters and Actions */}
         <div className="mb-6 space-y-4">
           <div className="flex flex-col md:flex-row gap-4">
@@ -566,6 +695,14 @@ export default function ClientsList() {
           <Table>
             <TableHeader>
               <TableRow>
+                {isAdmin && (
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedClients.size === paginatedClients.length && paginatedClients.length > 0}
+                      onCheckedChange={toggleAllClients}
+                    />
+                  </TableHead>
+                )}
                 <TableHead 
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={() => handleSort('id')}
@@ -610,19 +747,27 @@ export default function ClientsList() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-8">
+                  <TableCell colSpan={isAdmin ? 8 : 7} className="text-center py-8">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : paginatedClients.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-8">
+                  <TableCell colSpan={isAdmin ? 8 : 7} className="text-center py-8">
                     No clients found
                   </TableCell>
                 </TableRow>
               ) : (
                 paginatedClients.map((client) => (
                   <TableRow key={client.id}>
+                    {isAdmin && (
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedClients.has(client.id)}
+                          onCheckedChange={() => toggleClientSelection(client.id)}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="font-medium">{client.id}</TableCell>
                     <TableCell 
                       className="hover:underline cursor-pointer text-primary font-medium"
@@ -717,6 +862,92 @@ export default function ClientsList() {
           onOpenChange={setDeleteDialogOpen}
           onClientDeleted={fetchClients}
         />
+
+        {/* Bulk Update Dialog */}
+        <Dialog open={bulkUpdateDialogOpen} onOpenChange={setBulkUpdateDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Bulk Update Clients</DialogTitle>
+              <DialogDescription>
+                Update fields for {selectedClients.size} selected client{selectedClients.size !== 1 ? 's' : ''}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>State (Optional)</Label>
+                <Select value={bulkUpdateData.state} onValueChange={(value) => setBulkUpdateData(prev => ({ ...prev, state: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select new state..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INDIAN_STATES.map(state => (
+                      <SelectItem key={state.code} value={state.code}>
+                        {state.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>City (Optional)</Label>
+                <Input
+                  value={bulkUpdateData.city}
+                  onChange={(e) => setBulkUpdateData(prev => ({ ...prev, city: e.target.value }))}
+                  placeholder="Enter new city..."
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setBulkUpdateDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleBulkUpdate}>
+                  Update {selectedClients.size} Client{selectedClients.size !== 1 ? 's' : ''}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Bulk Email Dialog */}
+        <Dialog open={bulkEmailDialogOpen} onOpenChange={setBulkEmailDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Send Bulk Email</DialogTitle>
+              <DialogDescription>
+                Send email to {selectedClients.size} selected client{selectedClients.size !== 1 ? 's' : ''}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="bg-muted p-4 rounded-lg">
+                <p className="text-sm text-muted-foreground mb-2">Recipients:</p>
+                <div className="max-h-32 overflow-y-auto space-y-1">
+                  {clients.filter(c => selectedClients.has(c.id) && c.email).map(client => (
+                    <div key={client.id} className="text-sm">
+                      {client.name} - {client.email}
+                    </div>
+                  ))}
+                </div>
+                {clients.filter(c => selectedClients.has(c.id) && !c.email).length > 0 && (
+                  <p className="text-sm text-destructive mt-2">
+                    Note: {clients.filter(c => selectedClients.has(c.id) && !c.email).length} client(s) have no email address
+                  </p>
+                )}
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setBulkEmailDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button disabled>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Configure Email Service
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Email functionality requires Resend API configuration. Contact your administrator.
+              </p>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

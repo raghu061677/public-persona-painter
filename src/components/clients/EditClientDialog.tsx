@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -23,6 +24,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { z } from "zod";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const INDIAN_STATES = [
   { code: "AP", name: "Andhra Pradesh" },
@@ -76,6 +78,17 @@ const clientSchema = z.object({
   address: z.string().trim().max(500, "Address must be less than 500 characters").optional().or(z.literal("")),
   contact_person: z.string().trim().max(100, "Contact person must be less than 100 characters").optional().or(z.literal("")),
   notes: z.string().trim().max(1000, "Notes must be less than 1000 characters").optional().or(z.literal("")),
+  billing_address_line1: z.string().trim().max(200, "Address must be less than 200 characters").optional().or(z.literal("")),
+  billing_address_line2: z.string().trim().max(200, "Address must be less than 200 characters").optional().or(z.literal("")),
+  billing_city: z.string().trim().max(50, "City must be less than 50 characters").optional().or(z.literal("")),
+  billing_state: z.string().optional().or(z.literal("")),
+  billing_pincode: z.string().trim().regex(/^[0-9]{6}$/, "Pincode must be exactly 6 digits").optional().or(z.literal("")),
+  shipping_address_line1: z.string().trim().max(200, "Address must be less than 200 characters").optional().or(z.literal("")),
+  shipping_address_line2: z.string().trim().max(200, "Address must be less than 200 characters").optional().or(z.literal("")),
+  shipping_city: z.string().trim().max(50, "City must be less than 50 characters").optional().or(z.literal("")),
+  shipping_state: z.string().optional().or(z.literal("")),
+  shipping_pincode: z.string().trim().regex(/^[0-9]{6}$/, "Pincode must be exactly 6 digits").optional().or(z.literal("")),
+  shipping_same_as_billing: z.boolean(),
 });
 
 type ClientFormData = z.infer<typeof clientSchema>;
@@ -106,6 +119,17 @@ export function EditClientDialog({
     address: "",
     contact_person: "",
     notes: "",
+    billing_address_line1: "",
+    billing_address_line2: "",
+    billing_city: "",
+    billing_state: "",
+    billing_pincode: "",
+    shipping_address_line1: "",
+    shipping_address_line2: "",
+    shipping_city: "",
+    shipping_state: "",
+    shipping_pincode: "",
+    shipping_same_as_billing: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -123,6 +147,17 @@ export function EditClientDialog({
         address: client.address || "",
         contact_person: client.contact_person || "",
         notes: client.notes || "",
+        billing_address_line1: client.billing_address_line1 || "",
+        billing_address_line2: client.billing_address_line2 || "",
+        billing_city: client.billing_city || "",
+        billing_state: client.billing_state || "",
+        billing_pincode: client.billing_pincode || "",
+        shipping_address_line1: client.shipping_address_line1 || "",
+        shipping_address_line2: client.shipping_address_line2 || "",
+        shipping_city: client.shipping_city || "",
+        shipping_state: client.shipping_state || "",
+        shipping_pincode: client.shipping_pincode || "",
+        shipping_same_as_billing: client.shipping_same_as_billing || false,
       });
       setErrors({});
     }
@@ -178,6 +213,17 @@ export function EditClientDialog({
           address: formData.address?.trim() || null,
           contact_person: formData.contact_person?.trim() || null,
           notes: formData.notes?.trim() || null,
+          billing_address_line1: formData.billing_address_line1?.trim() || null,
+          billing_address_line2: formData.billing_address_line2?.trim() || null,
+          billing_city: formData.billing_city?.trim() || null,
+          billing_state: formData.billing_state || null,
+          billing_pincode: formData.billing_pincode?.trim() || null,
+          shipping_address_line1: formData.shipping_same_as_billing ? formData.billing_address_line1?.trim() : formData.shipping_address_line1?.trim() || null,
+          shipping_address_line2: formData.shipping_same_as_billing ? formData.billing_address_line2?.trim() : formData.shipping_address_line2?.trim() || null,
+          shipping_city: formData.shipping_same_as_billing ? formData.billing_city?.trim() : formData.shipping_city?.trim() || null,
+          shipping_state: formData.shipping_same_as_billing ? formData.billing_state : formData.shipping_state || null,
+          shipping_pincode: formData.shipping_same_as_billing ? formData.billing_pincode?.trim() : formData.shipping_pincode?.trim() || null,
+          shipping_same_as_billing: formData.shipping_same_as_billing,
         })
         .eq('id', client.id);
 
@@ -357,6 +403,168 @@ export function EditClientDialog({
               />
               {errors.notes && <p className="text-sm text-destructive mt-1">{errors.notes}</p>}
             </div>
+          </div>
+
+          <Separator className="my-6" />
+
+          {/* Billing Address Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Billing Address</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <Label>Address Line 1</Label>
+                <Input
+                  value={formData.billing_address_line1}
+                  onChange={(e) => updateField('billing_address_line1', e.target.value)}
+                  placeholder="Street address, building, apartment"
+                />
+                {errors.billing_address_line1 && <p className="text-sm text-destructive mt-1">{errors.billing_address_line1}</p>}
+              </div>
+
+              <div className="col-span-2">
+                <Label>Address Line 2</Label>
+                <Input
+                  value={formData.billing_address_line2}
+                  onChange={(e) => updateField('billing_address_line2', e.target.value)}
+                  placeholder="Landmark, area (optional)"
+                />
+                {errors.billing_address_line2 && <p className="text-sm text-destructive mt-1">{errors.billing_address_line2}</p>}
+              </div>
+
+              <div>
+                <Label>City</Label>
+                <Input
+                  value={formData.billing_city}
+                  onChange={(e) => updateField('billing_city', e.target.value)}
+                  placeholder="City"
+                />
+                {errors.billing_city && <p className="text-sm text-destructive mt-1">{errors.billing_city}</p>}
+              </div>
+
+              <div>
+                <Label>State</Label>
+                <Select value={formData.billing_state || "none"} onValueChange={(value) => updateField('billing_state', value === "none" ? "" : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select state..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Not specified</SelectItem>
+                    {INDIAN_STATES.map(state => (
+                      <SelectItem key={state.code} value={state.code}>
+                        {state.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.billing_state && <p className="text-sm text-destructive mt-1">{errors.billing_state}</p>}
+              </div>
+
+              <div>
+                <Label>Pincode</Label>
+                <Input
+                  value={formData.billing_pincode}
+                  onChange={(e) => updateField('billing_pincode', e.target.value.replace(/\D/g, ''))}
+                  placeholder="6 digit pincode"
+                  maxLength={6}
+                />
+                {errors.billing_pincode && <p className="text-sm text-destructive mt-1">{errors.billing_pincode}</p>}
+              </div>
+            </div>
+          </div>
+
+          <Separator className="my-6" />
+
+          {/* Shipping Address Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Shipping Address</h3>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="same-as-billing"
+                  checked={formData.shipping_same_as_billing}
+                  onCheckedChange={(checked) => {
+                    updateField('shipping_same_as_billing', String(checked));
+                    if (checked) {
+                      setFormData(prev => ({
+                        ...prev,
+                        shipping_same_as_billing: true,
+                        shipping_address_line1: prev.billing_address_line1,
+                        shipping_address_line2: prev.billing_address_line2,
+                        shipping_city: prev.billing_city,
+                        shipping_state: prev.billing_state,
+                        shipping_pincode: prev.billing_pincode,
+                      }));
+                    }
+                  }}
+                />
+                <Label htmlFor="same-as-billing" className="text-sm font-normal cursor-pointer">
+                  Same as billing address
+                </Label>
+              </div>
+            </div>
+
+            {!formData.shipping_same_as_billing && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <Label>Address Line 1</Label>
+                  <Input
+                    value={formData.shipping_address_line1}
+                    onChange={(e) => updateField('shipping_address_line1', e.target.value)}
+                    placeholder="Street address, building, apartment"
+                  />
+                  {errors.shipping_address_line1 && <p className="text-sm text-destructive mt-1">{errors.shipping_address_line1}</p>}
+                </div>
+
+                <div className="col-span-2">
+                  <Label>Address Line 2</Label>
+                  <Input
+                    value={formData.shipping_address_line2}
+                    onChange={(e) => updateField('shipping_address_line2', e.target.value)}
+                    placeholder="Landmark, area (optional)"
+                  />
+                  {errors.shipping_address_line2 && <p className="text-sm text-destructive mt-1">{errors.shipping_address_line2}</p>}
+                </div>
+
+                <div>
+                  <Label>City</Label>
+                  <Input
+                    value={formData.shipping_city}
+                    onChange={(e) => updateField('shipping_city', e.target.value)}
+                    placeholder="City"
+                  />
+                  {errors.shipping_city && <p className="text-sm text-destructive mt-1">{errors.shipping_city}</p>}
+                </div>
+
+                <div>
+                  <Label>State</Label>
+                  <Select value={formData.shipping_state || "none"} onValueChange={(value) => updateField('shipping_state', value === "none" ? "" : value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select state..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Not specified</SelectItem>
+                      {INDIAN_STATES.map(state => (
+                        <SelectItem key={state.code} value={state.code}>
+                          {state.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.shipping_state && <p className="text-sm text-destructive mt-1">{errors.shipping_state}</p>}
+                </div>
+
+                <div>
+                  <Label>Pincode</Label>
+                  <Input
+                    value={formData.shipping_pincode}
+                    onChange={(e) => updateField('shipping_pincode', e.target.value.replace(/\D/g, ''))}
+                    placeholder="6 digit pincode"
+                    maxLength={6}
+                  />
+                  {errors.shipping_pincode && <p className="text-sm text-destructive mt-1">{errors.shipping_pincode}</p>}
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter>

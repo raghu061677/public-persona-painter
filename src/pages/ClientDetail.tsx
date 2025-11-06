@@ -44,6 +44,17 @@ interface Client {
   contact_person: string | null;
   notes: string | null;
   created_at: string;
+  billing_address_line1: string | null;
+  billing_address_line2: string | null;
+  billing_city: string | null;
+  billing_state: string | null;
+  billing_pincode: string | null;
+  shipping_address_line1: string | null;
+  shipping_address_line2: string | null;
+  shipping_city: string | null;
+  shipping_state: string | null;
+  shipping_pincode: string | null;
+  shipping_same_as_billing: boolean | null;
 }
 
 interface Plan {
@@ -421,18 +432,6 @@ export default function ClientDetail() {
                   </div>
 
                   <div className="flex items-start gap-2">
-                    <MapPin className="h-4 w-4 mt-1 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Address</p>
-                      <p className="text-sm text-muted-foreground">
-                        {client.address || "Not provided"}
-                        {client.city && `, ${client.city}`}
-                        {client.state && `, ${client.state}`}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-2">
                     <FileText className="h-4 w-4 mt-1 text-muted-foreground" />
                     <div>
                       <p className="text-sm font-medium">GST Number</p>
@@ -460,6 +459,68 @@ export default function ClientDetail() {
               </CardContent>
             </Card>
 
+            {/* Address Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Addresses</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Billing Address */}
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-primary">Billing Address</p>
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 mt-1 text-muted-foreground" />
+                    <div className="text-sm text-muted-foreground">
+                      {client.billing_address_line1 ? (
+                        <>
+                          <p>{client.billing_address_line1}</p>
+                          {client.billing_address_line2 && <p>{client.billing_address_line2}</p>}
+                          <p>
+                            {client.billing_city && `${client.billing_city}`}
+                            {client.billing_state && `, ${client.billing_state}`}
+                            {client.billing_pincode && ` - ${client.billing_pincode}`}
+                          </p>
+                        </>
+                      ) : (
+                        <p>Not provided</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Shipping Address */}
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-primary">Shipping Address</p>
+                  {client.shipping_same_as_billing ? (
+                    <p className="text-sm text-muted-foreground italic">Same as billing address</p>
+                  ) : (
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-4 w-4 mt-1 text-muted-foreground" />
+                      <div className="text-sm text-muted-foreground">
+                        {client.shipping_address_line1 ? (
+                          <>
+                            <p>{client.shipping_address_line1}</p>
+                            {client.shipping_address_line2 && <p>{client.shipping_address_line2}</p>}
+                            <p>
+                              {client.shipping_city && `${client.shipping_city}`}
+                              {client.shipping_state && `, ${client.shipping_state}`}
+                              {client.shipping_pincode && ` - ${client.shipping_pincode}`}
+                            </p>
+                          </>
+                        ) : (
+                          <p>Not provided</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-4">
             {/* Recent Activity Summary */}
             <Card>
               <CardHeader>

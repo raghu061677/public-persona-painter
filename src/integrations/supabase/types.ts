@@ -421,6 +421,11 @@ export type Database = {
       clients: {
         Row: {
           address: string | null
+          billing_address_line1: string | null
+          billing_address_line2: string | null
+          billing_city: string | null
+          billing_pincode: string | null
+          billing_state: string | null
           city: string | null
           company: string | null
           contact_person: string | null
@@ -432,11 +437,22 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
+          shipping_address_line1: string | null
+          shipping_address_line2: string | null
+          shipping_city: string | null
+          shipping_pincode: string | null
+          shipping_same_as_billing: boolean | null
+          shipping_state: string | null
           state: string | null
           updated_at: string | null
         }
         Insert: {
           address?: string | null
+          billing_address_line1?: string | null
+          billing_address_line2?: string | null
+          billing_city?: string | null
+          billing_pincode?: string | null
+          billing_state?: string | null
           city?: string | null
           company?: string | null
           contact_person?: string | null
@@ -448,11 +464,22 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
+          shipping_address_line1?: string | null
+          shipping_address_line2?: string | null
+          shipping_city?: string | null
+          shipping_pincode?: string | null
+          shipping_same_as_billing?: boolean | null
+          shipping_state?: string | null
           state?: string | null
           updated_at?: string | null
         }
         Update: {
           address?: string | null
+          billing_address_line1?: string | null
+          billing_address_line2?: string | null
+          billing_city?: string | null
+          billing_pincode?: string | null
+          billing_state?: string | null
           city?: string | null
           company?: string | null
           contact_person?: string | null
@@ -464,6 +491,12 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
+          shipping_address_line1?: string | null
+          shipping_address_line2?: string | null
+          shipping_city?: string | null
+          shipping_pincode?: string | null
+          shipping_same_as_billing?: boolean | null
+          shipping_state?: string | null
           state?: string | null
           updated_at?: string | null
         }

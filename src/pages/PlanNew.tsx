@@ -300,25 +300,29 @@ export default function PlanNew() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-6 py-8 max-w-6xl">
+      <div className="container mx-auto px-6 py-8 max-w-7xl">
         <Button
           variant="ghost"
           onClick={() => navigate('/admin/plans')}
-          className="mb-6"
+          className="mb-6 hover:bg-muted"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Plans
         </Button>
 
-        <h1 className="text-3xl font-bold mb-8">Create New Plan</h1>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight">Create New Plan</h1>
+          <p className="text-muted-foreground mt-1">Fill in the details below to create a new quotation for your client</p>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Plan Details</CardTitle>
+          <Card className="border-l-4 border-l-primary">
+            <CardHeader className="border-b bg-muted/30">
+              <CardTitle className="text-lg">Plan Details</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">Basic information and classification of the plan</p>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
               <div>
                 <Label>Plan ID</Label>
                 <Input value={formData.id} disabled />
@@ -364,11 +368,12 @@ export default function PlanNew() {
           </Card>
 
           {/* Campaign Period */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Campaign Period</CardTitle>
+          <Card className="border-l-4 border-l-blue-500">
+            <CardHeader className="border-b bg-muted/30">
+              <CardTitle className="text-lg">Campaign Period</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">Define the start and end dates for this campaign</p>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6">
               <div>
                 <Label>Start Date *</Label>
                 <Popover>
@@ -417,11 +422,12 @@ export default function PlanNew() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
               {/* Selected Assets */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Selected Assets ({selectedAssets.size})</CardTitle>
+              <Card className="border-l-4 border-l-green-500">
+                <CardHeader className="border-b bg-muted/30">
+                  <CardTitle className="text-lg">Selected Assets ({selectedAssets.size})</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">Review and adjust pricing for selected media assets</p>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-6">
                   <SelectedAssetsTable
                     assets={selectedAssetsArray}
                     assetPricing={assetPricing}
@@ -432,11 +438,12 @@ export default function PlanNew() {
               </Card>
 
               {/* Asset Selection */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Available Media Assets</CardTitle>
+              <Card className="border-l-4 border-l-purple-500">
+                <CardHeader className="border-b bg-muted/30">
+                  <CardTitle className="text-lg">Available Media Assets</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">Browse and select assets to include in this plan</p>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-6">
                   <AssetSelectionTable
                     assets={availableAssets}
                     selectedIds={selectedAssets}
@@ -446,11 +453,12 @@ export default function PlanNew() {
               </Card>
 
               {/* Notes */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Additional Details</CardTitle>
+              <Card className="border-l-4 border-l-amber-500">
+                <CardHeader className="border-b bg-muted/30">
+                  <CardTitle className="text-lg">Additional Details</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">Add notes or special terms for this plan</p>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-6">
                   <div>
                     <Label>Notes</Label>
                     <Textarea
@@ -487,11 +495,17 @@ export default function PlanNew() {
               type="button"
               variant="outline"
               onClick={() => navigate('/admin/plans')}
+              size="lg"
             >
               Cancel
             </Button>
-            <Button type="submit" variant="gradient" disabled={loading}>
-              {loading ? "Creating..." : "Create Plan"}
+            <Button 
+              type="submit" 
+              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70" 
+              disabled={loading}
+              size="lg"
+            >
+              {loading ? "Creating Plan..." : "Create Plan"}
             </Button>
           </div>
         </form>

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -12,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink } from "lucide-react";
+import { Plus, Search, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -172,140 +173,238 @@ export default function PlansList() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">Plans & Quotations</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage client proposals and quotations
-            </p>
-          </div>
-          {isAdmin && (
-            <Button
-              onClick={() => navigate('/admin/plans/new')}
-              variant="gradient"
-              size="lg"
-            >
-              <Plus className="mr-2 h-5 w-5" />
-              New Plan
-            </Button>
-          )}
-        </div>
-
-        <div className="mb-6">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by ID, client name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+      <div className="container mx-auto px-6 py-8 max-w-7xl">
+        {/* Header Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Plans & Quotations</h1>
+              <p className="text-muted-foreground mt-1">
+                Manage client proposals and quotations
+              </p>
+            </div>
+            {isAdmin && (
+              <Button
+                onClick={() => navigate('/admin/plans/new')}
+                className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                size="lg"
+              >
+                <Plus className="mr-2 h-5 w-5" />
+                New Plan
+              </Button>
+            )}
           </div>
         </div>
 
-        <div className="bg-card rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Plan ID</TableHead>
-                <TableHead>Client Name</TableHead>
-                <TableHead>Plan Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead className="text-right">Grand Total</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
-                    Loading...
-                  </TableCell>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card className="border-l-4 border-l-blue-500">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Plans</p>
+                  <p className="text-2xl font-bold">{plans.length}</p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
+                  <FileText className="h-6 w-6 text-blue-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-l-4 border-l-green-500">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Approved</p>
+                  <p className="text-2xl font-bold">
+                    {plans.filter(p => p.status === 'Approved').length}
+                  </p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
+                  <Activity className="h-6 w-6 text-green-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-purple-500">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Converted</p>
+                  <p className="text-2xl font-bold">
+                    {plans.filter(p => p.status === 'Converted').length}
+                  </p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-purple-500/10 flex items-center justify-center">
+                  <Rocket className="h-6 w-6 text-purple-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-amber-500">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Draft</p>
+                  <p className="text-2xl font-bold">
+                    {plans.filter(p => p.status === 'Draft').length}
+                  </p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-amber-500/10 flex items-center justify-center">
+                  <FileText className="h-6 w-6 text-amber-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Search Bar */}
+        <Card className="mb-6">
+          <CardContent className="p-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by Plan ID, client name, or plan name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-11"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Table Card */}
+        <Card>
+          <CardHeader className="border-b">
+            <CardTitle className="text-lg">All Plans</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="font-semibold">Plan ID</TableHead>
+                  <TableHead className="font-semibold">Client Name</TableHead>
+                  <TableHead className="font-semibold">Plan Type</TableHead>
+                  <TableHead className="font-semibold">Status</TableHead>
+                  <TableHead className="font-semibold">Duration</TableHead>
+                  <TableHead className="text-right font-semibold">Grand Total</TableHead>
+                  <TableHead className="font-semibold">Created</TableHead>
+                  <TableHead className="text-right font-semibold">Actions</TableHead>
                 </TableRow>
-              ) : filteredPlans.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
-                    No plans found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredPlans.map((plan) => (
-                  <TableRow key={plan.id}>
-                    <TableCell className="font-medium">{plan.id}</TableCell>
-                    <TableCell>{plan.client_name}</TableCell>
-                    <TableCell>{plan.plan_type}</TableCell>
-                    <TableCell>
-                      <Badge className={getPlanStatusColor(plan.status)}>
-                        {plan.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{plan.duration_days} days</TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(plan.grand_total)}
-                    </TableCell>
-                    <TableCell>{formatDate(plan.created_at)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => navigate(`/admin/plans/${plan.id}`)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            {isAdmin && (
-                              <>
-                                <DropdownMenuItem onClick={() => navigate(`/admin/plans/edit/${plan.id}`)}>
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDelete(plan.id)}>
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleBlock(plan.id)}>
-                                  <Ban className="mr-2 h-4 w-4" />
-                                  Reject
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                              </>
-                            )}
-                            <DropdownMenuItem onClick={() => handleCopy(plan.id)}>
-                              <Copy className="mr-2 h-4 w-4" />
-                              Copy ID
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleShare(plan)}>
-                              <Share2 className="mr-2 h-4 w-4" />
-                              Share
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleShare(plan)}>
-                              <ExternalLink className="mr-2 h-4 w-4" />
-                              Public Link
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => navigate(`/admin/plans/${plan.id}`)}>
-                              <Activity className="mr-2 h-4 w-4" />
-                              Activity
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-12">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                        <p className="text-muted-foreground">Loading plans...</p>
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                ) : filteredPlans.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-12">
+                      <div className="flex flex-col items-center gap-2">
+                        <FileText className="h-12 w-12 text-muted-foreground/50" />
+                        <p className="text-muted-foreground font-medium">No plans found</p>
+                        <p className="text-sm text-muted-foreground">
+                          {searchTerm ? 'Try adjusting your search criteria' : 'Create your first plan to get started'}
+                        </p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredPlans.map((plan) => (
+                    <TableRow 
+                      key={plan.id} 
+                      className="hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => navigate(`/admin/plans/${plan.id}`)}
+                    >
+                      <TableCell className="font-medium text-primary">{plan.id}</TableCell>
+                      <TableCell className="font-medium">{plan.client_name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="font-normal">
+                          {plan.plan_type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getPlanStatusColor(plan.status)}>
+                          {plan.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{plan.duration_days} days</TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {formatCurrency(plan.grand_total)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{formatDate(plan.created_at)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/admin/plans/${plan.id}`);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              {isAdmin && (
+                                <>
+                                  <DropdownMenuItem onClick={() => navigate(`/admin/plans/edit/${plan.id}`)}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleDelete(plan.id)}>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleBlock(plan.id)}>
+                                    <Ban className="mr-2 h-4 w-4" />
+                                    Reject
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
+                              <DropdownMenuItem onClick={() => handleCopy(plan.id)}>
+                                <Copy className="mr-2 h-4 w-4" />
+                                Copy ID
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleShare(plan)}>
+                                <Share2 className="mr-2 h-4 w-4" />
+                                Share
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleShare(plan)}>
+                                <ExternalLink className="mr-2 h-4 w-4" />
+                                Public Link
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => navigate(`/admin/plans/${plan.id}`)}>
+                                <Activity className="mr-2 h-4 w-4" />
+                                Activity
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

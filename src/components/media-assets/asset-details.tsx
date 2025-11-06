@@ -162,7 +162,7 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
         </TabsContent>
 
         <TabsContent value="power-bills" className="mt-6">
-          <AssetPowerBillsTab assetId={asset.id} isAdmin={isAdmin} />
+          <AssetPowerBillsTab assetId={asset.id} asset={asset} isAdmin={isAdmin} />
         </TabsContent>
 
         <TabsContent value="maintenance" className="mt-6">

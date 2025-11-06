@@ -7,13 +7,15 @@ import { Plus } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
+import { PowerBillFetchDialog } from "./PowerBillFetchDialog";
 
 interface AssetPowerBillsTabProps {
   assetId: string;
+  asset?: any;
   isAdmin?: boolean;
 }
 
-export function AssetPowerBillsTab({ assetId, isAdmin }: AssetPowerBillsTabProps) {
+export function AssetPowerBillsTab({ assetId, asset, isAdmin }: AssetPowerBillsTabProps) {
   const [bills, setBills] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -63,10 +65,17 @@ export function AssetPowerBillsTab({ assetId, isAdmin }: AssetPowerBillsTabProps
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Power Bills (TGSPDCL)</h3>
         {isAdmin && (
-          <Button size="sm">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Bill
-          </Button>
+          <div className="flex gap-2">
+            <PowerBillFetchDialog
+              assetId={assetId}
+              defaultServiceNumber={asset?.service_number}
+              onBillFetched={fetchPowerBills}
+            />
+            <Button size="sm" variant="outline">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Manual Bill
+            </Button>
+          </div>
         )}
       </div>
 

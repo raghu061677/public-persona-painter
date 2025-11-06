@@ -1,8 +1,16 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { generateClientCode } from "@/lib/codeGenerator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -18,14 +26,54 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+
+const INDIAN_STATES = [
+  { code: "AP", name: "Andhra Pradesh" },
+  { code: "AR", name: "Arunachal Pradesh" },
+  { code: "AS", name: "Assam" },
+  { code: "BR", name: "Bihar" },
+  { code: "CG", name: "Chhattisgarh" },
+  { code: "GA", name: "Goa" },
+  { code: "GJ", name: "Gujarat" },
+  { code: "HR", name: "Haryana" },
+  { code: "HP", name: "Himachal Pradesh" },
+  { code: "JH", name: "Jharkhand" },
+  { code: "KA", name: "Karnataka" },
+  { code: "KL", name: "Kerala" },
+  { code: "MP", name: "Madhya Pradesh" },
+  { code: "MH", name: "Maharashtra" },
+  { code: "MN", name: "Manipur" },
+  { code: "ML", name: "Meghalaya" },
+  { code: "MZ", name: "Mizoram" },
+  { code: "NL", name: "Nagaland" },
+  { code: "OD", name: "Odisha" },
+  { code: "PB", name: "Punjab" },
+  { code: "RJ", name: "Rajasthan" },
+  { code: "SK", name: "Sikkim" },
+  { code: "TN", name: "Tamil Nadu" },
+  { code: "TG", name: "Telangana" },
+  { code: "TR", name: "Tripura" },
+  { code: "UP", name: "Uttar Pradesh" },
+  { code: "UK", name: "Uttarakhand" },
+  { code: "WB", name: "West Bengal" },
+  { code: "AN", name: "Andaman and Nicobar Islands" },
+  { code: "CH", name: "Chandigarh" },
+  { code: "DH", name: "Dadra and Nagar Haveli and Daman and Diu" },
+  { code: "DL", name: "Delhi" },
+  { code: "JK", name: "Jammu and Kashmir" },
+  { code: "LA", name: "Ladakh" },
+  { code: "LD", name: "Lakshadweep" },
+  { code: "PY", name: "Puducherry" },
+];
 
 export default function ClientsList() {
   const { isAdmin } = useAuth();
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -35,6 +83,7 @@ export default function ClientsList() {
     phone: "",
     company: "",
     gst_number: "",
+    state: "",
     city: "",
   });
 
@@ -59,6 +108,36 @@ export default function ClientsList() {
       setClients(data || []);
     }
     setLoading(false);
+  };
+
+  const generateClientId = async () => {
+    if (!formData.state) {
+      toast({
+        title: "Missing Information",
+        description: "Please select a state first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGenerating(true);
+    try {
+      const clientId = await generateClientCode(formData.state);
+      setFormData(prev => ({ ...prev, id: clientId }));
+      
+      toast({
+        title: "ID Generated",
+        description: `Client ID: ${clientId}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -93,6 +172,7 @@ export default function ClientsList() {
         phone: "",
         company: "",
         gst_number: "",
+        state: "",
         city: "",
       });
       fetchClients();
@@ -132,13 +212,43 @@ export default function ClientsList() {
                   <DialogTitle>Add New Client</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>State *</Label>
+                      <Select value={formData.state} onValueChange={(value) => setFormData(prev => ({ ...prev, state: value }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select state..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {INDIAN_STATES.map(state => (
+                            <SelectItem key={state.code} value={state.code}>
+                              {state.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-end">
+                      <Button
+                        type="button"
+                        onClick={generateClientId}
+                        disabled={!formData.state || generating}
+                        className="w-full"
+                        variant="outline"
+                      >
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        {generating ? 'Generating...' : 'Generate ID'}
+                      </Button>
+                    </div>
+                  </div>
                   <div>
                     <Label>Client ID *</Label>
                     <Input
                       required
                       value={formData.id}
-                      onChange={(e) => setFormData(prev => ({ ...prev, id: e.target.value }))}
-                      placeholder="e.g., CLI-001"
+                      readOnly
+                      disabled
+                      placeholder="Auto-generated"
                     />
                   </div>
                   <div>
@@ -189,7 +299,7 @@ export default function ClientsList() {
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Cancel
                     </Button>
-                    <Button type="submit" variant="gradient">
+                    <Button type="submit" variant="gradient" disabled={!formData.id}>
                       Create Client
                     </Button>
                   </div>

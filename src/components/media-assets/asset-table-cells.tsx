@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 interface Asset {
   id: string;
   image_urls?: string[];
+  images?: Record<string, { url: string; name: string; size: number; type: string }>;
   latitude?: number;
   longitude?: number;
   google_street_view_url?: string;
@@ -12,8 +13,27 @@ interface Asset {
 }
 
 export function ImageCell({ row }: any) {
-  const imageUrls = row.original.image_urls;
-  const imageUrl = imageUrls && imageUrls.length > 0 ? imageUrls[0] : null;
+  const navigate = useNavigate();
+  const asset = row.original;
+  
+  // Try to get the first image from the images object (preferred method)
+  let imageUrl: string | null = null;
+  
+  if (asset.images && typeof asset.images === 'object') {
+    // Priority order: geoTaggedPhoto -> newspaperPhoto -> trafficPhoto1 -> trafficPhoto2
+    const imageKeys = ['geoTaggedPhoto', 'newspaperPhoto', 'trafficPhoto1', 'trafficPhoto2'];
+    for (const key of imageKeys) {
+      if (asset.images[key]?.url) {
+        imageUrl = asset.images[key].url;
+        break;
+      }
+    }
+  }
+  
+  // Fallback to image_urls array if images object is empty
+  if (!imageUrl && asset.image_urls && asset.image_urls.length > 0) {
+    imageUrl = asset.image_urls[0];
+  }
 
   if (!imageUrl) {
     return (
@@ -26,9 +46,10 @@ export function ImageCell({ row }: any) {
   return (
     <img
       src={imageUrl}
-      alt={row.original.id}
+      alt={asset.id}
       className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
-      onClick={() => window.open(imageUrl, '_blank')}
+      onClick={() => navigate(`/admin/media-assets/${asset.id}`)}
+      title="Click to view details"
     />
   );
 }

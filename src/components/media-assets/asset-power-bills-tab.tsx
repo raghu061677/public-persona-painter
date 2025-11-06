@@ -72,6 +72,7 @@ export function AssetPowerBillsTab({ assetId, asset, isAdmin }: AssetPowerBillsT
             />
             <ManualBillDialog
               assetId={assetId}
+              asset={asset}
               onBillAdded={fetchPowerBills}
             />
           </div>

@@ -33,21 +33,22 @@ import { cn } from "@/lib/utils";
 
 interface ManualBillDialogProps {
   assetId: string;
+  asset?: any;
   onBillAdded?: () => void;
 }
 
-export function ManualBillDialog({ assetId, onBillAdded }: ManualBillDialogProps) {
+export function ManualBillDialog({ assetId, asset, onBillAdded }: ManualBillDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [billMonth, setBillMonth] = useState<Date>();
   const [paymentDate, setPaymentDate] = useState<Date>();
   
   const [formData, setFormData] = useState({
-    consumer_name: "",
-    service_number: "",
-    unique_service_number: "",
-    section_name: "",
-    ero: "",
+    consumer_name: asset?.consumer_name || "",
+    service_number: asset?.service_number || "",
+    unique_service_number: asset?.unique_service_number || "",
+    section_name: asset?.section_name || "",
+    ero: asset?.ero || "",
     bill_amount: "",
     paid_amount: "",
     payment_status: "Pending",
@@ -56,11 +57,11 @@ export function ManualBillDialog({ assetId, onBillAdded }: ManualBillDialogProps
 
   const resetForm = () => {
     setFormData({
-      consumer_name: "",
-      service_number: "",
-      unique_service_number: "",
-      section_name: "",
-      ero: "",
+      consumer_name: asset?.consumer_name || "",
+      service_number: asset?.service_number || "",
+      unique_service_number: asset?.unique_service_number || "",
+      section_name: asset?.section_name || "",
+      ero: asset?.ero || "",
       bill_amount: "",
       paid_amount: "",
       payment_status: "Pending",
@@ -219,70 +220,83 @@ export function ManualBillDialog({ assetId, onBillAdded }: ManualBillDialogProps
               </Select>
             </div>
 
-            {/* Consumer Details */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="consumer_name">Consumer Name</Label>
-                <Input
-                  id="consumer_name"
-                  value={formData.consumer_name}
-                  onChange={(e) => updateField('consumer_name', e.target.value)}
-                  placeholder="Enter consumer name"
-                />
-              </div>
+            {/* Consumer Details - Auto-populated from Asset */}
+            <div className="p-4 bg-muted/50 rounded-lg border space-y-3">
+              <p className="text-sm font-medium text-muted-foreground">Consumer Details (from Asset)</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="consumer_name">Consumer Name</Label>
+                  <Input
+                    id="consumer_name"
+                    value={formData.consumer_name}
+                    onChange={(e) => updateField('consumer_name', e.target.value)}
+                    placeholder="Auto-filled from asset"
+                    disabled
+                    className="bg-background"
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="service_number">Service Number</Label>
-                <Input
-                  id="service_number"
-                  value={formData.service_number}
-                  onChange={(e) => updateField('service_number', e.target.value)}
-                  placeholder="Enter service number"
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="service_number">Service Number</Label>
+                  <Input
+                    id="service_number"
+                    value={formData.service_number}
+                    onChange={(e) => updateField('service_number', e.target.value)}
+                    placeholder="Auto-filled from asset"
+                    disabled
+                    className="bg-background"
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="unique_service_number">Unique Service Number</Label>
-                <Input
-                  id="unique_service_number"
-                  value={formData.unique_service_number}
-                  onChange={(e) => updateField('unique_service_number', e.target.value)}
-                  placeholder="USC-XXXXXXX"
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="unique_service_number">Unique Service Number</Label>
+                  <Input
+                    id="unique_service_number"
+                    value={formData.unique_service_number}
+                    onChange={(e) => updateField('unique_service_number', e.target.value)}
+                    placeholder="Auto-filled from asset"
+                    disabled
+                    className="bg-background"
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="section_name">Section Name</Label>
-                <Input
-                  id="section_name"
-                  value={formData.section_name}
-                  onChange={(e) => updateField('section_name', e.target.value)}
-                  placeholder="Enter section name"
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="section_name">Section Name</Label>
+                  <Input
+                    id="section_name"
+                    value={formData.section_name}
+                    onChange={(e) => updateField('section_name', e.target.value)}
+                    placeholder="Auto-filled from asset"
+                    disabled
+                    className="bg-background"
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="ero">ERO</Label>
-                <Input
-                  id="ero"
-                  value={formData.ero}
-                  onChange={(e) => updateField('ero', e.target.value)}
-                  placeholder="Enter ERO"
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="ero">ERO</Label>
+                  <Input
+                    id="ero"
+                    value={formData.ero}
+                    onChange={(e) => updateField('ero', e.target.value)}
+                    placeholder="Auto-filled from asset"
+                    disabled
+                    className="bg-background"
+                  />
+                </div>
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="paid_amount">Paid Amount (₹)</Label>
-                <Input
-                  id="paid_amount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.paid_amount}
-                  onChange={(e) => updateField('paid_amount', e.target.value)}
-                  placeholder="0.00"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="paid_amount">Paid Amount (₹)</Label>
+              <Input
+                id="paid_amount"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.paid_amount}
+                onChange={(e) => updateField('paid_amount', e.target.value)}
+                placeholder="0.00"
+              />
             </div>
 
             {/* Payment Date */}

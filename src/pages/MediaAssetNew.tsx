@@ -13,6 +13,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { VendorDetailsForm } from "@/components/media-assets/vendor-details-form";
 import { toast } from "@/hooks/use-toast";
 import { parseDimensions, buildSearchTokens } from "@/utils/mediaAssets";
+import { generateMediaAssetCode } from "@/lib/codeGenerator";
 import { ArrowLeft, Sparkles, Image as ImageIcon, Calendar as CalendarIcon, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 
@@ -165,28 +166,16 @@ export default function MediaAssetNew() {
 
     setGenerating(true);
     try {
-      const pattern = `${cityCode}-${mediaTypeCode}-%`;
-      const { data, error } = await supabase
-        .from('media_assets')
-        .select('id')
-        .ilike('id', pattern)
-        .order('id', { ascending: false })
-        .limit(1);
-
-      if (error) throw error;
-
-      let nextSerial = 1;
-      if (data && data.length > 0) {
-        const lastId = data[0].id;
-        const parts = lastId.split('-');
-        if (parts.length === 3) {
-          const lastSerial = parseInt(parts[2], 10);
-          nextSerial = lastSerial + 1;
-        }
+      // Get the full city name from the selected code
+      const cityLabel = CITY_CODES.find(c => c.value === cityCode)?.label || "";
+      const mediaTypeLabel = MEDIA_TYPE_CODES.find(m => m.value === mediaTypeCode)?.fullName || "";
+      
+      if (!cityLabel || !mediaTypeLabel) {
+        throw new Error("Invalid city or media type selection");
       }
 
-      const paddedSerial = String(nextSerial).padStart(4, '0');
-      const generatedId = `${cityCode}-${mediaTypeCode}-${paddedSerial}`;
+      // Use the new centralized code generator
+      const generatedId = await generateMediaAssetCode(cityLabel, mediaTypeLabel);
       
       updateField('id', generatedId);
       

@@ -23,9 +23,11 @@ import {
 import { getPlanStatusColor, formatDate as formatPlanDate } from "@/utils/plans";
 import { toast } from "@/hooks/use-toast";
 import { TableFilters } from "@/components/common/table-filters";
+import { FilterPresets } from "@/components/common/filter-presets";
 import { BulkActionsDropdown, commonBulkActions } from "@/components/common/bulk-actions-dropdown";
 import { useTableSettings, formatCurrency as formatCurrencyUtil, formatDate as formatDateUtil } from "@/hooks/use-table-settings";
 import { useTableDensity } from "@/hooks/use-table-density";
+import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { highlightText } from "@/components/common/global-search";
 import {
@@ -53,6 +55,32 @@ export default function PlansList() {
     resetSettings,
     isReady: settingsReady 
   } = useTableSettings("plans");
+
+  // Define all columns
+  const allColumns = [
+    { key: "select", label: "Select" },
+    { key: "id", label: "Project ID" },
+    { key: "employee", label: "Employee" },
+    { key: "client", label: "Customer Name" },
+    { key: "display", label: "Display" },
+    { key: "from", label: "From" },
+    { key: "to", label: "To" },
+    { key: "days", label: "Days" },
+    { key: "sqft", label: "SQFT" },
+    { key: "amount", label: "Amount" },
+    { key: "qos", label: "QoS" },
+    { key: "status", label: "Status" },
+    { key: "actions", label: "Actions" },
+  ];
+
+  const defaultVisibleColumns = allColumns.map(col => col.key);
+
+  const {
+    isReady: columnPrefsReady,
+    visibleKeys: visibleColumns,
+    setVisibleKeys: setVisibleColumns,
+    reset: resetColumns,
+  } = useColumnPrefs("plans-columns", allColumns.map(c => c.key), defaultVisibleColumns);
 
   // Auto-refresh
   useEffect(() => {
@@ -368,7 +396,7 @@ export default function PlansList() {
 
             {/* Collapsible Advanced Filters */}
             {showFilters && (
-              <div className="mt-4 pt-4 border-t">
+              <div className="mt-4 pt-4 border-t space-y-4">
                 <TableFilters
                   filters={[
                     {
@@ -388,30 +416,27 @@ export default function PlansList() {
                     setSearchTerm("");
                     setFilterStatus("");
                   }}
-                  allColumns={[
-                    { key: "select", label: "Select" },
-                    { key: "id", label: "Project ID" },
-                    { key: "employee", label: "Employee" },
-                    { key: "client", label: "Customer Name" },
-                    { key: "display", label: "Display" },
-                    { key: "from", label: "From" },
-                    { key: "to", label: "To" },
-                    { key: "days", label: "Days" },
-                    { key: "sqft", label: "SQFT" },
-                    { key: "amount", label: "Amount" },
-                    { key: "qos", label: "QoS" },
-                    { key: "status", label: "Status" },
-                    { key: "actions", label: "Actions" },
-                  ]}
-                  visibleColumns={["select", "id", "employee", "client", "display", "from", "to", "days", "sqft", "amount", "qos", "status", "actions"]}
-                  onColumnVisibilityChange={() => {}}
-                  onResetColumns={() => {}}
+                  allColumns={allColumns}
+                  visibleColumns={visibleColumns}
+                  onColumnVisibilityChange={setVisibleColumns}
+                  onResetColumns={resetColumns}
                   density={density}
                   onDensityChange={setDensity}
                   tableKey="plans"
                   settings={settings}
                   onUpdateSettings={updateSettings}
                   onResetSettings={resetSettings}
+                />
+                <FilterPresets
+                  tableKey="plans"
+                  currentFilters={{
+                    searchTerm,
+                    status: filterStatus,
+                  }}
+                  onApplyPreset={(filters) => {
+                    setSearchTerm(filters.searchTerm || "");
+                    setFilterStatus(filters.status || "");
+                  }}
                 />
               </div>
             )}
@@ -449,30 +474,56 @@ export default function PlansList() {
             <Table>
               <TableHeader>
                 <TableRow className={`bg-muted/50 ${getRowClassName()}`}>
-                  <TableHead className={getCellClassName()}>
-                    <Checkbox
-                      checked={selectedPlans.size === filteredPlans.length && filteredPlans.length > 0}
-                      onCheckedChange={toggleAllPlans}
-                    />
-                  </TableHead>
-                  <TableHead className={`font-semibold ${getCellClassName()}`}>Project Id</TableHead>
-                  <TableHead className={`font-semibold ${getCellClassName()}`}>Employee</TableHead>
-                  <TableHead className={`font-semibold ${getCellClassName()}`}>Customer Name</TableHead>
-                  <TableHead className={`font-semibold ${getCellClassName()}`}>Display</TableHead>
-                  <TableHead className={`font-semibold ${getCellClassName()}`}>From</TableHead>
-                  <TableHead className={`font-semibold ${getCellClassName()}`}>To</TableHead>
-                  <TableHead className={`font-semibold ${getCellClassName()}`}>Days</TableHead>
-                  <TableHead className={`font-semibold ${getCellClassName()}`}>SQFT</TableHead>
-                  <TableHead className={`text-right font-semibold ${getCellClassName()}`}>Amount</TableHead>
-                  <TableHead className={`text-right font-semibold ${getCellClassName()}`}>QoS</TableHead>
-                  <TableHead className={`font-semibold ${getCellClassName()}`}>Status</TableHead>
-                  <TableHead className={`text-right font-semibold ${getCellClassName()}`}>Actions</TableHead>
+                  {visibleColumns.includes("select") && (
+                    <TableHead className={getCellClassName()}>
+                      <Checkbox
+                        checked={selectedPlans.size === filteredPlans.length && filteredPlans.length > 0}
+                        onCheckedChange={toggleAllPlans}
+                      />
+                    </TableHead>
+                  )}
+                  {visibleColumns.includes("id") && (
+                    <TableHead className={`font-semibold ${getCellClassName()}`}>Project Id</TableHead>
+                  )}
+                  {visibleColumns.includes("employee") && (
+                    <TableHead className={`font-semibold ${getCellClassName()}`}>Employee</TableHead>
+                  )}
+                  {visibleColumns.includes("client") && (
+                    <TableHead className={`font-semibold ${getCellClassName()}`}>Customer Name</TableHead>
+                  )}
+                  {visibleColumns.includes("display") && (
+                    <TableHead className={`font-semibold ${getCellClassName()}`}>Display</TableHead>
+                  )}
+                  {visibleColumns.includes("from") && (
+                    <TableHead className={`font-semibold ${getCellClassName()}`}>From</TableHead>
+                  )}
+                  {visibleColumns.includes("to") && (
+                    <TableHead className={`font-semibold ${getCellClassName()}`}>To</TableHead>
+                  )}
+                  {visibleColumns.includes("days") && (
+                    <TableHead className={`font-semibold ${getCellClassName()}`}>Days</TableHead>
+                  )}
+                  {visibleColumns.includes("sqft") && (
+                    <TableHead className={`font-semibold ${getCellClassName()}`}>SQFT</TableHead>
+                  )}
+                  {visibleColumns.includes("amount") && (
+                    <TableHead className={`text-right font-semibold ${getCellClassName()}`}>Amount</TableHead>
+                  )}
+                  {visibleColumns.includes("qos") && (
+                    <TableHead className={`text-right font-semibold ${getCellClassName()}`}>QoS</TableHead>
+                  )}
+                  {visibleColumns.includes("status") && (
+                    <TableHead className={`font-semibold ${getCellClassName()}`}>Status</TableHead>
+                  )}
+                  {visibleColumns.includes("actions") && (
+                    <TableHead className={`text-right font-semibold ${getCellClassName()}`}>Actions</TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading || !settingsReady ? (
+                {loading || !settingsReady || !columnPrefsReady ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center py-12">
+                    <TableCell colSpan={visibleColumns.length} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2">
                         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                         <p className="text-muted-foreground">Loading plans...</p>
@@ -481,7 +532,7 @@ export default function PlansList() {
                   </TableRow>
                 ) : filteredPlans.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center py-12">
+                    <TableCell colSpan={visibleColumns.length} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2">
                         <FileText className="h-12 w-12 text-muted-foreground/50" />
                         <p className="text-muted-foreground font-medium">No plans found</p>
@@ -498,35 +549,52 @@ export default function PlansList() {
                       className={`hover:bg-muted/50 cursor-pointer transition-colors ${getRowClassName()}`}
                       onClick={() => navigate(`/admin/plans/${plan.id}`)}
                     >
-                      <TableCell className={getCellClassName()} onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selectedPlans.has(plan.id)}
-                          onCheckedChange={() => togglePlanSelection(plan.id)}
-                        />
-                      </TableCell>
-                      <TableCell className={`font-medium text-primary ${getCellClassName()}`}>{plan.id}</TableCell>
-                      <TableCell className={`${getCellClassName()}`}>
-                        <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                            {plan.client_name?.charAt(0) || 'U'}
+                      {visibleColumns.includes("select") && (
+                        <TableCell className={getCellClassName()} onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedPlans.has(plan.id)}
+                            onCheckedChange={() => togglePlanSelection(plan.id)}
+                          />
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("id") && (
+                        <TableCell className={`font-medium text-primary ${getCellClassName()}`}>{plan.id}</TableCell>
+                      )}
+                      {visibleColumns.includes("employee") && (
+                        <TableCell className={`${getCellClassName()}`}>
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+                              {plan.client_name?.charAt(0) || 'U'}
+                            </div>
+                            <span className="font-medium">Raghu Gajula</span>
                           </div>
-                          <span className="font-medium">Raghu Gajula</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className={`font-medium ${getCellClassName()}`}>{plan.client_name}</TableCell>
-                      <TableCell className={getCellClassName()}>
-                        <span className="text-blue-600 cursor-pointer hover:underline">
-                          {plan.plan_name || '-'}
-                        </span>
-                      </TableCell>
-                      <TableCell className={`text-muted-foreground ${getCellClassName()}`}>
-                        {plan.start_date ? new Date(plan.start_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }).replace(/ /g, '') : '-'}
-                      </TableCell>
-                      <TableCell className={`text-muted-foreground ${getCellClassName()}`}>
-                        {plan.end_date ? new Date(plan.end_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }).replace(/ /g, '') : '-'}
-                      </TableCell>
-                      <TableCell className={`${getCellClassName()}`}>{plan.duration_days}</TableCell>
-                      <TableCell className={`text-right ${getCellClassName()}`}>
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("client") && (
+                        <TableCell className={`font-medium ${getCellClassName()}`}>{plan.client_name}</TableCell>
+                      )}
+                      {visibleColumns.includes("display") && (
+                        <TableCell className={getCellClassName()}>
+                          <span className="text-blue-600 cursor-pointer hover:underline">
+                            {plan.plan_name || '-'}
+                          </span>
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("from") && (
+                        <TableCell className={`text-muted-foreground ${getCellClassName()}`}>
+                          {plan.start_date ? new Date(plan.start_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }).replace(/ /g, '') : '-'}
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("to") && (
+                        <TableCell className={`text-muted-foreground ${getCellClassName()}`}>
+                          {plan.end_date ? new Date(plan.end_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }).replace(/ /g, '') : '-'}
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("days") && (
+                        <TableCell className={`${getCellClassName()}`}>{plan.duration_days}</TableCell>
+                      )}
+                      {visibleColumns.includes("sqft") && (
+                        <TableCell className={`text-right ${getCellClassName()}`}>
                         <TooltipProvider>
                           <Tooltip delayDuration={200}>
                             <TooltipTrigger asChild>
@@ -591,21 +659,29 @@ export default function PlansList() {
                             )}
                           </Tooltip>
                         </TooltipProvider>
-                      </TableCell>
-                      <TableCell className={`text-right font-medium ${getCellClassName()}`}>
-                        {formatCurrencyUtil(plan.grand_total, settings.currencyFormat, settings.currencySymbol, settings.compactNumbers)}
-                      </TableCell>
-                      <TableCell className={`text-right ${getCellClassName()}`}>
-                        <span className="text-green-600 font-medium">
-                          {plan.status === 'Approved' ? '45%' : plan.status === 'Draft' ? '-' : '30%'}
-                        </span>
-                      </TableCell>
-                      <TableCell className={getCellClassName()}>
-                        <Badge className={getPlanStatusColor(plan.status)}>
-                          {plan.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className={`text-right ${getCellClassName()}`}>
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("amount") && (
+                        <TableCell className={`text-right font-medium ${getCellClassName()}`}>
+                          {formatCurrencyUtil(plan.grand_total, settings.currencyFormat, settings.currencySymbol, settings.compactNumbers)}
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("qos") && (
+                        <TableCell className={`text-right ${getCellClassName()}`}>
+                          <span className="text-green-600 font-medium">
+                            {plan.status === 'Approved' ? '45%' : plan.status === 'Draft' ? '-' : '30%'}
+                          </span>
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("status") && (
+                        <TableCell className={getCellClassName()}>
+                          <Badge className={getPlanStatusColor(plan.status)}>
+                            {plan.status}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("actions") && (
+                        <TableCell className={`text-right ${getCellClassName()}`}>
                         <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                           <Button
                             variant="ghost"
@@ -661,7 +737,8 @@ export default function PlansList() {
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
-                      </TableCell>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 )}

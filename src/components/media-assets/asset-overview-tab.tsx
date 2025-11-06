@@ -1,7 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MapPin, Ruler, IndianRupee, Receipt, Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { MapPin } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
+import { SectionCard } from "@/components/ui/section-card";
 
 interface AssetOverviewTabProps {
   asset: any;
@@ -11,14 +11,13 @@ export function AssetOverviewTab({ asset }: AssetOverviewTabProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Location Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
-            Location
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <SectionCard 
+        title="Location" 
+        icon={MapPin} 
+        variant="primary"
+        description="Physical location and address details"
+      >
+        <div className="space-y-3">
           <div>
             <p className="text-sm text-muted-foreground">Address</p>
             <p className="font-medium">{asset.location}</p>
@@ -68,15 +67,17 @@ export function AssetOverviewTab({ asset }: AssetOverviewTabProps) {
               </a>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
 
       {/* Specifications Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Specifications</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <SectionCard 
+        title="Specifications" 
+        icon={Ruler} 
+        variant="blue"
+        description="Media type, dimensions and technical details"
+      >
+        <div className="space-y-3">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Media Type</p>
@@ -110,15 +111,17 @@ export function AssetOverviewTab({ asset }: AssetOverviewTabProps) {
               <Badge variant="secondary">Multi-Face</Badge>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
 
       {/* Pricing Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Pricing</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <SectionCard 
+        title="Pricing" 
+        icon={IndianRupee} 
+        variant="green"
+        description="Rate card and pricing structure"
+      >
+        <div className="space-y-3">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Card Rate</p>
@@ -137,15 +140,17 @@ export function AssetOverviewTab({ asset }: AssetOverviewTabProps) {
               <p className="font-medium">{asset.base_margin || 0}%</p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
 
       {/* Additional Costs Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Additional Costs</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <SectionCard 
+        title="Additional Costs" 
+        icon={Receipt} 
+        variant="amber"
+        description="Printing, mounting and other charges"
+      >
+        <div className="space-y-3">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Printing</p>
@@ -172,15 +177,17 @@ export function AssetOverviewTab({ asset }: AssetOverviewTabProps) {
               <p className="font-medium">{formatCurrency(asset.maintenance)}</p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
 
       {/* Ownership Card */}
-      <Card className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle>Ownership</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <SectionCard 
+        title="Ownership" 
+        icon={Building2} 
+        variant="purple"
+        description="Ownership type and vendor information"
+        className="lg:col-span-2"
+      >
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Type</p>
@@ -209,8 +216,7 @@ export function AssetOverviewTab({ asset }: AssetOverviewTabProps) {
               </>
             )}
           </div>
-        </CardContent>
-      </Card>
+      </SectionCard>
     </div>
   );
 }

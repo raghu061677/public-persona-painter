@@ -1,1 +1,4 @@
 project_id = "psryfvfdmjguhamvmqqd"
+
+[functions.fetch-monthly-power-bills]
+verify_jwt = false

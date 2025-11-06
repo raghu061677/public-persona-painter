@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Share2, Trash2, Copy, Rocket, MoreVertical, Ban, Activity, ExternalLink, Download, FileText, Plus, X, FileSpreadsheet, FileImage, Save } from "lucide-react";
+import { ArrowLeft, Share2, Trash2, Copy, Rocket, MoreVertical, Ban, Activity, ExternalLink, Download, FileText, Plus, X, FileSpreadsheet, FileImage, Save, Wand2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,8 +36,12 @@ import { generateCampaignCode } from "@/lib/codeGenerator";
 import { toast } from "@/hooks/use-toast";
 import { exportPlanToPPT, exportPlanToExcel, exportPlanToPDF } from "@/utils/planExports";
 import { ExportOptionsDialog, ExportOptions } from "@/components/plans/ExportOptionsDialog";
+import { ExportSettingsDialog, ExportSettings } from "@/components/plans/ExportSettingsDialog";
+import { TermsConditionsDialog, TermsData } from "@/components/plans/TermsConditionsDialog";
+import { BulkPrintingMountingDialog } from "@/components/plans/BulkPrintingMountingDialog";
 import { AddAssetsDialog } from "@/components/plans/AddAssetsDialog";
 import { SaveAsTemplateDialog } from "@/components/plans/SaveAsTemplateDialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function PlanDetail() {
   const { id } = useParams();
@@ -48,8 +52,12 @@ export default function PlanDetail() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showConvertDialog, setShowConvertDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showExportSettingsDialog, setShowExportSettingsDialog] = useState(false);
+  const [showTermsDialog, setShowTermsDialog] = useState(false);
+  const [showBulkPrintingDialog, setShowBulkPrintingDialog] = useState(false);
   const [showAddAssetsDialog, setShowAddAssetsDialog] = useState(false);
   const [showSaveAsTemplateDialog, setShowSaveAsTemplateDialog] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [exportingPPT, setExportingPPT] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
   const [campaignData, setCampaignData] = useState({
@@ -328,14 +336,23 @@ export default function PlanDetail() {
     }
   };
 
-  const handleExportPDF = async (options: ExportOptions) => {
+  const handleExportPDF = async (terms?: TermsData) => {
     try {
+      const docTypeMap: Record<string, "quotation" | "estimate" | "proforma_invoice" | "work_order"> = {
+        "Quotation": "quotation",
+        "Estimate": "estimate",
+        "Proforma Invoice": "proforma_invoice",
+        "Work Order": "work_order",
+      };
+      
+      const docType = terms?.optionType ? docTypeMap[terms.optionType] : "quotation";
+      
       await exportPlanToPDF(
         plan,
         planItems,
-        options.optionType,
-        { organization_name: "Go-Ads 360°" },
-        options.termsAndConditions
+        docType,
+        { organization_name: terms?.companyName || "Go-Ads 360°", gstin: terms?.gstin },
+        terms?.terms || []
       );
       toast({
         title: "Success",
@@ -347,6 +364,24 @@ export default function PlanDetail() {
         description: "Failed to export document",
         variant: "destructive",
       });
+    }
+  };
+
+  const toggleItemSelection = (itemId: string) => {
+    const newSelection = new Set(selectedItems);
+    if (newSelection.has(itemId)) {
+      newSelection.delete(itemId);
+    } else {
+      newSelection.add(itemId);
+    }
+    setSelectedItems(newSelection);
+  };
+
+  const toggleAllItems = () => {
+    if (selectedItems.size === planItems.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(planItems.map(item => item.asset_id)));
     }
   };
 
@@ -568,15 +603,19 @@ export default function PlanDetail() {
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleExportPPT} disabled={exportingPPT}>
                     <FileImage className="mr-2 h-4 w-4" />
-                    {exportingPPT ? "Exporting..." : "Download PPTx"}
+                    Download PPTx
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleExportExcel} disabled={exportingExcel}>
+                  <DropdownMenuItem onClick={() => setShowExportSettingsDialog(true)} disabled={exportingExcel}>
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    {exportingExcel ? "Exporting..." : "Download Excel"}
+                    Download Excel
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowExportDialog(true)}>
+                  <DropdownMenuItem onClick={() => setShowTermsDialog(true)}>
                     <FileText className="mr-2 h-4 w-4" />
                     Quotation, PI, WO
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => window.open(`/admin/plans/${id}/share/${plan.share_token || ''}`, '_blank')}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Photos
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -655,21 +694,39 @@ export default function PlanDetail() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Selected Assets ({planItems.length})</CardTitle>
-            {isAdmin && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAddAssetsDialog(true)}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Assets
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {selectedItems.size > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowBulkPrintingDialog(true)}
+                >
+                  <Wand2 className="mr-2 h-4 w-4" />
+                  Bulk P&M
+                </Button>
+              )}
+              {isAdmin && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddAssetsDialog(true)}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Assets
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedItems.size === planItems.length && planItems.length > 0}
+                      onCheckedChange={toggleAllItems}
+                    />
+                  </TableHead>
                   {isAdmin && <TableHead className="w-12"></TableHead>}
                   <TableHead>Asset ID</TableHead>
                   <TableHead>Location</TableHead>
@@ -683,6 +740,12 @@ export default function PlanDetail() {
               <TableBody>
                 {planItems.map((item) => (
                   <TableRow key={item.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedItems.has(item.asset_id)}
+                        onCheckedChange={() => toggleItemSelection(item.asset_id)}
+                      />
+                    </TableCell>
                     {isAdmin && (
                       <TableCell>
                         <Button
@@ -728,8 +791,47 @@ export default function PlanDetail() {
         <ExportOptionsDialog
           open={showExportDialog}
           onClose={() => setShowExportDialog(false)}
-          onExport={handleExportPDF}
+          onExport={(options) => {
+            const docTypeMap: Record<string, "quotation" | "estimate" | "proforma_invoice" | "work_order"> = {
+              "Quotation": "quotation",
+              "Estimate": "estimate",
+              "Proforma Invoice": "proforma_invoice",
+              "Work Order": "work_order",
+            };
+            const docType = docTypeMap[options.optionType] || "quotation";
+            exportPlanToPDF(plan, planItems, docType, { organization_name: "Go-Ads 360°" }, options.termsAndConditions);
+          }}
           clientName={plan.client_name}
+        />
+
+        <ExportSettingsDialog
+          open={showExportSettingsDialog}
+          onOpenChange={setShowExportSettingsDialog}
+          onExport={(settings) => {
+            handleExportExcel();
+            setShowExportSettingsDialog(false);
+          }}
+        />
+
+        <TermsConditionsDialog
+          open={showTermsDialog}
+          onOpenChange={setShowTermsDialog}
+          onSave={(data) => {
+            handleExportPDF(data);
+            setShowTermsDialog(false);
+          }}
+        />
+
+        <BulkPrintingMountingDialog
+          open={showBulkPrintingDialog}
+          onOpenChange={setShowBulkPrintingDialog}
+          selectedAssetIds={selectedItems}
+          planId={id!}
+          onSuccess={() => {
+            fetchPlanItems();
+            fetchPlan();
+            setSelectedItems(new Set());
+          }}
         />
 
         <AddAssetsDialog

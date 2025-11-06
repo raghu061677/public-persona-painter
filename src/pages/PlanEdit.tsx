@@ -139,9 +139,10 @@ export default function PlanEdit() {
       setAssetPricing(newPricing);
     } else {
       newSelected.add(assetId);
-      // Calculate prorata based on duration (Monthly Rate / 30 * Duration Days)
+      // Calculate prorata based on plan duration from form data
       const monthlyRate = asset.card_rate || 0;
-      const prorataRate = (monthlyRate / 30) * calculateDurationDays(formData.start_date, formData.end_date);
+      const durationDays = calculateDurationDays(formData.start_date, formData.end_date);
+      const prorataRate = (monthlyRate / 30) * durationDays;
       
       setAssetPricing(prev => ({
         ...prev,

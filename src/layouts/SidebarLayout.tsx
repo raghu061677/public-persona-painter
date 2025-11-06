@@ -3,7 +3,9 @@ import { useSidebarStore } from "@/store/sidebarStore";
 import {
   Home, Map, MapPin, Filter, Layers, Briefcase, Users,
   Wallet, BarChart2, Image, Upload, Download, Settings,
-  Menu, ChevronDown, ChevronRight,
+  Menu, ChevronDown, ChevronRight, Target, TrendingUp,
+  FileText, Building2, CreditCard, Smartphone, MessageSquare,
+  UserCog, FileSpreadsheet, Receipt, LayoutDashboard, Brain
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NavLink } from "react-router-dom";
@@ -14,40 +16,73 @@ const MENU_SECTIONS = [
   {
     title: "Main",
     items: [
-      { label: "Dashboard", icon: Home, path: "/dashboard" },
-      { label: "Media Assets", icon: Map, path: "/admin/media-assets" },
-      { label: "Asset Map", icon: MapPin, path: "/admin/media-assets-map" },
-      { label: "Vacant Assets", icon: Filter, path: "/reports/vacant-media" },
+      { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     ],
   },
   {
-    title: "Management",
+    title: "Inventory",
+    items: [
+      { label: "Media Assets", icon: Map, path: "/admin/media-assets" },
+      { label: "Map View", icon: MapPin, path: "/admin/media-assets-map" },
+      { label: "Vacant", icon: Filter, path: "/reports/vacant-media" },
+      { label: "Photo Library", icon: Image, path: "/admin/photo-library" },
+    ],
+  },
+  {
+    title: "Sales & Marketing",
     items: [
       { label: "Plans", icon: Layers, path: "/admin/plans" },
-      { label: "Campaigns", icon: Briefcase, path: "/admin/campaigns" },
       { label: "Clients", icon: Users, path: "/admin/clients" },
+      { label: "Leads", icon: Target, path: "/admin/leads" },
+    ],
+  },
+  {
+    title: "Execution",
+    items: [
+      { label: "Campaigns", icon: Briefcase, path: "/admin/campaigns" },
+      { label: "Operations", icon: TrendingUp, path: "/admin/operations" },
+      { label: "Mobile Field App", icon: Smartphone, path: "/admin/mobile-upload" },
     ],
   },
   {
     title: "Finance",
     items: [
       { label: "Finance", icon: Wallet, path: "/finance" },
+      { label: "Invoices", icon: FileText, path: "/admin/invoices" },
+      { label: "Estimations", icon: FileSpreadsheet, path: "/admin/estimations" },
+      { label: "Expenses", icon: Receipt, path: "/admin/expenses" },
     ],
   },
   {
-    title: "Tools & Data",
+    title: "Admin",
     items: [
+      { label: "Vendors", icon: Building2, path: "/admin/vendors" },
+      { label: "Documents", icon: FileText, path: "/admin/documents" },
+      { label: "Rate Cards", icon: CreditCard, path: "/admin/rate-cards" },
+    ],
+  },
+  {
+    title: "Analytics & Tools",
+    items: [
+      { label: "AI Assistant", icon: Brain, path: "/admin/assistant" },
       { label: "Reports", icon: BarChart2, path: "/reports" },
-      { label: "Photo Library", icon: Image, path: "/admin/photo-library" },
       { label: "Import", icon: Upload, path: "/admin/import" },
       { label: "Export", icon: Download, path: "/admin/export" },
+    ],
+  },
+  {
+    title: "Client Portal",
+    items: [
+      { label: "Portal Home", icon: Home, path: "/portal/home" },
     ],
   },
 ];
 
 export default function SidebarLayout({ children }: { children: React.ReactNode }) {
   const { open, toggle } = useSidebarStore();
-  const [expandedSections, setExpandedSections] = useState<string[]>(["Main", "Management", "Finance", "Tools & Data"]);
+  const [expandedSections, setExpandedSections] = useState<string[]>([
+    "Main", "Inventory", "Sales & Marketing", "Execution", "Finance", "Admin", "Analytics & Tools", "Client Portal"
+  ]);
 
   const toggleSection = (title: string) => {
     setExpandedSections((prev) =>

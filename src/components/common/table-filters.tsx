@@ -135,13 +135,13 @@ export function TableFilters({
                   ) : (
                     <Select
                       value={filterValues[filter.key] || ""}
-                      onValueChange={(value) => onFilterChange(filter.key, value)}
+                      onValueChange={(value) => onFilterChange(filter.key, value === "__all__" ? "" : value)}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder={filter.placeholder || `Select ${filter.label.toLowerCase()}`} />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">All {filter.label}</SelectItem>
+                      <SelectContent className="bg-popover z-50">
+                        <SelectItem value="__all__">All {filter.label}</SelectItem>
                         {filter.options?.map((option) => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
@@ -172,7 +172,7 @@ export function TableFilters({
                       <LayoutList className="h-4 w-4 mr-2" />
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-popover z-50">
                       <SelectItem value="compact">Compact</SelectItem>
                       <SelectItem value="normal">Normal</SelectItem>
                       <SelectItem value="comfortable">Comfortable</SelectItem>

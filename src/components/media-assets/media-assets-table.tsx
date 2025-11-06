@@ -529,7 +529,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
       key: "media_type",
       label: "Media Type",
       type: "select",
-      options: [{ value: "", label: "All Media Types" }, ...mediaTypes.map(t => ({ value: t, label: t }))],
+      options: mediaTypes.map(t => ({ value: t, label: t })),
     },
   ];
 

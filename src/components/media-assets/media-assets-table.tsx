@@ -48,6 +48,7 @@ import { DndProvider, useDrag, useDrop, type XYCoord } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import { useTableDensity } from "@/hooks/use-table-density";
+import { useTableSettings, formatCurrency as formatCurrencyUtil, formatDate as formatDateUtil } from "@/hooks/use-table-settings";
 import ColumnVisibilityButton from "@/components/common/column-visibility-button";
 import { TableFilters } from "@/components/common/table-filters";
 import { BulkActionsDropdown, commonBulkActions } from "@/components/common/bulk-actions-dropdown";
@@ -335,12 +336,28 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
       {
         accessorKey: "card_rate",
         header: "Card Rate",
-        cell: ({ row }) => formatCurrency(row.original.card_rate),
+        cell: ({ row }) => {
+          if (!settingsReady) return formatCurrency(row.original.card_rate);
+          return formatCurrencyUtil(
+            row.original.card_rate,
+            settings.currencyFormat,
+            settings.currencySymbol,
+            settings.compactNumbers
+          );
+        },
       },
       {
         accessorKey: "base_rent",
         header: "Base Rent",
-        cell: ({ row }) => formatCurrency(row.original.base_rent),
+        cell: ({ row }) => {
+          if (!settingsReady) return formatCurrency(row.original.base_rent);
+          return formatCurrencyUtil(
+            row.original.base_rent,
+            settings.currencyFormat,
+            settings.currencySymbol,
+            settings.compactNumbers
+          );
+        },
       },
       { accessorKey: "gst_percent", header: "GST %" },
       { accessorKey: "status", header: "Status" },
@@ -388,6 +405,24 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
   ]);
 
   const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("media-assets");
+  
+  const { 
+    settings, 
+    updateSettings, 
+    resetSettings,
+    isReady: settingsReady 
+  } = useTableSettings("media-assets");
+
+  // Auto-refresh functionality
+  useEffect(() => {
+    if (!settingsReady || settings.autoRefreshInterval === 0) return;
+
+    const interval = setInterval(() => {
+      onRefresh();
+    }, settings.autoRefreshInterval * 1000);
+
+    return () => clearInterval(interval);
+  }, [settings.autoRefreshInterval, settingsReady, onRefresh]);
 
   const columnVisibility: VisibilityState = useMemo(() => {
     return allColumnKeys.reduce((acc, key) => {
@@ -426,7 +461,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
     getSortedRowModel: getSortedRowModel(),
     initialState: {
       pagination: {
-        pageSize: 25,
+        pageSize: settingsReady ? settings.defaultPageSize : 25,
       },
     },
   });
@@ -497,7 +532,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
     return Array.from(types).sort();
   }, [assets]);
 
-  if (!isReady) {
+  if (!isReady || !settingsReady) {
     return (
       <div className="space-y-4">
         <Card>
@@ -571,6 +606,9 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
           searchableData={assets}
           searchableKeys={["id", "media_id", "location", "area", "city", "media_type", "status"]}
           onGlobalSearchFilter={setGlobalSearchFiltered}
+          settings={settings}
+          onUpdateSettings={updateSettings}
+          onResetSettings={resetSettings}
         />
 
         {selectedAssetIds.length > 0 && (

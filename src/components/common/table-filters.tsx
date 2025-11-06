@@ -19,6 +19,8 @@ import ColumnVisibilityButton from "./column-visibility-button";
 import { TableDensity } from "@/hooks/use-table-density";
 import { FilterPresets } from "./filter-presets";
 import { GlobalSearch } from "./global-search";
+import { TableSettingsPanel } from "./table-settings-panel";
+import { TableSettings } from "@/hooks/use-table-settings";
 
 export interface FilterConfig {
   key: string;
@@ -48,6 +50,10 @@ interface TableFiltersProps {
   searchableData?: any[];
   searchableKeys?: string[];
   onGlobalSearchFilter?: (filtered: any[]) => void;
+  // Settings
+  settings?: TableSettings;
+  onUpdateSettings?: (updates: Partial<TableSettings>) => void;
+  onResetSettings?: () => void;
 }
 
 export function TableFilters({
@@ -66,6 +72,9 @@ export function TableFilters({
   searchableData = [],
   searchableKeys = [],
   onGlobalSearchFilter,
+  settings,
+  onUpdateSettings,
+  onResetSettings,
 }: TableFiltersProps) {
   const hasActiveFilters = Object.values(filterValues).some(v => v !== "");
 
@@ -178,6 +187,14 @@ export function TableFilters({
                       <SelectItem value="comfortable">Comfortable</SelectItem>
                     </SelectContent>
                   </Select>
+                )}
+                
+                {settings && onUpdateSettings && onResetSettings && (
+                  <TableSettingsPanel
+                    settings={settings}
+                    onUpdateSettings={onUpdateSettings}
+                    onResetSettings={onResetSettings}
+                  />
                 )}
                 
                 <ColumnVisibilityButton

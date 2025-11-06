@@ -16,6 +16,7 @@ import MediaAssetEdit from "./pages/MediaAssetEdit";
 import MediaAssetsMap from "./pages/MediaAssetsMap";
 import MediaAssetsImport from "./pages/MediaAssetsImport";
 import ClientsList from "./pages/ClientsList";
+import ClientAnalytics from "./pages/ClientAnalytics";
 import PlansList from "./pages/PlansList";
 import PlanNew from "./pages/PlanNew";
 import PlanEdit from "./pages/PlanEdit";
@@ -59,6 +60,7 @@ const App = () => (
             {/* Protected routes with layout */}
             <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
             <Route path="/admin/clients" element={<AppLayout><ClientsList /></AppLayout>} />
+            <Route path="/admin/clients/:id/analytics" element={<AppLayout><ClientAnalytics /></AppLayout>} />
             <Route path="/admin/media-assets" element={<AppLayout><MediaAssetsList /></AppLayout>} />
             <Route path="/admin/media-assets/new" element={<AppLayout><MediaAssetNew /></AppLayout>} />
             <Route path="/admin/media-assets/import" element={<AppLayout><MediaAssetsImport /></AppLayout>} />

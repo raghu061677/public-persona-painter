@@ -25,7 +25,7 @@ import {
   formatDate 
 } from "@/utils/plans";
 import { generatePlanCode } from "@/lib/codeGenerator";
-import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AssetSelectionTable } from "@/components/plans/AssetSelectionTable";
 import { SelectedAssetsTable } from "@/components/plans/SelectedAssetsTable";
@@ -55,6 +55,7 @@ export default function PlanNew() {
     fetchClients();
     fetchAvailableAssets();
     generateNewPlanId();
+    loadTemplateFromSession();
   }, []);
 
   const generateNewPlanId = async () => {
@@ -85,6 +86,61 @@ export default function PlanNew() {
       .eq('status', 'Available')
       .order('city', { ascending: true });
     setAvailableAssets(data || []);
+  };
+
+  const loadTemplateFromSession = () => {
+    const templateData = sessionStorage.getItem('planTemplate');
+    if (templateData) {
+      try {
+        const template = JSON.parse(templateData);
+        
+        // Load template configuration
+        setFormData(prev => ({
+          ...prev,
+          plan_type: template.plan_type,
+          gst_percent: template.gst_percent.toString(),
+          notes: template.notes || "",
+        }));
+
+        // Calculate dates based on template duration
+        const startDate = new Date();
+        const endDate = new Date(startDate.getTime() + (template.duration_days || 30) * 24 * 60 * 60 * 1000);
+        setFormData(prev => ({
+          ...prev,
+          start_date: startDate,
+          end_date: endDate,
+        }));
+
+        // Load template assets
+        if (Array.isArray(template.template_items)) {
+          const assetIds = new Set<string>(template.template_items.map((item: any) => item.asset_id));
+          setSelectedAssets(assetIds);
+
+          // Load pricing for each asset
+          const pricing: Record<string, any> = {};
+          template.template_items.forEach((item: any) => {
+            pricing[item.asset_id] = {
+              sales_price: item.sales_price,
+              printing_charges: item.printing_charges || 0,
+              mounting_charges: item.mounting_charges || 0,
+              discount_type: item.discount_type || 'Percent',
+              discount_value: item.discount_value || 0,
+            };
+          });
+          setAssetPricing(pricing);
+        }
+
+        toast({
+          title: "Template Loaded",
+          description: `Template "${template.template_name}" loaded successfully`,
+        });
+
+        // Clear from session storage
+        sessionStorage.removeItem('planTemplate');
+      } catch (error) {
+        console.error('Error loading template:', error);
+      }
+    }
   };
 
   const handleClientSelect = (clientId: string) => {

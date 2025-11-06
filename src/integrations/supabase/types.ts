@@ -1134,6 +1134,54 @@ export type Database = {
           },
         ]
       }
+      plan_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          duration_days: number | null
+          gst_percent: number
+          id: string
+          is_active: boolean | null
+          notes: string | null
+          plan_type: Database["public"]["Enums"]["plan_type"]
+          template_items: Json
+          template_name: string
+          updated_at: string | null
+          usage_count: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          duration_days?: number | null
+          gst_percent?: number
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          plan_type?: Database["public"]["Enums"]["plan_type"]
+          template_items?: Json
+          template_name: string
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          duration_days?: number | null
+          gst_percent?: number
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          plan_type?: Database["public"]["Enums"]["plan_type"]
+          template_items?: Json
+          template_name?: string
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Relationships: []
+      }
       plans: {
         Row: {
           client_id: string

@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Share2, Trash2, Copy, Rocket, MoreVertical, Ban, Activity, ExternalLink, Download, FileText, Plus, X, FileSpreadsheet, FileImage } from "lucide-react";
+import { ArrowLeft, Share2, Trash2, Copy, Rocket, MoreVertical, Ban, Activity, ExternalLink, Download, FileText, Plus, X, FileSpreadsheet, FileImage, Save } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +37,7 @@ import { toast } from "@/hooks/use-toast";
 import { exportPlanToPPT, exportPlanToExcel, exportPlanToPDF } from "@/utils/planExports";
 import { ExportOptionsDialog, ExportOptions } from "@/components/plans/ExportOptionsDialog";
 import { AddAssetsDialog } from "@/components/plans/AddAssetsDialog";
+import { SaveAsTemplateDialog } from "@/components/plans/SaveAsTemplateDialog";
 
 export default function PlanDetail() {
   const { id } = useParams();
@@ -48,6 +49,7 @@ export default function PlanDetail() {
   const [showConvertDialog, setShowConvertDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showAddAssetsDialog, setShowAddAssetsDialog] = useState(false);
+  const [showSaveAsTemplateDialog, setShowSaveAsTemplateDialog] = useState(false);
   const [exportingPPT, setExportingPPT] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
   const [campaignData, setCampaignData] = useState({
@@ -533,6 +535,10 @@ export default function PlanDetail() {
                     <Activity className="mr-2 h-4 w-4" />
                     Edit Plan
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowSaveAsTemplateDialog(true)}>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save as Template
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleDelete}>
                     <Trash2 className="mr-2 h-4 w-4" />
@@ -731,6 +737,17 @@ export default function PlanDetail() {
           onClose={() => setShowAddAssetsDialog(false)}
           existingAssetIds={planItems.map(item => item.asset_id)}
           onAddAssets={handleAddAssets}
+        />
+
+        <SaveAsTemplateDialog
+          open={showSaveAsTemplateDialog}
+          onOpenChange={setShowSaveAsTemplateDialog}
+          planId={plan.id}
+          planType={plan.plan_type}
+          durationDays={plan.duration_days}
+          gstPercent={plan.gst_percent}
+          notes={plan.notes}
+          planItems={planItems}
         />
       </div>
     </div>

@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket, Download, Sparkles, ChevronDown, Info } from "lucide-react";
+import { Plus, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket, Download, Sparkles, ChevronDown, Info, FolderOpen } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +30,8 @@ import { useTableDensity } from "@/hooks/use-table-density";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { highlightText } from "@/components/common/global-search";
+import { TemplatesDialog } from "@/components/plans/TemplatesDialog";
+import { BulkActionsToolbar } from "@/components/plans/BulkActionsToolbar";
 import {
   Tooltip,
   TooltipContent,
@@ -47,6 +49,7 @@ export default function PlansList() {
   const [selectedPlans, setSelectedPlans] = useState<Set<string>>(new Set());
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [showTemplatesDialog, setShowTemplatesDialog] = useState(false);
 
   const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("plans");
   const { 
@@ -334,6 +337,14 @@ export default function PlansList() {
             {isAdmin && (
               <div className="flex items-center gap-3">
                 <Button
+                  onClick={() => setShowTemplatesDialog(true)}
+                  variant="outline"
+                  className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                >
+                  <FolderOpen className="mr-2 h-4 w-4" />
+                  Templates
+                </Button>
+                <Button
                   onClick={() => {
                     toast({
                       title: "AI Plan Creation",
@@ -443,29 +454,16 @@ export default function PlansList() {
           </CardContent>
         </Card>
 
-        {/* Bulk Selection Banner */}
+        {/* Bulk Actions Toolbar */}
         {selectedPlans.size > 0 && (
-          <Card className="mb-4 bg-primary/5 border-primary/20">
-            <CardContent className="p-4 flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-                  <span className="text-lg font-bold text-primary-foreground">{selectedPlans.size}</span>
-                </div>
-                <div>
-                  <p className="font-semibold">Plans Selected</p>
-                  <p className="text-sm text-muted-foreground">Ready for bulk actions</p>
-                </div>
-              </div>
-              <BulkActionsDropdown
-                selectedCount={selectedPlans.size}
-                actions={[
-                  { ...commonBulkActions.export, id: "export", label: "Export Selected" },
-                  commonBulkActions.delete,
-                ]}
-                onAction={handleBulkAction}
-              />
-            </CardContent>
-          </Card>
+          <div className="mb-4">
+            <BulkActionsToolbar
+              selectedIds={selectedPlans}
+              onClearSelection={() => setSelectedPlans(new Set())}
+              onRefresh={fetchPlans}
+              allPlans={plans}
+            />
+          </div>
         )}
 
         {/* Table Card */}
@@ -747,6 +745,12 @@ export default function PlansList() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Templates Dialog */}
+      <TemplatesDialog
+        open={showTemplatesDialog}
+        onOpenChange={setShowTemplatesDialog}
+      />
     </div>
   );
 }

@@ -43,10 +43,12 @@ import { DeleteClientDialog } from "@/components/clients/DeleteClientDialog";
 import { z } from "zod";
 import * as XLSX from 'xlsx';
 import { TableFilters } from "@/components/common/table-filters";
+import { FilterPresets } from "@/components/common/filter-presets";
 import { Card, CardContent } from "@/components/ui/card";
 import { BulkActionsDropdown, commonBulkActions } from "@/components/common/bulk-actions-dropdown";
 import { useTableSettings, formatDate as formatDateUtil } from "@/hooks/use-table-settings";
 import { useTableDensity } from "@/hooks/use-table-density";
+import { useColumnPrefs } from "@/hooks/use-column-prefs";
 
 const INDIAN_STATES = [
   { code: "AP", name: "Andhra Pradesh" },
@@ -136,6 +138,29 @@ export default function ClientsList() {
     resetSettings,
     isReady: settingsReady 
   } = useTableSettings("clients");
+
+  // Define all columns
+  const allColumns = [
+    { key: "select", label: "Select" },
+    { key: "id", label: "Client ID" },
+    { key: "name", label: "Name" },
+    { key: "company", label: "Company" },
+    { key: "email", label: "Email" },
+    { key: "phone", label: "Phone" },
+    { key: "city", label: "City" },
+    { key: "state", label: "State" },
+    { key: "gst", label: "GST Number" },
+    { key: "actions", label: "Actions" },
+  ];
+
+  const defaultVisibleColumns = ["select", "id", "name", "company", "email", "phone", "city", "state", "actions"];
+
+  const {
+    isReady: columnPrefsReady,
+    visibleKeys: visibleColumns,
+    setVisibleKeys: setVisibleColumns,
+    reset: resetColumns,
+  } = useColumnPrefs("clients-columns", allColumns.map(c => c.key), defaultVisibleColumns);
 
   // Auto-refresh
   useEffect(() => {
@@ -607,21 +632,30 @@ export default function ClientsList() {
             setFilterState("");
             setFilterCity("");
           }}
-          allColumns={[
-            { key: "select", label: "Select" },
-            { key: "id", label: "Client ID" },
-            { key: "name", label: "Name" },
-            { key: "company", label: "Company" },
-            { key: "email", label: "Email" },
-            { key: "phone", label: "Phone" },
-            { key: "city", label: "City" },
-            { key: "state", label: "State" },
-            { key: "gst", label: "GST Number" },
-            { key: "actions", label: "Actions" },
-          ]}
-          visibleColumns={["select", "id", "name", "company", "email", "phone", "city", "state", "actions"]}
-          onColumnVisibilityChange={() => {}}
-          onResetColumns={() => {}}
+          allColumns={allColumns}
+          visibleColumns={visibleColumns}
+          onColumnVisibilityChange={setVisibleColumns}
+          onResetColumns={resetColumns}
+          density={density}
+          onDensityChange={setDensity}
+          tableKey="clients"
+          settings={settings}
+          onUpdateSettings={updateSettings}
+          onResetSettings={resetSettings}
+        />
+
+        <FilterPresets
+          tableKey="clients"
+          currentFilters={{
+            search: searchTerm,
+            state: filterState,
+            city: filterCity,
+          }}
+          onApplyPreset={(filters) => {
+            setSearchTerm(filters.search || "");
+            setFilterState(filters.state || "");
+            setFilterCity(filters.city || "");
+          }}
         />
 
         <Card className="mb-4">
@@ -644,93 +678,131 @@ export default function ClientsList() {
         <div className="bg-card rounded-lg border">
           <Table>
             <TableHeader>
-              <TableRow>
-                {isAdmin && (
-                  <TableHead className="w-12">
+              <TableRow className={getRowClassName()}>
+                {visibleColumns.includes("select") && isAdmin && (
+                  <TableHead className={`w-12 ${getCellClassName()}`}>
                     <Checkbox
                       checked={selectedClients.size === paginatedClients.length && paginatedClients.length > 0}
                       onCheckedChange={toggleAllClients}
                     />
                   </TableHead>
                 )}
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort('id')}
-                >
-                  <div className="flex items-center gap-2">
-                    ID
-                    {sortField === 'id' && <ArrowUpDown className="h-4 w-4" />}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort('name')}
-                >
-                  <div className="flex items-center gap-2">
-                    Name
-                    {sortField === 'name' && <ArrowUpDown className="h-4 w-4" />}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort('company')}
-                >
-                  <div className="flex items-center gap-2">
-                    Company
-                    {sortField === 'company' && <ArrowUpDown className="h-4 w-4" />}
-                  </div>
-                </TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort('city')}
-                >
-                  <div className="flex items-center gap-2">
-                    City
-                    {sortField === 'city' && <ArrowUpDown className="h-4 w-4" />}
-                  </div>
-                </TableHead>
-                {isAdmin && <TableHead className="text-right">Actions</TableHead>}
+                {visibleColumns.includes("id") && (
+                  <TableHead 
+                    className={`cursor-pointer hover:bg-muted/50 ${getCellClassName()}`}
+                    onClick={() => handleSort('id')}
+                  >
+                    <div className="flex items-center gap-2">
+                      ID
+                      {sortField === 'id' && <ArrowUpDown className="h-4 w-4" />}
+                    </div>
+                  </TableHead>
+                )}
+                {visibleColumns.includes("name") && (
+                  <TableHead 
+                    className={`cursor-pointer hover:bg-muted/50 ${getCellClassName()}`}
+                    onClick={() => handleSort('name')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Name
+                      {sortField === 'name' && <ArrowUpDown className="h-4 w-4" />}
+                    </div>
+                  </TableHead>
+                )}
+                {visibleColumns.includes("company") && (
+                  <TableHead 
+                    className={`cursor-pointer hover:bg-muted/50 ${getCellClassName()}`}
+                    onClick={() => handleSort('company')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Company
+                      {sortField === 'company' && <ArrowUpDown className="h-4 w-4" />}
+                    </div>
+                  </TableHead>
+                )}
+                {visibleColumns.includes("email") && (
+                  <TableHead className={getCellClassName()}>Email</TableHead>
+                )}
+                {visibleColumns.includes("phone") && (
+                  <TableHead className={getCellClassName()}>Phone</TableHead>
+                )}
+                {visibleColumns.includes("city") && (
+                  <TableHead 
+                    className={`cursor-pointer hover:bg-muted/50 ${getCellClassName()}`}
+                    onClick={() => handleSort('city')}
+                  >
+                    <div className="flex items-center gap-2">
+                      City
+                      {sortField === 'city' && <ArrowUpDown className="h-4 w-4" />}
+                    </div>
+                  </TableHead>
+                )}
+                {visibleColumns.includes("state") && (
+                  <TableHead className={getCellClassName()}>State</TableHead>
+                )}
+                {visibleColumns.includes("gst") && (
+                  <TableHead className={getCellClassName()}>GST</TableHead>
+                )}
+                {visibleColumns.includes("actions") && isAdmin && (
+                  <TableHead className={`text-right ${getCellClassName()}`}>Actions</TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
+              {loading || !settingsReady || !columnPrefsReady ? (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 8 : 7} className="text-center py-8">
+                  <TableCell colSpan={visibleColumns.length} className="text-center py-8">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : paginatedClients.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 8 : 7} className="text-center py-8">
+                  <TableCell colSpan={visibleColumns.length} className="text-center py-8">
                     No clients found
                   </TableCell>
                 </TableRow>
               ) : (
                 paginatedClients.map((client) => (
-                  <TableRow key={client.id}>
-                    {isAdmin && (
-                      <TableCell onClick={(e) => e.stopPropagation()}>
+                  <TableRow key={client.id} className={getRowClassName()}>
+                    {visibleColumns.includes("select") && isAdmin && (
+                      <TableCell className={getCellClassName()} onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selectedClients.has(client.id)}
                           onCheckedChange={() => toggleClientSelection(client.id)}
                         />
                       </TableCell>
                     )}
-                    <TableCell className="font-medium">{client.id}</TableCell>
-                    <TableCell 
-                      className="hover:underline cursor-pointer text-primary font-medium"
-                      onClick={() => navigate(`/admin/clients/${client.id}`)}
-                    >
-                      {client.name}
-                    </TableCell>
-                    <TableCell>{client.company || '-'}</TableCell>
-                    <TableCell>{client.email || '-'}</TableCell>
-                    <TableCell>{client.phone || '-'}</TableCell>
-                    <TableCell>{client.city || '-'}</TableCell>
-                    {isAdmin && (
-                      <TableCell className="text-right">
+                    {visibleColumns.includes("id") && (
+                      <TableCell className={`font-medium ${getCellClassName()}`}>{client.id}</TableCell>
+                    )}
+                    {visibleColumns.includes("name") && (
+                      <TableCell 
+                        className={`hover:underline cursor-pointer text-primary font-medium ${getCellClassName()}`}
+                        onClick={() => navigate(`/admin/clients/${client.id}`)}
+                      >
+                        {client.name}
+                      </TableCell>
+                    )}
+                    {visibleColumns.includes("company") && (
+                      <TableCell className={getCellClassName()}>{client.company || '-'}</TableCell>
+                    )}
+                    {visibleColumns.includes("email") && (
+                      <TableCell className={getCellClassName()}>{client.email || '-'}</TableCell>
+                    )}
+                    {visibleColumns.includes("phone") && (
+                      <TableCell className={getCellClassName()}>{client.phone || '-'}</TableCell>
+                    )}
+                    {visibleColumns.includes("city") && (
+                      <TableCell className={getCellClassName()}>{client.city || '-'}</TableCell>
+                    )}
+                    {visibleColumns.includes("state") && (
+                      <TableCell className={getCellClassName()}>{client.state || '-'}</TableCell>
+                    )}
+                    {visibleColumns.includes("gst") && (
+                      <TableCell className={getCellClassName()}>{client.gst_number || '-'}</TableCell>
+                    )}
+                    {visibleColumns.includes("actions") && isAdmin && (
+                      <TableCell className={`text-right ${getCellClassName()}`}>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon">

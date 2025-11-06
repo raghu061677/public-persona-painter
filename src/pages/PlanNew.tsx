@@ -24,6 +24,7 @@ import {
   calculateDurationDays, 
   formatDate 
 } from "@/utils/plans";
+import { generatePlanCode } from "@/lib/codeGenerator";
 import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AssetSelectionTable } from "@/components/plans/AssetSelectionTable";
@@ -57,9 +58,15 @@ export default function PlanNew() {
   }, []);
 
   const generateNewPlanId = async () => {
-    const { data } = await supabase.rpc('generate_plan_id');
-    if (data) {
-      setFormData(prev => ({ ...prev, id: data }));
+    try {
+      const planId = await generatePlanCode();
+      setFormData(prev => ({ ...prev, id: planId }));
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to generate plan ID",
+        variant: "destructive",
+      });
     }
   };
 

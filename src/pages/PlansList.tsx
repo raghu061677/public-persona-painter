@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket, Download } from "lucide-react";
+import { Plus, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket, Download, Sparkles, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +38,7 @@ export default function PlansList() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [selectedPlans, setSelectedPlans] = useState<Set<string>>(new Set());
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
 
   const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("plans");
   const { 
@@ -251,93 +252,128 @@ export default function PlansList() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8 max-w-7xl">
         {/* Header Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Plans & Quotations</h1>
-              <p className="text-muted-foreground mt-1">
-                Manage client proposals and quotations
-              </p>
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FileText className="h-8 w-8 text-primary" />
+              <h1 className="text-2xl font-bold tracking-tight">Plan List</h1>
             </div>
             {isAdmin && (
-              <Button
-                onClick={() => navigate('/admin/plans/new')}
-                className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
-                size="lg"
-              >
-                <Plus className="mr-2 h-5 w-5" />
-                New Plan
-              </Button>
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={() => {
+                    toast({
+                      title: "AI Plan Creation",
+                      description: "AI-powered plan creation is coming soon!",
+                    });
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Create With AI
+                </Button>
+                <Button
+                  onClick={() => navigate('/admin/plans/new')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Plan
+                </Button>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card className="border-l-4 border-l-blue-500">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Plans</p>
-                  <p className="text-2xl font-bold">{plans.length}</p>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-                  <FileText className="h-6 w-6 text-blue-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="border-l-4 border-l-green-500">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Approved</p>
-                  <p className="text-2xl font-bold">
-                    {plans.filter(p => p.status === 'Approved').length}
-                  </p>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
-                  <Activity className="h-6 w-6 text-green-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card className="border-l-4 border-l-purple-500">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Converted</p>
-                  <p className="text-2xl font-bold">
-                    {plans.filter(p => p.status === 'Converted').length}
-                  </p>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-purple-500/10 flex items-center justify-center">
-                  <Rocket className="h-6 w-6 text-purple-500" />
-                </div>
+        {/* Filters Bar */}
+        <Card className="mb-4">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className="gap-2"
+              >
+                Display
+                <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+              </Button>
+              
+              <div className="flex-1 flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Filter by Project Id, Employee..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="flex-1 h-10 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                />
+                <Button size="icon" className="bg-blue-600 hover:bg-blue-700 text-white h-10 w-10">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </Button>
               </div>
-            </CardContent>
-          </Card>
 
-          <Card className="border-l-4 border-l-amber-500">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Draft</p>
-                  <p className="text-2xl font-bold">
-                    {plans.filter(p => p.status === 'Draft').length}
-                  </p>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-amber-500/10 flex items-center justify-center">
-                  <FileText className="h-6 w-6 text-amber-500" />
-                </div>
+              <Button variant="ghost" size="icon" onClick={() => setShowFilters(!showFilters)}>
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </Button>
+            </div>
+
+            {/* Collapsible Advanced Filters */}
+            {showFilters && (
+              <div className="mt-4 pt-4 border-t">
+                <TableFilters
+                  filters={[
+                    {
+                      key: "status",
+                      label: "Status",
+                      type: "select",
+                      options: uniqueStatuses.map(s => ({ value: s, label: s })),
+                    },
+                  ]}
+                  filterValues={{
+                    status: filterStatus,
+                  }}
+                  onFilterChange={(key, value) => {
+                    if (key === "status") setFilterStatus(value);
+                  }}
+                  onClearFilters={() => {
+                    setSearchTerm("");
+                    setFilterStatus("");
+                  }}
+                  allColumns={[
+                    { key: "select", label: "Select" },
+                    { key: "id", label: "Project ID" },
+                    { key: "employee", label: "Employee" },
+                    { key: "client", label: "Customer Name" },
+                    { key: "display", label: "Display" },
+                    { key: "from", label: "From" },
+                    { key: "to", label: "To" },
+                    { key: "days", label: "Days" },
+                    { key: "sqft", label: "SQFT" },
+                    { key: "amount", label: "Amount" },
+                    { key: "qos", label: "QoS" },
+                    { key: "status", label: "Status" },
+                    { key: "actions", label: "Actions" },
+                  ]}
+                  visibleColumns={["select", "id", "employee", "client", "display", "from", "to", "days", "sqft", "amount", "qos", "status", "actions"]}
+                  onColumnVisibilityChange={() => {}}
+                  onResetColumns={() => {}}
+                  density={density}
+                  onDensityChange={setDensity}
+                  tableKey="plans"
+                  settings={settings}
+                  onUpdateSettings={updateSettings}
+                  onResetSettings={resetSettings}
+                />
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
 
-        {/* Filters */}
+        {/* Bulk Selection Banner */}
         {selectedPlans.size > 0 && (
           <Card className="mb-4 bg-primary/5 border-primary/20">
             <CardContent className="p-4 flex items-center justify-between flex-wrap gap-4">
@@ -362,64 +398,8 @@ export default function PlansList() {
           </Card>
         )}
 
-        <TableFilters
-          filters={[
-            {
-              key: "search",
-              label: "Search",
-              type: "text",
-              placeholder: "Search by Plan ID, client name, or plan name...",
-            },
-            {
-              key: "status",
-              label: "Status",
-              type: "select",
-              options: uniqueStatuses.map(s => ({ value: s, label: s })),
-            },
-          ]}
-          filterValues={{
-            search: searchTerm,
-            status: filterStatus,
-          }}
-          onFilterChange={(key, value) => {
-            if (key === "search") setSearchTerm(value);
-            else if (key === "status") setFilterStatus(value);
-          }}
-          onClearFilters={() => {
-            setSearchTerm("");
-            setFilterStatus("");
-          }}
-          allColumns={[
-            { key: "select", label: "Select" },
-            { key: "id", label: "Plan ID" },
-            { key: "client", label: "Client Name" },
-            { key: "type", label: "Plan Type" },
-            { key: "status", label: "Status" },
-            { key: "duration", label: "Duration" },
-            { key: "total", label: "Grand Total" },
-            { key: "created", label: "Created" },
-            { key: "actions", label: "Actions" },
-          ]}
-          visibleColumns={["select", "id", "client", "type", "status", "duration", "total", "created", "actions"]}
-          onColumnVisibilityChange={() => {}}
-          onResetColumns={() => {}}
-          density={density}
-          onDensityChange={setDensity}
-          tableKey="plans"
-          enableGlobalSearch
-          searchableData={plans}
-          searchableKeys={["id", "client_name", "plan_name", "plan_type", "status"]}
-          onGlobalSearchFilter={setGlobalSearchFiltered}
-          settings={settings}
-          onUpdateSettings={updateSettings}
-          onResetSettings={resetSettings}
-        />
-
         {/* Table Card */}
         <Card>
-          <CardHeader className="border-b">
-            <CardTitle className="text-lg">All Plans</CardTitle>
-          </CardHeader>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
@@ -430,20 +410,24 @@ export default function PlansList() {
                       onCheckedChange={toggleAllPlans}
                     />
                   </TableHead>
-                  <TableHead className={`font-semibold ${getCellClassName()}`}>Plan ID</TableHead>
-                  <TableHead className={`font-semibold ${getCellClassName()}`}>Client Name</TableHead>
-                  <TableHead className={`font-semibold ${getCellClassName()}`}>Plan Type</TableHead>
+                  <TableHead className={`font-semibold ${getCellClassName()}`}>Project Id</TableHead>
+                  <TableHead className={`font-semibold ${getCellClassName()}`}>Employee</TableHead>
+                  <TableHead className={`font-semibold ${getCellClassName()}`}>Customer Name</TableHead>
+                  <TableHead className={`font-semibold ${getCellClassName()}`}>Display</TableHead>
+                  <TableHead className={`font-semibold ${getCellClassName()}`}>From</TableHead>
+                  <TableHead className={`font-semibold ${getCellClassName()}`}>To</TableHead>
+                  <TableHead className={`font-semibold ${getCellClassName()}`}>Days</TableHead>
+                  <TableHead className={`font-semibold ${getCellClassName()}`}>SQFT</TableHead>
+                  <TableHead className={`text-right font-semibold ${getCellClassName()}`}>Amount</TableHead>
+                  <TableHead className={`text-right font-semibold ${getCellClassName()}`}>QoS</TableHead>
                   <TableHead className={`font-semibold ${getCellClassName()}`}>Status</TableHead>
-                  <TableHead className={`font-semibold ${getCellClassName()}`}>Duration</TableHead>
-                  <TableHead className={`text-right font-semibold ${getCellClassName()}`}>Grand Total</TableHead>
-                  <TableHead className={`font-semibold ${getCellClassName()}`}>Created</TableHead>
                   <TableHead className={`text-right font-semibold ${getCellClassName()}`}>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading || !settingsReady ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12">
+                    <TableCell colSpan={13} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2">
                         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                         <p className="text-muted-foreground">Loading plans...</p>
@@ -452,7 +436,7 @@ export default function PlansList() {
                   </TableRow>
                 ) : filteredPlans.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12">
+                    <TableCell colSpan={13} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2">
                         <FileText className="h-12 w-12 text-muted-foreground/50" />
                         <p className="text-muted-foreground font-medium">No plans found</p>
@@ -476,23 +460,40 @@ export default function PlansList() {
                         />
                       </TableCell>
                       <TableCell className={`font-medium text-primary ${getCellClassName()}`}>{plan.id}</TableCell>
+                      <TableCell className={`${getCellClassName()}`}>
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+                            {plan.client_name?.charAt(0) || 'U'}
+                          </div>
+                          <span className="font-medium">Raghu Gajula</span>
+                        </div>
+                      </TableCell>
                       <TableCell className={`font-medium ${getCellClassName()}`}>{plan.client_name}</TableCell>
                       <TableCell className={getCellClassName()}>
-                        <Badge variant="outline" className="font-normal">
-                          {plan.plan_type}
-                        </Badge>
+                        <span className="text-blue-600 cursor-pointer hover:underline">
+                          {plan.plan_name || '-'}
+                        </span>
+                      </TableCell>
+                      <TableCell className={`text-muted-foreground ${getCellClassName()}`}>
+                        {plan.start_date ? new Date(plan.start_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }).replace(/ /g, '') : '-'}
+                      </TableCell>
+                      <TableCell className={`text-muted-foreground ${getCellClassName()}`}>
+                        {plan.end_date ? new Date(plan.end_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }).replace(/ /g, '') : '-'}
+                      </TableCell>
+                      <TableCell className={`${getCellClassName()}`}>{plan.duration_days}</TableCell>
+                      <TableCell className={`${getCellClassName()}`}>-</TableCell>
+                      <TableCell className={`text-right font-medium ${getCellClassName()}`}>
+                        {formatCurrencyUtil(plan.grand_total, settings.currencyFormat, settings.currencySymbol, settings.compactNumbers)}
+                      </TableCell>
+                      <TableCell className={`text-right ${getCellClassName()}`}>
+                        <span className="text-green-600 font-medium">
+                          {plan.status === 'Approved' ? '45%' : plan.status === 'Draft' ? '-' : '30%'}
+                        </span>
                       </TableCell>
                       <TableCell className={getCellClassName()}>
                         <Badge className={getPlanStatusColor(plan.status)}>
                           {plan.status}
                         </Badge>
-                      </TableCell>
-                      <TableCell className={`text-muted-foreground ${getCellClassName()}`}>{plan.duration_days} days</TableCell>
-                      <TableCell className={`text-right font-semibold ${getCellClassName()}`}>
-                        {formatCurrencyUtil(plan.grand_total, settings.currencyFormat, settings.currencySymbol, settings.compactNumbers)}
-                      </TableCell>
-                      <TableCell className={`text-muted-foreground ${getCellClassName()}`}>
-                        {formatDateUtil(plan.created_at, settings.dateFormat, settings.showTimestamps)}
                       </TableCell>
                       <TableCell className={`text-right ${getCellClassName()}`}>
                         <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>

@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket, Download, Sparkles, ChevronDown, Info, FolderOpen } from "lucide-react";
+import { Plus, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket, Download, Sparkles, ChevronDown, Info, FolderOpen, Edit } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -680,61 +680,82 @@ export default function PlansList() {
                       )}
                       {visibleColumns.includes("actions") && (
                         <TableCell className={`text-right ${getCellClassName()}`}>
-                        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/admin/plans/${plan.id}`);
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                              {isAdmin && (
-                                <>
-                                  <DropdownMenuItem onClick={() => navigate(`/admin/plans/edit/${plan.id}`)}>
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleDelete(plan.id)}>
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleBlock(plan.id)}>
-                                    <Ban className="mr-2 h-4 w-4" />
-                                    Reject
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                </>
-                              )}
-                              <DropdownMenuItem onClick={() => handleCopy(plan.id)}>
-                                <Copy className="mr-2 h-4 w-4" />
-                                Copy ID
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleShare(plan)}>
-                                <Share2 className="mr-2 h-4 w-4" />
-                                Share
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleShare(plan)}>
-                                <ExternalLink className="mr-2 h-4 w-4" />
-                                Public Link
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => navigate(`/admin/plans/${plan.id}`)}>
-                                <Activity className="mr-2 h-4 w-4" />
-                                Activity
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
+                        <TooltipProvider>
+                          <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/admin/plans/${plan.id}`);
+                                  }}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>View Details</TooltipContent>
+                            </Tooltip>
+                            
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/admin/plans/edit/${plan.id}`);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Edit Plan</TooltipContent>
+                            </Tooltip>
+                            
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-48">
+                                {isAdmin && (
+                                  <>
+                                    <DropdownMenuItem onClick={() => handleDelete(plan.id)}>
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleBlock(plan.id)}>
+                                      <Ban className="mr-2 h-4 w-4" />
+                                      Reject
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                  </>
+                                )}
+                                <DropdownMenuItem onClick={() => handleCopy(plan.id)}>
+                                  <Copy className="mr-2 h-4 w-4" />
+                                  Copy ID
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleShare(plan)}>
+                                  <Share2 className="mr-2 h-4 w-4" />
+                                  Share
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleShare(plan)}>
+                                  <ExternalLink className="mr-2 h-4 w-4" />
+                                  Public Link
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => navigate(`/admin/plans/${plan.id}`)}>
+                                  <Activity className="mr-2 h-4 w-4" />
+                                  Activity
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </TooltipProvider>
                         </TableCell>
                       )}
                     </TableRow>

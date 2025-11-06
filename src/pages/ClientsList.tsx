@@ -525,128 +525,14 @@ export default function ClientsList() {
             </p>
           </div>
           {isAdmin && (
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="gradient" size="lg">
-                  <Plus className="mr-2 h-5 w-5" />
-                  Add Client
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Add New Client</DialogTitle>
-                  <DialogDescription>
-                    Create a new client record. Fields marked with * are required.
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>State *</Label>
-                      <Select value={formData.state} onValueChange={(value) => updateField('state', value)}>
-                        <SelectTrigger className={formErrors.state ? "border-destructive" : ""}>
-                          <SelectValue placeholder="Select state..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {INDIAN_STATES.map(state => (
-                            <SelectItem key={state.code} value={state.code}>
-                              {state.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {formErrors.state && <p className="text-sm text-destructive mt-1">{formErrors.state}</p>}
-                    </div>
-                    <div className="flex items-end">
-                      <Button
-                        type="button"
-                        onClick={generateClientId}
-                        disabled={!formData.state || generating}
-                        className="w-full"
-                        variant="outline"
-                      >
-                        <Sparkles className="mr-2 h-4 w-4" />
-                        {generating ? 'Generating...' : 'Generate ID'}
-                      </Button>
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Client ID *</Label>
-                    <Input
-                      required
-                      value={formData.id}
-                      readOnly
-                      disabled
-                      placeholder="Auto-generated"
-                    />
-                  </div>
-                  <div>
-                    <Label>Name *</Label>
-                    <Input
-                      required
-                      value={formData.name}
-                      onChange={(e) => updateField('name', e.target.value)}
-                      className={formErrors.name ? "border-destructive" : ""}
-                    />
-                    {formErrors.name && <p className="text-sm text-destructive mt-1">{formErrors.name}</p>}
-                  </div>
-                  <div>
-                    <Label>Email</Label>
-                    <Input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => updateField('email', e.target.value)}
-                      className={formErrors.email ? "border-destructive" : ""}
-                    />
-                    {formErrors.email && <p className="text-sm text-destructive mt-1">{formErrors.email}</p>}
-                  </div>
-                  <div>
-                    <Label>Phone</Label>
-                    <Input
-                      value={formData.phone}
-                      onChange={(e) => updateField('phone', e.target.value.replace(/\D/g, ''))}
-                      placeholder="10 digit number"
-                      maxLength={10}
-                      className={formErrors.phone ? "border-destructive" : ""}
-                    />
-                    {formErrors.phone && <p className="text-sm text-destructive mt-1">{formErrors.phone}</p>}
-                  </div>
-                  <div>
-                    <Label>Company</Label>
-                    <Input
-                      value={formData.company}
-                      onChange={(e) => updateField('company', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>GST Number</Label>
-                    <Input
-                      value={formData.gst_number}
-                      onChange={(e) => updateField('gst_number', e.target.value.toUpperCase())}
-                      placeholder="22AAAAA0000A1Z5"
-                      maxLength={15}
-                      className={formErrors.gst_number ? "border-destructive" : ""}
-                    />
-                    {formErrors.gst_number && <p className="text-sm text-destructive mt-1">{formErrors.gst_number}</p>}
-                  </div>
-                  <div>
-                    <Label>City</Label>
-                    <Input
-                      value={formData.city}
-                      onChange={(e) => updateField('city', e.target.value)}
-                    />
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button type="submit" variant="gradient" disabled={!formData.id}>
-                      Create Client
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
+            <Button 
+              onClick={() => navigate('/admin/clients/new')}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              size="lg"
+            >
+              <Plus className="mr-2 h-5 w-5" />
+              Add Client
+            </Button>
           )}
         </div>
 

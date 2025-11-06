@@ -520,12 +520,12 @@ export default function ClientsList() {
               />
             </div>
             
-            <Select value={filterState} onValueChange={setFilterState}>
+            <Select value={filterState || "all"} onValueChange={(value) => setFilterState(value === "all" ? "" : value)}>
               <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Filter by State" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All States</SelectItem>
+                <SelectItem value="all">All States</SelectItem>
                 {uniqueStates.map(state => (
                   <SelectItem key={state} value={state}>
                     {INDIAN_STATES.find(s => s.code === state)?.name || state}
@@ -534,12 +534,12 @@ export default function ClientsList() {
               </SelectContent>
             </Select>
 
-            <Select value={filterCity} onValueChange={setFilterCity}>
+            <Select value={filterCity || "all"} onValueChange={(value) => setFilterCity(value === "all" ? "" : value)}>
               <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Filter by City" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Cities</SelectItem>
+                <SelectItem value="all">All Cities</SelectItem>
                 {uniqueCities.map(city => (
                   <SelectItem key={city} value={city}>{city}</SelectItem>
                 ))}

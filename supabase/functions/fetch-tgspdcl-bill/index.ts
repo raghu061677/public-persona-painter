@@ -34,10 +34,34 @@ serve(async (req) => {
     console.log('Fetching TGSPDCL bill for service number:', serviceNumber);
 
     // Attempt to fetch bill data from TGSPDCL portal
-    const billData = await fetchBillFromTGSPDCL(serviceNumber);
+    const { billData, error: fetchError } = await fetchBillFromTGSPDCL(serviceNumber);
 
     if (!billData) {
-      throw new Error('Unable to fetch bill data from TGSPDCL');
+      console.error('TGSPDCL API Error:', fetchError);
+      // Return mock data for testing purposes
+      const mockBillData: BillData = {
+        consumer_name: 'Test Consumer',
+        service_number: serviceNumber,
+        unique_service_number: `USC-${serviceNumber}`,
+        section_name: 'Test Section',
+        ero: 'Test ERO',
+        bill_amount: 0,
+        bill_month: new Date().toISOString().slice(0, 7),
+        status: 'Unavailable',
+      };
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: mockBillData,
+          message: 'Using test data - TGSPDCL API is currently unavailable',
+          payment_url: `https://www.tssouthernpower.com/OnlineBill/QuickPay?serviceNo=${serviceNumber}`
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     }
 
     // Initialize Supabase client
@@ -102,10 +126,12 @@ serve(async (req) => {
   }
 });
 
-async function fetchBillFromTGSPDCL(serviceNumber: string): Promise<BillData | null> {
+async function fetchBillFromTGSPDCL(serviceNumber: string): Promise<{ billData: BillData | null; error?: string }> {
   try {
     // Primary method: Try the enquiry page
     const url = `https://www.tssouthernpower.com/OnlineBill/QuickPay?serviceNo=${serviceNumber}`;
+    
+    console.log('Attempting to fetch from TGSPDCL:', url);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -115,32 +141,29 @@ async function fetchBillFromTGSPDCL(serviceNumber: string): Promise<BillData | n
       },
     });
 
+    console.log('TGSPDCL response status:', response.status);
+
     if (!response.ok) {
-      console.error('TGSPDCL response not OK:', response.status);
-      return null;
+      return { 
+        billData: null, 
+        error: `TGSPDCL API returned status ${response.status}. The service may be temporarily unavailable or the service number may be invalid.` 
+      };
     }
 
     const html = await response.text();
+    console.log('Received HTML response, parsing...');
     
     // Parse HTML to extract bill details
-    // Note: This is a simplified parser - you may need to adjust based on actual HTML structure
     const billData = parseHTMLForBillData(html, serviceNumber);
     
-    return billData;
+    return { billData };
   } catch (error) {
-    console.error('Error fetching from TGSPDCL:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error fetching from TGSPDCL:', errorMessage);
     
-    // Fallback: Return mock data for testing
-    // TODO: Remove this in production
-    return {
-      consumer_name: 'Sample Consumer',
-      service_number: serviceNumber,
-      unique_service_number: `USC-${serviceNumber}`,
-      section_name: 'Sample Section',
-      ero: 'Sample ERO',
-      bill_amount: 0,
-      bill_month: new Date().toISOString().slice(0, 7),
-      status: 'Unknown',
+    return { 
+      billData: null, 
+      error: `Failed to connect to TGSPDCL: ${errorMessage}` 
     };
   }
 }

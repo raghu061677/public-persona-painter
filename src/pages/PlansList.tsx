@@ -12,6 +12,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket, Download, Sparkles, ChevronDown, Info, FolderOpen, Edit } from "lucide-react";
 import {
   DropdownMenu,
@@ -324,6 +331,58 @@ export default function PlansList() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (!confirm(`Are you sure you want to delete ${selectedPlans.size} plan(s)?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('plans')
+        .delete()
+        .in('id', Array.from(selectedPlans));
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `${selectedPlans.size} plan(s) deleted successfully`,
+      });
+
+      setSelectedPlans(new Set());
+      fetchPlans();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBulkStatusUpdate = async (status: "Draft" | "Sent" | "Approved" | "Rejected" | "Converted") => {
+    try {
+      const { error } = await supabase
+        .from('plans')
+        .update({ status })
+        .in('id', Array.from(selectedPlans));
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `${selectedPlans.size} plan(s) updated to ${status}`,
+      });
+
+      setSelectedPlans(new Set());
+      fetchPlans();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8 max-w-7xl">
@@ -456,26 +515,56 @@ export default function PlansList() {
 
         {/* Bulk Actions Toolbar */}
         {selectedPlans.size > 0 && (
-          <div className="mb-4 flex items-center gap-3">
-            <BulkActionsToolbar
-              selectedIds={selectedPlans}
-              onClearSelection={() => setSelectedPlans(new Set())}
-              onRefresh={fetchPlans}
-              allPlans={plans}
-            />
-            {selectedPlans.size >= 2 && (
-              <Button
-                onClick={() => {
-                  const planIds = Array.from(selectedPlans).join(',');
-                  navigate(`/admin/plans-compare?plans=${planIds}`);
-                }}
-                variant="outline"
-                className="border-blue-600 text-blue-600 hover:bg-blue-50"
-              >
-                Compare Selected Plans
-              </Button>
-            )}
-          </div>
+          <Card className="mb-4">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-sm font-medium">
+                  {selectedPlans.size} plan(s) selected
+                </span>
+                
+                <Select onValueChange={handleBulkStatusUpdate}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Update Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Draft">Draft</SelectItem>
+                    <SelectItem value="Sent">Sent</SelectItem>
+                    <SelectItem value="Approved">Approved</SelectItem>
+                    <SelectItem value="Rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  variant="outline"
+                  onClick={handleBulkDelete}
+                  className="text-destructive border-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Selected
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedPlans(new Set())}
+                >
+                  Clear Selection
+                </Button>
+
+                {selectedPlans.size >= 2 && (
+                  <Button
+                    onClick={() => {
+                      const planIds = Array.from(selectedPlans).join(',');
+                      navigate(`/admin/plans-compare?plans=${planIds}`);
+                    }}
+                    variant="outline"
+                    className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                  >
+                    Compare Selected Plans
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Table Card */}

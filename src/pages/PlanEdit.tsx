@@ -142,7 +142,11 @@ export default function PlanEdit() {
       // Calculate prorata based on plan duration from form data
       const monthlyRate = asset.card_rate || 0;
       const durationDays = calculateDurationDays(formData.start_date, formData.end_date);
-      const prorataRate = (monthlyRate / 30) * durationDays;
+      
+      // If duration is 30 days or more, use monthly rate, otherwise calculate prorata
+      const prorataRate = durationDays >= 30 
+        ? monthlyRate 
+        : Math.round((monthlyRate / 30) * durationDays);
       
       setAssetPricing(prev => ({
         ...prev,
@@ -432,6 +436,21 @@ export default function PlanEdit() {
                 </Popover>
               </div>
               <div>
+                <Label>Duration (Days) *</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={durationDays}
+                  onChange={(e) => {
+                    const days = parseInt(e.target.value) || 1;
+                    const newEndDate = new Date(formData.start_date);
+                    newEndDate.setDate(newEndDate.getDate() + days);
+                    setFormData(prev => ({ ...prev, end_date: newEndDate }));
+                  }}
+                  placeholder="Enter duration in days"
+                />
+              </div>
+              <div>
                 <Label>End Date *</Label>
                 <Popover>
                   <PopoverTrigger asChild>
@@ -449,10 +468,6 @@ export default function PlanEdit() {
                     />
                   </PopoverContent>
                 </Popover>
-              </div>
-              <div>
-                <Label>Duration</Label>
-                <Input value={`${durationDays} days`} disabled />
               </div>
             </CardContent>
           </Card>

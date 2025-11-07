@@ -126,7 +126,10 @@ export function SelectedAssetsTable({
               const monthlyRate = asset.card_rate || 0; // Monthly rate from media asset
               
               // Calculate prorata based on days (Monthly Rate / 30 * Duration Days)
-              const prorataRate = (monthlyRate / 30) * durationDays;
+              // If duration is 30 days or more, use monthly rate, otherwise calculate prorata
+              const prorataRate = durationDays >= 30 
+                ? monthlyRate 
+                : Math.round((monthlyRate / 30) * durationDays);
               const salesPrice = pricing.sales_price || prorataRate;
               
               const discountType = pricing.discount_type || 'Percent';

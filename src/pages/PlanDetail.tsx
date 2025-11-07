@@ -499,8 +499,10 @@ export default function PlanDetail() {
               <span className="text-muted-foreground">{plan.id}</span>
             </div>
           </div>
-          {isAdmin && (
-            <div className="flex gap-2">
+          
+          {/* Action Buttons - Visible */}
+          <div className="flex gap-2 flex-wrap">
+            {isAdmin && (
               <Button 
                 variant="outline" 
                 size="sm"
@@ -509,126 +511,107 @@ export default function PlanDetail() {
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Plan
               </Button>
-              {plan.status === 'Approved' && (
-                <Dialog open={showConvertDialog} onOpenChange={setShowConvertDialog}>
-                  <DialogTrigger asChild>
-                    <Button variant="gradient" size="sm">
-                      <Rocket className="mr-2 h-4 w-4" />
-                      Convert to Campaign
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Convert to Campaign</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label>Campaign Name</Label>
-                        <Input
-                          value={campaignData.campaign_name}
-                          onChange={(e) => setCampaignData(prev => ({ ...prev, campaign_name: e.target.value }))}
-                          placeholder={plan.plan_name}
-                        />
-                      </div>
-                      <div>
-                        <Label>Start Date</Label>
-                        <Input
-                          type="date"
-                          value={campaignData.start_date}
-                          onChange={(e) => setCampaignData(prev => ({ ...prev, start_date: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <Label>End Date</Label>
-                        <Input
-                          type="date"
-                          value={campaignData.end_date}
-                          onChange={(e) => setCampaignData(prev => ({ ...prev, end_date: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <Label>Notes</Label>
-                        <Textarea
-                          value={campaignData.notes}
-                          onChange={(e) => setCampaignData(prev => ({ ...prev, notes: e.target.value }))}
-                          rows={3}
-                        />
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setShowConvertDialog(false)}>
-                          Cancel
-                        </Button>
-                        <Button variant="gradient" onClick={handleConvertToCampaign}>
-                          Create Campaign
-                        </Button>
-                      </div>
+            )}
+            
+            {plan.status === 'Approved' && isAdmin && (
+              <Dialog open={showConvertDialog} onOpenChange={setShowConvertDialog}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                    <Rocket className="mr-2 h-4 w-4" />
+                    Convert to Campaign
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Convert to Campaign</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Campaign Name</Label>
+                      <Input
+                        value={campaignData.campaign_name}
+                        onChange={(e) => setCampaignData(prev => ({ ...prev, campaign_name: e.target.value }))}
+                        placeholder={plan.plan_name}
+                      />
                     </div>
-                  </DialogContent>
-                </Dialog>
-              )}
+                    <div>
+                      <Label>Start Date</Label>
+                      <Input
+                        type="date"
+                        value={campaignData.start_date}
+                        onChange={(e) => setCampaignData(prev => ({ ...prev, start_date: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label>End Date</Label>
+                      <Input
+                        type="date"
+                        value={campaignData.end_date}
+                        onChange={(e) => setCampaignData(prev => ({ ...prev, end_date: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label>Notes</Label>
+                      <Textarea
+                        value={campaignData.notes}
+                        onChange={(e) => setCampaignData(prev => ({ ...prev, notes: e.target.value }))}
+                        rows={3}
+                      />
+                    </div>
+                    <Button onClick={handleConvertToCampaign} className="w-full">
+                      Create Campaign
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+            
+            {/* More Options Dropdown */}
+            {isAdmin && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <MoreVertical className="mr-2 h-4 w-4" />
-                    Actions
+                  <Button size="sm" variant="outline">
+                    <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem onClick={() => navigate(`/admin/plans/edit/${id}`)}>
-                    <Activity className="mr-2 h-4 w-4" />
-                    Edit Plan
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowSaveAsTemplateDialog(true)}>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save as Template
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleDelete}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleBlock}>
-                    <Ban className="mr-2 h-4 w-4" />
-                    Block
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleCopyId}>
                     <Copy className="mr-2 h-4 w-4" />
                     Copy ID
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={generateShareLink}>
                     <Share2 className="mr-2 h-4 w-4" />
-                    Share
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={generateShareLink}>
-                    <ExternalLink className="mr-2 h-4 w-4" />
                     Public Link
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <Activity className="mr-2 h-4 w-4" />
-                    Activity
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleExportPPT} disabled={exportingPPT}>
-                    <FileImage className="mr-2 h-4 w-4" />
+                  <DropdownMenuItem onClick={() => setShowExportDialog(true)}>
+                    <Download className="mr-2 h-4 w-4" />
                     Download PPTx
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowExportSettingsDialog(true)} disabled={exportingExcel}>
+                  <DropdownMenuItem onClick={handleExportExcel}>
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
                     Download Excel
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setShowTermsDialog(true)}>
                     <FileText className="mr-2 h-4 w-4" />
-                    Quotation, PI, WO
+                    Quotation / PI / WO
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => window.open(`/admin/plans/${id}/share/${plan.share_token || ''}`, '_blank')}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download Photos
+                  <DropdownMenuItem onClick={() => navigate(`/admin/audit-logs?entity_type=plan&entity_id=${id}`)}>
+                    <Activity className="mr-2 h-4 w-4" />
+                    Activity
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleBlock} className="text-orange-600">
+                    <Ban className="mr-2 h-4 w-4" />
+                    Block
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">

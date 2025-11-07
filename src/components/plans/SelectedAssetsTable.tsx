@@ -322,7 +322,7 @@ export function SelectedAssetsTable({
                                   type="number"
                                   value={negotiatedPrice}
                                   onChange={(e) => handleNegotiatedChange(parseFloat(e.target.value) || 0)}
-                                  className="h-9"
+                                  className="h-10 w-40 text-base"
                                   placeholder={cardRate.toFixed(0)}
                                 />
                               </TooltipTrigger>
@@ -421,7 +421,7 @@ export function SelectedAssetsTable({
                           type="number"
                           value={printing}
                           onChange={(e) => onPricingUpdate(asset.id, 'printing_charges', parseFloat(e.target.value) || 0)}
-                          className="h-9"
+                          className="h-10 w-40 text-base"
                           placeholder="0"
                         />
                       </TableCell>
@@ -432,7 +432,7 @@ export function SelectedAssetsTable({
                           type="number"
                           value={mounting}
                           onChange={(e) => onPricingUpdate(asset.id, 'mounting_charges', parseFloat(e.target.value) || 0)}
-                          className="h-9"
+                          className="h-10 w-40 text-base"
                           placeholder="0"
                         />
                       </TableCell>

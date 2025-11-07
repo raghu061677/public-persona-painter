@@ -32,7 +32,7 @@ export function PlanSummaryCard({
   const isLowMargin = marginPercent < 10;
 
   return (
-    <Card className="sticky top-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 bg-gradient-to-br from-background to-muted/20">
+    <Card className="sticky top-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 bg-gradient-to-br from-background to-muted/20 border-l-4 border-orange-500">
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center justify-between text-lg font-semibold text-slate-700 dark:text-slate-200">
           <span>Plan Summary</span>
@@ -71,8 +71,8 @@ export function PlanSummaryCard({
           </div>
           
           <div className="flex justify-between items-center">
-            <span className="text-sm text-slate-600 dark:text-slate-400">GST ({gstPercent}%)</span>
-            <span className="font-semibold text-base text-slate-500">{formatCurrency(gstAmount)}</span>
+            <span className="text-sm text-red-600 dark:text-red-500 font-medium">GST ({gstPercent}%)</span>
+            <span className="font-semibold text-base text-red-600 dark:text-red-500">{formatCurrency(gstAmount)}</span>
           </div>
           
           <div className="flex justify-between items-center pt-4 border-t-2 border-primary/20">

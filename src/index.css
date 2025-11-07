@@ -157,3 +157,63 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Remove number input spinners (up/down arrows) */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Enhanced dropdown styling */
+@layer components {
+  .dropdown-content {
+    @apply bg-popover text-popover-foreground z-50;
+  }
+  
+  /* Enhanced form sections */
+  .form-section {
+    @apply bg-card border border-border rounded-xl p-6 space-y-5 shadow-sm;
+  }
+
+  .form-section-header {
+    @apply text-lg font-semibold text-foreground mb-4 pb-3 border-b border-border;
+  }
+
+  .form-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5;
+  }
+
+  .form-grid-2 {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-5;
+  }
+
+  .form-label-required::after {
+    @apply content-['*'] text-destructive ml-1;
+  }
+
+  .input-group {
+    @apply space-y-2;
+  }
+
+  .input-with-icon {
+    @apply relative;
+  }
+
+  .input-icon {
+    @apply absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground;
+  }
+
+  .form-helper-text {
+    @apply text-xs text-muted-foreground mt-1;
+  }
+
+  .form-error-text {
+    @apply text-xs text-destructive mt-1;
+  }
+}

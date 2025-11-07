@@ -341,133 +341,150 @@ export default function PlanEdit() {
     .filter(Boolean);
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-6 py-8 max-w-7xl">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-7xl">
         <Button
           variant="ghost"
           onClick={() => navigate(`/admin/plans/${id}`)}
-          className="mb-6 hover:bg-muted"
+          className="mb-6 hover:bg-muted/50 transition-colors"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Plan
         </Button>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Edit Plan</h1>
-          <p className="text-muted-foreground mt-1">Update plan details and modify asset selection</p>
+        <div className="mb-8 space-y-2">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
+            Edit Plan
+          </h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Update plan details and modify asset selection</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Info */}
-          <Card className="border-l-4 border-l-primary">
-            <CardHeader className="border-b bg-muted/30">
-              <CardTitle className="text-lg">Plan Details</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">Basic information and classification of the plan</p>
+          <Card className="border-l-4 border-l-primary shadow-md hover:shadow-lg transition-shadow">
+            <CardHeader className="border-b bg-gradient-to-r from-primary/5 to-primary-glow/5 pb-4">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-primary"></div>
+                Plan Details
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1.5">Basic information and classification of the plan</p>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
-              <div>
-                <Label>Plan ID</Label>
-                <Input value={formData.id} disabled />
-              </div>
-              <div>
-                <Label>Client *</Label>
-                <Select value={formData.client_id} onValueChange={handleClientSelect}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map(client => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Plan Name *</Label>
-                <Input
-                  required
-                  value={formData.plan_name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, plan_name: e.target.value }))}
-                  placeholder="e.g., Q1 2025 Campaign"
-                />
-              </div>
-              <div>
-                <Label>Plan Type</Label>
-                <Select value={formData.plan_type} onValueChange={(v: "Quotation" | "Proposal" | "Estimate") => setFormData(prev => ({ ...prev, plan_type: v }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Quotation">Quotation</SelectItem>
-                    <SelectItem value="Proposal">Proposal</SelectItem>
-                    <SelectItem value="Estimate">Estimate</SelectItem>
-                  </SelectContent>
-                </Select>
+            <CardContent className="pt-6">
+              <div className="form-grid">
+                <div className="input-group">
+                  <Label className="text-sm font-medium">Plan ID</Label>
+                  <Input value={formData.id} disabled className="bg-muted/30" />
+                  <p className="form-helper-text">Auto-generated unique identifier</p>
+                </div>
+                <div className="input-group">
+                  <Label className="text-sm font-medium form-label-required">Client</Label>
+                  <Select value={formData.client_id} onValueChange={handleClientSelect}>
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Select client" />
+                    </SelectTrigger>
+                    <SelectContent className="dropdown-content">
+                      {clients.map(client => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="input-group">
+                  <Label className="text-sm font-medium form-label-required">Plan Name</Label>
+                  <Input
+                    required
+                    value={formData.plan_name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, plan_name: e.target.value }))}
+                    placeholder="e.g., Q1 2025 Campaign"
+                    className="h-11"
+                  />
+                </div>
+                <div className="input-group">
+                  <Label className="text-sm font-medium">Plan Type</Label>
+                  <Select value={formData.plan_type} onValueChange={(v: "Quotation" | "Proposal" | "Estimate") => setFormData(prev => ({ ...prev, plan_type: v }))}>
+                    <SelectTrigger className="h-11">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="dropdown-content">
+                      <SelectItem value="Quotation">Quotation</SelectItem>
+                      <SelectItem value="Proposal">Proposal</SelectItem>
+                      <SelectItem value="Estimate">Estimate</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Campaign Period */}
-          <Card className="border-l-4 border-l-blue-500">
-            <CardHeader className="border-b bg-muted/30">
-              <CardTitle className="text-lg">Campaign Period</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">Define the start and end dates for this campaign</p>
+          <Card className="border-l-4 border-l-blue-500 shadow-md hover:shadow-lg transition-shadow">
+            <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/20 dark:to-blue-900/20 pb-4">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                Campaign Period
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1.5">Define the start and end dates for this campaign</p>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6">
-              <div>
-                <Label>Start Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formatDate(formData.start_date)}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={formData.start_date}
-                      onSelect={(date) => date && setFormData(prev => ({ ...prev, start_date: date }))}
-                      className={cn("p-3 pointer-events-auto")}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div>
-                <Label>Duration (Days) *</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={durationDays}
-                  onChange={(e) => {
-                    const days = parseInt(e.target.value) || 1;
-                    const newEndDate = new Date(formData.start_date);
-                    newEndDate.setDate(newEndDate.getDate() + days);
-                    setFormData(prev => ({ ...prev, end_date: newEndDate }));
-                  }}
-                  placeholder="Enter duration in days"
-                />
-              </div>
-              <div>
-                <Label>End Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formatDate(formData.end_date)}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={formData.end_date}
-                      onSelect={(date) => date && setFormData(prev => ({ ...prev, end_date: date }))}
-                      className={cn("p-3 pointer-events-auto")}
-                    />
-                  </PopoverContent>
-                </Popover>
+            <CardContent className="pt-6">
+              <div className="form-grid">
+                <div className="input-group">
+                  <Label className="text-sm font-medium form-label-required">Start Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start h-11 hover:bg-muted/50">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formatDate(formData.start_date)}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 dropdown-content" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formData.start_date}
+                        onSelect={(date) => date && setFormData(prev => ({ ...prev, start_date: date }))}
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="input-group">
+                  <Label className="text-sm font-medium form-label-required">Duration (Days)</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={durationDays}
+                    onChange={(e) => {
+                      const days = parseInt(e.target.value) || 1;
+                      const newEndDate = new Date(formData.start_date);
+                      newEndDate.setDate(newEndDate.getDate() + days);
+                      setFormData(prev => ({ ...prev, end_date: newEndDate }));
+                    }}
+                    placeholder="Enter duration"
+                    className="h-11"
+                  />
+                  <p className="form-helper-text">Campaign duration in days</p>
+                </div>
+                <div className="input-group">
+                  <Label className="text-sm font-medium">End Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start h-11 hover:bg-muted/50">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formatDate(formData.end_date)}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 dropdown-content" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formData.end_date}
+                        onSelect={(date) => date && setFormData(prev => ({ ...prev, end_date: date }))}
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <p className="form-helper-text">Auto-calculated from duration</p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -475,10 +492,13 @@ export default function PlanEdit() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
               {/* Selected Assets */}
-              <Card className="border-l-4 border-l-green-500">
-                <CardHeader className="border-b bg-muted/30">
-                  <CardTitle className="text-lg">Selected Assets ({selectedAssets.size})</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">Review and adjust pricing for selected media assets</p>
+              <Card className="border-l-4 border-l-green-500 shadow-md hover:shadow-lg transition-shadow">
+                <CardHeader className="border-b bg-gradient-to-r from-green-50 to-green-100/50 dark:from-green-950/20 dark:to-green-900/20 pb-4">
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                    Selected Assets ({selectedAssets.size})
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1.5">Review and adjust pricing for selected media assets</p>
                 </CardHeader>
                 <CardContent className="pt-6">
                   <SelectedAssetsTable
@@ -492,10 +512,13 @@ export default function PlanEdit() {
               </Card>
 
               {/* Asset Selection */}
-              <Card className="border-l-4 border-l-purple-500">
-                <CardHeader className="border-b bg-muted/30">
-                  <CardTitle className="text-lg">Available Media Assets</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">Browse and select additional assets to include in this plan</p>
+              <Card className="border-l-4 border-l-purple-500 shadow-md hover:shadow-lg transition-shadow">
+                <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-950/20 dark:to-purple-900/20 pb-4">
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-purple-500"></div>
+                    Available Media Assets
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1.5">Browse and select additional assets to include in this plan</p>
                 </CardHeader>
                 <CardContent className="pt-6">
                   <AssetSelectionTable
@@ -507,19 +530,23 @@ export default function PlanEdit() {
               </Card>
 
               {/* Notes */}
-              <Card className="border-l-4 border-l-amber-500">
-                <CardHeader className="border-b bg-muted/30">
-                  <CardTitle className="text-lg">Additional Details</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">Add notes or special terms for this plan</p>
+              <Card className="border-l-4 border-l-amber-500 shadow-md hover:shadow-lg transition-shadow">
+                <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-amber-100/50 dark:from-amber-950/20 dark:to-amber-900/20 pb-4">
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-amber-500"></div>
+                    Additional Details
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1.5">Add notes or special terms for this plan</p>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  <div>
-                    <Label>Notes</Label>
+                  <div className="input-group">
+                    <Label className="text-sm font-medium">Notes</Label>
                     <Textarea
                       value={formData.notes}
                       onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                       placeholder="Any special terms or conditions..."
-                      rows={3}
+                      rows={4}
+                      className="resize-none"
                     />
                   </div>
                 </CardContent>
@@ -544,15 +571,16 @@ export default function PlanEdit() {
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-4">
+          <div className="flex justify-end gap-4 pt-4 pb-8">
             <Button
               type="button"
               variant="outline"
               onClick={() => navigate(`/admin/plans/${id}`)}
+              className="min-w-[120px]"
             >
               Cancel
             </Button>
-            <Button type="submit" variant="gradient" disabled={loading}>
+            <Button type="submit" disabled={loading} className="min-w-[120px] bg-gradient-to-r from-primary to-primary-glow hover:opacity-90">
               {loading ? "Updating..." : "Update Plan"}
             </Button>
           </div>

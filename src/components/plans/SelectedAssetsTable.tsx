@@ -212,12 +212,12 @@ export function SelectedAssetsTable({
               {isColumnVisible('illumination') && <TableHead>Illumination</TableHead>}
               {isColumnVisible('card_rate') && <TableHead>Card Rate</TableHead>}
               {isColumnVisible('base_rate') && <TableHead>Base Rate</TableHead>}
-              {isColumnVisible('negotiated_price') && <TableHead className="w-40">Negotiated ({durationDays}d)</TableHead>}
+              {isColumnVisible('negotiated_price') && <TableHead className="w-48">Negotiated ({durationDays}d)</TableHead>}
               {isColumnVisible('pro_rata') && <TableHead>Pro-Rata</TableHead>}
               {isColumnVisible('discount') && <TableHead>Discount</TableHead>}
               {isColumnVisible('profit') && <TableHead>Profit</TableHead>}
-              {isColumnVisible('printing') && <TableHead className="w-32">Printing</TableHead>}
-              {isColumnVisible('mounting') && <TableHead className="w-32">Mounting</TableHead>}
+              {isColumnVisible('printing') && <TableHead className="w-48">Printing</TableHead>}
+              {isColumnVisible('mounting') && <TableHead className="w-48">Mounting</TableHead>}
               {isColumnVisible('total') && <TableHead className="text-right">Total</TableHead>}
               <TableHead className="w-12"></TableHead>
             </TableRow>
@@ -250,8 +250,17 @@ export function SelectedAssetsTable({
                 const mounting = pricing.mounting_charges || 0;
                 const subtotal = proRata + printing + mounting;
 
-                const handleNegotiatedChange = (value: number) => {
-                  const validation = validateNegotiatedPrice(value, cardRate, baseRate);
+                const formatNumberWithCommas = (num: number) => {
+                  return num.toLocaleString('en-IN');
+                };
+
+                const parseFormattedNumber = (str: string) => {
+                  return parseFloat(str.replace(/,/g, '')) || 0;
+                };
+
+                const handleNegotiatedChange = (value: string) => {
+                  const numValue = parseFormattedNumber(value);
+                  const validation = validateNegotiatedPrice(numValue, cardRate, baseRate);
                   if (!validation.isValid) {
                     toast({
                       title: "Invalid Price",
@@ -260,7 +269,7 @@ export function SelectedAssetsTable({
                     });
                     return;
                   }
-                  onPricingUpdate(asset.id, 'negotiated_price', value);
+                  onPricingUpdate(asset.id, 'negotiated_price', numValue);
                 };
 
                 return (
@@ -319,11 +328,11 @@ export function SelectedAssetsTable({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Input
-                                  type="number"
-                                  value={negotiatedPrice}
-                                  onChange={(e) => handleNegotiatedChange(parseFloat(e.target.value) || 0)}
+                                  type="text"
+                                  value={formatNumberWithCommas(negotiatedPrice)}
+                                  onChange={(e) => handleNegotiatedChange(e.target.value)}
                                   className="h-10 w-40 text-base"
-                                  placeholder={cardRate.toFixed(0)}
+                                  placeholder={formatNumberWithCommas(cardRate)}
                                 />
                               </TooltipTrigger>
                               <TooltipContent>
@@ -418,9 +427,9 @@ export function SelectedAssetsTable({
                     {isColumnVisible('printing') && (
                       <TableCell>
                         <Input
-                          type="number"
-                          value={printing}
-                          onChange={(e) => onPricingUpdate(asset.id, 'printing_charges', parseFloat(e.target.value) || 0)}
+                          type="text"
+                          value={formatNumberWithCommas(printing)}
+                          onChange={(e) => onPricingUpdate(asset.id, 'printing_charges', parseFormattedNumber(e.target.value))}
                           className="h-10 w-40 text-base"
                           placeholder="0"
                         />
@@ -429,9 +438,9 @@ export function SelectedAssetsTable({
                     {isColumnVisible('mounting') && (
                       <TableCell>
                         <Input
-                          type="number"
-                          value={mounting}
-                          onChange={(e) => onPricingUpdate(asset.id, 'mounting_charges', parseFloat(e.target.value) || 0)}
+                          type="text"
+                          value={formatNumberWithCommas(mounting)}
+                          onChange={(e) => onPricingUpdate(asset.id, 'mounting_charges', parseFormattedNumber(e.target.value))}
                           className="h-10 w-40 text-base"
                           placeholder="0"
                         />

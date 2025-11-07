@@ -21,12 +21,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <div className="flex h-screen w-full overflow-hidden">
+      <div className="flex h-screen w-full overflow-hidden bg-background">
         <SidebarLayout>
           <div className="flex flex-col flex-1 h-full">
             <Topbar onSearchOpen={() => setCommandOpen(true)} />
-            <main className="flex-1 overflow-y-auto bg-background p-6">
-              {children}
+            <main className="flex-1 overflow-y-auto bg-secondary/20 p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+              <div className="max-w-7xl mx-auto">
+                {children}
+              </div>
             </main>
           </div>
         </SidebarLayout>

@@ -1,7 +1,9 @@
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, Plus } from "lucide-react";
 import ThemePicker from "@/components/ThemePicker";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { QuickAddDrawer } from "@/components/ui/quick-add-drawer";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -13,11 +15,13 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Topbar({ onSearchOpen }: { onSearchOpen: () => void }) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [userEmail, setUserEmail] = useState<string>("");
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -50,56 +54,87 @@ export default function Topbar({ onSearchOpen }: { onSearchOpen: () => void }) {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between bg-card border-b border-border h-14 px-4">
+    <header className="sticky top-0 z-50 flex items-center justify-between bg-card/80 backdrop-blur-sm border-b border-border h-14 md:h-16 px-3 md:px-4 shadow-sm">
       {/* Left: Brand */}
       <div className="flex items-center gap-2">
-        <span className="font-semibold text-foreground">Go-Ads 360°</span>
+        <span className="font-semibold text-foreground text-sm md:text-base">Go-Ads 360°</span>
       </div>
 
       {/* Middle: Search trigger */}
-      <div className="flex-1 max-w-md mx-4">
+      <div className="flex-1 max-w-md mx-2 md:mx-4">
         <Button
           variant="outline"
-          className="w-full justify-start text-muted-foreground hover:text-foreground"
+          className="w-full justify-start text-muted-foreground hover:text-foreground h-9 md:h-10"
           onClick={onSearchOpen}
         >
           <Search className="w-4 h-4 mr-2" />
-          <span className="hidden md:inline">Search or jump to...</span>
-          <kbd className="hidden md:inline-flex ml-auto pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-xs font-medium text-muted-foreground">
+          <span className="hidden sm:inline text-sm">Search or jump to...</span>
+          <span className="sm:hidden text-sm">Search...</span>
+          <kbd className="hidden lg:inline-flex ml-auto pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-xs font-medium text-muted-foreground">
             <span className="text-xs">⌘</span>K
           </kbd>
         </Button>
       </div>
 
       {/* Right: Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 md:gap-2">
+        {/* Quick Create - Desktop only */}
+        <div className="hidden md:block">
+          <QuickAddDrawer
+            trigger={
+              <Button variant="default" size="sm" className="gap-2">
+                <Plus className="w-4 h-4" />
+                <span className="hidden lg:inline">Quick Create</span>
+              </Button>
+            }
+          />
+        </div>
+
         <ThemePicker />
         
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative h-9 w-9 md:h-10 md:w-10">
           <Bell className="w-4 h-4" />
-          <span className="absolute top-1 right-1 h-2 w-2 bg-destructive rounded-full" />
+          <Badge 
+            variant="destructive" 
+            className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+          >
+            3
+          </Badge>
         </Button>
 
-        {/* User Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2">
-              <Avatar className="h-7 w-7">
-                <AvatarFallback className="text-xs">{getInitials()}</AvatarFallback>
+            <Button variant="ghost" size="icon" className="rounded-full h-9 w-9 md:h-10 md:w-10">
+              <Avatar className="w-8 h-8">
+                <AvatarFallback className="text-xs font-semibold">
+                  {getInitials()}
+                </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem disabled className="text-xs text-muted-foreground">
-              {userEmail}
-            </DropdownMenuItem>
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="flex items-center gap-2 p-2">
+              <Avatar className="w-8 h-8">
+                <AvatarFallback className="text-xs font-semibold">
+                  {getInitials()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col space-y-0.5">
+                <p className="text-sm font-medium leading-none">My Account</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {userEmail}
+                </p>
+              </div>
+            </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate("/settings")}>
               Settings
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/dashboard")}>
+              Dashboard
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive">
               Logout
             </DropdownMenuItem>
           </DropdownMenuContent>

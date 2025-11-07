@@ -61,7 +61,7 @@ export function QuickAddDrawer({ trigger }: QuickAddDrawerProps) {
 
   const handleAction = (path: string) => {
     setOpen(false);
-    navigate(path);
+    setTimeout(() => navigate(path), 150);
   };
 
   return (
@@ -73,25 +73,29 @@ export function QuickAddDrawer({ trigger }: QuickAddDrawerProps) {
           </Button>
         )}
       </DrawerTrigger>
-      <DrawerContent className="max-h-[80vh]">
-        <DrawerHeader className="text-left">
-          <DrawerTitle>Quick Create</DrawerTitle>
-          <DrawerDescription>Choose what you want to create</DrawerDescription>
+      <DrawerContent className="max-h-[85vh]">
+        <DrawerHeader className="text-left pb-4">
+          <DrawerTitle className="text-xl font-bold">Quick Create</DrawerTitle>
+          <DrawerDescription className="text-sm">Choose what you want to create</DrawerDescription>
         </DrawerHeader>
-        <div className="p-4 pb-8">
-          <div className="grid grid-cols-2 gap-4">
-            {quickActions.map((action) => (
+        <div className="p-4 pb-8 overflow-y-auto">
+          <div className="grid grid-cols-2 gap-3">
+            {quickActions.map((action, index) => (
               <button
                 key={action.path}
                 onClick={() => handleAction(action.path)}
                 className={cn(
                   "flex flex-col items-center justify-center p-6 rounded-2xl",
                   "transition-all duration-300 hover:scale-105 hover:shadow-elegant",
-                  "touch-manipulation",
+                  "touch-manipulation active:scale-95",
+                  "animate-fade-in",
                   action.color
                 )}
+                style={{ animationDelay: `${index * 50}ms` }}
               >
-                <div className="mb-3">{action.icon}</div>
+                <div className="mb-3 transform transition-transform group-hover:scale-110">
+                  {action.icon}
+                </div>
                 <div className="font-semibold text-sm mb-1">{action.label}</div>
                 <div className="text-xs opacity-80">{action.description}</div>
               </button>

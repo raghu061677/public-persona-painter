@@ -99,44 +99,44 @@ All colors MUST be HSL.
     --card: 215 28% 11%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 224 71% 4%;
+    --popover: 215 28% 11%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 160 84% 49%;
-    --primary-foreground: 222 47% 11%;
-    --primary-glow: 160 84% 59%;
+    --primary: 211 100% 48%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 211 100% 65%;
 
-    --secondary: 217 33% 17%;
+    --secondary: 215 20% 17%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217 33% 17%;
+    --muted: 215 20% 17%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 170 100% 51%;
-    --accent-foreground: 222 47% 11%;
+    --accent: 174 72% 36%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 61%;
+    --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 160 84% 49%;
+    --border: 215 20% 17%;
+    --input: 215 20% 17%;
+    --ring: 211 100% 48%;
 
     /* Chart colors for dark mode */
-    --chart-1: 160 84% 49%;
-    --chart-2: 170 100% 51%;
-    --chart-3: 180 100% 55%;
-    --chart-4: 190 94% 53%;
-    --chart-5: 200 98% 49%;
+    --chart-1: 211 100% 48%;
+    --chart-2: 174 72% 36%;
+    --chart-3: 180 100% 45%;
+    --chart-4: 190 94% 43%;
+    --chart-5: 200 98% 39%;
 
     /* Dark mode custom tokens */
-    --gradient-primary: linear-gradient(135deg, hsl(160 84% 49%), hsl(170 100% 51%));
-    --gradient-hero: linear-gradient(135deg, hsl(160 84% 49%) 0%, hsl(170 100% 51%) 50%, hsl(180 100% 55%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(224 71% 4%), hsl(217 33% 17%));
+    --gradient-primary: linear-gradient(135deg, hsl(211 100% 48%), hsl(174 72% 36%));
+    --gradient-hero: linear-gradient(135deg, hsl(211 100% 48%) 0%, hsl(174 72% 36%) 50%, hsl(180 100% 45%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(215 28% 11%), hsl(215 20% 17%));
     
-    --shadow-elegant: 0 20px 60px -10px hsl(160 84% 49% / 0.4);
-    --shadow-glow: 0 0 60px hsl(160 84% 59% / 0.5);
-    --shadow-card: 0 4px 24px hsl(160 84% 49% / 0.16);
+    --shadow-elegant: 0 20px 60px -10px hsl(211 100% 48% / 0.3);
+    --shadow-glow: 0 0 60px hsl(211 100% 65% / 0.4);
+    --shadow-card: 0 4px 24px hsl(211 100% 48% / 0.12);
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;

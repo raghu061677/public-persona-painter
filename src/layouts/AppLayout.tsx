@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import SidebarLayout from "@/layouts/SidebarLayout";
 import Topbar from "@/layouts/Topbar";
 import CommandPalette from "@/components/CommandPalette";
+import { QuickAddDrawer } from "@/components/ui/quick-add-drawer";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false);
@@ -33,6 +36,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </SidebarLayout>
       </div>
+      
+      {/* Mobile FAB - Quick Create */}
+      <div className="md:hidden fixed bottom-6 right-6 z-50 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+        <QuickAddDrawer
+          trigger={
+            <Button
+              size="lg"
+              className="h-14 w-14 rounded-full shadow-glow hover:shadow-elegant transition-all duration-300 hover:scale-110 animate-pulse-glow"
+            >
+              <Plus className="w-6 h-6" />
+            </Button>
+          }
+        />
+      </div>
+      
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
     </>
   );

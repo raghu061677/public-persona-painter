@@ -377,166 +377,146 @@ export default function PlanNew() {
           <p className="text-muted-foreground mt-1">Fill in the details below to create a new quotation for your client</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Info */}
-          <Card className="border-l-4 border-l-primary">
-            <CardHeader className="border-b bg-muted/30">
-              <CardTitle className="text-lg">Plan Details</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">Basic information and classification of the plan</p>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
-              <div>
-                <Label>Plan ID</Label>
-                <Input value={formData.id} disabled />
-              </div>
-              <div>
-                <Label>Client *</Label>
-                <Select value={formData.client_id} onValueChange={handleClientSelect}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map(client => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Plan Name *</Label>
-                <Input
-                  required
-                  value={formData.plan_name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, plan_name: e.target.value }))}
-                  placeholder="e.g., Q1 2025 Campaign"
-                />
-              </div>
-              <div>
-                <Label>Plan Type</Label>
-                <Select value={formData.plan_type} onValueChange={(v) => setFormData(prev => ({ ...prev, plan_type: v }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Quotation">Quotation</SelectItem>
-                    <SelectItem value="Proposal">Proposal</SelectItem>
-                    <SelectItem value="Estimate">Estimate</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Campaign Period */}
-          <Card className="border-l-4 border-l-blue-500">
-            <CardHeader className="border-b bg-muted/30">
-              <CardTitle className="text-lg">Campaign Period</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">Define the start and end dates for this campaign</p>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6">
-              <div>
-                <Label>Start Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formatDate(formData.start_date)}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={formData.start_date}
-                      onSelect={(date) => date && setFormData(prev => ({ ...prev, start_date: date }))}
-                      className={cn("p-3 pointer-events-auto")}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div>
-                <Label>End Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formatDate(formData.end_date)}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={formData.end_date}
-                      onSelect={(date) => date && setFormData(prev => ({ ...prev, end_date: date }))}
-                      className={cn("p-3 pointer-events-auto")}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div>
-                <Label>Duration</Label>
-                <Input value={`${durationDays} days`} disabled />
-              </div>
-            </CardContent>
-          </Card>
-
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Top 3-Column Grid: Plan Details | Campaign Period | Plan Summary */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              {/* Selected Assets */}
-              <Card className="border-l-4 border-l-green-500">
-                <CardHeader className="border-b bg-muted/30">
-                  <CardTitle className="text-lg">Selected Assets ({selectedAssets.size})</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">Review and adjust pricing for selected media assets</p>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <SelectedAssetsTable
-                    assets={selectedAssetsArray}
-                    assetPricing={assetPricing}
-                    onRemove={removeAsset}
-                    onPricingUpdate={updateAssetPricing}
-                    durationDays={durationDays}
+            {/* Plan Details */}
+            <Card className="rounded-2xl shadow-md hover:shadow-xl transition-all duration-200 border-l-4 border-l-primary">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg font-semibold text-slate-700 dark:text-slate-200">
+                  Plan Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Plan ID</Label>
+                  <Input value={formData.id} disabled className="h-10 bg-muted/30" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Client *</Label>
+                  <Select value={formData.client_id} onValueChange={handleClientSelect}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Select client" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients.map(client => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Plan Name *</Label>
+                  <Input
+                    required
+                    value={formData.plan_name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, plan_name: e.target.value }))}
+                    placeholder="e.g., Q1 2025 Campaign"
+                    className="h-10"
                   />
-                </CardContent>
-              </Card>
-
-              {/* Asset Selection */}
-              <Card className="border-l-4 border-l-purple-500">
-                <CardHeader className="border-b bg-muted/30">
-                  <CardTitle className="text-lg">Available Media Assets</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">Browse and select assets to include in this plan</p>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <AssetSelectionTable
-                    assets={availableAssets}
-                    selectedIds={selectedAssets}
-                    onSelect={toggleAssetSelection}
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Plan Type</Label>
+                  <Select value={formData.plan_type} onValueChange={(v) => setFormData(prev => ({ ...prev, plan_type: v }))}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Quotation">Quotation</SelectItem>
+                      <SelectItem value="Proposal">Proposal</SelectItem>
+                      <SelectItem value="Estimate">Estimate</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Notes</Label>
+                  <Textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Optional notes..."
+                    rows={3}
+                    className="resize-none"
                   />
-                </CardContent>
-              </Card>
+                </div>
+              </CardContent>
+            </Card>
 
-              {/* Notes */}
-              <Card className="border-l-4 border-l-amber-500">
-                <CardHeader className="border-b bg-muted/30">
-                  <CardTitle className="text-lg">Additional Details</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">Add notes or special terms for this plan</p>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <div>
-                    <Label>Notes</Label>
-                    <Textarea
-                      value={formData.notes}
-                      onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                      placeholder="Any special terms or conditions..."
-                      rows={3}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            {/* Campaign Period */}
+            <Card className="rounded-2xl shadow-md hover:shadow-xl transition-all duration-200 border-l-4 border-l-blue-500">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg font-semibold text-slate-700 dark:text-slate-200">
+                  Campaign Period
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Start Date *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start h-10 hover:bg-muted/50">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formatDate(formData.start_date)}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formData.start_date}
+                        onSelect={(date) => date && setFormData(prev => ({ ...prev, start_date: date }))}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">End Date *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start h-10 hover:bg-muted/50">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formatDate(formData.end_date)}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formData.end_date}
+                        onSelect={(date) => date && setFormData(prev => ({ ...prev, end_date: date }))}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Duration (Days)</Label>
+                  <Input
+                    type="number"
+                    value={durationDays}
+                    disabled
+                    className="h-10 bg-muted/30 font-semibold text-lg"
+                  />
+                  <p className="text-xs text-muted-foreground">Auto-calculated (inclusive)</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">GST %</Label>
+                  <Select value={formData.gst_percent} onValueChange={(v) => setFormData(prev => ({ ...prev, gst_percent: v }))}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">0%</SelectItem>
+                      <SelectItem value="5">5%</SelectItem>
+                      <SelectItem value="12">12%</SelectItem>
+                      <SelectItem value="18">18%</SelectItem>
+                      <SelectItem value="28">28%</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* Summary Card */}
-            <div>
+            {/* Plan Summary */}
+            <div className="lg:col-span-1">
               <PlanSummaryCard
                 selectedCount={selectedAssets.size}
                 duration={durationDays}
@@ -546,11 +526,48 @@ export default function PlanNew() {
                 gstPercent={parseFloat(formData.gst_percent)}
                 gstAmount={totals.gstAmount}
                 grandTotal={totals.grandTotal}
-                profitMargin={totals.totalBaseRent}
                 baseRent={totals.totalBaseRent}
               />
             </div>
           </div>
+
+          {/* Selected Assets - Full Width */}
+          <Card className="rounded-2xl shadow-md hover:shadow-lg transition-all duration-200">
+            <CardHeader className="border-b bg-gradient-to-r from-primary/5 to-primary-glow/5">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-700 dark:text-slate-200">
+                <div className="h-2 w-2 rounded-full bg-primary"></div>
+                Selected Media Assets ({selectedAssets.size})
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1.5">Review and adjust pricing for selected assets</p>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <SelectedAssetsTable
+                assets={selectedAssetsArray}
+                assetPricing={assetPricing}
+                onRemove={removeAsset}
+                onPricingUpdate={updateAssetPricing}
+                durationDays={durationDays}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Available Assets - Full Width */}
+          <Card className="rounded-2xl shadow-md hover:shadow-lg transition-all duration-200">
+            <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/20 dark:to-blue-900/20">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-700 dark:text-slate-200">
+                <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                Available Media Assets
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1.5">Browse and add assets to your plan</p>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <AssetSelectionTable
+                assets={availableAssets}
+                selectedIds={selectedAssets}
+                onSelect={toggleAssetSelection}
+              />
+            </CardContent>
+          </Card>
 
           {/* Actions */}
           <div className="flex justify-end gap-4">

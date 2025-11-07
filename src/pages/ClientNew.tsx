@@ -19,45 +19,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
-
-const INDIAN_STATES = [
-  { code: "AP", name: "Andhra Pradesh" },
-  { code: "AR", name: "Arunachal Pradesh" },
-  { code: "AS", name: "Assam" },
-  { code: "BR", name: "Bihar" },
-  { code: "CG", name: "Chhattisgarh" },
-  { code: "GA", name: "Goa" },
-  { code: "GJ", name: "Gujarat" },
-  { code: "HR", name: "Haryana" },
-  { code: "HP", name: "Himachal Pradesh" },
-  { code: "JH", name: "Jharkhand" },
-  { code: "KA", name: "Karnataka" },
-  { code: "KL", name: "Kerala" },
-  { code: "MP", name: "Madhya Pradesh" },
-  { code: "MH", name: "Maharashtra" },
-  { code: "MN", name: "Manipur" },
-  { code: "ML", name: "Meghalaya" },
-  { code: "MZ", name: "Mizoram" },
-  { code: "NL", name: "Nagaland" },
-  { code: "OD", name: "Odisha" },
-  { code: "PB", name: "Punjab" },
-  { code: "RJ", name: "Rajasthan" },
-  { code: "SK", name: "Sikkim" },
-  { code: "TN", name: "Tamil Nadu" },
-  { code: "TG", name: "Telangana" },
-  { code: "TR", name: "Tripura" },
-  { code: "UP", name: "Uttar Pradesh" },
-  { code: "UK", name: "Uttarakhand" },
-  { code: "WB", name: "West Bengal" },
-  { code: "AN", name: "Andaman and Nicobar Islands" },
-  { code: "CH", name: "Chandigarh" },
-  { code: "DH", name: "Dadra and Nagar Haveli and Daman and Diu" },
-  { code: "DL", name: "Delhi" },
-  { code: "JK", name: "Jammu and Kashmir" },
-  { code: "LA", name: "Ladakh" },
-  { code: "LD", name: "Lakshadweep" },
-  { code: "PY", name: "Puducherry" },
-];
+import { StateSelect } from "@/components/clients/StateSelect";
+import { getStateCode } from "@/lib/stateCodeMapping";
 
 const clientSchema = z.object({
   id: z.string().min(1, "Client ID is required"),
@@ -123,7 +86,7 @@ export default function ClientNew() {
   const generateClientId = async () => {
     if (!formData.state) return;
     try {
-      const stateCode = formData.state;
+      const stateCode = getStateCode(formData.state);
       const clientId = await generateClientCode(stateCode);
       setFormData(prev => ({ ...prev, id: clientId }));
     } catch (error) {
@@ -392,22 +355,13 @@ export default function ClientNew() {
               {/* State */}
               <div className="space-y-2">
                 <Label>Place of Supply *</Label>
-                <Select
+                <StateSelect
                   value={formData.state}
                   onValueChange={(value) => updateField("state", value)}
-                >
-                  <SelectTrigger className={errors.state ? "border-destructive" : ""}>
-                    <SelectValue placeholder="Select state" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {INDIAN_STATES.map((state) => (
-                      <SelectItem key={state.code} value={state.code}>
-                        {state.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.state && <p className="text-xs text-destructive">{errors.state}</p>}
+                  placeholder="Select state"
+                  className={errors.state ? "border-destructive" : ""}
+                  error={errors.state}
+                />
               </div>
 
               {/* Currency */}
@@ -494,21 +448,11 @@ export default function ClientNew() {
                 </div>
                 <div className="space-y-2">
                   <Label>State</Label>
-                  <Select
+                  <StateSelect
                     value={formData.billing_state}
                     onValueChange={(value) => updateField("billing_state", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select or type to add" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {INDIAN_STATES.map((state) => (
-                        <SelectItem key={state.code} value={state.code}>
-                          {state.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Select state"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Pin Code</Label>
@@ -586,21 +530,11 @@ export default function ClientNew() {
                 </div>
                 <div className="space-y-2">
                   <Label>State</Label>
-                  <Select
+                  <StateSelect
                     value={formData.shipping_state}
                     onValueChange={(value) => updateField("shipping_state", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select or type to add" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {INDIAN_STATES.map((state) => (
-                        <SelectItem key={state.code} value={state.code}>
-                          {state.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Select state"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Pin Code</Label>

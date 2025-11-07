@@ -9,13 +9,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Shield, Key, Palette, Upload, Image, Hash, Zap } from "lucide-react";
+import { User, Shield, Key, Palette, Upload, Image, Hash, Zap, RefreshCw } from "lucide-react";
+import { migrateClientIds } from "@/utils/migrateClientIds";
 
 export default function Settings() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [migrating, setMigrating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [roles, setRoles] = useState<string[]>([]);
@@ -254,6 +256,31 @@ export default function Settings() {
     }
   };
 
+  const handleMigrateClientIds = async () => {
+    if (!confirm("This will update all client IDs to use official Indian state codes. Are you sure?")) {
+      return;
+    }
+
+    setMigrating(true);
+    try {
+      const result = await migrateClientIds();
+      
+      toast({
+        title: "Migration Complete",
+        description: `Updated: ${result.success}, Skipped: ${result.skipped}, Errors: ${result.errors}`,
+      });
+    } catch (error: any) {
+      console.error("Migration error:", error);
+      toast({
+        title: "Migration Failed",
+        description: error.message || "Failed to migrate client IDs",
+        variant: "destructive",
+      });
+    } finally {
+      setMigrating(false);
+    }
+  };
+
   const getInitials = (email?: string) => {
     if (!email) return "U";
     return email.substring(0, 2).toUpperCase();
@@ -382,6 +409,48 @@ export default function Settings() {
                   <Button onClick={() => navigate('/admin/power-bills')} variant="outline">
                     <Zap className="mr-2 h-4 w-4" />
                     Open Power Bills
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <RefreshCw className="h-5 w-5" />
+                    <CardTitle>Client ID Migration</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Update existing client IDs to official Indian state code format
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    This will convert all existing client IDs to use official GST state codes (e.g., TG for Telangana, WB for West Bengal).
+                  </p>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Examples:</p>
+                    <ul className="text-sm text-muted-foreground space-y-1 ml-4">
+                      <li>• TE-0001 → TG-0001 (Telangana)</li>
+                      <li>• WE-0002 → WB-0001 (West Bengal)</li>
+                      <li>• AN-0003 → AP-0001 (Andhra Pradesh)</li>
+                    </ul>
+                  </div>
+                  <Button 
+                    onClick={handleMigrateClientIds} 
+                    variant="outline"
+                    disabled={migrating}
+                  >
+                    {migrating ? (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        Migrating...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Migrate Client IDs
+                      </>
+                    )}
                   </Button>
                 </CardContent>
               </Card>

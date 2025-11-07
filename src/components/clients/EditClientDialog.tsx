@@ -25,45 +25,7 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { z } from "zod";
 import { Checkbox } from "@/components/ui/checkbox";
-
-const INDIAN_STATES = [
-  { code: "AP", name: "Andhra Pradesh" },
-  { code: "AR", name: "Arunachal Pradesh" },
-  { code: "AS", name: "Assam" },
-  { code: "BR", name: "Bihar" },
-  { code: "CG", name: "Chhattisgarh" },
-  { code: "GA", name: "Goa" },
-  { code: "GJ", name: "Gujarat" },
-  { code: "HR", name: "Haryana" },
-  { code: "HP", name: "Himachal Pradesh" },
-  { code: "JH", name: "Jharkhand" },
-  { code: "KA", name: "Karnataka" },
-  { code: "KL", name: "Kerala" },
-  { code: "MP", name: "Madhya Pradesh" },
-  { code: "MH", name: "Maharashtra" },
-  { code: "MN", name: "Manipur" },
-  { code: "ML", name: "Meghalaya" },
-  { code: "MZ", name: "Mizoram" },
-  { code: "NL", name: "Nagaland" },
-  { code: "OD", name: "Odisha" },
-  { code: "PB", name: "Punjab" },
-  { code: "RJ", name: "Rajasthan" },
-  { code: "SK", name: "Sikkim" },
-  { code: "TN", name: "Tamil Nadu" },
-  { code: "TG", name: "Telangana" },
-  { code: "TR", name: "Tripura" },
-  { code: "UP", name: "Uttar Pradesh" },
-  { code: "UK", name: "Uttarakhand" },
-  { code: "WB", name: "West Bengal" },
-  { code: "AN", name: "Andaman and Nicobar Islands" },
-  { code: "CH", name: "Chandigarh" },
-  { code: "DH", name: "Dadra and Nagar Haveli and Daman and Diu" },
-  { code: "DL", name: "Delhi" },
-  { code: "JK", name: "Jammu and Kashmir" },
-  { code: "LA", name: "Ladakh" },
-  { code: "LD", name: "Lakshadweep" },
-  { code: "PY", name: "Puducherry" },
-];
+import { StateSelect } from "./StateSelect";
 
 // Validation schema with Zod
 const clientSchema = z.object({
@@ -343,19 +305,12 @@ export function EditClientDialog({
             {/* State */}
             <div>
               <Label>State *</Label>
-              <Select value={formData.state} onValueChange={(value) => updateField('state', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select state..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {INDIAN_STATES.map(state => (
-                    <SelectItem key={state.code} value={state.code}>
-                      {state.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.state && <p className="text-sm text-destructive mt-1">{errors.state}</p>}
+              <StateSelect
+                value={formData.state}
+                onValueChange={(value) => updateField('state', value)}
+                placeholder="Select state..."
+                error={errors.state}
+              />
             </div>
 
             {/* City */}
@@ -443,20 +398,12 @@ export function EditClientDialog({
 
               <div>
                 <Label>State</Label>
-                <Select value={formData.billing_state || "none"} onValueChange={(value) => updateField('billing_state', value === "none" ? "" : value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select state..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Not specified</SelectItem>
-                    {INDIAN_STATES.map(state => (
-                      <SelectItem key={state.code} value={state.code}>
-                        {state.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.billing_state && <p className="text-sm text-destructive mt-1">{errors.billing_state}</p>}
+                <StateSelect
+                  value={formData.billing_state || ""}
+                  onValueChange={(value) => updateField('billing_state', value)}
+                  placeholder="Select state..."
+                  error={errors.billing_state}
+                />
               </div>
 
               <div>
@@ -537,20 +484,12 @@ export function EditClientDialog({
 
                 <div>
                   <Label>State</Label>
-                  <Select value={formData.shipping_state || "none"} onValueChange={(value) => updateField('shipping_state', value === "none" ? "" : value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select state..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Not specified</SelectItem>
-                      {INDIAN_STATES.map(state => (
-                        <SelectItem key={state.code} value={state.code}>
-                          {state.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.shipping_state && <p className="text-sm text-destructive mt-1">{errors.shipping_state}</p>}
+                  <StateSelect
+                    value={formData.shipping_state || ""}
+                    onValueChange={(value) => updateField('shipping_state', value)}
+                    placeholder="Select state..."
+                    error={errors.shipping_state}
+                  />
                 </div>
 
                 <div>

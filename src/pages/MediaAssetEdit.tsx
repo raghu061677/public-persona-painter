@@ -11,9 +11,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Combobox } from "@/components/ui/combobox";
 import { VendorDetailsForm } from "@/components/media-assets/vendor-details-form";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 import { parseDimensions, buildSearchTokens } from "@/utils/mediaAssets";
-import { ArrowLeft, Save, Image as ImageIcon, Calendar as CalendarIcon, ExternalLink } from "lucide-react";
+import { ArrowLeft, Save, Image as ImageIcon, Calendar as CalendarIcon, ExternalLink, HelpCircle, MapPin, DollarSign, FileText } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 
@@ -325,248 +326,675 @@ export default function MediaAssetEdit() {
   const showPowerFields = formData.illumination && ['Frontlit', 'Backlit', 'Digital'].includes(formData.illumination);
 
   return (
-    <form onSubmit={handleSubmit} className="container mx-auto px-6 py-8 max-w-6xl">
-      <header className="flex items-center justify-between pb-4 mb-4 border-b">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => navigate(`/admin/media-assets/${id}`)} type="button">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Edit Media Asset</h1>
-            <p className="text-sm text-muted-foreground font-mono">{formData.id}</p>
-          </div>
-        </div>
-        <Button type="submit" disabled={loading}>
-          <Save className="mr-2 h-4 w-4" />
-          {loading ? 'Saving...' : 'Save Changes'}
-        </Button>
-      </header>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* LEFT COLUMN */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Basic Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Asset ID</Label>
-                <Input value={formData.id} readOnly disabled />
-              </div>
-              <div>
-                <Label>Municipal Ref. ID</Label>
-                <Input value={formData.media_id} onChange={(e) => updateField('media_id', e.target.value)} />
-              </div>
-              <div>
-                <Label>Media Type *</Label>
-                <Input required value={formData.media_type} onChange={(e) => updateField('media_type', e.target.value)} />
-              </div>
-              <div>
-                <Label>Category</Label>
-                <Select value={formData.category} onValueChange={(v) => updateField('category', v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="OOH">OOH</SelectItem>
-                    <SelectItem value="DOOH">DOOH</SelectItem>
-                    <SelectItem value="Transit">Transit</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Illumination</Label>
-                <Select value={formData.illumination || ''} onValueChange={(v) => updateField('illumination', v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Non-lit">Non-lit</SelectItem>
-                    <SelectItem value="Frontlit">Frontlit</SelectItem>
-                    <SelectItem value="Backlit">Backlit</SelectItem>
-                    <SelectItem value="Digital">Digital</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Status</Label>
-                <Select value={formData.status} onValueChange={(v) => updateField('status', v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Available">Available</SelectItem>
-                    <SelectItem value="Booked">Booked</SelectItem>
-                    <SelectItem value="Blocked">Blocked</SelectItem>
-                    <SelectItem value="Maintenance">Maintenance</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Location */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Location</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <Label>Location *</Label>
-                <Input required value={formData.location} onChange={(e) => updateField('location', e.target.value)} />
-              </div>
-              <div>
-                <Label>Area *</Label>
-                <Input required value={formData.area} onChange={(e) => updateField('area', e.target.value)} />
-              </div>
-              <div>
-                <Label>City *</Label>
-                <Input required value={formData.city} onChange={(e) => updateField('city', e.target.value)} />
-              </div>
-              <div>
-                <Label>District</Label>
-                <Input value={formData.district || ''} onChange={(e) => updateField('district', e.target.value)} />
-              </div>
-              <div>
-                <Label>State</Label>
-                <Input value={formData.state || ''} onChange={(e) => updateField('state', e.target.value)} />
-              </div>
-              <div>
-                <Label>Latitude</Label>
-                <Input type="number" step="any" value={formData.latitude} onChange={(e) => updateField('latitude', e.target.value)} />
-              </div>
-              <div>
-                <Label>Longitude</Label>
-                <Input type="number" step="any" value={formData.longitude} onChange={(e) => updateField('longitude', e.target.value)} />
-              </div>
-              <div className="md:col-span-2">
-                <Label>Direction</Label>
-                <Input value={formData.direction || ''} onChange={(e) => updateField('direction', e.target.value)} placeholder="e.g., Towards City Center" />
-              </div>
-              <div className="md:col-span-2">
-                <Label>Google Street View URL</Label>
-                <div className="flex gap-2">
-                  <Input value={formData.google_street_view_url || ''} onChange={(e) => updateField('google_street_view_url', e.target.value)} />
-                  {formData.google_street_view_url && (
-                    <Button variant="ghost" size="icon" asChild type="button">
-                      <a href={formData.google_street_view_url} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Specifications */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Specifications</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Dimensions (WxH) *</Label>
-                <Input 
-                  required 
-                  value={formData.dimensions} 
-                  onChange={(e) => updateField('dimensions', e.target.value)} 
-                  placeholder="e.g., 40x20 or 25x5-12x3 for multi-face"
-                />
-              </div>
-              <div>
-                <Label>Total Sq.Ft</Label>
-                <Input value={formData.total_sqft || 0} readOnly disabled />
-              </div>
-              
-              {formData.is_multi_face && formData.faces?.length > 0 && (
-                <div className="md:col-span-2 space-y-2 rounded-lg border p-4 bg-muted/50">
-                  <h4 className="font-medium text-sm">Face Breakdown</h4>
-                  {formData.faces.map((face: any, index: number) => (
-                    <div key={index} className="flex justify-between items-center text-sm p-2 rounded-md bg-background">
-                      <span>{face.label}</span>
-                      <span>{face.width}ft x {face.height}ft</span>
-                      <span className="font-semibold">{(face.width * face.height).toFixed(2)} sq.ft</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Financials */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Financials & Ownership</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <Label>Ownership</Label>
-                <Select value={formData.ownership || 'own'} onValueChange={(v) => updateField('ownership', v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="own">Own</SelectItem>
-                    <SelectItem value="rented">Rented</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {formData.ownership === 'own' && (
+    <TooltipProvider>
+      <form onSubmit={handleSubmit} className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+        <div className="container mx-auto px-6 py-8 max-w-7xl">
+          {/* Enhanced Header */}
+          <div className="mb-8 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 rounded-2xl p-8 border border-primary/20 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={() => navigate(`/admin/media-assets/${id}`)} 
+                  type="button"
+                  className="bg-background/80 hover:bg-background"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
                 <div>
-                  <Label>Municipal Authority</Label>
-                  <Combobox
-                    options={municipalAuthorities}
-                    value={formData.municipal_authority || ''}
-                    onChange={(v) => updateField('municipal_authority', v)}
-                    placeholder="Select or create..."
-                  />
+                  <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                    Edit Media Asset
+                  </h1>
+                  <p className="text-sm text-muted-foreground font-mono mt-1 flex items-center gap-2">
+                    <FileText className="h-3 w-3" />
+                    {formData.id}
+                  </p>
                 </div>
-              )}
-              <div>
-                <Label>Card Rate (₹/month) *</Label>
-                <Input type="number" required value={formData.card_rate} onChange={(e) => updateField('card_rate', e.target.value)} />
               </div>
-              <div>
-                <Label>Base Rent (₹)</Label>
-                <Input type="number" value={formData.base_rent} onChange={(e) => updateField('base_rent', e.target.value)} />
-              </div>
-              <div>
-                <Label>Base Margin (%)</Label>
-                <Input type="number" value={formData.base_margin} onChange={(e) => updateField('base_margin', e.target.value)} />
-              </div>
-              <div>
-                <Label>GST (%)</Label>
-                <Input type="number" value={formData.gst_percent} onChange={(e) => updateField('gst_percent', e.target.value)} />
-              </div>
-              <div>
-                <Label>Printing Charges (₹)</Label>
-                <Input type="number" value={formData.printing_charges} onChange={(e) => updateField('printing_charges', e.target.value)} />
-              </div>
-              <div>
-                <Label>Mounting Charges (₹)</Label>
-                <Input type="number" value={formData.mounting_charges} onChange={(e) => updateField('mounting_charges', e.target.value)} />
-              </div>
-              <div>
-                <Label>Concession Fee (₹)</Label>
-                <Input type="number" value={formData.concession_fee} onChange={(e) => updateField('concession_fee', e.target.value)} />
-              </div>
-              <div>
-                <Label>Ad Tax (₹)</Label>
-                <Input type="number" value={formData.ad_tax} onChange={(e) => updateField('ad_tax', e.target.value)} />
-              </div>
-              <div>
-                <Label>Electricity (₹)</Label>
-                <Input type="number" value={formData.electricity} onChange={(e) => updateField('electricity', e.target.value)} />
-              </div>
-              <div>
-                <Label>Maintenance (₹)</Label>
-                <Input type="number" value={formData.maintenance} onChange={(e) => updateField('maintenance', e.target.value)} />
-              </div>
-            </CardContent>
-          </Card>
+              <Button type="submit" disabled={loading} size="lg" className="shadow-lg">
+                <Save className="mr-2 h-4 w-4" />
+                {loading ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* LEFT COLUMN */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Basic Information */}
+              <Card className="overflow-hidden border-primary/20 shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 border-b">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Basic Information</CardTitle>
+                      <CardDescription>Essential asset details and classification</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="form-grid pt-6">
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label>Asset ID</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Unique system-generated identifier</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input value={formData.id} readOnly disabled />
+                  </div>
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label>Municipal Ref. ID</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Reference ID from municipal authority (if applicable)</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input 
+                      value={formData.media_id} 
+                      onChange={(e) => updateField('media_id', e.target.value)}
+                      placeholder="Optional reference number"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label className="form-label-required">Media Type</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Type of media (e.g., Billboard, Hoarding, Bus Shelter)</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input 
+                      required 
+                      value={formData.media_type} 
+                      onChange={(e) => updateField('media_type', e.target.value)}
+                      placeholder="e.g., Billboard"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label>Category</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>OOH: Traditional outdoor<br/>DOOH: Digital outdoor<br/>Transit: Mobile media</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Select value={formData.category} onValueChange={(v) => updateField('category', v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="OOH">OOH</SelectItem>
+                        <SelectItem value="DOOH">DOOH</SelectItem>
+                        <SelectItem value="Transit">Transit</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label>Illumination</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Lighting type affects power bill tracking</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Select value={formData.illumination || ''} onValueChange={(v) => updateField('illumination', v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Non-lit">Non-lit</SelectItem>
+                        <SelectItem value="Frontlit">Frontlit</SelectItem>
+                        <SelectItem value="Backlit">Backlit</SelectItem>
+                        <SelectItem value="Digital">Digital</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label>Status</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Current availability status of the asset</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Select value={formData.status} onValueChange={(v) => updateField('status', v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Available">Available</SelectItem>
+                        <SelectItem value="Booked">Booked</SelectItem>
+                        <SelectItem value="Blocked">Blocked</SelectItem>
+                        <SelectItem value="Maintenance">Maintenance</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Location */}
+              <Card className="overflow-hidden border-accent/20 shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-accent/5 via-primary/5 to-accent/5 border-b">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-accent/10 rounded-lg">
+                      <MapPin className="h-5 w-5 text-accent" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Location Details</CardTitle>
+                      <CardDescription>Geographic information and coordinates</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="form-grid pt-6">
+                  <div className="md:col-span-2 input-group">
+                    <div className="flex items-center gap-2">
+                      <Label className="form-label-required">Location</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Specific address or landmark description</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input 
+                      required 
+                      value={formData.location} 
+                      onChange={(e) => updateField('location', e.target.value)}
+                      placeholder="e.g., Opposite Central Mall, Main Road"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label className="form-label-required">Area</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Locality or neighborhood name</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input 
+                      required 
+                      value={formData.area} 
+                      onChange={(e) => updateField('area', e.target.value)}
+                      placeholder="e.g., Banjara Hills"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label className="form-label-required">City</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>City where the asset is located</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input 
+                      required 
+                      value={formData.city} 
+                      onChange={(e) => updateField('city', e.target.value)}
+                      placeholder="e.g., Hyderabad"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <Label>District</Label>
+                    <Input 
+                      value={formData.district || ''} 
+                      onChange={(e) => updateField('district', e.target.value)}
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <Label>State</Label>
+                    <Input 
+                      value={formData.state || ''} 
+                      onChange={(e) => updateField('state', e.target.value)}
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label>Latitude</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>GPS coordinates for map display</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input 
+                      type="number" 
+                      step="any" 
+                      value={formData.latitude} 
+                      onChange={(e) => updateField('latitude', e.target.value)}
+                      placeholder="e.g., 17.4065"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label>Longitude</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>GPS coordinates for map display</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input 
+                      type="number" 
+                      step="any" 
+                      value={formData.longitude} 
+                      onChange={(e) => updateField('longitude', e.target.value)}
+                      placeholder="e.g., 78.4772"
+                    />
+                  </div>
+                  <div className="md:col-span-2 input-group">
+                    <div className="flex items-center gap-2">
+                      <Label>Direction</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Direction the hoarding faces (helpful for visibility assessment)</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input 
+                      value={formData.direction || ''} 
+                      onChange={(e) => updateField('direction', e.target.value)} 
+                      placeholder="e.g., Towards City Center"
+                    />
+                  </div>
+                  <div className="md:col-span-2 input-group">
+                    <div className="flex items-center gap-2">
+                      <Label>Google Street View URL</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Auto-generated from lat/long for virtual site view</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input 
+                        value={formData.google_street_view_url || ''} 
+                        onChange={(e) => updateField('google_street_view_url', e.target.value)}
+                        placeholder="Auto-generated from coordinates"
+                      />
+                      {formData.google_street_view_url && (
+                        <Button variant="ghost" size="icon" asChild type="button">
+                          <a href={formData.google_street_view_url} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Specifications */}
+              <Card className="overflow-hidden border-primary/20 shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 border-b">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Specifications</CardTitle>
+                      <CardDescription>Physical dimensions and area calculations</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="form-grid pt-6">
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label className="form-label-required">Dimensions (W×H)</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Width × Height in feet<br/>Multi-face: Use hyphen (e.g., 25x5-12x3)</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input 
+                      required 
+                      value={formData.dimensions} 
+                      onChange={(e) => updateField('dimensions', e.target.value)} 
+                      placeholder="e.g., 40x20 or 25x5-12x3"
+                    />
+                    <p className="form-helper-text">Format: Width×Height (e.g., 40x20)</p>
+                  </div>
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label>Total Sq.Ft</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Auto-calculated from dimensions</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input value={formData.total_sqft || 0} readOnly disabled className="bg-muted/50" />
+                  </div>
+                  
+                  {formData.is_multi_face && formData.faces?.length > 0 && (
+                    <div className="md:col-span-2 space-y-3 rounded-xl border border-accent/30 p-4 bg-gradient-to-br from-accent/5 to-primary/5">
+                      <h4 className="font-semibold text-sm flex items-center gap-2 text-accent">
+                        <FileText className="h-4 w-4" />
+                        Face Breakdown
+                      </h4>
+                      <div className="space-y-2">
+                        {formData.faces.map((face: any, index: number) => (
+                          <div key={index} className="flex justify-between items-center text-sm p-3 rounded-lg bg-background border border-border shadow-sm">
+                            <span className="font-medium">{face.label}</span>
+                            <span className="text-muted-foreground">{face.width}ft × {face.height}ft</span>
+                            <span className="font-semibold text-primary">{(face.width * face.height).toFixed(2)} sq.ft</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Financials */}
+              <Card className="overflow-hidden border-green-500/20 shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-green-500/5 via-emerald-500/5 to-green-500/5 border-b">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-green-500/10 rounded-lg">
+                      <DollarSign className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Financials & Ownership</CardTitle>
+                      <CardDescription>Pricing, costs, and ownership details</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="form-grid pt-6">
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label>Ownership</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Own: Company-owned asset<br/>Rented: Leased from vendor</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Select value={formData.ownership || 'own'} onValueChange={(v) => updateField('ownership', v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="own">Own</SelectItem>
+                        <SelectItem value="rented">Rented</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {formData.ownership === 'own' && (
+                    <div className="input-group">
+                      <div className="flex items-center gap-2">
+                        <Label>Municipal Authority</Label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Governing body for municipal permissions</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <Combobox
+                        options={municipalAuthorities}
+                        value={formData.municipal_authority || ''}
+                        onChange={(v) => updateField('municipal_authority', v)}
+                        placeholder="Select or create..."
+                      />
+                    </div>
+                  )}
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label className="form-label-required">Card Rate (₹/month)</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Standard published rate for this asset</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input 
+                      type="number" 
+                      required 
+                      value={formData.card_rate} 
+                      onChange={(e) => updateField('card_rate', e.target.value)}
+                      placeholder="Monthly rate"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label>Base Rent (₹)</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Base cost before margin (for rented assets)</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input 
+                      type="number" 
+                      value={formData.base_rent} 
+                      onChange={(e) => updateField('base_rent', e.target.value)}
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label>Base Margin (%)</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Profit margin percentage on base rent</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input 
+                      type="number" 
+                      value={formData.base_margin} 
+                      onChange={(e) => updateField('base_margin', e.target.value)}
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label>GST (%)</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>GST percentage (typically 18%)</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input 
+                      type="number" 
+                      value={formData.gst_percent} 
+                      onChange={(e) => updateField('gst_percent', e.target.value)}
+                      placeholder="18"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label>Printing Charges (₹)</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Cost for flex/vinyl printing per campaign</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input 
+                      type="number" 
+                      value={formData.printing_charges} 
+                      onChange={(e) => updateField('printing_charges', e.target.value)}
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label>Mounting Charges (₹)</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Installation cost per campaign</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input 
+                      type="number" 
+                      value={formData.mounting_charges} 
+                      onChange={(e) => updateField('mounting_charges', e.target.value)}
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label>Concession Fee (₹)</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Fee paid to landlord/authority</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input 
+                      type="number" 
+                      value={formData.concession_fee} 
+                      onChange={(e) => updateField('concession_fee', e.target.value)}
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label>Ad Tax (₹)</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Municipal advertising tax</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input 
+                      type="number" 
+                      value={formData.ad_tax} 
+                      onChange={(e) => updateField('ad_tax', e.target.value)}
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label>Electricity (₹)</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Monthly power cost (for illuminated assets)</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input 
+                      type="number" 
+                      value={formData.electricity} 
+                      onChange={(e) => updateField('electricity', e.target.value)}
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <div className="flex items-center gap-2">
+                      <Label>Maintenance (₹)</Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Monthly maintenance and upkeep cost</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input 
+                      type="number" 
+                      value={formData.maintenance} 
+                      onChange={(e) => updateField('maintenance', e.target.value)}
+                      placeholder="Optional"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
           {/* Vendor Details (if rented) */}
           {formData.ownership === 'rented' && (
@@ -576,69 +1004,144 @@ export default function MediaAssetEdit() {
             />
           )}
 
-          {/* Power Details (conditional) */}
-          {showPowerFields && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Power Details</CardTitle>
-                <CardDescription>Electricity connection details for illuminated assets</CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div>
-                  <Label>Consumer Name</Label>
-                  <Input value={formData.consumer_name} onChange={(e) => updateField('consumer_name', e.target.value)} />
-                </div>
-                <div>
-                  <Label>Service Number</Label>
-                  <Input value={formData.service_number} onChange={(e) => updateField('service_number', e.target.value)} />
-                </div>
-                <div>
-                  <Label>Unique Service Number</Label>
-                  <Input value={formData.unique_service_number} onChange={(e) => updateField('unique_service_number', e.target.value)} />
-                </div>
-                <div>
-                  <Label>ERO</Label>
-                  <Input value={formData.ero} onChange={(e) => updateField('ero', e.target.value)} />
-                </div>
-                <div>
-                  <Label>Section Name</Label>
-                  <Input value={formData.section_name} onChange={(e) => updateField('section_name', e.target.value)} />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+              {/* Power Details (conditional) */}
+              {showPowerFields && (
+                <Card className="overflow-hidden border-yellow-500/20 shadow-lg">
+                  <CardHeader className="bg-gradient-to-r from-yellow-500/5 via-orange-500/5 to-yellow-500/5 border-b">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-yellow-500/10 rounded-lg">
+                        <DollarSign className="h-5 w-5 text-yellow-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl">Power Details</CardTitle>
+                        <CardDescription>Electricity connection for illuminated assets</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="form-grid pt-6">
+                    <div className="input-group">
+                      <div className="flex items-center gap-2">
+                        <Label>Consumer Name</Label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Name on electricity bill account</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <Input 
+                        value={formData.consumer_name} 
+                        onChange={(e) => updateField('consumer_name', e.target.value)}
+                        placeholder="Account holder name"
+                      />
+                    </div>
+                    <div className="input-group">
+                      <div className="flex items-center gap-2">
+                        <Label>Service Number</Label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Electricity service connection number</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <Input 
+                        value={formData.service_number} 
+                        onChange={(e) => updateField('service_number', e.target.value)}
+                        placeholder="Service ID"
+                      />
+                    </div>
+                    <div className="input-group">
+                      <div className="flex items-center gap-2">
+                        <Label>Unique Service Number</Label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Unique identifier for power bill tracking</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <Input 
+                        value={formData.unique_service_number} 
+                        onChange={(e) => updateField('unique_service_number', e.target.value)}
+                        placeholder="Unique ID"
+                      />
+                    </div>
+                    <div className="input-group">
+                      <Label>ERO</Label>
+                      <Input 
+                        value={formData.ero} 
+                        onChange={(e) => updateField('ero', e.target.value)}
+                        placeholder="Electricity Revenue Officer"
+                      />
+                    </div>
+                    <div className="input-group">
+                      <Label>Section Name</Label>
+                      <Input 
+                        value={formData.section_name} 
+                        onChange={(e) => updateField('section_name', e.target.value)}
+                        placeholder="Distribution section"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
 
-        {/* RIGHT COLUMN */}
-        <div className="lg:col-span-1 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Status & Visibility</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <Label>Visible on Public Site</Label>
-                  <p className="text-xs text-muted-foreground">Show on public map</p>
-                </div>
-                <Switch checked={formData.is_public ?? true} onCheckedChange={(checked) => updateField('is_public', checked)} />
-              </div>
-            </CardContent>
-          </Card>
+            {/* RIGHT COLUMN */}
+            <div className="lg:col-span-1 space-y-6">
+              <Card className="overflow-hidden border-primary/20 shadow-lg sticky top-4">
+                <CardHeader className="bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 border-b">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <CardTitle className="text-xl">Status & Visibility</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between rounded-xl border border-primary/20 p-4 bg-gradient-to-br from-primary/5 to-accent/5">
+                    <div>
+                      <Label className="text-base">Visible on Public Site</Label>
+                      <p className="text-xs text-muted-foreground mt-1">Display this asset on the public website</p>
+                    </div>
+                    <Switch 
+                      checked={formData.is_public ?? true} 
+                      onCheckedChange={(checked) => updateField('is_public', checked)} 
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Proof & Site Images</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <ImageUploader field="geoTaggedPhoto" label="Geo Tagged Photo" />
-              <ImageUploader field="newspaperPhoto" label="Newspaper Photo" />
-              <ImageUploader field="trafficPhoto1" label="Traffic Photo 1" />
-              <ImageUploader field="trafficPhoto2" label="Traffic Photo 2" />
-            </CardContent>
-          </Card>
+              <Card className="overflow-hidden border-accent/20 shadow-lg sticky top-[200px]">
+                <CardHeader className="bg-gradient-to-r from-accent/5 via-primary/5 to-accent/5 border-b">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-accent/10 rounded-lg">
+                      <ImageIcon className="h-5 w-5 text-accent" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Proof & Site Images</CardTitle>
+                      <CardDescription>Upload verification photos</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6 pt-6">
+                  <ImageUploader field="geoTaggedPhoto" label="Geo Tagged Photo" />
+                  <ImageUploader field="newspaperPhoto" label="Newspaper Photo" />
+                  <ImageUploader field="trafficPhoto1" label="Traffic Photo 1" />
+                  <ImageUploader field="trafficPhoto2" label="Traffic Photo 2" />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
-      </div>
-    </form>
+      </form>
+    </TooltipProvider>
   );
 }

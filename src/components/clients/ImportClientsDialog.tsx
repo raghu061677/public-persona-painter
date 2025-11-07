@@ -119,11 +119,11 @@ export function ImportClientsDialog({ onImportComplete }: ImportClientsDialogPro
     }
   };
 
-  const handleConfirmImport = async () => {
+  const handleConfirmImport = async (updatedRecords: PreviewRecord[]) => {
     setIsImporting(true);
     
-    // Filter only valid records
-    const validRecords = previewRecords.filter(r => r.status === 'valid');
+    // Filter only valid records from the updated data
+    const validRecords = updatedRecords.filter(r => r.status === 'valid');
     
     let successCount = 0;
     let errorCount = 0;
@@ -222,7 +222,7 @@ export function ImportClientsDialog({ onImportComplete }: ImportClientsDialogPro
         entity_type: 'clients',
         imported_by: user?.id,
         file_name: fileName,
-        total_records: previewRecords.length,
+        total_records: updatedRecords.length,
         success_count: successCount,
         skipped_count: skippedCount,
         error_count: errorCount,
@@ -242,7 +242,7 @@ export function ImportClientsDialog({ onImportComplete }: ImportClientsDialogPro
             {skippedCount > 0 && <p>⏭️ Skipped: {skippedCount} (already exist)</p>}
             {errorCount > 0 && <p>❌ Failed: {errorCount}</p>}
             <p className="text-xs text-muted-foreground mt-2">
-              Processed {totalProcessed} of {previewRecords.length} rows
+              Processed {totalProcessed} of {updatedRecords.length} rows
             </p>
             {errorCount > 0 && (
               <p className="text-xs text-destructive mt-1">

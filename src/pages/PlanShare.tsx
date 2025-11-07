@@ -12,16 +12,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle, MapPin } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { getPlanStatusColor, formatDate } from "@/utils/plans";
 import { toast } from "@/hooks/use-toast";
+import { PlanAssetMap } from "@/components/plans/PlanAssetMap";
+import { PublicPlanShare } from "@/components/plans/PublicPlanShare";
 
 export default function PlanShare() {
   const { id, shareToken } = useParams();
   const [plan, setPlan] = useState<any>(null);
   const [planItems, setPlanItems] = useState<any[]>([]);
+  const [assets, setAssets] = useState<any[]>([]);
+  const [termsData, setTermsData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showMap, setShowMap] = useState(false);
 
   useEffect(() => {
     fetchPlan();
@@ -45,8 +50,19 @@ export default function PlanShare() {
       return;
     }
 
+    if (!planData.share_link_active) {
+      toast({
+        title: "Link Inactive",
+        description: "This share link has been deactivated",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
     setPlan(planData);
 
+    // Fetch plan items
     const { data: itemsData } = await supabase
       .from('plan_items')
       .select('*')
@@ -54,6 +70,27 @@ export default function PlanShare() {
       .order('created_at');
     
     setPlanItems(itemsData || []);
+
+    // Fetch asset details for map
+    if (itemsData && itemsData.length > 0) {
+      const assetIds = itemsData.map(item => item.asset_id);
+      const { data: assetsData } = await supabase
+        .from('media_assets')
+        .select('id, location, area, city, media_type, dimensions, direction, illumination, total_sqft, latitude, longitude')
+        .in('id', assetIds);
+      
+      setAssets(assetsData || []);
+    }
+
+    // Fetch terms and conditions
+    const { data: termsSettings } = await supabase
+      .from('plan_terms_settings')
+      .select('*')
+      .limit(1)
+      .single();
+    
+    setTermsData(termsSettings);
+    
     setLoading(false);
   };
 
@@ -210,10 +247,66 @@ export default function PlanShare() {
           </CardContent>
         </Card>
 
+        {/* Map View */}
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Asset Locations
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowMap(!showMap)}
+              >
+                {showMap ? "Hide Map" : "Show Map"}
+              </Button>
+            </div>
+          </CardHeader>
+          {showMap && (
+            <CardContent>
+              <PlanAssetMap assets={assets} planItems={planItems} />
+            </CardContent>
+          )}
+        </Card>
+
+        {/* Share & Download */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Share & Download</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PublicPlanShare 
+              plan={plan} 
+              publicUrl={`${window.location.origin}/share/plan/${plan.id}/${plan.share_token}`}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Terms & Conditions */}
+        {termsData && termsData.terms && termsData.terms.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>{termsData.title || "Terms & Conditions"}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-sm">
+                {termsData.terms.map((term: string, index: number) => (
+                  <li key={index} className="flex gap-2">
+                    <span className="text-muted-foreground">{index + 1}.</span>
+                    <span>{term}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+
         {plan.notes && (
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Terms & Notes</CardTitle>
+              <CardTitle>Additional Notes</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm whitespace-pre-wrap">{plan.notes}</p>

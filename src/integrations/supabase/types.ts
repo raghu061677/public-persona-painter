@@ -1307,6 +1307,30 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_terms_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          terms: string[]
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          terms?: string[]
+          title?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          terms?: string[]
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       plans: {
         Row: {
           client_id: string
@@ -1315,6 +1339,7 @@ export type Database = {
           created_by: string
           duration_days: number
           end_date: string
+          export_links: Json | null
           grand_total: number
           gst_amount: number
           gst_percent: number
@@ -1322,6 +1347,7 @@ export type Database = {
           notes: string | null
           plan_name: string
           plan_type: Database["public"]["Enums"]["plan_type"]
+          share_link_active: boolean | null
           share_token: string | null
           start_date: string
           status: Database["public"]["Enums"]["plan_status"]
@@ -1335,6 +1361,7 @@ export type Database = {
           created_by: string
           duration_days: number
           end_date: string
+          export_links?: Json | null
           grand_total?: number
           gst_amount?: number
           gst_percent?: number
@@ -1342,6 +1369,7 @@ export type Database = {
           notes?: string | null
           plan_name: string
           plan_type?: Database["public"]["Enums"]["plan_type"]
+          share_link_active?: boolean | null
           share_token?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["plan_status"]
@@ -1355,6 +1383,7 @@ export type Database = {
           created_by?: string
           duration_days?: number
           end_date?: string
+          export_links?: Json | null
           grand_total?: number
           gst_amount?: number
           gst_percent?: number
@@ -1362,6 +1391,7 @@ export type Database = {
           notes?: string | null
           plan_name?: string
           plan_type?: Database["public"]["Enums"]["plan_type"]
+          share_link_active?: boolean | null
           share_token?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["plan_status"]

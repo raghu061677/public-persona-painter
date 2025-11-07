@@ -143,17 +143,28 @@ export default function PlanDetail() {
       
       await supabase
         .from('plans')
-        .update({ share_token: shareToken })
+        .update({ 
+          share_token: shareToken,
+          share_link_active: true 
+        })
+        .eq('id', id);
+    } else if (!plan.share_link_active) {
+      // Reactivate existing link
+      await supabase
+        .from('plans')
+        .update({ share_link_active: true })
         .eq('id', id);
     }
 
-    const shareUrl = `${window.location.origin}/admin/plans/${id}/share/${shareToken}`;
+    const shareUrl = `${window.location.origin}/share/plan/${id}/${shareToken}`;
     await navigator.clipboard.writeText(shareUrl);
     
     toast({
-      title: "Public Link Copied",
+      title: "Public Link Generated",
       description: "Share link copied to clipboard",
     });
+    
+    fetchPlan();
   };
 
   const handleCopyId = async () => {
@@ -315,14 +326,27 @@ export default function PlanDetail() {
     }
   };
 
-  const handleExportPPT = async () => {
+  const handleExportPPT = async (uploadToCloud = false) => {
     setExportingPPT(true);
     try {
-      await exportPlanToPPT(plan, planItems);
+      const { data: orgSettings } = await supabase
+        .from('organization_settings')
+        .select('*')
+        .limit(1)
+        .single();
+
+      await exportPlanToPPT(plan, planItems, orgSettings, uploadToCloud);
+      
       toast({
         title: "Success",
-        description: "Plan exported to PowerPoint",
+        description: uploadToCloud 
+          ? "Plan exported to PowerPoint and uploaded to cloud" 
+          : "Plan exported to PowerPoint",
       });
+      
+      if (uploadToCloud) {
+        fetchPlan();
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -334,14 +358,20 @@ export default function PlanDetail() {
     }
   };
 
-  const handleExportExcel = async () => {
+  const handleExportExcel = async (uploadToCloud = false) => {
     setExportingExcel(true);
     try {
-      await exportPlanToExcel(plan, planItems);
+      await exportPlanToExcel(plan, planItems, uploadToCloud);
       toast({
         title: "Success",
-        description: "Plan exported to Excel",
+        description: uploadToCloud
+          ? "Plan exported to Excel and uploaded to cloud"
+          : "Plan exported to Excel",
       });
+      
+      if (uploadToCloud) {
+        fetchPlan();
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -350,6 +380,44 @@ export default function PlanDetail() {
       });
     } finally {
       setExportingExcel(false);
+    }
+  };
+
+  const handleGenerateAndUploadPDF = async (docType: "quotation" | "estimate" | "proforma_invoice" | "work_order") => {
+    try {
+      const { data: orgSettings } = await supabase
+        .from('organization_settings')
+        .select('*')
+        .limit(1)
+        .single();
+
+      const { data: termsData } = await supabase
+        .from('plan_terms_settings')
+        .select('terms')
+        .limit(1)
+        .single();
+
+      await exportPlanToPDF(
+        plan,
+        planItems,
+        docType,
+        orgSettings,
+        termsData?.terms,
+        true // Upload to cloud
+      );
+      
+      toast({
+        title: "Success",
+        description: `${docType.toUpperCase()} exported and uploaded to cloud`,
+      });
+      
+      fetchPlan();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to export PDF",
+        variant: "destructive",
+      });
     }
   };
 
@@ -369,7 +437,8 @@ export default function PlanDetail() {
         planItems,
         docType,
         { organization_name: terms?.companyName || "Go-Ads 360°", gstin: terms?.gstin },
-        terms?.terms || []
+        terms?.terms || [],
+        false // Don't upload, just download
       );
       toast({
         title: "Success",
@@ -583,7 +652,7 @@ export default function PlanDetail() {
                   <Download className="mr-2 h-4 w-4" />
                   Download PPTx
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportExcel}>
+                <DropdownMenuItem onClick={() => handleExportExcel(false)}>
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
                   Download Excel
                 </DropdownMenuItem>

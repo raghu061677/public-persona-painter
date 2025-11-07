@@ -72,12 +72,72 @@ function getAssetImageUrl(asset: AssetDetails): string | null {
 }
 
 /**
+ * Get terms and conditions
+ */
+async function getTermsAndConditions(): Promise<string[]> {
+  const { data } = await supabase
+    .from('plan_terms_settings')
+    .select('terms')
+    .limit(1)
+    .single();
+  
+  return data?.terms || [];
+}
+
+/**
+ * Upload file to Supabase Storage
+ */
+async function uploadToStorage(
+  file: Blob,
+  bucket: string,
+  path: string
+): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(path, file, { upsert: true });
+
+    if (error) throw error;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(data.path);
+
+    return publicUrl;
+  } catch (error) {
+    console.error('Storage upload error:', error);
+    return null;
+  }
+}
+
+/**
+ * Update plan export links
+ */
+async function updatePlanExportLinks(planId: string, links: Record<string, any>) {
+  const { data } = await supabase
+    .from('plans')
+    .select('export_links')
+    .eq('id', planId)
+    .single();
+
+  const currentLinks = (data?.export_links as Record<string, any>) || {};
+  
+  await supabase
+    .from('plans')
+    .update({
+      export_links: { ...currentLinks, ...links }
+    })
+    .eq('id', planId);
+}
+
+/**
  * Export plan to PowerPoint with asset images and details
  */
 export async function exportPlanToPPT(
   plan: any,
   planItems: PlanItem[],
-  orgSettings?: any
+  orgSettings?: any,
+  uploadToCloud: boolean = false
 ) {
   try {
     const pptx = new pptxgen();
@@ -222,9 +282,73 @@ export async function exportPlanToPPT(
       });
     }
 
+    // Terms & Conditions slide
+    const terms = await getTermsAndConditions();
+    if (terms.length > 0) {
+      const termsSlide = pptx.addSlide();
+      termsSlide.addText("Terms & Conditions", {
+        x: 0.5,
+        y: 0.5,
+        w: 9,
+        h: 0.6,
+        fontSize: 28,
+        bold: true,
+        color: "1e40af"
+      });
+
+      const termsText = terms.map((term, idx) => `${idx + 1}. ${term}`).join('\n\n');
+      termsSlide.addText(termsText, {
+        x: 0.5,
+        y: 1.3,
+        w: 9,
+        h: 5,
+        fontSize: 11,
+        color: "374151",
+        valign: "top"
+      });
+
+      // Add public link if available
+      if (plan.share_token) {
+        const publicUrl = `${window.location.origin}/share/plan/${plan.id}/${plan.share_token}`;
+        termsSlide.addText("View Interactive Map & Asset Details:", {
+          x: 0.5,
+          y: 6.5,
+          w: 9,
+          h: 0.4,
+          fontSize: 12,
+          color: "1e40af",
+          bold: true
+        });
+        termsSlide.addText(publicUrl, {
+          x: 0.5,
+          y: 6.9,
+          w: 9,
+          h: 0.4,
+          fontSize: 10,
+          color: "0066cc",
+          hyperlink: { url: publicUrl }
+        });
+      }
+    }
+
     // Save file
-    await pptx.writeFile({ fileName: `${plan.id}_presentation.pptx` });
-    return true;
+    if (uploadToCloud) {
+      const blob = await pptx.write({ outputType: 'blob' }) as Blob;
+      const fileName = `plan_${plan.id}_${Date.now()}.pptx`;
+      const storagePath = `exports/plans/${plan.id}/${fileName}`;
+      
+      const publicUrl = await uploadToStorage(blob, 'client-documents', storagePath);
+      if (publicUrl) {
+        await updatePlanExportLinks(plan.id, { ppt_url: publicUrl });
+      }
+      
+      // Also download locally
+      await pptx.writeFile({ fileName: `${plan.id}_presentation.pptx` });
+      return publicUrl;
+    } else {
+      await pptx.writeFile({ fileName: `${plan.id}_presentation.pptx` });
+      return true;
+    }
   } catch (error) {
     console.error("PPT export error:", error);
     throw error;
@@ -234,7 +358,11 @@ export async function exportPlanToPPT(
 /**
  * Export plan to Excel
  */
-export async function exportPlanToExcel(plan: any, planItems: PlanItem[]) {
+export async function exportPlanToExcel(
+  plan: any,
+  planItems: PlanItem[],
+  uploadToCloud: boolean = false
+) {
   try {
     const workbook = XLSX.utils.book_new();
 
@@ -278,8 +406,23 @@ export async function exportPlanToExcel(plan: any, planItems: PlanItem[]) {
     XLSX.utils.book_append_sheet(workbook, assetsSheet, "Assets");
 
     // Save file
-    XLSX.writeFile(workbook, `${plan.id}_plan.xlsx`);
-    return true;
+    if (uploadToCloud) {
+      const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const fileName = `plan_${plan.id}_${Date.now()}.xlsx`;
+      const storagePath = `exports/plans/${plan.id}/${fileName}`;
+      
+      const publicUrl = await uploadToStorage(blob, 'client-documents', storagePath);
+      if (publicUrl) {
+        await updatePlanExportLinks(plan.id, { excel_url: publicUrl });
+      }
+      
+      XLSX.writeFile(workbook, `${plan.id}_plan.xlsx`);
+      return publicUrl;
+    } else {
+      XLSX.writeFile(workbook, `${plan.id}_plan.xlsx`);
+      return true;
+    }
   } catch (error) {
     console.error("Excel export error:", error);
     throw error;
@@ -294,7 +437,8 @@ export async function exportPlanToPDF(
   planItems: PlanItem[],
   docType: "quotation" | "estimate" | "proforma_invoice" | "work_order",
   orgSettings?: any,
-  termsAndConditions?: string[]
+  termsAndConditions?: string[],
+  uploadToCloud: boolean = false
 ) {
   try {
     const doc = new jsPDF();
@@ -397,7 +541,8 @@ export async function exportPlanToPDF(
     yPos += 15;
 
     // Terms and conditions
-    if (termsAndConditions && termsAndConditions.length > 0) {
+    const terms = termsAndConditions || await getTermsAndConditions();
+    if (terms && terms.length > 0) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(12);
       doc.text("Terms and Conditions -", 14, yPos);
@@ -405,7 +550,7 @@ export async function exportPlanToPDF(
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
-      termsAndConditions.forEach((term, index) => {
+      terms.forEach((term, index) => {
         if (yPos > 270) {
           doc.addPage();
           yPos = 20;
@@ -417,8 +562,22 @@ export async function exportPlanToPDF(
     }
 
     // Save file
-    doc.save(`${plan.id}_${docType}.pdf`);
-    return true;
+    if (uploadToCloud) {
+      const pdfBlob = doc.output('blob');
+      const fileName = `plan_${plan.id}_${docType}_${Date.now()}.pdf`;
+      const storagePath = `exports/plans/${plan.id}/${fileName}`;
+      
+      const publicUrl = await uploadToStorage(pdfBlob, 'client-documents', storagePath);
+      if (publicUrl) {
+        await updatePlanExportLinks(plan.id, { pdf_url: publicUrl });
+      }
+      
+      doc.save(`${plan.id}_${docType}.pdf`);
+      return publicUrl;
+    } else {
+      doc.save(`${plan.id}_${docType}.pdf`);
+      return true;
+    }
   } catch (error) {
     console.error("PDF export error:", error);
     throw error;

@@ -13,6 +13,7 @@ import { toast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import { ImportPreviewDialog } from "./ImportPreviewDialog";
+import { getStateCode } from "@/lib/stateCodeMapping";
 
 interface ImportClientsDialogProps {
   onImportComplete: () => void;
@@ -34,7 +35,7 @@ export function ImportClientsDialog({ onImportComplete }: ImportClientsDialogPro
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const generateClientId = (state: string, existingCount: number): string => {
-    const stateCode = state?.substring(0, 2).toUpperCase() || "XX";
+    const stateCode = getStateCode(state);
     const sequence = String(existingCount + 1).padStart(4, "0");
     return `${stateCode}-${sequence}`;
   };
@@ -179,10 +180,11 @@ export function ImportClientsDialog({ onImportComplete }: ImportClientsDialogPro
           if (isDuplicate) continue;
 
           // Get count of existing clients with same state for ID generation
+          const stateCode = getStateCode(state);
           const { count } = await supabase
             .from('clients')
             .select('*', { count: 'exact', head: true })
-            .ilike('id', `${state.substring(0, 2).toUpperCase()}%`);
+            .ilike('id', `${stateCode}%`);
 
           const clientId = generateClientId(state, count || 0);
 

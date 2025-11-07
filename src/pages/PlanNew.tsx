@@ -22,6 +22,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { 
   calculateDurationDays, 
+  calculateProRata,
   formatDate 
 } from "@/utils/plans";
 import { generatePlanCode } from "@/lib/codeGenerator";
@@ -163,9 +164,10 @@ export default function PlanNew() {
       setAssetPricing(newPricing);
     } else {
       newSelected.add(assetId);
-      // Calculate prorata based on duration (Monthly Rate / 30 * Duration Days)
+      // Calculate pro-rata: (monthly_rate / 30) × number_of_days
       const monthlyRate = asset.card_rate || 0;
-      const prorataRate = (monthlyRate / 30) * calculateDurationDays(formData.start_date, formData.end_date);
+      const days = calculateDurationDays(new Date(formData.start_date), new Date(formData.end_date));
+      const prorataRate = calculateProRata(monthlyRate, days);
       
       setAssetPricing(prev => ({
         ...prev,
@@ -259,7 +261,7 @@ export default function PlanNew() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const durationDays = calculateDurationDays(formData.start_date, formData.end_date);
+      const durationDays = calculateDurationDays(new Date(formData.start_date), new Date(formData.end_date));
       const totals = calculateTotals();
       const { netTotal, gstAmount, grandTotal } = totals;
 
@@ -352,7 +354,7 @@ export default function PlanNew() {
     }
   };
 
-  const durationDays = calculateDurationDays(formData.start_date, formData.end_date);
+  const durationDays = calculateDurationDays(new Date(formData.start_date), new Date(formData.end_date));
   const totals = calculateTotals();
   const selectedAssetsArray = Array.from(selectedAssets)
     .map(id => availableAssets.find(a => a.id === id))

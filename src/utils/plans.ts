@@ -1,12 +1,27 @@
 // Utility functions for plans and quotations
 
 /**
- * Calculate duration in days between two dates
+ * Calculate duration in days between two dates (inclusive)
+ * Example: 10 Nov to 19 Nov = 10 days (not 9)
  */
 export function calculateDurationDays(startDate: Date, endDate: Date): number {
-  const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  start.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+  const diffTime = end.getTime() - start.getTime();
+  const days = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 for inclusive
+  return Math.max(days, 1); // Minimum 1 day
+}
+
+/**
+ * Calculate pro-rata rate based on monthly rate and number of days
+ * Formula: (monthly_rate / 30) × number_of_days
+ */
+export function calculateProRata(monthlyRate: number, days: number): number {
+  if (!monthlyRate || !days || days < 0) return 0;
+  const dailyRate = monthlyRate / 30;
+  return Math.round(dailyRate * days * 100) / 100; // Round to 2 decimals
 }
 
 /**
@@ -25,19 +40,22 @@ export function calculateGrandTotal(amount: number, gstPercent: number): number 
 }
 
 /**
- * Calculate plan item totals
+ * Calculate plan item totals with pro-rata pricing
  */
 export function calculatePlanItemTotals(
-  salesPrice: number,
+  monthlyRate: number,
+  days: number,
   printingCharges: number = 0,
   mountingCharges: number = 0,
   gstPercent: number = 18
 ) {
-  const subtotal = salesPrice + printingCharges + mountingCharges;
+  const proRataPrice = calculateProRata(monthlyRate, days);
+  const subtotal = proRataPrice + printingCharges + mountingCharges;
   const gstAmount = calculateGST(subtotal, gstPercent);
   const totalWithGst = subtotal + gstAmount;
   
   return {
+    proRataPrice: Math.round(proRataPrice * 100) / 100,
     subtotal: Math.round(subtotal * 100) / 100,
     gstAmount: Math.round(gstAmount * 100) / 100,
     totalWithGst: Math.round(totalWithGst * 100) / 100,

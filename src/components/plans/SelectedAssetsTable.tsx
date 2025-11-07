@@ -21,6 +21,7 @@ import { Trash2, Sparkles, Loader2 } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { calculateProRata } from "@/utils/plans";
 import {
   Tooltip,
   TooltipContent,
@@ -123,13 +124,11 @@ export function SelectedAssetsTable({
           ) : (
             assets.map((asset) => {
               const pricing = assetPricing[asset.id] || {};
-              const monthlyRate = asset.card_rate || 0; // Monthly rate from media asset
+              const monthlyRate = asset.card_rate || 0; // Base monthly rate from media asset
               
-              // Calculate prorata based on days (Monthly Rate / 30 * Duration Days)
-              // If duration is 30 days or more, use monthly rate, otherwise calculate prorata
-              const prorataRate = durationDays >= 30 
-                ? monthlyRate 
-                : Math.round((monthlyRate / 30) * durationDays);
+              // Calculate pro-rata rate: (monthly_rate / 30) × number_of_days
+              // Works for any duration: 10 days, 30 days, 45 days, etc.
+              const prorataRate = calculateProRata(monthlyRate, durationDays);
               const salesPrice = pricing.sales_price || prorataRate;
               
               const discountType = pricing.discount_type || 'Percent';

@@ -142,6 +142,13 @@ export async function exportPlanToPPT(
   try {
     const pptx = new pptxgen();
     
+    // Fetch client details
+    const { data: clientData } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('id', plan.client_id)
+      .single();
+    
     // Fetch asset details
     const assetIds = planItems.map(item => item.asset_id);
     const assetDetailsMap = await fetchAssetDetails(assetIds);
@@ -202,6 +209,9 @@ export async function exportPlanToPPT(
     const summaryData = [
       [{ text: "Plan ID" }, { text: plan.id }],
       [{ text: "Client" }, { text: plan.client_name }],
+      [{ text: "GSTIN" }, { text: clientData?.gst_number || "N/A" }],
+      [{ text: "Address" }, { text: clientData?.billing_address_line1 || clientData?.address || "N/A" }],
+      [{ text: "City, State" }, { text: `${clientData?.billing_city || clientData?.city || ""}, ${clientData?.billing_state || clientData?.state || ""}` }],
       [{ text: "Duration" }, { text: `${plan.duration_days} days` }],
       [{ text: "Start Date" }, { text: new Date(plan.start_date).toLocaleDateString() }],
       [{ text: "End Date" }, { text: new Date(plan.end_date).toLocaleDateString() }],
@@ -364,6 +374,13 @@ export async function exportPlanToExcel(
   uploadToCloud: boolean = false
 ) {
   try {
+    // Fetch client details
+    const { data: clientData } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('id', plan.client_id)
+      .single();
+    
     const workbook = XLSX.utils.book_new();
 
     // Plan Summary sheet
@@ -372,6 +389,14 @@ export async function exportPlanToExcel(
       ["Plan ID", plan.id],
       ["Plan Name", plan.plan_name],
       ["Client", plan.client_name],
+      ["GSTIN", clientData?.gst_number || "N/A"],
+      ["Billing Address", clientData?.billing_address_line1 || clientData?.address || "N/A"],
+      ["City", clientData?.billing_city || clientData?.city || "N/A"],
+      ["State", clientData?.billing_state || clientData?.state || "N/A"],
+      ["Pincode", clientData?.billing_pincode || "N/A"],
+      ["Contact Person", clientData?.contact_person || "N/A"],
+      ["Phone", clientData?.phone || "N/A"],
+      ["Email", clientData?.email || "N/A"],
       ["Start Date", new Date(plan.start_date).toLocaleDateString()],
       ["End Date", new Date(plan.end_date).toLocaleDateString()],
       ["Duration", `${plan.duration_days} days`],
@@ -441,6 +466,13 @@ export async function exportPlanToPDF(
   uploadToCloud: boolean = false
 ) {
   try {
+    // Fetch client details
+    const { data: clientData } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('id', plan.client_id)
+      .single();
+    
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     let yPos = 20;
@@ -459,16 +491,38 @@ export async function exportPlanToPDF(
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text(orgSettings?.organization_name || "Go-Ads 360°", 14, yPos);
-    yPos += 15;
+    yPos += 5;
+    if (orgSettings?.gstin) {
+      doc.text(`GSTIN: ${orgSettings.gstin}`, 14, yPos);
+      yPos += 5;
+    }
+    yPos += 10;
 
     // Client details
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text("To,", 14, yPos);
+    doc.text("Bill To:", 14, yPos);
     yPos += 7;
     doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
     doc.text(plan.client_name, 14, yPos);
-    yPos += 10;
+    yPos += 5;
+    if (clientData?.gst_number) {
+      doc.text(`GSTIN: ${clientData.gst_number}`, 14, yPos);
+      yPos += 5;
+    }
+    if (clientData?.billing_address_line1 || clientData?.address) {
+      const address = clientData?.billing_address_line1 || clientData?.address;
+      const addressLines = doc.splitTextToSize(address, 80);
+      doc.text(addressLines, 14, yPos);
+      yPos += addressLines.length * 5;
+    }
+    if (clientData?.billing_city || clientData?.city) {
+      const cityState = `${clientData?.billing_city || clientData?.city || ""}, ${clientData?.billing_state || clientData?.state || ""} ${clientData?.billing_pincode || ""}`;
+      doc.text(cityState, 14, yPos);
+      yPos += 5;
+    }
+    yPos += 5;
 
     // Plan details
     doc.text(`Display Name: ${plan.plan_name}`, 120, yPos - 17);

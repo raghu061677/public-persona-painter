@@ -335,7 +335,7 @@ export default function PlanDetail() {
         .limit(1)
         .single();
 
-      await exportPlanToPPT(plan, planItems, orgSettings, uploadToCloud);
+      const result = await exportPlanToPPT(plan, planItems, orgSettings, uploadToCloud);
       
       toast({
         title: "Success",
@@ -344,13 +344,14 @@ export default function PlanDetail() {
           : "Plan exported to PowerPoint",
       });
       
-      if (uploadToCloud) {
+      if (uploadToCloud && result) {
         fetchPlan();
       }
     } catch (error: any) {
+      console.error("PPT Export Error:", error);
       toast({
         title: "Error",
-        description: "Failed to export PPT",
+        description: error.message || "Failed to export PPT",
         variant: "destructive",
       });
     } finally {
@@ -361,7 +362,7 @@ export default function PlanDetail() {
   const handleExportExcel = async (uploadToCloud = false) => {
     setExportingExcel(true);
     try {
-      await exportPlanToExcel(plan, planItems, uploadToCloud);
+      const result = await exportPlanToExcel(plan, planItems, uploadToCloud);
       toast({
         title: "Success",
         description: uploadToCloud
@@ -369,13 +370,14 @@ export default function PlanDetail() {
           : "Plan exported to Excel",
       });
       
-      if (uploadToCloud) {
+      if (uploadToCloud && result) {
         fetchPlan();
       }
     } catch (error: any) {
+      console.error("Excel Export Error:", error);
       toast({
         title: "Error",
-        description: "Failed to export Excel",
+        description: error.message || "Failed to export Excel",
         variant: "destructive",
       });
     } finally {
@@ -648,17 +650,26 @@ export default function PlanDetail() {
                   Public Link
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setShowExportDialog(true)}>
+                <DropdownMenuItem onClick={() => handleExportPPT(false)} disabled={exportingPPT}>
                   <Download className="mr-2 h-4 w-4" />
-                  Download PPTx
+                  {exportingPPT ? "Exporting..." : "Download PPT"}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExportExcel(false)}>
+                <DropdownMenuItem onClick={() => handleExportExcel(false)} disabled={exportingExcel}>
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Download Excel
+                  {exportingExcel ? "Exporting..." : "Download Excel"}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setShowTermsDialog(true)}>
                   <FileText className="mr-2 h-4 w-4" />
-                  Quotation, PI, WO
+                  Download PDF
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleExportPPT(true)} disabled={exportingPPT}>
+                  <Save className="mr-2 h-4 w-4" />
+                  Upload PPT to Cloud
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExportExcel(true)} disabled={exportingExcel}>
+                  <Save className="mr-2 h-4 w-4" />
+                  Upload Excel to Cloud
                 </DropdownMenuItem>
                 {isAdmin && (
                   <>
@@ -719,6 +730,59 @@ export default function PlanDetail() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Export Links Section */}
+        {plan.export_links && (plan.export_links.ppt_url || plan.export_links.excel_url || plan.export_links.pdf_url) && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Saved Exports</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {plan.export_links.ppt_url && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(plan.export_links.ppt_url, '_blank')}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Open PPT
+                  </Button>
+                )}
+                {plan.export_links.excel_url && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(plan.export_links.excel_url, '_blank')}
+                  >
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Open Excel
+                  </Button>
+                )}
+                {plan.export_links.pdf_url && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(plan.export_links.pdf_url, '_blank')}
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Open PDF
+                  </Button>
+                )}
+                {plan.share_link_active && plan.share_token && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`${window.location.origin}/share/plan/${plan.id}/${plan.share_token}`, '_blank')}
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Open Public Link
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           {/* Client Info */}

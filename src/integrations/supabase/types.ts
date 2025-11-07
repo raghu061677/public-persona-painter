@@ -53,6 +53,39 @@ export type Database = {
         }
         Relationships: []
       }
+      approval_settings: {
+        Row: {
+          approval_levels: Json
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          max_amount: number | null
+          min_amount: number
+          plan_type: Database["public"]["Enums"]["plan_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          approval_levels?: Json
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_amount?: number | null
+          min_amount?: number
+          plan_type: Database["public"]["Enums"]["plan_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          approval_levels?: Json
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_amount?: number | null
+          min_amount?: number
+          plan_type?: Database["public"]["Enums"]["plan_type"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       asset_expenses: {
         Row: {
           amount: number
@@ -1095,6 +1128,53 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_approvals: {
+        Row: {
+          approval_level: Database["public"]["Enums"]["approval_level"]
+          approved_at: string | null
+          approver_id: string | null
+          comments: string | null
+          created_at: string | null
+          id: string
+          plan_id: string
+          required_role: Database["public"]["Enums"]["app_role"]
+          status: Database["public"]["Enums"]["approval_status"]
+          updated_at: string | null
+        }
+        Insert: {
+          approval_level: Database["public"]["Enums"]["approval_level"]
+          approved_at?: string | null
+          approver_id?: string | null
+          comments?: string | null
+          created_at?: string | null
+          id?: string
+          plan_id: string
+          required_role: Database["public"]["Enums"]["app_role"]
+          status?: Database["public"]["Enums"]["approval_status"]
+          updated_at?: string | null
+        }
+        Update: {
+          approval_level?: Database["public"]["Enums"]["approval_level"]
+          approved_at?: string | null
+          approver_id?: string | null
+          comments?: string | null
+          created_at?: string | null
+          id?: string
+          plan_id?: string
+          required_role?: Database["public"]["Enums"]["app_role"]
+          status?: Database["public"]["Enums"]["approval_status"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_approvals_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_items: {
         Row: {
           area: string
@@ -1314,6 +1394,36 @@ export type Database = {
         }
         Relationships: []
       }
+      reminder_settings: {
+        Row: {
+          created_at: string | null
+          days_before: number
+          email_template: string | null
+          id: string
+          is_active: boolean | null
+          reminder_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          days_before: number
+          email_template?: string | null
+          id?: string
+          is_active?: boolean | null
+          reminder_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          days_before?: number
+          email_template?: string | null
+          id?: string
+          is_active?: boolean | null
+          reminder_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -1416,6 +1526,10 @@ export type Database = {
       }
     }
     Functions: {
+      create_plan_approval_workflow: {
+        Args: { p_plan_id: string }
+        Returns: undefined
+      }
       generate_campaign_id: { Args: never; Returns: string }
       generate_estimation_id: { Args: never; Returns: string }
       generate_expense_id: { Args: never; Returns: string }
@@ -1438,9 +1552,19 @@ export type Database = {
         }
         Returns: boolean
       }
+      process_plan_approval: {
+        Args: {
+          p_approval_id: string
+          p_comments?: string
+          p_status: Database["public"]["Enums"]["approval_status"]
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "sales" | "finance" | "operations"
+      approval_level: "L1" | "L2" | "L3"
+      approval_status: "pending" | "approved" | "rejected"
       asset_installation_status:
         | "Pending"
         | "Assigned"
@@ -1606,6 +1730,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user", "sales", "finance", "operations"],
+      approval_level: ["L1", "L2", "L3"],
+      approval_status: ["pending", "approved", "rejected"],
       asset_installation_status: [
         "Pending",
         "Assigned",

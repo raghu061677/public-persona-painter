@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Share2, Trash2, Copy, Rocket, MoreVertical, Ban, Activity, ExternalLink, Download, FileText, Plus, X, FileSpreadsheet, FileImage, Save, Wand2, Edit } from "lucide-react";
+import { ArrowLeft, Share2, Trash2, Copy, Rocket, MoreVertical, Ban, Activity, ExternalLink, Download, FileText, Plus, X, FileSpreadsheet, FileImage, Save, Wand2, Edit, CheckCircle2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,6 +41,7 @@ import { TermsConditionsDialog, TermsData } from "@/components/plans/TermsCondit
 import { BulkPrintingMountingDialog } from "@/components/plans/BulkPrintingMountingDialog";
 import { AddAssetsDialog } from "@/components/plans/AddAssetsDialog";
 import { SaveAsTemplateDialog } from "@/components/plans/SaveAsTemplateDialog";
+import { ApprovalWorkflowDialog } from "@/components/plans/ApprovalWorkflowDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function PlanDetail() {
@@ -49,6 +50,8 @@ export default function PlanDetail() {
   const [plan, setPlan] = useState<any>(null);
   const [planItems, setPlanItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showConvertDialog, setShowConvertDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -67,10 +70,24 @@ export default function PlanDetail() {
     notes: "",
   });
 
+  const loadPendingApprovals = async () => {
+    if (!id) return;
+    const { data, error } = await supabase
+      .from("plan_approvals")
+      .select("*", { count: "exact" })
+      .eq("plan_id", id)
+      .eq("status", "pending");
+
+    if (!error && data) {
+      setPendingApprovalsCount(data.length);
+    }
+  };
+
   useEffect(() => {
     checkAdminStatus();
     fetchPlan();
     fetchPlanItems();
+    loadPendingApprovals();
   }, [id]);
 
   const checkAdminStatus = async () => {
@@ -502,6 +519,17 @@ export default function PlanDetail() {
           
           {/* Action Buttons - Visible */}
           <div className="flex gap-2 flex-wrap">
+            {pendingApprovalsCount > 0 && (
+              <Button
+                onClick={() => setShowApprovalDialog(true)}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Pending Approvals ({pendingApprovalsCount})
+              </Button>
+            )}
+
             {isAdmin && (
               <Button 
                 variant="outline" 
@@ -841,6 +869,17 @@ export default function PlanDetail() {
           gstPercent={plan.gst_percent}
           notes={plan.notes}
           planItems={planItems}
+        />
+
+        <ApprovalWorkflowDialog
+          open={showApprovalDialog}
+          onOpenChange={setShowApprovalDialog}
+          planId={id!}
+          planName={plan?.plan_name || ""}
+          onApprovalComplete={() => {
+            fetchPlan();
+            loadPendingApprovals();
+          }}
         />
       </div>
     </div>

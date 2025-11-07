@@ -12,14 +12,25 @@ import { Upload, FileSpreadsheet } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
+import { ImportPreviewDialog } from "./ImportPreviewDialog";
 
 interface ImportClientsDialogProps {
   onImportComplete: () => void;
 }
 
+interface PreviewRecord {
+  row: number;
+  data: any;
+  status: 'valid' | 'warning' | 'error';
+  issues: string[];
+}
+
 export function ImportClientsDialog({ onImportComplete }: ImportClientsDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewRecords, setPreviewRecords] = useState<PreviewRecord[]>([]);
+  const [fileName, setFileName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const generateClientId = (state: string, existingCount: number): string => {
@@ -28,11 +39,60 @@ export function ImportClientsDialog({ onImportComplete }: ImportClientsDialogPro
     return `${stateCode}-${sequence}`;
   };
 
+  const validateRecord = (row: any, rowNum: number): PreviewRecord => {
+    const issues: string[] = [];
+    let status: 'valid' | 'warning' | 'error' = 'valid';
+
+    const name = row.name || row.Name || row.CLIENT_NAME;
+    const email = row.email || row.Email || row.EMAIL;
+    const state = row.state || row.State || row.STATE || "";
+    const gstNumber = row.gst_number || row.GST || row.GSTIN || null;
+
+    // Required field validation
+    if (!name) {
+      issues.push('Missing name');
+      status = 'error';
+    }
+
+    if (!state) {
+      issues.push('Missing state (needed for ID generation)');
+      status = 'error';
+    }
+
+    // Email validation
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      issues.push('Invalid email format');
+      status = status === 'error' ? 'error' : 'warning';
+    }
+
+    // GST validation
+    if (gstNumber && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstNumber)) {
+      issues.push('Invalid GST format');
+      status = status === 'error' ? 'error' : 'warning';
+    }
+
+    return {
+      row: rowNum,
+      data: {
+        name,
+        email,
+        phone: row.phone || row.Phone || row.PHONE || null,
+        company: row.company || row.Company || row.COMPANY || null,
+        gst_number: gstNumber,
+        address: row.address || row.Address || row.ADDRESS || null,
+        city: row.city || row.City || row.CITY || null,
+        state,
+        contact_person: row.contact_person || row['Contact Person'] || row.CONTACT_PERSON || null,
+        notes: row.notes || row.Notes || row.NOTES || null,
+      },
+      status,
+      issues,
+    };
+  };
+
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
-    setIsImporting(true);
 
     try {
       const data = await file.arrayBuffer();
@@ -41,26 +101,45 @@ export function ImportClientsDialog({ onImportComplete }: ImportClientsDialogPro
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-      let successCount = 0;
-      let errorCount = 0;
-      let skippedCount = 0;
-      const errorDetails: string[] = [];
-      const skippedDetails: string[] = [];
+      // Validate all records
+      const validated = jsonData.map((row: any, index: number) => 
+        validateRecord(row, index + 2) // +2 for Excel row (header is row 1)
+      );
 
-      console.log(`Starting import of ${jsonData.length} rows...`);
+      setPreviewRecords(validated);
+      setFileName(file.name);
+      setShowPreview(true);
+    } catch (error) {
+      console.error('Parse error:', error);
+      toast({
+        title: "Parse Failed",
+        description: "Failed to parse the file. Please check the format.",
+        variant: "destructive",
+      });
+    }
+  };
 
-      for (const row of jsonData as any[]) {
-        const rowNum = jsonData.indexOf(row) + 1;
+  const handleConfirmImport = async () => {
+    setIsImporting(true);
+    
+    // Filter only valid records
+    const validRecords = previewRecords.filter(r => r.status === 'valid');
+    
+    let successCount = 0;
+    let errorCount = 0;
+    let skippedCount = 0;
+    const errorDetails: string[] = [];
+    const skippedDetails: string[] = [];
+
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+
+      console.log(`Starting import of ${validRecords.length} valid rows...`);
+
+      for (const record of validRecords) {
         try {
-          const name = row.name || row.Name || row.CLIENT_NAME;
-          const email = row.email || row.Email || row.EMAIL;
-          const state = row.state || row.State || row.STATE || "";
-          
-          if (!name) {
-            errorDetails.push(`Row ${rowNum}: Missing client name`);
-            errorCount++;
-            continue;
-          }
+          const { name, email, state, gst_number } = record.data;
 
           // Check for duplicate by email or GST number
           let isDuplicate = false;
@@ -74,24 +153,23 @@ export function ImportClientsDialog({ onImportComplete }: ImportClientsDialogPro
 
             if (existingByEmail) {
               skippedDetails.push(`${name} (duplicate email: ${email})`);
-              console.log(`Row ${rowNum}: Skipped - Duplicate email (${email})`);
+              console.log(`Row ${record.row}: Skipped - Duplicate email (${email})`);
               skippedCount++;
               isDuplicate = true;
               continue;
             }
           }
 
-          const gstNumber = row.gst_number || row.GST || row.GSTIN || null;
-          if (gstNumber) {
+          if (gst_number) {
             const { data: existingByGST } = await supabase
               .from('clients')
               .select('id, name, gst_number')
-              .eq('gst_number', gstNumber)
+              .eq('gst_number', gst_number)
               .maybeSingle();
 
             if (existingByGST) {
-              skippedDetails.push(`${name} (duplicate GST: ${gstNumber})`);
-              console.log(`Row ${rowNum}: Skipped - Duplicate GST (${gstNumber})`);
+              skippedDetails.push(`${name} (duplicate GST: ${gst_number})`);
+              console.log(`Row ${record.row}: Skipped - Duplicate GST (${gst_number})`);
               skippedCount++;
               isDuplicate = true;
               continue;
@@ -110,22 +188,7 @@ export function ImportClientsDialog({ onImportComplete }: ImportClientsDialogPro
 
           const client = {
             id: clientId,
-            name,
-            email: email || null,
-            phone: row.phone || row.Phone || row.PHONE || null,
-            company: row.company || row.Company || row.COMPANY || null,
-            gst_number: gstNumber,
-            address: row.address || row.Address || row.ADDRESS || null,
-            city: row.city || row.City || row.CITY || null,
-            state,
-            contact_person: row.contact_person || row['Contact Person'] || row.CONTACT_PERSON || null,
-            notes: row.notes || row.Notes || row.NOTES || null,
-            billing_address_line1: row.billing_address_line1 || row['Billing Address Line 1'] || null,
-            billing_address_line2: row.billing_address_line2 || row['Billing Address Line 2'] || null,
-            billing_city: row.billing_city || row['Billing City'] || null,
-            billing_state: row.billing_state || row['Billing State'] || null,
-            billing_pincode: row.billing_pincode || row['Billing Pincode'] || null,
-            shipping_same_as_billing: row.shipping_same_as_billing === true || row.shipping_same_as_billing === 'true' || row.shipping_same_as_billing === 'TRUE' || false,
+            ...record.data,
           };
 
           // Remove null/undefined values
@@ -140,28 +203,35 @@ export function ImportClientsDialog({ onImportComplete }: ImportClientsDialogPro
             .insert(client);
 
           if (error) {
-            errorDetails.push(`Row ${rowNum} (${name}): ${error.message}`);
-            console.error(`Row ${rowNum}: Failed - ${error.message}`, client);
+            errorDetails.push(`Row ${record.row} (${name}): ${error.message}`);
+            console.error(`Row ${record.row}: Failed - ${error.message}`, client);
             errorCount++;
           } else {
-            console.log(`Row ${rowNum}: Successfully imported (ID: ${clientId}, Name: ${name})`);
+            console.log(`Row ${record.row}: Successfully imported (ID: ${clientId}, Name: ${name})`);
             successCount++;
           }
         } catch (err: any) {
-          errorDetails.push(`Row ${rowNum}: ${err.message}`);
-          console.error(`Row ${rowNum}: Error - ${err.message}`, row);
+          errorDetails.push(`Row ${record.row}: ${err.message}`);
+          console.error(`Row ${record.row}: Error - ${err.message}`, record);
           errorCount++;
         }
       }
 
-      console.log('Import Summary:', { successCount, skippedCount, errorCount });
-      if (errorDetails.length > 0) {
-        console.error('Failed imports:', errorDetails);
-      }
-      if (skippedDetails.length > 0) {
-        console.log('Skipped clients:', skippedDetails);
-      }
+      // Log import to database
+      await supabase.from('import_logs').insert({
+        entity_type: 'clients',
+        imported_by: user?.id,
+        file_name: fileName,
+        total_records: previewRecords.length,
+        success_count: successCount,
+        skipped_count: skippedCount,
+        error_count: errorCount,
+        errors: errorDetails,
+        skipped_records: skippedDetails,
+      });
 
+      console.log('Import Summary:', { successCount, skippedCount, errorCount });
+      
       const totalProcessed = successCount + skippedCount + errorCount;
       
       toast({
@@ -172,7 +242,7 @@ export function ImportClientsDialog({ onImportComplete }: ImportClientsDialogPro
             {skippedCount > 0 && <p>⏭️ Skipped: {skippedCount} (already exist)</p>}
             {errorCount > 0 && <p>❌ Failed: {errorCount}</p>}
             <p className="text-xs text-muted-foreground mt-2">
-              Processed {totalProcessed} of {jsonData.length} rows
+              Processed {totalProcessed} of {previewRecords.length} rows
             </p>
             {errorCount > 0 && (
               <p className="text-xs text-destructive mt-1">
@@ -184,13 +254,14 @@ export function ImportClientsDialog({ onImportComplete }: ImportClientsDialogPro
         variant: errorCount > 0 ? "destructive" : "default",
       });
 
+      setShowPreview(false);
       setIsOpen(false);
       onImportComplete();
     } catch (error) {
       console.error('Import error:', error);
       toast({
         title: "Import Failed",
-        description: "Failed to parse the file. Please check the format.",
+        description: "An error occurred during import. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -202,52 +273,62 @@ export function ImportClientsDialog({ onImportComplete }: ImportClientsDialogPro
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="default" className="gap-2">
-          <Upload className="h-4 w-4" />
-          Import
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">Import Clients</DialogTitle>
-          <DialogDescription className="text-base">
-            Upload an Excel file (.xlsx) with your client data
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-8 text-center hover:border-primary/50 hover:bg-muted/20 transition-all duration-200">
-            <FileSpreadsheet className="h-16 w-16 mx-auto mb-4 text-primary/60" />
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleFileChange}
-              className="hidden"
-              id="client-file-upload"
-            />
-            <label htmlFor="client-file-upload" className="cursor-pointer">
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                disabled={isImporting}
-                onClick={() => fileInputRef.current?.click()}
-                className="mb-3"
-              >
-                {isImporting ? "Importing..." : "Choose Excel File"}
-              </Button>
-            </label>
-            <p className="text-sm text-muted-foreground">
-              Supports .xlsx and .xls formats
-            </p>
-            <p className="text-xs text-muted-foreground mt-2">
-              Existing records will be skipped automatically
-            </p>
+    <>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="default" className="gap-2">
+            <Upload className="h-4 w-4" />
+            Import
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Import Clients</DialogTitle>
+            <DialogDescription className="text-base">
+              Upload an Excel file (.xlsx) with your client data
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-8 text-center hover:border-primary/50 hover:bg-muted/20 transition-all duration-200">
+              <FileSpreadsheet className="h-16 w-16 mx-auto mb-4 text-primary/60" />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileChange}
+                className="hidden"
+                id="client-file-upload"
+              />
+              <label htmlFor="client-file-upload" className="cursor-pointer">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  disabled={isImporting}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="mb-3"
+                >
+                  Choose Excel File
+                </Button>
+              </label>
+              <p className="text-sm text-muted-foreground">
+                Supports .xlsx and .xls formats
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Records will be validated before import
+              </p>
+            </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      <ImportPreviewDialog
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        records={previewRecords}
+        onConfirm={handleConfirmImport}
+        isImporting={isImporting}
+      />
+    </>
   );
 }

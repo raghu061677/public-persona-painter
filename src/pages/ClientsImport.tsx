@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Download } from "lucide-react";
 import { ImportClientsDialog } from "@/components/clients/ImportClientsDialog";
+import { ImportHistoryDialog } from "@/components/clients/ImportHistoryDialog";
 import * as XLSX from "xlsx";
 import { toast } from "@/hooks/use-toast";
 
@@ -174,6 +175,7 @@ export default function ClientsImport() {
               <Download className="h-4 w-4" />
               Download Sample File
             </Button>
+            <ImportHistoryDialog />
             <ImportClientsDialog onImportComplete={handleImportComplete} />
           </div>
         </CardContent>

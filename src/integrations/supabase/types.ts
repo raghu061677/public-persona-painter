@@ -748,6 +748,51 @@ export type Database = {
           },
         ]
       }
+      import_logs: {
+        Row: {
+          created_at: string | null
+          entity_type: string
+          error_count: number
+          errors: Json | null
+          file_name: string
+          id: string
+          imported_by: string | null
+          skipped_count: number
+          skipped_records: Json | null
+          success_count: number
+          total_records: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          entity_type: string
+          error_count?: number
+          errors?: Json | null
+          file_name: string
+          id?: string
+          imported_by?: string | null
+          skipped_count?: number
+          skipped_records?: Json | null
+          success_count?: number
+          total_records?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          entity_type?: string
+          error_count?: number
+          errors?: Json | null
+          file_name?: string
+          id?: string
+          imported_by?: string | null
+          skipped_count?: number
+          skipped_records?: Json | null
+          success_count?: number
+          total_records?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           balance_due: number

@@ -15,6 +15,7 @@ import MediaAssetDetail from "./pages/MediaAssetDetail";
 import MediaAssetEdit from "./pages/MediaAssetEdit";
 import MediaAssetsMap from "./pages/MediaAssetsMap";
 import MediaAssetsImport from "./pages/MediaAssetsImport";
+import ClientsImport from "./pages/ClientsImport";
 import ClientsList from "./pages/ClientsList";
 import ClientNew from "./pages/ClientNew";
 import ClientAnalytics from "./pages/ClientAnalytics";
@@ -71,6 +72,7 @@ const App = () => (
             <Route path="/admin/media-assets" element={<AppLayout><MediaAssetsList /></AppLayout>} />
             <Route path="/admin/media-assets/new" element={<AppLayout><MediaAssetNew /></AppLayout>} />
             <Route path="/admin/media-assets/import" element={<AppLayout><MediaAssetsImport /></AppLayout>} />
+            <Route path="/admin/clients/import" element={<AppLayout><ClientsImport /></AppLayout>} />
             <Route path="/admin/media-assets/edit/:id" element={<AppLayout><MediaAssetEdit /></AppLayout>} />
             <Route path="/admin/media-assets/:id" element={<AppLayout><MediaAssetDetail /></AppLayout>} />
             <Route path="/admin/media-assets-map" element={<AppLayout><MediaAssetsMap /></AppLayout>} />

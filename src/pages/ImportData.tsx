@@ -46,17 +46,16 @@ export default function ImportData() {
               Import Clients
             </CardTitle>
             <CardDescription>
-              Upload a list of clients. Required fields: name, email, phone, company.
-              Coming soon.
+              Upload a list of clients. The system will auto-generate IDs in format STATE-XXXX.
+              Required fields: name, state.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button 
-              disabled
-              variant="outline"
+              onClick={() => navigate('/admin/clients/import')}
               className="w-full"
             >
-              Coming Soon
+              Go to Clients Import
             </Button>
           </CardContent>
         </Card>

@@ -518,7 +518,7 @@ export default function PlanDetail() {
           </div>
           
           {/* Action Buttons */}
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-start">
             {pendingApprovalsCount > 0 && (
               <Button
                 onClick={() => setShowApprovalDialog(true)}
@@ -541,60 +541,67 @@ export default function PlanDetail() {
               </Button>
             )}
             
-            {/* Actions Dropdown */}
-            {isAdmin && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" variant="outline">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleBlock} className="text-orange-600">
-                    <Ban className="mr-2 h-4 w-4" />
-                    Block
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleCopyId}>
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={generateShareLink}>
-                    <Share2 className="mr-2 h-4 w-4" />
-                    Share
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate(`/admin/audit-logs?entity_type=plan&entity_id=${id}`)}>
-                    <Activity className="mr-2 h-4 w-4" />
-                    Activity
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={generateShareLink}>
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    Public Link
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setShowExportDialog(true)}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download PPTx
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleExportExcel}>
-                    <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Download Excel
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowTermsDialog(true)}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    Quotation, PI, WO
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate(`/admin/plans/edit/${id}`)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit Plan
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+            {/* Actions Dropdown - Always Visible */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-popover z-50">
+                {isAdmin && (
+                  <>
+                    <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleBlock} className="text-orange-600">
+                      <Ban className="mr-2 h-4 w-4" />
+                      Block
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuItem onClick={handleCopyId}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={generateShareLink}>
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Share
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate(`/admin/audit-logs?entity_type=plan&entity_id=${id}`)}>
+                  <Activity className="mr-2 h-4 w-4" />
+                  Activity
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={generateShareLink}>
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Public Link
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setShowExportDialog(true)}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download PPTx
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Download Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowTermsDialog(true)}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Quotation, PI, WO
+                </DropdownMenuItem>
+                {isAdmin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate(`/admin/plans/edit/${id}`)}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit Plan
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 

@@ -33,6 +33,7 @@ import {
 import { formatCurrency } from "@/utils/mediaAssets";
 import { getPlanStatusColor, formatDate } from "@/utils/plans";
 import { generateCampaignCode } from "@/lib/codeGenerator";
+import { calcProRata, calcDiscount, calcProfit } from "@/utils/pricing";
 import { toast } from "@/hooks/use-toast";
 import { exportPlanToPPT, exportPlanToExcel, exportPlanToPDF } from "@/utils/planExports";
 import { ExportOptionsDialog, ExportOptions } from "@/components/plans/ExportOptionsDialog";
@@ -892,43 +893,61 @@ export default function PlanDetail() {
                   <TableHead>Asset ID</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>City</TableHead>
-                  <TableHead className="text-right">Sales Price</TableHead>
+                  <TableHead className="text-right">Card Rate</TableHead>
+                  <TableHead className="text-right">Negotiated</TableHead>
+                  <TableHead className="text-right">Pro-Rata</TableHead>
+                  <TableHead className="text-right">Discount</TableHead>
+                  <TableHead className="text-right">Profit</TableHead>
                   <TableHead className="text-right">Printing</TableHead>
                   <TableHead className="text-right">Mounting</TableHead>
                   <TableHead className="text-right">Total + GST</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {planItems.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedItems.has(item.asset_id)}
-                        onCheckedChange={() => toggleItemSelection(item.asset_id)}
-                      />
-                    </TableCell>
-                    {isAdmin && (
+                {planItems.map((item) => {
+                  const proRata = calcProRata(item.sales_price, plan.duration_days);
+                  const discount = calcDiscount(item.card_rate, item.sales_price);
+                  const profit = calcProfit(item.base_rent || 0, item.sales_price);
+                  
+                  return (
+                    <TableRow key={item.id}>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveAsset(item.id, item.asset_id)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                        <Checkbox
+                          checked={selectedItems.has(item.asset_id)}
+                          onCheckedChange={() => toggleItemSelection(item.asset_id)}
+                        />
                       </TableCell>
-                    )}
-                    <TableCell className="font-medium">{item.asset_id}</TableCell>
-                    <TableCell>{item.location}</TableCell>
-                    <TableCell>{item.city}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(item.sales_price)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(item.printing_charges)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(item.mounting_charges)}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(item.total_with_gst)}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      {isAdmin && (
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveAsset(item.id, item.asset_id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
+                      <TableCell className="font-medium">{item.asset_id}</TableCell>
+                      <TableCell>{item.location}</TableCell>
+                      <TableCell>{item.city}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.card_rate)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.sales_price)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(proRata)}</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(discount.value)} ({discount.percent.toFixed(2)}%)
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(profit.value)} ({profit.percent.toFixed(2)}%)
+                      </TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.printing_charges)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.mounting_charges)}</TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatCurrency(item.total_with_gst)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>

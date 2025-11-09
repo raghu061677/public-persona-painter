@@ -269,7 +269,20 @@ export function SelectedAssetsTable({
                     });
                     return;
                   }
+                  
+                  // Update negotiated price and recalculate all dependent values
                   onPricingUpdate(asset.id, 'negotiated_price', numValue);
+                  
+                  // Recalculate pro-rata, discount, and profit
+                  const newProRata = calcProRata(numValue, durationDays);
+                  const newDiscount = calcDiscount(cardRate, numValue);
+                  const newProfit = calcProfit(baseRate, numValue);
+                  
+                  onPricingUpdate(asset.id, 'pro_rata', newProRata);
+                  onPricingUpdate(asset.id, 'discount_value', newDiscount.value);
+                  onPricingUpdate(asset.id, 'discount_percent', newDiscount.percent);
+                  onPricingUpdate(asset.id, 'profit_value', newProfit.value);
+                  onPricingUpdate(asset.id, 'profit_percent', newProfit.percent);
                 };
 
                 return (

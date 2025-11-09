@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { AssetSelectionTable } from "@/components/plans/AssetSelectionTable";
 import { SelectedAssetsTable } from "@/components/plans/SelectedAssetsTable";
 import { PlanSummaryCard } from "@/components/plans/PlanSummaryCard";
+import { calcProRata, calcDiscount, calcProfit } from "@/utils/pricing";
 
 export default function PlanEdit() {
   const { id } = useParams();
@@ -140,19 +141,27 @@ export default function PlanEdit() {
       setAssetPricing(newPricing);
     } else {
       newSelected.add(assetId);
-      // Calculate pro-rata: (monthly_rate / 30) × number_of_days
-      const monthlyRate = asset.card_rate || 0;
+      // Default negotiated price to card_rate
+      const cardRate = asset.card_rate || 0;
+      const baseRate = asset.base_rent || 0;
       const days = calculateDurationDays(new Date(formData.start_date), new Date(formData.end_date));
-      const prorataRate = calculateProRata(monthlyRate, days);
+      
+      // Calculate initial values
+      const proRata = calcProRata(cardRate, days);
+      const discount = calcDiscount(cardRate, cardRate);
+      const profit = calcProfit(baseRate, cardRate);
       
       setAssetPricing(prev => ({
         ...prev,
         [assetId]: {
-          sales_price: prorataRate,
+          negotiated_price: cardRate,
+          pro_rata: proRata,
+          discount_value: discount.value,
+          discount_percent: discount.percent,
+          profit_value: profit.value,
+          profit_percent: profit.percent,
           printing_charges: asset.printing_charges || 0,
           mounting_charges: asset.mounting_charges || 0,
-          discount_type: 'Percent',
-          discount_value: 0,
         }
       }));
     }

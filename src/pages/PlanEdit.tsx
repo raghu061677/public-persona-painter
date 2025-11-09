@@ -92,11 +92,11 @@ export default function PlanEdit() {
         const pricing: Record<string, any> = {};
         items.forEach(item => {
           pricing[item.asset_id] = {
-            sales_price: item.sales_price,
+            negotiated_price: item.sales_price,
             printing_charges: item.printing_charges || 0,
             mounting_charges: item.mounting_charges || 0,
-            discount_type: item.discount_type || 'Percent',
             discount_value: item.discount_value || 0,
+            discount_amount: item.discount_amount || 0,
           };
         });
         setAssetPricing(pricing);
@@ -192,35 +192,41 @@ export default function PlanEdit() {
     let totalDiscount = 0;
     let totalBaseRent = 0;
 
+    const days = calculateDurationDays(new Date(formData.start_date), new Date(formData.end_date));
+
     selectedAssets.forEach(assetId => {
       const pricing = assetPricing[assetId];
       const asset = availableAssets.find(a => a.id === assetId);
       
       if (pricing && asset) {
-        const salesPrice = pricing.sales_price || 0;
-        const discountType = pricing.discount_type || 'Percent';
-        const discountValue = pricing.discount_value || 0;
+        const cardRate = asset.card_rate || 0;
+        const negotiatedPrice = pricing.negotiated_price || cardRate;
+        const printing = pricing.printing_charges || 0;
+        const mounting = pricing.mounting_charges || 0;
         
-        const discountAmount = discountType === 'Percent'
-          ? (salesPrice * discountValue) / 100
-          : discountValue;
+        // Calculate pro-rata based on negotiated price
+        const proRata = calcProRata(negotiatedPrice, days);
         
-        const netPrice = salesPrice - discountAmount;
+        // Calculate discount: (Card Rate - Negotiated Price) pro-rated
+        const discountMonthly = cardRate - negotiatedPrice;
+        const discountProRata = calcProRata(discountMonthly, days);
         
-        subtotal += salesPrice + (pricing.printing_charges || 0) + (pricing.mounting_charges || 0);
-        totalDiscount += discountAmount;
+        // Subtotal for this asset
+        const assetSubtotal = proRata + printing + mounting;
+        
+        subtotal += assetSubtotal;
+        totalDiscount += discountProRata;
         totalBaseRent += asset.base_rent || 0;
       }
     });
 
-    const netTotal = subtotal - totalDiscount;
-    const gstAmount = (netTotal * parseFloat(formData.gst_percent)) / 100;
-    const grandTotal = netTotal + gstAmount;
+    const gstAmount = (subtotal * parseFloat(formData.gst_percent)) / 100;
+    const grandTotal = subtotal + gstAmount;
 
     return {
       subtotal,
       totalDiscount,
-      netTotal,
+      netTotal: subtotal,
       gstAmount,
       grandTotal,
       totalBaseRent,
@@ -281,18 +287,21 @@ export default function PlanEdit() {
         const asset = availableAssets.find(a => a.id === assetId);
         const pricing = assetPricing[assetId];
         
-        const salesPrice = pricing.sales_price || 0;
-        const discountType = pricing.discount_type || 'Percent';
-        const discountValue = pricing.discount_value || 0;
+        const cardRate = asset.card_rate || 0;
+        const baseRate = asset.base_rent || 0;
+        const negotiatedPrice = pricing.negotiated_price || cardRate;
         const printing = pricing.printing_charges || 0;
         const mounting = pricing.mounting_charges || 0;
         
-        const discountAmount = discountType === 'Percent'
-          ? (salesPrice * discountValue) / 100
-          : discountValue;
+        // Calculate pro-rata
+        const proRata = calcProRata(negotiatedPrice, durationDays);
         
-        const netPrice = salesPrice - discountAmount;
-        const subtotal = netPrice + printing + mounting;
+        // Calculate discount (monthly and pro-rated)
+        const discountMonthly = cardRate - negotiatedPrice;
+        const discountAmount = calcProRata(discountMonthly, durationDays);
+        
+        // Calculate subtotal
+        const subtotal = proRata + printing + mounting;
         const itemGst = (subtotal * parseFloat(formData.gst_percent)) / 100;
         const totalWithGst = subtotal + itemGst;
 
@@ -304,11 +313,11 @@ export default function PlanEdit() {
           area: asset.area,
           media_type: asset.media_type,
           dimensions: asset.dimensions,
-          card_rate: asset.card_rate,
-          base_rent: asset.base_rent,
-          sales_price: salesPrice,
-          discount_type: discountType,
-          discount_value: discountValue,
+          card_rate: cardRate,
+          base_rent: baseRate,
+          sales_price: negotiatedPrice,
+          discount_type: 'Amount',
+          discount_value: discountMonthly,
           discount_amount: discountAmount,
           printing_charges: printing,
           mounting_charges: mounting,

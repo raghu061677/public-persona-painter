@@ -2,11 +2,13 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { PowerBillFetchDialog } from "./PowerBillFetchDialog";
 import { ManualBillDialog } from "./ManualBillDialog";
+import { CreditCard, ExternalLink, Image } from "lucide-react";
 
 interface AssetPowerBillsTabProps {
   assetId: string;
@@ -17,6 +19,7 @@ interface AssetPowerBillsTabProps {
 export function AssetPowerBillsTab({ assetId, asset, isAdmin }: AssetPowerBillsTabProps) {
   const [bills, setBills] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processingPayment, setProcessingPayment] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPowerBills();
@@ -40,6 +43,65 @@ export function AssetPowerBillsTab({ assetId, asset, isAdmin }: AssetPowerBillsT
       setBills(data || []);
     }
     setLoading(false);
+  };
+
+  const handlePayBill = async (bill: any) => {
+    if (!asset?.service_number) {
+      toast({
+        title: "Missing Service Number",
+        description: "Please add service number to the asset first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Open TGSPDCL payment portal in new tab
+    const billMonth = format(new Date(bill.bill_month), 'yyyy-MM');
+    const paymentUrl = `https://www.tssouthernpower.com/CCM/ConsumerLogin.html?serviceNo=${asset.service_number}`;
+    window.open(paymentUrl, '_blank');
+
+    // Start processing
+    setProcessingPayment(bill.id);
+
+    toast({
+      title: "Redirected to Payment Portal",
+      description: "Please complete the payment. Click 'Confirm Payment' when done.",
+    });
+  };
+
+  const handleConfirmPayment = async (bill: any) => {
+    setProcessingPayment(bill.id);
+    
+    try {
+      // Call edge function to capture receipt
+      const { data, error } = await supabase.functions.invoke('capture-bill-receipt', {
+        body: {
+          service_no: asset?.service_number,
+          bill_month: format(new Date(bill.bill_month), 'MMM-yyyy'),
+          amount: bill.bill_amount,
+          bill_id: bill.id,
+          asset_id: assetId,
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Payment Recorded",
+        description: "Receipt has been saved and expense created",
+      });
+
+      // Refresh bills
+      fetchPowerBills();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to record payment",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingPayment(null);
+    }
   };
 
   const getPaymentStatusColor = (status: string) => {
@@ -149,11 +211,49 @@ export function AssetPowerBillsTab({ assetId, asset, isAdmin }: AssetPowerBillsT
                     </div>
                   )}
                 </div>
+                
                 {bill.notes && (
                   <div className="mt-4 p-3 bg-muted rounded-md">
                     <p className="text-sm">{bill.notes}</p>
                   </div>
                 )}
+
+                {/* Payment Actions */}
+                <div className="mt-4 flex gap-2 items-center">
+                  {!bill.paid && isAdmin && (
+                    <>
+                      <Button
+                        onClick={() => handlePayBill(bill)}
+                        className="bg-green-600 hover:bg-green-700"
+                        disabled={processingPayment === bill.id}
+                      >
+                        <CreditCard className="mr-2 h-4 w-4" />
+                        Pay Bill
+                        <ExternalLink className="ml-2 h-3 w-3" />
+                      </Button>
+                      {processingPayment === bill.id && (
+                        <Button
+                          onClick={() => handleConfirmPayment(bill)}
+                          variant="outline"
+                          disabled={processingPayment !== bill.id}
+                        >
+                          Confirm Payment Made
+                        </Button>
+                      )}
+                    </>
+                  )}
+                  
+                  {bill.paid && bill.paid_receipt_url && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(bill.paid_receipt_url, '_blank')}
+                    >
+                      <Image className="mr-2 h-4 w-4" />
+                      View Receipt
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))}

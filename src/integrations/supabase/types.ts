@@ -213,7 +213,9 @@ export type Database = {
           ero: string | null
           id: string
           notes: string | null
+          paid: boolean | null
           paid_amount: number | null
+          paid_receipt_url: string | null
           payment_date: string | null
           payment_status: string | null
           section_name: string | null
@@ -232,7 +234,9 @@ export type Database = {
           ero?: string | null
           id?: string
           notes?: string | null
+          paid?: boolean | null
           paid_amount?: number | null
+          paid_receipt_url?: string | null
           payment_date?: string | null
           payment_status?: string | null
           section_name?: string | null
@@ -251,7 +255,9 @@ export type Database = {
           ero?: string | null
           id?: string
           notes?: string | null
+          paid?: boolean | null
           paid_amount?: number | null
+          paid_receipt_url?: string | null
           payment_date?: string | null
           payment_status?: string | null
           section_name?: string | null
@@ -725,6 +731,8 @@ export type Database = {
       expenses: {
         Row: {
           amount: number
+          bill_id: string | null
+          bill_month: string | null
           campaign_id: string | null
           category: Database["public"]["Enums"]["expense_category"]
           created_at: string | null
@@ -741,6 +749,8 @@ export type Database = {
         }
         Insert: {
           amount: number
+          bill_id?: string | null
+          bill_month?: string | null
           campaign_id?: string | null
           category: Database["public"]["Enums"]["expense_category"]
           created_at?: string | null
@@ -757,6 +767,8 @@ export type Database = {
         }
         Update: {
           amount?: number
+          bill_id?: string | null
+          bill_month?: string | null
           campaign_id?: string | null
           category?: Database["public"]["Enums"]["expense_category"]
           created_at?: string | null
@@ -772,6 +784,13 @@ export type Database = {
           vendor_name?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "expenses_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "asset_power_bills"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "expenses_campaign_id_fkey"
             columns: ["campaign_id"]

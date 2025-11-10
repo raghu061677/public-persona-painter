@@ -253,6 +253,12 @@ export default function MediaAssetEdit() {
           vendor_details: formData.ownership === 'rented' ? formData.vendor_details : null,
           images: images,
           search_tokens,
+          // Power details
+          consumer_name: formData.consumer_name || null,
+          service_number: formData.service_number || null,
+          unique_service_number: formData.unique_service_number || null,
+          ero: formData.ero || null,
+          section_name: formData.section_name || null,
         })
         .eq('id', id);
 

@@ -20,18 +20,19 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch all media assets with service numbers
+    // Fetch all media assets with unique service numbers and illumination
     const { data: assets, error: assetsError } = await supabase
       .from('media_assets')
-      .select('id, service_number, location, area, city')
-      .not('service_number', 'is', null);
+      .select('id, unique_service_number, service_number, location, area, city, illumination')
+      .not('unique_service_number', 'is', null)
+      .eq('illumination', 'Yes');
 
     if (assetsError) {
       console.error('Error fetching assets:', assetsError);
       throw assetsError;
     }
 
-    console.log(`Found ${assets?.length || 0} assets with service numbers`);
+    console.log(`Found ${assets?.length || 0} illuminated assets with unique service numbers`);
 
     let successCount = 0;
     let failureCount = 0;
@@ -42,12 +43,12 @@ serve(async (req) => {
       try {
         console.log(`Fetching bill for asset ${asset.id} (${asset.location})`);
 
-        // Call the fetch-tgspdcl-bill function
+        // Call the fetch-tgspdcl-bill function with unique service number
         const { data: billData, error: billError } = await supabase.functions.invoke(
           'fetch-tgspdcl-bill',
           {
             body: {
-              serviceNumber: asset.service_number,
+              uniqueServiceNumber: asset.unique_service_number,
               assetId: asset.id
             }
           }

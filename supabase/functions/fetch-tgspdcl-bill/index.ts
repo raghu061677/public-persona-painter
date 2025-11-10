@@ -25,24 +25,24 @@ serve(async (req) => {
   }
 
   try {
-    const { serviceNumber, assetId } = await req.json();
+    const { uniqueServiceNumber, assetId } = await req.json();
 
-    if (!serviceNumber) {
-      throw new Error('Service number is required');
+    if (!uniqueServiceNumber) {
+      throw new Error('Unique service number is required');
     }
 
-    console.log('Fetching TGSPDCL bill for service number:', serviceNumber);
+    console.log('Fetching TGSPDCL bill for unique service number:', uniqueServiceNumber);
 
     // Attempt to fetch bill data from TGSPDCL portal
-    const { billData, error: fetchError } = await fetchBillFromTGSPDCL(serviceNumber);
+    const { billData, error: fetchError } = await fetchBillFromTGSPDCL(uniqueServiceNumber);
 
     if (!billData) {
       console.error('TGSPDCL API Error:', fetchError);
       // Return mock data for testing purposes
       const mockBillData: BillData = {
         consumer_name: 'Test Consumer',
-        service_number: serviceNumber,
-        unique_service_number: `USC-${serviceNumber}`,
+        service_number: uniqueServiceNumber.substring(0, 10),
+        unique_service_number: uniqueServiceNumber,
         section_name: 'Test Section',
         ero: 'Test ERO',
         bill_amount: 0,
@@ -55,7 +55,7 @@ serve(async (req) => {
           success: true,
           data: mockBillData,
           message: 'Using test data - TGSPDCL API is currently unavailable',
-          payment_url: `https://www.tssouthernpower.com/OnlineBill/QuickPay?serviceNo=${serviceNumber}`
+          payment_url: `https://www.tssouthernpower.com/OnlineBill/QuickPay?uniqueServiceNo=${uniqueServiceNumber}`
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -99,12 +99,12 @@ serve(async (req) => {
       console.log('Bill data stored successfully');
     }
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        data: billData,
-        payment_url: `https://www.tssouthernpower.com/OnlineBill/QuickPay?serviceNo=${serviceNumber}`
-      }),
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: billData,
+          payment_url: `https://www.tssouthernpower.com/OnlineBill/QuickPay?uniqueServiceNo=${uniqueServiceNumber}`
+        }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
@@ -126,10 +126,10 @@ serve(async (req) => {
   }
 });
 
-async function fetchBillFromTGSPDCL(serviceNumber: string): Promise<{ billData: BillData | null; error?: string }> {
+async function fetchBillFromTGSPDCL(uniqueServiceNumber: string): Promise<{ billData: BillData | null; error?: string }> {
   try {
-    // Primary method: Try the enquiry page
-    const url = `https://www.tssouthernpower.com/OnlineBill/QuickPay?serviceNo=${serviceNumber}`;
+    // Primary method: Try the enquiry page with unique service number
+    const url = `https://www.tssouthernpower.com/OnlineBill/QuickPay?uniqueServiceNo=${uniqueServiceNumber}`;
     
     console.log('Attempting to fetch from TGSPDCL:', url);
     
@@ -154,7 +154,7 @@ async function fetchBillFromTGSPDCL(serviceNumber: string): Promise<{ billData: 
     console.log('Received HTML response, parsing...');
     
     // Parse HTML to extract bill details
-    const billData = parseHTMLForBillData(html, serviceNumber);
+    const billData = parseHTMLForBillData(html, uniqueServiceNumber);
     
     return { billData };
   } catch (error) {
@@ -168,7 +168,7 @@ async function fetchBillFromTGSPDCL(serviceNumber: string): Promise<{ billData: 
   }
 }
 
-function parseHTMLForBillData(html: string, serviceNumber: string): BillData {
+function parseHTMLForBillData(html: string, uniqueServiceNumber: string): BillData {
   // Basic HTML parsing
   // This is a simplified version - adjust regex patterns based on actual TGSPDCL HTML structure
   
@@ -178,11 +178,12 @@ function parseHTMLForBillData(html: string, serviceNumber: string): BillData {
   const sectionMatch = html.match(/Section[:\s]*([^<\n]+)/i);
   const eroMatch = html.match(/ERO[:\s]*([^<\n]+)/i);
   const statusMatch = html.match(/Status[:\s]*([^<\n]+)/i);
+  const serviceNoMatch = html.match(/Service No[:\s]*([^<\n]+)/i);
 
   return {
     consumer_name: consumerNameMatch ? consumerNameMatch[1].trim() : 'Unknown',
-    service_number: serviceNumber,
-    unique_service_number: `USC-${serviceNumber}`,
+    service_number: serviceNoMatch ? serviceNoMatch[1].trim() : uniqueServiceNumber.substring(0, 10),
+    unique_service_number: uniqueServiceNumber,
     section_name: sectionMatch ? sectionMatch[1].trim() : undefined,
     ero: eroMatch ? eroMatch[1].trim() : undefined,
     bill_amount: billAmountMatch ? parseFloat(billAmountMatch[1].replace(/,/g, '')) : 0,

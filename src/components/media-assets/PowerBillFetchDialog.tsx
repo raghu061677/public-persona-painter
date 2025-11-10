@@ -29,16 +29,16 @@ export function PowerBillFetchDialog({
   onBillFetched 
 }: PowerBillFetchDialogProps) {
   const [open, setOpen] = useState(false);
-  const [serviceNumber, setServiceNumber] = useState(defaultServiceNumber || "");
+  const [uniqueServiceNumber, setUniqueServiceNumber] = useState(defaultServiceNumber || "");
   const [loading, setLoading] = useState(false);
   const [billData, setBillData] = useState<any>(null);
   const [paymentUrl, setPaymentUrl] = useState<string>("");
 
   const handleFetchBill = async () => {
-    if (!serviceNumber.trim()) {
+    if (!uniqueServiceNumber.trim()) {
       toast({
         title: "Error",
-        description: "Please enter a service number",
+        description: "Please enter a unique service number",
         variant: "destructive",
       });
       return;
@@ -50,7 +50,7 @@ export function PowerBillFetchDialog({
     try {
       const { data, error } = await supabase.functions.invoke('fetch-tgspdcl-bill', {
         body: {
-          serviceNumber: serviceNumber.trim(),
+          uniqueServiceNumber: uniqueServiceNumber.trim(),
           assetId: assetId,
         }
       });
@@ -102,7 +102,7 @@ export function PowerBillFetchDialog({
         <DialogHeader>
           <DialogTitle>Fetch TGSPDCL Power Bill</DialogTitle>
           <DialogDescription>
-            Enter the TGSPDCL service number to fetch current bill details
+            Enter the TGSPDCL unique service number to fetch current bill details
           </DialogDescription>
         </DialogHeader>
 
@@ -110,19 +110,19 @@ export function PowerBillFetchDialog({
           {/* Input Section */}
           <div className="grid grid-cols-4 gap-4">
             <div className="col-span-3 space-y-2">
-              <Label htmlFor="serviceNumber">Service Number</Label>
+              <Label htmlFor="uniqueServiceNumber">Unique Service Number</Label>
               <Input
-                id="serviceNumber"
-                value={serviceNumber}
-                onChange={(e) => setServiceNumber(e.target.value)}
-                placeholder="Enter TGSPDCL service number"
+                id="uniqueServiceNumber"
+                value={uniqueServiceNumber}
+                onChange={(e) => setUniqueServiceNumber(e.target.value)}
+                placeholder="Enter TGSPDCL unique service number"
                 disabled={loading}
               />
             </div>
             <div className="flex items-end">
               <Button 
                 onClick={handleFetchBill} 
-                disabled={loading || !serviceNumber.trim()}
+                disabled={loading || !uniqueServiceNumber.trim()}
                 className="w-full"
               >
                 {loading ? (

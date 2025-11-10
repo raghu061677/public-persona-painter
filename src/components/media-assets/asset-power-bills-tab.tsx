@@ -129,7 +129,7 @@ export function AssetPowerBillsTab({ assetId, asset, isAdmin }: AssetPowerBillsT
           <div className="flex gap-2">
             <PowerBillFetchDialog
               assetId={assetId}
-              defaultServiceNumber={asset?.service_number}
+              defaultServiceNumber={asset?.unique_service_number}
               onBillFetched={fetchPowerBills}
             />
             <ManualBillDialog

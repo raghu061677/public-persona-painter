@@ -188,8 +188,11 @@ export default function PlanEdit() {
   };
 
   const calculateTotals = () => {
-    let subtotal = 0;
+    let displayCost = 0;
+    let printingCost = 0;
+    let mountingCost = 0;
     let totalDiscount = 0;
+    let totalProfit = 0;
     let totalBaseRent = 0;
 
     const days = calculateDurationDays(new Date(formData.start_date), new Date(formData.end_date));
@@ -200,6 +203,7 @@ export default function PlanEdit() {
       
       if (pricing && asset) {
         const cardRate = asset.card_rate || 0;
+        const baseRate = asset.base_rent || 0;
         const negotiatedPrice = pricing.negotiated_price || cardRate;
         const printing = pricing.printing_charges || 0;
         const mounting = pricing.mounting_charges || 0;
@@ -211,22 +215,32 @@ export default function PlanEdit() {
         const discountMonthly = cardRate - negotiatedPrice;
         const discountProRata = calcProRata(discountMonthly, days);
         
-        // Subtotal for this asset
-        const assetSubtotal = proRata + printing + mounting;
+        // Calculate profit: (Negotiated Price - Base Rate) pro-rated
+        const profitMonthly = negotiatedPrice - baseRate;
+        const profitProRata = calcProRata(profitMonthly, days);
         
-        subtotal += assetSubtotal;
+        displayCost += proRata;
+        printingCost += printing;
+        mountingCost += mounting;
         totalDiscount += discountProRata;
-        totalBaseRent += asset.base_rent || 0;
+        totalProfit += profitProRata;
+        totalBaseRent += baseRate;
       }
     });
 
-    const gstAmount = (subtotal * parseFloat(formData.gst_percent)) / 100;
-    const grandTotal = subtotal + gstAmount;
+    const subtotal = displayCost + printingCost + mountingCost;
+    const netTotal = subtotal;
+    const gstAmount = (netTotal * parseFloat(formData.gst_percent)) / 100;
+    const grandTotal = netTotal + gstAmount;
 
     return {
+      displayCost,
+      printingCost,
+      mountingCost,
       subtotal,
       totalDiscount,
-      netTotal: subtotal,
+      netTotal,
+      totalProfit,
       gstAmount,
       grandTotal,
       totalBaseRent,
@@ -517,9 +531,13 @@ export default function PlanEdit() {
               <PlanSummaryCard
                 selectedCount={selectedAssets.size}
                 duration={durationDays}
+                displayCost={totals.displayCost}
+                printingCost={totals.printingCost}
+                mountingCost={totals.mountingCost}
                 subtotal={totals.subtotal}
                 discount={totals.totalDiscount}
                 netTotal={totals.netTotal}
+                profit={totals.totalProfit}
                 gstPercent={parseFloat(formData.gst_percent)}
                 gstAmount={totals.gstAmount}
                 grandTotal={totals.grandTotal}

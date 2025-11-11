@@ -203,8 +203,11 @@ export default function PlanNew() {
   };
 
   const calculateTotals = () => {
-    let subtotal = 0;
+    let displayCost = 0;
+    let printingCost = 0;
+    let mountingCost = 0;
     let totalDiscount = 0;
+    let totalProfit = 0;
     let totalBaseRent = 0;
 
     selectedAssets.forEach(assetId => {
@@ -215,28 +218,39 @@ export default function PlanNew() {
         const salesPrice = pricing.sales_price || 0;
         const discountType = pricing.discount_type || 'Percent';
         const discountValue = pricing.discount_value || 0;
+        const printing = pricing.printing_charges || 0;
+        const mounting = pricing.mounting_charges || 0;
+        const baseRate = asset.base_rent || 0;
         
         const discountAmount = discountType === 'Percent'
           ? (salesPrice * discountValue) / 100
           : discountValue;
         
         const netPrice = salesPrice - discountAmount;
-        const itemTotal = netPrice + (pricing.printing_charges || 0) + (pricing.mounting_charges || 0);
+        const profitAmount = netPrice - baseRate;
         
-        subtotal += salesPrice + (pricing.printing_charges || 0) + (pricing.mounting_charges || 0);
+        displayCost += netPrice;
+        printingCost += printing;
+        mountingCost += mounting;
         totalDiscount += discountAmount;
-        totalBaseRent += asset.base_rent || 0;
+        totalProfit += profitAmount;
+        totalBaseRent += baseRate;
       }
     });
 
-    const netTotal = subtotal - totalDiscount;
+    const subtotal = displayCost + printingCost + mountingCost;
+    const netTotal = subtotal;
     const gstAmount = (netTotal * parseFloat(formData.gst_percent)) / 100;
     const grandTotal = netTotal + gstAmount;
 
     return {
+      displayCost,
+      printingCost,
+      mountingCost,
       subtotal,
       totalDiscount,
       netTotal,
+      totalProfit,
       gstAmount,
       grandTotal,
       totalBaseRent,
@@ -520,9 +534,13 @@ export default function PlanNew() {
               <PlanSummaryCard
                 selectedCount={selectedAssets.size}
                 duration={durationDays}
+                displayCost={totals.displayCost}
+                printingCost={totals.printingCost}
+                mountingCost={totals.mountingCost}
                 subtotal={totals.subtotal}
                 discount={totals.totalDiscount}
                 netTotal={totals.netTotal}
+                profit={totals.totalProfit}
                 gstPercent={parseFloat(formData.gst_percent)}
                 gstAmount={totals.gstAmount}
                 grandTotal={totals.grandTotal}

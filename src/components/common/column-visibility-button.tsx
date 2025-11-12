@@ -6,7 +6,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Columns3, RotateCcw, Eye, EyeOff, Check, Search, ChevronDown, ChevronRight, Bookmark } from "lucide-react";
+import { Columns3, RotateCcw, Eye, EyeOff, Check, Search, ChevronDown, ChevronRight, Bookmark, List, LayoutGrid } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Column {
   key: string;
@@ -80,8 +86,9 @@ export default function ColumnVisibilityButton({
   tableKey = 'default',
 }: ColumnVisibilityButtonProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(['Location', 'Rates', 'Status', 'Dimensions']);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>(['Location', 'Rates & Financial', 'Status & Info', 'Dimensions']);
   const [selectedPreset, setSelectedPreset] = useState<string>("");
+  const [viewMode, setViewMode] = useState<'grouped' | 'compact'>('grouped');
 
   // Group columns by category
   const groupedColumns = useMemo(() => {
@@ -209,16 +216,39 @@ export default function ColumnVisibilityButton({
               <Columns3 className="h-4 w-4 text-primary" />
               <h4 className="font-semibold text-sm">Column Visibility</h4>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onReset}
-              className="h-7 px-2 text-xs hover:bg-background"
-              title="Reset to Default"
-            >
-              <RotateCcw className="h-3 w-3 mr-1" />
-              Reset
-            </Button>
+            <div className="flex items-center gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setViewMode(viewMode === 'grouped' ? 'compact' : 'grouped')}
+                      className="h-7 px-2 hover:bg-background"
+                    >
+                      {viewMode === 'grouped' ? (
+                        <List className="h-3 w-3" />
+                      ) : (
+                        <LayoutGrid className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {viewMode === 'grouped' ? 'Switch to Compact View' : 'Switch to Grouped View'}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onReset}
+                className="h-7 px-2 text-xs hover:bg-background"
+                title="Reset to Default"
+              >
+                <RotateCcw className="h-3 w-3 mr-1" />
+                Reset
+              </Button>
+            </div>
           </div>
 
           {/* Presets */}
@@ -280,80 +310,117 @@ export default function ColumnVisibilityButton({
             </div>
           </div>
           
-          {/* Grouped Column List */}
+          {/* Grouped Column List or Compact List */}
           <div className="p-3">
             <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
-              {filteredGroups.map((group, groupIndex) => {
-                const isExpanded = expandedGroups.includes(group.name);
-                const visibleInGroup = group.columns.filter(col => visibleKeys.includes(col.key)).length;
-                const allVisible = visibleInGroup === group.columns.length;
-                
-                return (
-                  <div key={group.name}>
-                    {groupIndex > 0 && <Separator className="my-2" />}
-                    <Collapsible open={isExpanded} onOpenChange={() => toggleGroup(group.name)}>
-                      <div className="flex items-center justify-between py-1.5 px-2 hover:bg-accent/50 rounded-md group">
-                        <CollapsibleTrigger className="flex items-center gap-2 flex-1 text-left">
-                          {isExpanded ? (
-                            <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                          ) : (
-                            <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                          )}
-                          <span className="text-xs font-semibold text-foreground/80">
-                            {group.name}
-                          </span>
-                          <Badge variant="outline" className="ml-auto px-1.5 py-0 h-4 text-[10px]">
-                            {visibleInGroup}/{group.columns.length}
-                          </Badge>
-                        </CollapsibleTrigger>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleGroupColumns(group, allVisible);
-                          }}
-                        >
-                          {allVisible ? (
-                            <EyeOff className="h-3 w-3" />
-                          ) : (
-                            <Eye className="h-3 w-3" />
-                          )}
-                        </Button>
-                      </div>
-                      <CollapsibleContent className="space-y-0.5 mt-1 animate-accordion-down">
-                        {group.columns.map((column) => {
-                          const isVisible = visibleKeys.includes(column.key);
-                          return (
-                            <div 
-                              key={column.key}
-                              className="flex items-center space-x-3 py-1.5 pl-8 pr-3 hover:bg-accent/50 rounded-md cursor-pointer transition-colors group"
-                              onClick={() => handleToggle(column.key)}
-                            >
-                              <Checkbox
-                                id={`col-${column.key}`}
-                                checked={isVisible}
-                                onCheckedChange={() => handleToggle(column.key)}
-                                className="data-[state=checked]:bg-primary"
-                              />
-                              <label
-                                htmlFor={`col-${column.key}`}
-                                className="text-xs font-normal cursor-pointer flex-1 leading-none select-none"
-                              >
-                                {column.label}
-                              </label>
-                              {isVisible && (
-                                <Check className="h-3 w-3 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+              {viewMode === 'grouped' ? (
+                // Grouped View
+                <>
+                  {filteredGroups.map((group, groupIndex) => {
+                    const isExpanded = expandedGroups.includes(group.name);
+                    const visibleInGroup = group.columns.filter(col => visibleKeys.includes(col.key)).length;
+                    const allVisible = visibleInGroup === group.columns.length;
+                    
+                    return (
+                      <div key={group.name}>
+                        {groupIndex > 0 && <Separator className="my-2" />}
+                        <Collapsible open={isExpanded} onOpenChange={() => toggleGroup(group.name)}>
+                          <div className="flex items-center justify-between py-1.5 px-2 hover:bg-accent/50 rounded-md group">
+                            <CollapsibleTrigger className="flex items-center gap-2 flex-1 text-left">
+                              {isExpanded ? (
+                                <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                              ) : (
+                                <ChevronRight className="h-3 w-3 text-muted-foreground" />
                               )}
-                            </div>
-                          );
-                        })}
-                      </CollapsibleContent>
-                    </Collapsible>
-                  </div>
-                );
-              })}
+                              <span className="text-xs font-semibold text-foreground/80">
+                                {group.name}
+                              </span>
+                              <Badge variant="outline" className="ml-auto px-1.5 py-0 h-4 text-[10px]">
+                                {visibleInGroup}/{group.columns.length}
+                              </Badge>
+                            </CollapsibleTrigger>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleGroupColumns(group, allVisible);
+                              }}
+                            >
+                              {allVisible ? (
+                                <EyeOff className="h-3 w-3" />
+                              ) : (
+                                <Eye className="h-3 w-3" />
+                              )}
+                            </Button>
+                          </div>
+                          <CollapsibleContent className="space-y-0.5 mt-1 animate-accordion-down">
+                            {group.columns.map((column) => {
+                              const isVisible = visibleKeys.includes(column.key);
+                              return (
+                                <div 
+                                  key={column.key}
+                                  className="flex items-center space-x-3 py-1.5 pl-8 pr-3 hover:bg-accent/50 rounded-md cursor-pointer transition-colors group"
+                                  onClick={() => handleToggle(column.key)}
+                                >
+                                  <Checkbox
+                                    id={`col-${column.key}`}
+                                    checked={isVisible}
+                                    onCheckedChange={() => handleToggle(column.key)}
+                                    className="data-[state=checked]:bg-primary"
+                                  />
+                                  <label
+                                    htmlFor={`col-${column.key}`}
+                                    className="text-xs font-normal cursor-pointer flex-1 leading-none select-none"
+                                  >
+                                    {column.label}
+                                  </label>
+                                  {isVisible && (
+                                    <Check className="h-3 w-3 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      </div>
+                    );
+                  })}
+                </>
+              ) : (
+                // Compact View
+                <>
+                  {(searchQuery ? filteredGroups.flatMap(g => g.columns) : allColumns).map((column, index) => {
+                    const isVisible = visibleKeys.includes(column.key);
+                    return (
+                      <div key={column.key}>
+                        {index > 0 && index % 8 === 0 && <Separator className="my-1.5" />}
+                        <div 
+                          className="flex items-center space-x-2 py-1 px-2 hover:bg-accent/50 rounded-md cursor-pointer transition-colors group"
+                          onClick={() => handleToggle(column.key)}
+                        >
+                          <Checkbox
+                            id={`col-compact-${column.key}`}
+                            checked={isVisible}
+                            onCheckedChange={() => handleToggle(column.key)}
+                            className="data-[state=checked]:bg-primary h-3.5 w-3.5"
+                          />
+                          <label
+                            htmlFor={`col-compact-${column.key}`}
+                            className="text-xs font-normal cursor-pointer flex-1 leading-none select-none"
+                          >
+                            {column.label}
+                          </label>
+                          {isVisible && (
+                            <Check className="h-3 w-3 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
               
               {filteredGroups.length === 0 && (
                 <div className="text-center py-8 text-sm text-muted-foreground">

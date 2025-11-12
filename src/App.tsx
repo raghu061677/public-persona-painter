@@ -38,7 +38,7 @@ import VacantMediaReport from "./pages/VacantMediaReport";
 import PhotoLibrary from "./pages/PhotoLibrary";
 import ImportData from "./pages/ImportData";
 import ExportData from "./pages/ExportData";
-import Settings from "./pages/Settings";
+import UserManagement from "./pages/UserManagement";
 import CodeManagement from "./pages/CodeManagement";
 import PowerBillsDashboard from "./pages/PowerBillsDashboard";
 import PowerBillsAnalytics from "./pages/PowerBillsAnalytics";
@@ -48,7 +48,7 @@ import ApprovalSettings from "./pages/ApprovalSettings";
 import ApprovalDelegation from "./pages/ApprovalDelegation";
 import ApprovalAnalytics from "./pages/ApprovalAnalytics";
 import VendorsManagement from "./pages/VendorsManagement";
-import UserManagement from "./pages/UserManagement";
+import Settings from "./pages/Settings";
 import PlanComparison from "./pages/PlanComparison";
 import NotFound from "./pages/NotFound";
 
@@ -105,11 +105,11 @@ const App = () => (
             <Route path="/admin/power-bills-bulk-payment" element={<AppLayout><PowerBillsBulkPayment /></AppLayout>} />
             <Route path="/admin/audit-logs" element={<AppLayout><AuditLogs /></AppLayout>} />
             <Route path="/admin/vendors" element={<AppLayout><VendorsManagement /></AppLayout>} />
+            <Route path="/admin/users" element={<AppLayout><UserManagement /></AppLayout>} />
             <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
             <Route path="/admin/approval-settings" element={<AppLayout><ApprovalSettings /></AppLayout>} />
             <Route path="/admin/approval-delegation" element={<AppLayout><ApprovalDelegation /></AppLayout>} />
             <Route path="/admin/approval-analytics" element={<AppLayout><ApprovalAnalytics /></AppLayout>} />
-            <Route path="/admin/users" element={<AppLayout><UserManagement /></AppLayout>} />
             
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />

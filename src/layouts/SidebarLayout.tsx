@@ -54,8 +54,9 @@ const MENU_SECTIONS = [
     ],
   },
   {
-    title: "Admin",
+    title: "Administration",
     items: [
+      { label: "User Management", icon: UserCog, path: "/admin/users" },
       { label: "Vendors", icon: Building2, path: "/admin/vendors" },
       { label: "Documents", icon: FileText, path: "/admin/documents" },
       { label: "Rate Cards", icon: CreditCard, path: "/admin/rate-cards" },
@@ -81,7 +82,7 @@ const MENU_SECTIONS = [
 export default function SidebarLayout({ children }: { children: React.ReactNode }) {
   const { open, toggle } = useSidebarStore();
   const [expandedSections, setExpandedSections] = useState<string[]>([
-    "Main", "Inventory", "Sales & Marketing", "Execution", "Finance", "Admin", "Analytics & Tools", "Client Portal"
+    "Main", "Inventory", "Sales & Marketing", "Execution", "Finance", "Administration", "Analytics & Tools", "Client Portal"
   ]);
 
   const toggleSection = (title: string) => {

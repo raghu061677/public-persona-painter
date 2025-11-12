@@ -78,12 +78,35 @@ export default function CampaignDetail() {
   };
 
   const fetchCampaignAssets = async () => {
-    const { data } = await supabase
+    const { data: assets } = await supabase
       .from('campaign_assets')
       .select('*')
       .eq('campaign_id', id)
       .order('created_at');
-    setCampaignAssets(data || []);
+    
+    // Fetch media asset details to get total_sqft for printing calculations
+    if (assets && assets.length > 0) {
+      const assetIds = assets.map(a => a.asset_id);
+      const { data: mediaAssets } = await supabase
+        .from('media_assets')
+        .select('id, total_sqft')
+        .in('id', assetIds);
+      
+      const mediaAssetsMap = (mediaAssets || []).reduce((acc, ma) => {
+        acc[ma.id] = ma;
+        return acc;
+      }, {} as Record<string, any>);
+      
+      // Merge media asset data with campaign assets
+      const enrichedAssets = assets.map(a => ({
+        ...a,
+        total_sqft: mediaAssetsMap[a.asset_id]?.total_sqft || 0
+      }));
+      
+      setCampaignAssets(enrichedAssets);
+    } else {
+      setCampaignAssets(assets || []);
+    }
   };
 
   const handleDelete = async () => {
@@ -123,15 +146,31 @@ export default function CampaignDetail() {
   // Calculate campaign duration
   const startDate = new Date(campaign.start_date);
   const endDate = new Date(campaign.end_date);
-  const durationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  const durationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
   const durationMonths = Math.round(durationDays / 30);
 
-  // Calculate detailed financials
-  const baseAmount = campaignAssets.reduce((sum, a) => sum + (a.card_rate || 0), 0);
-  const printingTotal = campaignAssets.reduce((sum, a) => sum + (a.printing_charges || 0), 0);
-  const mountingTotal = campaignAssets.reduce((sum, a) => sum + (a.mounting_charges || 0), 0);
-  const subtotal = baseAmount + printingTotal + mountingTotal;
-  const discount = subtotal - campaign.total_amount;
+  // Calculate detailed financials with pro-rata
+  const pricePerSqft = 15; // ₹15 per sqft for printing
+  const mountingCostPerAsset = 1500; // ₹1500 per asset
+  
+  // Display cost (pro-rated based on campaign duration)
+  const displayCost = campaignAssets.reduce((sum, a) => {
+    const monthlyRate = a.card_rate || 0;
+    const proRatedCost = (monthlyRate / 30) * durationDays;
+    return sum + proRatedCost;
+  }, 0);
+  
+  // Printing cost based on total sqft
+  const printingTotal = campaignAssets.reduce((sum, a) => {
+    const sqft = a.total_sqft || 0;
+    return sum + (sqft * pricePerSqft);
+  }, 0);
+  
+  // Mounting cost - ₹1500 per asset
+  const mountingTotal = campaignAssets.length * mountingCostPerAsset;
+  
+  const subtotal = displayCost + printingTotal + mountingTotal;
+  const discount = subtotal > campaign.total_amount ? subtotal - campaign.total_amount : 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -243,36 +282,38 @@ export default function CampaignDetail() {
               <CardTitle className="text-orange-600 dark:text-orange-400">Financial Summary</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Base Amount</span>
-                  <span>{formatCurrency(baseAmount)}</span>
+              <div className="space-y-2.5">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground font-medium">Display Cost</span>
+                  <span className="font-medium">{formatCurrency(displayCost)}</span>
                 </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Printing Charges</span>
-                  <span>{formatCurrency(printingTotal)}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Mounting Charges</span>
+                {printingTotal > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Printing Cost</span>
+                    <span>{formatCurrency(printingTotal)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Mounting Cost</span>
                   <span>{formatCurrency(mountingTotal)}</span>
                 </div>
                 {discount > 0 && (
-                  <div className="flex justify-between text-xs text-green-600">
-                    <span>Discount</span>
-                    <span>- {formatCurrency(discount)}</span>
+                  <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
+                    <span className="font-medium">Discount</span>
+                    <span className="font-medium">- {formatCurrency(discount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between pt-1 border-t">
-                  <span className="text-sm text-muted-foreground">Taxable Amount</span>
-                  <span className="font-medium">{formatCurrency(campaign.total_amount)}</span>
+                <div className="flex justify-between pt-2 border-t border-border">
+                  <span className="text-sm font-semibold">Taxable Amount</span>
+                  <span className="font-semibold">{formatCurrency(campaign.total_amount)}</span>
                 </div>
-                <div className="flex justify-between text-xs">
+                <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">GST ({campaign.gst_percent}%)</span>
                   <span>{formatCurrency(campaign.gst_amount)}</span>
                 </div>
-                <div className="flex justify-between pt-2 border-t">
-                  <span className="font-semibold">Grand Total</span>
-                  <span className="font-semibold text-lg">{formatCurrency(campaign.grand_total)}</span>
+                <div className="flex justify-between pt-3 border-t-2 border-border">
+                  <span className="text-base font-bold">Grand Total</span>
+                  <span className="text-lg font-bold text-orange-600 dark:text-orange-400">{formatCurrency(campaign.grand_total)}</span>
                 </div>
               </div>
             </CardContent>

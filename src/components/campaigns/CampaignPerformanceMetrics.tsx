@@ -50,46 +50,62 @@ export function CampaignPerformanceMetrics({ campaign, campaignAssets }: Campaig
   ).map(([city, count]) => ({ city, count }));
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Performance Metrics</CardTitle>
+    <Card className="shadow-sm">
+      <CardHeader className="border-b bg-gradient-to-r from-primary/5 to-primary/10">
+        <CardTitle className="text-lg font-semibold flex items-center gap-2">
+          <BarChart className="h-5 w-5 text-primary" />
+          Performance Metrics
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 pt-6">
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
-            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-2">
-              <DollarSign className="h-4 w-4" />
-              <span className="text-sm font-medium">Cost per Asset</span>
+          <div className="relative overflow-hidden bg-gradient-to-br from-blue-500/10 to-blue-600/5 rounded-xl p-5 border border-blue-500/20 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-3">
+              <div className="p-2 bg-blue-500/20 rounded-lg">
+                <DollarSign className="h-4 w-4" />
+              </div>
+              <span className="text-sm font-semibold">Cost per Asset</span>
             </div>
-            <p className="text-2xl font-bold">{formatCurrency(costPerAsset)}</p>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">
+              {formatCurrency(costPerAsset)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-2 font-medium">
               Total: {formatCurrency(campaign.grand_total)}
             </p>
+            <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl"></div>
           </div>
 
-          <div className="bg-amber-500/10 rounded-lg p-4 border border-amber-500/20">
-            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-2">
-              <Clock className="h-4 w-4" />
-              <span className="text-sm font-medium">Avg. Verification Time</span>
+          <div className="relative overflow-hidden bg-gradient-to-br from-amber-500/10 to-amber-600/5 rounded-xl p-5 border border-amber-500/20 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-3">
+              <div className="p-2 bg-amber-500/20 rounded-lg">
+                <Clock className="h-4 w-4" />
+              </div>
+              <span className="text-sm font-semibold">Avg. Verification</span>
             </div>
-            <p className="text-2xl font-bold">
-              {avgVerificationTime > 0 ? `${Math.round(avgVerificationTime)} days` : 'N/A'}
+            <p className="text-3xl font-bold text-amber-700 dark:text-amber-300">
+              {avgVerificationTime > 0 ? `${Math.round(avgVerificationTime)}d` : 'N/A'}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              From assignment to verification
+            <p className="text-xs text-muted-foreground mt-2 font-medium">
+              Assignment to verification
             </p>
+            <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl"></div>
           </div>
 
-          <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20">
-            <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-2">
-              <CheckCircle className="h-4 w-4" />
-              <span className="text-sm font-medium">Completion Rate</span>
+          <div className="relative overflow-hidden bg-gradient-to-br from-green-500/10 to-green-600/5 rounded-xl p-5 border border-green-500/20 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-3">
+              <div className="p-2 bg-green-500/20 rounded-lg">
+                <CheckCircle className="h-4 w-4" />
+              </div>
+              <span className="text-sm font-semibold">Completion Rate</span>
             </div>
-            <p className="text-2xl font-bold">{Math.round(completionRate)}%</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {verifiedAssets} of {totalAssets} assets
+            <p className="text-3xl font-bold text-green-700 dark:text-green-300">
+              {Math.round(completionRate)}%
             </p>
+            <p className="text-xs text-muted-foreground mt-2 font-medium">
+              {verifiedAssets} of {totalAssets} assets verified
+            </p>
+            <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-green-500/5 rounded-full blur-2xl"></div>
           </div>
         </div>
 

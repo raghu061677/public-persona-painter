@@ -6,8 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Zap, Download, RefreshCw, Lightbulb, Sun, Flame, Settings } from "lucide-react";
+import { Zap, Download, RefreshCw, Lightbulb, Sun, Flame, Settings, Upload, FileSpreadsheet, FileText } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +50,7 @@ const getIlluminationIcon = (type: string | null) => {
 
 export default function PowerBillsDashboard() {
   const { isAdmin } = useAuth();
+  const navigate = useNavigate();
   const [assets, setAssets] = useState<MediaAssetWithBill[]>([]);
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -205,6 +210,68 @@ export default function PowerBillsDashboard() {
     setSelectedAssets(new Set());
   };
 
+  const exportToExcel = () => {
+    const exportData = assets.map(asset => ({
+      'Asset ID': asset.id,
+      'Area': asset.area,
+      'Location': asset.location,
+      'City': asset.city,
+      'Illumination Type': asset.illumination || 'N/A',
+      'Consumer Name': asset.consumer_name || 'N/A',
+      'Service Number': asset.service_number || 'N/A',
+      'Unique Service Number': asset.unique_service_number || 'N/A',
+      'ERO': asset.ero || 'N/A',
+      'Section Name': asset.section_name || 'N/A',
+      'Latest Bill Month': asset.latest_bill_month || 'N/A',
+      'Bill Amount': asset.latest_bill_amount || 0,
+      'Payment Status': asset.payment_status || 'No Data',
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Power Bills');
+    XLSX.writeFile(wb, `power-bills-${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast({
+      title: "Success",
+      description: "Excel file downloaded successfully",
+    });
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF('l', 'mm', 'a4');
+    
+    doc.setFontSize(18);
+    doc.text('Power Bills Dashboard', 14, 20);
+    doc.setFontSize(11);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+
+    const tableData = assets.map(asset => [
+      asset.id,
+      asset.area,
+      asset.location,
+      asset.city,
+      asset.illumination || 'N/A',
+      asset.consumer_name || 'N/A',
+      asset.service_number || 'N/A',
+      asset.payment_status || 'No Data',
+      asset.latest_bill_amount ? `₹${asset.latest_bill_amount}` : '-',
+    ]);
+
+    autoTable(doc, {
+      head: [['Asset ID', 'Area', 'Location', 'City', 'Illumination', 'Consumer', 'Service No.', 'Status', 'Amount']],
+      body: tableData,
+      startY: 35,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [30, 64, 175] },
+    });
+
+    doc.save(`power-bills-${new Date().toISOString().split('T')[0]}.pdf`);
+    toast({
+      title: "Success",
+      description: "PDF file downloaded successfully",
+    });
+  };
+
   if (!isAdmin) {
     return (
       <div className="flex-1 p-8">
@@ -224,10 +291,24 @@ export default function PowerBillsDashboard() {
           <h2 className="text-3xl font-bold tracking-tight">Power Bills Dashboard</h2>
           <p className="text-muted-foreground">Manage electricity bills for all media assets</p>
         </div>
-        <Button onClick={fetchAssetsWithBills} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={exportToExcel} variant="outline" size="sm">
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            Export Excel
+          </Button>
+          <Button onClick={exportToPDF} variant="outline" size="sm">
+            <FileText className="h-4 w-4 mr-2" />
+            Export PDF
+          </Button>
+          <Button onClick={() => navigate('/admin/power-bills/bulk-upload')} size="sm">
+            <Upload className="h-4 w-4 mr-2" />
+            Bulk Upload
+          </Button>
+          <Button onClick={fetchAssetsWithBills} variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">

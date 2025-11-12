@@ -5,10 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { format } from "date-fns";
-import { CreditCard, ExternalLink, Loader2 } from "lucide-react";
+import { CreditCard, ExternalLink, Loader2, Upload } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -35,6 +38,9 @@ export default function PowerBillsBulkPayment() {
   const [selectedBills, setSelectedBills] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [paymentDate, setPaymentDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [showReceiptDialog, setShowReceiptDialog] = useState(false);
 
   useEffect(() => {
     if (isAdmin) {
@@ -140,25 +146,50 @@ export default function PowerBillsBulkPayment() {
   };
 
   const handleConfirmBulkPayment = async () => {
-    if (selectedBills.size === 0) return;
+    if (selectedBills.size === 0) {
+      toast.error("Please select at least one bill");
+      return;
+    }
 
     setProcessing(true);
     const selectedBillsData = bills.filter(b => selectedBills.has(b.id));
     let successCount = 0;
     let failCount = 0;
+    let receiptUrl: string | null = null;
 
     try {
+      // Upload receipt if provided
+      if (receiptFile) {
+        const fileExt = receiptFile.name.split('.').pop();
+        const fileName = `bulk-payment-${Date.now()}.${fileExt}`;
+        const filePath = `power-bills/receipts/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('client-documents')
+          .upload(filePath, receiptFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('client-documents')
+          .getPublicUrl(filePath);
+
+        receiptUrl = publicUrl;
+      }
+
+      // Update each selected bill
       for (const bill of selectedBillsData) {
         try {
-          const { error } = await supabase.functions.invoke('capture-bill-receipt', {
-            body: {
-              service_no: bill.service_number,
-              bill_month: format(new Date(bill.bill_month), 'MMM-yyyy'),
-              amount: bill.bill_amount,
-              bill_id: bill.id,
-              asset_id: bill.asset_id,
-            }
-          });
+          const { error } = await supabase
+            .from('asset_power_bills')
+            .update({
+              payment_status: 'Paid',
+              paid_amount: bill.bill_amount,
+              payment_date: paymentDate,
+              paid_receipt_url: receiptUrl,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', bill.id);
 
           if (error) throw error;
           successCount++;
@@ -173,7 +204,9 @@ export default function PowerBillsBulkPayment() {
         { duration: 5000 }
       );
 
-      // Refresh the list
+      // Reset and refresh
+      setShowReceiptDialog(false);
+      setReceiptFile(null);
       fetchPendingBills();
       setSelectedBills(new Set());
     } catch (error) {
@@ -250,13 +283,64 @@ export default function PowerBillsBulkPayment() {
                 Pay Selected Bills
                 <ExternalLink className="ml-2 h-3 w-3" />
               </Button>
-              <Button
-                onClick={handleConfirmBulkPayment}
-                disabled={selectedBills.size === 0 || processing}
-                variant="outline"
-              >
-                Confirm Payment Made
-              </Button>
+              
+              <Dialog open={showReceiptDialog} onOpenChange={setShowReceiptDialog}>
+                <DialogTrigger asChild>
+                  <Button
+                    disabled={selectedBills.size === 0 || processing}
+                    variant="outline"
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Mark as Paid
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Confirm Bulk Payment</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="payment-date">Payment Date</Label>
+                      <Input
+                        id="payment-date"
+                        type="date"
+                        value={paymentDate}
+                        onChange={(e) => setPaymentDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="receipt">Payment Receipt (Optional)</Label>
+                      <Input
+                        id="receipt"
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+                      />
+                      {receiptFile && (
+                        <p className="text-sm text-muted-foreground">
+                          Selected: {receiptFile.name}
+                        </p>
+                      )}
+                    </div>
+                    <div className="bg-muted p-3 rounded-lg">
+                      <p className="text-sm font-medium">Summary</p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedBills.size} bills • Total: {formatCurrency(getTotalAmount())}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleConfirmBulkPayment}
+                      disabled={processing}
+                      className="w-full"
+                    >
+                      {processing ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : null}
+                      Confirm Payment
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </CardContent>

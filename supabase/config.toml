@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.capture-bill-receipt]
 verify_jwt = false
+
+[functions.send-power-bill-reminders]
+verify_jwt = false

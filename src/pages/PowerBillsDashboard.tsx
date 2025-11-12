@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Zap, Download, RefreshCw, Lightbulb, Sun, Flame, Settings, Upload, FileSpreadsheet, FileText } from "lucide-react";
+import { Zap, Download, RefreshCw, Lightbulb, Sun, Flame, Settings, Upload, FileSpreadsheet, FileText, BarChart3, CreditCard } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from 'xlsx';
@@ -49,8 +49,8 @@ const getIlluminationIcon = (type: string | null) => {
 };
 
 export default function PowerBillsDashboard() {
-  const { isAdmin } = useAuth();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [assets, setAssets] = useState<MediaAssetWithBill[]>([]);
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -289,9 +289,17 @@ export default function PowerBillsDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Power Bills Dashboard</h2>
-          <p className="text-muted-foreground">Manage electricity bills for all media assets</p>
+          <p className="text-muted-foreground">Manage electricity bills for all illumination assets</p>
         </div>
         <div className="flex gap-2">
+          <Button onClick={() => navigate('/admin/power-bills-analytics')} variant="outline" size="sm">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Analytics
+          </Button>
+          <Button onClick={() => navigate('/admin/power-bills-bulk-payment')} variant="outline" size="sm">
+            <CreditCard className="h-4 w-4 mr-2" />
+            Bulk Payment
+          </Button>
           <Button onClick={exportToExcel} variant="outline" size="sm">
             <FileSpreadsheet className="h-4 w-4 mr-2" />
             Export Excel

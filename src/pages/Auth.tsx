@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { getRoleDashboard } from "@/utils/roleBasedRedirect";
 
 const authSchema = z.object({
   email: z.string().trim().email({ message: "Invalid email address" }).max(255),
@@ -24,17 +25,37 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Helper to fetch user roles and redirect
+    const redirectUserToDashboard = async (userId: string) => {
+      try {
+        const { data: rolesData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId);
+        
+        const roles = (rolesData?.map(r => r.role) || ['user']) as ('admin' | 'sales' | 'operations' | 'finance' | 'user')[];
+        const dashboardRoute = getRoleDashboard(roles);
+        navigate(dashboardRoute);
+      } catch (error) {
+        // Fallback to default dashboard
+        navigate("/dashboard");
+      }
+    };
+
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/dashboard");
+      if (session?.user) {
+        redirectUserToDashboard(session.user.id);
       }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        navigate("/dashboard");
+      if (session?.user) {
+        // Defer the redirect to avoid deadlock
+        setTimeout(() => {
+          redirectUserToDashboard(session.user.id);
+        }, 0);
       }
     });
 

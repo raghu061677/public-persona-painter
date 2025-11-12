@@ -1,5 +1,7 @@
 import { ROLE_DASHBOARDS } from "@/lib/routes";
-import type { AppRole } from "@/contexts/AuthContext";
+
+// Valid role types based on database enum
+type AppRole = 'admin' | 'sales' | 'operations' | 'finance' | 'user';
 
 /**
  * Get the appropriate dashboard route based on user's primary role

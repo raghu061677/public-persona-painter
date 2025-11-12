@@ -8,11 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, UserPlus, Pencil, Trash2, Mail, Shield } from "lucide-react";
+import { Search, UserPlus, Pencil, Trash2, Mail, Shield, Upload, Key } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import EditUserDialog from "@/components/users/EditUserDialog";
 import AddUserDialog from "@/components/users/AddUserDialog";
 import UserPermissionsView from "@/components/users/UserPermissionsView";
+import TeamsManagement from "@/components/users/TeamsManagement";
+import UserActivityDashboard from "@/components/users/UserActivityDashboard";
+import BulkImportDialog from "@/components/users/BulkImportDialog";
+import PasswordResetDialog from "@/components/users/PasswordResetDialog";
 import { logAudit } from "@/utils/auditLog";
 import {
   Table,
@@ -75,6 +79,13 @@ export default function UserManagement() {
   const [submitting, setSubmitting] = useState(false);
   const [editUser, setEditUser] = useState<UserProfile | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
+  const [passwordResetOpen, setPasswordResetOpen] = useState(false);
+  const [selectedUserForReset, setSelectedUserForReset] = useState<{
+    id: string;
+    email: string;
+    username: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -287,6 +298,10 @@ export default function UserManagement() {
             <UserPlus className="h-4 w-4 mr-2" />
             Add User
           </Button>
+          <Button variant="outline" onClick={() => setBulkImportOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Bulk Import
+          </Button>
           <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
@@ -345,6 +360,8 @@ export default function UserManagement() {
       <Tabs defaultValue="users" className="w-full">
         <TabsList>
           <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="teams">Teams</TabsTrigger>
+          <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="permissions">Role Permissions</TabsTrigger>
           <TabsTrigger value="user-access">User Access</TabsTrigger>
         </TabsList>
@@ -416,10 +433,26 @@ export default function UserManagement() {
                             setEditUser(user);
                             setEditOpen(true);
                           }}
+                          title="Edit user"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon">
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => {
+                            setSelectedUserForReset({
+                              id: user.id,
+                              email: user.email || '',
+                              username: user.username,
+                            });
+                            setPasswordResetOpen(true);
+                          }}
+                          title="Reset password"
+                        >
+                          <Key className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" title="Delete user">
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
@@ -429,6 +462,14 @@ export default function UserManagement() {
               </TableBody>
             </Table>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="teams" className="space-y-4 mt-6">
+          <TeamsManagement />
+        </TabsContent>
+
+        <TabsContent value="activity" className="space-y-4 mt-6">
+          <UserActivityDashboard />
         </TabsContent>
 
         <TabsContent value="permissions" className="space-y-4 mt-6">
@@ -510,6 +551,22 @@ export default function UserManagement() {
         onOpenChange={setEditOpen}
         onSuccess={loadData}
       />
+
+      <BulkImportDialog
+        open={bulkImportOpen}
+        onOpenChange={setBulkImportOpen}
+        onSuccess={loadData}
+      />
+
+      {selectedUserForReset && (
+        <PasswordResetDialog
+          open={passwordResetOpen}
+          onOpenChange={setPasswordResetOpen}
+          userId={selectedUserForReset.id}
+          userEmail={selectedUserForReset.email}
+          username={selectedUserForReset.username}
+        />
+      )}
     </div>
   );
 }

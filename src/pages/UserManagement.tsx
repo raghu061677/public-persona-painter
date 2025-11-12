@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, UserPlus, Pencil, Trash2, Mail, Shield } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import EditUserDialog from "@/components/users/EditUserDialog";
+import AddUserDialog from "@/components/users/AddUserDialog";
 import UserPermissionsView from "@/components/users/UserPermissionsView";
 import { logAudit } from "@/utils/auditLog";
 import {
@@ -67,6 +68,7 @@ export default function UserManagement() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [rolePermissions, setRolePermissions] = useState<Record<string, Record<string, boolean>>>({});
+  const [addUserOpen, setAddUserOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<string>("sales");
@@ -280,58 +282,64 @@ export default function UserManagement() {
             Manage your team members and their account permissions.
           </p>
         </div>
-        <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Invite User
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Invite New User</DialogTitle>
-              <DialogDescription>
-                Send an invitation to a new team member
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 mt-4">
-              <div>
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="user@example.com"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  className="mt-2"
-                />
-              </div>
-              <div>
-                <Label htmlFor="role">Role</Label>
-                <Select value={inviteRole} onValueChange={setInviteRole}>
-                  <SelectTrigger className="mt-2">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROLES.map(role => (
-                      <SelectItem key={role} value={role} className="capitalize">
-                        {role}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button 
-                onClick={handleInviteUser} 
-                disabled={submitting}
-                className="w-full"
-              >
+        <div className="flex gap-2">
+          <Button onClick={() => setAddUserOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Add User
+          </Button>
+          <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
                 <Mail className="h-4 w-4 mr-2" />
-                {submitting ? "Sending..." : "Send Invitation"}
+                Invite User
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Invite New User</DialogTitle>
+                <DialogDescription>
+                  Send an invitation to a new team member
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 mt-4">
+                <div>
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="user@example.com"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="mt-2"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="role">Role</Label>
+                  <Select value={inviteRole} onValueChange={setInviteRole}>
+                    <SelectTrigger className="mt-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROLES.map(role => (
+                        <SelectItem key={role} value={role} className="capitalize">
+                          {role}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button 
+                  onClick={handleInviteUser} 
+                  disabled={submitting}
+                  className="w-full"
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  {submitting ? "Sending..." : "Send Invitation"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Tabs defaultValue="users" className="w-full">
@@ -490,6 +498,12 @@ export default function UserManagement() {
         </TabsContent>
       </Tabs>
 
+      <AddUserDialog
+        open={addUserOpen}
+        onOpenChange={setAddUserOpen}
+        onSuccess={loadData}
+      />
+      
       <EditUserDialog
         user={editUser}
         open={editOpen}

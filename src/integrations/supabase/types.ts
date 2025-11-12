@@ -1684,6 +1684,15 @@ export type Database = {
         Args: { p_plan_id: string }
         Returns: undefined
       }
+      create_user_with_role: {
+        Args: {
+          user_email: string
+          user_name?: string
+          user_password: string
+          user_role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: Json
+      }
       generate_campaign_id: { Args: never; Returns: string }
       generate_estimation_id: { Args: never; Returns: string }
       generate_expense_id: { Args: never; Returns: string }

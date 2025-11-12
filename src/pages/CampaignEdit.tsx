@@ -29,7 +29,7 @@ export default function CampaignEdit() {
   const [clientName, setClientName] = useState("");
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
-  const [status, setStatus] = useState("Planned");
+  const [status, setStatus] = useState<"Planned" | "Assigned" | "InProgress" | "PhotoUploaded" | "Verified" | "Completed">("Planned");
   const [notes, setNotes] = useState("");
   const [gstPercent, setGstPercent] = useState(18);
   

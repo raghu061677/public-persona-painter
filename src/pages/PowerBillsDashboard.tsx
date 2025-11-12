@@ -7,6 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Zap, Download, RefreshCw, Lightbulb, Sun, Flame, Settings, Upload, FileSpreadsheet, FileText, BarChart3, CreditCard } from "lucide-react";
+import { FetchBillButton } from "@/components/power-bills/FetchBillButton";
+import { PayBillButton } from "@/components/power-bills/PayBillButton";
+import { UploadReceiptDialog } from "@/components/power-bills/UploadReceiptDialog";
+import { useState as useDialogState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from 'xlsx';
@@ -66,6 +70,8 @@ export default function PowerBillsDashboard() {
     ero: false,
     sectionName: false,
   });
+  const [uploadDialogOpen, setUploadDialogOpen] = useDialogState(false);
+  const [selectedBillAsset, setSelectedBillAsset] = useDialogState<any>(null);
 
   useEffect(() => {
     if (isAdmin) {
@@ -471,6 +477,7 @@ export default function PowerBillsDashboard() {
                   <TableHead>Latest Bill</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -484,7 +491,15 @@ export default function PowerBillsDashboard() {
                         }
                       />
                     </TableCell>
-                    <TableCell className="font-medium">{asset.id}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto font-medium"
+                        onClick={() => navigate(`/admin/media-assets/${asset.id}`)}
+                      >
+                        {asset.id}
+                      </Button>
+                    </TableCell>
                     <TableCell>{asset.location}</TableCell>
                     <TableCell>{asset.city}</TableCell>
                     <TableCell>
@@ -523,13 +538,49 @@ export default function PowerBillsDashboard() {
                         <Badge variant="outline">No Data</Badge>
                       )}
                     </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <FetchBillButton
+                          assetId={asset.id}
+                          serviceNumber={asset.service_number}
+                          uniqueServiceNumber={asset.unique_service_number}
+                          onSuccess={fetchAssetsWithBills}
+                        />
+                        {asset.latest_bill_amount && asset.payment_status === 'Pending' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedBillAsset(asset);
+                              setUploadDialogOpen(true);
+                            }}
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Upload
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+        </TableBody>
+      </Table>
+        )}
+      </CardContent>
+    </Card>
+
+    {selectedBillAsset && (
+      <UploadReceiptDialog
+        billId={selectedBillAsset.id}
+        serviceNumber={selectedBillAsset.service_number || ''}
+        billAmount={selectedBillAsset.latest_bill_amount || 0}
+        billMonth={selectedBillAsset.latest_bill_month || ''}
+        assetId={selectedBillAsset.id}
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        onSuccess={fetchAssetsWithBills}
+      />
+    )}
+  </div>
+);
 }

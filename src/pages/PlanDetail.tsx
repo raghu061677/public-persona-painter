@@ -764,11 +764,11 @@ export default function PlanDetail() {
             {/* Convert to Campaign - Approved Status */}
             {plan.status === 'Approved' && isAdmin && (
               <Button 
-                size="sm" 
-                className="bg-gradient-primary hover:shadow-glow transition-smooth"
+                size="lg" 
+                className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 animate-pulse-glow"
                 onClick={() => setShowConvertDialog(true)}
               >
-                <Rocket className="mr-2 h-4 w-4" />
+                <Rocket className="mr-2 h-5 w-5" />
                 Convert to Campaign
               </Button>
             )}
@@ -1068,13 +1068,6 @@ export default function PlanDetail() {
           </Card>
         </div>
 
-        {/* Approval History Timeline */}
-        {(plan.status === 'Sent' || plan.status === 'Approved' || plan.status === 'Rejected' || plan.status === 'Converted') && (
-          <div className="mb-6">
-            <ApprovalHistoryTimeline planId={plan.id} />
-          </div>
-        )}
-
         {/* Plan Items */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
@@ -1187,17 +1180,22 @@ export default function PlanDetail() {
           </Card>
         )}
 
+        {/* Approval History Timeline */}
+        {(plan.status === 'Sent' || plan.status === 'Approved' || plan.status === 'Rejected' || plan.status === 'Converted') && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Approval History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ApprovalHistoryTimeline planId={id!} />
+            </CardContent>
+          </Card>
+        )}
+
         <div className="mt-8 text-sm text-muted-foreground">
           <p>Created: {new Date(plan.created_at).toLocaleString()}</p>
           <p>Last updated: {new Date(plan.updated_at).toLocaleString()}</p>
         </div>
-
-        {/* Approval History Timeline */}
-        {(plan.status === 'Sent' || plan.status === 'Approved' || plan.status === 'Rejected' || plan.status === 'Converted') && (
-          <div className="mt-6">
-            <ApprovalHistoryTimeline planId={id!} />
-          </div>
-        )}
 
         <ExportOptionsDialog
           open={showExportDialog}

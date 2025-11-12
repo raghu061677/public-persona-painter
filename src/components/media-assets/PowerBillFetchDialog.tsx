@@ -30,6 +30,7 @@ export function PowerBillFetchDialog({
 }: PowerBillFetchDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [autoFetching, setAutoFetching] = useState(false);
   
   // Form fields matching TGSPDCL portal
   const [formData, setFormData] = useState({
@@ -46,6 +47,64 @@ export function PowerBillFetchDialog({
     arrears: "0",
     total_amount: "",
   });
+
+  const tryAutoFetch = async () => {
+    if (!formData.unique_service_number.trim()) {
+      toast({
+        title: "Missing Unique Service Number",
+        description: "Please enter the Unique Service Number to auto-fetch bill",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAutoFetching(true);
+    try {
+      console.log('Attempting auto-fetch for:', formData.unique_service_number);
+      
+      const { data, error } = await supabase.functions.invoke('fetch-tgspdcl-bill', {
+        body: {
+          uniqueServiceNumber: formData.unique_service_number.trim(),
+          assetId: assetId,
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success && data.data) {
+        // Auto-fill form with fetched data
+        const bill = data.data;
+        setFormData({
+          ...formData,
+          consumer_name: bill.consumer_name || "",
+          service_number: bill.service_number || "",
+          ero: bill.ero || "",
+          section: bill.section_name || "",
+          total_amount: bill.bill_amount?.toString() || "",
+        });
+
+        toast({
+          title: "Bill Data Fetched",
+          description: "Bill details have been automatically loaded. Please verify and save.",
+        });
+      } else {
+        toast({
+          title: "Auto-fetch Failed",
+          description: data?.message || "Unable to fetch bill automatically. Please enter details manually.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Auto-fetch error:', error);
+      toast({
+        title: "Auto-fetch Error",
+        description: "Please enter bill details manually from the TGSPDCL portal",
+        variant: "destructive",
+      });
+    } finally {
+      setAutoFetching(false);
+    }
+  };
 
   const openTGSPDCLPortal = () => {
     window.open('https://tgsouthernpower.org/paybillonline', '_blank');
@@ -189,12 +248,58 @@ export function PowerBillFetchDialog({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Auto-Fetch Option */}
+          <div className="space-y-3 bg-blue-50 dark:bg-blue-950 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+            <Label className="text-base font-semibold text-blue-900 dark:text-blue-100">
+              🚀 Try Auto-Fetch (Beta)
+            </Label>
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              Enter your Unique Service Number below and try automatic bill fetching
+            </p>
+            <div className="flex gap-2">
+              <Input
+                value={formData.unique_service_number}
+                onChange={(e) => handleInputChange('unique_service_number', e.target.value)}
+                placeholder="Enter Unique Service Number"
+                className="flex-1"
+              />
+              <Button 
+                onClick={tryAutoFetch}
+                disabled={autoFetching || !formData.unique_service_number}
+                variant="default"
+              >
+                {autoFetching ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Fetching...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="mr-2 h-4 w-4" />
+                    Auto-Fetch
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or enter manually
+              </span>
+            </div>
+          </div>
+
           {/* Step 1: Open Portal */}
           <div className="space-y-2">
             <Label className="text-base font-semibold">Step 1: Open TGSPDCL Portal</Label>
             <Button 
               onClick={openTGSPDCLPortal}
-              variant="default"
+              variant="outline"
               className="w-full"
               size="lg"
             >

@@ -1,15 +1,19 @@
-import React from "react";
+import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle, XCircle, Image as ImageIcon } from "lucide-react";
+import { CheckCircle, XCircle, Image as ImageIcon, CheckCircle2 } from "lucide-react";
+import { ProofApprovalDialog } from "./ProofApprovalDialog";
 
 interface ProofGalleryProps {
   assets: any[];
+  onUpdate?: () => void;
 }
 
-export function ProofGallery({ assets }: ProofGalleryProps) {
-  const [selectedPhoto, setSelectedPhoto] = React.useState<string | null>(null);
+export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [approvalAsset, setApprovalAsset] = useState<any>(null);
   
   const photoTypes = [
     { key: 'newspaperPhoto', label: 'Newspaper' },
@@ -46,14 +50,25 @@ export function ProofGallery({ assets }: ProofGalleryProps) {
                   <h3 className="font-semibold text-lg">{asset.asset_id}</h3>
                   <p className="text-sm text-muted-foreground">{asset.location}, {asset.city}</p>
                 </div>
-                <Badge variant={isComplete ? "default" : "secondary"} className="gap-1">
-                  {isComplete ? (
-                    <CheckCircle className="h-3 w-3" />
-                  ) : (
-                    <XCircle className="h-3 w-3" />
+                <div className="flex items-center gap-2">
+                  <Badge variant={isComplete ? "default" : "secondary"} className="gap-1">
+                    {isComplete ? (
+                      <CheckCircle className="h-3 w-3" />
+                    ) : (
+                      <XCircle className="h-3 w-3" />
+                    )}
+                    {uploadedCount}/4 Photos
+                  </Badge>
+                  {asset.status === 'PhotoUploaded' && isComplete && onUpdate && (
+                    <Button
+                      size="sm"
+                      onClick={() => setApprovalAsset(asset)}
+                    >
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Review & Approve
+                    </Button>
                   )}
-                  {uploadedCount}/4 Photos
-                </Badge>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

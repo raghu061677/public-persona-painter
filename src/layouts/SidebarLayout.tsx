@@ -56,6 +56,7 @@ const MENU_SECTIONS = [
   {
     title: "Administration",
     items: [
+      { label: "Organization Settings", icon: Settings, path: "/admin/organization-settings" },
       { label: "User Management", icon: UserCog, path: "/admin/users" },
       { label: "Vendors", icon: Building2, path: "/admin/vendors" },
       { label: "Documents", icon: FileText, path: "/admin/documents" },

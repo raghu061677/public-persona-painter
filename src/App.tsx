@@ -33,6 +33,7 @@ import MobilePowerBills from "./pages/MobilePowerBills";
 import FinanceDashboard from "./pages/FinanceDashboard";
 import EstimationsList from "./pages/EstimationsList";
 import InvoicesList from "./pages/InvoicesList";
+import InvoiceDetail from "./pages/InvoiceDetail";
 import ExpensesList from "./pages/ExpensesList";
 import ReportsDashboard from "./pages/ReportsDashboard";
 import VacantMediaReport from "./pages/VacantMediaReport";
@@ -52,6 +53,7 @@ import ApprovalDelegation from "./pages/ApprovalDelegation";
 import ApprovalAnalytics from "./pages/ApprovalAnalytics";
 import VendorsManagement from "./pages/VendorsManagement";
 import Settings from "./pages/Settings";
+import OrganizationSettings from "./pages/OrganizationSettings";
 import OperationsSettings from "./pages/OperationsSettings";
 import Operations from "./pages/Operations";
 import OperationsCalendar from "./pages/OperationsCalendar";
@@ -107,6 +109,7 @@ const App = () => (
             <Route path="/finance" element={<AppLayout><FinanceDashboard /></AppLayout>} />
             <Route path="/finance/estimations" element={<AppLayout><EstimationsList /></AppLayout>} />
             <Route path="/finance/invoices" element={<AppLayout><InvoicesList /></AppLayout>} />
+            <Route path="/finance/invoices/:id" element={<AppLayout><InvoiceDetail /></AppLayout>} />
             <Route path="/finance/expenses" element={<AppLayout><ExpensesList /></AppLayout>} />
             <Route path="/reports" element={<AppLayout><ReportsDashboard /></AppLayout>} />
             <Route path="/reports/vacant-media" element={<AppLayout><VacantMediaReport /></AppLayout>} />
@@ -123,6 +126,7 @@ const App = () => (
             <Route path="/admin/vendors" element={<AppLayout><VendorsManagement /></AppLayout>} />
             <Route path="/admin/users" element={<AppLayout><UserManagement /></AppLayout>} />
             <Route path="/admin/operations-settings" element={<AppLayout><OperationsSettings /></AppLayout>} />
+            <Route path="/admin/organization-settings" element={<AppLayout><OrganizationSettings /></AppLayout>} />
             <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
             <Route path="/admin/approval-settings" element={<AppLayout><ApprovalSettings /></AppLayout>} />
             <Route path="/admin/approval-delegation" element={<AppLayout><ApprovalDelegation /></AppLayout>} />

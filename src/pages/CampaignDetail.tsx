@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Trash2, Upload, RefreshCw, Info } from "lucide-react";
+import { ArrowLeft, Trash2, Upload, RefreshCw, Info, Pencil } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { getCampaignStatusColor, getAssetStatusColor, calculateProgress } from "@/utils/campaigns";
 import { formatDate } from "@/utils/plans";
@@ -218,10 +218,20 @@ export default function CampaignDetail() {
               Refresh
             </Button>
             {isAdmin && (
-              <Button variant="destructive" size="sm" onClick={handleDelete}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(`/admin/campaigns/edit/${campaign.id}`)}
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+                <Button variant="destructive" size="sm" onClick={handleDelete}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              </>
             )}
           </div>
         </div>

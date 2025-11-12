@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Eye, Trash2, FileText, Plus } from "lucide-react";
+import { Eye, Trash2, FileText, Plus, Pencil } from "lucide-react";
 import { CreateCampaignFromPlanDialog } from "@/components/campaigns/CreateCampaignFromPlanDialog";
 import { CampaignTemplatesDialog } from "@/components/campaigns/CampaignTemplatesDialog";
 import { BulkStatusUpdateDialog } from "@/components/campaigns/BulkStatusUpdateDialog";
@@ -389,13 +389,22 @@ export default function CampaignsList() {
                           <Eye className="h-4 w-4" />
                         </Button>
                         {isAdmin && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(campaign.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => navigate(`/admin/campaigns/edit/${campaign.id}`)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(campaign.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
                         )}
                       </div>
                     </TableCell>

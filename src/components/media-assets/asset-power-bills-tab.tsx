@@ -4,7 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { FetchBillButton } from "@/components/power-bills/FetchBillButton";
+import { PowerBillFetchDialog } from "@/components/media-assets/PowerBillFetchDialog";
 import { PayBillButton } from "@/components/power-bills/PayBillButton";
 import { UploadReceiptDialog } from "@/components/power-bills/UploadReceiptDialog";
 import { Upload } from "lucide-react";
@@ -86,11 +86,11 @@ export function AssetPowerBillsTab({ assetId, asset, isAdmin }: AssetPowerBillsT
             </CardDescription>
           </div>
           <div className="flex gap-2">
-            <FetchBillButton 
+            <PowerBillFetchDialog 
               assetId={assetId}
-              serviceNumber={asset?.service_number}
-              uniqueServiceNumber={asset?.unique_service_number}
-              onSuccess={fetchPowerBills}
+              asset={asset}
+              defaultServiceNumber={asset?.unique_service_number || asset?.service_number}
+              onBillFetched={fetchPowerBills}
             />
             <PayBillButton 
               serviceNumber={asset?.service_number}

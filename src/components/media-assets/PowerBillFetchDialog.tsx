@@ -11,82 +11,164 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Download, ExternalLink, Zap, Loader2 } from "lucide-react";
-import { formatCurrency } from "@/utils/mediaAssets";
+import { ExternalLink, Zap, Loader2, Save } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 interface PowerBillFetchDialogProps {
   assetId: string;
+  asset?: any;
   defaultServiceNumber?: string;
   onBillFetched?: () => void;
 }
 
 export function PowerBillFetchDialog({ 
-  assetId, 
+  assetId,
+  asset,
   defaultServiceNumber,
   onBillFetched 
 }: PowerBillFetchDialogProps) {
   const [open, setOpen] = useState(false);
-  const [uniqueServiceNumber, setUniqueServiceNumber] = useState(defaultServiceNumber || "");
   const [loading, setLoading] = useState(false);
-  const [billData, setBillData] = useState<any>(null);
-  const [paymentUrl, setPaymentUrl] = useState<string>("");
+  
+  // Form fields matching TGSPDCL portal
+  const [formData, setFormData] = useState({
+    consumer_name: "",
+    unique_service_number: defaultServiceNumber || "",
+    service_number: "",
+    ero: "",
+    section: "",
+    units: "",
+    bill_date: "",
+    due_date: "",
+    current_month_bill: "",
+    acd_amount: "0",
+    arrears: "0",
+    total_amount: "",
+  });
 
-  const handleFetchBill = async () => {
-    if (!uniqueServiceNumber.trim()) {
+  const openTGSPDCLPortal = () => {
+    window.open('https://tgsouthernpower.org/paybillonline', '_blank');
+    toast({
+      title: "Portal Opened",
+      description: "Enter your Unique Service Number on the TGSPDCL portal, then copy the bill details here",
+    });
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveBill = async () => {
+    // Validation
+    if (!formData.unique_service_number.trim() || !formData.total_amount.trim()) {
       toast({
-        title: "Error",
-        description: "Please enter a unique service number",
+        title: "Missing Required Fields",
+        description: "Please fill in Unique Service Number and Total Amount",
         variant: "destructive",
       });
       return;
     }
 
     setLoading(true);
-    setBillData(null);
-
     try {
-      const { data, error } = await supabase.functions.invoke('fetch-tgspdcl-bill', {
-        body: {
-          uniqueServiceNumber: uniqueServiceNumber.trim(),
-          assetId: assetId,
+      // Parse bill month from bill_date (format: DD-MMM-YY)
+      let billMonth = new Date().toISOString().slice(0, 7) + '-01';
+      if (formData.bill_date) {
+        try {
+          const [day, monthStr, year] = formData.bill_date.split('-');
+          const monthMap: Record<string, string> = {
+            'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+            'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+            'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+          };
+          const month = monthMap[monthStr] || '01';
+          const fullYear = `20${year}`;
+          billMonth = `${fullYear}-${month}-01`;
+        } catch (e) {
+          console.error('Error parsing bill date:', e);
         }
-      });
+      }
+
+      // Parse due date (format: DD-MMM-YY)
+      let dueDate = null;
+      if (formData.due_date) {
+        try {
+          const [day, monthStr, year] = formData.due_date.split('-');
+          const monthMap: Record<string, string> = {
+            'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+            'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+            'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+          };
+          const month = monthMap[monthStr] || '01';
+          const fullYear = `20${year}`;
+          dueDate = `${fullYear}-${month}-${day.padStart(2, '0')}`;
+        } catch (e) {
+          console.error('Error parsing due date:', e);
+        }
+      }
+
+      const billData = {
+        asset_id: assetId,
+        area: asset?.area || "",
+        location: asset?.location || "",
+        direction: asset?.direction || "",
+        unique_service_number: formData.unique_service_number.trim(),
+        service_number: formData.service_number.trim() || formData.unique_service_number.trim(),
+        consumer_name: formData.consumer_name.trim(),
+        ero: formData.ero.trim(),
+        section_name: formData.section.trim(),
+        units: parseFloat(formData.units) || 0,
+        bill_month: billMonth,
+        due_date: dueDate,
+        current_month_bill: parseFloat(formData.current_month_bill) || 0,
+        acd_amount: parseFloat(formData.acd_amount) || 0,
+        arrears: parseFloat(formData.arrears) || 0,
+        total_due: parseFloat(formData.total_amount) || 0,
+        payment_link: `https://tgsouthernpower.org/paybillonline`,
+        payment_status: 'Pending',
+      };
+
+      const { error } = await supabase
+        .from('asset_power_bills')
+        .upsert(billData, {
+          onConflict: 'asset_id,bill_month'
+        });
 
       if (error) throw error;
 
-      if (data.success) {
-        setBillData(data.data);
-        setPaymentUrl(data.payment_url);
-        
-        toast({
-          title: "Bill Fetched Successfully",
-          description: "Power bill details have been retrieved and saved",
-        });
+      toast({
+        title: "Bill Saved Successfully",
+        description: "Power bill details have been saved to the database",
+      });
 
-        if (onBillFetched) {
-          onBillFetched();
-        }
-      } else {
-        throw new Error(data.error || "Failed to fetch bill");
-      }
+      setOpen(false);
+      onBillFetched?.();
+      
+      // Reset form
+      setFormData({
+        consumer_name: "",
+        unique_service_number: defaultServiceNumber || "",
+        service_number: "",
+        ero: "",
+        section: "",
+        units: "",
+        bill_date: "",
+        due_date: "",
+        current_month_bill: "",
+        acd_amount: "0",
+        arrears: "0",
+        total_amount: "",
+      });
     } catch (error: any) {
-      console.error('Error fetching bill:', error);
+      console.error('Error saving bill:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to fetch bill from TGSPDCL",
+        description: error.message || "Failed to save bill data",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handlePayNow = () => {
-    if (paymentUrl) {
-      window.open(paymentUrl, '_blank');
     }
   };
 
@@ -95,134 +177,213 @@ export function PowerBillFetchDialog({
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <Zap className="mr-2 h-4 w-4" />
-          Fetch TGSPDCL Bill
+          Fetch Bill from TGSPDCL
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Fetch TGSPDCL Power Bill</DialogTitle>
           <DialogDescription>
-            Enter the TGSPDCL unique service number to fetch current bill details
+            Open the TGSPDCL portal, enter your Unique Service Number, then copy the bill details here
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Input Section */}
-          <div className="grid grid-cols-4 gap-4">
-            <div className="col-span-3 space-y-2">
-              <Label htmlFor="uniqueServiceNumber">Unique Service Number</Label>
-              <Input
-                id="uniqueServiceNumber"
-                value={uniqueServiceNumber}
-                onChange={(e) => setUniqueServiceNumber(e.target.value)}
-                placeholder="Enter TGSPDCL unique service number"
-                disabled={loading}
-              />
-            </div>
-            <div className="flex items-end">
-              <Button 
-                onClick={handleFetchBill} 
-                disabled={loading || !uniqueServiceNumber.trim()}
-                className="w-full"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Fetching...
-                  </>
-                ) : (
-                  <>
-                    <Download className="mr-2 h-4 w-4" />
-                    Fetch Bill
-                  </>
-                )}
-              </Button>
+        <div className="space-y-6">
+          {/* Step 1: Open Portal */}
+          <div className="space-y-2">
+            <Label className="text-base font-semibold">Step 1: Open TGSPDCL Portal</Label>
+            <Button 
+              onClick={openTGSPDCLPortal}
+              variant="default"
+              className="w-full"
+              size="lg"
+            >
+              <ExternalLink className="mr-2 h-5 w-5" />
+              Open TGSPDCL Pay Bill Online Portal
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Enter your Unique Service Number on the portal to view bill details
+            </p>
+          </div>
+
+          <Separator />
+
+          {/* Step 2: Consumer Details */}
+          <div className="space-y-4">
+            <Label className="text-base font-semibold">Step 2: Enter Consumer Details</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="consumer_name">Consumer Name</Label>
+                <Input
+                  id="consumer_name"
+                  value={formData.consumer_name}
+                  onChange={(e) => handleInputChange('consumer_name', e.target.value)}
+                  placeholder="e.g., KKRC Infrastructure Pvt Ltd"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="unique_service_number">Unique Service Number *</Label>
+                <Input
+                  id="unique_service_number"
+                  value={formData.unique_service_number}
+                  onChange={(e) => handleInputChange('unique_service_number', e.target.value)}
+                  placeholder="e.g., 114269004"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="service_number">Service Number</Label>
+                <Input
+                  id="service_number"
+                  value={formData.service_number}
+                  onChange={(e) => handleInputChange('service_number', e.target.value)}
+                  placeholder="e.g., 21003 06546"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ero">ERO</Label>
+                <Input
+                  id="ero"
+                  value={formData.ero}
+                  onChange={(e) => handleInputChange('ero', e.target.value)}
+                  placeholder="e.g., 15,GACHIBOWLI"
+                />
+              </div>
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="section">Section</Label>
+                <Input
+                  id="section"
+                  value={formData.section}
+                  onChange={(e) => handleInputChange('section', e.target.value)}
+                  placeholder="e.g., VASANTH NAGAR"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Bill Details Display */}
-          {billData && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Bill Details</CardTitle>
-                    <CardDescription>
-                      Latest bill information from TGSPDCL
-                    </CardDescription>
-                  </div>
-                  <Badge variant={billData.status === 'Paid' ? 'secondary' : 'destructive'}>
-                    {billData.status}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground text-xs">Consumer Name</Label>
-                    <p className="font-medium">{billData.consumer_name}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground text-xs">Service Number</Label>
-                    <p className="font-mono text-sm">{billData.service_number}</p>
-                  </div>
-                  {billData.section_name && (
-                    <div>
-                      <Label className="text-muted-foreground text-xs">Section</Label>
-                      <p className="font-medium">{billData.section_name}</p>
-                    </div>
-                  )}
-                  {billData.ero && (
-                    <div>
-                      <Label className="text-muted-foreground text-xs">ERO</Label>
-                      <p className="font-medium">{billData.ero}</p>
-                    </div>
-                  )}
-                  <div>
-                    <Label className="text-muted-foreground text-xs">Bill Month</Label>
-                    <p className="font-medium">{billData.bill_month}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground text-xs">Bill Amount</Label>
-                    <p className="text-2xl font-bold text-primary">
-                      {formatCurrency(billData.bill_amount)}
-                    </p>
-                  </div>
-                  {billData.due_date && (
-                    <div>
-                      <Label className="text-muted-foreground text-xs">Due Date</Label>
-                      <p className="font-medium">{billData.due_date}</p>
-                    </div>
-                  )}
-                </div>
+          <Separator />
 
-                {billData.status !== 'Paid' && (
-                  <div className="pt-4 border-t">
-                    <Button 
-                      onClick={handlePayNow}
-                      className="w-full"
-                      variant="default"
-                    >
-                      <ExternalLink className="mr-2 h-4 w-4" />
-                      Pay Now on TGSPDCL Portal
-                    </Button>
-                    <p className="text-xs text-muted-foreground text-center mt-2">
-                      You will be redirected to TGSPDCL's secure payment portal
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          {/* Step 3: Bill Details */}
+          <div className="space-y-4">
+            <Label className="text-base font-semibold">Step 3: Enter Bill / Payment Details</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="units">Units</Label>
+                <Input
+                  id="units"
+                  type="number"
+                  value={formData.units}
+                  onChange={(e) => handleInputChange('units', e.target.value)}
+                  placeholder="e.g., 28"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="current_month_bill">Current Month Bill (₹)</Label>
+                <Input
+                  id="current_month_bill"
+                  type="number"
+                  step="0.01"
+                  value={formData.current_month_bill}
+                  onChange={(e) => handleInputChange('current_month_bill', e.target.value)}
+                  placeholder="e.g., 826"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bill_date">Bill Date</Label>
+                <Input
+                  id="bill_date"
+                  value={formData.bill_date}
+                  onChange={(e) => handleInputChange('bill_date', e.target.value)}
+                  placeholder="DD-MMM-YY (e.g., 07-Nov-25)"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="due_date">Due Date</Label>
+                <Input
+                  id="due_date"
+                  value={formData.due_date}
+                  onChange={(e) => handleInputChange('due_date', e.target.value)}
+                  placeholder="DD-MMM-YY (e.g., 21-Nov-25)"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="acd_amount">ACD Amount (₹)</Label>
+                <Input
+                  id="acd_amount"
+                  type="number"
+                  step="0.01"
+                  value={formData.acd_amount}
+                  onChange={(e) => handleInputChange('acd_amount', e.target.value)}
+                  placeholder="e.g., 0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="arrears">Arrears (₹)</Label>
+                <Input
+                  id="arrears"
+                  type="number"
+                  step="0.01"
+                  value={formData.arrears}
+                  onChange={(e) => handleInputChange('arrears', e.target.value)}
+                  placeholder="e.g., 0"
+                />
+              </div>
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="total_amount" className="text-base font-semibold">
+                  Total Amount to be Paid (₹) *
+                </Label>
+                <Input
+                  id="total_amount"
+                  type="number"
+                  step="0.01"
+                  value={formData.total_amount}
+                  onChange={(e) => handleInputChange('total_amount', e.target.value)}
+                  placeholder="e.g., 826.0"
+                  className="text-lg font-semibold"
+                  required
+                />
+              </div>
+            </div>
+          </div>
 
-          {/* Information */}
+          {/* Save Button */}
+          <div className="flex gap-2 pt-4">
+            <Button 
+              onClick={handleSaveBill}
+              disabled={loading || !formData.unique_service_number || !formData.total_amount}
+              className="flex-1"
+              size="lg"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Bill Details
+                </>
+              )}
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+          </div>
+
+          {/* Help Text */}
           <div className="bg-muted p-4 rounded-lg">
-            <h4 className="text-sm font-medium mb-2">About TGSPDCL Bill Fetch</h4>
+            <h4 className="text-sm font-medium mb-2">Instructions</h4>
             <ul className="text-xs text-muted-foreground space-y-1">
-              <li>• Bills are fetched from Telangana Southern Power Distribution portal</li>
-              <li>• Data is automatically saved to your asset's power bills</li>
-              <li>• Payment is processed securely on TGSPDCL's official portal</li>
-              <li>• Ensure you have the correct service number for the asset</li>
+              <li>• Click "Open TGSPDCL Portal" to access the bill payment page</li>
+              <li>• Enter your Unique Service Number and click Submit on the portal</li>
+              <li>• Copy the Consumer Details and Bill/Payment Details shown on the portal</li>
+              <li>• Paste the values into this form and click "Save Bill Details"</li>
+              <li>• Date format: DD-MMM-YY (e.g., 07-Nov-25)</li>
             </ul>
           </div>
         </div>

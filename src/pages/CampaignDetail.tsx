@@ -172,10 +172,10 @@ export default function CampaignDetail() {
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          {/* Client Info */}
-          <Card>
+          {/* Client Info - Blue */}
+          <Card className="border-l-4 border-l-blue-500 shadow-sm">
             <CardHeader>
-              <CardTitle>Client Information</CardTitle>
+              <CardTitle className="text-blue-600 dark:text-blue-400">Client Information</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
@@ -191,10 +191,10 @@ export default function CampaignDetail() {
             </CardContent>
           </Card>
 
-          {/* Campaign Period */}
-          <Card>
+          {/* Campaign Period - Green */}
+          <Card className="border-l-4 border-l-green-500 shadow-sm">
             <CardHeader>
-              <CardTitle>Campaign Period</CardTitle>
+              <CardTitle className="text-green-600 dark:text-green-400">Campaign Period</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
@@ -210,10 +210,10 @@ export default function CampaignDetail() {
             </CardContent>
           </Card>
 
-          {/* Financial Summary */}
-          <Card>
+          {/* Financial Summary - Orange */}
+          <Card className="border-l-4 border-l-orange-500 shadow-sm">
             <CardHeader>
-              <CardTitle>Financial Summary</CardTitle>
+              <CardTitle className="text-orange-600 dark:text-orange-400">Financial Summary</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">

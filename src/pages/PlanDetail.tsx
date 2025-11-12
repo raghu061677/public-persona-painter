@@ -933,7 +933,7 @@ export default function PlanDetail() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           {/* Client Info - Blue Theme */}
-          <Card className="border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20">
+          <Card className="border-l-4 border-l-blue-500 shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-blue-600 dark:text-blue-400">
                 Client Information
@@ -952,7 +952,7 @@ export default function PlanDetail() {
           </Card>
 
           {/* Campaign Period - Green Theme */}
-          <Card className="border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/20">
+          <Card className="border-l-4 border-l-green-500 shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-green-600 dark:text-green-400">
                 Campaign Period
@@ -975,7 +975,7 @@ export default function PlanDetail() {
           </Card>
 
           {/* Financial Summary - Orange Theme */}
-          <Card className="border-orange-200 dark:border-orange-900 bg-orange-50/50 dark:bg-orange-950/20">
+          <Card className="border-l-4 border-l-orange-500 shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-orange-600 dark:text-orange-400">
                 Financial Summary

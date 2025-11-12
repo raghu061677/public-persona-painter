@@ -85,36 +85,32 @@ export default function FinanceDashboard() {
       title: "Revenue (FY)",
       value: formatINR(stats.revenue),
       icon: TrendingUp,
-      color: "text-green-600",
-      bgColor: "bg-green-50 dark:bg-green-950",
+      borderColor: "border-l-green-500",
     },
     {
       title: "Paid",
       value: formatINR(stats.paid),
       icon: DollarSign,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50 dark:bg-blue-950",
+      borderColor: "border-l-blue-500",
     },
     {
       title: "Outstanding",
       value: formatINR(stats.outstanding),
       icon: Receipt,
-      color: "text-amber-600",
-      bgColor: "bg-amber-50 dark:bg-amber-950",
+      borderColor: "border-l-amber-500",
     },
     {
       title: "Expenses",
       value: formatINR(stats.expenses_total),
       icon: TrendingDown,
-      color: "text-red-600",
-      bgColor: "bg-red-50 dark:bg-red-950",
+      borderColor: "border-l-red-500",
     },
     {
       title: "Profit",
       value: formatINR(stats.profit),
       icon: Wallet,
-      color: stats.profit >= 0 ? "text-green-600" : "text-red-600",
-      bgColor: stats.profit >= 0 ? "bg-green-50 dark:bg-green-950" : "bg-red-50 dark:bg-red-950",
+      borderColor: stats.profit >= 0 ? "border-l-green-500" : "border-l-red-500",
+      color: stats.profit >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400",
     },
   ];
 
@@ -135,13 +131,13 @@ export default function FinanceDashboard() {
           {kpiCards.map((kpi) => {
             const Icon = kpi.icon;
             return (
-              <Card key={kpi.title} className={kpi.bgColor}>
+              <Card key={kpi.title} className={`border-l-4 ${kpi.borderColor} shadow-sm`}>
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-medium text-muted-foreground">{kpi.title}</p>
-                    <Icon className={`h-5 w-5 ${kpi.color}`} />
+                    <Icon className="h-5 w-5" />
                   </div>
-                  <p className={`text-2xl font-bold ${kpi.color}`}>{kpi.value}</p>
+                  <p className={`text-2xl font-bold ${kpi.color || ''}`}>{kpi.value}</p>
                 </CardContent>
               </Card>
             );

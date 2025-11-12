@@ -5,11 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 const sectionVariants = {
   primary: "border-l-4 border-l-primary",
-  blue: "border-l-4 border-l-blue-500",
-  green: "border-l-4 border-l-green-500",
-  purple: "border-l-4 border-l-purple-500",
-  amber: "border-l-4 border-l-amber-500",
-  red: "border-l-4 border-l-red-500",
+  blue: "border-l-4 border-l-blue-500 shadow-sm",
+  green: "border-l-4 border-l-green-500 shadow-sm",
+  purple: "border-l-4 border-l-purple-500 shadow-sm",
+  amber: "border-l-4 border-l-amber-500 shadow-sm",
+  orange: "border-l-4 border-l-orange-500 shadow-sm",
+  red: "border-l-4 border-l-red-500 shadow-sm",
   default: "",
 } as const;
 
@@ -19,6 +20,7 @@ const iconVariants = {
   green: "text-green-500",
   purple: "text-purple-500",
   amber: "text-amber-500",
+  orange: "text-orange-500",
   red: "text-red-500",
   default: "text-muted-foreground",
 } as const;

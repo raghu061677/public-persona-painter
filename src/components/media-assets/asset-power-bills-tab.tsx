@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { PowerBillFetchDialog } from "@/components/media-assets/PowerBillFetchDialog";
 import { PayBillButton } from "@/components/power-bills/PayBillButton";
 import { UploadReceiptDialog } from "@/components/power-bills/UploadReceiptDialog";
-import { Upload } from "lucide-react";
+import { FileText, Upload } from "lucide-react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 
 interface AssetPowerBillsTabProps {
@@ -104,42 +105,51 @@ export function AssetPowerBillsTab({ assetId, asset, isAdmin }: AssetPowerBillsT
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Bill Month</TableHead>
-                <TableHead>Service Number</TableHead>
-                <TableHead>Consumer Name</TableHead>
-                <TableHead>Bill Amount</TableHead>
+                <TableHead>Bill Date</TableHead>
+                <TableHead>Due Date</TableHead>
+                <TableHead>Units</TableHead>
+                <TableHead>Current Bill</TableHead>
+                <TableHead>Arrears</TableHead>
+                <TableHead>Total Due</TableHead>
                 <TableHead>Payment Status</TableHead>
-                <TableHead>Paid Date</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {bills.map((bill) => (
                 <TableRow key={bill.id}>
-                  <TableCell>{bill.bill_month}</TableCell>
-                  <TableCell className="font-mono text-sm">{bill.service_number}</TableCell>
-                  <TableCell>{bill.consumer_name || '-'}</TableCell>
+                  <TableCell className="font-medium">
+                    {bill.bill_date ? format(new Date(bill.bill_date), 'dd MMM yyyy') : 
+                     format(new Date(bill.bill_month), 'MMM yyyy')}
+                  </TableCell>
+                  <TableCell>
+                    {bill.due_date ? format(new Date(bill.due_date), 'dd MMM yyyy') : '-'}
+                  </TableCell>
+                  <TableCell>{bill.units || 0}</TableCell>
+                  <TableCell>₹{(bill.current_month_bill || bill.bill_amount || 0).toLocaleString('en-IN')}</TableCell>
+                  <TableCell>
+                    {bill.arrears ? (
+                      <span className="text-destructive">₹{bill.arrears.toLocaleString('en-IN')}</span>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
                   <TableCell className="font-semibold">
-                    ₹{bill.bill_amount?.toLocaleString('en-IN') || 0}
+                    ₹{(bill.total_due || 0).toLocaleString('en-IN')}
                   </TableCell>
                   <TableCell>
                     <Badge variant={getPaymentStatusColor(bill.payment_status)}>
                       {bill.payment_status}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    {bill.payment_date 
-                      ? new Date(bill.payment_date).toLocaleDateString('en-IN') 
-                      : '-'}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
+                  <TableCell className="text-right">
+                    <div className="flex gap-2 justify-end">
                       {bill.payment_status === 'Pending' && (
                         <>
                           <PayBillButton
                             billId={bill.id}
                             assetId={assetId}
-                            amount={bill.bill_amount || 0}
+                            amount={bill.total_due || bill.bill_amount || 0}
                             consumerName={bill.consumer_name}
                             serviceNumber={bill.service_number}
                             uniqueServiceNumber={bill.unique_service_number}
@@ -151,7 +161,7 @@ export function AssetPowerBillsTab({ assetId, asset, isAdmin }: AssetPowerBillsT
                             variant="outline"
                             onClick={() => handleOpenUploadDialog(bill)}
                           >
-                            <Upload className="h-4 w-4 mr-2" />
+                            <Upload className="h-4 w-4 mr-1" />
                             Upload Receipt
                           </Button>
                         </>
@@ -162,6 +172,7 @@ export function AssetPowerBillsTab({ assetId, asset, isAdmin }: AssetPowerBillsT
                           variant="ghost"
                           onClick={() => window.open(bill.paid_receipt_url, '_blank')}
                         >
+                          <FileText className="h-4 w-4 mr-1" />
                           View Receipt
                         </Button>
                       )}

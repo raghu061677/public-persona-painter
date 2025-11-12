@@ -162,6 +162,15 @@ export default function AddUserDialog({
         },
       });
 
+      // Send welcome email
+      try {
+        await supabase.functions.invoke('send-welcome-email', {
+          body: { userId: newUser.user.id, email, username, role: selectedRole },
+        });
+      } catch (emailErr) {
+        console.error("Welcome email failed:", emailErr);
+      }
+
       toast({
         title: "User created successfully",
         description: `${email} has been added with ${selectedRole} role`,

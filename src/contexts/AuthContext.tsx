@@ -31,10 +31,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Defer role fetching with setTimeout to prevent deadlock
+        // Defer role fetching and activity logging with setTimeout to prevent deadlock
         if (session?.user) {
-          setTimeout(() => {
-            fetchUserRoles(session.user.id);
+          setTimeout(async () => {
+            await fetchUserRoles(session.user.id);
+            
+            // Log authentication events
+            if (event === 'SIGNED_IN') {
+              await supabase.rpc('log_user_activity', {
+                p_user_id: session.user.id,
+                p_activity_type: 'login',
+                p_activity_description: 'User signed in',
+              });
+            } else if (event === 'SIGNED_OUT') {
+              await supabase.rpc('log_user_activity', {
+                p_user_id: session.user.id,
+                p_activity_type: 'logout',
+                p_activity_description: 'User signed out',
+              });
+            }
           }, 0);
         } else {
           setRoles([]);

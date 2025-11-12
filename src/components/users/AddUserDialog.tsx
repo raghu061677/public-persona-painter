@@ -109,7 +109,7 @@ export default function AddUserDialog({
 
       // Log audit
       await logAudit({
-        action: 'create_user',
+        action: 'invite_user',
         resourceType: 'user_management',
         resourceId: email,
         details: {
@@ -117,6 +117,14 @@ export default function AddUserDialog({
           username,
           role: selectedRole,
         },
+      });
+
+      // Log activity
+      await supabase.rpc('log_user_activity', {
+        p_user_id: currentUser.id,
+        p_activity_type: 'invite_user',
+        p_activity_description: `Invited ${email} with role ${selectedRole}`,
+        p_metadata: { invited_email: email, assigned_role: selectedRole },
       });
 
       toast({

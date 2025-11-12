@@ -16,7 +16,15 @@ export type AuditAction =
   | 'update_user'
   | 'delete_user'
   | 'invite_user'
-  | 'change_permissions';
+  | 'change_permissions'
+  | 'create_plan'
+  | 'update_plan'
+  | 'delete_plan'
+  | 'create_campaign'
+  | 'update_campaign'
+  | 'create_client'
+  | 'update_client'
+  | 'delete_client';
 
 export type ResourceType = 
   | 'media_asset'

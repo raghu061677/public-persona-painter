@@ -49,7 +49,7 @@ export default function VendorsManagement() {
 
   useEffect(() => {
     if (!canViewFinance) {
-      navigate("/admin/dashboard");
+      navigate("/dashboard");
       return;
     }
     fetchVendors();

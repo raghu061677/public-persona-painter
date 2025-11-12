@@ -1,6 +1,5 @@
-import { Bell, Search, Plus } from "lucide-react";
-import ThemePicker from "@/components/ThemePicker";
-import { useThemeStore } from "@/store/themeStore";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -12,11 +11,12 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ROUTES } from "@/lib/routes";
+import ThemePicker from "@/components/ThemePicker";
+import { Bell, Search, Plus } from "lucide-react";
 
 export default function Topbar({ onSearchOpen }: { onSearchOpen: () => void }) {
   const navigate = useNavigate();
@@ -39,7 +39,7 @@ export default function Topbar({ onSearchOpen }: { onSearchOpen: () => void }) {
         title: "Logged out",
         description: "You've been successfully logged out.",
       });
-      navigate("/auth");
+      navigate(ROUTES.AUTH);
     } catch (error) {
       toast({
         variant: "destructive",
@@ -128,10 +128,10 @@ export default function Topbar({ onSearchOpen }: { onSearchOpen: () => void }) {
               </div>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate("/settings")}>
+            <DropdownMenuItem onClick={() => navigate(ROUTES.SETTINGS)}>
               Settings
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/dashboard")}>
+            <DropdownMenuItem onClick={() => navigate(ROUTES.DASHBOARD)}>
               Dashboard
             </DropdownMenuItem>
             <DropdownMenuSeparator />

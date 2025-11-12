@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { ROUTES } from "@/lib/routes";
 import { useNavigate } from "react-router-dom";
 import { 
   Hash, 
@@ -59,7 +60,7 @@ export default function CodeManagement() {
 
   useEffect(() => {
     if (!isAdmin) {
-      navigate('/dashboard');
+      navigate(ROUTES.DASHBOARD);
       return;
     }
     fetchData();

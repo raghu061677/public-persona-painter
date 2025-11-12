@@ -184,76 +184,94 @@ function parseJSONResponse(data: any, uniqueServiceNumber: string): BillData | n
 
 async function fetchBillFromTGSPDCL(uniqueServiceNumber: string): Promise<{ billData: BillData | null; error?: string }> {
   try {
-    const endpoints = [
-      `https://tgsouthernpower.org/paybillonline`,
-      `https://www.tssouthernpower.com/OnlineBill/QuickPay?uniqueServiceNo=${uniqueServiceNumber}`,
-      `https://tgspdcl.in/OnlineBill/QuickPay?uniqueServiceNo=${uniqueServiceNumber}`,
-    ];
-
     console.log('Attempting to fetch bill for USN:', uniqueServiceNumber);
 
-    for (const url of endpoints) {
+    // Primary endpoint - TGSPDCL main portal
+    const url = 'https://tgsouthernpower.org/paybillonline';
+    
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Origin': 'https://tgsouthernpower.org',
+      'Referer': 'https://tgsouthernpower.org/paybillonline',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
+    };
+
+    console.log('Fetching from TGSPDCL portal:', url);
+    
+    const formBody = `usno=${uniqueServiceNumber}&submit=Get+Bill`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formBody,
+      redirect: 'follow',
+    });
+
+    console.log('Response status:', response.status);
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+    if (!response.ok) {
+      console.error('Response not OK:', response.status, response.statusText);
+      return {
+        billData: null,
+        error: `TGSPDCL portal returned status ${response.status}. Please try again later.`
+      };
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    console.log('Content-Type:', contentType);
+
+    // Try JSON first
+    if (contentType.includes('application/json')) {
+      console.log('Parsing JSON response...');
       try {
-        console.log('Trying endpoint:', url);
+        const jsonData = await response.json();
+        console.log('JSON data received:', JSON.stringify(jsonData).substring(0, 200));
+        const billData = parseJSONResponse(jsonData, uniqueServiceNumber);
         
-        // POST request for the main portal
-        const isMainPortal = url.includes('paybillonline');
-        const headers: Record<string, string> = {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Referer': 'https://tgsouthernpower.org/',
-        };
-        
-        if (isMainPortal) {
-          headers['Content-Type'] = 'application/x-www-form-urlencoded';
+        if (billData && (billData.bill_amount! > 0 || billData.total_due! > 0)) {
+          console.log('✓ Successfully extracted bill data from JSON');
+          return { billData };
         }
-        
-        const response = await fetch(url, {
-          method: isMainPortal ? 'POST' : 'GET',
-          headers,
-          body: isMainPortal ? `usno=${uniqueServiceNumber}` : undefined,
-        });
-
-        console.log(`Response status from ${url}:`, response.status);
-
-        if (response.ok) {
-          const contentType = response.headers.get('content-type');
-          let billData: BillData | null = null;
-
-          if (contentType?.includes('application/json')) {
-            console.log('Parsing JSON response...');
-            const jsonData = await response.json();
-            billData = parseJSONResponse(jsonData, uniqueServiceNumber);
-          } else {
-            console.log('Parsing HTML response...');
-            const html = await response.text();
-            billData = parseHTMLForBillData(html, uniqueServiceNumber);
-          }
-
-          if (billData && (billData.bill_amount! > 0 || billData.total_due! > 0)) {
-            console.log('Successfully extracted bill data:', billData);
-            return { billData };
-          }
-        }
-      } catch (endpointError) {
-        console.warn(`Failed to fetch from ${url}:`, endpointError);
-        continue;
+      } catch (jsonError) {
+        console.warn('JSON parsing failed, trying HTML:', jsonError);
       }
     }
 
-    return { 
-      billData: null, 
-      error: 'Unable to fetch bill from TGSPDCL portal. Service may be unavailable.' 
+    // Parse HTML response
+    console.log('Parsing HTML response...');
+    const html = await response.text();
+    console.log('HTML content length:', html.length, 'chars');
+    
+    // Save first 1000 chars for debugging
+    console.log('HTML preview:', html.substring(0, 1000));
+    
+    const billData = parseHTMLForBillData(html, uniqueServiceNumber);
+    
+    if (billData && (billData.bill_amount! > 0 || billData.total_due! > 0)) {
+      console.log('✓ Successfully extracted bill data from HTML');
+      return { billData };
+    }
+
+    console.warn('No valid bill data found in response');
+    return {
+      billData: null,
+      error: 'Unable to fetch bill from TGSPDCL portal. The service may be temporarily unavailable or the unique service number may be invalid.'
     };
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error fetching from TGSPDCL:', errorMessage);
+    console.error('Full error:', error);
     
-    return { 
-      billData: null, 
-      error: `Failed to connect to TGSPDCL: ${errorMessage}` 
+    return {
+      billData: null,
+      error: `Failed to connect to TGSPDCL: ${errorMessage}`
     };
   }
 }
@@ -296,75 +314,158 @@ function parseHTMLForBillData(html: string, uniqueServiceNumber: string): BillDa
     return month ? `${year}-${month}-${day}` : undefined;
   };
 
-  // Extract bill details from table rows and divs
-  $('tr, div, td').each((_, elem) => {
-    const text = $(elem).text().trim();
+  // Look for specific table/div patterns used by TGSPDCL
+  const tables = $('table');
+  console.log(`Found ${tables.length} tables in HTML`);
+
+  // Strategy 1: Look in table cells (td, th)
+  $('td, th, div.bill-detail, div.info-row, span.value, p').each((_, elem) => {
+    const $elem = $(elem);
+    const text = $elem.text().trim();
+    const html = $elem.html() || '';
     
+    // Consumer Name
     if (/Consumer\s*Name/i.test(text) && !billData.consumer_name) {
-      const match = text.match(/Consumer\s*Name\s*[:\-]?\s*([A-Z\s&.,()]+)/i);
-      if (match) billData.consumer_name = match[1].trim();
+      const nextText = $elem.next().text().trim();
+      if (nextText && nextText.length > 3) {
+        billData.consumer_name = nextText;
+      } else {
+        const match = text.match(/Consumer\s*Name\s*[:\-]?\s*(.+?)(?:\n|$)/i);
+        if (match) billData.consumer_name = match[1].trim();
+      }
     }
     
+    // Service Number
     if (/Service\s*No/i.test(text) && !billData.service_number) {
-      const match = text.match(/Service\s*No\.?\s*[:\-]?\s*([A-Z0-9]+)/i);
-      if (match) billData.service_number = match[1].trim();
+      const nextText = $elem.next().text().trim();
+      if (nextText && /^[A-Z0-9]{6,}$/.test(nextText)) {
+        billData.service_number = nextText;
+      } else {
+        const match = text.match(/Service\s*No\.?\s*[:\-]?\s*([A-Z0-9]+)/i);
+        if (match) billData.service_number = match[1].trim();
+      }
     }
     
-    if (/ERO/i.test(text) && !billData.ero) {
-      const match = text.match(/ERO\s*[:\-]?\s*([^<\n]+?)(?:\s{2,}|$)/i);
-      if (match) billData.ero = match[1].trim();
+    // ERO
+    if (/\bERO\b/i.test(text) && !billData.ero) {
+      const nextText = $elem.next().text().trim();
+      if (nextText && nextText.length > 2) {
+        billData.ero = nextText;
+      } else {
+        const match = text.match(/ERO\s*[:\-]?\s*(.+?)(?:\n|$)/i);
+        if (match) billData.ero = match[1].trim();
+      }
     }
     
+    // Section
     if (/Section/i.test(text) && !billData.section_name) {
-      const match = text.match(/Section\s*[:\-]?\s*([^<\n]+?)(?:\s{2,}|$)/i);
-      if (match) billData.section_name = match[1].trim();
+      const nextText = $elem.next().text().trim();
+      if (nextText && nextText.length > 2) {
+        billData.section_name = nextText;
+      } else {
+        const match = text.match(/Section\s*[:\-]?\s*(.+?)(?:\n|$)/i);
+        if (match) billData.section_name = match[1].trim();
+      }
     }
     
+    // Address
     if (/Address/i.test(text) && !billData.address) {
-      const match = text.match(/Address\s*[:\-]?\s*(.+?)(?:\s{2,}|$)/i);
-      if (match) billData.address = match[1].trim();
-    }
-    
-    if (/Units?/i.test(text) && !billData.units) {
-      const match = text.match(/Units?\s*[:\-]?\s*(\d+)/i);
-      if (match) billData.units = parseInt(match[1]);
-    }
-    
-    if (/Bill\s*Date\s*\/\s*Due\s*Date/i.test(text)) {
-      const match = text.match(/(\d{1,2}[-\/]\w{3}[-\/]\d{2,4})\s*\/\s*(\d{1,2}[-\/]\w{3}[-\/]\d{2,4})/i);
-      if (match) {
-        billData.bill_date = parseDate(match[1]);
-        billData.due_date = parseDate(match[2]);
+      const nextText = $elem.next().text().trim();
+      if (nextText && nextText.length > 5) {
+        billData.address = nextText;
+      } else {
+        const match = text.match(/Address\s*[:\-]?\s*(.+?)(?:\n|$)/i);
+        if (match) billData.address = match[1].trim();
       }
     }
     
+    // Units
+    if (/Units?\s*Consumed/i.test(text) && !billData.units) {
+      const nextText = $elem.next().text().trim();
+      const nextNum = parseInt(nextText);
+      if (!isNaN(nextNum)) {
+        billData.units = nextNum;
+      } else {
+        const match = text.match(/Units?\s*(?:Consumed)?\s*[:\-]?\s*(\d+)/i);
+        if (match) billData.units = parseInt(match[1]);
+      }
+    }
+    
+    // Bill Date / Due Date
+    if (/Bill\s*Date.*Due\s*Date/i.test(text) || /Bill.*Due/i.test(text)) {
+      const dateMatch = text.match(/(\d{1,2}[-\/]\w{3}[-\/]\d{2,4})\s*[\/\-]\s*(\d{1,2}[-\/]\w{3}[-\/]\d{2,4})/i);
+      if (dateMatch) {
+        billData.bill_date = parseDate(dateMatch[1]);
+        billData.due_date = parseDate(dateMatch[2]);
+      }
+    }
+    
+    // Current Month Bill
     if (/Current\s*Month\s*Bill/i.test(text) && !billData.current_month_bill) {
-      const match = text.match(/Current\s*Month\s*Bill\s*[:\-]?\s*₹?\s*([\d,]+\.?\d*)/i);
-      if (match) {
-        billData.current_month_bill = extractNumber(match[1]);
-        billData.bill_amount = billData.current_month_bill;
+      const nextText = $elem.next().text().trim();
+      const nextNum = extractNumber(nextText);
+      if (nextNum && nextNum > 0) {
+        billData.current_month_bill = nextNum;
+        billData.bill_amount = nextNum;
+      } else {
+        const match = text.match(/Current\s*Month\s*Bill\s*[:\-]?\s*₹?\s*([\d,]+\.?\d*)/i);
+        if (match) {
+          billData.current_month_bill = extractNumber(match[1]);
+          billData.bill_amount = billData.current_month_bill;
+        }
       }
     }
     
+    // ACD Amount
     if (/ACD\s*Amount/i.test(text) && billData.acd_amount === undefined) {
-      const match = text.match(/ACD\s*Amount\s*[:\-]?\s*₹?\s*([\d,]+\.?\d*)/i);
-      if (match) billData.acd_amount = extractNumber(match[1]);
+      const nextText = $elem.next().text().trim();
+      const nextNum = extractNumber(nextText);
+      if (nextNum !== undefined) {
+        billData.acd_amount = nextNum;
+      } else {
+        const match = text.match(/ACD\s*Amount\s*[:\-]?\s*₹?\s*([\d,]+\.?\d*)/i);
+        if (match) billData.acd_amount = extractNumber(match[1]);
+      }
     }
     
-    if (/Arrears?/i.test(text) && billData.arrears === undefined) {
-      const match = text.match(/Arrears?\s*[:\-]?\s*₹?\s*([\d,]+\.?\d*)/i);
-      if (match) billData.arrears = extractNumber(match[1]);
+    // Arrears
+    if (/Arrears?/i.test(text) && billData.arrears === undefined && !/ACD/.test(text)) {
+      const nextText = $elem.next().text().trim();
+      const nextNum = extractNumber(nextText);
+      if (nextNum !== undefined) {
+        billData.arrears = nextNum;
+      } else {
+        const match = text.match(/Arrears?\s*[:\-]?\s*₹?\s*([\d,]+\.?\d*)/i);
+        if (match) billData.arrears = extractNumber(match[1]);
+      }
     }
     
-    if (/Total\s*Amount\s*to\s*be\s*Paid/i.test(text) && !billData.total_due) {
-      const match = text.match(/Total\s*Amount\s*to\s*be\s*Paid\s*[:\-]?\s*₹?\s*([\d,]+\.?\d*)/i);
-      if (match) billData.total_due = extractNumber(match[1]);
+    // Total Amount to be Paid
+    if (/Total\s*(?:Amount)?\s*to\s*be\s*Paid/i.test(text) && !billData.total_due) {
+      const nextText = $elem.next().text().trim();
+      const nextNum = extractNumber(nextText);
+      if (nextNum && nextNum > 0) {
+        billData.total_due = nextNum;
+      } else {
+        const match = text.match(/Total\s*(?:Amount)?\s*to\s*be\s*Paid\s*[:\-]?\s*₹?\s*([\d,]+\.?\d*)/i);
+        if (match) billData.total_due = extractNumber(match[1]);
+      }
     }
   });
 
-  // Fallback: Try regex patterns on raw HTML
+  // Fallback: Aggressive regex on entire HTML
+  if (!billData.consumer_name) {
+    const match = html.match(/Consumer\s*Name\s*[:\-]?\s*<[^>]*>([^<]+)/i);
+    if (match) billData.consumer_name = match[1].trim();
+  }
+  
+  if (!billData.service_number) {
+    const match = html.match(/Service\s*No[\.:]?\s*<[^>]*>([A-Z0-9]+)/i);
+    if (match) billData.service_number = match[1].trim();
+  }
+
   if (!billData.current_month_bill) {
-    const billMatch = html.match(/Current\s*Month\s*Bill\s*[:\-]?\s*₹?\s*([\d,]+\.?\d*)/i);
+    const billMatch = html.match(/Current\s*Month\s*Bill\s*[:\-]?\s*<[^>]*>₹?\s*([\d,]+\.?\d*)/i);
     if (billMatch) {
       billData.current_month_bill = extractNumber(billMatch[1]);
       billData.bill_amount = billData.current_month_bill;
@@ -372,11 +473,16 @@ function parseHTMLForBillData(html: string, uniqueServiceNumber: string): BillDa
   }
 
   if (!billData.total_due) {
-    const totalMatch = html.match(/Total\s*Amount\s*to\s*be\s*Paid\s*[:\-]?\s*₹?\s*([\d,]+\.?\d*)/i);
+    const totalMatch = html.match(/Total\s*(?:Amount)?\s*to\s*be\s*Paid\s*[:\-]?\s*<[^>]*>₹?\s*([\d,]+\.?\d*)/i);
     if (totalMatch) billData.total_due = extractNumber(totalMatch[1]);
   }
 
-  console.log('Extracted bill data:', billData);
+  if (!billData.units) {
+    const unitsMatch = html.match(/Units?\s*(?:Consumed)?\s*[:\-]?\s*<[^>]*>(\d+)/i);
+    if (unitsMatch) billData.units = parseInt(unitsMatch[1]);
+  }
+
+  console.log('✓ Extracted bill data:', JSON.stringify(billData, null, 2));
   
   return billData;
 }

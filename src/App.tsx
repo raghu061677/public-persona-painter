@@ -44,6 +44,7 @@ import PowerBillsDashboard from "./pages/PowerBillsDashboard";
 import PowerBillsAnalytics from "./pages/PowerBillsAnalytics";
 import PowerBillsBulkPayment from "./pages/PowerBillsBulkPayment";
 import PowerBillsBulkUpload from "./pages/PowerBillsBulkUpload";
+import PowerBillsReconciliation from "./pages/PowerBillsReconciliation";
 import AuditLogs from "./pages/AuditLogs";
 import ApprovalSettings from "./pages/ApprovalSettings";
 import ApprovalDelegation from "./pages/ApprovalDelegation";
@@ -105,6 +106,7 @@ const App = () => (
             <Route path="/admin/power-bills-analytics" element={<AppLayout><PowerBillsAnalytics /></AppLayout>} />
             <Route path="/admin/power-bills-bulk-payment" element={<AppLayout><PowerBillsBulkPayment /></AppLayout>} />
             <Route path="/admin/power-bills/bulk-upload" element={<AppLayout><PowerBillsBulkUpload /></AppLayout>} />
+            <Route path="/admin/power-bills/reconciliation" element={<AppLayout><PowerBillsReconciliation /></AppLayout>} />
             <Route path="/admin/audit-logs" element={<AppLayout><AuditLogs /></AppLayout>} />
             <Route path="/admin/vendors" element={<AppLayout><VendorsManagement /></AppLayout>} />
             <Route path="/admin/users" element={<AppLayout><UserManagement /></AppLayout>} />

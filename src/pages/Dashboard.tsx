@@ -28,6 +28,7 @@ import {
   Cell,
 } from "recharts";
 import { PendingApprovalsWidget } from "@/components/dashboard/PendingApprovalsWidget";
+import PowerBillsWidget from "@/components/dashboard/PowerBillsWidget";
 
 const COLORS = [
   'hsl(var(--chart-1))',
@@ -209,8 +210,13 @@ const Dashboard = () => {
           <PendingApprovalsWidget />
         </div>
 
+        {/* Power Bills Widget */}
+        <div className="lg:col-span-4">
+          <PowerBillsWidget />
+        </div>
+
         {/* Revenue Overview Chart */}
-        <div className="lg:col-span-8">
+        <div className="lg:col-span-4">
           <Card>
             <CardHeader>
               <CardTitle>Revenue Overview</CardTitle>
@@ -219,7 +225,7 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="pl-2">
-              <ResponsiveContainer width="100%" height={350}>
+              <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={revenueData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis

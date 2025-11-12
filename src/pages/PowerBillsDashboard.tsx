@@ -300,6 +300,10 @@ export default function PowerBillsDashboard() {
             <CreditCard className="h-4 w-4 mr-2" />
             Bulk Payment
           </Button>
+          <Button onClick={() => navigate('/admin/power-bills/reconciliation')} variant="outline" size="sm">
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            Reconciliation
+          </Button>
           <Button onClick={exportToExcel} variant="outline" size="sm">
             <FileSpreadsheet className="h-4 w-4 mr-2" />
             Export Excel

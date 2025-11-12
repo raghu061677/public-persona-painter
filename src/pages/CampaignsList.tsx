@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Eye, Trash2, FileText } from "lucide-react";
+import { getCampaignStatusConfig } from "@/utils/statusBadges";
 import { getCampaignStatusColor } from "@/utils/campaigns";
 import { formatDate as formatPlanDate } from "@/utils/plans";
 import { toast } from "@/hooks/use-toast";
@@ -338,8 +339,8 @@ export default function CampaignsList() {
                       {formatDateUtil(campaign.start_date, settings.dateFormat)} - {formatDateUtil(campaign.end_date, settings.dateFormat)}
                     </TableCell>
                     <TableCell className={getCellClassName()}>
-                      <Badge className={getCampaignStatusColor(campaign.status)}>
-                        {campaign.status}
+                      <Badge variant="outline" className={getCampaignStatusConfig(campaign.status).className}>
+                        {getCampaignStatusConfig(campaign.status).label}
                       </Badge>
                     </TableCell>
                     <TableCell className={getCellClassName()}>{campaign.total_assets || 0}</TableCell>

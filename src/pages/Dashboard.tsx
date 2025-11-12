@@ -30,6 +30,7 @@ import {
 } from "recharts";
 import { PendingApprovalsWidget } from "@/components/dashboard/PendingApprovalsWidget";
 import PowerBillsWidget from "@/components/dashboard/PowerBillsWidget";
+import { ApprovedPlansWidget } from "@/components/dashboard/ApprovedPlansWidget";
 import RoleBasedDashboard, { getRoleDashboardLayout } from "@/components/dashboard/RoleBasedDashboard";
 import GuidedTour from "@/components/onboarding/GuidedTour";
 
@@ -222,6 +223,13 @@ const Dashboard = () => {
           )}
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+            {/* Approved Plans Widget */}
+            {shouldShowWidget('pending-approvals') && (
+              <div className="lg:col-span-4" data-tour="approved-plans">
+                <ApprovedPlansWidget />
+              </div>
+            )}
+
             {/* Pending Approvals Widget */}
             {shouldShowWidget('pending-approvals') && (
               <div className="lg:col-span-4" data-tour="pending-approvals">

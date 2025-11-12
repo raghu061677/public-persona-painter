@@ -90,7 +90,7 @@ export default function MediaAssetsList() {
           </div>
           
           {/* Combined Stats Box */}
-          <Card className="w-full lg:w-auto border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+          <Card className="w-full lg:w-auto border-l-4 border-l-blue-500 shadow-sm bg-gradient-to-br from-blue-50/50 to-blue-100/30 dark:from-blue-950/20 dark:to-blue-900/20">
             <CardContent className="p-4">
               <div className="grid grid-cols-2 gap-4 lg:flex lg:gap-6">
                 <div className="flex items-center gap-3">

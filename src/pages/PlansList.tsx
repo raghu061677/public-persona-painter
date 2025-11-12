@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket, Download, Sparkles, ChevronDown, Info, FolderOpen, Edit } from "lucide-react";
+import { getPlanStatusConfig } from "@/utils/statusBadges";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +40,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { highlightText } from "@/components/common/global-search";
 import { TemplatesDialog } from "@/components/plans/TemplatesDialog";
 import { BulkActionsToolbar } from "@/components/plans/BulkActionsToolbar";
+import { BulkConversionDialog } from "@/components/plans/BulkConversionDialog";
 import {
   Tooltip,
   TooltipContent,
@@ -57,6 +59,7 @@ export default function PlansList() {
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [showTemplatesDialog, setShowTemplatesDialog] = useState(false);
+  const [showBulkConversionDialog, setShowBulkConversionDialog] = useState(false);
 
   const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("plans");
   const { 
@@ -570,6 +573,19 @@ export default function PlansList() {
                   Delete Selected
                 </Button>
 
+                {selectedPlans.size > 0 && Array.from(selectedPlans).every(id => {
+                  const plan = filteredPlans.find(p => p.id === id);
+                  return plan?.status === 'Approved';
+                }) && isAdmin && (
+                  <Button
+                    onClick={() => setShowBulkConversionDialog(true)}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <Rocket className="mr-2 h-4 w-4" />
+                    Convert {selectedPlans.size} to Campaigns
+                  </Button>
+                )}
+
                 <Button
                   variant="outline"
                   onClick={() => setSelectedPlans(new Set())}
@@ -803,14 +819,9 @@ export default function PlansList() {
                         <TableCell className={getCellClassName()}>
                           <Badge 
                             variant="outline" 
-                            className={`${getStatusBadgeColor(plan.status)} border`}
+                            className={getPlanStatusConfig(plan.status).className}
                           >
-                            {plan.status === 'Draft' && '🟡 Draft'}
-                            {plan.status === 'Sent' && '🟠 Submitted'}
-                            {plan.status === 'Approved' && '🟢 Approved'}
-                            {plan.status === 'Rejected' && '🔴 Rejected'}
-                            {plan.status === 'Converted' && '🚀 Converted'}
-                            {!['Draft', 'Sent', 'Approved', 'Rejected', 'Converted'].includes(plan.status) && plan.status}
+                            {getPlanStatusConfig(plan.status).label}
                           </Badge>
                         </TableCell>
                       )}
@@ -940,6 +951,17 @@ export default function PlansList() {
       <TemplatesDialog
         open={showTemplatesDialog}
         onOpenChange={setShowTemplatesDialog}
+      />
+
+      {/* Bulk Conversion Dialog */}
+      <BulkConversionDialog
+        open={showBulkConversionDialog}
+        onOpenChange={setShowBulkConversionDialog}
+        selectedPlanIds={Array.from(selectedPlans)}
+        onComplete={() => {
+          setSelectedPlans(new Set());
+          fetchPlans();
+        }}
       />
     </div>
   );

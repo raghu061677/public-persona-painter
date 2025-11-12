@@ -28,6 +28,7 @@ import PlanShare from "./pages/PlanShare";
 import CampaignsList from "./pages/CampaignsList";
 import CampaignDetail from "./pages/CampaignDetail";
 import CampaignEdit from "./pages/CampaignEdit";
+import CampaignBudget from "./pages/CampaignBudget";
 import MobileUpload from "./pages/MobileUpload";
 import MobileFieldApp from "./pages/MobileFieldApp";
 import MobilePowerBills from "./pages/MobilePowerBills";

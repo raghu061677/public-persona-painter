@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      alert_settings: {
+        Row: {
+          budget_variance_threshold: number
+          created_at: string | null
+          id: string
+          schedule_critical_days: number
+          schedule_warning_days: number
+          updated_at: string | null
+          updated_by: string | null
+          verification_delay_critical_days: number
+          verification_delay_warning_days: number
+          verification_lag_threshold: number
+        }
+        Insert: {
+          budget_variance_threshold?: number
+          created_at?: string | null
+          id?: string
+          schedule_critical_days?: number
+          schedule_warning_days?: number
+          updated_at?: string | null
+          updated_by?: string | null
+          verification_delay_critical_days?: number
+          verification_delay_warning_days?: number
+          verification_lag_threshold?: number
+        }
+        Update: {
+          budget_variance_threshold?: number
+          created_at?: string | null
+          id?: string
+          schedule_critical_days?: number
+          schedule_warning_days?: number
+          updated_at?: string | null
+          updated_by?: string | null
+          verification_delay_critical_days?: number
+          verification_delay_warning_days?: number
+          verification_lag_threshold?: number
+        }
+        Relationships: []
+      }
       analytics_daily: {
         Row: {
           created_at: string | null
@@ -243,10 +282,12 @@ export type Database = {
       asset_power_bills: {
         Row: {
           acd_amount: number | null
+          address: string | null
           area: string | null
           arrears: number | null
           asset_id: string
           bill_amount: number
+          bill_date: string | null
           bill_month: string
           bill_url: string | null
           consumer_name: string | null
@@ -274,10 +315,12 @@ export type Database = {
         }
         Insert: {
           acd_amount?: number | null
+          address?: string | null
           area?: string | null
           arrears?: number | null
           asset_id: string
           bill_amount?: number
+          bill_date?: string | null
           bill_month: string
           bill_url?: string | null
           consumer_name?: string | null
@@ -305,10 +348,12 @@ export type Database = {
         }
         Update: {
           acd_amount?: number | null
+          address?: string | null
           area?: string | null
           arrears?: number | null
           asset_id?: string
           bill_amount?: number
+          bill_date?: string | null
           bill_month?: string
           bill_url?: string | null
           consumer_name?: string | null

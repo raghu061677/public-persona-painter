@@ -33,6 +33,9 @@ import PowerBillsWidget from "@/components/dashboard/PowerBillsWidget";
 import { ApprovedPlansWidget } from "@/components/dashboard/ApprovedPlansWidget";
 import RoleBasedDashboard, { getRoleDashboardLayout } from "@/components/dashboard/RoleBasedDashboard";
 import GuidedTour from "@/components/onboarding/GuidedTour";
+import { ManagerDashboard } from "@/components/dashboard/ManagerDashboard";
+import { InstallationDashboard } from "@/components/dashboard/InstallationDashboard";
+import { MonitoringDashboard } from "@/components/dashboard/MonitoringDashboard";
 
 const COLORS = [
   'hsl(var(--chart-1))',
@@ -186,6 +189,41 @@ const Dashboard = () => {
   const dashboardLayout = getRoleDashboardLayout(userRole);
   const shouldShowWidget = (widgetId: string) => dashboardLayout.includes(widgetId);
 
+  // Role-specific dashboard layouts
+  if (userRole === 'manager') {
+    return (
+      <>
+        <GuidedTour role={userRole} />
+        <RoleBasedDashboard role={userRole}>
+          <ManagerDashboard />
+        </RoleBasedDashboard>
+      </>
+    );
+  }
+
+  if (userRole === 'installation') {
+    return (
+      <>
+        <GuidedTour role={userRole} />
+        <RoleBasedDashboard role={userRole}>
+          <InstallationDashboard />
+        </RoleBasedDashboard>
+      </>
+    );
+  }
+
+  if (userRole === 'monitoring') {
+    return (
+      <>
+        <GuidedTour role={userRole} />
+        <RoleBasedDashboard role={userRole}>
+          <MonitoringDashboard />
+        </RoleBasedDashboard>
+      </>
+    );
+  }
+
+  // Default dashboard for admin, sales, operations, finance
   return (
     <>
       <GuidedTour role={userRole} />

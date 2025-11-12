@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SectionCard } from "@/components/ui/section-card";
 import {
   Select,
   SelectContent,
@@ -25,7 +26,7 @@ import {
   calculateProRata,
   formatDate 
 } from "@/utils/plans";
-import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, FileText, CalendarDays, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AssetSelectionTable } from "@/components/plans/AssetSelectionTable";
 import { SelectedAssetsTable } from "@/components/plans/SelectedAssetsTable";
@@ -392,13 +393,13 @@ export default function PlanEdit() {
           {/* Top 3-Column Grid: Plan Details | Campaign Period | Plan Summary */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Plan Details */}
-            <Card className="rounded-2xl shadow-md hover:shadow-xl transition-all duration-200 border-l-4 border-l-primary">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold text-slate-700 dark:text-slate-200">
-                  Plan Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <SectionCard
+              title="Plan Details"
+              icon={FileText}
+              variant="blue"
+              description="Basic plan information"
+            >
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Plan ID</Label>
                   <Input value={formData.id} disabled className="h-10 bg-muted/30" />
@@ -451,17 +452,17 @@ export default function PlanEdit() {
                     className="resize-none"
                   />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </SectionCard>
 
             {/* Campaign Period */}
-            <Card className="rounded-2xl shadow-md hover:shadow-xl transition-all duration-200 border-l-4 border-l-blue-500">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold text-slate-700 dark:text-slate-200">
-                  Campaign Period
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <SectionCard
+              title="Campaign Period"
+              icon={CalendarDays}
+              variant="green"
+              description="Duration and dates"
+            >
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Start Date *</Label>
                   <Popover>
@@ -523,12 +524,19 @@ export default function PlanEdit() {
                     </SelectContent>
                   </Select>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </SectionCard>
 
-            {/* Plan Summary */}
+            {/* Plan Summary - Now with Orange Border */}
             <div className="lg:col-span-1">
-              <PlanSummaryCard
+              <SectionCard
+                title="Financial Summary"
+                icon={DollarSign}
+                variant="orange"
+                description="Cost breakdown"
+                className="h-full"
+              >
+                <PlanSummaryCard
                 selectedCount={selectedAssets.size}
                 duration={durationDays}
                 displayCost={totals.displayCost}
@@ -542,7 +550,9 @@ export default function PlanEdit() {
                 gstAmount={totals.gstAmount}
                 grandTotal={totals.grandTotal}
                 baseRent={totals.totalBaseRent}
+                withCard={false}
               />
+              </SectionCard>
             </div>
           </div>
 

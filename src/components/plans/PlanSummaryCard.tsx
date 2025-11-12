@@ -19,6 +19,7 @@ interface PlanSummaryCardProps {
   gstAmount: number;
   grandTotal: number;
   baseRent?: number;
+  withCard?: boolean;
 }
 
 export function PlanSummaryCard({
@@ -35,6 +36,7 @@ export function PlanSummaryCard({
   gstAmount,
   grandTotal,
   baseRent,
+  withCard = true,
 }: PlanSummaryCardProps) {
   const profitPercent = netTotal > 0 ? (profit / netTotal) * 100 : 0;
   const isLowMargin = profitPercent < 10;
@@ -61,25 +63,8 @@ export function PlanSummaryCard({
     URL.revokeObjectURL(url);
   };
 
-  return (
-    <Card className="sticky top-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 bg-gradient-to-br from-background to-muted/20 border-l-4 border-l-primary">
-      <CardHeader className="pb-4">
-        <CardTitle className="flex items-center justify-between text-lg font-semibold">
-          <span className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Financial Summary
-          </span>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={exportSummary}
-            className="h-8 w-8 p-0"
-          >
-            <Download className="h-4 w-4" />
-          </Button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
+  const content = (
+    <div className="space-y-6">
         {/* KPI Section */}
         <div className="grid grid-cols-2 gap-4 pb-4 border-b">
           <div className="text-center p-3 rounded-lg bg-primary/5">
@@ -176,6 +161,33 @@ export function PlanSummaryCard({
             )}
           </div>
         )}
+    </div>
+  );
+  
+  if (!withCard) {
+    return content;
+  }
+
+  return (
+    <Card className="sticky top-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 bg-gradient-to-br from-background to-muted/20 border-l-4 border-l-primary">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center justify-between text-lg font-semibold">
+          <span className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            Financial Summary
+          </span>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={exportSummary}
+            className="h-8 w-8 p-0"
+          >
+            <Download className="h-4 w-4" />
+          </Button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {content}
       </CardContent>
     </Card>
   );

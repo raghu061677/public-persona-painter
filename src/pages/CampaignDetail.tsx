@@ -14,11 +14,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Trash2, Upload, RefreshCw } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { getCampaignStatusColor, getAssetStatusColor, calculateProgress } from "@/utils/campaigns";
 import { formatDate } from "@/utils/plans";
 import { toast } from "@/hooks/use-toast";
+import { OperationsBoard } from "@/components/campaigns/OperationsBoard";
+import { ProofGallery } from "@/components/campaigns/ProofGallery";
 
 export default function CampaignDetail() {
   const { id } = useParams();
@@ -28,10 +30,14 @@ export default function CampaignDetail() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  useEffect(() => {
-    checkAdminStatus();
+  const refreshData = () => {
     fetchCampaign();
     fetchCampaignAssets();
+  };
+
+  useEffect(() => {
+    checkAdminStatus();
+    refreshData();
   }, [id]);
 
   const checkAdminStatus = async () => {
@@ -132,12 +138,18 @@ export default function CampaignDetail() {
               <span className="text-muted-foreground">{campaign.id}</span>
             </div>
           </div>
-          {isAdmin && (
-            <Button variant="destructive" size="sm" onClick={handleDelete}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={refreshData}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
             </Button>
-          )}
+            {isAdmin && (
+              <Button variant="destructive" size="sm" onClick={handleDelete}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Progress */}
@@ -270,16 +282,20 @@ export default function CampaignDetail() {
 
           <TabsContent value="operations">
             <Card>
-              <CardContent className="pt-6 text-center py-12">
-                <p className="text-muted-foreground">Operations board view coming soon</p>
+              <CardContent className="pt-6">
+                <OperationsBoard
+                  campaignId={campaign.id}
+                  assets={campaignAssets}
+                  onUpdate={refreshData}
+                />
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="proof">
             <Card>
-              <CardContent className="pt-6 text-center py-12">
-                <p className="text-muted-foreground">Proof gallery coming soon</p>
+              <CardContent className="pt-6">
+                <ProofGallery assets={campaignAssets} />
               </CardContent>
             </Card>
           </TabsContent>

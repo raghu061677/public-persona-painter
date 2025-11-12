@@ -59,18 +59,22 @@ export default function MobileUpload() {
     }
 
     setUploading(true);
-    setUploadProgress(0);
+    setUploadProgress(25);
 
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${photoType}-${Date.now()}.${fileExt}`;
       const filePath = `campaigns/${campaignId}/assets/${assetId}/${fileName}`;
 
+      setUploadProgress(50);
+
       const { error: uploadError } = await supabase.storage
         .from('campaign-photos')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
+
+      setUploadProgress(75);
 
       const { data: { publicUrl } } = supabase.storage
         .from('campaign-photos')
@@ -83,28 +87,42 @@ export default function MobileUpload() {
           name: file.name,
           size: file.size,
           type: file.type,
+          uploadedAt: new Date().toISOString(),
         }
       };
 
       setPhotos(updatedPhotos);
 
-      // Update database
+      const allPhotosUploaded = hasAllPhotos(updatedPhotos);
+
+      // Update database with new status
+      let newStatus = asset.status;
+      if (allPhotosUploaded && asset.status !== 'Verified') {
+        newStatus = 'PhotoUploaded';
+      } else if (asset.status === 'Pending' || asset.status === 'Assigned') {
+        newStatus = 'Mounted';
+      }
+
       const { error: updateError } = await supabase
         .from('campaign_assets')
         .update({ 
           photos: updatedPhotos,
-          status: hasAllPhotos(updatedPhotos) ? 'PhotoUploaded' : asset.status
+          status: newStatus,
+          completed_at: allPhotosUploaded ? new Date().toISOString() : null,
         })
         .eq('id', assetId);
 
       if (updateError) throw updateError;
 
+      setUploadProgress(100);
+
       toast({
         title: "Success",
-        description: `${photoType} uploaded successfully`,
+        description: allPhotosUploaded 
+          ? "All photos uploaded! Asset marked as complete."
+          : "Photo uploaded successfully",
       });
 
-      setUploadProgress(100);
       fetchData();
     } catch (error: any) {
       toast({
@@ -113,8 +131,10 @@ export default function MobileUpload() {
         variant: "destructive",
       });
     } finally {
-      setUploading(false);
-      setUploadProgress(0);
+      setTimeout(() => {
+        setUploading(false);
+        setUploadProgress(0);
+      }, 500);
     }
   };
 

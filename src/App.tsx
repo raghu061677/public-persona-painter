@@ -71,6 +71,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin/plans/:id/share/:shareToken" element={<PlanShare />} />
             <Route path="/mobile/field-app" element={<MobileFieldApp />} />
+            <Route path="/mobile/upload/:campaignId/:assetId" element={<MobileUpload />} />
             <Route path="/mobile/power-bills" element={<MobilePowerBills />} />
             
             {/* Protected routes with layout */}

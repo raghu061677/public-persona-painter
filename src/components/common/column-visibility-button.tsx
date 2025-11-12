@@ -5,7 +5,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Columns3, RotateCcw } from "lucide-react";
+import { Columns3, RotateCcw, Eye, EyeOff, Check } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 interface Column {
   key: string;
@@ -33,23 +35,39 @@ export default function ColumnVisibilityButton({
     }
   };
 
+  const selectAll = () => {
+    onChange(allColumns.map(c => c.key));
+  };
+
+  const deselectAll = () => {
+    // Keep select and actions columns
+    onChange(allColumns.filter(c => c.key === 'select' || c.key === 'actions').map(c => c.key));
+  };
+
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button variant="outline" size="sm" className="gap-2 hover:bg-accent">
           <Columns3 className="h-4 w-4" />
-          Columns ({visibleKeys.length}/{allColumns.length})
+          <span className="hidden sm:inline">Toggle Columns</span>
+          <Badge variant="secondary" className="ml-1 px-1.5 py-0 h-5">
+            {visibleKeys.length}/{allColumns.length}
+          </Badge>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 bg-popover z-50" align="end">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between border-b pb-3">
-            <h4 className="font-semibold text-sm">Toggle Columns</h4>
+      <PopoverContent className="w-72 bg-popover z-50 p-0" align="end">
+        <div className="space-y-0">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b bg-muted/50">
+            <div className="flex items-center gap-2">
+              <Columns3 className="h-4 w-4 text-primary" />
+              <h4 className="font-semibold text-sm">Column Visibility</h4>
+            </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={onReset}
-              className="h-7 px-2 text-xs"
+              className="h-7 px-2 text-xs hover:bg-background"
               title="Reset to Default"
             >
               <RotateCcw className="h-3 w-3 mr-1" />
@@ -57,52 +75,81 @@ export default function ColumnVisibilityButton({
             </Button>
           </div>
           
-          <div className="space-y-2 border-b pb-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start h-8 text-xs font-normal"
-              onClick={() => onChange(allColumns.map(c => c.key))}
-            >
-              Select All
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start h-8 text-xs font-normal"
-              onClick={() => onChange(allColumns.filter(c => c.key === 'select' || c.key === 'actions').map(c => c.key))}
-            >
-              Deselect All
-            </Button>
-          </div>
-          
-          <div className="space-y-1 max-h-[350px] overflow-y-auto pr-2">
-            {allColumns.map((column) => (
-              <div 
-                key={column.key} 
-                className="flex items-center space-x-2 py-1.5 hover:bg-muted/50 rounded px-2 -mx-2 cursor-pointer"
-                onClick={() => handleToggle(column.key)}
+          {/* Quick Actions */}
+          <div className="p-3 bg-background border-b">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-8 text-xs"
+                onClick={selectAll}
               >
-                <Checkbox
-                  id={`col-${column.key}`}
-                  checked={visibleKeys.includes(column.key)}
-                  onCheckedChange={() => handleToggle(column.key)}
-                />
-                <label
-                  htmlFor={`col-${column.key}`}
-                  className="text-sm font-normal cursor-pointer flex-1 leading-none"
-                >
-                  {column.label}
-                </label>
-              </div>
-            ))}
+                <Eye className="h-3 w-3 mr-1.5" />
+                Show All
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-8 text-xs"
+                onClick={deselectAll}
+              >
+                <EyeOff className="h-3 w-3 mr-1.5" />
+                Hide All
+              </Button>
+            </div>
           </div>
           
-          <div className="pt-2 border-t text-xs text-muted-foreground text-center">
-            {visibleKeys.length} of {allColumns.length} columns visible
+          {/* Column List */}
+          <div className="p-3">
+            <div className="space-y-0.5 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
+              {allColumns.map((column, index) => {
+                const isVisible = visibleKeys.includes(column.key);
+                return (
+                  <div key={column.key}>
+                    {index > 0 && index % 5 === 0 && (
+                      <Separator className="my-2" />
+                    )}
+                    <div 
+                      className="flex items-center space-x-3 py-2 px-3 hover:bg-accent/50 rounded-md cursor-pointer transition-colors group"
+                      onClick={() => handleToggle(column.key)}
+                    >
+                      <Checkbox
+                        id={`col-${column.key}`}
+                        checked={isVisible}
+                        onCheckedChange={() => handleToggle(column.key)}
+                        className="data-[state=checked]:bg-primary"
+                      />
+                      <label
+                        htmlFor={`col-${column.key}`}
+                        className="text-sm font-normal cursor-pointer flex-1 leading-none select-none"
+                      >
+                        {column.label}
+                      </label>
+                      {isVisible && (
+                        <Check className="h-3 w-3 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          {/* Footer */}
+          <div className="p-3 pt-2 border-t bg-muted/30">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Eye className="h-3 w-3" />
+                <span>Visible Columns</span>
+              </div>
+              <Badge variant="outline" className="font-mono">
+                {visibleKeys.length} / {allColumns.length}
+              </Badge>
+            </div>
           </div>
         </div>
       </PopoverContent>
     </Popover>
   );
 }
+

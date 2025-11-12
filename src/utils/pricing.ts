@@ -54,12 +54,6 @@ export function validateNegotiatedPrice(
   cardRate: number,
   baseRate: number
 ): { isValid: boolean; message?: string } {
-  if (negotiatedPrice > cardRate) {
-    return {
-      isValid: false,
-      message: "Negotiated price cannot exceed card rate."
-    };
-  }
   if (negotiatedPrice < baseRate) {
     return {
       isValid: false,

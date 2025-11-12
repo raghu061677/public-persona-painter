@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { Resend } from "npm:resend@2.0.0";
+import { Resend } from "https://esm.sh/resend@4.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -178,12 +178,12 @@ const handler = async (req: Request): Promise<Response> => {
       activity_description: "Welcome email sent",
       metadata: {
         role,
-        email_id: emailResponse.id,
+        email_id: emailResponse.data?.id,
       },
     });
 
     return new Response(
-      JSON.stringify({ success: true, emailId: emailResponse.id }),
+      JSON.stringify({ success: true, emailId: emailResponse.data?.id }),
       {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },

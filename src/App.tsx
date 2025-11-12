@@ -45,6 +45,8 @@ import PowerBillsAnalytics from "./pages/PowerBillsAnalytics";
 import PowerBillsBulkPayment from "./pages/PowerBillsBulkPayment";
 import AuditLogs from "./pages/AuditLogs";
 import ApprovalSettings from "./pages/ApprovalSettings";
+import ApprovalDelegation from "./pages/ApprovalDelegation";
+import ApprovalAnalytics from "./pages/ApprovalAnalytics";
 import VendorsManagement from "./pages/VendorsManagement";
 import PlanComparison from "./pages/PlanComparison";
 import NotFound from "./pages/NotFound";
@@ -104,6 +106,8 @@ const App = () => (
             <Route path="/admin/vendors" element={<AppLayout><VendorsManagement /></AppLayout>} />
             <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
             <Route path="/admin/approval-settings" element={<AppLayout><ApprovalSettings /></AppLayout>} />
+            <Route path="/admin/approval-delegation" element={<AppLayout><ApprovalDelegation /></AppLayout>} />
+            <Route path="/admin/approval-analytics" element={<AppLayout><ApprovalAnalytics /></AppLayout>} />
             
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />

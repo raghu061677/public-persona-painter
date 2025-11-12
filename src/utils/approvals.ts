@@ -58,11 +58,22 @@ export async function getPendingApprovalsForUser(userId: string): Promise<any[]>
 
   const roles = userRoles.map(ur => ur.role);
 
+  // Check for active delegations where user is the delegate
+  const { data: delegations } = await supabase
+    .from("approval_delegations")
+    .select("role")
+    .eq("delegate_id", userId)
+    .eq("is_active", true)
+    .gte("end_date", new Date().toISOString());
+
+  const delegatedRoles = delegations?.map(d => d.role) || [];
+  const allRoles = [...new Set([...roles, ...delegatedRoles])];
+
   const { data, error } = await supabase
     .from("plan_approvals")
     .select("*, plans(*)")
     .eq("status", "pending")
-    .in("required_role", roles);
+    .in("required_role", allRoles);
 
   if (error) throw error;
   return data || [];

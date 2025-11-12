@@ -53,6 +53,45 @@ export type Database = {
         }
         Relationships: []
       }
+      approval_delegations: {
+        Row: {
+          created_at: string | null
+          delegate_id: string
+          delegator_id: string
+          end_date: string
+          id: string
+          is_active: boolean | null
+          notes: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          start_date: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          delegate_id: string
+          delegator_id: string
+          end_date: string
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          start_date?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          delegate_id?: string
+          delegator_id?: string
+          end_date?: string
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          start_date?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       approval_settings: {
         Row: {
           approval_levels: Json

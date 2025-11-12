@@ -2,12 +2,63 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Print Styles */
+@media print {
+  /* Preserve colored borders in print */
+  .border-l-blue-500,
+  .border-l-green-500,
+  .border-l-orange-500,
+  .border-l-purple-500,
+  .border-l-red-500,
+  .border-l-amber-500 {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  
+  /* Ensure shadows are visible */
+  .shadow-sm,
+  .shadow,
+  .shadow-md,
+  .shadow-lg {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  
+  /* Preserve background colors in cards */
+  .bg-blue-50,
+  .bg-green-50,
+  .bg-orange-50,
+  .bg-purple-50,
+  .bg-red-50,
+  .bg-amber-50 {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  
+  /* Hide non-essential elements in print */
+  .no-print,
+  nav,
+  aside,
+  button:not(.print-include) {
+    display: none !important;
+  }
+  
+  /* Optimize page breaks */
+  .card,
+  .section {
+    page-break-inside: avoid;
+  }
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */
 
 @layer base {
   :root {
+    --font-family: Inter, sans-serif;
+    --base-font-size: 16px;
+    
     --background: 210 40% 98%;
     --foreground: 215 25% 27%;
 
@@ -174,6 +225,8 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-family);
+    font-size: var(--base-font-size);
   }
 }
 

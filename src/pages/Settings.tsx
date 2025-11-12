@@ -9,8 +9,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Shield, Key, Palette, Upload, Image, Hash, Zap, RefreshCw, Settings as SettingsIcon } from "lucide-react";
+import { User, Shield, Key, Palette, Upload, Image, Hash, Zap, RefreshCw, Settings as SettingsIcon, HelpCircle } from "lucide-react";
 import { migrateClientIds } from "@/utils/migrateClientIds";
+import { ThemeCustomization } from "@/components/settings/ThemeCustomization";
+import { ColorLegend } from "@/components/settings/ColorLegend";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -304,10 +306,12 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="branding">Branding</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="help">Help</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile" className="space-y-6 mt-6">
@@ -632,6 +636,25 @@ export default function Settings() {
               </Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="appearance" className="space-y-6 mt-6">
+          <ThemeCustomization />
+        </TabsContent>
+
+        <TabsContent value="help" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <HelpCircle className="h-5 w-5" />
+                <CardTitle>Color Legend & Guidelines</CardTitle>
+              </div>
+              <CardDescription>
+                Understanding the visual language of Go-Ads 360°
+              </CardDescription>
+            </CardHeader>
+          </Card>
+          <ColorLegend />
         </TabsContent>
       </Tabs>
     </div>

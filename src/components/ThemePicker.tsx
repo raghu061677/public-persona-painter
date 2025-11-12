@@ -3,6 +3,7 @@ import { Palette, Sun, Moon, Droplet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
+import { useEffect } from 'react';
 
 const themes = [
   { value: 'light', label: 'Light', icon: Sun },
@@ -13,6 +14,11 @@ const themes = [
 
 export default function ThemePicker() {
   const { theme, setTheme } = useThemeStore();
+
+  // Apply theme on mount
+  useEffect(() => {
+    document.documentElement.className = theme;
+  }, [theme]);
 
   const saveTheme = async (value: typeof theme) => {
     setTheme(value);

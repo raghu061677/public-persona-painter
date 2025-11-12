@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Zap, Download, RefreshCw, Lightbulb, Sun, Flame, Settings, Upload, FileSpreadsheet, FileText, BarChart3, CreditCard } from "lucide-react";
+import { Zap, Download, RefreshCw, Lightbulb, Sun, Flame, Settings, Upload, FileSpreadsheet, FileText, BarChart3, CreditCard, Calendar, Clock, Play } from "lucide-react";
 import { FetchBillButton } from "@/components/power-bills/FetchBillButton";
 import { PayBillButton } from "@/components/power-bills/PayBillButton";
 import { UploadReceiptDialog } from "@/components/power-bills/UploadReceiptDialog";
@@ -72,6 +72,7 @@ export default function PowerBillsDashboard() {
   });
   const [uploadDialogOpen, setUploadDialogOpen] = useDialogState(false);
   const [selectedBillAsset, setSelectedBillAsset] = useDialogState<any>(null);
+  const [triggeringJob, setTriggeringJob] = useState(false);
 
   useEffect(() => {
     if (isAdmin) {
@@ -243,6 +244,35 @@ export default function PowerBillsDashboard() {
     });
   };
 
+  const handleTriggerMonthlyJob = async () => {
+    setTriggeringJob(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-monthly-power-bills');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Job Triggered",
+        description: `Monthly bill fetch started. ${data?.summary?.successCount || 0} bills fetched successfully.`,
+      });
+      
+      // Refresh the dashboard after a delay
+      setTimeout(() => {
+        fetchAssetsWithBills();
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error triggering job:', error);
+      toast({
+        title: "Error",
+        description: "Failed to trigger monthly bill fetch job",
+        variant: "destructive",
+      });
+    } finally {
+      setTriggeringJob(false);
+    }
+  };
+
   const exportToPDF = () => {
     const doc = new jsPDF('l', 'mm', 'a4');
     
@@ -372,6 +402,104 @@ export default function PowerBillsDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Automation Schedule Card */}
+      <Card className="border-primary/20 bg-gradient-to-br from-background to-primary/5">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                Automated Bill Fetching
+              </CardTitle>
+              <CardDescription>
+                Bills are automatically fetched and reminders sent on schedule
+              </CardDescription>
+            </div>
+            <Button 
+              onClick={handleTriggerMonthlyJob}
+              disabled={triggeringJob}
+              size="sm"
+              className="gap-2"
+            >
+              <Play className="h-4 w-4" />
+              {triggeringJob ? "Running..." : "Trigger Now"}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-card border">
+                <div className="p-2 rounded-md bg-primary/10">
+                  <Clock className="h-4 w-4 text-primary" />
+                </div>
+                <div className="space-y-1 flex-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">Monthly Bill Fetch</p>
+                    <Badge variant="secondary">Active</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Runs on 28th-31st of every month at 8:30 PM UTC
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Automatically fetches bills for all assets with service numbers
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-card border">
+                <div className="p-2 rounded-md bg-amber-500/10">
+                  <Zap className="h-4 w-4 text-amber-500" />
+                </div>
+                <div className="space-y-1 flex-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">Daily Reminders</p>
+                    <Badge variant="secondary">Active</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Runs daily at 3:30 AM UTC (9:00 AM IST)
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Sends email notifications for pending and overdue bills
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  What Happens Automatically?
+                </h4>
+                <ul className="space-y-2 text-xs text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary mt-0.5">•</span>
+                    <span>Fetches bills from TSSPDCL for all illuminated assets</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary mt-0.5">•</span>
+                    <span>Stores bill details (units, amounts, due dates) in database</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary mt-0.5">•</span>
+                    <span>Sends summary email with success/failure report</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary mt-0.5">•</span>
+                    <span>Triggers payment reminders for bills due in 3 and 7 days</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary mt-0.5">•</span>
+                    <span>Escalates overdue bills with increasing urgency levels</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

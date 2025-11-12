@@ -1197,41 +1197,65 @@ export type Database = {
       }
       organization_settings: {
         Row: {
+          address: string | null
+          city: string | null
           created_at: string | null
+          email: string | null
           gps_tolerance_meters: number | null
+          gstin: string | null
           hero_image_url: string | null
           id: string
           logo_url: string | null
           organization_name: string | null
+          phone: string | null
+          pincode: string | null
           primary_color: string | null
+          primary_contact: string | null
           require_proof_approval: boolean | null
           secondary_color: string | null
+          state: string | null
           updated_at: string | null
           updated_by: string | null
         }
         Insert: {
+          address?: string | null
+          city?: string | null
           created_at?: string | null
+          email?: string | null
           gps_tolerance_meters?: number | null
+          gstin?: string | null
           hero_image_url?: string | null
           id?: string
           logo_url?: string | null
           organization_name?: string | null
+          phone?: string | null
+          pincode?: string | null
           primary_color?: string | null
+          primary_contact?: string | null
           require_proof_approval?: boolean | null
           secondary_color?: string | null
+          state?: string | null
           updated_at?: string | null
           updated_by?: string | null
         }
         Update: {
+          address?: string | null
+          city?: string | null
           created_at?: string | null
+          email?: string | null
           gps_tolerance_meters?: number | null
+          gstin?: string | null
           hero_image_url?: string | null
           id?: string
           logo_url?: string | null
           organization_name?: string | null
+          phone?: string | null
+          pincode?: string | null
           primary_color?: string | null
+          primary_contact?: string | null
           require_proof_approval?: boolean | null
           secondary_color?: string | null
+          state?: string | null
           updated_at?: string | null
           updated_by?: string | null
         }

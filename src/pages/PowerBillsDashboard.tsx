@@ -39,11 +39,12 @@ export default function PowerBillsDashboard() {
   const fetchAssetsWithBills = async () => {
     setLoading(true);
     try {
-      // Fetch all media assets with service numbers
+      // Fetch all illumination media assets (assets with power connections)
       const { data: assetsData, error: assetsError } = await supabase
         .from('media_assets')
-        .select('id, location, area, city, service_number, consumer_name')
-        .not('service_number', 'is', null)
+        .select('id, location, area, city, service_number, consumer_name, illumination')
+        .not('illumination', 'is', null)
+        .neq('illumination', '')
         .order('city', { ascending: true });
 
       if (assetsError) throw assetsError;

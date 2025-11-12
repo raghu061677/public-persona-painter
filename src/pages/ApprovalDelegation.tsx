@@ -91,9 +91,15 @@ export default function ApprovalDelegation() {
       return;
     }
 
+    if (!user) {
+      toast.error("User not authenticated");
+      return;
+    }
+
     const { error } = await supabase.from("approval_delegations").insert({
+      delegator_id: user.id,
       delegate_id: formData.delegate_id,
-      role: formData.role,
+      role: formData.role as any,
       start_date: formData.start_date,
       end_date: formData.end_date,
       notes: formData.notes || null

@@ -13,6 +13,7 @@ import { User, Shield, Key, Palette, Upload, Image, Hash, Zap, RefreshCw, Settin
 import { migrateClientIds } from "@/utils/migrateClientIds";
 import { ThemeCustomization } from "@/components/settings/ThemeCustomization";
 import { ColorLegend } from "@/components/settings/ColorLegend";
+import { AlertThresholdSettings } from "@/components/settings/AlertThresholdSettings";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -306,10 +307,11 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="branding">Branding</TabsTrigger>
+          <TabsTrigger value="alerts">Alerts</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="help">Help</TabsTrigger>
         </TabsList>
@@ -592,6 +594,18 @@ export default function Settings() {
               </Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="alerts" className="space-y-6 mt-6">
+          {isAdmin ? (
+            <AlertThresholdSettings />
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">Only admins can configure alert thresholds.</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="security" className="space-y-6 mt-6">

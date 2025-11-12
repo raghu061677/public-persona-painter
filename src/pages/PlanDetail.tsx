@@ -933,70 +933,120 @@ export default function PlanDetail() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           {/* Client Info */}
-          <Card>
+          <Card className="border-l-4 border-l-blue-500">
             <CardHeader>
-              <CardTitle>Client Information</CardTitle>
+              <CardTitle className="text-lg">Client Information</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div>
                   <p className="text-sm text-muted-foreground">Client Name</p>
-                  <p className="font-medium">{plan.client_name}</p>
+                  <p className="font-semibold text-lg">{plan.client_name}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Client ID</p>
-                  <p className="font-medium">{plan.client_id}</p>
+                  <p className="font-semibold">{plan.client_id}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Campaign Period */}
-          <Card>
+          <Card className="border-l-4 border-l-purple-500">
             <CardHeader>
-              <CardTitle>Campaign Period</CardTitle>
+              <CardTitle className="text-lg">Campaign Period</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div>
                   <p className="text-sm text-muted-foreground">Start Date</p>
-                  <p className="font-medium">{formatDate(plan.start_date)}</p>
+                  <p className="font-semibold text-lg">{formatDate(plan.start_date)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">End Date</p>
-                  <p className="font-medium">{formatDate(plan.end_date)}</p>
+                  <p className="font-semibold text-lg">{formatDate(plan.end_date)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Duration</p>
-                  <p className="font-medium">{plan.duration_days} days</p>
+                  <p className="font-semibold">{plan.duration_days} days</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Summary */}
-          <Card>
+          {/* Financial Summary */}
+          <Card className="border-l-4 border-l-orange-500">
             <CardHeader>
-              <CardTitle>Financial Summary</CardTitle>
+              <CardTitle className="text-lg">Financial Summary</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Subtotal</span>
-                  <span className="font-medium">{formatCurrency(plan.total_amount)}</span>
+                  <span className="font-semibold text-lg">{formatCurrency(plan.total_amount)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">GST ({plan.gst_percent}%)</span>
-                  <span className="font-medium">{formatCurrency(plan.gst_amount)}</span>
+                
+                {/* Discount - Blue */}
+                {(() => {
+                  const totalDiscount = planItems.reduce((sum, item) => sum + (item.discount_amount || 0), 0);
+                  if (totalDiscount > 0) {
+                    return (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-blue-600">Discount</span>
+                        <span className="font-semibold text-blue-600">
+                          -{formatCurrency(totalDiscount)}
+                        </span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+                
+                {/* Net Total - After Discount */}
+                <div className="flex justify-between items-center pt-2 border-t">
+                  <span className="text-sm font-medium">Net Total</span>
+                  <span className="font-semibold">{formatCurrency(plan.grand_total - plan.gst_amount)}</span>
                 </div>
-                <div className="flex justify-between pt-2 border-t">
-                  <span className="font-semibold">Grand Total</span>
-                  <span className="font-semibold text-lg">{formatCurrency(plan.grand_total)}</span>
+                
+                {/* Profit - Green */}
+                {(() => {
+                  const baseCost = planItems.reduce((sum, item) => sum + (item.base_rent || 0), 0);
+                  const profit = (plan.grand_total - plan.gst_amount) - baseCost;
+                  if (profit > 0) {
+                    return (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-green-600">Profit</span>
+                        <span className="font-semibold text-green-600">
+                          {formatCurrency(profit)}
+                        </span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+                
+                {/* GST - Red */}
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-red-600">GST ({plan.gst_percent}%)</span>
+                  <span className="font-semibold text-red-600">{formatCurrency(plan.gst_amount)}</span>
+                </div>
+                
+                {/* Grand Total - Blue Large */}
+                <div className="flex justify-between items-center pt-3 border-t-2 border-primary/20">
+                  <span className="font-bold">Grand Total</span>
+                  <span className="font-bold text-2xl text-blue-600">{formatCurrency(plan.grand_total)}</span>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Approval History Timeline */}
+        {(plan.status === 'Sent' || plan.status === 'Approved' || plan.status === 'Rejected' || plan.status === 'Converted') && (
+          <div className="mb-6">
+            <ApprovalHistoryTimeline planId={plan.id} />
+          </div>
+        )}
 
         {/* Plan Items */}
         <Card>
@@ -1078,17 +1128,17 @@ export default function PlanDetail() {
                       <TableCell>{item.location}</TableCell>
                       <TableCell>{item.city}</TableCell>
                       <TableCell className="text-right">{formatCurrency(item.card_rate)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.sales_price)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(proRata)}</TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(discount.value)} ({discount.percent.toFixed(2)}%)
+                      <TableCell className="text-right font-medium">{formatCurrency(item.sales_price)}</TableCell>
+                      <TableCell className="text-right text-purple-600">{formatCurrency(proRata)}</TableCell>
+                      <TableCell className="text-right text-blue-600 font-medium">
+                        -{formatCurrency(discount.value)} ({discount.percent.toFixed(2)}%)
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right text-green-600 font-medium">
                         {formatCurrency(profit.value)} ({profit.percent.toFixed(2)}%)
                       </TableCell>
                       <TableCell className="text-right">{formatCurrency(item.printing_charges)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(item.mounting_charges)}</TableCell>
-                      <TableCell className="text-right font-medium">
+                      <TableCell className="text-right font-semibold text-lg">
                         {formatCurrency(item.total_with_gst)}
                       </TableCell>
                     </TableRow>

@@ -146,14 +146,20 @@ export function CampaignHealthAlerts({ campaignId }: CampaignHealthAlertsProps) 
           }
         }
 
-        // 3. Check Budget Overruns (placeholder - would need actual cost tracking)
-        const estimatedCosts = assets.reduce((sum, a) => 
-          sum + (a.card_rate || 0) + (a.printing_charges || 0) + (a.mounting_charges || 0), 0
-        );
+        // 3. Check Budget Overruns - use pro-rated costs for campaign duration
+        const estimatedCosts = assets.reduce((sum, a) => {
+          // Calculate pro-rata rate: (monthly_rate / 30) * campaign_days
+          const monthlyRate = a.negotiated_price || a.card_rate || 0;
+          const proRataRate = (monthlyRate / 30) * campaignDuration;
+          const totalCost = proRataRate + (a.printing_charges || 0) + (a.mounting_charges || 0);
+          return sum + totalCost;
+        }, 0);
         
-        const budgetVariance = ((estimatedCosts - campaign.total_amount) / campaign.total_amount) * 100;
+        const budgetVariance = campaign.total_amount > 0 
+          ? ((estimatedCosts - campaign.total_amount) / campaign.total_amount) * 100 
+          : 0;
         
-        if (budgetVariance > 10) {
+        if (budgetVariance > 10 && campaign.total_amount > 0) {
           detectedAlerts.push({
             id: `${campaign.id}-budget-warn`,
             type: 'budget',

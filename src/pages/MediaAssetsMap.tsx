@@ -1,9 +1,17 @@
 import { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
+import { Filter, X, ExternalLink } from "lucide-react";
+import { formatCurrency } from "@/utils/mediaAssets";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import MarkerClusterGroup from "react-leaflet-cluster";
 
 // Fix for default marker icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -22,8 +30,11 @@ interface MediaAsset {
   latitude: number;
   longitude: number;
   dimensions: string;
+  total_sqft?: number;
   card_rate: number;
   status: string;
+  direction?: string;
+  illumination?: string;
   image_urls?: string[];
   images?: {
     frontView?: string;
@@ -34,11 +45,28 @@ interface MediaAsset {
   };
 }
 
+type AssetStatus = 'Available' | 'Booked' | 'Blocked' | 'Maintenance' | 'Pending Compliance';
+
+interface StatusFilter {
+  status: AssetStatus;
+  color: string;
+  enabled: boolean;
+  count: number;
+}
+
 export default function MediaAssetsMap() {
+  const navigate = useNavigate();
   const [assets, setAssets] = useState<MediaAsset[]>([]);
   const [filteredAssets, setFilteredAssets] = useState<MediaAsset[]>([]);
-  const [locationSearch, setLocationSearch] = useState("");
-  const [areaSearch, setAreaSearch] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showFilters, setShowFilters] = useState(true);
+  const [statusFilters, setStatusFilters] = useState<StatusFilter[]>([
+    { status: 'Available', color: '#10b981', enabled: true, count: 0 },
+    { status: 'Booked', color: '#3b82f6', enabled: true, count: 0 },
+    { status: 'Blocked', color: '#ef4444', enabled: true, count: 0 },
+    { status: 'Maintenance', color: '#f59e0b', enabled: true, count: 0 },
+    { status: 'Pending Compliance', color: '#9ca3af', enabled: true, count: 0 },
+  ]);
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<L.Marker[]>([]);
@@ -48,8 +76,17 @@ export default function MediaAssetsMap() {
   }, []);
 
   useEffect(() => {
+    // Update counts when assets change
+    const newFilters = statusFilters.map(filter => ({
+      ...filter,
+      count: assets.filter(a => a.status === filter.status).length
+    }));
+    setStatusFilters(newFilters);
+  }, [assets]);
+
+  useEffect(() => {
     filterAssets();
-  }, [locationSearch, areaSearch, assets]);
+  }, [searchTerm, statusFilters, assets]);
 
   useEffect(() => {
     if (filteredAssets.length > 0 && mapContainerRef.current && !mapRef.current) {
@@ -86,19 +123,57 @@ export default function MediaAssetsMap() {
   const filterAssets = () => {
     let filtered = [...assets];
 
-    if (locationSearch) {
+    // Apply search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
       filtered = filtered.filter((asset) =>
-        asset.location.toLowerCase().includes(locationSearch.toLowerCase())
+        asset.location.toLowerCase().includes(term) ||
+        asset.area.toLowerCase().includes(term) ||
+        asset.city.toLowerCase().includes(term)
       );
     }
 
-    if (areaSearch) {
+    // Apply status filters
+    const enabledStatuses = statusFilters
+      .filter(f => f.enabled)
+      .map(f => f.status);
+    
+    if (enabledStatuses.length < statusFilters.length) {
       filtered = filtered.filter((asset) =>
-        asset.area.toLowerCase().includes(areaSearch.toLowerCase())
+        enabledStatuses.includes(asset.status as AssetStatus)
       );
     }
 
     setFilteredAssets(filtered);
+  };
+
+  const toggleStatusFilter = (status: AssetStatus) => {
+    setStatusFilters(prev =>
+      prev.map(f =>
+        f.status === status ? { ...f, enabled: !f.enabled } : f
+      )
+    );
+  };
+
+  const getMarkerIcon = (status: string) => {
+    const filter = statusFilters.find(f => f.status === status);
+    const color = filter?.color || '#9ca3af';
+    
+    const svgIcon = `
+      <svg width="32" height="42" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
+        <path d="M16 0C7.163 0 0 7.163 0 16c0 13 16 26 16 26s16-13 16-26c0-8.837-7.163-16-16-16z" 
+              fill="${color}" stroke="white" stroke-width="2"/>
+        <circle cx="16" cy="16" r="6" fill="white"/>
+      </svg>
+    `;
+
+    return L.divIcon({
+      html: svgIcon,
+      className: 'custom-marker',
+      iconSize: [32, 42],
+      iconAnchor: [16, 42],
+      popupAnchor: [0, -42]
+    });
   };
 
   const initializeMap = () => {
@@ -128,55 +203,107 @@ export default function MediaAssetsMap() {
 
     // Add new markers
     filteredAssets.forEach((asset) => {
-      // Get the first available image URL
-      let imageUrl = "";
+      // Get all available images
+      let imageUrls: string[] = [];
+      
       // Try image_urls array first
       if (asset.image_urls && asset.image_urls.length > 0) {
-        imageUrl = asset.image_urls[0];
+        imageUrls = asset.image_urls;
       } 
       // Then try images object
       else if (asset.images) {
         const imageKeys = ['frontView', 'backView', 'leftView', 'rightView'];
-        for (const key of imageKeys) {
-          if (asset.images[key]) {
-            imageUrl = asset.images[key]!;
-            break;
-          }
-        }
+        imageUrls = imageKeys
+          .map(key => asset.images?.[key])
+          .filter((url): url is string => !!url);
       }
 
+      const firstImageUrl = imageUrls[0] || "";
+      const filter = statusFilters.find(f => f.status === asset.status);
+      const statusColor = filter?.color || '#9ca3af';
+
       const popupContent = `
-        <div style="min-width: 250px; max-width: 300px;">
-          ${imageUrl ? `
-            <div style="margin-bottom: 12px;">
-              <img src="${imageUrl}" alt="${asset.location}" 
-                   style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px;" 
+        <div style="min-width: 300px; max-width: 350px; font-family: system-ui;">
+          ${firstImageUrl ? `
+            <div style="margin-bottom: 12px; position: relative;">
+              <img src="${firstImageUrl}" alt="${asset.location}" 
+                   style="width: 100%; height: 180px; object-fit: cover; border-radius: 8px;" 
                    onerror="this.style.display='none'" />
+              ${imageUrls.length > 1 ? `
+                <div style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">
+                  +${imageUrls.length - 1} photos
+                </div>
+              ` : ''}
             </div>
           ` : ''}
-          <h3 style="font-weight: 600; font-size: 1rem; margin-bottom: 8px;">${asset.location}</h3>
-          <div style="font-size: 0.875rem; line-height: 1.5;">
-            <p><strong>Area:</strong> ${asset.area}</p>
-            <p><strong>City:</strong> ${asset.city}</p>
-            <p><strong>Type:</strong> ${asset.media_type}</p>
-            <p><strong>Dimensions:</strong> ${asset.dimensions}</p>
-            <p><strong>Rate:</strong> ₹${asset.card_rate?.toLocaleString("en-IN")}</p>
-            <p><strong>Status:</strong> <span style="color: ${
-              asset.status === "Available" ? "#16a34a" : "#dc2626"
-            }">${asset.status}</span></p>
+          <h3 style="font-weight: 700; font-size: 1.1rem; margin-bottom: 4px; color: #1f2937;">${asset.location}</h3>
+          <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 12px;">${asset.area}</p>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; font-size: 0.875rem;">
+            <div>
+              <div style="font-weight: 500; color: #6b7280; font-size: 0.75rem;">Dimensions</div>
+              <div style="font-weight: 600; color: #1f2937;">${asset.dimensions}</div>
+            </div>
+            ${asset.total_sqft ? `
+              <div>
+                <div style="font-weight: 500; color: #6b7280; font-size: 0.75rem;">Sq. Ft.</div>
+                <div style="font-weight: 600; color: #1f2937;">${asset.total_sqft.toFixed(2)}</div>
+              </div>
+            ` : ''}
           </div>
-          <div style="margin-top: 12px;">
-            <a href="/admin/media-assets/${asset.id}" 
-               style="color: #1e40af; text-decoration: none; font-weight: 500; font-size: 0.875rem;"
-               target="_blank">
-              View Details →
-            </a>
+
+          ${asset.illumination || asset.direction ? `
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; font-size: 0.875rem;">
+              ${asset.illumination ? `
+                <div>
+                  <div style="font-weight: 500; color: #6b7280; font-size: 0.75rem;">Illumination</div>
+                  <div style="font-weight: 600; color: #1f2937;">${asset.illumination}</div>
+                </div>
+              ` : ''}
+              ${asset.direction ? `
+                <div>
+                  <div style="font-weight: 500; color: #6b7280; font-size: 0.75rem;">Direction</div>
+                  <div style="font-weight: 600; color: #1f2937;">${asset.direction}</div>
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
+
+          <div style="padding: 12px; background: #f9fafb; border-radius: 8px; margin-bottom: 12px;">
+            <div style="font-size: 1.5rem; font-weight: 700; color: #1f2937;">
+              ${formatCurrency(asset.card_rate)}
+            </div>
+            <div style="font-size: 0.75rem; color: #6b7280; margin-top: 2px;">per month</div>
           </div>
+
+          <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: ${statusColor}15; border-radius: 6px; margin-bottom: 12px;">
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: ${statusColor};"></div>
+            <span style="font-weight: 600; font-size: 0.875rem; color: ${statusColor};">${asset.status}</span>
+          </div>
+
+          <button 
+            onclick="window.open('/admin/media-assets/${asset.id}', '_blank')"
+            style="width: 100%; padding: 10px; background: #1e40af; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 0.875rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;"
+            onmouseover="this.style.background='#1e3a8a'"
+            onmouseout="this.style.background='#1e40af'"
+          >
+            View Details
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+          </button>
         </div>
       `;
 
-      const marker = L.marker([asset.latitude, asset.longitude])
-        .bindPopup(popupContent)
+      const marker = L.marker([asset.latitude, asset.longitude], {
+        icon: getMarkerIcon(asset.status)
+      })
+        .bindPopup(popupContent, {
+          maxWidth: 350,
+          className: 'custom-popup'
+        })
         .addTo(mapRef.current!);
 
       markersRef.current.push(marker);
@@ -201,7 +328,8 @@ export default function MediaAssetsMap() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      <div className="flex-none px-6 py-6 border-b border-border">
+      {/* Header */}
+      <div className="flex-none px-6 py-6 border-b border-border bg-card">
         <div className="space-y-2 mb-6">
           <h1 className="text-3xl font-bold text-foreground">Media Assets on Map</h1>
           <p className="text-sm text-muted-foreground">
@@ -210,45 +338,124 @@ export default function MediaAssetsMap() {
         </div>
 
         <div className="space-y-4">
-          <div>
-            <h2 className="text-xl font-semibold text-foreground mb-1">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-foreground">
               Asset Locations ({filteredAssets.length})
             </h2>
-            <p className="text-sm text-muted-foreground">
-              Filter assets by location or area. Click on any marker to see details.
-            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="gap-2"
+            >
+              <Filter className="h-4 w-4" />
+              {showFilters ? 'Hide' : 'Show'} Filters
+            </Button>
           </div>
+          <p className="text-sm text-muted-foreground">
+            Filter assets by location or area. Click on any marker or cluster to see details.
+          </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              placeholder="Search by Location / Landmark..."
-              value={locationSearch}
-              onChange={(e) => setLocationSearch(e.target.value)}
-              className="w-full"
-            />
-            <Input
-              placeholder="Search by Area..."
-              value={areaSearch}
-              onChange={(e) => setAreaSearch(e.target.value)}
-              className="w-full"
-            />
-          </div>
+          <Input
+            placeholder="Search by Location / Landmark..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full max-w-md"
+          />
         </div>
       </div>
 
+      {/* Map Container with Filters Overlay */}
       <div className="flex-1 relative">
         {filteredAssets.length > 0 ? (
-          <div ref={mapContainerRef} className="absolute inset-0" />
+          <>
+            <div ref={mapContainerRef} className="absolute inset-0" />
+            
+            {/* Filters & Legend Card */}
+            {showFilters && (
+              <Card className="absolute top-4 right-4 z-[1000] w-72 shadow-lg">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-5 w-5" />
+                      <CardTitle className="text-lg">Filters & Legend</CardTitle>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setShowFilters(false)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {statusFilters.map((filter) => (
+                    <div
+                      key={filter.status}
+                      className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
+                      onClick={() => toggleStatusFilter(filter.status)}
+                    >
+                      <Checkbox
+                        checked={filter.enabled}
+                        onCheckedChange={() => toggleStatusFilter(filter.status)}
+                        className="pointer-events-none"
+                      />
+                      <div
+                        className="w-4 h-4 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: filter.color }}
+                      />
+                      <span className="font-medium text-sm flex-1">{filter.status}</span>
+                      <Badge variant="secondary" className="text-xs">
+                        {filter.count}
+                      </Badge>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+          </>
         ) : (
           <div className="flex items-center justify-center h-full">
-            <p className="text-muted-foreground">
-              {assets.length === 0
-                ? "No geotagged assets found"
-                : "No assets match your search criteria"}
-            </p>
+            <div className="text-center space-y-2">
+              <p className="text-lg font-medium text-muted-foreground">
+                {assets.length === 0
+                  ? "No geotagged assets found"
+                  : "No assets match your search criteria"}
+              </p>
+              {searchTerm && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSearchTerm("")}
+                >
+                  Clear Search
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </div>
+
+      <style>{`
+        .custom-marker {
+          background: transparent;
+          border: none;
+        }
+        .custom-popup .leaflet-popup-content-wrapper {
+          padding: 0;
+          border-radius: 12px;
+          box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        .custom-popup .leaflet-popup-content {
+          margin: 0;
+          width: auto !important;
+        }
+        .custom-popup .leaflet-popup-tip {
+          background: white;
+        }
+      `}</style>
     </div>
   );
 }

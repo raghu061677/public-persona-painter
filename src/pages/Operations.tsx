@@ -185,10 +185,23 @@ export default function Operations() {
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
+            onClick={() => navigate("/admin/operations-analytics")}
+          >
+            <TrendingUp className="mr-2 h-4 w-4" />
+            Analytics
+          </Button>
+          <Button
+            variant="outline"
             onClick={() => navigate("/admin/operations-calendar")}
           >
             <Calendar className="mr-2 h-4 w-4" />
-            Calendar View
+            Calendar
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/admin/mobile-operations")}
+          >
+            Mobile View
           </Button>
           <OperationsNotifications />
         </div>

@@ -55,6 +55,8 @@ import Settings from "./pages/Settings";
 import OperationsSettings from "./pages/OperationsSettings";
 import Operations from "./pages/Operations";
 import OperationsCalendar from "./pages/OperationsCalendar";
+import OperationsAnalytics from "./pages/OperationsAnalytics";
+import MobileOperations from "./pages/MobileOperations";
 import PlanComparison from "./pages/PlanComparison";
 import NotFound from "./pages/NotFound";
 
@@ -98,7 +100,9 @@ const App = () => (
             <Route path="/admin/campaigns" element={<AppLayout><CampaignsList /></AppLayout>} />
             <Route path="/admin/campaigns/:id" element={<AppLayout><CampaignDetail /></AppLayout>} />
             <Route path="/admin/operations" element={<AppLayout><Operations /></AppLayout>} />
+            <Route path="/admin/operations-analytics" element={<AppLayout><OperationsAnalytics /></AppLayout>} />
             <Route path="/admin/operations-calendar" element={<AppLayout><OperationsCalendar /></AppLayout>} />
+            <Route path="/admin/mobile-operations" element={<MobileOperations />} />
             <Route path="/admin/mobile-upload" element={<AppLayout><MobileFieldApp /></AppLayout>} />
             <Route path="/finance" element={<AppLayout><FinanceDashboard /></AppLayout>} />
             <Route path="/finance/estimations" element={<AppLayout><EstimationsList /></AppLayout>} />

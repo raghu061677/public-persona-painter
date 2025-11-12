@@ -52,9 +52,8 @@ export default function CampaignDetail() {
       const { data } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', user.id)
-        .single();
-      setIsAdmin(data?.role === 'admin');
+        .eq('user_id', user.id);
+      setIsAdmin(data?.some(r => r.role === 'admin') || false);
     }
   };
 

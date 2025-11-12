@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/table";
 import { Eye, Trash2, FileText, Plus } from "lucide-react";
 import { CreateCampaignFromPlanDialog } from "@/components/campaigns/CreateCampaignFromPlanDialog";
+import { CampaignTemplatesDialog } from "@/components/campaigns/CampaignTemplatesDialog";
+import { BulkStatusUpdateDialog } from "@/components/campaigns/BulkStatusUpdateDialog";
 import { getCampaignStatusConfig } from "@/utils/statusBadges";
 import { getCampaignStatusColor } from "@/utils/campaigns";
 import { formatDate as formatPlanDate } from "@/utils/plans";
@@ -204,16 +206,26 @@ export default function CampaignsList() {
               Track and manage active campaigns
             </p>
           </div>
-          {isAdmin && (
-            <Button
-              onClick={() => setShowCreateDialog(true)}
-              size="lg"
-              className="bg-gradient-primary hover:shadow-glow transition-smooth"
-            >
-              <Plus className="mr-2 h-5 w-5" />
-              New Campaign
-            </Button>
-          )}
+          <div className="flex gap-2">
+            <CampaignTemplatesDialog />
+            {isAdmin && (
+              <>
+                <BulkStatusUpdateDialog
+                  selectedCampaigns={Array.from(selectedCampaigns)}
+                  onUpdate={fetchCampaigns}
+                  onClearSelection={() => setSelectedCampaigns(new Set())}
+                />
+                <Button
+                  onClick={() => setShowCreateDialog(true)}
+                  size="lg"
+                  className="bg-gradient-primary hover:shadow-glow transition-smooth"
+                >
+                  <Plus className="mr-2 h-5 w-5" />
+                  New Campaign
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Bulk Actions */}

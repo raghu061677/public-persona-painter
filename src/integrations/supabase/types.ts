@@ -392,6 +392,51 @@ export type Database = {
           },
         ]
       }
+      campaign_templates: {
+        Row: {
+          asset_preferences: Json | null
+          client_type: string | null
+          created_at: string | null
+          created_by: string
+          default_status: string | null
+          description: string | null
+          duration_days: number | null
+          id: string
+          is_active: boolean | null
+          template_name: string
+          updated_at: string | null
+          usage_count: number | null
+        }
+        Insert: {
+          asset_preferences?: Json | null
+          client_type?: string | null
+          created_at?: string | null
+          created_by: string
+          default_status?: string | null
+          description?: string | null
+          duration_days?: number | null
+          id?: string
+          is_active?: boolean | null
+          template_name: string
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Update: {
+          asset_preferences?: Json | null
+          client_type?: string | null
+          created_at?: string | null
+          created_by?: string
+          default_status?: string | null
+          description?: string | null
+          duration_days?: number | null
+          id?: string
+          is_active?: boolean | null
+          template_name?: string
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Relationships: []
+      }
       campaigns: {
         Row: {
           assigned_to: string | null

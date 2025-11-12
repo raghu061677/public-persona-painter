@@ -22,6 +22,8 @@ import { toast } from "@/hooks/use-toast";
 import { OperationsBoard } from "@/components/campaigns/OperationsBoard";
 import { ProofGallery } from "@/components/campaigns/ProofGallery";
 import { ExportProofDialog } from "@/components/campaigns/ExportProofDialog";
+import { CampaignTimelineCard } from "@/components/campaigns/CampaignTimelineCard";
+import { CampaignPerformanceMetrics } from "@/components/campaigns/CampaignPerformanceMetrics";
 
 export default function CampaignDetail() {
   const { id } = useParams();
@@ -236,6 +238,12 @@ export default function CampaignDetail() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Timeline and Performance */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <CampaignTimelineCard campaign={campaign} campaignAssets={campaignAssets} />
+          <CampaignPerformanceMetrics campaign={campaign} campaignAssets={campaignAssets} />
         </div>
 
         {/* Tabs */}

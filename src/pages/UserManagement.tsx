@@ -8,8 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, UserPlus, Pencil, Trash2, Mail } from "lucide-react";
+import { Search, UserPlus, Pencil, Trash2, Mail, Shield } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import EditUserDialog from "@/components/users/EditUserDialog";
+import UserPermissionsView from "@/components/users/UserPermissionsView";
+import { logAudit } from "@/utils/auditLog";
 import {
   Table,
   TableBody,
@@ -68,6 +71,8 @@ export default function UserManagement() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<string>("sales");
   const [submitting, setSubmitting] = useState(false);
+  const [editUser, setEditUser] = useState<UserProfile | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -155,30 +160,37 @@ export default function UserManagement() {
 
     setSubmitting(true);
     try {
-      // Create user via admin API
-      const { data, error } = await supabase.auth.admin.createUser({
-        email: inviteEmail,
-        email_confirm: true,
-        user_metadata: { role: inviteRole }
+      const { data: { user: currentUserData } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("id", currentUserData?.id)
+        .single();
+
+      // Call edge function to send invite
+      const { error: inviteError } = await supabase.functions.invoke('send-user-invite', {
+        body: {
+          email: inviteEmail,
+          role: inviteRole,
+          inviterName: profile?.username || 'Admin',
+        },
       });
 
-      if (error) throw error;
+      if (inviteError) throw inviteError;
 
-      // Add role
-      if (data.user) {
-        const { error: roleError } = await supabase
-          .from("user_roles")
-          .insert({
-            user_id: data.user.id,
-            role: inviteRole as any
-          });
-
-        if (roleError) throw roleError;
-      }
+      // Log audit
+      await logAudit({
+        action: 'invite_user',
+        resourceType: 'user_management',
+        details: {
+          email: inviteEmail,
+          role: inviteRole,
+        },
+      });
 
       toast({
         title: "User invited",
-        description: `Invitation sent to ${inviteEmail}`,
+        description: `Invitation email sent to ${inviteEmail}`,
       });
 
       setInviteOpen(false);
@@ -224,6 +236,18 @@ export default function UserManagement() {
           [module]: !currentValue
         }
       }));
+
+      // Log audit
+      await logAudit({
+        action: 'change_permissions',
+        resourceType: 'user_role',
+        details: {
+          role,
+          module,
+          old_value: currentValue,
+          new_value: !currentValue,
+        },
+      });
 
       toast({
         title: "Permission updated",
@@ -314,6 +338,7 @@ export default function UserManagement() {
         <TabsList>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="permissions">Role Permissions</TabsTrigger>
+          <TabsTrigger value="user-access">User Access</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4 mt-6">
@@ -376,7 +401,14 @@ export default function UserManagement() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon">
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => {
+                            setEditUser(user);
+                            setEditOpen(true);
+                          }}
+                        >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="icon">
@@ -437,7 +469,33 @@ export default function UserManagement() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="user-access" className="space-y-4 mt-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle>User Permissions Dashboard</CardTitle>
+                  <CardDescription>
+                    View what each user can access across all modules
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <UserPermissionsView />
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      <EditUserDialog
+        user={editUser}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onSuccess={loadData}
+      />
     </div>
   );
 }

@@ -1,0 +1,203 @@
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "@/hooks/use-toast";
+import { logAudit } from "@/utils/auditLog";
+
+interface UserProfile {
+  id: string;
+  username: string;
+  email?: string;
+  roles?: string[];
+  status?: string;
+}
+
+interface EditUserDialogProps {
+  user: UserProfile | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}
+
+const ROLES = ['admin', 'sales', 'operations', 'finance'];
+
+export default function EditUserDialog({
+  user,
+  open,
+  onOpenChange,
+  onSuccess,
+}: EditUserDialogProps) {
+  const { user: currentUser } = useAuth();
+  const [username, setUsername] = useState(user?.username || "");
+  const [selectedRole, setSelectedRole] = useState<string>(user?.roles?.[0] || "sales");
+  const [isActive, setIsActive] = useState(user?.status === 'Active');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    setSubmitting(true);
+    try {
+      const oldValues = {
+        username: user.username,
+        role: user.roles?.[0],
+        status: user.status,
+      };
+
+      // Update profile
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ username })
+        .eq("id", user.id);
+
+      if (profileError) throw profileError;
+
+      // Update role if changed
+      if (selectedRole !== user.roles?.[0]) {
+        // Delete old roles
+        await supabase.from("user_roles").delete().eq("user_id", user.id);
+        
+        // Insert new role
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .insert({ user_id: user.id, role: selectedRole as any });
+
+        if (roleError) throw roleError;
+      }
+
+      // Update user status via admin API
+      const newStatus = isActive ? 'Active' : 'Suspended';
+      if (newStatus !== user.status) {
+        const { error: banError } = await supabase.auth.admin.updateUserById(
+          user.id,
+          { ban_duration: isActive ? 'none' : '876000h' } // 100 years for suspended
+        );
+
+        if (banError) throw banError;
+      }
+
+      // Log audit
+      await logAudit({
+        action: 'update_user',
+        resourceType: 'user_role',
+        resourceId: user.id,
+        details: {
+          old_values: oldValues,
+          new_values: {
+            username,
+            role: selectedRole,
+            status: isActive ? 'Active' : 'Suspended',
+          },
+        },
+      });
+
+      toast({
+        title: "User updated",
+        description: "User details have been updated successfully",
+      });
+
+      onSuccess();
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error("Error updating user:", error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit User</DialogTitle>
+          <DialogDescription>
+            Update user details, role, and status
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={user?.email || ""}
+              disabled
+              className="mt-2 bg-muted"
+            />
+          </div>
+          <div>
+            <Label htmlFor="username">Username</Label>
+            <Input
+              id="username"
+              type="text"
+              placeholder="Enter username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="mt-2"
+            />
+          </div>
+          <div>
+            <Label htmlFor="role">Role</Label>
+            <Select value={selectedRole} onValueChange={setSelectedRole}>
+              <SelectTrigger className="mt-2">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLES.map(role => (
+                  <SelectItem key={role} value={role} className="capitalize">
+                    {role}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="status">Active Status</Label>
+            <Switch
+              id="status"
+              checked={isActive}
+              onCheckedChange={setIsActive}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={submitting}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Updating..." : "Update User"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -11,7 +11,12 @@ export type AuditAction =
   | 'bulk_update'
   | 'document_upload'
   | 'document_download'
-  | 'document_delete';
+  | 'document_delete'
+  | 'create_user'
+  | 'update_user'
+  | 'delete_user'
+  | 'invite_user'
+  | 'change_permissions';
 
 export type ResourceType = 
   | 'media_asset'
@@ -23,7 +28,8 @@ export type ResourceType =
   | 'vendor'
   | 'user_role'
   | 'export'
-  | 'client_documents';
+  | 'client_documents'
+  | 'user_management';
 
 interface AuditLogParams {
   action: AuditAction;

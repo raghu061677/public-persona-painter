@@ -1539,6 +1539,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_audit_logs: {
+        Row: {
+          action: string
+          action_by: string
+          changed_fields: Json | null
+          created_at: string | null
+          id: string
+          new_values: Json | null
+          old_values: Json | null
+          resource_id: string | null
+          resource_type: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          action_by: string
+          changed_fields?: Json | null
+          created_at?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          resource_id?: string | null
+          resource_type: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          action_by?: string
+          changed_fields?: Json | null
+          created_at?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          resource_id?: string | null
+          resource_type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null

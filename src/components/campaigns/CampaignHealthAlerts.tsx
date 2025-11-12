@@ -149,7 +149,7 @@ export function CampaignHealthAlerts({ campaignId }: CampaignHealthAlertsProps) 
         // 3. Check Budget Overruns - use pro-rated costs for campaign duration
         const estimatedCosts = assets.reduce((sum, a) => {
           // Calculate pro-rata rate: (monthly_rate / 30) * campaign_days
-          const monthlyRate = a.negotiated_price || a.card_rate || 0;
+          const monthlyRate = a.card_rate || 0;
           const proRataRate = (monthlyRate / 30) * campaignDuration;
           const totalCost = proRataRate + (a.printing_charges || 0) + (a.mounting_charges || 0);
           return sum + totalCost;

@@ -243,10 +243,12 @@ export type Database = {
       asset_power_bills: {
         Row: {
           acd_amount: number | null
+          address: string | null
           area: string | null
           arrears: number | null
           asset_id: string
           bill_amount: number
+          bill_date: string | null
           bill_month: string
           bill_url: string | null
           consumer_name: string | null
@@ -274,10 +276,12 @@ export type Database = {
         }
         Insert: {
           acd_amount?: number | null
+          address?: string | null
           area?: string | null
           arrears?: number | null
           asset_id: string
           bill_amount?: number
+          bill_date?: string | null
           bill_month: string
           bill_url?: string | null
           consumer_name?: string | null
@@ -305,10 +309,12 @@ export type Database = {
         }
         Update: {
           acd_amount?: number | null
+          address?: string | null
           area?: string | null
           arrears?: number | null
           asset_id?: string
           bill_amount?: number
+          bill_date?: string | null
           bill_month?: string
           bill_url?: string | null
           consumer_name?: string | null

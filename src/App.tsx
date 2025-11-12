@@ -27,6 +27,7 @@ import PlanDetail from "./pages/PlanDetail";
 import PlanShare from "./pages/PlanShare";
 import CampaignsList from "./pages/CampaignsList";
 import CampaignDetail from "./pages/CampaignDetail";
+import CampaignEdit from "./pages/CampaignEdit";
 import MobileUpload from "./pages/MobileUpload";
 import MobileFieldApp from "./pages/MobileFieldApp";
 import MobilePowerBills from "./pages/MobilePowerBills";
@@ -100,6 +101,7 @@ const App = () => (
             <Route path="/admin/plans/:id" element={<AppLayout><PlanDetail /></AppLayout>} />
             <Route path="/admin/plans-compare" element={<AppLayout><PlanComparison /></AppLayout>} />
             <Route path="/admin/campaigns" element={<AppLayout><CampaignsList /></AppLayout>} />
+            <Route path="/admin/campaigns/edit/:id" element={<AppLayout><CampaignEdit /></AppLayout>} />
             <Route path="/admin/campaigns/:id" element={<AppLayout><CampaignDetail /></AppLayout>} />
             <Route path="/admin/operations" element={<AppLayout><Operations /></AppLayout>} />
             <Route path="/admin/operations-analytics" element={<AppLayout><OperationsAnalytics /></AppLayout>} />

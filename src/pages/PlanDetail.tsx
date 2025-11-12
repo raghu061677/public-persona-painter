@@ -96,6 +96,27 @@ export default function PlanDetail() {
     loadPendingApprovals();
   }, [id]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+K+C - Convert to Campaign (when approved and admin)
+      if (e.ctrlKey && e.key === 'k') {
+        e.preventDefault();
+        const handleSecondKey = (e2: KeyboardEvent) => {
+          if (e2.key === 'c' && plan?.status === 'Approved' && isAdmin) {
+            setShowConvertDialog(true);
+          }
+          document.removeEventListener('keydown', handleSecondKey);
+        };
+        document.addEventListener('keydown', handleSecondKey);
+        setTimeout(() => document.removeEventListener('keydown', handleSecondKey), 1000);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [plan, isAdmin]);
+
   const checkAdminStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {

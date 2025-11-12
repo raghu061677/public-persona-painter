@@ -1,5 +1,6 @@
 import { Bell, Search, Plus } from "lucide-react";
 import ThemePicker from "@/components/ThemePicker";
+import { useThemeStore } from "@/store/themeStore";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -92,7 +93,7 @@ export default function Topbar({ onSearchOpen }: { onSearchOpen: () => void }) {
 
         <ThemePicker />
         
-        <Button variant="ghost" size="icon" className="relative h-9 w-9 md:h-10 md:w-10">
+        <Button variant="ghost" size="icon" className="relative h-9 w-9 md:h-10 md:w-10" title="Notifications">
           <Bell className="w-4 h-4" />
           <Badge 
             variant="destructive" 

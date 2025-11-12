@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { getPlanStatusConfig } from "@/utils/statusBadges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -20,7 +21,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket, Download, Sparkles, ChevronDown, Info, FolderOpen, Edit } from "lucide-react";
-import { getPlanStatusConfig } from "@/utils/statusBadges";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -108,6 +108,23 @@ export default function PlansList() {
     checkAdminStatus();
     fetchPlans();
     
+    // Keyboard shortcut: Ctrl+K+B - Bulk conversion dialog
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'k') {
+        e.preventDefault();
+        const handleSecondKey = (e2: KeyboardEvent) => {
+          if (e2.key === 'b') {
+            setShowBulkConversionDialog(true);
+          }
+          document.removeEventListener('keydown', handleSecondKey);
+        };
+        document.addEventListener('keydown', handleSecondKey);
+        setTimeout(() => document.removeEventListener('keydown', handleSecondKey), 1000);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    
     const channel = supabase
       .channel('plans-changes')
       .on(
@@ -124,6 +141,7 @@ export default function PlansList() {
       .subscribe();
 
     return () => {
+      document.removeEventListener('keydown', handleKeyDown);
       supabase.removeChannel(channel);
     };
   }, []);
@@ -817,12 +835,12 @@ export default function PlansList() {
                       )}
                       {visibleColumns.includes("status") && (
                         <TableCell className={getCellClassName()}>
-                          <Badge 
-                            variant="outline" 
-                            className={getPlanStatusConfig(plan.status).className}
-                          >
-                            {getPlanStatusConfig(plan.status).label}
-                          </Badge>
+          <Badge 
+            variant={getPlanStatusConfig(plan.status).variant}
+            className={getPlanStatusConfig(plan.status).className}
+          >
+            {getPlanStatusConfig(plan.status).label}
+          </Badge>
                         </TableCell>
                       )}
                       {visibleColumns.includes("actions") && (

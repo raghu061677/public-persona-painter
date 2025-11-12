@@ -19,10 +19,21 @@ export default function MobileUpload() {
   const [uploading, setUploading] = useState(false);
   const [photos, setPhotos] = useState<any>({});
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [gpsValidating, setGpsValidating] = useState(false);
+  const [settings, setSettings] = useState<any>(null);
 
   useEffect(() => {
     fetchData();
+    fetchSettings();
   }, [campaignId, assetId]);
+
+  const fetchSettings = async () => {
+    const { data } = await supabase
+      .from('organization_settings')
+      .select('gps_tolerance_meters, require_proof_approval')
+      .single();
+    setSettings(data || { gps_tolerance_meters: 100, require_proof_approval: true });
+  };
 
   const fetchData = async () => {
     const { data: campaignData } = await supabase
@@ -47,6 +58,59 @@ export default function MobileUpload() {
     setLoading(false);
   };
 
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) *
+      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // Distance in meters
+  };
+
+  const validateGPS = async (file: File): Promise<{ valid: boolean; error?: string; coords?: { lat: number; lng: number } }> => {
+    if (!asset.latitude || !asset.longitude) {
+      return { valid: true }; // Skip validation if asset has no GPS coordinates
+    }
+
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        resolve({ valid: false, error: "GPS not supported on this device" });
+        return;
+      }
+
+      setGpsValidating(true);
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const userLat = position.coords.latitude;
+          const userLng = position.coords.longitude;
+          const distance = calculateDistance(userLat, userLng, asset.latitude, asset.longitude);
+          const tolerance = settings?.gps_tolerance_meters || 100;
+
+          setGpsValidating(false);
+          if (distance <= tolerance) {
+            resolve({ valid: true, coords: { lat: userLat, lng: userLng } });
+          } else {
+            resolve({
+              valid: false,
+              error: `You are ${Math.round(distance)}m away from the asset location. Please move within ${tolerance}m.`
+            });
+          }
+        },
+        (error) => {
+          setGpsValidating(false);
+          resolve({ valid: false, error: "Failed to get your location. Please enable GPS." });
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    });
+  };
+
   const handleFileUpload = async (photoType: string, file: File) => {
     const validation = validatePhotoFile(file);
     if (!validation.valid) {
@@ -56,6 +120,19 @@ export default function MobileUpload() {
         variant: "destructive",
       });
       return;
+    }
+
+    // GPS validation for geo-tagged photos
+    if (photoType === 'geoTaggedPhoto') {
+      const gpsValidation = await validateGPS(file);
+      if (!gpsValidation.valid) {
+        toast({
+          title: "GPS Validation Failed",
+          description: gpsValidation.error,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setUploading(true);

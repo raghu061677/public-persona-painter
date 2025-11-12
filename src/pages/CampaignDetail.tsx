@@ -21,6 +21,7 @@ import { formatDate } from "@/utils/plans";
 import { toast } from "@/hooks/use-toast";
 import { OperationsBoard } from "@/components/campaigns/OperationsBoard";
 import { ProofGallery } from "@/components/campaigns/ProofGallery";
+import { ExportProofDialog } from "@/components/campaigns/ExportProofDialog";
 
 export default function CampaignDetail() {
   const { id } = useParams();
@@ -139,6 +140,11 @@ export default function CampaignDetail() {
             </div>
           </div>
           <div className="flex gap-2">
+            <ExportProofDialog
+              campaignId={campaign.id}
+              campaignName={campaign.campaign_name}
+              assets={campaignAssets}
+            />
             <Button variant="outline" size="sm" onClick={refreshData}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Refresh
@@ -295,7 +301,7 @@ export default function CampaignDetail() {
           <TabsContent value="proof">
             <Card>
               <CardContent className="pt-6">
-                <ProofGallery assets={campaignAssets} />
+                <ProofGallery assets={campaignAssets} onUpdate={refreshData} />
               </CardContent>
             </Card>
           </TabsContent>

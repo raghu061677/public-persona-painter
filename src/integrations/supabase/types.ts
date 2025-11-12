@@ -1153,33 +1153,39 @@ export type Database = {
       organization_settings: {
         Row: {
           created_at: string | null
+          gps_tolerance_meters: number | null
           hero_image_url: string | null
           id: string
           logo_url: string | null
           organization_name: string | null
           primary_color: string | null
+          require_proof_approval: boolean | null
           secondary_color: string | null
           updated_at: string | null
           updated_by: string | null
         }
         Insert: {
           created_at?: string | null
+          gps_tolerance_meters?: number | null
           hero_image_url?: string | null
           id?: string
           logo_url?: string | null
           organization_name?: string | null
           primary_color?: string | null
+          require_proof_approval?: boolean | null
           secondary_color?: string | null
           updated_at?: string | null
           updated_by?: string | null
         }
         Update: {
           created_at?: string | null
+          gps_tolerance_meters?: number | null
           hero_image_url?: string | null
           id?: string
           logo_url?: string | null
           organization_name?: string | null
           primary_color?: string | null
+          require_proof_approval?: boolean | null
           secondary_color?: string | null
           updated_at?: string | null
           updated_by?: string | null

@@ -99,6 +99,18 @@ export function ProofGallery({ assets }: ProofGalleryProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      {approvalAsset && (
+        <ProofApprovalDialog
+          asset={approvalAsset}
+          open={!!approvalAsset}
+          onOpenChange={(open) => !open && setApprovalAsset(null)}
+          onUpdate={() => {
+            onUpdate?.();
+            setApprovalAsset(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -23,6 +23,7 @@ import { toast } from "@/hooks/use-toast";
 import { UserPlus, Upload, CheckCircle2 } from "lucide-react";
 import { getAssetStatusColor } from "@/utils/campaigns";
 import { useNavigate } from "react-router-dom";
+import { BulkOperationsDialog } from "./BulkOperationsDialog";
 
 interface OperationsBoardProps {
   campaignId: string;
@@ -114,6 +115,10 @@ export function OperationsBoard({ campaignId, assets, onUpdate }: OperationsBoar
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end mb-4">
+        <BulkOperationsDialog assets={assets} onUpdate={onUpdate} />
+      </div>
+      
       <div className="grid gap-4">
         {assets.map((asset) => (
           <Card key={asset.id}>

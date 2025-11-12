@@ -397,7 +397,7 @@ export default function CampaignEdit() {
 
               <div>
                 <Label htmlFor="status">Status</Label>
-                <Select value={status} onValueChange={setStatus}>
+                <Select value={status} onValueChange={(value) => setStatus(value as typeof status)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

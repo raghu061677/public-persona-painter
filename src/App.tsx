@@ -53,6 +53,7 @@ import ApprovalAnalytics from "./pages/ApprovalAnalytics";
 import VendorsManagement from "./pages/VendorsManagement";
 import Settings from "./pages/Settings";
 import OperationsSettings from "./pages/OperationsSettings";
+import Operations from "./pages/Operations";
 import PlanComparison from "./pages/PlanComparison";
 import NotFound from "./pages/NotFound";
 
@@ -95,6 +96,7 @@ const App = () => (
             <Route path="/admin/plans-compare" element={<AppLayout><PlanComparison /></AppLayout>} />
             <Route path="/admin/campaigns" element={<AppLayout><CampaignsList /></AppLayout>} />
             <Route path="/admin/campaigns/:id" element={<AppLayout><CampaignDetail /></AppLayout>} />
+            <Route path="/admin/operations" element={<AppLayout><Operations /></AppLayout>} />
             <Route path="/finance" element={<AppLayout><FinanceDashboard /></AppLayout>} />
             <Route path="/finance/estimations" element={<AppLayout><EstimationsList /></AppLayout>} />
             <Route path="/finance/invoices" element={<AppLayout><InvoicesList /></AppLayout>} />

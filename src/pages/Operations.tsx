@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Search, Filter, TrendingUp, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { ArrowLeft, Search, Filter, TrendingUp, AlertCircle, CheckCircle, Clock, Calendar } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { OperationsNotifications } from "@/components/operations/OperationsNotifications";
 
 interface Campaign {
   id: string;
@@ -37,6 +38,56 @@ export default function Operations() {
 
   useEffect(() => {
     fetchCampaigns();
+
+    // Set up real-time subscription for campaign updates
+    const channel = supabase
+      .channel("campaigns-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "campaigns",
+          filter: `status=in.(InProgress,Planned)`,
+        },
+        (payload) => {
+          console.log("Campaign change detected:", payload);
+          fetchCampaigns(); // Refresh campaigns on any change
+        }
+      )
+      .subscribe();
+
+    // Set up real-time subscription for campaign_assets changes
+    const assetsChannel = supabase
+      .channel("campaign-assets-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "campaign_assets",
+        },
+        (payload) => {
+          console.log("Campaign asset updated:", payload);
+          // Refresh stats when asset status changes
+          if (campaigns.length > 0) {
+            const loadStats = async () => {
+              const statsData: Record<string, any> = {};
+              for (const campaign of campaigns) {
+                statsData[campaign.id] = await getStatusStats(campaign.id);
+              }
+              setStats(statsData);
+            };
+            loadStats();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      supabase.removeChannel(assetsChannel);
+    };
   }, []);
 
   const fetchCampaigns = async () => {
@@ -130,6 +181,16 @@ export default function Operations() {
               Manage campaign operations and mounting assignments
             </p>
           </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => navigate("/admin/operations-calendar")}
+          >
+            <Calendar className="mr-2 h-4 w-4" />
+            Calendar View
+          </Button>
+          <OperationsNotifications />
         </div>
       </div>
 

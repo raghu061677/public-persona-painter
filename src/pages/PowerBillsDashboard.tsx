@@ -291,7 +291,7 @@ export default function PowerBillsDashboard() {
           <h2 className="text-3xl font-bold tracking-tight">Power Bills Dashboard</h2>
           <p className="text-muted-foreground">Manage electricity bills for all illumination assets</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button onClick={() => navigate('/admin/power-bills-analytics')} variant="outline" size="sm">
             <BarChart3 className="h-4 w-4 mr-2" />
             Analytics
@@ -315,6 +315,15 @@ export default function PowerBillsDashboard() {
           <Button onClick={() => navigate('/admin/power-bills/bulk-upload')} size="sm">
             <Upload className="h-4 w-4 mr-2" />
             Bulk Upload
+          </Button>
+          <Button 
+            onClick={() => window.open('/mobile/power-bills', '_blank')} 
+            variant="outline" 
+            size="sm"
+            className="md:hidden"
+          >
+            <Zap className="h-4 w-4 mr-2" />
+            Mobile View
           </Button>
           <Button onClick={fetchAssetsWithBills} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />

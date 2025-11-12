@@ -198,15 +198,20 @@ async function fetchBillFromTGSPDCL(uniqueServiceNumber: string): Promise<{ bill
         
         // POST request for the main portal
         const isMainPortal = url.includes('paybillonline');
+        const headers: Record<string, string> = {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Referer': 'https://tgsouthernpower.org/',
+        };
+        
+        if (isMainPortal) {
+          headers['Content-Type'] = 'application/x-www-form-urlencoded';
+        }
+        
         const response = await fetch(url, {
           method: isMainPortal ? 'POST' : 'GET',
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Content-Type': isMainPortal ? 'application/x-www-form-urlencoded' : undefined,
-            'Referer': 'https://tgsouthernpower.org/',
-          },
+          headers,
           body: isMainPortal ? `usno=${uniqueServiceNumber}` : undefined,
         });
 

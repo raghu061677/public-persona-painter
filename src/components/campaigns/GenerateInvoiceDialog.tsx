@@ -1,0 +1,248 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { FileText, Loader2 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { generateInvoiceId } from "@/utils/finance";
+
+interface GenerateInvoiceDialogProps {
+  campaign: any;
+  campaignAssets: any[];
+  displayCost: number;
+  printingTotal: number;
+  mountingTotal: number;
+  discount: number;
+}
+
+export function GenerateInvoiceDialog({
+  campaign,
+  campaignAssets,
+  displayCost,
+  printingTotal,
+  mountingTotal,
+  discount,
+}: GenerateInvoiceDialogProps) {
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [dueDate, setDueDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 30); // Default 30 days from today
+    return date.toISOString().split('T')[0];
+  });
+  const [notes, setNotes] = useState("");
+
+  const handleGenerateInvoice = async () => {
+    try {
+      setLoading(true);
+
+      // Get terms & conditions
+      const { data: termsData } = await supabase
+        .from('plan_terms_settings')
+        .select('terms')
+        .single();
+
+      // Generate invoice ID
+      const invoiceId = await generateInvoiceId(supabase);
+
+      // Prepare invoice items - one line per asset
+      const items = campaignAssets.map((asset, index) => {
+        const assetDisplayCost = (asset.card_rate / 30) * campaign.duration_days;
+        const assetPrintingCost = (asset.total_sqft || 0) * 15;
+        const assetMountingCost = 1500;
+        const assetSubtotal = assetDisplayCost + assetPrintingCost + assetMountingCost;
+        
+        return {
+          sno: index + 1,
+          description: `${asset.media_type} - ${asset.location}, ${asset.area}, ${asset.city}`,
+          asset_id: asset.asset_id,
+          dimensions: campaignAssets[0]?.dimensions || asset.dimensions || 'N/A',
+          quantity: 1,
+          duration_days: campaign.duration_days,
+          display_rate: assetDisplayCost,
+          printing_cost: assetPrintingCost,
+          mounting_cost: assetMountingCost,
+          subtotal: assetSubtotal,
+        };
+      });
+
+      // Calculate totals
+      const sub_total = displayCost + printingTotal + mountingTotal - discount;
+      const gst_amount = campaign.gst_amount;
+      const total_amount = campaign.grand_total;
+      const balance_due = total_amount;
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      // Create invoice
+      const { data: invoice, error } = await supabase
+        .from('invoices')
+        .insert({
+          id: invoiceId,
+          client_id: campaign.client_id,
+          client_name: campaign.client_name,
+          invoice_date: new Date().toISOString().split('T')[0],
+          due_date: dueDate,
+          sub_total,
+          gst_percent: campaign.gst_percent,
+          gst_amount,
+          total_amount,
+          balance_due,
+          status: 'Draft' as const,
+          items,
+          notes: notes || `Invoice for campaign: ${campaign.campaign_name}`,
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Invoice ${invoiceId} created successfully`,
+      });
+
+      setOpen(false);
+      
+      // Navigate to invoice detail page
+      navigate(`/finance/invoices/${invoiceId}`);
+    } catch (error: any) {
+      console.error('Error generating invoice:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate invoice",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="default" size="sm">
+          <FileText className="mr-2 h-4 w-4" />
+          Generate Invoice
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Generate Invoice from Campaign</DialogTitle>
+          <DialogDescription>
+            Create an invoice for {campaign.campaign_name} with {campaignAssets.length} assets
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          {/* Invoice Summary */}
+          <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
+            <h4 className="font-semibold text-sm">Invoice Summary</h4>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Client:</span>
+                <span className="font-medium">{campaign.client_name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Campaign:</span>
+                <span className="font-medium">{campaign.campaign_name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Display Cost:</span>
+                <span className="font-medium">₹{displayCost.toLocaleString('en-IN')}</span>
+              </div>
+              {printingTotal > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Printing:</span>
+                  <span className="font-medium">₹{printingTotal.toLocaleString('en-IN')}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Mounting:</span>
+                <span className="font-medium">₹{mountingTotal.toLocaleString('en-IN')}</span>
+              </div>
+              {discount > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>Discount:</span>
+                  <span className="font-medium">-₹{discount.toLocaleString('en-IN')}</span>
+                </div>
+              )}
+              <div className="flex justify-between col-span-2 pt-2 border-t">
+                <span className="text-muted-foreground">Taxable:</span>
+                <span className="font-semibold">₹{campaign.total_amount.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">GST ({campaign.gst_percent}%):</span>
+                <span className="font-medium">₹{campaign.gst_amount.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between col-span-2 pt-2 border-t-2 font-bold">
+                <span>Grand Total:</span>
+                <span className="text-primary">₹{campaign.grand_total.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Due Date */}
+          <div className="space-y-2">
+            <Label htmlFor="due_date">Due Date</Label>
+            <Input
+              id="due_date"
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes (Optional)</Label>
+            <Textarea
+              id="notes"
+              placeholder="Additional notes for the invoice..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+            />
+          </div>
+
+          {/* Terms Info */}
+          <div className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950/20 p-3 rounded border border-blue-200 dark:border-blue-800">
+            <p className="font-medium mb-1">Invoice will include:</p>
+            <ul className="list-disc list-inside space-y-0.5">
+              <li>Detailed line items for each asset with breakdown</li>
+              <li>Pro-rata display cost calculation ({campaign.duration_days} days)</li>
+              <li>Printing costs (₹15 per sqft) and mounting charges (₹1,500 per asset)</li>
+              <li>GST breakdown ({campaign.gst_percent}%)</li>
+              <li>Standard terms & conditions</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+            Cancel
+          </Button>
+          <Button onClick={handleGenerateInvoice} disabled={loading}>
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Generate Invoice
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

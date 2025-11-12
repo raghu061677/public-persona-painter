@@ -14,11 +14,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Trash2, Upload, RefreshCw } from "lucide-react";
+import { ArrowLeft, Trash2, Upload, RefreshCw, Info } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { getCampaignStatusColor, getAssetStatusColor, calculateProgress } from "@/utils/campaigns";
 import { formatDate } from "@/utils/plans";
 import { toast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { OperationsBoard } from "@/components/campaigns/OperationsBoard";
 import { ProofGallery } from "@/components/campaigns/ProofGallery";
 import { ExportProofDialog } from "@/components/campaigns/ExportProofDialog";
@@ -27,6 +28,7 @@ import { CampaignPerformanceMetrics } from "@/components/campaigns/CampaignPerfo
 import { CampaignPDFReport } from "@/components/campaigns/CampaignPDFReport";
 import { CampaignComparisonDialog } from "@/components/campaigns/CampaignComparisonDialog";
 import { CampaignHealthAlerts } from "@/components/campaigns/CampaignHealthAlerts";
+import { GenerateInvoiceDialog } from "@/components/campaigns/GenerateInvoiceDialog";
 
 export default function CampaignDetail() {
   const { id } = useParams();
@@ -196,6 +198,14 @@ export default function CampaignDetail() {
             </div>
           </div>
           <div className="flex gap-2">
+            <GenerateInvoiceDialog 
+              campaign={campaign} 
+              campaignAssets={campaignAssets}
+              displayCost={displayCost}
+              printingTotal={printingTotal}
+              mountingTotal={mountingTotal}
+              discount={discount}
+            />
             <CampaignPDFReport campaign={campaign} campaignAssets={campaignAssets} />
             <CampaignComparisonDialog currentCampaignId={campaign.id} />
             <ExportProofDialog
@@ -282,40 +292,141 @@ export default function CampaignDetail() {
               <CardTitle className="text-orange-600 dark:text-orange-400">Financial Summary</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2.5">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground font-medium">Display Cost</span>
-                  <span className="font-medium">{formatCurrency(displayCost)}</span>
-                </div>
-                {printingTotal > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Printing Cost</span>
-                    <span>{formatCurrency(printingTotal)}</span>
+              <TooltipProvider>
+                <div className="space-y-2.5">
+                  <div className="flex justify-between text-sm items-center">
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground font-medium">Display Cost</span>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="font-semibold mb-1">Pro-rata Calculation:</p>
+                          <p className="text-xs">
+                            For each asset: (Card Rate ÷ 30 days) × {durationDays} days
+                          </p>
+                          <p className="text-xs mt-1 text-muted-foreground">
+                            Campaign: {formatDate(campaign.start_date)} to {formatDate(campaign.end_date)}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <span className="font-medium">{formatCurrency(displayCost)}</span>
                   </div>
-                )}
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Mounting Cost</span>
-                  <span>{formatCurrency(mountingTotal)}</span>
-                </div>
-                {discount > 0 && (
-                  <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
-                    <span className="font-medium">Discount</span>
-                    <span className="font-medium">- {formatCurrency(discount)}</span>
+                  
+                  {printingTotal > 0 && (
+                    <div className="flex justify-between text-sm items-center">
+                      <div className="flex items-center gap-1">
+                        <span className="text-muted-foreground">Printing Cost</span>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="font-semibold mb-1">Printing Cost Breakdown:</p>
+                            <p className="text-xs">
+                              ₹15 per sqft × Total sqft of all assets
+                            </p>
+                            <p className="text-xs mt-1 text-muted-foreground">
+                              {campaignAssets.length} assets with combined {campaignAssets.reduce((sum, a) => sum + (a.total_sqft || 0), 0).toFixed(0)} sqft
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <span>{formatCurrency(printingTotal)}</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between text-sm items-center">
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground">Mounting Cost</span>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="font-semibold mb-1">Mounting Cost Breakdown:</p>
+                          <p className="text-xs">
+                            ₹1,500 per asset × {campaignAssets.length} assets
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <span>{formatCurrency(mountingTotal)}</span>
                   </div>
-                )}
-                <div className="flex justify-between pt-2 border-t border-border">
-                  <span className="text-sm font-semibold">Taxable Amount</span>
-                  <span className="font-semibold">{formatCurrency(campaign.total_amount)}</span>
+                  
+                  {discount > 0 && (
+                    <div className="flex justify-between text-sm text-green-600 dark:text-green-400 items-center">
+                      <div className="flex items-center gap-1">
+                        <span className="font-medium">Discount</span>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="h-3.5 w-3.5" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="font-semibold mb-1">Discount Applied:</p>
+                            <p className="text-xs">
+                              Subtotal - Campaign Total Amount
+                            </p>
+                            <p className="text-xs mt-1 text-muted-foreground">
+                              {formatCurrency(subtotal)} - {formatCurrency(campaign.total_amount)}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <span className="font-medium">- {formatCurrency(discount)}</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between pt-2 border-t border-border">
+                    <span className="text-sm font-semibold">Taxable Amount</span>
+                    <span className="font-semibold">{formatCurrency(campaign.total_amount)}</span>
+                  </div>
+                  
+                  <div className="flex justify-between text-sm items-center">
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground">GST ({campaign.gst_percent}%)</span>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="font-semibold mb-1">GST Calculation:</p>
+                          <p className="text-xs">
+                            Taxable Amount × {campaign.gst_percent}%
+                          </p>
+                          <p className="text-xs mt-1 text-muted-foreground">
+                            {formatCurrency(campaign.total_amount)} × {campaign.gst_percent}% = {formatCurrency(campaign.gst_amount)}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <span>{formatCurrency(campaign.gst_amount)}</span>
+                  </div>
+                  
+                  <div className="flex justify-between pt-3 border-t-2 border-border items-center">
+                    <div className="flex items-center gap-1">
+                      <span className="text-base font-bold">Grand Total</span>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-3.5 w-3.5" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="font-semibold mb-1">Grand Total:</p>
+                          <p className="text-xs">
+                            Taxable Amount + GST
+                          </p>
+                          <p className="text-xs mt-1 text-muted-foreground">
+                            {formatCurrency(campaign.total_amount)} + {formatCurrency(campaign.gst_amount)}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <span className="text-lg font-bold text-orange-600 dark:text-orange-400">{formatCurrency(campaign.grand_total)}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">GST ({campaign.gst_percent}%)</span>
-                  <span>{formatCurrency(campaign.gst_amount)}</span>
-                </div>
-                <div className="flex justify-between pt-3 border-t-2 border-border">
-                  <span className="text-base font-bold">Grand Total</span>
-                  <span className="text-lg font-bold text-orange-600 dark:text-orange-400">{formatCurrency(campaign.grand_total)}</span>
-                </div>
-              </div>
+              </TooltipProvider>
             </CardContent>
           </Card>
         </div>

@@ -27,6 +27,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { PendingApprovalsWidget } from "@/components/dashboard/PendingApprovalsWidget";
 
 const COLORS = [
   'hsl(var(--chart-1))',
@@ -203,7 +204,13 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        <div className="lg:col-span-12 xl:col-span-8">
+        {/* Pending Approvals Widget */}
+        <div className="lg:col-span-4">
+          <PendingApprovalsWidget />
+        </div>
+
+        {/* Revenue Overview Chart */}
+        <div className="lg:col-span-8">
           <Card>
             <CardHeader>
               <CardTitle>Revenue Overview</CardTitle>

@@ -43,6 +43,7 @@ import { BulkPrintingMountingDialog } from "@/components/plans/BulkPrintingMount
 import { AddAssetsDialog } from "@/components/plans/AddAssetsDialog";
 import { SaveAsTemplateDialog } from "@/components/plans/SaveAsTemplateDialog";
 import { ApprovalWorkflowDialog } from "@/components/plans/ApprovalWorkflowDialog";
+import { ApprovalHistoryTimeline } from "@/components/plans/ApprovalHistoryTimeline";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function PlanDetail() {
@@ -1113,6 +1114,14 @@ export default function PlanDetail() {
           <p>Created: {new Date(plan.created_at).toLocaleString()}</p>
           <p>Last updated: {new Date(plan.updated_at).toLocaleString()}</p>
         </div>
+
+        {/* Approval History Timeline */}
+        {(plan.status === 'Sent' || plan.status === 'Approved' || plan.status === 'Rejected' || plan.status === 'Converted') && (
+          <div className="mt-6">
+            <ApprovalHistoryTimeline planId={id!} />
+          </div>
+        )}
+
         <ExportOptionsDialog
           open={showExportDialog}
           onClose={() => setShowExportDialog(false)}

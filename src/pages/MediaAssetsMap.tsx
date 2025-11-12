@@ -6,12 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Filter, X, ExternalLink } from "lucide-react";
+import { Filter, X, Navigation, Layers } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import MarkerClusterGroup from "react-leaflet-cluster";
+import "leaflet.markercluster";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+// @ts-ignore
+import "leaflet.heat";
 
 // Fix for default marker icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -60,6 +66,7 @@ export default function MediaAssetsMap() {
   const [filteredAssets, setFilteredAssets] = useState<MediaAsset[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(true);
+  const [showHeatmap, setShowHeatmap] = useState(false);
   const [statusFilters, setStatusFilters] = useState<StatusFilter[]>([
     { status: 'Available', color: '#10b981', enabled: true, count: 0 },
     { status: 'Booked', color: '#3b82f6', enabled: true, count: 0 },
@@ -70,6 +77,8 @@ export default function MediaAssetsMap() {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<L.Marker[]>([]);
+  const markerClusterGroupRef = useRef<L.MarkerClusterGroup | null>(null);
+  const heatLayerRef = useRef<L.Layer | null>(null);
 
   useEffect(() => {
     fetchAssets();
@@ -99,6 +108,12 @@ export default function MediaAssetsMap() {
       updateMarkers();
     }
   }, [filteredAssets]);
+
+  useEffect(() => {
+    if (mapRef.current) {
+      updateHeatmap();
+    }
+  }, [showHeatmap]);
 
   const fetchAssets = async () => {
     const { data, error } = await supabase
@@ -190,15 +205,36 @@ export default function MediaAssetsMap() {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(mapRef.current);
 
+    // Initialize marker cluster group
+    markerClusterGroupRef.current = L.markerClusterGroup({
+      maxClusterRadius: 80,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: true,
+      zoomToBoundsOnClick: true,
+      iconCreateFunction: (cluster) => {
+        const count = cluster.getChildCount();
+        let size = 'small';
+        if (count > 10) size = 'medium';
+        if (count > 50) size = 'large';
+        
+        return L.divIcon({
+          html: `<div class="cluster-icon cluster-${size}">${count}</div>`,
+          className: 'custom-cluster-icon',
+          iconSize: L.point(40, 40),
+        });
+      }
+    });
+    mapRef.current.addLayer(markerClusterGroupRef.current);
+
     // Add markers
     updateMarkers();
   };
 
   const updateMarkers = () => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !markerClusterGroupRef.current) return;
 
     // Clear existing markers
-    markersRef.current.forEach((marker) => marker.remove());
+    markerClusterGroupRef.current.clearLayers();
     markersRef.current = [];
 
     // Add new markers
@@ -303,16 +339,105 @@ export default function MediaAssetsMap() {
         .bindPopup(popupContent, {
           maxWidth: 350,
           className: 'custom-popup'
-        })
-        .addTo(mapRef.current!);
+        });
 
+      markerClusterGroupRef.current!.addLayer(marker);
       markersRef.current.push(marker);
     });
 
+    // Update heatmap if enabled
+    updateHeatmap();
+
     // Fit map to markers if we have any
     if (markersRef.current.length > 0) {
-      const group = L.featureGroup(markersRef.current);
-      mapRef.current.fitBounds(group.getBounds().pad(0.1));
+      const bounds = markerClusterGroupRef.current!.getBounds();
+      if (bounds.isValid()) {
+        mapRef.current.fitBounds(bounds.pad(0.1));
+      }
+    }
+  };
+
+  const updateHeatmap = () => {
+    if (!mapRef.current) return;
+
+    // Remove existing heatmap
+    if (heatLayerRef.current) {
+      mapRef.current.removeLayer(heatLayerRef.current);
+      heatLayerRef.current = null;
+    }
+
+    // Add new heatmap if enabled
+    if (showHeatmap && filteredAssets.length > 0) {
+      const heatData = filteredAssets.map(asset => [
+        asset.latitude,
+        asset.longitude,
+        0.5 // intensity
+      ]);
+
+      // @ts-ignore - leaflet.heat types
+      heatLayerRef.current = L.heatLayer(heatData, {
+        radius: 25,
+        blur: 15,
+        maxZoom: 13,
+        gradient: {
+          0.0: '#3b82f6',
+          0.5: '#f59e0b',
+          1.0: '#ef4444'
+        }
+      }).addTo(mapRef.current);
+    }
+  };
+
+  const centerOnUserLocation = () => {
+    if (!mapRef.current) return;
+
+    if ('geolocation' in navigator) {
+      toast({
+        title: "Locating...",
+        description: "Finding your current location",
+      });
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          mapRef.current?.setView([latitude, longitude], 15);
+
+          // Add temporary marker for user location
+          const userMarker = L.marker([latitude, longitude], {
+            icon: L.divIcon({
+              html: `<div style="background: #3b82f6; border: 3px solid white; border-radius: 50%; width: 20px; height: 20px; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);"></div>`,
+              className: 'user-location-marker',
+              iconSize: [20, 20],
+              iconAnchor: [10, 10]
+            })
+          }).addTo(mapRef.current!);
+
+          setTimeout(() => userMarker.remove(), 5000);
+
+          toast({
+            title: "Location Found",
+            description: "Map centered on your location",
+          });
+        },
+        (error) => {
+          toast({
+            title: "Location Error",
+            description: error.message || "Could not get your location",
+            variant: "destructive",
+          });
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
+        }
+      );
+    } else {
+      toast({
+        title: "Not Supported",
+        description: "Geolocation is not supported by your browser",
+        variant: "destructive",
+      });
     }
   };
 
@@ -390,31 +515,59 @@ export default function MediaAssetsMap() {
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {statusFilters.map((filter) => (
-                    <div
-                      key={filter.status}
-                      className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
-                      onClick={() => toggleStatusFilter(filter.status)}
-                    >
-                      <Checkbox
-                        checked={filter.enabled}
-                        onCheckedChange={() => toggleStatusFilter(filter.status)}
-                        className="pointer-events-none"
-                      />
-                      <div
-                        className="w-4 h-4 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: filter.color }}
-                      />
-                      <span className="font-medium text-sm flex-1">{filter.status}</span>
-                      <Badge variant="secondary" className="text-xs">
-                        {filter.count}
-                      </Badge>
+                <CardContent className="space-y-4">
+                  {/* Heatmap Toggle */}
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30 border border-border">
+                    <div className="flex items-center gap-2">
+                      <Layers className="h-4 w-4 text-primary" />
+                      <Label htmlFor="heatmap-toggle" className="text-sm font-medium cursor-pointer">
+                        Asset Density Heatmap
+                      </Label>
                     </div>
-                  ))}
+                    <Switch
+                      id="heatmap-toggle"
+                      checked={showHeatmap}
+                      onCheckedChange={setShowHeatmap}
+                    />
+                  </div>
+
+                  {/* Status Filters */}
+                  <div className="space-y-2">
+                    {statusFilters.map((filter) => (
+                      <div
+                        key={filter.status}
+                        className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
+                        onClick={() => toggleStatusFilter(filter.status)}
+                      >
+                        <Checkbox
+                          checked={filter.enabled}
+                          onCheckedChange={() => toggleStatusFilter(filter.status)}
+                          className="pointer-events-none"
+                        />
+                        <div
+                          className="w-4 h-4 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: filter.color }}
+                        />
+                        <span className="font-medium text-sm flex-1">{filter.status}</span>
+                        <Badge variant="secondary" className="text-xs">
+                          {filter.count}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             )}
+
+            {/* My Location Button */}
+            <Button
+              onClick={centerOnUserLocation}
+              size="icon"
+              className="absolute bottom-24 right-4 z-[1000] h-12 w-12 rounded-full shadow-lg bg-primary hover:bg-primary/90"
+              title="Center on my location"
+            >
+              <Navigation className="h-5 w-5" />
+            </Button>
           </>
         ) : (
           <div className="flex items-center justify-center h-full">
@@ -454,6 +607,42 @@ export default function MediaAssetsMap() {
         }
         .custom-popup .leaflet-popup-tip {
           background: white;
+        }
+        .custom-cluster-icon {
+          background: transparent;
+          border: none;
+        }
+        .cluster-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          font-weight: 700;
+          color: white;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          border: 3px solid white;
+        }
+        .cluster-small {
+          background: #10b981;
+          width: 40px;
+          height: 40px;
+          font-size: 14px;
+        }
+        .cluster-medium {
+          background: #f59e0b;
+          width: 50px;
+          height: 50px;
+          font-size: 16px;
+        }
+        .cluster-large {
+          background: #ef4444;
+          width: 60px;
+          height: 60px;
+          font-size: 18px;
+        }
+        .user-location-marker {
+          background: transparent;
+          border: none;
         }
       `}</style>
     </div>

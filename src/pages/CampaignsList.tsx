@@ -82,9 +82,11 @@ export default function CampaignsList() {
       const { data } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', user.id)
-        .single();
-      setIsAdmin(data?.role === 'admin');
+        .eq('user_id', user.id);
+      
+      // Check if user has admin role among all their roles
+      const hasAdminRole = data?.some(r => r.role === 'admin');
+      setIsAdmin(hasAdminRole || false);
     }
   };
 

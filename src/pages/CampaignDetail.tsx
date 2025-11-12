@@ -24,6 +24,9 @@ import { ProofGallery } from "@/components/campaigns/ProofGallery";
 import { ExportProofDialog } from "@/components/campaigns/ExportProofDialog";
 import { CampaignTimelineCard } from "@/components/campaigns/CampaignTimelineCard";
 import { CampaignPerformanceMetrics } from "@/components/campaigns/CampaignPerformanceMetrics";
+import { CampaignPDFReport } from "@/components/campaigns/CampaignPDFReport";
+import { CampaignComparisonDialog } from "@/components/campaigns/CampaignComparisonDialog";
+import { CampaignHealthAlerts } from "@/components/campaigns/CampaignHealthAlerts";
 
 export default function CampaignDetail() {
   const { id } = useParams();
@@ -118,6 +121,19 @@ export default function CampaignDetail() {
   const verifiedAssets = campaignAssets.filter(a => a.status === 'Verified').length;
   const progress = calculateProgress(campaign.total_assets, verifiedAssets);
 
+  // Calculate campaign duration
+  const startDate = new Date(campaign.start_date);
+  const endDate = new Date(campaign.end_date);
+  const durationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  const durationMonths = Math.round(durationDays / 30);
+
+  // Calculate detailed financials
+  const baseAmount = campaignAssets.reduce((sum, a) => sum + (a.card_rate || 0), 0);
+  const printingTotal = campaignAssets.reduce((sum, a) => sum + (a.printing_charges || 0), 0);
+  const mountingTotal = campaignAssets.reduce((sum, a) => sum + (a.mounting_charges || 0), 0);
+  const subtotal = baseAmount + printingTotal + mountingTotal;
+  const discount = subtotal - campaign.total_amount;
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8">
@@ -142,6 +158,8 @@ export default function CampaignDetail() {
             </div>
           </div>
           <div className="flex gap-2">
+            <CampaignPDFReport campaign={campaign} campaignAssets={campaignAssets} />
+            <CampaignComparisonDialog currentCampaignId={campaign.id} />
             <ExportProofDialog
               campaignId={campaign.id}
               campaignName={campaign.campaign_name}
@@ -212,6 +230,10 @@ export default function CampaignDetail() {
                   <p className="text-sm text-muted-foreground">End Date</p>
                   <p className="font-medium">{formatDate(campaign.end_date)}</p>
                 </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Duration</p>
+                  <p className="font-medium">{durationDays} days ({durationMonths} {durationMonths === 1 ? 'month' : 'months'})</p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -223,13 +245,31 @@ export default function CampaignDetail() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Subtotal</span>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Base Amount</span>
+                  <span>{formatCurrency(baseAmount)}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Printing Charges</span>
+                  <span>{formatCurrency(printingTotal)}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Mounting Charges</span>
+                  <span>{formatCurrency(mountingTotal)}</span>
+                </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-xs text-green-600">
+                    <span>Discount</span>
+                    <span>- {formatCurrency(discount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-1 border-t">
+                  <span className="text-sm text-muted-foreground">Taxable Amount</span>
                   <span className="font-medium">{formatCurrency(campaign.total_amount)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">GST ({campaign.gst_percent}%)</span>
-                  <span className="font-medium">{formatCurrency(campaign.gst_amount)}</span>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">GST ({campaign.gst_percent}%)</span>
+                  <span>{formatCurrency(campaign.gst_amount)}</span>
                 </div>
                 <div className="flex justify-between pt-2 border-t">
                   <span className="font-semibold">Grand Total</span>
@@ -238,6 +278,11 @@ export default function CampaignDetail() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Health Alerts */}
+        <div className="mb-6">
+          <CampaignHealthAlerts campaignId={campaign.id} />
         </div>
 
         {/* Timeline and Performance */}

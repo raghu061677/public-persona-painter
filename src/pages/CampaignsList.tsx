@@ -15,6 +15,7 @@ import { Eye, Trash2, FileText, Plus } from "lucide-react";
 import { CreateCampaignFromPlanDialog } from "@/components/campaigns/CreateCampaignFromPlanDialog";
 import { CampaignTemplatesDialog } from "@/components/campaigns/CampaignTemplatesDialog";
 import { BulkStatusUpdateDialog } from "@/components/campaigns/BulkStatusUpdateDialog";
+import { CampaignHealthAlerts } from "@/components/campaigns/CampaignHealthAlerts";
 import { getCampaignStatusConfig } from "@/utils/statusBadges";
 import { getCampaignStatusColor } from "@/utils/campaigns";
 import { formatDate as formatPlanDate } from "@/utils/plans";
@@ -226,6 +227,11 @@ export default function CampaignsList() {
               </>
             )}
           </div>
+        </div>
+
+        {/* Health Alerts */}
+        <div className="mb-6">
+          <CampaignHealthAlerts />
         </div>
 
         {/* Bulk Actions */}

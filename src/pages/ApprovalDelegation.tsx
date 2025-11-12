@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -96,14 +97,14 @@ export default function ApprovalDelegation() {
       return;
     }
 
-    const { error } = await supabase.from("approval_delegations").insert({
+    const { error } = await supabase.from("approval_delegations").insert([{
       delegator_id: user.id,
       delegate_id: formData.delegate_id,
-      role: formData.role as any,
+      role: formData.role as Database["public"]["Enums"]["app_role"],
       start_date: formData.start_date,
       end_date: formData.end_date,
       notes: formData.notes || null
-    });
+    }]);
 
     if (error) {
       toast.error("Failed to create delegation");

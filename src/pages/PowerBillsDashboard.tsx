@@ -6,20 +6,43 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Zap, Download, RefreshCw } from "lucide-react";
+import { Zap, Download, RefreshCw, Lightbulb, Sun, Flame, Settings } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface MediaAssetWithBill {
   id: string;
   location: string;
   area: string;
   city: string;
+  illumination: string | null;
   service_number: string | null;
+  unique_service_number: string | null;
   consumer_name: string | null;
+  ero: string | null;
+  section_name: string | null;
   latest_bill_amount?: number;
   latest_bill_month?: string;
   payment_status?: string;
 }
+
+const getIlluminationIcon = (type: string | null) => {
+  if (!type) return <Zap className="h-4 w-4 text-muted-foreground" />;
+  
+  const lowerType = type.toLowerCase();
+  if (lowerType.includes('led')) return <Lightbulb className="h-4 w-4 text-blue-500" />;
+  if (lowerType.includes('fluorescent')) return <Sun className="h-4 w-4 text-yellow-500" />;
+  if (lowerType.includes('neon')) return <Flame className="h-4 w-4 text-pink-500" />;
+  if (lowerType.includes('halogen')) return <Sun className="h-4 w-4 text-orange-500" />;
+  return <Zap className="h-4 w-4 text-purple-500" />;
+};
 
 export default function PowerBillsDashboard() {
   const { isAdmin } = useAuth();
@@ -29,6 +52,15 @@ export default function PowerBillsDashboard() {
   const [fetching, setFetching] = useState(false);
   const [totalDues, setTotalDues] = useState(0);
   const [totalAssets, setTotalAssets] = useState(0);
+  
+  // Column visibility state
+  const [showColumns, setShowColumns] = useState({
+    consumerName: true,
+    serviceNumber: true,
+    uniqueServiceNumber: false,
+    ero: false,
+    sectionName: false,
+  });
 
   useEffect(() => {
     if (isAdmin) {
@@ -42,7 +74,7 @@ export default function PowerBillsDashboard() {
       // Fetch all illumination media assets (assets with power connections)
       const { data: assetsData, error: assetsError } = await supabase
         .from('media_assets')
-        .select('id, location, area, city, service_number, consumer_name, illumination')
+        .select('id, location, area, city, illumination, service_number, unique_service_number, consumer_name, ero, section_name')
         .not('illumination', 'is', null)
         .neq('illumination', '')
         .order('city', { ascending: true });
@@ -240,22 +272,76 @@ export default function PowerBillsDashboard() {
               <CardTitle>Assets with Power Connections</CardTitle>
               <CardDescription>Select assets to fetch bills in bulk</CardDescription>
             </div>
-            <Button 
-              onClick={handleBulkFetch} 
-              disabled={selectedAssets.size === 0 || fetching}
-            >
-              {fetching ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Fetching...
-                </>
-              ) : (
-                <>
-                  <Zap className="h-4 w-4 mr-2" />
-                  Fetch Bills ({selectedAssets.size})
-                </>
-              )}
-            </Button>
+            <div className="flex gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Power Details
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Power Connection Columns</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem
+                    checked={showColumns.consumerName}
+                    onCheckedChange={(checked) => 
+                      setShowColumns(prev => ({ ...prev, consumerName: checked }))
+                    }
+                  >
+                    Consumer Name
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={showColumns.serviceNumber}
+                    onCheckedChange={(checked) => 
+                      setShowColumns(prev => ({ ...prev, serviceNumber: checked }))
+                    }
+                  >
+                    Service Number
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={showColumns.uniqueServiceNumber}
+                    onCheckedChange={(checked) => 
+                      setShowColumns(prev => ({ ...prev, uniqueServiceNumber: checked }))
+                    }
+                  >
+                    Unique Service Number
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={showColumns.ero}
+                    onCheckedChange={(checked) => 
+                      setShowColumns(prev => ({ ...prev, ero: checked }))
+                    }
+                  >
+                    ERO (Revenue Officer)
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={showColumns.sectionName}
+                    onCheckedChange={(checked) => 
+                      setShowColumns(prev => ({ ...prev, sectionName: checked }))
+                    }
+                  >
+                    Section Name
+                  </DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button 
+                onClick={handleBulkFetch} 
+                disabled={selectedAssets.size === 0 || fetching}
+              >
+                {fetching ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Fetching...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-4 w-4 mr-2" />
+                    Fetch Bills ({selectedAssets.size})
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -274,8 +360,12 @@ export default function PowerBillsDashboard() {
                   <TableHead>Asset ID</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>City</TableHead>
-                  <TableHead>Service No.</TableHead>
-                  <TableHead>Consumer Name</TableHead>
+                  <TableHead>Illumination</TableHead>
+                  {showColumns.serviceNumber && <TableHead>Service No.</TableHead>}
+                  {showColumns.uniqueServiceNumber && <TableHead>Unique Service No.</TableHead>}
+                  {showColumns.consumerName && <TableHead>Consumer Name</TableHead>}
+                  {showColumns.ero && <TableHead>ERO</TableHead>}
+                  {showColumns.sectionName && <TableHead>Section Name</TableHead>}
                   <TableHead>Latest Bill</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>
@@ -295,8 +385,27 @@ export default function PowerBillsDashboard() {
                     <TableCell className="font-medium">{asset.id}</TableCell>
                     <TableCell>{asset.location}</TableCell>
                     <TableCell>{asset.city}</TableCell>
-                    <TableCell className="font-mono text-sm">{asset.service_number}</TableCell>
-                    <TableCell>{asset.consumer_name || '-'}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {getIlluminationIcon(asset.illumination)}
+                        <span className="text-sm">{asset.illumination || 'N/A'}</span>
+                      </div>
+                    </TableCell>
+                    {showColumns.serviceNumber && (
+                      <TableCell className="font-mono text-sm">{asset.service_number || '-'}</TableCell>
+                    )}
+                    {showColumns.uniqueServiceNumber && (
+                      <TableCell className="font-mono text-sm">{asset.unique_service_number || '-'}</TableCell>
+                    )}
+                    {showColumns.consumerName && (
+                      <TableCell>{asset.consumer_name || '-'}</TableCell>
+                    )}
+                    {showColumns.ero && (
+                      <TableCell>{asset.ero || '-'}</TableCell>
+                    )}
+                    {showColumns.sectionName && (
+                      <TableCell>{asset.section_name || '-'}</TableCell>
+                    )}
                     <TableCell>{asset.latest_bill_month || '-'}</TableCell>
                     <TableCell>
                       {asset.latest_bill_amount 

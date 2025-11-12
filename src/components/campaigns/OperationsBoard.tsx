@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,14 +34,65 @@ export function OperationsBoard({ campaignId, assets, onUpdate }: OperationsBoar
   const navigate = useNavigate();
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
-  const [mounterName, setMounterName] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState("");
   const [assigning, setAssigning] = useState(false);
+  const [users, setUsers] = useState<Array<{ id: string; username: string }>>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  useEffect(() => {
+    fetchOperationsUsers();
+  }, []);
+
+  const fetchOperationsUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      // Fetch users with operations role
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'operations');
+
+      if (rolesError) throw rolesError;
+
+      if (userRoles && userRoles.length > 0) {
+        const userIds = userRoles.map(ur => ur.user_id);
+        
+        // Fetch profiles for these users
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, username')
+          .in('id', userIds);
+
+        if (profilesError) throw profilesError;
+        setUsers(profiles || []);
+      }
+    } catch (error: any) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: "Warning",
+        description: "Could not load operations users",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
 
   const handleAssignMounter = async () => {
-    if (!selectedAsset || !mounterName.trim()) {
+    if (!selectedAsset || !selectedUserId) {
       toast({
         title: "Error",
-        description: "Please enter mounter name",
+        description: "Please select a mounter",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const selectedUser = users.find(u => u.id === selectedUserId);
+    if (!selectedUser) {
+      toast({
+        title: "Error",
+        description: "Invalid user selection",
         variant: "destructive",
       });
       return;
@@ -53,7 +103,7 @@ export function OperationsBoard({ campaignId, assets, onUpdate }: OperationsBoar
       const { error } = await supabase
         .from('campaign_assets')
         .update({
-          mounter_name: mounterName,
+          mounter_name: selectedUser.username,
           status: 'Assigned',
           assigned_at: new Date().toISOString(),
         })
@@ -63,11 +113,11 @@ export function OperationsBoard({ campaignId, assets, onUpdate }: OperationsBoar
 
       toast({
         title: "Success",
-        description: "Mounter assigned successfully",
+        description: `Assigned to ${selectedUser.username}`,
       });
 
       setAssignDialogOpen(false);
-      setMounterName("");
+      setSelectedUserId("");
       setSelectedAsset(null);
       onUpdate();
     } catch (error: any) {
@@ -198,19 +248,31 @@ export function OperationsBoard({ campaignId, assets, onUpdate }: OperationsBoar
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="mounter-name">Mounter Name</Label>
-              <Input
-                id="mounter-name"
-                value={mounterName}
-                onChange={(e) => setMounterName(e.target.value)}
-                placeholder="Enter mounter name"
-              />
+              <Label htmlFor="mounter-select">Select Operations User</Label>
+              {loadingUsers ? (
+                <div className="text-sm text-muted-foreground">Loading users...</div>
+              ) : users.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No operations users found. Please assign operations role to users first.</div>
+              ) : (
+                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                  <SelectTrigger id="mounter-select">
+                    <SelectValue placeholder="Choose a user..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.username || 'Unnamed User'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleAssignMounter} disabled={assigning}>
+              <Button onClick={handleAssignMounter} disabled={assigning || !selectedUserId}>
                 {assigning ? "Assigning..." : "Assign"}
               </Button>
             </div>

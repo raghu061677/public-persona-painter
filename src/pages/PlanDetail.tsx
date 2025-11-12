@@ -55,6 +55,10 @@ export default function PlanDetail() {
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showConvertDialog, setShowConvertDialog] = useState(false);
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [approvalRemarks, setApprovalRemarks] = useState("");
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showExportSettingsDialog, setShowExportSettingsDialog] = useState(false);
   const [showTermsDialog, setShowTermsDialog] = useState(false);
@@ -474,6 +478,116 @@ export default function PlanDetail() {
     }
   };
 
+  const handleSubmitForApproval = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      await supabase.from("plans").update({ status: "Sent" }).eq("id", id);
+      
+      // Create approval workflow
+      await supabase.rpc("create_plan_approval_workflow", { p_plan_id: id });
+
+      toast({
+        title: "Success",
+        description: "Plan submitted for approval",
+      });
+
+      setShowSubmitDialog(false);
+      setApprovalRemarks("");
+      fetchPlan();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleApprovePlan = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Get pending approval for current user
+      const { data: approvals } = await supabase
+        .from("plan_approvals")
+        .select("id")
+        .eq("plan_id", id)
+        .eq("status", "pending")
+        .limit(1);
+
+      if (!approvals || approvals.length === 0) {
+        throw new Error("No pending approval found");
+      }
+
+      const result = await supabase.rpc("process_plan_approval", {
+        p_approval_id: approvals[0].id,
+        p_status: "approved",
+        p_comments: approvalRemarks,
+      });
+
+      toast({
+        title: "Success",
+        description: "Plan approved successfully",
+      });
+
+      setShowApproveDialog(false);
+      setApprovalRemarks("");
+      fetchPlan();
+      loadPendingApprovals();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRejectPlan = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Get pending approval for current user
+      const { data: approvals } = await supabase
+        .from("plan_approvals")
+        .select("id")
+        .eq("plan_id", id)
+        .eq("status", "pending")
+        .limit(1);
+
+      if (!approvals || approvals.length === 0) {
+        throw new Error("No pending approval found");
+      }
+
+      await supabase.rpc("process_plan_approval", {
+        p_approval_id: approvals[0].id,
+        p_status: "rejected",
+        p_comments: approvalRemarks,
+      });
+
+      toast({
+        title: "Plan Rejected",
+        description: "Plan has been rejected",
+        variant: "destructive",
+      });
+
+      setShowRejectDialog(false);
+      setApprovalRemarks("");
+      fetchPlan();
+      loadPendingApprovals();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleConvertToCampaign = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -591,17 +705,41 @@ export default function PlanDetail() {
           
           {/* Action Buttons */}
           <div className="flex gap-2 flex-wrap items-start">
-            {pendingApprovalsCount > 0 && (
+            {/* Submit for Approval - Draft Status */}
+            {plan.status === 'Draft' && isAdmin && (
               <Button
-                onClick={() => setShowApprovalDialog(true)}
+                onClick={() => setShowSubmitDialog(true)}
                 size="sm"
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-orange-600 hover:bg-orange-700"
               >
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                Pending Approvals ({pendingApprovalsCount})
+                <Activity className="h-4 w-4 mr-2" />
+                Submit for Approval
               </Button>
             )}
 
+            {/* Approve/Reject - Sent Status */}
+            {plan.status === 'Sent' && isAdmin && pendingApprovalsCount > 0 && (
+              <>
+                <Button
+                  onClick={() => setShowApproveDialog(true)}
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Approve
+                </Button>
+                <Button
+                  onClick={() => setShowRejectDialog(true)}
+                  size="sm"
+                  variant="destructive"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Reject
+                </Button>
+              </>
+            )}
+
+            {/* Convert to Campaign - Approved Status */}
             {plan.status === 'Approved' && isAdmin && (
               <Button 
                 size="sm" 
@@ -611,6 +749,13 @@ export default function PlanDetail() {
                 <Rocket className="mr-2 h-4 w-4" />
                 Convert to Campaign
               </Button>
+            )}
+
+            {/* Already Converted Badge */}
+            {plan.status === 'Converted' && (
+              <Badge variant="outline" className="text-green-600 border-green-600">
+                Already Converted to Campaign
+              </Badge>
             )}
             
             {/* Actions Dropdown - Always Visible */}
@@ -1031,6 +1176,105 @@ export default function PlanDetail() {
           notes={plan.notes}
           planItems={planItems}
         />
+
+
+        {/* Submit for Approval Dialog */}
+        <Dialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Submit Plan for Approval</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Submit this plan for approval workflow. It will be reviewed by designated approvers.
+              </p>
+              <div>
+                <Label>Remarks (Optional)</Label>
+                <Textarea
+                  value={approvalRemarks}
+                  onChange={(e) => setApprovalRemarks(e.target.value)}
+                  placeholder="Add any remarks or notes for approvers..."
+                  rows={3}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowSubmitDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSubmitForApproval} className="bg-orange-600 hover:bg-orange-700">
+                  Submit for Approval
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Approve Plan Dialog */}
+        <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Approve Plan</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Approve this plan to proceed with campaign conversion.
+              </p>
+              <div>
+                <Label>Approval Comments (Optional)</Label>
+                <Textarea
+                  value={approvalRemarks}
+                  onChange={(e) => setApprovalRemarks(e.target.value)}
+                  placeholder="Add approval comments..."
+                  rows={3}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowApproveDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleApprovePlan} className="bg-green-600 hover:bg-green-700">
+                  Approve Plan
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Reject Plan Dialog */}
+        <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Reject Plan</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Reject this plan. Please provide a reason for rejection.
+              </p>
+              <div>
+                <Label>Rejection Reason *</Label>
+                <Textarea
+                  value={approvalRemarks}
+                  onChange={(e) => setApprovalRemarks(e.target.value)}
+                  placeholder="Provide reason for rejection..."
+                  rows={3}
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleRejectPlan} 
+                  variant="destructive"
+                  disabled={!approvalRemarks.trim()}
+                >
+                  Reject Plan
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <ApprovalWorkflowDialog
           open={showApprovalDialog}

@@ -308,9 +308,32 @@ async function sendJobCompletionEmail(
     </html>
   `;
 
+  // Fetch admin users dynamically
+  const { data: admins } = await supabase
+    .from('user_roles')
+    .select('user_id')
+    .eq('role', 'admin');
+
+  const adminEmails: string[] = [];
+  if (admins && admins.length > 0) {
+    for (const admin of admins) {
+      try {
+        const { data: userData } = await supabase.auth.admin.getUserById(admin.user_id);
+        if (userData?.user?.email) {
+          adminEmails.push(userData.user.email);
+        }
+      } catch (err) {
+        console.error('Error fetching admin email:', err);
+      }
+    }
+  }
+
+  // Fallback to default admin email if no admins found
+  const toEmails = adminEmails.length > 0 ? adminEmails : ['raghu@go-ads.in'];
+
   const { data, error } = await resend.emails.send({
-    from: 'Go-Ads Power Bills <noreply@go-ads.in>',
-    to: ['admin@go-ads.in'], // Replace with actual admin email(s)
+    from: 'Go-Ads Power Bills <onboarding@resend.dev>',
+    to: toEmails,
     subject: `⚡ Monthly Power Bills Fetched: ${summary.successCount}/${summary.totalAssets} Assets (${summary.completionRate})`,
     html,
   });

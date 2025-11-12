@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { PowerBillFetchDialog } from "@/components/media-assets/PowerBillFetchDialog";
 import { PayBillButton } from "@/components/power-bills/PayBillButton";
 import { UploadReceiptDialog } from "@/components/power-bills/UploadReceiptDialog";
-import { FileText } from "lucide-react";
+import { FileText, Upload } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 

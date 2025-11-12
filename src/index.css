@@ -1,3 +1,6 @@
+@import url('react-big-calendar/lib/css/react-big-calendar.css');
+@import url('react-big-calendar/lib/addons/dragAndDrop/styles.css');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -287,5 +290,46 @@ input[type="number"] {
 
   .form-error-text {
     @apply text-xs text-destructive mt-1;
+  }
+
+  /* Custom styles for react-big-calendar */
+  .rbc-calendar {
+    font-family: inherit;
+  }
+
+  .rbc-header {
+    @apply p-3 font-semibold text-sm bg-muted;
+  }
+
+  .rbc-event {
+    @apply px-2 py-1 text-xs rounded cursor-pointer;
+  }
+
+  .rbc-event:hover {
+    @apply opacity-80;
+  }
+
+  .rbc-today {
+    background-color: hsl(var(--primary) / 0.05);
+  }
+
+  .rbc-toolbar button {
+    @apply px-4 py-2 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors;
+  }
+
+  .rbc-toolbar button.rbc-active {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .rbc-time-slot {
+    @apply min-h-[40px];
+  }
+
+  .rbc-day-bg:hover {
+    @apply bg-muted/50;
+  }
+
+  .rbc-selected-cell {
+    background-color: hsl(var(--primary) / 0.1);
   }
 }

@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -29,10 +28,53 @@ interface BulkOperationsDialogProps {
 export function BulkOperationsDialog({ assets, onUpdate }: BulkOperationsDialogProps) {
   const [open, setOpen] = useState(false);
   const [selectedAssets, setSelectedAssets] = useState<string[]>([]);
-  const [operation, setOperation] = useState<'assign' | 'status'>('assign');
-  const [mounterName, setMounterName] = useState("");
+  const [operation, setOperation] = useState<'assign' | 'reassign' | 'status'>('assign');
+  const [selectedUserId, setSelectedUserId] = useState("");
   const [newStatus, setNewStatus] = useState<string>("");
   const [processing, setProcessing] = useState(false);
+  const [users, setUsers] = useState<Array<{ id: string; username: string }>>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      fetchOperationsUsers();
+    }
+  }, [open]);
+
+  const fetchOperationsUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      // Fetch users with operations role
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'operations');
+
+      if (rolesError) throw rolesError;
+
+      if (userRoles && userRoles.length > 0) {
+        const userIds = userRoles.map(ur => ur.user_id);
+        
+        // Fetch profiles for these users
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, username')
+          .in('id', userIds);
+
+        if (profilesError) throw profilesError;
+        setUsers(profiles || []);
+      }
+    } catch (error: any) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: "Warning",
+        description: "Could not load operations users",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -60,10 +102,10 @@ export function BulkOperationsDialog({ assets, onUpdate }: BulkOperationsDialogP
       return;
     }
 
-    if (operation === 'assign' && !mounterName.trim()) {
+    if ((operation === 'assign' || operation === 'reassign') && !selectedUserId) {
       toast({
         title: "Error",
-        description: "Please enter mounter name",
+        description: "Please select a user",
         variant: "destructive",
       });
       return;
@@ -78,12 +120,22 @@ export function BulkOperationsDialog({ assets, onUpdate }: BulkOperationsDialogP
       return;
     }
 
+    const selectedUser = users.find(u => u.id === selectedUserId);
+    if ((operation === 'assign' || operation === 'reassign') && !selectedUser) {
+      toast({
+        title: "Error",
+        description: "Invalid user selection",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setProcessing(true);
     try {
       const updates: any = {};
       
-      if (operation === 'assign') {
-        updates.mounter_name = mounterName;
+      if (operation === 'assign' || operation === 'reassign') {
+        updates.mounter_name = selectedUser!.username;
         updates.status = 'Assigned';
         updates.assigned_at = new Date().toISOString();
       } else {
@@ -97,14 +149,15 @@ export function BulkOperationsDialog({ assets, onUpdate }: BulkOperationsDialogP
 
       if (error) throw error;
 
+      const actionText = operation === 'reassign' ? 'reassigned' : operation === 'assign' ? 'assigned' : 'updated';
       toast({
         title: "Success",
-        description: `Updated ${selectedAssets.length} asset(s) successfully`,
+        description: `Successfully ${actionText} ${selectedAssets.length} asset(s)`,
       });
 
       setOpen(false);
       setSelectedAssets([]);
-      setMounterName("");
+      setSelectedUserId("");
       setNewStatus("");
       onUpdate();
     } catch (error: any) {
@@ -142,21 +195,37 @@ export function BulkOperationsDialog({ assets, onUpdate }: BulkOperationsDialogP
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="assign">Assign Mounter</SelectItem>
+                <SelectItem value="assign">Assign to User</SelectItem>
+                <SelectItem value="reassign">Reassign to Different User</SelectItem>
                 <SelectItem value="status">Update Status</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Operation Fields */}
-          {operation === 'assign' && (
+          {(operation === 'assign' || operation === 'reassign') && (
             <div className="space-y-2">
-              <Label>Mounter Name</Label>
-              <Input
-                value={mounterName}
-                onChange={(e) => setMounterName(e.target.value)}
-                placeholder="Enter mounter name"
-              />
+              <Label>{operation === 'reassign' ? 'Reassign to User' : 'Assign to User'}</Label>
+              {loadingUsers ? (
+                <div className="text-sm text-muted-foreground">Loading users...</div>
+              ) : users.length === 0 ? (
+                <div className="text-sm text-muted-foreground p-3 border rounded-md bg-muted">
+                  No operations users found. Please assign operations role to users first.
+                </div>
+              ) : (
+                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a user..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.username || 'Unnamed User'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           )}
 
@@ -215,7 +284,10 @@ export function BulkOperationsDialog({ assets, onUpdate }: BulkOperationsDialogP
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleBulkOperation} disabled={processing}>
+            <Button 
+              onClick={handleBulkOperation} 
+              disabled={processing || ((operation === 'assign' || operation === 'reassign') && !selectedUserId) || (operation === 'status' && !newStatus)}
+            >
               {processing ? (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />

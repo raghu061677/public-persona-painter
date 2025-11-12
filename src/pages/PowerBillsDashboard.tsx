@@ -7,7 +7,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Zap, Download, RefreshCw, Lightbulb, Sun, Flame, Settings, Upload, FileSpreadsheet, FileText, BarChart3, CreditCard, Calendar, Clock, Play } from "lucide-react";
-import { PayBillButton } from "@/components/power-bills/PayBillButton";
 import { UploadReceiptDialog } from "@/components/power-bills/UploadReceiptDialog";
 import { PowerBillsAnalyticsChart } from "@/components/power-bills/PowerBillsAnalyticsChart";
 import { PowerBillFetchDialog } from "@/components/media-assets/PowerBillFetchDialog";

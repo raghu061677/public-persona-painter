@@ -1291,6 +1291,74 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_transactions: {
+        Row: {
+          amount: number
+          asset_id: string
+          bank_name: string | null
+          bill_id: string
+          completed_at: string | null
+          created_at: string | null
+          failure_reason: string | null
+          id: string
+          initiated_at: string | null
+          initiated_by: string | null
+          metadata: Json | null
+          payment_gateway: string | null
+          payment_method: string
+          status: string
+          transaction_id: string | null
+          updated_at: string | null
+          upi_id: string | null
+        }
+        Insert: {
+          amount: number
+          asset_id: string
+          bank_name?: string | null
+          bill_id: string
+          completed_at?: string | null
+          created_at?: string | null
+          failure_reason?: string | null
+          id?: string
+          initiated_at?: string | null
+          initiated_by?: string | null
+          metadata?: Json | null
+          payment_gateway?: string | null
+          payment_method: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string | null
+          upi_id?: string | null
+        }
+        Update: {
+          amount?: number
+          asset_id?: string
+          bank_name?: string | null
+          bill_id?: string
+          completed_at?: string | null
+          created_at?: string | null
+          failure_reason?: string | null
+          id?: string
+          initiated_at?: string | null
+          initiated_by?: string | null
+          metadata?: Json | null
+          payment_gateway?: string | null
+          payment_method?: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string | null
+          upi_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "asset_power_bills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_approvals: {
         Row: {
           approval_level: Database["public"]["Enums"]["approval_level"]
@@ -1966,7 +2034,15 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user" | "sales" | "finance" | "operations"
+      app_role:
+        | "admin"
+        | "user"
+        | "sales"
+        | "finance"
+        | "operations"
+        | "manager"
+        | "installation"
+        | "monitoring"
       approval_level: "L1" | "L2" | "L3"
       approval_status: "pending" | "approved" | "rejected"
       asset_installation_status:
@@ -2133,7 +2209,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user", "sales", "finance", "operations"],
+      app_role: [
+        "admin",
+        "user",
+        "sales",
+        "finance",
+        "operations",
+        "manager",
+        "installation",
+        "monitoring",
+      ],
       approval_level: ["L1", "L2", "L3"],
       approval_status: ["pending", "approved", "rejected"],
       asset_installation_status: [

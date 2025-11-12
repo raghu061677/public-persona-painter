@@ -1,41 +1,56 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ExternalLink } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { CreditCard } from "lucide-react";
+import { PaymentDialog } from "./PaymentDialog";
 
 interface PayBillButtonProps {
+  billId: string;
+  assetId: string;
+  amount: number;
+  consumerName?: string | null;
   serviceNumber?: string | null;
   uniqueServiceNumber?: string | null;
   paymentLink?: string | null;
   size?: "default" | "sm" | "lg" | "icon";
+  onPaymentSuccess?: () => void;
 }
 
 export function PayBillButton({ 
+  billId,
+  assetId,
+  amount,
+  consumerName,
   serviceNumber, 
   uniqueServiceNumber, 
   paymentLink,
-  size = "sm"
+  size = "sm",
+  onPaymentSuccess,
 }: PayBillButtonProps) {
-  const handlePayBill = () => {
-    const billDeskUrl = paymentLink || 
-      `https://www.billdesk.com/pgidsk/pgmerc/tsspdclpgi/TSSPDCLPGIDetails.jsp`;
-    
-    window.open(billDeskUrl, '_blank');
-    
-    toast({
-      title: "Payment Portal Opened",
-      description: "Please complete payment and upload receipt after payment",
-    });
-  };
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
   return (
-    <Button 
-      onClick={handlePayBill}
-      variant="default"
-      size={size}
-      disabled={!serviceNumber && !uniqueServiceNumber}
-    >
-      <ExternalLink className="h-4 w-4 mr-2" />
-      Pay via BillDesk
-    </Button>
+    <>
+      <Button 
+        onClick={() => setShowPaymentDialog(true)}
+        variant="default"
+        size={size}
+        disabled={!serviceNumber && !uniqueServiceNumber}
+      >
+        <CreditCard className="h-4 w-4 mr-2" />
+        Pay Bill
+      </Button>
+
+      <PaymentDialog
+        open={showPaymentDialog}
+        onOpenChange={setShowPaymentDialog}
+        billId={billId}
+        assetId={assetId}
+        amount={amount}
+        consumerName={consumerName || undefined}
+        serviceNumber={serviceNumber || undefined}
+        uniqueServiceNumber={uniqueServiceNumber || undefined}
+        onPaymentSuccess={onPaymentSuccess}
+      />
+    </>
   );
 }

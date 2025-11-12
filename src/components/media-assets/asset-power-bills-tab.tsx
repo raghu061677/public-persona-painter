@@ -92,10 +92,6 @@ export function AssetPowerBillsTab({ assetId, asset, isAdmin }: AssetPowerBillsT
               defaultServiceNumber={asset?.unique_service_number || asset?.service_number}
               onBillFetched={fetchPowerBills}
             />
-            <PayBillButton 
-              serviceNumber={asset?.service_number}
-              uniqueServiceNumber={asset?.unique_service_number}
-            />
           </div>
         </div>
       </CardHeader>
@@ -139,13 +135,26 @@ export function AssetPowerBillsTab({ assetId, asset, isAdmin }: AssetPowerBillsT
                   <TableCell>
                     <div className="flex gap-2">
                       {bill.payment_status === 'Pending' && (
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleOpenUploadDialog(bill)}
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload Receipt
-                        </Button>
+                        <>
+                          <PayBillButton
+                            billId={bill.id}
+                            assetId={assetId}
+                            amount={bill.bill_amount || 0}
+                            consumerName={bill.consumer_name}
+                            serviceNumber={bill.service_number}
+                            uniqueServiceNumber={bill.unique_service_number}
+                            onPaymentSuccess={fetchPowerBills}
+                            size="sm"
+                          />
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleOpenUploadDialog(bill)}
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Upload Receipt
+                          </Button>
+                        </>
                       )}
                       {bill.paid_receipt_url && (
                         <Button 

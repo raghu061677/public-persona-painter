@@ -29,7 +29,7 @@ interface AddUserDialogProps {
   onSuccess: () => void;
 }
 
-const ROLES = ['admin', 'sales', 'operations', 'finance', 'user'];
+const ROLES = ['admin', 'manager', 'sales', 'operations', 'installation', 'monitoring'];
 
 export default function AddUserDialog({
   open,
@@ -39,7 +39,7 @@ export default function AddUserDialog({
   const { user: currentUser, isAdmin } = useAuth();
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
-  const [selectedRole, setSelectedRole] = useState<string>("user");
+  const [selectedRole, setSelectedRole] = useState<string>("sales");
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -135,7 +135,7 @@ export default function AddUserDialog({
       // Reset form
       setEmail("");
       setUsername("");
-      setSelectedRole("user");
+      setSelectedRole("sales");
       
       onSuccess();
       onOpenChange(false);
@@ -239,10 +239,11 @@ export default function AddUserDialog({
             </Select>
             <p className="text-xs text-muted-foreground">
               {selectedRole === 'admin' && '👑 Full system access'}
+              {selectedRole === 'manager' && '📊 Manage teams and oversee operations'}
               {selectedRole === 'sales' && '💼 Manage clients, leads, and plans'}
               {selectedRole === 'operations' && '⚙️ Manage campaigns and mounting tasks'}
-              {selectedRole === 'finance' && '💰 Manage invoices and expenses'}
-              {selectedRole === 'user' && '👤 Basic access'}
+              {selectedRole === 'installation' && '🔧 Handle media asset installation'}
+              {selectedRole === 'monitoring' && '📹 Monitor asset status and performance'}
             </p>
           </div>
 

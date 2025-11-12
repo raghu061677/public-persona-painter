@@ -59,7 +59,7 @@ export default function CodeManagement() {
 
   useEffect(() => {
     if (!isAdmin) {
-      navigate('/admin/dashboard');
+      navigate('/dashboard');
       return;
     }
     fetchData();

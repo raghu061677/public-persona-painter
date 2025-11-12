@@ -89,7 +89,7 @@ export default function UserManagement() {
 
   useEffect(() => {
     if (!isAdmin) {
-      navigate("/admin/dashboard");
+      navigate("/dashboard");
       return;
     }
     loadData();

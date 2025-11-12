@@ -33,7 +33,7 @@ export default function AuditLogs() {
 
   useEffect(() => {
     if (!isAdmin) {
-      navigate("/admin/dashboard");
+      navigate("/dashboard");
       return;
     }
     fetchLogs();

@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, Clock, DollarSign, CheckCircle2, Bell } from "lucide-react";
+import { AlertTriangle, Clock, DollarSign, CheckCircle2, Bell, Info } from "lucide-react";
 import { formatDate } from "@/utils/plans";
 import { formatCurrency } from "@/utils/mediaAssets";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface HealthAlert {
   id: string;
@@ -22,11 +23,30 @@ interface CampaignHealthAlertsProps {
   campaignId?: string;
 }
 
+interface BudgetBreakdown {
+  assetId: string;
+  monthlyRate: number;
+  proRata: number;
+  printing: number;
+  mounting: number;
+  total: number;
+}
+
 export function CampaignHealthAlerts({ campaignId }: CampaignHealthAlertsProps) {
   const [alerts, setAlerts] = useState<HealthAlert[]>([]);
   const [loading, setLoading] = useState(true);
+  const [budgetBreakdowns, setBudgetBreakdowns] = useState<Map<string, BudgetBreakdown[]>>(new Map());
+  const [alertThresholds, setAlertThresholds] = useState({
+    budgetVariance: 10,
+    scheduleWarning: 7,
+    scheduleCritical: 3,
+    verificationLag: 20,
+    verificationWarningDays: 3,
+    verificationCriticalDays: 7,
+  });
 
   useEffect(() => {
+    loadAlertSettings();
     checkCampaignHealth();
     
     // Refresh every 5 minutes
@@ -34,9 +54,32 @@ export function CampaignHealthAlerts({ campaignId }: CampaignHealthAlertsProps) 
     return () => clearInterval(interval);
   }, [campaignId]);
 
+  const loadAlertSettings = async () => {
+    try {
+      const { data } = await supabase
+        .from("alert_settings")
+        .select("*")
+        .single();
+
+      if (data) {
+        setAlertThresholds({
+          budgetVariance: data.budget_variance_threshold || 10,
+          scheduleWarning: data.schedule_warning_days || 7,
+          scheduleCritical: data.schedule_critical_days || 3,
+          verificationLag: data.verification_lag_threshold || 20,
+          verificationWarningDays: data.verification_delay_warning_days || 3,
+          verificationCriticalDays: data.verification_delay_critical_days || 7,
+        });
+      }
+    } catch (error) {
+      console.error("Error loading alert settings:", error);
+    }
+  };
+
   const checkCampaignHealth = async () => {
     setLoading(true);
     const detectedAlerts: HealthAlert[] = [];
+    const breakdowns = new Map<string, BudgetBreakdown[]>();
 
     try {
       // Fetch campaigns to check
@@ -76,7 +119,7 @@ export function CampaignHealthAlerts({ campaignId }: CampaignHealthAlertsProps) 
         const campaignProgress = Math.max(0, Math.min(100, ((today.getTime() - startDate.getTime()) / (endDate.getTime() - startDate.getTime())) * 100));
 
         // 1. Check Schedule Delays
-        if (campaign.status === 'Planned' && daysUntilStart <= 7 && daysUntilStart > 0) {
+        if (campaign.status === 'Planned' && daysUntilStart <= alertThresholds.scheduleWarning && daysUntilStart > 0) {
           const unassignedAssets = assets.filter(a => !a.mounter_name).length;
           if (unassignedAssets > 0) {
             detectedAlerts.push({
@@ -91,7 +134,7 @@ export function CampaignHealthAlerts({ campaignId }: CampaignHealthAlertsProps) 
           }
         }
 
-        if (campaign.status === 'Assigned' && daysUntilStart <= 3 && daysUntilStart > 0) {
+        if (campaign.status === 'Assigned' && daysUntilStart <= alertThresholds.scheduleCritical && daysUntilStart > 0) {
           const notMountedAssets = assets.filter(a => a.status === 'Pending' || a.status === 'Assigned').length;
           if (notMountedAssets > assets.length * 0.5) {
             detectedAlerts.push({
@@ -111,7 +154,7 @@ export function CampaignHealthAlerts({ campaignId }: CampaignHealthAlertsProps) 
           const verifiedAssets = assets.filter(a => a.status === 'Verified').length;
           const verificationRate = (verifiedAssets / assets.length) * 100;
           
-          if (verificationRate < campaignProgress - 20) {
+          if (verificationRate < campaignProgress - alertThresholds.verificationLag) {
             detectedAlerts.push({
               id: `${campaign.id}-verification-warn`,
               type: 'verification',
@@ -133,11 +176,11 @@ export function CampaignHealthAlerts({ campaignId }: CampaignHealthAlertsProps) 
           
           const daysPending = Math.ceil((today.getTime() - new Date(oldestPending.created_at).getTime()) / (1000 * 60 * 60 * 24));
           
-          if (daysPending > 3) {
+          if (daysPending > alertThresholds.verificationWarningDays) {
             detectedAlerts.push({
               id: `${campaign.id}-verification-delay`,
               type: 'verification',
-              severity: daysPending > 7 ? 'error' : 'warning',
+              severity: daysPending > alertThresholds.verificationCriticalDays ? 'error' : 'warning',
               message: `${pendingVerification.length} assets awaiting verification`,
               details: `Oldest pending for ${daysPending} days`,
               campaignId: campaign.id,
@@ -147,23 +190,38 @@ export function CampaignHealthAlerts({ campaignId }: CampaignHealthAlertsProps) 
         }
 
         // 3. Check Budget Overruns - use pro-rated costs for campaign duration
+        const breakdown: BudgetBreakdown[] = [];
         const estimatedCosts = assets.reduce((sum, a) => {
           // Calculate pro-rata rate: (monthly_rate / 30) * campaign_days
           const monthlyRate = a.card_rate || 0;
           const proRataRate = (monthlyRate / 30) * campaignDuration;
-          const totalCost = proRataRate + (a.printing_charges || 0) + (a.mounting_charges || 0);
+          const printing = a.printing_charges || 0;
+          const mounting = a.mounting_charges || 0;
+          const totalCost = proRataRate + printing + mounting;
+          
+          breakdown.push({
+            assetId: a.asset_id,
+            monthlyRate,
+            proRata: proRataRate,
+            printing,
+            mounting,
+            total: totalCost,
+          });
+          
           return sum + totalCost;
         }, 0);
+        
+        breakdowns.set(campaign.id, breakdown);
         
         const budgetVariance = campaign.total_amount > 0 
           ? ((estimatedCosts - campaign.total_amount) / campaign.total_amount) * 100 
           : 0;
         
-        if (budgetVariance > 10 && campaign.total_amount > 0) {
+        if (budgetVariance > alertThresholds.budgetVariance && campaign.total_amount > 0) {
           detectedAlerts.push({
             id: `${campaign.id}-budget-warn`,
             type: 'budget',
-            severity: budgetVariance > 20 ? 'error' : 'warning',
+            severity: budgetVariance > alertThresholds.budgetVariance * 2 ? 'error' : 'warning',
             message: 'Budget overrun detected',
             details: `Estimated costs ${formatCurrency(estimatedCosts)} exceed budget by ${Math.round(budgetVariance)}%`,
             campaignId: campaign.id,
@@ -173,6 +231,7 @@ export function CampaignHealthAlerts({ campaignId }: CampaignHealthAlertsProps) 
       }
 
       setAlerts(detectedAlerts);
+      setBudgetBreakdowns(breakdowns);
     } catch (error) {
       console.error("Error checking campaign health:", error);
     } finally {
@@ -237,9 +296,42 @@ export function CampaignHealthAlerts({ campaignId }: CampaignHealthAlertsProps) 
                     {alert.type}
                   </Badge>
                 </div>
-                <AlertDescription className="text-xs opacity-80">
-                  {alert.details}
-                </AlertDescription>
+                <div className="flex items-center gap-2">
+                  <AlertDescription className="text-xs opacity-80">
+                    {alert.details}
+                  </AlertDescription>
+                  {alert.type === 'budget' && budgetBreakdowns.has(alert.campaignId) && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                          <Info className="h-3 w-3" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80" align="start">
+                        <div className="space-y-2">
+                          <h4 className="font-semibold text-sm">Cost Breakdown</h4>
+                          <div className="text-xs space-y-1">
+                            {budgetBreakdowns.get(alert.campaignId)?.map((item, idx) => (
+                              <div key={idx} className="border-b pb-2 last:border-0">
+                                <p className="font-medium">{item.assetId}</p>
+                                <div className="grid grid-cols-2 gap-1 text-muted-foreground mt-1">
+                                  <span>Pro-rata ({Math.round((item.proRata / item.monthlyRate) * 30)}d):</span>
+                                  <span className="text-right">{formatCurrency(item.proRata)}</span>
+                                  <span>Printing:</span>
+                                  <span className="text-right">{formatCurrency(item.printing)}</span>
+                                  <span>Mounting:</span>
+                                  <span className="text-right">{formatCurrency(item.mounting)}</span>
+                                  <span className="font-medium">Total:</span>
+                                  <span className="text-right font-medium">{formatCurrency(item.total)}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
                 {!campaignId && (
                   <AlertDescription className="text-xs opacity-60">
                     Campaign: {alert.campaignName}

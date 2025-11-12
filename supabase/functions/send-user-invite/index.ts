@@ -41,7 +41,44 @@ serve(async (req) => {
       user_metadata: { role },
     });
 
-    if (userError) throw userError;
+    if (userError) {
+      console.error('User creation error:', userError);
+      throw userError;
+    }
+
+    if (!userData.user) {
+      throw new Error('User creation failed - no user data returned');
+    }
+
+    console.log('User created:', userData.user.id);
+
+    // Insert profile for the new user
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: userData.user.id,
+        username: email.split('@')[0]
+      });
+
+    if (profileError) {
+      console.error('Profile creation error:', profileError);
+      // Don't fail the whole operation if profile creation fails
+    }
+
+    // Insert role for the new user
+    const { error: roleError } = await supabase
+      .from('user_roles')
+      .insert({
+        user_id: userData.user.id,
+        role: role
+      });
+
+    if (roleError) {
+      console.error('Role assignment error:', roleError);
+      throw new Error(`Failed to assign role: ${roleError.message}`);
+    }
+
+    console.log('Role assigned successfully:', role);
 
     // Generate password reset link
     const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({

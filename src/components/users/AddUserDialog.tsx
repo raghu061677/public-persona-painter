@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -17,10 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
 import { logAudit } from "@/utils/auditLog";
-import { Eye, EyeOff, UserPlus } from "lucide-react";
+import { UserPlus, AlertCircle } from "lucide-react";
 
 interface AddUserDialogProps {
   open: boolean;
@@ -28,54 +29,41 @@ interface AddUserDialogProps {
   onSuccess: () => void;
 }
 
-const ROLES = ['admin', 'sales', 'operations', 'finance'];
-
-const MODULES = [
-  { key: 'sales', label: 'Sales' },
-  { key: 'planning', label: 'Planning' },
-  { key: 'execution', label: 'Execution' },
-  { key: 'inventory', label: 'Inventory' },
-  { key: 'finance', label: 'Finance' },
-  { key: 'administration', label: 'Administration' },
-];
+const ROLES = ['admin', 'sales', 'operations', 'finance', 'user'];
 
 export default function AddUserDialog({
   open,
   onOpenChange,
   onSuccess,
 }: AddUserDialogProps) {
+  const { user: currentUser, isAdmin } = useAuth();
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
-  const [selectedRole, setSelectedRole] = useState<string>("sales");
-  const [customPermissions, setCustomPermissions] = useState<Record<string, boolean>>({});
-  const [showPassword, setShowPassword] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<string>("user");
   const [submitting, setSubmitting] = useState(false);
-
-  const handlePermissionToggle = (module: string) => {
-    setCustomPermissions(prev => ({
-      ...prev,
-      [module]: !prev[module]
-    }));
-  };
-
-  const generatePassword = () => {
-    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    let newPassword = "";
-    for (let i = 0; i < 12; i++) {
-      newPassword += charset.charAt(Math.floor(Math.random() * charset.length));
-    }
-    setPassword(newPassword);
-    toast({
-      title: "Password Generated",
-      description: "A secure password has been generated",
-    });
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email || !password || !username) {
+    if (!currentUser) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to create users",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isAdmin) {
+      toast({
+        title: "Error",
+        description: "Only administrators can create new users",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!email || !username) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -84,10 +72,12 @@ export default function AddUserDialog({
       return;
     }
 
-    if (password.length < 8) {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
       toast({
         title: "Error",
-        description: "Password must be at least 8 characters long",
+        description: "Please enter a valid email address",
         variant: "destructive",
       });
       return;
@@ -95,66 +85,33 @@ export default function AddUserDialog({
 
     setSubmitting(true);
     try {
-      // Create user via Supabase Admin API
-      const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: {
-          username: username,
+      console.log('Creating user via edge function...');
+      
+      // Call the edge function to create user and send invite
+      const { data, error } = await supabase.functions.invoke('send-user-invite', {
+        body: {
+          email,
+          role: selectedRole,
+          inviterName: username || 'Admin',
         },
       });
 
-      if (createError) throw createError;
-
-      if (!newUser.user) {
-        throw new Error("Failed to create user");
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Failed to create user');
       }
 
-      // Update profile with username
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ username })
-        .eq("id", newUser.user.id);
-
-      if (profileError) throw profileError;
-
-      // Assign role
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({
-          user_id: newUser.user.id,
-          role: selectedRole as any,
-        });
-
-      if (roleError) throw roleError;
-
-      // If admin role and custom permissions are set, create role_permissions
-      if (selectedRole !== 'admin' && Object.keys(customPermissions).length > 0) {
-        const permissionsToInsert = Object.entries(customPermissions)
-          .filter(([_, canAccess]) => canAccess)
-          .map(([module, _]) => ({
-            role: selectedRole,
-            module,
-            can_access: true,
-          }));
-
-        if (permissionsToInsert.length > 0) {
-          const { error: permError } = await supabase
-            .from("role_permissions")
-            .upsert(permissionsToInsert, {
-              onConflict: 'role,module',
-            });
-
-          if (permError) throw permError;
-        }
+      if (!data?.success) {
+        throw new Error(data?.error || 'Failed to send invitation');
       }
+
+      console.log('User created successfully');
 
       // Log audit
       await logAudit({
         action: 'create_user',
         resourceType: 'user_management',
-        resourceId: newUser.user.id,
+        resourceId: email,
         details: {
           email,
           username,
@@ -162,34 +119,39 @@ export default function AddUserDialog({
         },
       });
 
-      // Send welcome email
-      try {
-        await supabase.functions.invoke('send-welcome-email', {
-          body: { userId: newUser.user.id, email, username, role: selectedRole },
-        });
-      } catch (emailErr) {
-        console.error("Welcome email failed:", emailErr);
-      }
-
       toast({
-        title: "User created successfully",
-        description: `${email} has been added with ${selectedRole} role`,
+        title: "User invited successfully",
+        description: `An invitation has been sent to ${email} with ${selectedRole} role`,
       });
 
       // Reset form
       setEmail("");
-      setPassword("");
       setUsername("");
-      setSelectedRole("sales");
-      setCustomPermissions({});
+      setSelectedRole("user");
       
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
       console.error("Error creating user:", error);
+      
+      let errorMessage = "Failed to create user";
+      
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Handle specific error cases
+      if (error.message?.includes('User already registered')) {
+        errorMessage = "A user with this email already exists";
+      } else if (error.message?.includes('not allowed')) {
+        errorMessage = "You don't have permission to create users. Please contact your administrator.";
+      } else if (error.message?.includes('role')) {
+        errorMessage = "Failed to assign role. Please try again or contact support.";
+      }
+      
       toast({
         title: "Error",
-        description: error.message || "Failed to create user",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -199,78 +161,63 @@ export default function AddUserDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
             Add New User
           </DialogTitle>
           <DialogDescription>
-            Create a new user account with assigned role and permissions
+            Send an invitation email to create a new user account
           </DialogDescription>
         </DialogHeader>
+
+        {!isAdmin && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Only administrators can create new users
+            </AlertDescription>
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address *</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="user@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="username">Username *</Label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="Enter username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email Address *</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="user@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={!isAdmin}
+            />
+            <p className="text-xs text-muted-foreground">
+              An invitation will be sent to this email
+            </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password *</Label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter password (min 8 characters)"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={generatePassword}
-              >
-                Generate
-              </Button>
-            </div>
-            {password && password.length < 8 && (
-              <p className="text-xs text-destructive">Password must be at least 8 characters</p>
-            )}
+            <Label htmlFor="username">Username *</Label>
+            <Input
+              id="username"
+              type="text"
+              placeholder="Enter username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              disabled={!isAdmin}
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="role">Role *</Label>
-            <Select value={selectedRole} onValueChange={setSelectedRole}>
+            <Select 
+              value={selectedRole} 
+              onValueChange={setSelectedRole}
+              disabled={!isAdmin}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -282,41 +229,20 @@ export default function AddUserDialog({
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              {selectedRole === 'admin' && '👑 Full system access'}
+              {selectedRole === 'sales' && '💼 Manage clients, leads, and plans'}
+              {selectedRole === 'operations' && '⚙️ Manage campaigns and mounting tasks'}
+              {selectedRole === 'finance' && '💰 Manage invoices and expenses'}
+              {selectedRole === 'user' && '👤 Basic access'}
+            </p>
           </div>
 
-          {selectedRole !== 'admin' && (
-            <div className="space-y-3 border rounded-lg p-4">
-              <Label className="text-sm font-semibold">Custom Module Permissions</Label>
-              <p className="text-xs text-muted-foreground mb-2">
-                Override default role permissions for this user
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                {MODULES.map(module => (
-                  <div key={module.key} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={module.key}
-                      checked={customPermissions[module.key] || false}
-                      onCheckedChange={() => handlePermissionToggle(module.key)}
-                    />
-                    <label
-                      htmlFor={module.key}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      {module.label}
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {selectedRole === 'admin' && (
-            <div className="bg-muted/50 border border-primary/20 rounded-lg p-3">
-              <p className="text-sm text-muted-foreground">
-                ℹ️ Admin users have access to all modules by default
-              </p>
-            </div>
-          )}
+          <Alert>
+            <AlertDescription className="text-xs">
+              The user will receive an email with a link to set their password and activate their account.
+            </AlertDescription>
+          </Alert>
 
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button
@@ -327,9 +253,9 @@ export default function AddUserDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting || !isAdmin}>
               <UserPlus className="h-4 w-4 mr-2" />
-              {submitting ? "Creating..." : "Create User"}
+              {submitting ? "Sending Invitation..." : "Send Invitation"}
             </Button>
           </div>
         </form>

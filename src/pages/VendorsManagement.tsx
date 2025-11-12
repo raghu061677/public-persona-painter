@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { ROUTES } from "@/lib/routes";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,7 @@ export default function VendorsManagement() {
 
   useEffect(() => {
     if (!canViewFinance) {
-      navigate("/dashboard");
+      navigate(ROUTES.DASHBOARD);
       return;
     }
     fetchVendors();

@@ -13,7 +13,7 @@ import { Trash2, Sparkles, Loader2, Settings2 } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { calcProRata, calcDiscount, calcProfit, validateNegotiatedPrice } from "@/utils/pricing";
+import { calcProRata, calcDiscount, calcProfit } from "@/utils/pricing";
 import {
   Tooltip,
   TooltipContent,
@@ -260,14 +260,15 @@ export function SelectedAssetsTable({
 
                 const handleNegotiatedChange = (value: string) => {
                   const numValue = parseFormattedNumber(value);
-                  const validation = validateNegotiatedPrice(numValue, cardRate, baseRate);
-                  if (!validation.isValid) {
+                  
+                  // Only warn if below base rate (below cost)
+                  if (numValue < baseRate) {
                     toast({
-                      title: "Invalid Price",
-                      description: validation.message,
+                      title: "Warning",
+                      description: "Price is below base rate (below cost). This will result in a loss.",
                       variant: "destructive",
                     });
-                    return;
+                    // Don't return - allow the user to save it if they want
                   }
                   
                   // Update negotiated price and recalculate all dependent values
@@ -350,7 +351,7 @@ export function SelectedAssetsTable({
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p className="text-xs">Client agreed price per month</p>
-                                <p className="text-xs text-muted-foreground">Must be ≤ Card Rate and ≥ Base Rate</p>
+                                <p className="text-xs text-muted-foreground">Can be any price (above or below Card Rate)</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>

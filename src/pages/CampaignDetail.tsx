@@ -217,7 +217,15 @@ export default function CampaignDetail() {
               <RefreshCw className="mr-2 h-4 w-4" />
               Refresh
             </Button>
-            {isAdmin && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/admin/campaigns/${id}/budget`)}
+          >
+            <TrendingUp className="mr-2 h-4 w-4" />
+            Budget Tracker
+          </Button>
+          {isAdmin && (
               <>
                 <Button
                   variant="outline"

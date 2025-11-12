@@ -1512,6 +1512,33 @@ export type Database = {
         }
         Relationships: []
       }
+      role_permissions: {
+        Row: {
+          can_access: boolean
+          created_at: string | null
+          id: string
+          module: string
+          role: string
+          updated_at: string | null
+        }
+        Insert: {
+          can_access?: boolean
+          created_at?: string | null
+          id?: string
+          module: string
+          role: string
+          updated_at?: string | null
+        }
+        Update: {
+          can_access?: boolean
+          created_at?: string | null
+          id?: string
+          module?: string
+          role?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null

@@ -932,110 +932,116 @@ export default function PlanDetail() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          {/* Client Info */}
-          <Card className="border-l-4 border-l-blue-500">
-            <CardHeader>
-              <CardTitle className="text-lg">Client Information</CardTitle>
+          {/* Client Info - Blue Theme */}
+          <Card className="border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                Client Information
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-sm text-muted-foreground">Client Name</p>
-                  <p className="font-semibold text-lg">{plan.client_name}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Client ID</p>
-                  <p className="font-semibold">{plan.client_id}</p>
-                </div>
+            <CardContent className="space-y-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Client Name</p>
+                <p className="font-semibold text-lg">{plan.client_name}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Client ID</p>
+                <p className="font-mono">{plan.client_id}</p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Campaign Period */}
-          <Card className="border-l-4 border-l-purple-500">
-            <CardHeader>
-              <CardTitle className="text-lg">Campaign Period</CardTitle>
+          {/* Campaign Period - Green Theme */}
+          <Card className="border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-green-600 dark:text-green-400">
+                Campaign Period
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-sm text-muted-foreground">Start Date</p>
-                  <p className="font-semibold text-lg">{formatDate(plan.start_date)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">End Date</p>
-                  <p className="font-semibold text-lg">{formatDate(plan.end_date)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Duration</p>
-                  <p className="font-semibold">{plan.duration_days} days</p>
-                </div>
+            <CardContent className="space-y-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Start Date</p>
+                <p className="font-semibold">{formatDate(plan.start_date)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">End Date</p>
+                <p className="font-semibold">{formatDate(plan.end_date)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Duration</p>
+                <p className="font-semibold">{plan.duration_days} days</p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Financial Summary */}
-          <Card className="border-l-4 border-l-orange-500">
-            <CardHeader>
-              <CardTitle className="text-lg">Financial Summary</CardTitle>
+          {/* Financial Summary - Orange Theme */}
+          <Card className="border-orange-200 dark:border-orange-900 bg-orange-50/50 dark:bg-orange-950/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-orange-600 dark:text-orange-400">
+                Financial Summary
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Subtotal</span>
-                  <span className="font-semibold text-lg">{formatCurrency(plan.total_amount)}</span>
-                </div>
-                
-                {/* Discount - Blue */}
-                {(() => {
-                  const totalDiscount = planItems.reduce((sum, item) => sum + (item.discount_amount || 0), 0);
-                  if (totalDiscount > 0) {
-                    return (
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-blue-600">Discount</span>
-                        <span className="font-semibold text-blue-600">
-                          -{formatCurrency(totalDiscount)}
-                        </span>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
-                
-                {/* Net Total - After Discount */}
-                <div className="flex justify-between items-center pt-2 border-t">
-                  <span className="text-sm font-medium">Net Total</span>
-                  <span className="font-semibold">{formatCurrency(plan.grand_total - plan.gst_amount)}</span>
-                </div>
-                
-                {/* Profit - Green */}
-                {(() => {
-                  const baseCost = planItems.reduce((sum, item) => sum + (item.base_rent || 0), 0);
-                  const profit = (plan.grand_total - plan.gst_amount) - baseCost;
-                  if (profit > 0) {
-                    return (
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-green-600">Profit</span>
-                        <span className="font-semibold text-green-600">
-                          {formatCurrency(profit)}
-                        </span>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
-                
-                {/* GST - Red */}
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-red-600">GST ({plan.gst_percent}%)</span>
-                  <span className="font-semibold text-red-600">{formatCurrency(plan.gst_amount)}</span>
-                </div>
-                
-                {/* Grand Total - Blue Large */}
-                <div className="flex justify-between items-center pt-3 border-t-2 border-primary/20">
-                  <span className="font-bold">Grand Total</span>
-                  <span className="font-bold text-2xl text-blue-600">{formatCurrency(plan.grand_total)}</span>
-                </div>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-muted-foreground">Subtotal</span>
+                <span className="font-bold text-lg">{formatCurrency(plan.total_amount)}</span>
+              </div>
+              
+              {/* Discount - Blue */}
+              {(() => {
+                const totalDiscount = planItems.reduce((sum, item) => sum + (item.discount_amount || 0), 0);
+                if (totalDiscount > 0) {
+                  return (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Discount</span>
+                      <span className="font-semibold text-blue-600 dark:text-blue-400">
+                        -{formatCurrency(totalDiscount)}
+                      </span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+              
+              {/* Net Total - After Discount */}
+              <div className="flex justify-between items-center pt-2 border-t">
+                <span className="text-xs font-medium">Net Total</span>
+                <span className="font-semibold">{formatCurrency(plan.grand_total - plan.gst_amount)}</span>
+              </div>
+              
+              {/* Profit - Green */}
+              {(() => {
+                const baseCost = planItems.reduce((sum, item) => sum + (item.base_rent || 0), 0);
+                const profit = (plan.grand_total - plan.gst_amount) - baseCost;
+                if (profit > 0) {
+                  return (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-medium text-green-600 dark:text-green-400">Profit</span>
+                      <span className="font-semibold text-green-600 dark:text-green-400">
+                        {formatCurrency(profit)}
+                      </span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+              
+              {/* GST - Red */}
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-medium text-red-600 dark:text-red-400">
+                  GST ({plan.gst_percent}%)
+                </span>
+                <span className="font-semibold text-red-600 dark:text-red-400">
+                  {formatCurrency(plan.gst_amount)}
+                </span>
+              </div>
+              
+              {/* Grand Total - Blue Large */}
+              <div className="flex justify-between items-center pt-3 border-t-2 border-primary/20">
+                <span className="text-xs font-bold text-muted-foreground">Grand Total</span>
+                <span className="font-bold text-2xl text-blue-600 dark:text-blue-400">
+                  {formatCurrency(plan.grand_total)}
+                </span>
               </div>
             </CardContent>
           </Card>

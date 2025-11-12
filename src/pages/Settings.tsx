@@ -374,6 +374,27 @@ export default function Settings() {
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    <CardTitle>User Management</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Manage team members, roles, and permissions
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Add users, assign roles, and control access to different modules (Sales, Planning, Finance, etc.)
+                  </p>
+                  <Button onClick={() => navigate('/admin/users')} variant="outline">
+                    <User className="mr-2 h-4 w-4" />
+                    Manage Users
+                  </Button>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
                     <Hash className="h-5 w-5" />
                     <CardTitle>Code Management</CardTitle>
                   </div>

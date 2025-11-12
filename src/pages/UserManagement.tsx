@@ -1,0 +1,443 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Search, UserPlus, Pencil, Trash2, Mail } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+
+interface UserProfile {
+  id: string;
+  username: string;
+  avatar_url?: string;
+  created_at: string;
+  email?: string;
+  roles?: string[];
+  status?: string;
+}
+
+const MODULES = [
+  { key: 'sales', label: 'Sales' },
+  { key: 'planning', label: 'Planning' },
+  { key: 'execution', label: 'Execution' },
+  { key: 'inventory', label: 'Inventory' },
+  { key: 'finance', label: 'Finance' },
+  { key: 'administration', label: 'Administration' },
+];
+
+const ROLES = ['admin', 'sales', 'operations', 'finance'];
+
+export default function UserManagement() {
+  const { isAdmin } = useAuth();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [rolePermissions, setRolePermissions] = useState<Record<string, Record<string, boolean>>>({});
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<string>("sales");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      navigate("/admin/dashboard");
+      return;
+    }
+    loadData();
+  }, [isAdmin, navigate]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load all users with their auth data
+      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+      if (authError) throw authError;
+
+      // Load profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*");
+      if (profilesError) throw profilesError;
+
+      // Load user roles
+      const { data: rolesData, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("*");
+      if (rolesError) throw rolesError;
+
+      // Merge data
+      const mergedUsers = authUsers.users.map(user => {
+        const profile = profiles?.find(p => p.id === user.id);
+        const userRoles = rolesData?.filter(r => r.user_id === user.id).map(r => r.role) || [];
+        
+        return {
+          id: user.id,
+          email: user.email,
+          username: profile?.username || user.email?.split('@')[0] || 'Unknown',
+          avatar_url: profile?.avatar_url,
+          created_at: user.created_at,
+          roles: userRoles,
+          status: user.banned_until ? 'Suspended' : 'Active',
+        };
+      });
+
+      setUsers(mergedUsers);
+
+      // Load role permissions
+      const { data: permsData, error: permsError } = await supabase
+        .from("role_permissions")
+        .select("*");
+      if (permsError) throw permsError;
+
+      const permsMap: Record<string, Record<string, boolean>> = {};
+      ROLES.forEach(role => {
+        permsMap[role] = {};
+        MODULES.forEach(module => {
+          const perm = permsData?.find(p => p.role === role && p.module === module.key);
+          permsMap[role][module.key] = perm?.can_access || false;
+        });
+      });
+      
+      setRolePermissions(permsMap);
+    } catch (error: any) {
+      console.error("Error loading data:", error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInviteUser = async () => {
+    if (!inviteEmail || !inviteRole) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // Create user via admin API
+      const { data, error } = await supabase.auth.admin.createUser({
+        email: inviteEmail,
+        email_confirm: true,
+        user_metadata: { role: inviteRole }
+      });
+
+      if (error) throw error;
+
+      // Add role
+      if (data.user) {
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .insert({
+            user_id: data.user.id,
+            role: inviteRole as any
+          });
+
+        if (roleError) throw roleError;
+      }
+
+      toast({
+        title: "User invited",
+        description: `Invitation sent to ${inviteEmail}`,
+      });
+
+      setInviteOpen(false);
+      setInviteEmail("");
+      setInviteRole("sales");
+      loadData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleTogglePermission = async (role: string, module: string) => {
+    if (role === 'admin') {
+      toast({
+        title: "Cannot modify",
+        description: "Admin permissions are locked",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const currentValue = rolePermissions[role]?.[module] || false;
+    
+    try {
+      const { error } = await supabase
+        .from("role_permissions")
+        .update({ can_access: !currentValue })
+        .eq("role", role)
+        .eq("module", module);
+
+      if (error) throw error;
+
+      setRolePermissions(prev => ({
+        ...prev,
+        [role]: {
+          ...prev[role],
+          [module]: !currentValue
+        }
+      }));
+
+      toast({
+        title: "Permission updated",
+        description: `${role} ${!currentValue ? 'can now' : 'cannot'} access ${module}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const filteredUsers = users.filter(user =>
+    user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-full">Loading...</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">User Management</h1>
+          <p className="text-muted-foreground mt-2">
+            Manage your team members and their account permissions.
+          </p>
+        </div>
+        <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Invite User
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Invite New User</DialogTitle>
+              <DialogDescription>
+                Send an invitation to a new team member
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div>
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="user@example.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="role">Role</Label>
+                <Select value={inviteRole} onValueChange={setInviteRole}>
+                  <SelectTrigger className="mt-2">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLES.map(role => (
+                      <SelectItem key={role} value={role} className="capitalize">
+                        {role}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button 
+                onClick={handleInviteUser} 
+                disabled={submitting}
+                className="w-full"
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                {submitting ? "Sending..." : "Send Invitation"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <Tabs defaultValue="users" className="w-full">
+        <TabsList>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="permissions">Role Permissions</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="users" className="space-y-4 mt-6">
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={user.avatar_url} />
+                          <AvatarFallback>
+                            {user.username.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">{user.username}</div>
+                          <div className="text-sm text-muted-foreground">{user.email}</div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {user.roles && user.roles.length > 0 ? (
+                        <div className="flex gap-1">
+                          {user.roles.map(role => (
+                            <Badge key={role} variant="secondary" className="capitalize">
+                              {role}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">No role</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={user.status === 'Active' ? 'default' : 'secondary'}>
+                        {user.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="icon">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="permissions" className="space-y-4 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Role Permissions Matrix</CardTitle>
+              <CardDescription>
+                Configure module access for each role
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-32">Role</TableHead>
+                    {MODULES.map(module => (
+                      <TableHead key={module.key} className="text-center">
+                        {module.label}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ROLES.map(role => (
+                    <TableRow key={role}>
+                      <TableCell className="font-medium capitalize">{role}</TableCell>
+                      {MODULES.map(module => {
+                        const hasAccess = rolePermissions[role]?.[module.key] || false;
+                        const isLocked = role === 'admin';
+                        
+                        return (
+                          <TableCell key={module.key} className="text-center">
+                            <Checkbox
+                              checked={hasAccess}
+                              disabled={isLocked}
+                              onCheckedChange={() => handleTogglePermission(role, module.key)}
+                              className="mx-auto"
+                            />
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

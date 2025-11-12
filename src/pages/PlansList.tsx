@@ -411,6 +411,16 @@ export default function PlansList() {
               <h1 className="text-2xl font-bold tracking-tight">Plan List</h1>
             </div>
             <div className="flex items-center gap-3">
+              {isAdmin && (
+                <Button
+                  onClick={() => setFilterStatus(filterStatus === 'Approved' ? '' : 'Approved')}
+                  variant={filterStatus === 'Approved' ? "default" : "outline"}
+                  className={filterStatus === 'Approved' ? "bg-green-600 hover:bg-green-700" : "border-green-600 text-green-600 hover:bg-green-50"}
+                >
+                  <Rocket className="mr-2 h-4 w-4" />
+                  Ready to Convert ({plans.filter(p => p.status === 'Approved').length})
+                </Button>
+              )}
               <Button
                 onClick={() => setShowTemplatesDialog(true)}
                 variant="outline"
@@ -825,22 +835,43 @@ export default function PlansList() {
                               <TooltipContent>View Details</TooltipContent>
                             </Tooltip>
                             
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/admin/plans/edit/${plan.id}`);
-                                  }}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Edit Plan</TooltipContent>
-                            </Tooltip>
+                            {plan.status !== 'Converted' && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/admin/plans/edit/${plan.id}`);
+                                    }}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Edit Plan</TooltipContent>
+                              </Tooltip>
+                            )}
+                            
+                            {plan.status === 'Approved' && isAdmin && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="default"
+                                    size="icon"
+                                    className="h-8 w-8 bg-green-600 hover:bg-green-700"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/admin/plans/${plan.id}`);
+                                    }}
+                                  >
+                                    <Rocket className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Convert to Campaign</TooltipContent>
+                              </Tooltip>
+                            )}
                             
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -848,7 +879,19 @@ export default function PlansList() {
                                   <MoreVertical className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuContent align="end" className="w-56">
+                                {plan.status === 'Approved' && isAdmin && (
+                                  <>
+                                    <DropdownMenuItem 
+                                      onClick={() => navigate(`/admin/plans/${plan.id}`)}
+                                      className="text-green-600 font-medium"
+                                    >
+                                      <Rocket className="mr-2 h-4 w-4" />
+                                      Convert to Campaign
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                  </>
+                                )}
                                 {isAdmin && (
                                   <>
                                     <DropdownMenuItem onClick={() => handleDelete(plan.id)}>

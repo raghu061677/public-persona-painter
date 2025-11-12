@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Shield, Key, Palette, Upload, Image, Hash, Zap, RefreshCw } from "lucide-react";
+import { User, Shield, Key, Palette, Upload, Image, Hash, Zap, RefreshCw, Settings as SettingsIcon } from "lucide-react";
 import { migrateClientIds } from "@/utils/migrateClientIds";
 
 export default function Settings() {
@@ -430,6 +430,27 @@ export default function Settings() {
                   <Button onClick={() => navigate('/admin/power-bills')} variant="outline">
                     <Zap className="mr-2 h-4 w-4" />
                     Open Power Bills
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <SettingsIcon className="h-5 w-5" />
+                    <CardTitle>Operations Settings</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Configure GPS validation and proof approval workflow
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Set GPS tolerance radius for geo-tagged photos and enable/disable proof approval requirements for field operations.
+                  </p>
+                  <Button onClick={() => navigate('/admin/operations-settings')} variant="outline">
+                    <SettingsIcon className="mr-2 h-4 w-4" />
+                    Configure Operations
                   </Button>
                 </CardContent>
               </Card>

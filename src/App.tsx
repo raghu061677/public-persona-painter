@@ -52,6 +52,7 @@ import ApprovalDelegation from "./pages/ApprovalDelegation";
 import ApprovalAnalytics from "./pages/ApprovalAnalytics";
 import VendorsManagement from "./pages/VendorsManagement";
 import Settings from "./pages/Settings";
+import OperationsSettings from "./pages/OperationsSettings";
 import PlanComparison from "./pages/PlanComparison";
 import NotFound from "./pages/NotFound";
 
@@ -112,6 +113,7 @@ const App = () => (
             <Route path="/admin/audit-logs" element={<AppLayout><AuditLogs /></AppLayout>} />
             <Route path="/admin/vendors" element={<AppLayout><VendorsManagement /></AppLayout>} />
             <Route path="/admin/users" element={<AppLayout><UserManagement /></AppLayout>} />
+            <Route path="/admin/operations-settings" element={<AppLayout><OperationsSettings /></AppLayout>} />
             <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
             <Route path="/admin/approval-settings" element={<AppLayout><ApprovalSettings /></AppLayout>} />
             <Route path="/admin/approval-delegation" element={<AppLayout><ApprovalDelegation /></AppLayout>} />

@@ -19,6 +19,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -123,9 +129,12 @@ export default function PlanDetail() {
       const { data } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      setIsAdmin(data?.role === 'admin');
+        .eq('user_id', user.id);
+      
+      // Check if 'admin' role exists in the array
+      const hasAdminRole = data?.some(r => r.role === 'admin') || false;
+      setIsAdmin(hasAdminRole);
+      console.log('Admin check for user:', user.email, 'Has admin role:', hasAdminRole, 'Roles:', data);
     }
   };
 
@@ -771,6 +780,48 @@ export default function PlanDetail() {
                 <Rocket className="mr-2 h-5 w-5" />
                 Convert to Campaign
               </Button>
+            )}
+
+            {/* Tooltip when button is not visible */}
+            {plan.status === 'Approved' && !isAdmin && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      size="lg" 
+                      disabled
+                      className="opacity-50 cursor-not-allowed"
+                    >
+                      <Rocket className="mr-2 h-5 w-5" />
+                      Convert to Campaign
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-medium">Only admins can convert approved plans to campaigns</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+
+            {plan.status !== 'Approved' && plan.status !== 'Converted' && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      size="lg" 
+                      disabled
+                      className="opacity-50 cursor-not-allowed"
+                    >
+                      <Rocket className="mr-2 h-5 w-5" />
+                      Convert to Campaign
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-medium">Plan must be approved before converting to campaign</p>
+                    <p className="text-sm text-muted-foreground mt-1">Current status: {plan.status}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
 
             {/* Already Converted Badge */}

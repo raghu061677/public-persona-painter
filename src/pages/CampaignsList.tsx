@@ -11,7 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Eye, Trash2, FileText } from "lucide-react";
+import { Eye, Trash2, FileText, Plus } from "lucide-react";
+import { CreateCampaignFromPlanDialog } from "@/components/campaigns/CreateCampaignFromPlanDialog";
 import { getCampaignStatusConfig } from "@/utils/statusBadges";
 import { getCampaignStatusColor } from "@/utils/campaigns";
 import { formatDate as formatPlanDate } from "@/utils/plans";
@@ -32,6 +33,7 @@ export default function CampaignsList() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [selectedCampaigns, setSelectedCampaigns] = useState<Set<string>>(new Set());
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("campaigns");
   const { 
@@ -200,6 +202,16 @@ export default function CampaignsList() {
               Track and manage active campaigns
             </p>
           </div>
+          {isAdmin && (
+            <Button
+              onClick={() => setShowCreateDialog(true)}
+              size="lg"
+              className="bg-gradient-primary hover:shadow-glow transition-smooth"
+            >
+              <Plus className="mr-2 h-5 w-5" />
+              New Campaign
+            </Button>
+          )}
         </div>
 
         {/* Bulk Actions */}
@@ -373,6 +385,16 @@ export default function CampaignsList() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Create Campaign Dialog */}
+        <CreateCampaignFromPlanDialog
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+          onSuccess={() => {
+            fetchCampaigns();
+            navigate('/admin/campaigns');
+          }}
+        />
       </div>
     </div>
   );

@@ -242,6 +242,9 @@ export type Database = {
       }
       asset_power_bills: {
         Row: {
+          acd_amount: number | null
+          area: string | null
+          arrears: number | null
           asset_id: string
           bill_amount: number
           bill_month: string
@@ -249,20 +252,30 @@ export type Database = {
           consumer_name: string | null
           created_at: string | null
           created_by: string | null
+          current_month_bill: number | null
+          direction: string | null
+          due_date: string | null
           ero: string | null
           id: string
+          location: string | null
           notes: string | null
           paid: boolean | null
           paid_amount: number | null
           paid_receipt_url: string | null
           payment_date: string | null
+          payment_link: string | null
           payment_status: string | null
           section_name: string | null
           service_number: string | null
+          total_due: number | null
           unique_service_number: string | null
+          units: number | null
           updated_at: string | null
         }
         Insert: {
+          acd_amount?: number | null
+          area?: string | null
+          arrears?: number | null
           asset_id: string
           bill_amount?: number
           bill_month: string
@@ -270,20 +283,30 @@ export type Database = {
           consumer_name?: string | null
           created_at?: string | null
           created_by?: string | null
+          current_month_bill?: number | null
+          direction?: string | null
+          due_date?: string | null
           ero?: string | null
           id?: string
+          location?: string | null
           notes?: string | null
           paid?: boolean | null
           paid_amount?: number | null
           paid_receipt_url?: string | null
           payment_date?: string | null
+          payment_link?: string | null
           payment_status?: string | null
           section_name?: string | null
           service_number?: string | null
+          total_due?: number | null
           unique_service_number?: string | null
+          units?: number | null
           updated_at?: string | null
         }
         Update: {
+          acd_amount?: number | null
+          area?: string | null
+          arrears?: number | null
           asset_id?: string
           bill_amount?: number
           bill_month?: string
@@ -291,17 +314,24 @@ export type Database = {
           consumer_name?: string | null
           created_at?: string | null
           created_by?: string | null
+          current_month_bill?: number | null
+          direction?: string | null
+          due_date?: string | null
           ero?: string | null
           id?: string
+          location?: string | null
           notes?: string | null
           paid?: boolean | null
           paid_amount?: number | null
           paid_receipt_url?: string | null
           payment_date?: string | null
+          payment_link?: string | null
           payment_status?: string | null
           section_name?: string | null
           service_number?: string | null
+          total_due?: number | null
           unique_service_number?: string | null
+          units?: number | null
           updated_at?: string | null
         }
         Relationships: [

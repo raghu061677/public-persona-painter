@@ -7,9 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Zap, Download, RefreshCw, Lightbulb, Sun, Flame, Settings, Upload, FileSpreadsheet, FileText, BarChart3, CreditCard, Calendar, Clock, Play } from "lucide-react";
-import { FetchBillButton } from "@/components/power-bills/FetchBillButton";
 import { PayBillButton } from "@/components/power-bills/PayBillButton";
 import { UploadReceiptDialog } from "@/components/power-bills/UploadReceiptDialog";
+import { PowerBillsAnalyticsChart } from "@/components/power-bills/PowerBillsAnalyticsChart";
+import { PowerBillFetchDialog } from "@/components/media-assets/PowerBillFetchDialog";
 import { useState as useDialogState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -501,6 +502,9 @@ export default function PowerBillsDashboard() {
         </CardContent>
       </Card>
 
+      {/* Analytics Chart */}
+      <PowerBillsAnalyticsChart />
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -668,11 +672,11 @@ export default function PowerBillsDashboard() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <FetchBillButton
+                        <PowerBillFetchDialog
                           assetId={asset.id}
-                          serviceNumber={asset.service_number}
-                          uniqueServiceNumber={asset.unique_service_number}
-                          onSuccess={fetchAssetsWithBills}
+                          asset={asset}
+                          defaultServiceNumber={asset.unique_service_number || asset.service_number}
+                          onBillFetched={fetchAssetsWithBills}
                         />
                         {asset.latest_bill_amount && asset.payment_status === 'Pending' && (
                           <Button

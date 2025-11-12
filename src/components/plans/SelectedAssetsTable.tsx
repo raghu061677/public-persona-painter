@@ -9,11 +9,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2, Sparkles, Loader2, Settings2 } from "lucide-react";
+import { Trash2, Sparkles, Loader2, Settings2, History } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { calcProRata, calcDiscount, calcProfit } from "@/utils/pricing";
+import { PricingHistoryDialog } from "./PricingHistoryDialog";
 import {
   Tooltip,
   TooltipContent,
@@ -96,6 +97,13 @@ export function SelectedAssetsTable({
   durationDays = 30,
 }: SelectedAssetsTableProps) {
   const [loadingRates, setLoadingRates] = useState<Set<string>>(new Set());
+  const [showBulkSettingsDialog, setShowBulkSettingsDialog] = useState(false);
+  const [gettingSuggestion, setGettingSuggestion] = useState<string | null>(null);
+  const [pricingHistoryAsset, setPricingHistoryAsset] = useState<{
+    id: string;
+    location: string;
+    cardRate: number;
+  } | null>(null);
   
   const { visibleKeys, setVisibleKeys } = useColumnPrefs(
     'plan-assets',
@@ -362,6 +370,25 @@ export function SelectedAssetsTable({
                                   size="icon"
                                   variant="outline"
                                   className="h-9 w-9 shrink-0"
+                                  onClick={() => setPricingHistoryAsset({
+                                    id: asset.id,
+                                    location: asset.location,
+                                    cardRate: cardRate,
+                                  })}
+                                >
+                                  <History className="h-4 w-4 text-blue-600" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>View pricing history</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="outline"
+                                  className="h-9 w-9 shrink-0"
                                   onClick={() => getSuggestion(asset.id, asset)}
                                   disabled={loadingRates.has(asset.id)}
                                 >
@@ -482,6 +509,17 @@ export function SelectedAssetsTable({
           </TableBody>
         </Table>
       </div>
+      
+      {/* Pricing History Dialog */}
+      {pricingHistoryAsset && (
+        <PricingHistoryDialog
+          open={!!pricingHistoryAsset}
+          onOpenChange={(open) => !open && setPricingHistoryAsset(null)}
+          assetId={pricingHistoryAsset.id}
+          assetLocation={pricingHistoryAsset.location}
+          currentCardRate={pricingHistoryAsset.cardRate}
+        />
+      )}
     </div>
   );
 }

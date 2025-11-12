@@ -110,6 +110,13 @@ export default function PlanDetail() {
         e.preventDefault();
         const handleSecondKey = (e2: KeyboardEvent) => {
           if (e2.key === 'c' && plan?.status === 'Approved' && isAdmin) {
+            // Pre-populate campaign data from plan
+            setCampaignData({
+              campaign_name: plan.plan_name,
+              start_date: plan.start_date,
+              end_date: plan.end_date,
+              notes: plan.notes || "",
+            });
             setShowConvertDialog(true);
           }
           document.removeEventListener('keydown', handleSecondKey);
@@ -775,7 +782,16 @@ export default function PlanDetail() {
               <Button 
                 size="lg" 
                 className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 animate-pulse-glow"
-                onClick={() => setShowConvertDialog(true)}
+                onClick={() => {
+                  // Pre-populate campaign data from plan
+                  setCampaignData({
+                    campaign_name: plan.plan_name,
+                    start_date: plan.start_date,
+                    end_date: plan.end_date,
+                    notes: plan.notes || "",
+                  });
+                  setShowConvertDialog(true);
+                }}
               >
                 <Rocket className="mr-2 h-5 w-5" />
                 Convert to Campaign
@@ -912,12 +928,15 @@ export default function PlanDetail() {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label>Campaign Name</Label>
+                <Label>Display Name / Campaign Name</Label>
                 <Input
                   value={campaignData.campaign_name}
                   onChange={(e) => setCampaignData(prev => ({ ...prev, campaign_name: e.target.value }))}
-                  placeholder={plan.plan_name}
+                  placeholder={plan?.plan_name}
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  This name will be displayed in campaign details
+                </p>
               </div>
               <div>
                 <Label>Start Date</Label>
@@ -940,10 +959,12 @@ export default function PlanDetail() {
                 <Textarea
                   value={campaignData.notes}
                   onChange={(e) => setCampaignData(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Additional notes for this campaign"
                   rows={3}
                 />
               </div>
-              <Button onClick={handleConvertToCampaign} className="w-full">
+              <Button onClick={handleConvertToCampaign} className="w-full bg-green-600 hover:bg-green-700">
+                <Rocket className="mr-2 h-4 w-4" />
                 Create Campaign
               </Button>
             </div>

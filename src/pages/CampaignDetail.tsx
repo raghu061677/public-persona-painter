@@ -175,10 +175,14 @@ export default function CampaignDetail() {
           {/* Client Info - Blue */}
           <Card className="border-l-4 border-l-blue-500 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-blue-600 dark:text-blue-400">Client Information</CardTitle>
+              <CardTitle className="text-blue-600 dark:text-blue-400">Campaign Details</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">Display Name</p>
+                  <p className="font-medium">{campaign.campaign_name}</p>
+                </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Client Name</p>
                   <p className="font-medium">{campaign.client_name}</p>

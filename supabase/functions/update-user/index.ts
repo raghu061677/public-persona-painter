@@ -36,17 +36,21 @@ serve(async (req) => {
       );
     }
 
-    // Check if user has admin role
-    const { data: userRoles, error: roleError } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', currentUser.id);
+    // Check if user is super admin or has admin role
+    const isSuperAdmin = currentUser.email === 'admin@go-ads.in';
+    
+    if (!isSuperAdmin) {
+      const { data: userRoles, error: roleError } = await supabaseClient
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', currentUser.id);
 
-    if (roleError || !userRoles?.some(r => r.role === 'admin')) {
-      return new Response(
-        JSON.stringify({ error: 'Forbidden - Admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (roleError || !userRoles?.some(r => r.role === 'admin')) {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden - Admin access required' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Parse request body

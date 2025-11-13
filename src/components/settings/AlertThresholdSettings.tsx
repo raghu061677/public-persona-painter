@@ -28,18 +28,18 @@ export function AlertThresholdSettings() {
     setLoading(true);
     try {
       const { data } = await supabase
-        .from("alert_settings")
+        .from("alert_settings" as any)
         .select("*")
         .single();
 
       if (data) {
         setSettings(data);
-        setBudgetThreshold(data.budget_variance_threshold || 10);
-        setScheduleWarningDays(data.schedule_warning_days || 7);
-        setScheduleCriticalDays(data.schedule_critical_days || 3);
-        setVerificationLagThreshold(data.verification_lag_threshold || 20);
-        setVerificationWarningDays(data.verification_delay_warning_days || 3);
-        setVerificationCriticalDays(data.verification_delay_critical_days || 7);
+        setBudgetThreshold((data as any).budget_variance_threshold || 10);
+        setScheduleWarningDays((data as any).schedule_warning_days || 7);
+        setScheduleCriticalDays((data as any).schedule_critical_days || 3);
+        setVerificationLagThreshold((data as any).verification_lag_threshold || 20);
+        setVerificationWarningDays((data as any).verification_delay_warning_days || 3);
+        setVerificationCriticalDays((data as any).verification_delay_critical_days || 7);
       }
     } catch (error) {
       console.error("Error loading alert settings:", error);
@@ -67,7 +67,7 @@ export function AlertThresholdSettings() {
       if (settings?.id) {
         // Update existing
         const { error } = await supabase
-          .from("alert_settings")
+          .from("alert_settings" as any)
           .update(payload)
           .eq("id", settings.id);
 
@@ -75,7 +75,7 @@ export function AlertThresholdSettings() {
       } else {
         // Insert new
         const { error } = await supabase
-          .from("alert_settings")
+          .from("alert_settings" as any)
           .insert([payload]);
 
         if (error) throw error;

@@ -57,18 +57,18 @@ export function CampaignHealthAlerts({ campaignId }: CampaignHealthAlertsProps) 
   const loadAlertSettings = async () => {
     try {
       const { data } = await supabase
-        .from("alert_settings")
+        .from("alert_settings" as any)
         .select("*")
         .single();
 
       if (data) {
         setAlertThresholds({
-          budgetVariance: data.budget_variance_threshold || 10,
-          scheduleWarning: data.schedule_warning_days || 7,
-          scheduleCritical: data.schedule_critical_days || 3,
-          verificationLag: data.verification_lag_threshold || 20,
-          verificationWarningDays: data.verification_delay_warning_days || 3,
-          verificationCriticalDays: data.verification_delay_critical_days || 7,
+          budgetVariance: (data as any).budget_variance_threshold || 10,
+          scheduleWarning: (data as any).schedule_warning_days || 7,
+          scheduleCritical: (data as any).schedule_critical_days || 3,
+          verificationLag: (data as any).verification_lag_threshold || 20,
+          verificationWarningDays: (data as any).verification_delay_warning_days || 3,
+          verificationCriticalDays: (data as any).verification_delay_critical_days || 7,
         });
       }
     } catch (error) {

@@ -244,13 +244,29 @@ export default function MediaAssetsMap() {
       
       // Try image_urls array first
       if (asset.image_urls && asset.image_urls.length > 0) {
-        imageUrls = asset.image_urls;
+        imageUrls = asset.image_urls.map(url => {
+          // If it's a Supabase storage path, get the public URL
+          if (url.startsWith('media-assets/')) {
+            const { data } = supabase.storage.from('media-assets').getPublicUrl(url);
+            return data.publicUrl;
+          }
+          return url;
+        });
       } 
       // Then try images object
       else if (asset.images) {
         const imageKeys = ['frontView', 'backView', 'leftView', 'rightView'];
         imageUrls = imageKeys
-          .map(key => asset.images?.[key])
+          .map(key => {
+            const url = asset.images?.[key];
+            if (!url) return null;
+            // If it's a Supabase storage path, get the public URL
+            if (url.startsWith('media-assets/')) {
+              const { data } = supabase.storage.from('media-assets').getPublicUrl(url);
+              return data.publicUrl;
+            }
+            return url;
+          })
           .filter((url): url is string => !!url);
       }
 
@@ -312,24 +328,10 @@ export default function MediaAssetsMap() {
             <div style="font-size: 0.75rem; color: #6b7280; margin-top: 2px;">per month</div>
           </div>
 
-          <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: ${statusColor}15; border-radius: 6px; margin-bottom: 12px;">
+          <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: ${statusColor}15; border-radius: 6px;">
             <div style="width: 8px; height: 8px; border-radius: 50%; background: ${statusColor};"></div>
             <span style="font-weight: 600; font-size: 0.875rem; color: ${statusColor};">${asset.status}</span>
           </div>
-
-          <button 
-            onclick="window.open('/admin/media-assets/${asset.id}', '_blank')"
-            style="width: 100%; padding: 10px; background: #1e40af; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 0.875rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;"
-            onmouseover="this.style.background='#1e3a8a'"
-            onmouseout="this.style.background='#1e40af'"
-          >
-            View Details
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-              <polyline points="15 3 21 3 21 9"></polyline>
-              <line x1="10" y1="14" x2="21" y2="3"></line>
-            </svg>
-          </button>
         </div>
       `;
 

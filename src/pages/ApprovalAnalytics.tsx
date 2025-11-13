@@ -217,7 +217,7 @@ export default function ApprovalAnalytics() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={(entry) => `${entry.status}: ${entry.count}`}
+                  label={(entry: any) => `${entry.status}: ${entry.count}`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="count"

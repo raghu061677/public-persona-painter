@@ -5,10 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Plus, FileText, Calendar, User, Building2, MapPin } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { RefreshCw, Plus, FileText, Calendar, User, Building2, MapPin, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { EnhancedBillDialog } from "./EnhancedBillDialog";
 import { AnomalyBadge } from "@/components/power-bills/AnomalyBadge";
+import { SharedBillIndicator } from "./SharedBillIndicator";
 
 interface EnhancedPowerBillsTabProps {
   assetId: string;
@@ -22,9 +24,11 @@ export function EnhancedPowerBillsTab({ assetId, asset, isAdmin }: EnhancedPower
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedBill, setSelectedBill] = useState<any>(null);
   const [consumerInfo, setConsumerInfo] = useState<any>(null);
+  const [duplicateUSNAssets, setDuplicateUSNAssets] = useState<any[]>([]);
 
   useEffect(() => {
     fetchPowerBills();
+    checkForDuplicateUSN();
   }, [assetId]);
 
   const fetchPowerBills = async () => {
@@ -67,6 +71,26 @@ export function EnhancedPowerBillsTab({ assetId, asset, isAdmin }: EnhancedPower
   const handleAddManualBill = () => {
     setSelectedBill(null);
     setDialogOpen(true);
+  };
+
+  const checkForDuplicateUSN = async () => {
+    if (!asset?.unique_service_number) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("media_assets")
+        .select("id, area, location, unique_service_number")
+        .eq("unique_service_number", asset.unique_service_number)
+        .neq("id", assetId);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setDuplicateUSNAssets(data);
+      }
+    } catch (error) {
+      console.error("Error checking for duplicate USN:", error);
+    }
   };
 
   const getPaymentStatusColor = (status: string): "default" | "destructive" | "outline" | "secondary" => {
@@ -137,6 +161,39 @@ export function EnhancedPowerBillsTab({ assetId, asset, isAdmin }: EnhancedPower
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Duplicate USN Warning */}
+      {duplicateUSNAssets.length > 0 && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <div className="space-y-2">
+              <p className="font-medium">
+                Shared Power Connection Detected
+              </p>
+              <p className="text-sm">
+                This asset shares the same Unique Service Number (USN) with{" "}
+                {duplicateUSNAssets.length === 1 ? "1 other asset" : `${duplicateUSNAssets.length} other assets`}:
+              </p>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {duplicateUSNAssets.map((dup) => (
+                  <Badge key={dup.id} variant="secondary">
+                    {dup.id} - {dup.area}, {dup.location}
+                  </Badge>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => window.location.href = "/admin/power-bills-sharing"}
+              >
+                Configure Bill Sharing
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Last Bill Summary */}
@@ -243,6 +300,16 @@ export function EnhancedPowerBillsTab({ assetId, asset, isAdmin }: EnhancedPower
                 ))}
               </TableBody>
             </Table>
+          )}
+
+          {/* Shared Bill Indicator - Show for latest bill if shared */}
+          {bills.length > 0 && bills[0].shared_with_assets && (
+            <SharedBillIndicator
+              sharedAssets={bills[0].shared_with_assets}
+              sharePercentage={bills[0].share_percentage || 100}
+              isPrimaryBill={bills[0].is_primary_bill}
+              uniqueServiceNumber={bills[0].unique_service_number}
+            />
           )}
         </CardContent>
       </Card>

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import AppLayout from "@/layouts/AppLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -87,27 +88,27 @@ const App = () => (
             <Route path="/mobile/power-bills" element={<MobilePowerBills />} />
             
             {/* Protected routes with layout */}
-            <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
-            <Route path="/admin/clients" element={<AppLayout><ClientsList /></AppLayout>} />
-            <Route path="/admin/clients/new" element={<AppLayout><ClientNew /></AppLayout>} />
-            <Route path="/admin/clients/:id" element={<AppLayout><ClientDetail /></AppLayout>} />
+            <Route path="/dashboard" element={<ProtectedRoute requireAuth><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/clients" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><AppLayout><ClientsList /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/clients/new" element={<ProtectedRoute requiredModule="clients" requiredAction="create"><AppLayout><ClientNew /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/clients/:id" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><AppLayout><ClientDetail /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/clients/:id/analytics" element={<AppLayout><ClientAnalytics /></AppLayout>} />
-            <Route path="/admin/media-assets" element={<AppLayout><MediaAssetsList /></AppLayout>} />
-            <Route path="/admin/media-assets/new" element={<AppLayout><MediaAssetNew /></AppLayout>} />
-            <Route path="/admin/media-assets/import" element={<AppLayout><MediaAssetsImport /></AppLayout>} />
-            <Route path="/admin/clients/import" element={<AppLayout><ClientsImport /></AppLayout>} />
-            <Route path="/admin/media-assets/edit/:id" element={<AppLayout><MediaAssetEdit /></AppLayout>} />
-            <Route path="/admin/media-assets/:id" element={<AppLayout><MediaAssetDetail /></AppLayout>} />
-            <Route path="/admin/media-assets-map" element={<AppLayout><MediaAssetsMap /></AppLayout>} />
-            <Route path="/admin/plans" element={<AppLayout><PlansList /></AppLayout>} />
-            <Route path="/admin/plans/new" element={<AppLayout><PlanNew /></AppLayout>} />
-            <Route path="/admin/plans/edit/:id" element={<AppLayout><PlanEdit /></AppLayout>} />
-            <Route path="/admin/plans/:id" element={<AppLayout><PlanDetail /></AppLayout>} />
-            <Route path="/admin/plans-compare" element={<AppLayout><PlanComparison /></AppLayout>} />
-            <Route path="/admin/campaigns" element={<AppLayout><CampaignsList /></AppLayout>} />
-            <Route path="/admin/campaigns/edit/:id" element={<AppLayout><CampaignEdit /></AppLayout>} />
-            <Route path="/admin/campaigns/:id" element={<AppLayout><CampaignDetail /></AppLayout>} />
-            <Route path="/admin/campaigns/:id/budget" element={<AppLayout><CampaignBudget /></AppLayout>} />
+            <Route path="/admin/media-assets" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><AppLayout><MediaAssetsList /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/media-assets/new" element={<ProtectedRoute requiredModule="media_assets" requiredAction="create"><AppLayout><MediaAssetNew /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/media-assets/import" element={<ProtectedRoute requiredModule="media_assets" requiredAction="create"><AppLayout><MediaAssetsImport /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/clients/import" element={<ProtectedRoute requiredModule="clients" requiredAction="create"><AppLayout><ClientsImport /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/media-assets/edit/:id" element={<ProtectedRoute requiredModule="media_assets" requiredAction="update"><AppLayout><MediaAssetEdit /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/media-assets/:id" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><AppLayout><MediaAssetDetail /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/media-assets-map" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><AppLayout><MediaAssetsMap /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/plans" element={<ProtectedRoute requiredModule="plans" requiredAction="view"><AppLayout><PlansList /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/plans/new" element={<ProtectedRoute requiredModule="plans" requiredAction="create"><AppLayout><PlanNew /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/plans/edit/:id" element={<ProtectedRoute requiredModule="plans" requiredAction="update"><AppLayout><PlanEdit /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/plans/:id" element={<ProtectedRoute requiredModule="plans" requiredAction="view"><AppLayout><PlanDetail /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/plans-compare" element={<ProtectedRoute requiredModule="plans" requiredAction="view"><AppLayout><PlanComparison /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/campaigns" element={<ProtectedRoute requiredModule="campaigns" requiredAction="view"><AppLayout><CampaignsList /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/campaigns/edit/:id" element={<ProtectedRoute requiredModule="campaigns" requiredAction="update"><AppLayout><CampaignEdit /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/campaigns/:id" element={<ProtectedRoute requiredModule="campaigns" requiredAction="view"><AppLayout><CampaignDetail /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/campaigns/:id/budget" element={<ProtectedRoute requiredModule="campaigns" requiredAction="view"><AppLayout><CampaignBudget /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/operations" element={<AppLayout><Operations /></AppLayout>} />
             <Route path="/admin/operations-analytics" element={<AppLayout><OperationsAnalytics /></AppLayout>} />
             <Route path="/admin/operations-calendar" element={<AppLayout><OperationsCalendar /></AppLayout>} />
@@ -131,7 +132,7 @@ const App = () => (
             <Route path="/admin/power-bills/reconciliation" element={<AppLayout><PowerBillsReconciliation /></AppLayout>} />
             <Route path="/admin/audit-logs" element={<AppLayout><AuditLogs /></AppLayout>} />
             <Route path="/admin/vendors" element={<AppLayout><VendorsManagement /></AppLayout>} />
-            <Route path="/admin/users" element={<AppLayout><UserManagement /></AppLayout>} />
+            <Route path="/admin/users" element={<ProtectedRoute requiredModule="users" requiredAction="view"><AppLayout><UserManagement /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/operations-settings" element={<AppLayout><OperationsSettings /></AppLayout>} />
             <Route path="/admin/organization-settings" element={<AppLayout><OrganizationSettings /></AppLayout>} />
             <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />

@@ -68,6 +68,7 @@ const MENU_SECTIONS: MenuSection[] = [
       { label: "Estimations", icon: FileSpreadsheet, path: "/finance/estimations", module: "invoices" },
       { label: "Expenses", icon: Receipt, path: "/finance/expenses", module: "expenses" },
       { label: "Power Bills", icon: Zap, path: "/admin/power-bills", module: "expenses" },
+      { label: "Bill Sharing", icon: Users, path: "/admin/power-bills-sharing", module: "expenses" },
     ],
   },
   {

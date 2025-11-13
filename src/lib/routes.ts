@@ -63,6 +63,7 @@ export const ROUTES = {
   POWER_BILLS_BULK_PAYMENT: "/admin/power-bills/bulk-payment",
   POWER_BILLS_BULK_UPLOAD: "/admin/power-bills/bulk-upload",
   POWER_BILLS_RECONCILIATION: "/admin/power-bills/reconciliation",
+  POWER_BILLS_SHARING: "/admin/power-bills-sharing",
   MOBILE_POWER_BILLS: "/mobile/power-bills",
   
   // Operations

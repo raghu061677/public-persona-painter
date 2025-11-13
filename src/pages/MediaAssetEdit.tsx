@@ -17,6 +17,8 @@ import { parseDimensions, buildSearchTokens } from "@/utils/mediaAssets";
 import { ArrowLeft, Save, Image as ImageIcon, Calendar as CalendarIcon, ExternalLink, HelpCircle, MapPin, DollarSign, FileText } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import { PhotoUploadSection } from "@/components/media-assets/PhotoUploadSection";
+import { PhotoGallery } from "@/components/media-assets/PhotoGallery";
 
 type ImageField = 'geoTaggedPhoto' | 'newspaperPhoto' | 'trafficPhoto1' | 'trafficPhoto2';
 
@@ -1145,6 +1147,19 @@ export default function MediaAssetEdit() {
                 </CardContent>
               </Card>
             </div>
+          </div>
+
+          {/* PROOF PHOTOS SECTION - Full Width Below */}
+          <div className="space-y-6 mt-8">
+            <PhotoUploadSection assetId={id!} onUploadComplete={fetchAsset} />
+            
+            {formData?.images?.photos && (
+              <PhotoGallery 
+                assetId={id!} 
+                photos={formData.images.photos} 
+                onPhotoDeleted={fetchAsset}
+              />
+            )}
           </div>
         </div>
       </form>

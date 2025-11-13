@@ -225,14 +225,23 @@ export function OperationsBoard({ campaignId, assets, onUpdate }: OperationsBoar
                       Assign Mounter
                     </Button>
                   ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => navigate(`/mobile/upload/${campaignId}/${asset.id}`)}
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload Photos
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate(`/mobile/upload/${campaignId}/${asset.id}`)}
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Mobile Upload
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate(`/admin/operations/${campaignId}/assets/${asset.asset_id}`)}
+                      >
+                        📸 Manage Photos
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>

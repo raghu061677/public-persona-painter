@@ -31,6 +31,7 @@ import CampaignEdit from "./pages/CampaignEdit";
 import CampaignBudget from "./pages/CampaignBudget";
 import MobileUpload from "./pages/MobileUpload";
 import MobileOpsUpload from "./pages/MobileOpsUpload";
+import CampaignAssetProofs from "./pages/CampaignAssetProofs";
 import MobileFieldApp from "./pages/MobileFieldApp";
 import MobilePowerBills from "./pages/MobilePowerBills";
 import FinanceDashboard from "./pages/FinanceDashboard";
@@ -137,6 +138,9 @@ const App = () => (
             <Route path="/admin/approval-settings" element={<AppLayout><ApprovalSettings /></AppLayout>} />
             <Route path="/admin/approval-delegation" element={<AppLayout><ApprovalDelegation /></AppLayout>} />
             <Route path="/admin/approval-analytics" element={<AppLayout><ApprovalAnalytics /></AppLayout>} />
+            
+            {/* Operations Photo Upload */}
+            <Route path="/admin/operations/:campaignId/assets/:assetId" element={<AppLayout><CampaignAssetProofs /></AppLayout>} />
             
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />

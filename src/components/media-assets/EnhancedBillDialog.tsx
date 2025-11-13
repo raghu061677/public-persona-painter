@@ -39,13 +39,14 @@ export function EnhancedBillDialog({
   const [dueDate, setDueDate] = useState<Date>();
   const [paidDate, setPaidDate] = useState<Date>();
   
+  // Auto-populate from asset record
   const [formData, setFormData] = useState({
-    consumer_name: existingConsumerInfo?.consumer_name || "",
+    consumer_name: existingConsumerInfo?.consumer_name || asset?.consumer_name || "",
     service_number: existingConsumerInfo?.service_number || asset?.service_number || "",
     unique_service_number: existingConsumerInfo?.unique_service_number || asset?.unique_service_number || "",
-    ero_name: existingConsumerInfo?.ero_name || "",
-    section_name: existingConsumerInfo?.section_name || "",
-    consumer_address: existingConsumerInfo?.consumer_address || "",
+    ero_name: existingConsumerInfo?.ero_name || asset?.ero || "",
+    section_name: existingConsumerInfo?.section_name || asset?.section_name || "",
+    consumer_address: existingConsumerInfo?.consumer_address || asset?.location || "",
     bill_month: "",
     bill_amount: "",
     energy_charges: "",
@@ -59,12 +60,12 @@ export function EnhancedBillDialog({
 
   const resetForm = () => {
     setFormData({
-      consumer_name: existingConsumerInfo?.consumer_name || "",
+      consumer_name: existingConsumerInfo?.consumer_name || asset?.consumer_name || "",
       service_number: existingConsumerInfo?.service_number || asset?.service_number || "",
       unique_service_number: existingConsumerInfo?.unique_service_number || asset?.unique_service_number || "",
-      ero_name: existingConsumerInfo?.ero_name || "",
-      section_name: existingConsumerInfo?.section_name || "",
-      consumer_address: existingConsumerInfo?.consumer_address || "",
+      ero_name: existingConsumerInfo?.ero_name || asset?.ero || "",
+      section_name: existingConsumerInfo?.section_name || asset?.section_name || "",
+      consumer_address: existingConsumerInfo?.consumer_address || asset?.location || "",
       bill_month: "",
       bill_amount: "",
       energy_charges: "",

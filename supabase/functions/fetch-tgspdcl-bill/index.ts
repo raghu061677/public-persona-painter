@@ -127,7 +127,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        data: billData,
+        billData: billData,
+        data: billData, // Keep both for backward compatibility
         message: 'Bill fetched and stored successfully',
         payment_url: `https://tgsouthernpower.org/paybillonline`
       }),

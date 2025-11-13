@@ -32,13 +32,13 @@ export function PowerBillFetchDialog({
   const [loading, setLoading] = useState(false);
   const [autoFetching, setAutoFetching] = useState(false);
   
-  // Form fields matching TGSPDCL portal
+  // Auto-populate consumer details from asset record
   const [formData, setFormData] = useState({
-    consumer_name: "",
-    unique_service_number: defaultServiceNumber || "",
-    service_number: "",
-    ero: "",
-    section: "",
+    consumer_name: asset?.consumer_name || "",
+    unique_service_number: asset?.unique_service_number || defaultServiceNumber || "",
+    service_number: asset?.service_number || "",
+    ero: asset?.ero || "",
+    section: asset?.section_name || "",
     units: "",
     bill_date: "",
     due_date: "",
@@ -71,26 +71,32 @@ export function PowerBillFetchDialog({
 
       if (error) throw error;
 
-      if (data?.success && data.data) {
-        // Auto-fill form with fetched data
-        const bill = data.data;
+      if (data?.success && data.billData) {
+        // Auto-fill Step 3 with fetched bill data
+        const bill = data.billData;
         setFormData({
           ...formData,
-          consumer_name: bill.consumer_name || "",
-          service_number: bill.service_number || "",
-          ero: bill.ero || "",
-          section: bill.section_name || "",
-          total_amount: bill.bill_amount?.toString() || "",
+          consumer_name: bill.consumer_name || formData.consumer_name,
+          service_number: bill.service_number || formData.service_number,
+          ero: bill.ero_name || bill.ero || formData.ero,
+          section: bill.section_name || formData.section,
+          units: bill.units?.toString() || "",
+          bill_date: bill.bill_date || "",
+          due_date: bill.due_date || "",
+          current_month_bill: bill.bill_amount?.toString() || bill.current_month_bill?.toString() || "",
+          acd_amount: bill.acd_amount?.toString() || "0",
+          arrears: bill.arrears?.toString() || "0",
+          total_amount: bill.total_due?.toString() || bill.bill_amount?.toString() || "",
         });
 
         toast({
-          title: "Bill Data Fetched",
-          description: "Bill details have been automatically loaded. Please verify and save.",
+          title: "Bill Data Fetched Successfully",
+          description: "Bill details from TGSPDCL portal have been auto-populated. Please verify and save.",
         });
       } else {
         toast({
           title: "Auto-fetch Failed",
-          description: data?.message || "Unable to fetch bill automatically. Please enter details manually.",
+          description: data?.message || "Unable to fetch bill automatically. Please enter details manually from the TGSPDCL portal.",
           variant: "destructive",
         });
       }

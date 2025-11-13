@@ -40,10 +40,10 @@ export function FetchBillButton({
 
       if (error) throw error;
 
-      if (data?.success) {
+      if (data?.success && (data?.billData || data?.data)) {
         toast({
           title: "Bill Fetched Successfully",
-          description: data.message || "Bill details have been updated",
+          description: data.message || "Bill details have been fetched and saved",
         });
         onSuccess?.();
       } else {

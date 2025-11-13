@@ -107,13 +107,26 @@ export function EnhancedBillDialog({
         data.bill_month = lines[index + 1];
       }
       
-      // Bill Date
-      if (line.includes('Bill Date') && lines[index + 1]) {
+      // Bill Date / Due Date in format "05-Nov-25 / 19-Nov-25"
+      if (line.includes('Bill Date') && line.includes('Due Date')) {
+        const dates = line.split('/').map(d => d.trim());
+        if (dates.length >= 2) {
+          // Extract dates from "Bill Date / Due Date	05-Nov-25 / 19-Nov-25"
+          const datePart = dates[dates.length - 2].split(/\s+/).pop(); // Get "05-Nov-25"
+          const dueDatePart = dates[dates.length - 1].split(/\s+/)[0]; // Get "19-Nov-25"
+          
+          if (datePart) data.bill_date = datePart;
+          if (dueDatePart) data.due_date = dueDatePart;
+        }
+      }
+      
+      // Individual Bill Date
+      if (line.includes('Bill Date') && !line.includes('Due Date') && lines[index + 1]) {
         data.bill_date = lines[index + 1];
       }
       
-      // Due Date
-      if (line.includes('Due Date') && lines[index + 1]) {
+      // Individual Due Date
+      if (line.includes('Due Date') && !line.includes('Bill Date') && lines[index + 1]) {
         data.due_date = lines[index + 1];
       }
       
@@ -137,13 +150,48 @@ export function EnhancedBillDialog({
         data.arrears = lines[index + 1].replace(/[₹,]/g, '');
       }
       
-      // Total Amount
-      if (line.includes('Total Amount Payable') && lines[index + 1]) {
+      // Total Amount (multiple variations)
+      if ((line.includes('Total Amount Payable') || line.includes('Total Amount to be Paid')) && lines[index + 1]) {
         data.total_due = lines[index + 1].replace(/[₹,]/g, '');
       }
     });
 
     return data;
+  };
+
+  // Parse date in format "05-Nov-25" to Date object
+  const parseDate = (dateStr: string): Date | null => {
+    try {
+      // Handle format: "05-Nov-25" or "05-11-2025"
+      const parts = dateStr.split('-');
+      if (parts.length !== 3) return null;
+
+      const [day, monthPart, yearPart] = parts;
+      
+      // Convert 2-digit year to 4-digit (assume 20xx for xx <= 99)
+      let year = yearPart.length === 2 ? `20${yearPart}` : yearPart;
+      
+      // Check if month is a name (Nov) or number (11)
+      let month: string;
+      if (isNaN(Number(monthPart))) {
+        // Month is a name like "Nov"
+        const monthMap: { [key: string]: string } = {
+          'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+          'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+          'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+        };
+        month = monthMap[monthPart] || '01';
+      } else {
+        // Month is already a number
+        month = monthPart.padStart(2, '0');
+      }
+      
+      // Create date in format "YYYY-MM-DD"
+      return new Date(`${year}-${month}-${day.padStart(2, '0')}`);
+    } catch (e) {
+      console.error('Error parsing date:', e);
+      return null;
+    }
   };
 
   const handleParse = () => {
@@ -183,22 +231,14 @@ export function EnhancedBillDialog({
       total_due: parsedData.total_due || prev.total_due,
     }));
 
-    // Parse dates
+    // Parse dates using the new parseDate function
     if (parsedData.bill_date) {
-      try {
-        const [day, month, year] = parsedData.bill_date.split('-');
-        setBillDate(new Date(`${year}-${month}-${day}`));
-      } catch (e) {
-        console.error('Error parsing bill date:', e);
-      }
+      const date = parseDate(parsedData.bill_date);
+      if (date) setBillDate(date);
     }
     if (parsedData.due_date) {
-      try {
-        const [day, month, year] = parsedData.due_date.split('-');
-        setDueDate(new Date(`${year}-${month}-${day}`));
-      } catch (e) {
-        console.error('Error parsing due date:', e);
-      }
+      const date = parseDate(parsedData.due_date);
+      if (date) setDueDate(date);
     }
 
     toast({

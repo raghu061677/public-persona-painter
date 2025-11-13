@@ -66,7 +66,7 @@ export default function PhotoGallery() {
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterAsset, setFilterAsset] = useState("");
+  const [filterAsset, setFilterAsset] = useState("__all__");
   const [filterCampaign, setFilterCampaign] = useState("__all__");
   const [filterCategory, setFilterCategory] = useState("__all__");
   const [filterApprovalStatus, setFilterApprovalStatus] = useState("all");
@@ -204,7 +204,7 @@ export default function PhotoGallery() {
     }
 
     // Asset filter
-    if (filterAsset) {
+    if (filterAsset && filterAsset !== "__all__") {
       result = result.filter((photo) => photo.asset_id === filterAsset);
     }
 
@@ -287,7 +287,7 @@ export default function PhotoGallery() {
 
   const clearFilters = () => {
     setSearchQuery("");
-    setFilterAsset("");
+    setFilterAsset("__all__");
     setFilterCampaign("__all__");
     setFilterCategory("__all__");
     setFilterApprovalStatus("all");
@@ -343,7 +343,7 @@ export default function PhotoGallery() {
                   <SelectValue placeholder="All Assets" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Assets</SelectItem>
+                  <SelectItem value="__all__">All Assets</SelectItem>
                   {uniqueAssets.map((asset) => (
                     <SelectItem key={asset} value={asset}>{asset}</SelectItem>
                   ))}

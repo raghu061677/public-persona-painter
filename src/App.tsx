@@ -67,6 +67,8 @@ import OperationsCalendar from "./pages/OperationsCalendar";
 import OperationsAnalytics from "./pages/OperationsAnalytics";
 import MobileOperations from "./pages/MobileOperations";
 import PlanComparison from "./pages/PlanComparison";
+import ProformasList from "./pages/ProformasList";
+import ProformaDetail from "./pages/ProformaDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -120,6 +122,8 @@ const App = () => (
             <Route path="/admin/mobile-upload" element={<AppLayout><MobileFieldApp /></AppLayout>} />
             <Route path="/finance" element={<AppLayout><FinanceDashboard /></AppLayout>} />
             <Route path="/finance/estimations" element={<AppLayout><EstimationsList /></AppLayout>} />
+            <Route path="/finance/proformas" element={<AppLayout><ProformasList /></AppLayout>} />
+            <Route path="/finance/proformas/:id" element={<AppLayout><ProformaDetail /></AppLayout>} />
             <Route path="/finance/invoices" element={<AppLayout><InvoicesList /></AppLayout>} />
             <Route path="/finance/invoices/:id" element={<AppLayout><InvoiceDetail /></AppLayout>} />
             <Route path="/finance/expenses" element={<AppLayout><ExpensesList /></AppLayout>} />

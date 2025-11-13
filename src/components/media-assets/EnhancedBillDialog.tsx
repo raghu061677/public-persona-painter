@@ -492,12 +492,12 @@ export function EnhancedBillDialog({
     try {
       const billData = {
         asset_id: assetId,
-        consumer_name: formData.consumer_name,
-        service_number: formData.service_number,
-        unique_service_number: formData.unique_service_number,
-        ero_name: formData.ero_name,
-        section_name: formData.section_name,
-        consumer_address: formData.consumer_address,
+        consumer_name: formData.consumer_name || null,
+        service_number: formData.service_number || null,
+        unique_service_number: formData.unique_service_number || null,
+        ero_name: formData.ero_name || null,
+        section_name: formData.section_name || null,
+        address: formData.consumer_address || null,
         bill_date: billDate ? format(billDate, "yyyy-MM-dd") : null,
         due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
         payment_date: paidDate ? format(paidDate, "yyyy-MM-dd") : null,
@@ -507,9 +507,8 @@ export function EnhancedBillDialog({
         acd_amount: parseFloat(formData.acd_amount) || 0,
         arrears: parseFloat(formData.arrears) || 0,
         total_due: parseFloat(formData.total_due) || 0,
-        payment_status: formData.payment_status,
-        payment_method: formData.payment_method,
-        transaction_id: formData.transaction_id || null,
+        payment_status: formData.payment_status || 'Pending',
+        payment_reference: formData.transaction_id || null,
         notes: formData.notes || null,
       };
 

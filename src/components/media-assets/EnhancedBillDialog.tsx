@@ -146,14 +146,9 @@ export function EnhancedBillDialog({
         data.bill_amount = lines[index + 1].replace(/[₹,]/g, '');
       }
       
-      // Energy Charges
-      if (line.includes('Energy Charges') && lines[index + 1]) {
-        data.energy_charges = lines[index + 1].replace(/[₹,]/g, '');
-      }
-      
-      // Fixed Charges
-      if (line.includes('Fixed Charges') && lines[index + 1]) {
-        data.fixed_charges = lines[index + 1].replace(/[₹,]/g, '');
+      // ACD Amount
+      if (line.includes('ACD Amount') && lines[index + 1]) {
+        data.acd_amount = lines[index + 1].replace(/[₹,]/g, '');
       }
       
       // Arrears
@@ -166,6 +161,18 @@ export function EnhancedBillDialog({
         data.total_due = lines[index + 1].replace(/[₹,]/g, '');
       }
     });
+
+    // Auto-generate bill_month from bill_date
+    if (data.bill_date) {
+      const parsedDate = parseDate(data.bill_date);
+      if (parsedDate) {
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'];
+        const month = monthNames[parsedDate.getMonth()];
+        const year = parsedDate.getFullYear();
+        data.bill_month = `${month} ${year}`;
+      }
+    }
 
     return data;
   };

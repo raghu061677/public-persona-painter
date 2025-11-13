@@ -9,13 +9,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Loader2, AlertTriangle, Sparkles, ClipboardPaste } from "lucide-react";
+import { CalendarIcon, Loader2, AlertTriangle, Sparkles, ClipboardPaste, Check, ChevronsUpDown } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 interface EnhancedBillDialogProps {
   open: boolean;
@@ -45,6 +46,14 @@ export function EnhancedBillDialog({
   const [pasteOpen, setPasteOpen] = useState(true);
   const [pastedText, setPastedText] = useState("");
   const [parsedData, setParsedData] = useState<any>(null);
+  
+  // Auto-fill state
+  const [consumerSuggestions, setConsumerSuggestions] = useState<Array<{
+    consumer_name: string;
+    service_number: string;
+    unique_service_number: string;
+  }>>([]);
+  const [consumerOpen, setConsumerOpen] = useState(false);
   
   // Auto-populate from asset record
   const [formData, setFormData] = useState({
@@ -201,6 +210,41 @@ export function EnhancedBillDialog({
     setPastedText("");
     setParsedData(null);
     setPasteOpen(false);
+  };
+
+  // Fetch consumer suggestions
+  useEffect(() => {
+    const fetchConsumerSuggestions = async () => {
+      const { data, error } = await supabase
+        .from("asset_power_bills")
+        .select("consumer_name, service_number, unique_service_number")
+        .eq("asset_id", assetId)
+        .not("consumer_name", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (!error && data) {
+        // Remove duplicates based on unique_service_number
+        const unique = data.filter((bill, index, self) =>
+          index === self.findIndex((b) => b.unique_service_number === bill.unique_service_number)
+        );
+        setConsumerSuggestions(unique);
+      }
+    };
+
+    if (open && assetId) {
+      fetchConsumerSuggestions();
+    }
+  }, [open, assetId]);
+
+  const handleConsumerSelect = (consumer: typeof consumerSuggestions[0]) => {
+    setFormData(prev => ({
+      ...prev,
+      consumer_name: consumer.consumer_name,
+      service_number: consumer.service_number,
+      unique_service_number: consumer.unique_service_number,
+    }));
+    setConsumerOpen(false);
   };
 
   // Check for bookmarklet data on mount
@@ -532,11 +576,68 @@ export function EnhancedBillDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Consumer Name</Label>
-                <Input
-                  value={formData.consumer_name}
-                  onChange={(e) => updateField("consumer_name", e.target.value)}
-                  disabled={!manualMode}
-                />
+                {manualMode ? (
+                  <Popover open={consumerOpen} onOpenChange={setConsumerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between"
+                      >
+                        {formData.consumer_name || "Select or enter consumer"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0" align="start">
+                      <Command>
+                        <CommandInput 
+                          placeholder="Search or type new consumer..." 
+                          value={formData.consumer_name}
+                          onValueChange={(value) => updateField("consumer_name", value)}
+                        />
+                        <CommandList>
+                          <CommandEmpty>
+                            <div className="p-2 text-sm text-muted-foreground">
+                              No previous records. Type to enter new.
+                            </div>
+                          </CommandEmpty>
+                          {consumerSuggestions.length > 0 && (
+                            <CommandGroup heading="Previous Consumers">
+                              {consumerSuggestions.map((consumer, idx) => (
+                                <CommandItem
+                                  key={idx}
+                                  value={consumer.consumer_name}
+                                  onSelect={() => handleConsumerSelect(consumer)}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      formData.consumer_name === consumer.consumer_name
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{consumer.consumer_name}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {consumer.unique_service_number} • {consumer.service_number}
+                                    </span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          )}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <Input
+                    value={formData.consumer_name}
+                    onChange={(e) => updateField("consumer_name", e.target.value)}
+                    disabled={true}
+                  />
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Service Number</Label>

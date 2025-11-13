@@ -5,7 +5,7 @@ import {
   Wallet, BarChart2, Image, Upload, Download, Settings,
   Menu, ChevronDown, ChevronRight, Target, TrendingUp,
   FileText, Building2, CreditCard, Smartphone, MessageSquare,
-  UserCog, FileSpreadsheet, Receipt, LayoutDashboard, Brain
+  UserCog, FileSpreadsheet, Receipt, LayoutDashboard, Brain, Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NavLink } from "react-router-dom";
@@ -67,6 +67,7 @@ const MENU_SECTIONS: MenuSection[] = [
       { label: "Invoices", icon: FileText, path: "/finance/invoices", module: "invoices" },
       { label: "Estimations", icon: FileSpreadsheet, path: "/finance/estimations", module: "invoices" },
       { label: "Expenses", icon: Receipt, path: "/finance/expenses", module: "expenses" },
+      { label: "Power Bills", icon: Zap, path: "/admin/power-bills", module: "expenses" },
     ],
   },
   {

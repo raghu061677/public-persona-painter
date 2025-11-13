@@ -100,39 +100,35 @@ export default function UserManagement() {
     try {
       setLoading(true);
       
-      // Load all users with their auth data
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-      if (authError) throw authError;
+      // Get current session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to view users",
+          variant: "destructive",
+        });
+        navigate("/auth");
+        return;
+      }
 
-      // Load profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("*");
-      if (profilesError) throw profilesError;
-
-      // Load user roles
-      const { data: rolesData, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("*");
-      if (rolesError) throw rolesError;
-
-      // Merge data
-      const mergedUsers = authUsers.users.map(user => {
-        const profile = profiles?.find(p => p.id === user.id);
-        const userRoles = rolesData?.filter(r => r.user_id === user.id).map(r => r.role) || [];
-        
-        return {
-          id: user.id,
-          email: user.email,
-          username: profile?.username || user.email?.split('@')[0] || 'Unknown',
-          avatar_url: profile?.avatar_url,
-          created_at: user.created_at,
-          roles: userRoles,
-          status: user.banned_until ? 'Suspended' : 'Active',
-        };
+      // Fetch users via edge function
+      const { data: usersData, error: usersError } = await supabase.functions.invoke('list-users', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       });
 
-      setUsers(mergedUsers);
+      if (usersError) {
+        console.error("Error fetching users:", usersError);
+        throw usersError;
+      }
+
+      if (!usersData?.users) {
+        throw new Error("No user data received");
+      }
+
+      setUsers(usersData.users);
 
       // Load role permissions
       const { data: permsData, error: permsError } = await supabase

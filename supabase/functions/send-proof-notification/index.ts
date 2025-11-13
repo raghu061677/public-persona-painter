@@ -1,9 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@4.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import React from "npm:react@18.3.1";
-import { renderAsync } from "npm:@react-email/components@0.0.22";
-import { ProofUploadEmail } from "./_templates/proof-upload-email.tsx";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -103,7 +100,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const organizationName = orgSettings?.organization_name || "Go-Ads 360°";
 
-    // Render email template
+    // Create simple HTML email
     const uploadDate = new Date().toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
@@ -112,18 +109,43 @@ const handler = async (req: Request): Promise<Response> => {
       minute: "2-digit",
     });
 
-    const html = await renderAsync(
-      React.createElement(ProofUploadEmail, {
-        clientName: client.contact_person || client.name,
-        campaignName: campaign.campaign_name,
-        assetLocation: asset.location,
-        assetCity: asset.city,
-        photoCount,
-        uploadDate,
-        organizationName,
-        // proofLink: `${supabaseUrl}/admin/campaigns/${campaignId}` // Add when portal is ready
-      })
-    );
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #1e40af; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f9fafb; padding: 20px; border-radius: 0 0 8px 8px; }
+            .detail { margin: 15px 0; padding: 10px; background: white; border-radius: 4px; }
+            .label { font-weight: bold; color: #4b5563; }
+            .footer { text-align: center; color: #6b7280; font-size: 14px; margin-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>📸 Proof Photos ${notificationType === "upload" ? "Uploaded" : "Verified"}</h1>
+            </div>
+            <div class="content">
+              <p>Dear ${client.contact_person || client.name},</p>
+              <p>${photoCount} proof photo${photoCount > 1 ? 's have' : ' has'} been ${notificationType === "upload" ? "uploaded" : "verified"} for your campaign.</p>
+              <div class="detail">
+                <div><span class="label">Campaign:</span> ${campaign.campaign_name}</div>
+                <div><span class="label">Location:</span> ${asset.location}, ${asset.area}, ${asset.city}</div>
+                <div><span class="label">Date:</span> ${uploadDate}</div>
+              </div>
+              <p>You can view all proof photos in your campaign dashboard.</p>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} ${organizationName}. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
 
     // Send email
     const subject = notificationType === "upload" 

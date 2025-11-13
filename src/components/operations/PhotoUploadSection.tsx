@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { Upload, X, FileImage, Zap } from "lucide-react";
+import { useState, useCallback, useEffect } from "react";
+import { Upload, X, FileImage, Zap, CheckCircle2, ImagePlus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -8,6 +8,8 @@ import { toast } from "@/hooks/use-toast";
 import { uploadOperationsProofs } from "@/lib/operations/uploadProofs";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { supabase } from "@/integrations/supabase/client";
+import { addWatermarkBatch, createPreviewUrl, revokePreviewUrls } from "@/lib/imageWatermark";
 
 interface PhotoUploadSectionProps {
   campaignId: string;
@@ -24,10 +26,45 @@ interface UploadingFile {
   compressedSize?: number;
 }
 
+interface PreviewFile {
+  file: File;
+  previewUrl: string;
+}
+
 export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: PhotoUploadSectionProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [previewFiles, setPreviewFiles] = useState<PreviewFile[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string>();
+  const [orgName, setOrgName] = useState<string>();
+
+  // Load organization settings for watermark
+  useEffect(() => {
+    const loadOrgSettings = async () => {
+      const { data } = await supabase
+        .from('organization_settings')
+        .select('logo_url, organization_name')
+        .single();
+      
+      if (data) {
+        setLogoUrl(data.logo_url || undefined);
+        setOrgName(data.organization_name || undefined);
+      }
+    };
+    loadOrgSettings();
+  }, []);
+
+  // Cleanup preview URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (previewFiles.length > 0) {
+        revokePreviewUrls(previewFiles.map(p => p.previewUrl));
+      }
+    };
+  }, [previewFiles]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -71,25 +108,53 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
       return;
     }
 
-    // Calculate total size
-    const totalSizeMB = files.reduce((sum, f) => sum + f.size, 0) / 1024 / 1024;
-    
-    // Initialize uploading state
-    const initialFiles: UploadingFile[] = files.map(file => ({
+    // Create preview URLs
+    const previews: PreviewFile[] = files.map(file => ({
       file,
-      progress: 0,
-      status: 'uploading' as const,
-      originalSize: file.size,
+      previewUrl: createPreviewUrl(file),
     }));
-    
-    setUploadingFiles(initialFiles);
-    setIsUploading(true);
+
+    setPreviewFiles(previews);
+    setShowPreview(true);
+  };
+
+  const handleConfirmUpload = async () => {
+    const files = previewFiles.map(p => p.file);
+    setShowPreview(false);
+    setIsProcessing(true);
 
     try {
+      // Step 1: Add watermarks
+      toast({
+        title: "Processing Images",
+        description: "Adding watermarks and preparing for upload...",
+      });
+
+      const watermarkedFiles = await addWatermarkBatch(
+        files,
+        logoUrl,
+        orgName,
+        (index, progress) => {
+          // Optional: show watermarking progress
+        }
+      );
+
+      // Step 2: Initialize upload state
+      const initialFiles: UploadingFile[] = watermarkedFiles.map(file => ({
+        file,
+        progress: 0,
+        status: 'uploading' as const,
+        originalSize: file.size,
+      }));
+      
+      setUploadingFiles(initialFiles);
+      setIsUploading(true);
+      setIsProcessing(false);
+
       const results = await uploadOperationsProofs(
         campaignId,
         assetId,
-        files,
+        watermarkedFiles,
         (fileIndex, progress) => {
           setUploadingFiles(prev => {
             const updated = [...prev];
@@ -114,8 +179,12 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
 
       toast({
         title: "Upload Complete",
-        description: `Successfully uploaded ${files.length} proof photo${files.length !== 1 ? 's' : ''}`,
+        description: `Successfully uploaded ${watermarkedFiles.length} watermarked proof photo${watermarkedFiles.length !== 1 ? 's' : ''}`,
       });
+
+      // Cleanup preview URLs
+      revokePreviewUrls(previewFiles.map(p => p.previewUrl));
+      setPreviewFiles([]);
 
       // Clear after 2 seconds
       setTimeout(() => {
@@ -139,7 +208,20 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
       );
     } finally {
       setIsUploading(false);
+      setIsProcessing(false);
     }
+  };
+
+  const handleCancelPreview = () => {
+    revokePreviewUrls(previewFiles.map(p => p.previewUrl));
+    setPreviewFiles([]);
+    setShowPreview(false);
+  };
+
+  const removePreviewFile = (index: number) => {
+    const urlToRevoke = previewFiles[index].previewUrl;
+    revokePreviewUrls([urlToRevoke]);
+    setPreviewFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const removeFile = (index: number) => {
@@ -147,14 +229,96 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
   };
 
   return (
-    <Card>
-      <CardHeader>
+    <>
+      {/* Preview Dialog */}
+      {showPreview && (
+        <Card className="mb-4 border-primary">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <ImagePlus className="h-5 w-5" />
+                  Review Selected Photos
+                </CardTitle>
+                <CardDescription>
+                  {previewFiles.length} photo{previewFiles.length !== 1 ? 's' : ''} selected. 
+                  Watermark will be added automatically.
+                </CardDescription>
+              </div>
+              <Button variant="ghost" size="icon" onClick={handleCancelPreview}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Preview Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {previewFiles.map((preview, index) => (
+                <div key={index} className="relative group">
+                  <div className="aspect-square rounded-lg overflow-hidden border-2 border-border bg-muted">
+                    <img
+                      src={preview.previewUrl}
+                      alt={preview.file.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => removePreviewFile(index)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                  <div className="mt-1 text-xs text-muted-foreground truncate">
+                    {preview.file.name}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {(preview.file.size / 1024 / 1024).toFixed(2)}MB
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={handleCancelPreview}
+                className="flex-1"
+                disabled={isProcessing}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmUpload}
+                className="flex-1"
+                disabled={previewFiles.length === 0 || isProcessing}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                {isProcessing ? "Processing..." : `Upload ${previewFiles.length} Photo${previewFiles.length !== 1 ? 's' : ''}`}
+              </Button>
+            </div>
+
+            <Alert>
+              <Zap className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                Photos will be watermarked with your company logo, timestamp, and "PROOF OF INSTALLATION" text.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileImage className="h-5 w-5" />
           Upload Proof Photos
         </CardTitle>
         <CardDescription>
-          Upload 1-20 images. Auto-compression & tag detection enabled.
+          Upload 1-20 images. Auto-watermarking, compression & tag detection enabled.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -162,8 +326,7 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
         <Alert>
           <Zap className="h-4 w-4" />
           <AlertDescription>
-            Images will be automatically compressed to reduce storage costs while maintaining quality.
-            Photos with GPS data are auto-tagged as "Geo-Tagged".
+            Photos will be auto-compressed, watermarked with company branding, and tagged based on GPS data or filename.
           </AlertDescription>
         </Alert>
 
@@ -172,7 +335,7 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
           className={cn(
             "border-2 border-dashed rounded-lg p-8 text-center transition-colors",
             isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25",
-            isUploading && "opacity-50 pointer-events-none"
+            (isUploading || isProcessing || showPreview) && "opacity-50 pointer-events-none"
           )}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -197,7 +360,7 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
           <Button
             variant="outline"
             onClick={() => document.getElementById('photo-upload')?.click()}
-            disabled={isUploading}
+            disabled={isUploading || isProcessing || showPreview}
           >
             Select Files
           </Button>
@@ -263,5 +426,6 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
         )}
       </CardContent>
     </Card>
+    </>
   );
 }

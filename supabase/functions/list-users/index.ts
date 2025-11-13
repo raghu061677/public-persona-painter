@@ -77,7 +77,7 @@ serve(async (req) => {
         avatar_url: profile?.avatar_url,
         created_at: u.created_at,
         roles: userRoles,
-        status: u.email_confirmed_at ? 'active' : 'pending',
+        status: (u as any).banned_until ? 'Suspended' : (u.email_confirmed_at ? 'Active' : 'Pending'),
         last_sign_in_at: u.last_sign_in_at
       };
     });

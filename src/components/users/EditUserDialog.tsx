@@ -63,36 +63,18 @@ export default function EditUserDialog({
         status: user.status,
       };
 
-      // Update profile
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ username })
-        .eq("id", user.id);
+      // Call edge function to update user
+      const { error: updateError } = await supabase.functions.invoke('update-user', {
+        body: {
+          userId: user.id,
+          username,
+          role: selectedRole,
+          isActive,
+        },
+      });
 
-      if (profileError) throw profileError;
-
-      // Update role if changed
-      if (selectedRole !== user.roles?.[0]) {
-        // Delete old roles
-        await supabase.from("user_roles").delete().eq("user_id", user.id);
-        
-        // Insert new role
-        const { error: roleError } = await supabase
-          .from("user_roles")
-          .insert({ user_id: user.id, role: selectedRole as any });
-
-        if (roleError) throw roleError;
-      }
-
-      // Update user status via admin API
-      const newStatus = isActive ? 'Active' : 'Suspended';
-      if (newStatus !== user.status) {
-        const { error: banError } = await supabase.auth.admin.updateUserById(
-          user.id,
-          { ban_duration: isActive ? 'none' : '876000h' } // 100 years for suspended
-        );
-
-        if (banError) throw banError;
+      if (updateError) {
+        throw new Error(updateError.message || 'Failed to update user');
       }
 
       // Log audit

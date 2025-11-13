@@ -5,6 +5,37 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Retry utility with exponential backoff
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  baseDelay = 1000
+): Promise<T> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+      
+      // Don't retry on final attempt
+      if (attempt === maxRetries) {
+        break;
+      }
+      
+      // Calculate exponential backoff delay
+      const delay = baseDelay * Math.pow(2, attempt);
+      console.log(`Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms`);
+      
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError || new Error("Max retries exceeded");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -65,44 +96,54 @@ Return a JSON with: score (0-100), issues (array of problems found), suggestions
 
     const prompt = validationPrompts[photoType] || validationPrompts["Other"];
 
-    // Call Lovable AI with vision capabilities
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: prompt },
-              { 
-                type: "image_url", 
-                image_url: { url: imageUrl }
-              }
-            ]
-          }
-        ],
-        response_format: { type: "json_object" }
-      }),
+    // Call Lovable AI with retry logic for transient failures
+    const aiResponse = await retryWithBackoff(async () => {
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: prompt },
+                { 
+                  type: "image_url", 
+                  image_url: { url: imageUrl }
+                }
+              ]
+            }
+          ],
+          response_format: { type: "json_object" }
+        }),
+      });
+
+      // Throw error for server errors (5xx) to trigger retry
+      if (!response.ok && response.status >= 500) {
+        throw new Error(`AI API server error: ${response.status}`);
+      }
+
+      return response;
     });
 
+    // Handle error responses (429, 402, other 4xx)
+    if (aiResponse.status === 429) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (aiResponse.status === 402) {
+      return new Response(
+        JSON.stringify({ error: "Payment required. Please add credits to your workspace." }),
+        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     if (!aiResponse.ok) {
-      if (aiResponse.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (aiResponse.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Payment required. Please add credits to your workspace." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
       throw new Error(`AI API error: ${aiResponse.status}`);
     }
 

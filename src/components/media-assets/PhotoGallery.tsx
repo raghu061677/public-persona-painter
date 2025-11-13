@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Trash2, MapPin } from "lucide-react";
+import { Trash2, MapPin, Play } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PhotoValidationBadge } from "./PhotoValidationBadge";
 import { PhotoValidationResult } from "@/lib/photoValidation";
+import { PhotoSlideshow } from "./PhotoSlideshow";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +44,8 @@ export function PhotoGallery({ assetId, photos, onPhotoDeleted }: PhotoGalleryPr
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<ProofPhoto | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [slideshowOpen, setSlideshowOpen] = useState(false);
+  const [slideshowIndex, setSlideshowIndex] = useState(0);
   const [deleting, setDeleting] = useState(false);
 
   const getTagColor = (tag: string) => {
@@ -130,6 +133,11 @@ export function PhotoGallery({ assetId, photos, onPhotoDeleted }: PhotoGalleryPr
     setViewerOpen(true);
   };
 
+  const openSlideshow = (index: number) => {
+    setSlideshowIndex(index);
+    setSlideshowOpen(true);
+  };
+
   if (!photos || photos.length === 0) {
     return null;
   }
@@ -138,10 +146,20 @@ export function PhotoGallery({ assetId, photos, onPhotoDeleted }: PhotoGalleryPr
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Uploaded Proof Photos</CardTitle>
-          <CardDescription>
-            {photos.length} proof photo{photos.length !== 1 ? 's' : ''} uploaded
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Uploaded Proof Photos</CardTitle>
+              <CardDescription>
+                {photos.length} proof photo{photos.length !== 1 ? 's' : ''} uploaded
+              </CardDescription>
+            </div>
+            {photos.length > 0 && (
+              <Button onClick={() => openSlideshow(0)} variant="outline" size="sm">
+                <Play className="h-4 w-4 mr-2" />
+                Slideshow
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -152,7 +170,7 @@ export function PhotoGallery({ assetId, photos, onPhotoDeleted }: PhotoGalleryPr
                     src={photo.url}
                     alt={photo.tag}
                     className="w-full h-48 object-cover cursor-pointer"
-                    onClick={() => openViewer(photo)}
+                    onClick={() => openSlideshow(index)}
                   />
                   
                   {/* Tag Badge */}
@@ -257,6 +275,14 @@ export function PhotoGallery({ assetId, photos, onPhotoDeleted }: PhotoGalleryPr
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Slideshow */}
+      <PhotoSlideshow
+        photos={photos}
+        open={slideshowOpen}
+        onOpenChange={setSlideshowOpen}
+        initialIndex={slideshowIndex}
+      />
     </>
   );
 }

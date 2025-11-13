@@ -156,9 +156,9 @@ export function PhotoUploadSection({ assetId, onUploadComplete }: PhotoUploadSec
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Proof Photos</CardTitle>
+        <CardTitle>Site & Proof Photos</CardTitle>
         <CardDescription>
-          Upload proof images (Traffic, Newspaper, Geo-Tagged). System will auto-detect image type.
+          Upload multiple proof images (Traffic, Newspaper, Geo-Tagged). System will auto-detect image type. These photos can be used in Plan module presentations.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

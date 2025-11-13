@@ -1126,26 +1126,6 @@ export default function MediaAssetEdit() {
                   </div>
                 </CardContent>
               </Card>
-
-              <Card className="overflow-hidden border-accent/20 shadow-lg sticky top-[200px]">
-                <CardHeader className="bg-gradient-to-r from-accent/5 via-primary/5 to-accent/5 border-b">
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 bg-accent/10 rounded-lg">
-                      <ImageIcon className="h-5 w-5 text-accent" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-xl">Proof & Site Images</CardTitle>
-                      <CardDescription>Upload verification photos</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6 pt-6">
-                  <ImageUploader field="geoTaggedPhoto" label="Geo Tagged Photo" />
-                  <ImageUploader field="newspaperPhoto" label="Newspaper Photo" />
-                  <ImageUploader field="trafficPhoto1" label="Traffic Photo 1" />
-                  <ImageUploader field="trafficPhoto2" label="Traffic Photo 2" />
-                </CardContent>
-              </Card>
             </div>
           </div>
 
@@ -1153,7 +1133,7 @@ export default function MediaAssetEdit() {
           <div className="space-y-6 mt-8">
             <PhotoUploadSection assetId={id!} onUploadComplete={fetchAsset} />
             
-            {formData?.images?.photos && (
+            {formData?.images?.photos && formData.images.photos.length > 0 && (
               <PhotoGallery 
                 assetId={id!} 
                 photos={formData.images.photos} 

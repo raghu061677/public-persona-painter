@@ -64,6 +64,7 @@ export function EnhancedBillDialog({
     section_name: existingConsumerInfo?.section_name || asset?.section_name || "",
     consumer_address: existingConsumerInfo?.consumer_address || asset?.location || "",
     bill_month: "",
+    units: "",
     bill_amount: "",
     energy_charges: "",
     fixed_charges: "",
@@ -105,6 +106,16 @@ export function EnhancedBillDialog({
       // Bill Month
       if (line.includes('Bill Month') && lines[index + 1]) {
         data.bill_month = lines[index + 1];
+      }
+      
+      // Units
+      if (line.includes('Units') && !line.includes('Bill Date')) {
+        const unitsMatch = line.match(/Units[\s:]+(\d+)/i);
+        if (unitsMatch) {
+          data.units = unitsMatch[1];
+        } else if (lines[index + 1]) {
+          data.units = lines[index + 1].replace(/[^\d]/g, '');
+        }
       }
       
       // Bill Date / Due Date in format "05-Nov-25 / 19-Nov-25"
@@ -224,6 +235,7 @@ export function EnhancedBillDialog({
       ero_name: parsedData.ero_name || prev.ero_name,
       section_name: parsedData.section_name || prev.section_name,
       bill_month: parsedData.bill_month || prev.bill_month,
+      units: parsedData.units || prev.units,
       bill_amount: parsedData.bill_amount || prev.bill_amount,
       energy_charges: parsedData.energy_charges || prev.energy_charges,
       fixed_charges: parsedData.fixed_charges || prev.fixed_charges,
@@ -355,6 +367,7 @@ export function EnhancedBillDialog({
       section_name: existingConsumerInfo?.section_name || asset?.section_name || "",
       consumer_address: existingConsumerInfo?.consumer_address || asset?.location || "",
       bill_month: "",
+      units: "",
       bill_amount: "",
       energy_charges: "",
       fixed_charges: "",
@@ -452,6 +465,7 @@ export function EnhancedBillDialog({
         due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
         paid_date: paidDate ? format(paidDate, "yyyy-MM-dd") : null,
         bill_month: formData.bill_month,
+        units: parseFloat(formData.units) || 0,
         bill_amount: parseFloat(formData.bill_amount) || 0,
         energy_charges: parseFloat(formData.energy_charges) || 0,
         fixed_charges: parseFloat(formData.fixed_charges) || 0,
@@ -726,6 +740,15 @@ export function EnhancedBillDialog({
                   value={formData.bill_month}
                   onChange={(e) => updateField("bill_month", e.target.value)}
                   placeholder="e.g., Jan 2025"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Units Consumed</Label>
+                <Input
+                  type="number"
+                  value={formData.units}
+                  onChange={(e) => updateField("units", e.target.value)}
+                  placeholder="e.g., 40"
                 />
               </div>
               <div className="space-y-2">

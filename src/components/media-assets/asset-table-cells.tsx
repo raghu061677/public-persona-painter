@@ -5,7 +5,10 @@ import { useNavigate } from "react-router-dom";
 interface Asset {
   id: string;
   image_urls?: string[];
-  images?: Record<string, { url: string; name: string; size: number; type: string }>;
+  images?: {
+    photos?: Array<{ url: string; tag: string; uploaded_at: string }>;
+    [key: string]: any;
+  };
   latitude?: number;
   longitude?: number;
   google_street_view_url?: string;
@@ -16,21 +19,14 @@ export function ImageCell({ row }: any) {
   const navigate = useNavigate();
   const asset = row.original;
   
-  // Try to get the first image from the images object (preferred method)
+  // Try to get the first image from images.photos array (new format)
   let imageUrl: string | null = null;
   
-  if (asset.images && typeof asset.images === 'object') {
-    // Priority order: geoTaggedPhoto -> newspaperPhoto -> trafficPhoto1 -> trafficPhoto2
-    const imageKeys = ['geoTaggedPhoto', 'newspaperPhoto', 'trafficPhoto1', 'trafficPhoto2'];
-    for (const key of imageKeys) {
-      if (asset.images[key]?.url) {
-        imageUrl = asset.images[key].url;
-        break;
-      }
-    }
+  if (asset.images?.photos && Array.isArray(asset.images.photos) && asset.images.photos.length > 0) {
+    imageUrl = asset.images.photos[0].url;
   }
   
-  // Fallback to image_urls array if images object is empty
+  // Fallback to legacy image_urls array if new format is empty
   if (!imageUrl && asset.image_urls && asset.image_urls.length > 0) {
     imageUrl = asset.image_urls[0];
   }

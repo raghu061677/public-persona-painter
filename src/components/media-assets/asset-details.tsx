@@ -30,21 +30,24 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-  // Collect all images
-  const allImages: { url: string; name: string }[] = [];
+  // Collect all images from images.photos array
+  const allImages: { url: string; name: string; tag?: string }[] = [];
   
-  if (asset.image_urls && Array.isArray(asset.image_urls)) {
-    asset.image_urls.forEach((url: string, index: number) => {
-      allImages.push({ url, name: `Image ${index + 1}` });
+  // New format: images.photos array
+  if (asset.images?.photos && Array.isArray(asset.images.photos)) {
+    asset.images.photos.forEach((photo: any, index: number) => {
+      allImages.push({ 
+        url: photo.url, 
+        name: photo.tag || `Photo ${index + 1}`,
+        tag: photo.tag 
+      });
     });
   }
   
-  if (asset.images && typeof asset.images === 'object') {
-    Object.entries(asset.images).forEach(([key, imageData]: [string, any]) => {
-      const imageUrl = imageData?.url || imageData;
-      if (imageUrl) {
-        allImages.push({ url: imageUrl, name: imageData?.name || key });
-      }
+  // Legacy: image_urls array (if any old records exist)
+  if (asset.image_urls && Array.isArray(asset.image_urls) && asset.image_urls.length > 0) {
+    asset.image_urls.forEach((url: string, index: number) => {
+      allImages.push({ url, name: `Image ${index + 1}` });
     });
   }
 

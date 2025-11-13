@@ -14,13 +14,11 @@ import { VendorDetailsForm } from "@/components/media-assets/vendor-details-form
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 import { parseDimensions, buildSearchTokens } from "@/utils/mediaAssets";
-import { ArrowLeft, Save, Image as ImageIcon, Calendar as CalendarIcon, ExternalLink, HelpCircle, MapPin, DollarSign, FileText } from "lucide-react";
+import { ArrowLeft, Save, Calendar as CalendarIcon, ExternalLink, HelpCircle, MapPin, DollarSign, FileText } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { PhotoUploadSection } from "@/components/media-assets/PhotoUploadSection";
 import { PhotoGallery } from "@/components/media-assets/PhotoGallery";
-
-type ImageField = 'geoTaggedPhoto' | 'newspaperPhoto' | 'trafficPhoto1' | 'trafficPhoto2';
 
 export default function MediaAssetEdit() {
   const { id } = useParams();
@@ -29,18 +27,6 @@ export default function MediaAssetEdit() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [municipalAuthorities, setMunicipalAuthorities] = useState<{ label: string; value: string }[]>([]);
-  const [imageFiles, setImageFiles] = useState<Record<ImageField, File | null>>({
-    geoTaggedPhoto: null,
-    newspaperPhoto: null,
-    trafficPhoto1: null,
-    trafficPhoto2: null,
-  });
-  const [imagePreviews, setImagePreviews] = useState<Record<ImageField, string>>({
-    geoTaggedPhoto: '',
-    newspaperPhoto: '',
-    trafficPhoto1: '',
-    trafficPhoto2: '',
-  });
   const [formData, setFormData] = useState<any>(null);
 
   useEffect(() => {
@@ -118,16 +104,6 @@ export default function MediaAssetEdit() {
       });
       navigate('/admin/media-assets');
     } else {
-      // Load existing images into previews
-      if (data.images) {
-        const newPreviews: any = {};
-        Object.keys(imageFiles).forEach((key) => {
-          if (data.images[key]?.url) {
-            newPreviews[key] = data.images[key].url;
-          }
-        });
-        setImagePreviews(prev => ({ ...prev, ...newPreviews }));
-      }
 
       // Convert numeric values to strings for form inputs
       const formattedData = {
@@ -156,47 +132,6 @@ export default function MediaAssetEdit() {
     setFetching(false);
   };
 
-  const handleImageSelect = (file: File, field: ImageField) => {
-    if (!file) return;
-    const localUrl = URL.createObjectURL(file);
-    
-    setImageFiles(prev => ({ ...prev, [field]: file }));
-    setImagePreviews(prev => ({ ...prev, [field]: localUrl }));
-  };
-
-  const uploadImages = async (assetId: string) => {
-    const imageData: any = { ...(formData.images || {}) };
-    
-    for (const key of Object.keys(imageFiles) as ImageField[]) {
-      const file = imageFiles[key];
-      if (file) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${assetId}/${key}_${Date.now()}.${fileExt}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('hero-images')
-          .upload(fileName, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('hero-images')
-          .getPublicUrl(fileName);
-
-        imageData[key] = {
-          url: publicUrl,
-          name: file.name,
-          size: file.size,
-          type: file.type,
-        };
-      }
-    }
-    
-    return imageData;
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,9 +140,6 @@ export default function MediaAssetEdit() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
-
-      // Upload any new images
-      const images = await uploadImages(formData.id);
 
       const parsed = parseDimensions(formData.dimensions);
       const search_tokens = buildSearchTokens([
@@ -253,7 +185,6 @@ export default function MediaAssetEdit() {
           municipal_authority: formData.municipal_authority || null,
           is_public: formData.is_public,
           vendor_details: formData.ownership === 'rented' ? formData.vendor_details : null,
-          images: images,
           search_tokens,
           // Power details
           consumer_name: formData.consumer_name || null,
@@ -286,36 +217,6 @@ export default function MediaAssetEdit() {
     setFormData((prev: any) => ({ ...prev, [field]: value }));
   };
 
-  const ImageUploader = ({ field, label }: { field: ImageField; label: string }) => {
-    const fileRef = useRef<HTMLInputElement>(null);
-    const imgUrl = imagePreviews[field];
-
-    return (
-      <div className="space-y-2">
-        <Label>{label}</Label>
-        <input
-          type="file"
-          ref={fileRef}
-          onChange={(e) => e.target.files && handleImageSelect(e.target.files[0], field)}
-          className="hidden"
-          accept="image/*"
-        />
-        <div
-          className="relative aspect-video w-full border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary"
-          onClick={() => fileRef.current?.click()}
-        >
-          {imgUrl ? (
-            <img src={imgUrl} alt={label} className="object-cover w-full h-full rounded-md" />
-          ) : (
-            <>
-              <ImageIcon className="h-8 w-8 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground mt-1">Click to upload</p>
-            </>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   if (fetching) {
     return (

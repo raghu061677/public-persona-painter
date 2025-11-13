@@ -14,6 +14,7 @@ import { toast } from "@/hooks/use-toast";
 import EditUserDialog from "@/components/users/EditUserDialog";
 import AddUserDialog from "@/components/users/AddUserDialog";
 import UserPermissionsView from "@/components/users/UserPermissionsView";
+import { RolePermissionsMatrix } from "@/components/users/RolePermissionsMatrix";
 import TeamsManagement from "@/components/users/TeamsManagement";
 import UserActivityDashboard from "@/components/users/UserActivityDashboard";
 import BulkImportDialog from "@/components/users/BulkImportDialog";
@@ -470,50 +471,7 @@ export default function UserManagement() {
         </TabsContent>
 
         <TabsContent value="permissions" className="space-y-4 mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Role Permissions Matrix</CardTitle>
-              <CardDescription>
-                Configure module access for each role
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-32">Role</TableHead>
-                    {MODULES.map(module => (
-                      <TableHead key={module.key} className="text-center">
-                        {module.label}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {ROLES.map(role => (
-                    <TableRow key={role}>
-                      <TableCell className="font-medium capitalize">{role}</TableCell>
-                      {MODULES.map(module => {
-                        const hasAccess = rolePermissions[role]?.[module.key] || false;
-                        const isLocked = role === 'admin';
-                        
-                        return (
-                          <TableCell key={module.key} className="text-center">
-                            <Checkbox
-                              checked={hasAccess}
-                              disabled={isLocked}
-                              onCheckedChange={() => handleTogglePermission(role, module.key)}
-                              className="mx-auto"
-                            />
-                          </TableCell>
-                        );
-                      })}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <RolePermissionsMatrix />
         </TabsContent>
 
         <TabsContent value="user-access" className="space-y-4 mt-6">

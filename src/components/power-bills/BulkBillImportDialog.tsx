@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { 
   Upload, 
@@ -18,7 +19,9 @@ import {
   CheckCircle2, 
   AlertCircle, 
   Trash2,
-  Download
+  Download,
+  FileSpreadsheet,
+  X
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -30,6 +33,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import * as XLSX from 'xlsx';
 
 interface ParsedBill {
   asset_id: string;
@@ -53,6 +58,9 @@ export function BulkBillImportDialog({ onImportComplete }: { onImportComplete?: 
   const [parsing, setParsing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [parsedBills, setParsedBills] = useState<ParsedBill[]>([]);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Helper to parse date formats
   const parseDate = (dateStr: string) => {
@@ -331,8 +339,195 @@ export function BulkBillImportDialog({ onImportComplete }: { onImportComplete?: 
     setParsedBills(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Download template
-  const downloadTemplate = () => {
+  // Parse Excel file
+  const parseExcelFile = async (file: File) => {
+    setParsing(true);
+    
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+      if (jsonData.length === 0) {
+        throw new Error('Excel file is empty');
+      }
+
+      // Map Excel rows to ParsedBill objects
+      const bills: ParsedBill[] = jsonData.map((row: any, index) => {
+        const bill: ParsedBill = {
+          asset_id: row['Asset ID'] || row['asset_id'] || row['AssetID'] || '',
+          bill_month: row['Bill Month'] || row['bill_month'] || row['Month'] || '',
+          units: row['Units'] || row['units'] || '',
+          bill_date: row['Bill Date'] || row['bill_date'] || '',
+          due_date: row['Due Date'] || row['due_date'] || '',
+          current_month_bill: row['Current Month Bill'] || row['Bill Amount'] || row['current_month_bill'] || '',
+          acd_amount: row['ACD Amount'] || row['acd_amount'] || '0',
+          arrears: row['Arrears'] || row['arrears'] || '0',
+          total_amount: row['Total Amount'] || row['total_amount'] || row['Total'] || '',
+          energy_charges: row['Energy Charges'] || row['energy_charges'] || '',
+          fixed_charges: row['Fixed Charges'] || row['fixed_charges'] || '',
+          status: 'invalid',
+        };
+
+        // Validate
+        if (!bill.asset_id) {
+          bill.error = 'Missing Asset ID';
+        } else if (!bill.bill_month && !bill.bill_date) {
+          bill.error = 'Missing Bill Month/Date';
+        } else if (!bill.total_amount && !bill.current_month_bill) {
+          bill.error = 'Missing Bill Amount';
+        } else {
+          bill.status = 'valid';
+        }
+
+        return bill;
+      });
+
+      // Check for duplicates
+      const assetIds = bills.map(b => b.asset_id);
+      const duplicates = assetIds.filter((id, index) => assetIds.indexOf(id) !== index);
+      
+      bills.forEach(bill => {
+        if (duplicates.includes(bill.asset_id)) {
+          bill.status = 'duplicate';
+          bill.error = 'Duplicate in file';
+        }
+      });
+
+      setParsedBills(bills);
+      
+      const validCount = bills.filter(b => b.status === 'valid').length;
+      
+      toast({
+        title: "Excel Parsed Successfully",
+        description: `Found ${bills.length} bills. ${validCount} valid, ${bills.length - validCount} have issues.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Excel Parsing Failed",
+        description: error.message || "Could not parse Excel file",
+        variant: "destructive",
+      });
+    } finally {
+      setParsing(false);
+    }
+  };
+
+  // Handle file upload
+  const handleFileUpload = (file: File) => {
+    if (!file) return;
+
+    const validTypes = [
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/csv'
+    ];
+
+    if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx?|csv)$/i)) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload an Excel file (.xlsx, .xls) or CSV file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploadedFile(file);
+    parseExcelFile(file);
+  };
+
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  };
+
+  const clearFile = () => {
+    setUploadedFile(null);
+    setParsedBills([]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Download Excel template
+  const downloadExcelTemplate = () => {
+    const template = [
+      {
+        'Asset ID': 'HYD-BQS-0001',
+        'Bill Month': '2025-01',
+        'Units': 40,
+        'Bill Date': '2025-01-05',
+        'Due Date': '2025-01-19',
+        'Current Month Bill': 982,
+        'ACD Amount': 0,
+        'Arrears': 0,
+        'Total Amount': 982,
+        'Energy Charges': 650,
+        'Fixed Charges': 332
+      },
+      {
+        'Asset ID': 'HYD-BQS-0002',
+        'Bill Month': '2025-01',
+        'Units': 55,
+        'Bill Date': '2025-01-05',
+        'Due Date': '2025-01-19',
+        'Current Month Bill': 1250,
+        'ACD Amount': 0,
+        'Arrears': 100,
+        'Total Amount': 1350,
+        'Energy Charges': 890,
+        'Fixed Charges': 360
+      }
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(template);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Power Bills');
+    
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 15 }, // Asset ID
+      { wch: 12 }, // Bill Month
+      { wch: 8 },  // Units
+      { wch: 12 }, // Bill Date
+      { wch: 12 }, // Due Date
+      { wch: 18 }, // Current Month Bill
+      { wch: 12 }, // ACD Amount
+      { wch: 10 }, // Arrears
+      { wch: 15 }, // Total Amount
+      { wch: 15 }, // Energy Charges
+      { wch: 15 }, // Fixed Charges
+    ];
+
+    XLSX.writeFile(wb, 'power-bills-template.xlsx');
+  };
+
+  // Download text template
+  const downloadTextTemplate = () => {
     const template = `Asset ID: HYD-BQS-0001
 Bill Month: 2025-01
 Units: 40
@@ -374,53 +569,152 @@ Total Amount to be Paid: 1350.0`;
         <DialogHeader>
           <DialogTitle>Bulk Power Bill Import</DialogTitle>
           <DialogDescription>
-            Paste multiple bill records separated by blank lines or "---". Each section must include Asset ID.
+            Upload an Excel file or paste multiple bill records. Each record must include Asset ID.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden grid grid-cols-2 gap-4">
-          {/* Left: Paste Area */}
-          <div className="space-y-4 flex flex-col">
-            <div className="flex items-center justify-between">
-              <Label>Paste Bill Data</Label>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={downloadTemplate}
-              >
-                <Download className="mr-2 h-3 w-3" />
-                Template
-              </Button>
+        <Tabs defaultValue="excel" className="flex-1 overflow-hidden flex flex-col">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="excel">
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Excel Upload
+            </TabsTrigger>
+            <TabsTrigger value="paste">
+              <Upload className="mr-2 h-4 w-4" />
+              Paste Text
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="flex-1 overflow-hidden grid grid-cols-2 gap-4 mt-4">
+            {/* Left: Upload/Paste Area */}
+            <div className="space-y-4 flex flex-col">
+              <TabsContent value="excel" className="flex-1 flex flex-col space-y-4 m-0">
+                <div className="flex items-center justify-between">
+                  <Label>Upload Excel File</Label>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={downloadExcelTemplate}
+                  >
+                    <Download className="mr-2 h-3 w-3" />
+                    Template
+                  </Button>
+                </div>
+
+                {/* Drag & Drop Zone */}
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`
+                    flex-1 border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center
+                    transition-colors cursor-pointer
+                    ${isDragging 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-muted-foreground/25 hover:border-primary/50'
+                    }
+                  `}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleFileInputChange}
+                    className="hidden"
+                  />
+                  
+                  {uploadedFile ? (
+                    <div className="text-center space-y-3">
+                      <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                        <FileSpreadsheet className="h-8 w-8 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">{uploadedFile.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(uploadedFile.size / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          clearFile();
+                        }}
+                      >
+                        <X className="mr-2 h-3 w-3" />
+                        Remove
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                        <Upload className="h-8 w-8 text-primary" />
+                      </div>
+                      <p className="text-sm font-medium mb-1">
+                        Drop Excel file here or click to browse
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Supports .xlsx, .xls, .csv files
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                {uploadedFile && (
+                  <div className="bg-muted/50 p-3 rounded-lg text-xs">
+                    <p className="font-semibold mb-1">Expected Columns:</p>
+                    <p className="text-muted-foreground">
+                      Asset ID, Bill Month, Units, Bill Date, Due Date, Current Month Bill, 
+                      ACD Amount, Arrears, Total Amount, Energy Charges, Fixed Charges
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="paste" className="flex-1 flex flex-col space-y-4 m-0">
+                <div className="flex items-center justify-between">
+                  <Label>Paste Bill Data</Label>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={downloadTextTemplate}
+                  >
+                    <Download className="mr-2 h-3 w-3" />
+                    Template
+                  </Button>
+                </div>
+                
+                <Textarea
+                  value={bulkText}
+                  onChange={(e) => setBulkText(e.target.value)}
+                  placeholder="Asset ID: HYD-BQS-0001&#10;Bill Month: 2025-01&#10;Units: 40&#10;Bill Date / Due Date: 05-Jan-25 / 19-Jan-25&#10;Current Month Bill: 982&#10;ACD Amount: 0&#10;Arrears: 0&#10;Total Amount: 982&#10;&#10;---&#10;&#10;Asset ID: HYD-BQS-0002&#10;..."
+                  className="flex-1 font-mono text-xs min-h-[400px]"
+                />
+
+                <Button 
+                  onClick={handleParseBulk}
+                  disabled={!bulkText.trim() || parsing}
+                  className="w-full"
+                >
+                  {parsing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Parsing...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Parse Bills
+                    </>
+                  )}
+                </Button>
+              </TabsContent>
             </div>
-            
-            <Textarea
-              value={bulkText}
-              onChange={(e) => setBulkText(e.target.value)}
-              placeholder="Asset ID: HYD-BQS-0001&#10;Bill Month: 2025-01&#10;Units: 40&#10;Bill Date / Due Date: 05-Jan-25 / 19-Jan-25&#10;Current Month Bill: 982&#10;ACD Amount: 0&#10;Arrears: 0&#10;Total Amount: 982&#10;&#10;---&#10;&#10;Asset ID: HYD-BQS-0002&#10;..."
-              className="flex-1 font-mono text-xs min-h-[400px]"
-            />
 
-            <Button 
-              onClick={handleParseBulk}
-              disabled={!bulkText.trim() || parsing}
-              className="w-full"
-            >
-              {parsing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Parsing...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Parse Bills
-                </>
-              )}
-            </Button>
-          </div>
-
-          {/* Right: Preview Table */}
-          <div className="flex flex-col space-y-4">
+            {/* Right: Preview Table */}
+            <div className="flex flex-col space-y-4">
             <div className="flex items-center justify-between">
               <Label>Parsed Bills Preview</Label>
               {parsedBills.length > 0 && (
@@ -512,8 +806,9 @@ Total Amount to be Paid: 1350.0`;
                 </>
               )}
             </Button>
+            </div>
           </div>
-        </div>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

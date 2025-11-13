@@ -9,6 +9,7 @@ import { RefreshCw, Plus, FileText, Calendar, User, Building2, MapPin } from "lu
 import { format } from "date-fns";
 import { EnhancedBillDialog } from "./EnhancedBillDialog";
 import { FetchBillButton } from "../power-bills/FetchBillButton";
+import { AnomalyBadge } from "@/components/power-bills/AnomalyBadge";
 
 interface EnhancedPowerBillsTabProps {
   assetId: string;
@@ -219,7 +220,16 @@ export function EnhancedPowerBillsTab({ assetId, asset, isAdmin }: EnhancedPower
               <TableBody>
                 {bills.map((bill) => (
                   <TableRow key={bill.id}>
-                    <TableCell className="font-medium">{bill.bill_month || "N/A"}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {bill.bill_month || "N/A"}
+                        <AnomalyBadge 
+                          isAnomaly={bill.is_anomaly}
+                          anomalyType={bill.anomaly_type}
+                          anomalyDetails={bill.anomaly_details}
+                        />
+                      </div>
+                    </TableCell>
                     <TableCell>
                       {bill.bill_date ? format(new Date(bill.bill_date), "dd MMM yyyy") : "N/A"}
                     </TableCell>

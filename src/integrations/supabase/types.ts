@@ -325,6 +325,8 @@ export type Database = {
         Row: {
           acd_amount: number | null
           address: string | null
+          anomaly_details: Json | null
+          anomaly_type: string | null
           area: string | null
           arrears: number | null
           asset_id: string
@@ -344,6 +346,8 @@ export type Database = {
           ero_name: string | null
           fixed_charges: number | null
           id: string
+          is_anomaly: boolean | null
+          last_reconciled_at: string | null
           location: string | null
           notes: string | null
           paid: boolean | null
@@ -363,6 +367,8 @@ export type Database = {
         Insert: {
           acd_amount?: number | null
           address?: string | null
+          anomaly_details?: Json | null
+          anomaly_type?: string | null
           area?: string | null
           arrears?: number | null
           asset_id: string
@@ -382,6 +388,8 @@ export type Database = {
           ero_name?: string | null
           fixed_charges?: number | null
           id?: string
+          is_anomaly?: boolean | null
+          last_reconciled_at?: string | null
           location?: string | null
           notes?: string | null
           paid?: boolean | null
@@ -401,6 +409,8 @@ export type Database = {
         Update: {
           acd_amount?: number | null
           address?: string | null
+          anomaly_details?: Json | null
+          anomaly_type?: string | null
           area?: string | null
           arrears?: number | null
           asset_id?: string
@@ -420,6 +430,8 @@ export type Database = {
           ero_name?: string | null
           fixed_charges?: number | null
           id?: string
+          is_anomaly?: boolean | null
+          last_reconciled_at?: string | null
           location?: string | null
           notes?: string | null
           paid?: boolean | null
@@ -442,6 +454,53 @@ export type Database = {
             columns: ["asset_id"]
             isOneToOne: false
             referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bill_reminders: {
+        Row: {
+          bill_id: string
+          created_at: string | null
+          error_message: string | null
+          id: string
+          message: string
+          recipient: string
+          reminder_type: string
+          scheduled_for: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          bill_id: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          message: string
+          recipient: string
+          reminder_type: string
+          scheduled_for: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          bill_id?: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          message?: string
+          recipient?: string
+          reminder_type?: string
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bill_reminders_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "asset_power_bills"
             referencedColumns: ["id"]
           },
         ]
@@ -1992,6 +2051,42 @@ export type Database = {
           start_date?: string
           status?: Database["public"]["Enums"]["plan_status"]
           total_amount?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      power_bill_jobs: {
+        Row: {
+          asset_id: string
+          created_at: string | null
+          error_message: string | null
+          id: string
+          job_status: string
+          job_type: string
+          result: Json | null
+          run_date: string
+          updated_at: string | null
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          job_status?: string
+          job_type?: string
+          result?: Json | null
+          run_date?: string
+          updated_at?: string | null
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          job_status?: string
+          job_type?: string
+          result?: Json | null
+          run_date?: string
           updated_at?: string | null
         }
         Relationships: []

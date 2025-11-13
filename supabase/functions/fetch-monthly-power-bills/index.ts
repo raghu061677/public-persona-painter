@@ -31,9 +31,10 @@ serve(async (req) => {
     // Fetch all media assets with unique service numbers and illumination
     const { data: assets, error: assetsError } = await supabase
       .from('media_assets')
-      .select('id, unique_service_number, service_number, location, area, city, illumination')
+      .select('id, unique_service_number, service_number, consumer_name, ero, section_name, location, area, city, illumination')
       .not('unique_service_number', 'is', null)
-      .eq('illumination', 'Yes');
+      .not('illumination', 'is', null)
+      .neq('illumination', '');
 
     if (assetsError) {
       console.error('Error fetching assets:', assetsError);
@@ -42,16 +43,32 @@ serve(async (req) => {
 
     console.log(`Found ${assets?.length || 0} illuminated assets with unique service numbers`);
 
-    let successCount = 0;
-    let failureCount = 0;
-    const results: FetchResult[] = [];
+    const results = {
+      total: assets?.length || 0,
+      success: 0,
+      failed: 0,
+      skipped: 0,
+      newBills: 0,
+      anomaliesDetected: 0,
+      expensesCreated: 0,
+      details: [] as FetchResult[],
+    };
 
-    // Process each asset
+    // Process each asset with job tracking and anomaly detection
     for (const asset of assets || []) {
+      const jobId = crypto.randomUUID();
+      
       try {
+        // Create job record
+        await supabase.from('power_bill_jobs').insert({
+          id: jobId,
+          asset_id: asset.id,
+          job_type: 'monthly_fetch',
+          job_status: 'running',
+        });
+
         console.log(`Fetching bill for asset ${asset.id} (${asset.location})`);
 
-        // Call the fetch-tgspdcl-bill function with unique service number
         const { data: billData, error: billError } = await supabase.functions.invoke(
           'fetch-tgspdcl-bill',
           {
@@ -62,68 +79,143 @@ serve(async (req) => {
           }
         );
 
-        if (billError) {
-          throw billError;
+        if (billError || !billData?.success) {
+          throw new Error(billData?.error || billError?.message || 'Unknown error');
         }
 
-        if (billData?.success) {
-          successCount++;
-          results.push({
-            assetId: asset.id,
-            location: asset.location,
-            success: true,
-            billAmount: billData.bill?.total_due || 0
-          });
-          console.log(`✓ Successfully fetched bill for ${asset.id}`);
-        } else {
-          failureCount++;
-          results.push({
-            assetId: asset.id,
-            location: asset.location,
-            success: false,
-            error: billData?.error || 'Unknown error'
-          });
-          console.error(`✗ Failed to fetch bill for ${asset.id}: ${billData?.error}`);
+        const bill = billData.data;
+        const billMonth = bill.bill_month || new Date().toISOString().split('T')[0];
+
+        // Check if bill exists
+        const { data: existingBill } = await supabase
+          .from('asset_power_bills')
+          .select('id')
+          .eq('asset_id', asset.id)
+          .eq('bill_month', billMonth)
+          .maybeSingle();
+
+        if (existingBill) {
+          results.skipped++;
+          await supabase.from('power_bill_jobs').update({
+            job_status: 'completed',
+            result: { message: 'Bill already exists' },
+          }).eq('id', jobId);
+          continue;
         }
 
-        // Add small delay to avoid overwhelming the TGSPDCL server
+        // Anomaly detection
+        const { data: recentBills } = await supabase
+          .from('asset_power_bills')
+          .select('bill_amount')
+          .eq('asset_id', asset.id)
+          .order('bill_month', { ascending: false })
+          .limit(6);
+
+        let isAnomaly = false;
+        let anomalyType = null;
+        let anomalyDetails = {};
+
+        if (recentBills && recentBills.length > 0) {
+          const avgAmount = recentBills.reduce((sum, b) => sum + (b.bill_amount || 0), 0) / recentBills.length;
+          const currentAmount = bill.bill_amount || bill.total_due || 0;
+
+          if (currentAmount > avgAmount * 1.35) {
+            isAnomaly = true;
+            anomalyType = 'high_spike';
+            anomalyDetails = {
+              currentAmount,
+              averageAmount: avgAmount,
+              percentageIncrease: ((currentAmount - avgAmount) / avgAmount * 100).toFixed(2),
+            };
+            results.anomaliesDetected++;
+          }
+        }
+
+        // Insert new bill
+        const { data: newBill } = await supabase
+          .from('asset_power_bills')
+          .insert({
+            asset_id: asset.id,
+            unique_service_number: bill.unique_service_number,
+            consumer_name: bill.consumer_name || asset.consumer_name,
+            service_number: bill.service_number || asset.service_number,
+            ero_name: bill.ero_name || asset.ero,
+            section_name: bill.section_name || asset.section_name,
+            consumer_address: bill.consumer_address,
+            bill_date: bill.bill_date,
+            due_date: bill.due_date,
+            bill_month: billMonth,
+            bill_amount: bill.bill_amount || 0,
+            energy_charges: bill.energy_charges || 0,
+            fixed_charges: bill.fixed_charges || 0,
+            arrears: bill.arrears || 0,
+            total_due: bill.total_due || bill.bill_amount || 0,
+            payment_status: 'Pending',
+            is_anomaly: isAnomaly,
+            anomaly_type: anomalyType,
+            anomaly_details: anomalyDetails,
+          })
+          .select()
+          .single();
+
+        results.newBills++;
+
+        // Auto-create expense
+        const { data: expenseId } = await supabase.rpc('generate_expense_id');
+        await supabase.from('expenses').insert({
+          id: expenseId,
+          bill_id: newBill.id,
+          category: 'Power Bill',
+          vendor_name: 'TGSPDCL',
+          amount: newBill.bill_amount || 0,
+          gst_percent: 0,
+          gst_amount: 0,
+          total_amount: newBill.total_due || 0,
+          payment_status: 'Pending',
+          notes: `Auto-generated from power bill ${billMonth} for asset ${asset.id}`,
+          bill_month: billMonth,
+        });
+
+        results.expensesCreated++;
+        results.success++;
+
+        await supabase.from('power_bill_jobs').update({
+          job_status: 'completed',
+          result: { billAmount: newBill.bill_amount, isAnomaly },
+        }).eq('id', jobId);
+
+        results.details.push({
+          assetId: asset.id,
+          location: asset.location,
+          success: true,
+          billAmount: newBill.bill_amount,
+        });
+
+        // Small delay
         await new Promise(resolve => setTimeout(resolve, 2000));
 
       } catch (error) {
-        failureCount++;
+        results.failed++;
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        results.push({
+        
+        await supabase.from('power_bill_jobs').update({
+          job_status: 'failed',
+          error_message: errorMessage,
+        }).eq('id', jobId);
+
+        results.details.push({
           assetId: asset.id,
           location: asset.location,
           success: false,
-          error: errorMessage
+          error: errorMessage,
         });
-        console.error(`✗ Error fetching bill for ${asset.id}:`, errorMessage);
       }
     }
 
-    // Create summary
-    const summary = {
-      jobRunAt: new Date().toISOString(),
-      totalAssets: assets?.length || 0,
-      successCount,
-      failureCount,
-      failures: results.filter(r => !r.success).slice(0, 10),
-      completionRate: assets?.length ? ((successCount / assets.length) * 100).toFixed(2) + '%' : '0%'
-    };
-
-    console.log('Monthly power bills fetch job completed:', summary);
-
-    // Send email notification with job results
-    try {
-      await sendJobCompletionEmail(supabase, summary, results);
-      console.log('✓ Job completion email sent');
-    } catch (emailError) {
-      console.error('✗ Failed to send job completion email:', emailError);
-    }
+    console.log('Monthly power bills fetch job completed:', results);
 
     // Trigger reminder emails for pending bills
-    if (successCount > 0) {
+    if (results.success > 0) {
       try {
         console.log('Triggering power bill reminders...');
         const { error: reminderError } = await supabase.functions.invoke('send-power-bill-reminders');
@@ -141,7 +233,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         message: 'Monthly power bills fetch completed',
-        summary
+        results,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

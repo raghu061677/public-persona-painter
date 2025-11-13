@@ -13,6 +13,8 @@ import { PowerBillFetchDialog } from "@/components/media-assets/PowerBillFetchDi
 import { useState as useDialogState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { AnomalyBadge } from "@/components/power-bills/AnomalyBadge";
+import { BillJobsMonitor } from "@/components/power-bills/BillJobsMonitor";
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -93,10 +95,10 @@ export default function PowerBillsDashboard() {
 
       if (assetsError) throw assetsError;
 
-      // Fetch latest bills for these assets
+      // Fetch latest bills for these assets with anomaly info
       const { data: billsData, error: billsError } = await supabase
         .from('asset_power_bills')
-        .select('asset_id, bill_amount, bill_month, payment_status')
+        .select('asset_id, bill_amount, bill_month, payment_status, is_anomaly, anomaly_type, anomaly_details')
         .order('bill_month', { ascending: false });
 
       if (billsError) throw billsError;

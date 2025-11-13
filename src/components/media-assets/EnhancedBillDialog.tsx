@@ -66,12 +66,12 @@ export function EnhancedBillDialog({
     bill_month: "",
     units: "",
     bill_amount: "",
-    energy_charges: "",
-    fixed_charges: "",
+    acd_amount: "",
     arrears: "",
     total_due: "",
-    payment_status: "Pending",
-    payment_reference: "",
+    payment_method: "online",
+    payment_status: "unpaid" as const,
+    transaction_id: "",
     notes: "",
   });
 
@@ -368,12 +368,12 @@ export function EnhancedBillDialog({
       bill_month: "",
       units: "",
       bill_amount: "",
-      energy_charges: "",
-      fixed_charges: "",
+      acd_amount: "",
       arrears: "",
       total_due: "",
-      payment_status: "Pending",
-      payment_reference: "",
+      payment_method: "online",
+      payment_status: "unpaid" as const,
+      transaction_id: "",
       notes: "",
     });
     setBillDate(undefined);
@@ -466,12 +466,12 @@ export function EnhancedBillDialog({
         bill_month: formData.bill_month,
         units: parseFloat(formData.units) || 0,
         bill_amount: parseFloat(formData.bill_amount) || 0,
-        energy_charges: parseFloat(formData.energy_charges) || 0,
-        fixed_charges: parseFloat(formData.fixed_charges) || 0,
+        acd_amount: parseFloat(formData.acd_amount) || 0,
         arrears: parseFloat(formData.arrears) || 0,
-        total_due: parseFloat(formData.total_due) || parseFloat(formData.bill_amount) || 0,
+        total_due: parseFloat(formData.total_due) || 0,
         payment_status: formData.payment_status,
-        payment_reference: formData.payment_reference || null,
+        payment_method: formData.payment_method,
+        transaction_id: formData.transaction_id || null,
         notes: formData.notes || null,
       };
 
@@ -789,22 +789,12 @@ export function EnhancedBillDialog({
                 />
               </div>
               <div className="space-y-2">
-                <Label>Energy Charges (₹)</Label>
+                <Label>ACD Amount (₹)</Label>
                 <Input
                   type="number"
                   step="0.01"
-                  value={formData.energy_charges}
-                  onChange={(e) => updateField("energy_charges", e.target.value)}
-                  placeholder="0.00"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Fixed Charges (₹)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.fixed_charges}
-                  onChange={(e) => updateField("fixed_charges", e.target.value)}
+                  value={formData.acd_amount}
+                  onChange={(e) => updateField("acd_amount", e.target.value)}
                   placeholder="0.00"
                 />
               </div>
@@ -865,10 +855,10 @@ export function EnhancedBillDialog({
                 </Popover>
               </div>
               <div className="space-y-2">
-                <Label>Payment Reference</Label>
+                <Label>Transaction ID</Label>
                 <Input
-                  value={formData.payment_reference}
-                  onChange={(e) => updateField("payment_reference", e.target.value)}
+                  value={formData.transaction_id}
+                  onChange={(e) => updateField("transaction_id", e.target.value)}
                   placeholder="Transaction ID / Reference Number"
                 />
               </div>

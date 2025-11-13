@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { z } from "zod";
 
 interface EnhancedBillDialogProps {
   open: boolean;
@@ -27,7 +28,17 @@ interface EnhancedBillDialogProps {
   onSuccess?: () => void;
 }
 
-export function EnhancedBillDialog({ 
+// Validation schema
+const billSchema = z.object({
+  bill_month: z.string().min(1, "Bill month is required").regex(/^\d{4}-\d{2}-01$/, "Invalid date format"),
+  bill_amount: z.string().min(1, "Bill amount is required").refine((val) => !isNaN(Number(val)) && Number(val) >= 0, "Must be a valid positive number"),
+  total_due: z.string().min(1, "Total due is required").refine((val) => !isNaN(Number(val)) && Number(val) >= 0, "Must be a valid positive number"),
+  units: z.string().optional(),
+  acd_amount: z.string().optional(),
+  arrears: z.string().optional(),
+});
+
+export function EnhancedBillDialog({
   open, 
   onOpenChange, 
   assetId, 
@@ -41,6 +52,7 @@ export function EnhancedBillDialog({
   const [billDate, setBillDate] = useState<Date>();
   const [dueDate, setDueDate] = useState<Date>();
   const [paidDate, setPaidDate] = useState<Date>();
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   
   // Quick Paste state
   const [pasteOpen, setPasteOpen] = useState(true);
@@ -487,6 +499,41 @@ export function EnhancedBillDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Clear previous validation errors
+    setValidationErrors({});
+    
+    // Validate required fields
+    try {
+      billSchema.parse({
+        bill_month: formData.bill_month,
+        bill_amount: formData.bill_amount,
+        total_due: formData.total_due,
+        units: formData.units,
+        acd_amount: formData.acd_amount,
+        arrears: formData.arrears,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const errors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            errors[err.path[0] as string] = err.message;
+          }
+        });
+        setValidationErrors(errors);
+        
+        // Show toast with first error
+        const firstError = error.errors[0];
+        toast({
+          title: "Validation Error",
+          description: firstError.message,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
     setLoading(true);
 
     try {
@@ -771,7 +818,9 @@ export function EnhancedBillDialog({
             <h3 className="text-lg font-semibold mb-4">Bill Details</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Bill Month</Label>
+                <Label className={validationErrors.bill_month ? "text-destructive" : ""}>
+                  Bill Month <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   type="month"
                   value={formData.bill_month ? formData.bill_month.substring(0, 7) : ''}
@@ -779,9 +828,14 @@ export function EnhancedBillDialog({
                     // Convert YYYY-MM to YYYY-MM-01 for database
                     const value = e.target.value ? `${e.target.value}-01` : '';
                     updateField("bill_month", value);
+                    setValidationErrors(prev => ({ ...prev, bill_month: '' }));
                   }}
                   placeholder="Select month"
+                  className={validationErrors.bill_month ? "border-destructive" : ""}
                 />
+                {validationErrors.bill_month && (
+                  <p className="text-sm text-destructive">{validationErrors.bill_month}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Units Consumed</Label>
@@ -821,14 +875,23 @@ export function EnhancedBillDialog({
                 </Popover>
               </div>
               <div className="space-y-2">
-                <Label>Bill Amount (₹)</Label>
+                <Label className={validationErrors.bill_amount ? "text-destructive" : ""}>
+                  Bill Amount (₹) <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   type="number"
                   step="0.01"
                   value={formData.bill_amount}
-                  onChange={(e) => updateField("bill_amount", e.target.value)}
+                  onChange={(e) => {
+                    updateField("bill_amount", e.target.value);
+                    setValidationErrors(prev => ({ ...prev, bill_amount: '' }));
+                  }}
                   placeholder="0.00"
+                  className={validationErrors.bill_amount ? "border-destructive" : ""}
                 />
+                {validationErrors.bill_amount && (
+                  <p className="text-sm text-destructive">{validationErrors.bill_amount}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>ACD Amount (₹)</Label>
@@ -851,14 +914,23 @@ export function EnhancedBillDialog({
                 />
               </div>
               <div className="space-y-2">
-                <Label>Total Due (₹)</Label>
+                <Label className={validationErrors.total_due ? "text-destructive" : ""}>
+                  Total Due (₹) <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   type="number"
                   step="0.01"
                   value={formData.total_due}
-                  onChange={(e) => updateField("total_due", e.target.value)}
+                  onChange={(e) => {
+                    updateField("total_due", e.target.value);
+                    setValidationErrors(prev => ({ ...prev, total_due: '' }));
+                  }}
                   placeholder="0.00"
+                  className={validationErrors.total_due ? "border-destructive" : ""}
                 />
+                {validationErrors.total_due && (
+                  <p className="text-sm text-destructive">{validationErrors.total_due}</p>
+                )}
               </div>
             </div>
           </div>

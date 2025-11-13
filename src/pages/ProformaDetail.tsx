@@ -8,49 +8,8 @@ import { ArrowLeft, Calendar, Building2, FileText, IndianRupee } from "lucide-re
 import { ProformaPDFButton } from "@/components/proforma/ProformaPDFButton";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
+import type { ProformaInvoice, ProformaInvoiceItem } from "@/types/proforma";
 
-interface ProformaInvoice {
-  id: string;
-  proforma_number: string;
-  proforma_date: string;
-  reference_plan_id?: string;
-  client_name: string;
-  client_gstin?: string;
-  client_address?: string;
-  client_state?: string;
-  plan_name?: string;
-  campaign_start_date?: string;
-  campaign_end_date?: string;
-  subtotal: number;
-  printing_total: number;
-  mounting_total: number;
-  discount_total: number;
-  taxable_amount: number;
-  cgst_amount: number;
-  sgst_amount: number;
-  total_tax: number;
-  grand_total: number;
-  status: string;
-  additional_notes?: string;
-}
-
-interface ProformaItem {
-  id: string;
-  asset_id: string;
-  display_name: string;
-  area: string;
-  location: string;
-  direction: string;
-  dimension_width: number;
-  dimension_height: number;
-  total_sqft: number;
-  illumination_type: string;
-  negotiated_rate: number;
-  discount: number;
-  printing_charge: number;
-  mounting_charge: number;
-  line_total: number;
-}
 
 const ProformaDetail = () => {
   const { id } = useParams();
@@ -58,7 +17,7 @@ const ProformaDetail = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [proforma, setProforma] = useState<ProformaInvoice | null>(null);
-  const [items, setItems] = useState<ProformaItem[]>([]);
+  const [items, setItems] = useState<ProformaInvoiceItem[]>([]);
 
   useEffect(() => {
     if (id) {
@@ -70,23 +29,23 @@ const ProformaDetail = () => {
     try {
       // Fetch proforma invoice
       const { data: proformaData, error: proformaError } = await supabase
-        .from('proforma_invoices')
+        .from('proforma_invoices' as any)
         .select('*')
         .eq('id', id)
-        .single() as any;
+        .single();
 
       if (proformaError) throw proformaError;
-      setProforma(proformaData);
+      setProforma(proformaData as unknown as ProformaInvoice);
 
       // Fetch items
       const { data: itemsData, error: itemsError } = await supabase
-        .from('proforma_invoice_items')
+        .from('proforma_invoice_items' as any)
         .select('*')
         .eq('proforma_invoice_id', id)
-        .order('created_at') as any;
+        .order('created_at');
 
       if (itemsError) throw itemsError;
-      setItems(itemsData || []);
+      setItems((itemsData || []) as unknown as ProformaInvoiceItem[]);
 
     } catch (error) {
       console.error('Error fetching proforma details:', error);

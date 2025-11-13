@@ -4,6 +4,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { generateProformaPDF } from "@/lib/proforma/generateProformaPDF";
+import type { ProformaInvoice, ProformaInvoiceItem } from "@/types/proforma";
 
 interface ProformaPDFButtonProps {
   proformaId: string;
@@ -25,19 +26,19 @@ export const ProformaPDFButton = ({
     try {
       // Fetch proforma invoice data
       const { data: proformaData, error: proformaError } = await supabase
-        .from('proforma_invoices')
+        .from('proforma_invoices' as any)
         .select('*')
         .eq('id', proformaId)
-        .single() as any;
+        .single();
 
       if (proformaError) throw proformaError;
 
       // Fetch proforma invoice items
       const { data: itemsData, error: itemsError } = await supabase
-        .from('proforma_invoice_items')
+        .from('proforma_invoice_items' as any)
         .select('*')
         .eq('proforma_invoice_id', proformaId)
-        .order('created_at') as any;
+        .order('created_at');
 
       if (itemsError) throw itemsError;
 
@@ -52,12 +53,12 @@ export const ProformaPDFButton = ({
 
       // Generate PDF
       const pdf = generateProformaPDF({
-        ...proformaData,
-        items: itemsData
+        ...(proformaData as unknown as ProformaInvoice),
+        items: itemsData as unknown as ProformaInvoiceItem[]
       });
 
       // Download PDF
-      const fileName = `Proforma_${proformaData.proforma_number.replace(/\//g, '-')}.pdf`;
+      const fileName = `Proforma_${(proformaData as any).proforma_number.replace(/\//g, '-')}.pdf`;
       pdf.save(fileName);
 
       toast({

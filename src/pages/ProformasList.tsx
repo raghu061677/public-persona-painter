@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import type { ProformaInvoice } from "@/types/proforma";
 
 interface Proforma {
   id: string;
@@ -32,12 +33,12 @@ const ProformasList = () => {
   const fetchProformas = async () => {
     try {
       const { data, error } = await supabase
-        .from('proforma_invoices')
+        .from('proforma_invoices' as any)
         .select('id, proforma_number, proforma_date, client_name, plan_name, grand_total, status')
-        .order('proforma_date', { ascending: false }) as any;
+        .order('proforma_date', { ascending: false });
 
       if (error) throw error;
-      setProformas(data || []);
+      setProformas((data || []) as unknown as Proforma[]);
     } catch (error) {
       console.error('Error fetching proformas:', error);
       toast({

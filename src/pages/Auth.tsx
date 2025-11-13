@@ -38,7 +38,7 @@ const Auth = () => {
         navigate(dashboardRoute);
       } catch (error) {
         // Fallback to default dashboard
-        navigate("/dashboard");
+        navigate("/admin/dashboard");
       }
     };
 

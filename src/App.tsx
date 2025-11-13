@@ -70,6 +70,7 @@ import MobileOperations from "./pages/MobileOperations";
 import PlanComparison from "./pages/PlanComparison";
 import ProformasList from "./pages/ProformasList";
 import ProformaDetail from "./pages/ProformaDetail";
+import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -86,6 +87,7 @@ const App = () => (
             {/* Public routes */}
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/install" element={<Install />} />
             <Route path="/admin/plans/:id/share/:shareToken" element={<PlanShare />} />
             <Route path="/mobile/field-app" element={<MobileFieldApp />} />
             <Route path="/mobile/upload/:campaignId/:assetId" element={<MobileUpload />} />

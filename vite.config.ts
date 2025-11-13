@@ -50,7 +50,9 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,json}"],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,json,woff,woff2}"],
+        navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/api/, /^\/admin\/plans\/.*\/share/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/psryfvfdmjguhamvmqqd\.supabase\.co\/.*/i,
@@ -58,11 +60,34 @@ export default defineConfig(({ mode }) => ({
             options: {
               cacheName: "supabase-api-cache",
               expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60,
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60, // 1 hour
               },
               cacheableResponse: {
                 statuses: [0, 200],
+              },
+              networkTimeoutSeconds: 10,
+            },
+          },
+          {
+            urlPattern: /\/admin\/(dashboard|clients|media-assets|plans|campaigns)/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "pages-cache",
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 24 * 60 * 60, // 24 hours
+              },
+            },
+          },
+          {
+            urlPattern: /\.(png|jpg|jpeg|svg|gif|webp)$/,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "images-cache",
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
               },
             },
           },

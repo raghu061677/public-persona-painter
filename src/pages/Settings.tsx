@@ -15,6 +15,7 @@ import { ThemeCustomization } from "@/components/settings/ThemeCustomization";
 import { ColorLegend } from "@/components/settings/ColorLegend";
 import { AlertThresholdSettings } from "@/components/settings/AlertThresholdSettings";
 import { WatermarkSettings } from "@/components/settings/WatermarkSettings";
+import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { ActivityLogViewer } from "@/components/audit/ActivityLogViewer";
 
 export default function Settings() {
@@ -309,8 +310,9 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="branding">Branding</TabsTrigger>
           <TabsTrigger value="alerts">Alerts</TabsTrigger>
@@ -506,6 +508,10 @@ export default function Settings() {
               </Card>
             </>
           )}
+        </TabsContent>
+
+        <TabsContent value="notifications" className="space-y-6 mt-6">
+          <NotificationSettings />
         </TabsContent>
 
         <TabsContent value="branding" className="space-y-6 mt-6">

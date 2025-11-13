@@ -500,7 +500,7 @@ export function EnhancedBillDialog({
         consumer_address: formData.consumer_address,
         bill_date: billDate ? format(billDate, "yyyy-MM-dd") : null,
         due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
-        paid_date: paidDate ? format(paidDate, "yyyy-MM-dd") : null,
+        payment_date: paidDate ? format(paidDate, "yyyy-MM-dd") : null,
         bill_month: formData.bill_month,
         units: parseFloat(formData.units) || 0,
         bill_amount: parseFloat(formData.bill_amount) || 0,

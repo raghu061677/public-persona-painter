@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, UserPlus, Pencil, Trash2, Mail, Shield, Upload, Key } from "lucide-react";
+import { Search, UserPlus, Pencil, Trash2, Mail, Shield, Upload, Key, MoreVertical } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import EditUserDialog from "@/components/users/EditUserDialog";
 import AddUserDialog from "@/components/users/AddUserDialog";
@@ -19,6 +19,7 @@ import TeamsManagement from "@/components/users/TeamsManagement";
 import UserActivityDashboard from "@/components/users/UserActivityDashboard";
 import BulkImportDialog from "@/components/users/BulkImportDialog";
 import PasswordResetDialog from "@/components/users/PasswordResetDialog";
+import { RoleManagementDialog } from "@/components/users/RoleManagementDialog";
 import { logAudit } from "@/utils/auditLog";
 import {
   Table,
@@ -45,6 +46,14 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface UserProfile {
   id: string;
@@ -83,7 +92,13 @@ export default function UserManagement() {
   const [editOpen, setEditOpen] = useState(false);
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [passwordResetOpen, setPasswordResetOpen] = useState(false);
+  const [roleManagementOpen, setRoleManagementOpen] = useState(false);
   const [selectedUserForReset, setSelectedUserForReset] = useState<{
+    id: string;
+    email: string;
+    username: string;
+  } | null>(null);
+  const [selectedUserForRoleManagement, setSelectedUserForRoleManagement] = useState<{
     id: string;
     email: string;
     username: string;
@@ -559,6 +574,15 @@ export default function UserManagement() {
           userId={selectedUserForReset.id}
           userEmail={selectedUserForReset.email}
           username={selectedUserForReset.username}
+        />
+      )}
+
+      {selectedUserForRoleManagement && (
+        <RoleManagementDialog
+          open={roleManagementOpen}
+          onOpenChange={setRoleManagementOpen}
+          user={selectedUserForRoleManagement}
+          onSuccess={loadData}
         />
       )}
     </div>

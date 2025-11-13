@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Filter, Camera, Calendar, MapPin, User } from "lucide-react";
+import { Search, Filter, Camera, Calendar, MapPin, User, FileDown, CheckSquare, Square } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
+import { PhotoExportDialog } from "@/components/gallery/PhotoExportDialog";
 
 interface MediaPhoto {
   id: string;
@@ -28,6 +30,8 @@ export default function PhotoGallery() {
   const [filteredPhotos, setFilteredPhotos] = useState<MediaPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState<MediaPhoto | null>(null);
+  const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set());
+  const [showExportDialog, setShowExportDialog] = useState(false);
   
   // Filter states
   const [searchAsset, setSearchAsset] = useState("");
@@ -85,6 +89,36 @@ export default function PhotoGallery() {
     setFilteredPhotos(filtered);
   };
 
+  const togglePhotoSelection = (photoId: string) => {
+    const newSelected = new Set(selectedPhotos);
+    if (newSelected.has(photoId)) {
+      newSelected.delete(photoId);
+    } else {
+      newSelected.add(photoId);
+    }
+    setSelectedPhotos(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedPhotos.size === filteredPhotos.length) {
+      setSelectedPhotos(new Set());
+    } else {
+      setSelectedPhotos(new Set(filteredPhotos.map(p => p.id)));
+    }
+  };
+
+  const handleExport = () => {
+    if (selectedPhotos.size === 0) {
+      toast({
+        title: "No photos selected",
+        description: "Please select at least one photo to export",
+        variant: "destructive",
+      });
+      return;
+    }
+    setShowExportDialog(true);
+  };
+
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
       Mounting: "bg-blue-500",
@@ -115,10 +149,18 @@ export default function PhotoGallery() {
             Browse all media photos across assets, campaigns, and clients
           </p>
         </div>
-        <Button onClick={loadPhotos}>
-          <Camera className="mr-2 h-4 w-4" />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          {selectedPhotos.size > 0 && (
+            <Button variant="outline" onClick={handleExport}>
+              <FileDown className="mr-2 h-4 w-4" />
+              Export ({selectedPhotos.size})
+            </Button>
+          )}
+          <Button onClick={loadPhotos}>
+            <Camera className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Filters Card */}
@@ -175,6 +217,49 @@ export default function PhotoGallery() {
         </CardContent>
       </Card>
 
+      {/* Selection Actions Bar */}
+      {selectedPhotos.size > 0 && (
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleSelectAll}
+                >
+                  {selectedPhotos.size === filteredPhotos.length ? (
+                    <CheckSquare className="h-4 w-4 mr-2" />
+                  ) : (
+                    <Square className="h-4 w-4 mr-2" />
+                  )}
+                  {selectedPhotos.size === filteredPhotos.length ? 'Deselect All' : 'Select All'}
+                </Button>
+                <span className="text-sm font-medium">
+                  {selectedPhotos.size} photo{selectedPhotos.size !== 1 ? 's' : ''} selected
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedPhotos(new Set())}
+                >
+                  Clear Selection
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleExport}
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Export PDF
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Tabs for quick category filtering */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-6">
@@ -210,14 +295,32 @@ export default function PhotoGallery() {
               {filteredPhotos.map((photo) => (
                 <Card
                   key={photo.id}
-                  className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-                  onClick={() => setSelectedPhoto(photo)}
+                  className={`overflow-hidden transition-all ${
+                    selectedPhotos.has(photo.id) ? 'ring-2 ring-primary shadow-lg' : 'hover:shadow-lg'
+                  }`}
                 >
                   <div className="aspect-square relative overflow-hidden bg-muted">
+                    {/* Selection Checkbox */}
+                    <div 
+                      className="absolute top-2 left-2 z-10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        togglePhotoSelection(photo.id);
+                      }}
+                    >
+                      <div className="bg-background/80 backdrop-blur-sm rounded p-1 hover:bg-background cursor-pointer">
+                        <Checkbox
+                          checked={selectedPhotos.has(photo.id)}
+                          onCheckedChange={() => togglePhotoSelection(photo.id)}
+                        />
+                      </div>
+                    </div>
+
                     <img
                       src={photo.photo_url}
                       alt={`${photo.asset_id} - ${photo.category}`}
-                      className="object-cover w-full h-full hover:scale-105 transition-transform duration-300"
+                      className="object-cover w-full h-full hover:scale-105 transition-transform duration-300 cursor-pointer"
+                      onClick={() => setSelectedPhoto(photo)}
                     />
                     <div className="absolute top-2 right-2">
                       <Badge className={getCategoryColor(photo.category)}>
@@ -275,6 +378,13 @@ export default function PhotoGallery() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Export Dialog */}
+      <PhotoExportDialog
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
+        selectedPhotos={photos.filter(p => selectedPhotos.has(p.id))}
+      />
     </div>
   );
 }

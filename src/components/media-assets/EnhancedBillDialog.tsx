@@ -108,9 +108,9 @@ export function EnhancedBillDialog({
         data.bill_month = lines[index + 1];
       }
       
-      // Units
+      // Units - check same line first (tab-separated), then next line
       if (line.includes('Units') && !line.includes('Bill Date')) {
-        const unitsMatch = line.match(/Units[\s:]+(\d+)/i);
+        const unitsMatch = line.match(/Units[\s\t:]+(\d+)/i);
         if (unitsMatch) {
           data.units = unitsMatch[1];
         } else if (lines[index + 1]) {
@@ -118,47 +118,78 @@ export function EnhancedBillDialog({
         }
       }
       
-      // Bill Date / Due Date in format "05-Nov-25 / 19-Nov-25"
+      // Bill Date / Due Date in format "Bill Date / Due Date	05-Nov-25 / 19-Nov-25"
       if (line.includes('Bill Date') && line.includes('Due Date')) {
-        const dates = line.split('/').map(d => d.trim());
-        if (dates.length >= 2) {
-          // Extract dates from "Bill Date / Due Date	05-Nov-25 / 19-Nov-25"
-          const datePart = dates[dates.length - 2].split(/\s+/).pop(); // Get "05-Nov-25"
-          const dueDatePart = dates[dates.length - 1].split(/\s+/)[0]; // Get "19-Nov-25"
-          
-          if (datePart) data.bill_date = datePart;
-          if (dueDatePart) data.due_date = dueDatePart;
+        // Try to extract dates from the same line (tab-separated format)
+        const tabSplit = line.split(/[\t]+/);
+        if (tabSplit.length >= 2) {
+          const datesPart = tabSplit[tabSplit.length - 1]; // Get "05-Nov-25 / 19-Nov-25"
+          const dates = datesPart.split('/').map(d => d.trim());
+          if (dates.length >= 2) {
+            data.bill_date = dates[0];
+            data.due_date = dates[1];
+          }
         }
       }
       
       // Individual Bill Date
-      if (line.includes('Bill Date') && !line.includes('Due Date') && lines[index + 1]) {
-        data.bill_date = lines[index + 1];
+      if (line.includes('Bill Date') && !line.includes('Due Date')) {
+        const tabSplit = line.split(/[\t]+/);
+        if (tabSplit.length >= 2) {
+          data.bill_date = tabSplit[1].trim();
+        } else if (lines[index + 1]) {
+          data.bill_date = lines[index + 1];
+        }
       }
       
       // Individual Due Date
-      if (line.includes('Due Date') && !line.includes('Bill Date') && lines[index + 1]) {
-        data.due_date = lines[index + 1];
+      if (line.includes('Due Date') && !line.includes('Bill Date')) {
+        const tabSplit = line.split(/[\t]+/);
+        if (tabSplit.length >= 2) {
+          data.due_date = tabSplit[1].trim();
+        } else if (lines[index + 1]) {
+          data.due_date = lines[index + 1];
+        }
       }
       
-      // Current Month Bill
-      if (line.includes('Current Month Bill') && lines[index + 1]) {
-        data.bill_amount = lines[index + 1].replace(/[₹,]/g, '');
+      // Current Month Bill - check same line first (tab-separated), then next line
+      if (line.includes('Current Month Bill')) {
+        const tabSplit = line.split(/[\t]+/);
+        if (tabSplit.length >= 2) {
+          data.bill_amount = tabSplit[1].replace(/[₹,]/g, '').trim();
+        } else if (lines[index + 1]) {
+          data.bill_amount = lines[index + 1].replace(/[₹,]/g, '').trim();
+        }
       }
       
-      // ACD Amount
-      if (line.includes('ACD Amount') && lines[index + 1]) {
-        data.acd_amount = lines[index + 1].replace(/[₹,]/g, '');
+      // ACD Amount - check same line first (tab-separated), then next line
+      if (line.includes('ACD Amount')) {
+        const tabSplit = line.split(/[\t]+/);
+        if (tabSplit.length >= 2) {
+          data.acd_amount = tabSplit[1].replace(/[₹,]/g, '').trim();
+        } else if (lines[index + 1]) {
+          data.acd_amount = lines[index + 1].replace(/[₹,]/g, '').trim();
+        }
       }
       
-      // Arrears
-      if (line.includes('Arrears') && lines[index + 1]) {
-        data.arrears = lines[index + 1].replace(/[₹,]/g, '');
+      // Arrears - check same line first (tab-separated), then next line
+      if (line.includes('Arrears')) {
+        const tabSplit = line.split(/[\t]+/);
+        if (tabSplit.length >= 2) {
+          data.arrears = tabSplit[1].replace(/[₹,]/g, '').trim();
+        } else if (lines[index + 1]) {
+          data.arrears = lines[index + 1].replace(/[₹,]/g, '').trim();
+        }
       }
       
-      // Total Amount (multiple variations)
-      if ((line.includes('Total Amount Payable') || line.includes('Total Amount to be Paid')) && lines[index + 1]) {
-        data.total_due = lines[index + 1].replace(/[₹,]/g, '');
+      // Total Amount to be Paid - check same line first (tab-separated), then next line
+      if (line.includes('Total Amount to be Paid') || line.includes('Total Amount Payable')) {
+        const tabSplit = line.split(/[\t]+/);
+        if (tabSplit.length >= 2) {
+          data.total_due = tabSplit[1].replace(/[₹,]/g, '').trim();
+        } else if (lines[index + 1]) {
+          data.total_due = lines[index + 1].replace(/[₹,]/g, '').trim();
+        }
       }
     });
 

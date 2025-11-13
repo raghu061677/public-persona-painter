@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { Upload, X, FileImage, Zap, CheckCircle2, ImagePlus } from "lucide-react";
+import { Upload, X, FileImage, Zap, CheckCircle2, ImagePlus, Wand2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { addWatermarkBatch, createPreviewUrl, revokePreviewUrls } from "@/lib/imageWatermark";
+import { PhotoEditorDialog } from "./PhotoEditorDialog";
+import { logActivity } from "@/utils/activityLogger";
 
 interface PhotoUploadSectionProps {
   campaignId: string;
@@ -37,6 +39,7 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
   const [isUploading, setIsUploading] = useState(false);
   const [previewFiles, setPreviewFiles] = useState<PreviewFile[]>([]);
   const [showPreview, setShowPreview] = useState(false);
+  const [showPhotoEditor, setShowPhotoEditor] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string>();
   const [orgName, setOrgName] = useState<string>();
@@ -168,6 +171,19 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
         }
       );
 
+      // Log activity for each uploaded photo
+      for (let i = 0; i < results.length; i++) {
+        if (results[i]) {
+          await logActivity(
+            'upload',
+            'operation_photo',
+            assetId,
+            `Proof photo: ${results[i].tag}`,
+            { tag: results[i].tag, assetId, campaignId }
+          );
+        }
+      }
+
       // Update with tags
       setUploadingFiles(prev => 
         prev.map((uf, i) => ({
@@ -285,19 +301,25 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
               <Button
                 variant="outline"
                 onClick={handleCancelPreview}
-                className="flex-1"
                 disabled={isProcessing}
               >
                 <X className="h-4 w-4 mr-2" />
                 Cancel
               </Button>
               <Button
+                variant="secondary"
+                onClick={() => setShowPhotoEditor(true)}
+                disabled={previewFiles.length === 0 || isProcessing}
+              >
+                <Wand2 className="h-4 w-4 mr-2" />
+                Edit Photos
+              </Button>
+              <Button
                 onClick={handleConfirmUpload}
-                className="flex-1"
                 disabled={previewFiles.length === 0 || isProcessing}
               >
                 <CheckCircle2 className="h-4 w-4 mr-2" />
-                {isProcessing ? "Processing..." : `Upload ${previewFiles.length} Photo${previewFiles.length !== 1 ? 's' : ''}`}
+                {isProcessing ? "Processing..." : `Upload ${previewFiles.length}`}
               </Button>
             </div>
 
@@ -426,6 +448,21 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
         )}
       </CardContent>
     </Card>
+
+      <PhotoEditorDialog
+        open={showPhotoEditor}
+        onOpenChange={setShowPhotoEditor}
+        photos={previewFiles.map(p => p.file)}
+        onApplyEdits={(editedPhotos) => {
+          // Update preview files with edited photos
+          revokePreviewUrls(previewFiles.map(p => p.previewUrl));
+          const newPreviews = editedPhotos.map(file => ({
+            file,
+            previewUrl: createPreviewUrl(file),
+          }));
+          setPreviewFiles(newPreviews);
+        }}
+      />
     </>
   );
 }

@@ -14,6 +14,8 @@ import { migrateClientIds } from "@/utils/migrateClientIds";
 import { ThemeCustomization } from "@/components/settings/ThemeCustomization";
 import { ColorLegend } from "@/components/settings/ColorLegend";
 import { AlertThresholdSettings } from "@/components/settings/AlertThresholdSettings";
+import { WatermarkSettings } from "@/components/settings/WatermarkSettings";
+import { ActivityLogViewer } from "@/components/audit/ActivityLogViewer";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -654,6 +656,8 @@ export default function Settings() {
 
         <TabsContent value="appearance" className="space-y-6 mt-6">
           <ThemeCustomization />
+          {isAdmin && <WatermarkSettings />}
+          {isAdmin && <ActivityLogViewer />}
         </TabsContent>
 
         <TabsContent value="help" className="space-y-6 mt-6">

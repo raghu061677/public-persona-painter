@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          ip_address: string | null
+          resource_id: string | null
+          resource_name: string | null
+          resource_type: string
+          user_agent: string | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          resource_id?: string | null
+          resource_name?: string | null
+          resource_type: string
+          user_agent?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          resource_id?: string | null
+          resource_name?: string | null
+          resource_type?: string
+          user_agent?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: []
+      }
       alert_settings: {
         Row: {
           budget_variance_threshold: number
@@ -1393,6 +1435,12 @@ export type Database = {
           state: string | null
           updated_at: string | null
           updated_by: string | null
+          watermark_font_size: number | null
+          watermark_include_logo: boolean | null
+          watermark_include_timestamp: boolean | null
+          watermark_opacity: number | null
+          watermark_position: string | null
+          watermark_text: string | null
         }
         Insert: {
           address?: string | null
@@ -1414,6 +1462,12 @@ export type Database = {
           state?: string | null
           updated_at?: string | null
           updated_by?: string | null
+          watermark_font_size?: number | null
+          watermark_include_logo?: boolean | null
+          watermark_include_timestamp?: boolean | null
+          watermark_opacity?: number | null
+          watermark_position?: string | null
+          watermark_text?: string | null
         }
         Update: {
           address?: string | null
@@ -1435,6 +1489,12 @@ export type Database = {
           state?: string | null
           updated_at?: string | null
           updated_by?: string | null
+          watermark_font_size?: number | null
+          watermark_include_logo?: boolean | null
+          watermark_include_timestamp?: boolean | null
+          watermark_opacity?: number | null
+          watermark_position?: string | null
+          watermark_text?: string | null
         }
         Relationships: []
       }
@@ -2161,6 +2221,16 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      log_activity: {
+        Args: {
+          p_action: string
+          p_details?: Json
+          p_resource_id?: string
+          p_resource_name?: string
+          p_resource_type: string
+        }
+        Returns: string
       }
       log_user_activity: {
         Args: {

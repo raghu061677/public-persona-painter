@@ -237,8 +237,7 @@ export function EnhancedBillDialog({
       bill_month: parsedData.bill_month || prev.bill_month,
       units: parsedData.units || prev.units,
       bill_amount: parsedData.bill_amount || prev.bill_amount,
-      energy_charges: parsedData.energy_charges || prev.energy_charges,
-      fixed_charges: parsedData.fixed_charges || prev.fixed_charges,
+      acd_amount: parsedData.acd_amount || prev.acd_amount,
       arrears: parsedData.arrears || prev.arrears,
       total_due: parsedData.total_due || prev.total_due,
     }));

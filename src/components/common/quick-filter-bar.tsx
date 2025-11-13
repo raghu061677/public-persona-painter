@@ -78,12 +78,12 @@ export function QuickFilterBar({
           {/* City Dropdown */}
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-muted-foreground" />
-            <Select value={selectedCity || ""} onValueChange={onCityChange}>
+            <Select value={selectedCity || "__all__"} onValueChange={(val) => onCityChange(val === "__all__" ? "" : val)}>
               <SelectTrigger className="w-[160px] h-8 text-sm">
                 <SelectValue placeholder="All Cities" />
               </SelectTrigger>
               <SelectContent className="bg-popover z-50">
-                <SelectItem value="">All Cities</SelectItem>
+                <SelectItem value="__all__">All Cities</SelectItem>
                 {cityOptions.map((city) => (
                   <SelectItem key={city} value={city}>
                     {city}

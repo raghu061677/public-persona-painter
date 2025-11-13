@@ -199,9 +199,9 @@ export function EnhancedBillDialog({
       if (parsedDate) {
         const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
           'July', 'August', 'September', 'October', 'November', 'December'];
-        const month = monthNames[parsedDate.getMonth()];
+        const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
         const year = parsedDate.getFullYear();
-        data.bill_month = `${month} ${year}`;
+        data.bill_month = `${year}-${month}-01`; // Store as YYYY-MM-01 for database
       }
     }
 
@@ -773,9 +773,14 @@ export function EnhancedBillDialog({
               <div className="space-y-2">
                 <Label>Bill Month</Label>
                 <Input
-                  value={formData.bill_month}
-                  onChange={(e) => updateField("bill_month", e.target.value)}
-                  placeholder="e.g., Jan 2025"
+                  type="month"
+                  value={formData.bill_month ? formData.bill_month.substring(0, 7) : ''}
+                  onChange={(e) => {
+                    // Convert YYYY-MM to YYYY-MM-01 for database
+                    const value = e.target.value ? `${e.target.value}-01` : '';
+                    updateField("bill_month", value);
+                  }}
+                  placeholder="Select month"
                 />
               </div>
               <div className="space-y-2">

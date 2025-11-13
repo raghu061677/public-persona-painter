@@ -168,7 +168,7 @@ serve(async (req) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Go-Ads 360° <noreply@go-ads.com>",
+        from: "Go-Ads 360° <onboarding@resend.dev>",
         to: [email],
         subject: `You've been invited to Go-Ads 360°`,
         html: emailHtml,

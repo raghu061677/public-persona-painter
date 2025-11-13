@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Plus, FileText, Calendar, User, Building2, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { EnhancedBillDialog } from "./EnhancedBillDialog";
-import { FetchBillButton } from "../power-bills/FetchBillButton";
 import { AnomalyBadge } from "@/components/power-bills/AnomalyBadge";
 
 interface EnhancedPowerBillsTabProps {
@@ -184,12 +183,6 @@ export function EnhancedPowerBillsTab({ assetId, asset, isAdmin }: EnhancedPower
               <CardDescription>Manage electricity bills for this asset</CardDescription>
             </div>
             <div className="flex gap-2">
-              <FetchBillButton
-                assetId={assetId}
-                serviceNumber={asset?.service_number}
-                uniqueServiceNumber={asset?.unique_service_number}
-                onSuccess={fetchPowerBills}
-              />
               <Button onClick={handleAddManualBill} variant="outline" size="sm">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Manual Entry

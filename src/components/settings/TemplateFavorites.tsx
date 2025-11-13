@@ -45,7 +45,7 @@ export function TemplateFavorites({ currentSettings, onApplyTemplate }: Template
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setFavorites(data || []);
+      setFavorites((data as any) || []);
     } catch (error: any) {
       console.error('Error loading favorites:', error);
       toast({
@@ -63,9 +63,13 @@ export function TemplateFavorites({ currentSettings, onApplyTemplate }: Template
     if (!name) return;
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { error } = await supabase
         .from('template_favorites')
-        .insert({
+        .insert([{
+          user_id: user.id,
           template_name: name,
           template_config: {
             ppt_template_name: currentSettings.ppt_template_name,
@@ -77,7 +81,7 @@ export function TemplateFavorites({ currentSettings, onApplyTemplate }: Template
             ppt_watermark_enabled: currentSettings.ppt_watermark_enabled,
             ppt_footer_text: currentSettings.ppt_footer_text,
           },
-        });
+        }]);
 
       if (error) throw error;
 

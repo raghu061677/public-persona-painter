@@ -164,7 +164,7 @@ export function PhotoUploadSection({ assetId, onUploadComplete }: PhotoUploadSec
       <CardContent className="space-y-4">
         <div
           className={`
-            border-2 border-dashed rounded-lg p-8 text-center transition-colors
+            border-2 border-dashed rounded-lg p-6 sm:p-8 text-center transition-colors
             ${dragActive ? 'border-primary bg-primary/5' : 'border-border'}
             ${uploading ? 'pointer-events-none opacity-50' : 'cursor-pointer hover:border-primary/50'}
           `}
@@ -177,6 +177,7 @@ export function PhotoUploadSection({ assetId, onUploadComplete }: PhotoUploadSec
             type="file"
             multiple
             accept="image/*"
+            capture="environment"
             onChange={handleChange}
             className="hidden"
             id="proof-upload"
@@ -184,15 +185,24 @@ export function PhotoUploadSection({ assetId, onUploadComplete }: PhotoUploadSec
           />
           <label htmlFor="proof-upload" className="cursor-pointer">
             <div className="flex flex-col items-center gap-2">
-              <Upload className="h-12 w-12 text-muted-foreground" />
+              <Upload className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground" />
               <div className="space-y-1">
                 <p className="text-sm font-medium">
-                  Drag & drop images or click to browse
+                  Tap to upload from gallery or camera
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Upload up to 10 images (JPG, PNG)
                 </p>
               </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                asChild
+              >
+                <span>Choose Files</span>
+              </Button>
             </div>
           </label>
         </div>

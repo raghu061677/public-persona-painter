@@ -51,6 +51,7 @@ import { useTableDensity } from "@/hooks/use-table-density";
 import { useTableSettings, formatCurrency as formatCurrencyUtil, formatDate as formatDateUtil } from "@/hooks/use-table-settings";
 import ColumnVisibilityButton from "@/components/common/column-visibility-button";
 import { TableFilters } from "@/components/common/table-filters";
+import { QuickFilterBar } from "@/components/common/quick-filter-bar";
 import { BulkActionsDropdown, commonBulkActions } from "@/components/common/bulk-actions-dropdown";
 import { highlightText } from "@/components/common/global-search";
 import {
@@ -74,6 +75,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { formatCurrency } from "@/utils/mediaAssets";
+import { isWithinInterval, parseISO } from "date-fns";
 import "./media-assets-table.css";
 
 interface Asset {
@@ -98,6 +100,8 @@ interface Asset {
   longitude?: number;
   is_public?: boolean;
   media_id?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 const DraggableHeader = ({ header, table }: { header: any; table: any }) => {
@@ -190,6 +194,12 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<Asset[]>(assets);
+  
+  // Advanced filter states
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [dateRange, setDateRange] = useState<any>();
+  const [quickFilterStatus, setQuickFilterStatus] = useState<string>("");
+  const [quickFilterCity, setQuickFilterCity] = useState<string>("");
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState<string | null>(null);
@@ -424,6 +434,30 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
     return () => clearInterval(interval);
   }, [settings.autoRefreshInterval, settingsReady, onRefresh]);
 
+  // Apply advanced filters
+  const filteredData = useMemo(() => {
+    let filtered = globalSearchFiltered;
+
+    // Multi-select status filter
+    if (selectedStatuses.length > 0) {
+      filtered = filtered.filter((asset) => selectedStatuses.includes(asset.status));
+    }
+
+    // Date range filter
+    if (dateRange?.from) {
+      filtered = filtered.filter((asset) => {
+        if (!asset.created_at) return false;
+        const assetDate = parseISO(asset.created_at);
+        if (dateRange.to) {
+          return isWithinInterval(assetDate, { start: dateRange.from, end: dateRange.to });
+        }
+        return assetDate >= dateRange.from;
+      });
+    }
+
+    return filtered;
+  }, [globalSearchFiltered, selectedStatuses, dateRange]);
+
   const columnVisibility: VisibilityState = useMemo(() => {
     return allColumnKeys.reduce((acc, key) => {
       acc[key] = visibleKeys.includes(key);
@@ -432,7 +466,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
   }, [visibleKeys, allColumnKeys]);
 
   const table = useReactTable({
-    data: globalSearchFiltered,
+    data: filteredData,
     columns,
     state: {
       sorting,
@@ -526,10 +560,20 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
     return table.getSelectedRowModel().rows.map((row) => row.original.id);
   }, [rowSelection, table]);
 
-  // Get unique media types for filter
+  // Get unique media types, statuses, and cities for filters
   const mediaTypes = useMemo(() => {
     const types = new Set(assets.map((a) => a.media_type).filter(Boolean));
     return Array.from(types).sort();
+  }, [assets]);
+
+  const statusOptions = useMemo(() => {
+    const statuses = new Set(assets.map((a) => a.status).filter(Boolean));
+    return Array.from(statuses).sort();
+  }, [assets]);
+
+  const cityOptions = useMemo(() => {
+    const cities = new Set(assets.map((a) => a.city).filter(Boolean));
+    return Array.from(cities).sort();
   }, [assets]);
 
   if (!isReady || !settingsReady) {
@@ -564,7 +608,20 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
       key: "media_type",
       label: "Media Type",
       type: "select",
-      options: mediaTypes.map(t => ({ value: t, label: t })),
+      options: mediaTypes,
+    },
+    {
+      key: "status",
+      label: "Status",
+      type: "multi-select",
+      options: statusOptions,
+      placeholder: "Select statuses...",
+    },
+    {
+      key: "created_at",
+      label: "Created Date",
+      type: "date-range",
+      placeholder: "Pick a date range...",
     },
   ];
 
@@ -572,24 +629,66 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
     location: (table.getColumn("location")?.getFilterValue() as string) ?? "",
     area: (table.getColumn("area")?.getFilterValue() as string) ?? "",
     media_type: (table.getColumn("media_type")?.getFilterValue() as string) ?? "",
+    status: selectedStatuses,
+    created_at: dateRange,
   };
 
-  const handleFilterChange = (key: string, value: string) => {
+  const handleFilterChange = (key: string, value: any) => {
     if (key === "location") handleLocationFilterChange({ target: { value } } as any);
     else if (key === "area") handleAreaFilterChange({ target: { value } } as any);
     else if (key === "media_type") handleMediaTypeFilterChange(value);
+    else if (key === "status") setSelectedStatuses(value);
+    else if (key === "created_at") setDateRange(value);
   };
 
   const handleClearFilters = () => {
     table.getColumn("location")?.setFilterValue("");
     table.getColumn("area")?.setFilterValue("");
     table.getColumn("media_type")?.setFilterValue("");
+    setSelectedStatuses([]);
+    setDateRange(undefined);
+    setQuickFilterStatus("");
+    setQuickFilterCity("");
+  };
+
+  const handleQuickFilterStatusChange = (status: string) => {
+    setQuickFilterStatus(status);
+    if (status) {
+      setSelectedStatuses([status]);
+    } else {
+      setSelectedStatuses([]);
+    }
+  };
+
+  const handleQuickFilterCityChange = (city: string) => {
+    setQuickFilterCity(city);
+    table.getColumn("city")?.setFilterValue(city);
+  };
+
+  const handleQuickClearAll = () => {
+    setQuickFilterStatus("");
+    setQuickFilterCity("");
+    handleClearFilters();
   };
 
   return (
     <>
       <DndProvider backend={HTML5Backend}>
-        {/* Import TableFilters component */}
+        {/* Quick Filter Bar */}
+        <QuickFilterBar
+          statusOptions={statusOptions}
+          cityOptions={cityOptions}
+          selectedStatus={quickFilterStatus}
+          selectedCity={quickFilterCity}
+          onStatusChange={handleQuickFilterStatusChange}
+          onCityChange={handleQuickFilterCityChange}
+          onClearAll={handleQuickClearAll}
+          activeFiltersCount={Object.values(filterValues).filter(v => 
+            Array.isArray(v) ? v.length > 0 : v !== "" && v !== undefined
+          ).length}
+        />
+
+        {/* Advanced Filters */}
         <TableFilters
           filters={filterConfigs}
           filterValues={filterValues}

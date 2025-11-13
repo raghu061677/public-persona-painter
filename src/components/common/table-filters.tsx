@@ -21,19 +21,22 @@ import { FilterPresets } from "./filter-presets";
 import { GlobalSearch } from "./global-search";
 import { TableSettingsPanel } from "./table-settings-panel";
 import { TableSettings } from "@/hooks/use-table-settings";
+import { DateRangeFilter } from "./date-range-filter";
+import { MultiSelectFilter } from "./multi-select-filter";
+import { DateRange } from "react-day-picker";
 
 export interface FilterConfig {
   key: string;
   label: string;
-  type: "text" | "select";
+  type: "text" | "select" | "multi-select" | "date-range";
   placeholder?: string;
-  options?: { value: string; label: string }[];
+  options?: { value: string; label: string }[] | string[];
 }
 
 interface TableFiltersProps {
   filters: FilterConfig[];
-  filterValues: Record<string, string>;
-  onFilterChange: (key: string, value: string) => void;
+  filterValues: Record<string, any>;
+  onFilterChange: (key: string, value: any) => void;
   onClearFilters: () => void;
   // Column visibility props
   allColumns: { key: string; label: string }[];
@@ -135,36 +138,71 @@ export function TableFilters({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {/* Dynamic Filters */}
-              {filters.map((filter) => (
-                <div key={filter.key} className="space-y-1.5">
-                  <Label className="text-xs font-medium text-muted-foreground">{filter.label}</Label>
-                  {filter.type === "text" ? (
-                    <Input
-                      placeholder={filter.placeholder || `Search ${filter.label.toLowerCase()}...`}
-                      value={filterValues[filter.key] || ""}
-                      onChange={(e) => onFilterChange(filter.key, e.target.value)}
-                      className="h-9 text-sm"
+              {filters.map((filter) => {
+                if (filter.type === "text") {
+                  return (
+                    <div key={filter.key} className="space-y-1.5">
+                      <Label className="text-xs font-medium text-muted-foreground">{filter.label}</Label>
+                      <Input
+                        placeholder={filter.placeholder || `Search ${filter.label.toLowerCase()}...`}
+                        value={filterValues[filter.key] || ""}
+                        onChange={(e) => onFilterChange(filter.key, e.target.value)}
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                  );
+                } else if (filter.type === "select") {
+                  return (
+                    <div key={filter.key} className="space-y-1.5">
+                      <Label className="text-xs font-medium text-muted-foreground">{filter.label}</Label>
+                      <Select
+                        value={filterValues[filter.key] || ""}
+                        onValueChange={(value) => onFilterChange(filter.key, value === "__all__" ? "" : value)}
+                      >
+                        <SelectTrigger className="h-9 text-sm">
+                          <SelectValue placeholder={filter.placeholder || `Select ${filter.label.toLowerCase()}`} />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover z-50">
+                          <SelectItem value="__all__">All {filter.label}</SelectItem>
+                          {filter.options?.map((option) => {
+                            const opt = typeof option === 'string' ? { value: option, label: option } : option;
+                            return (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                } else if (filter.type === "multi-select") {
+                  const options = filter.options?.map(opt => 
+                    typeof opt === 'string' ? opt : opt.value
+                  ) || [];
+                  return (
+                    <MultiSelectFilter
+                      key={filter.key}
+                      label={filter.label}
+                      options={options}
+                      value={filterValues[filter.key] || []}
+                      onChange={(value) => onFilterChange(filter.key, value)}
+                      placeholder={filter.placeholder}
                     />
-                  ) : (
-                    <Select
-                      value={filterValues[filter.key] || ""}
-                      onValueChange={(value) => onFilterChange(filter.key, value === "__all__" ? "" : value)}
-                    >
-                      <SelectTrigger className="h-9 text-sm">
-                        <SelectValue placeholder={filter.placeholder || `Select ${filter.label.toLowerCase()}`} />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover z-50">
-                        <SelectItem value="__all__">All {filter.label}</SelectItem>
-                        {filter.options?.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              ))}
+                  );
+                } else if (filter.type === "date-range") {
+                  return (
+                    <DateRangeFilter
+                      key={filter.key}
+                      label={filter.label}
+                      value={filterValues[filter.key] as DateRange | undefined}
+                      onChange={(value) => onFilterChange(filter.key, value)}
+                      placeholder={filter.placeholder}
+                    />
+                  );
+                }
+                return null;
+              })}
             </div>
 
             {/* Action Buttons Row */}

@@ -82,32 +82,21 @@ export default function PowerBillsSharing() {
       for (const connection of shared) {
         const { data: billData } = await supabase
           .from("asset_power_bills")
-          .select("bill_amount, bill_date, shared_with_assets, is_primary_bill")
+          .select("bill_amount, bill_date")
           .eq("unique_service_number", connection.unique_service_number)
-          .eq("is_primary_bill", true)
           .order("bill_date", { ascending: false })
           .limit(1)
           .maybeSingle();
 
         if (billData) {
-          connection.total_monthly_bill = billData.bill_amount;
-          connection.last_bill_date = billData.bill_date;
+          connection.total_monthly_bill = billData.bill_amount || 0;
+          connection.last_bill_date = billData.bill_date || undefined;
 
-          // Update share percentages from bill data
-          if (billData.shared_with_assets && Array.isArray(billData.shared_with_assets)) {
-            const sharingMap = new Map(
-              billData.shared_with_assets.map((s: any) => [s.asset_id, s.share_percentage])
-            );
-            connection.assets.forEach((asset) => {
-              asset.share_percentage = sharingMap.get(asset.asset_id) || 0;
-            });
-          } else {
-            // Default: equal split
-            const equalShare = 100 / connection.assets.length;
-            connection.assets.forEach((asset) => {
-              asset.share_percentage = equalShare;
-            });
-          }
+          // Default: equal split
+          const equalShare = 100 / connection.assets.length;
+          connection.assets.forEach((asset) => {
+            asset.share_percentage = equalShare;
+          });
         }
       }
 
@@ -169,10 +158,12 @@ export default function PowerBillsSharing() {
       const { error } = await supabase
         .from("asset_power_bills")
         .update({
-          shared_with_assets: sharingConfig.sharedAssets,
+          notes: JSON.stringify({ 
+            shared_config: sharingConfig.sharedAssets,
+            config_updated_at: new Date().toISOString()
+          })
         })
-        .eq("unique_service_number", editingUSN)
-        .eq("is_primary_bill", true);
+        .eq("unique_service_number", editingUSN);
 
       if (error) throw error;
 

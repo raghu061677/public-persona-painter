@@ -559,11 +559,46 @@ export function EnhancedBillDialog({
         notes: formData.notes || null,
       };
 
-      const { error } = await supabase
+      const { data: insertedBill, error } = await supabase
         .from("asset_power_bills")
-        .insert(billData);
+        .insert(billData)
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Check if we need to split expenses for shared power connections
+      if (insertedBill?.id && asset?.unique_service_number) {
+        // Check if this USN is shared across multiple assets
+        const { data: sharedAssets } = await supabase
+          .from("media_assets")
+          .select("id")
+          .eq("unique_service_number", asset.unique_service_number)
+          .neq("id", assetId);
+
+        if (sharedAssets && sharedAssets.length > 0) {
+          // This is a shared connection, trigger expense splitting
+          try {
+            const { error: splitError } = await supabase.functions.invoke('split-power-bill-expenses', {
+              body: { bill_id: insertedBill.id, action: 'create' }
+            });
+
+            if (splitError) {
+              console.error('Error splitting expenses:', splitError);
+              // Don't fail the main operation, just log
+              toast({
+                title: "Warning",
+                description: "Bill saved but expense splitting failed. Configure sharing manually.",
+                variant: "default",
+              });
+            } else {
+              console.log('Expenses split successfully for shared connection');
+            }
+          } catch (splitErr) {
+            console.error('Error calling split function:', splitErr);
+          }
+        }
+      }
 
       toast({
         title: "Success",

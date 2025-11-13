@@ -18,6 +18,7 @@ import { BillJobsMonitor } from "@/components/power-bills/BillJobsMonitor";
 import PowerBillKPIs from "@/components/power-bills/PowerBillKPIs";
 import SixMonthChart from "@/components/power-bills/SixMonthChart";
 import UnpaidBillsTable from "@/components/power-bills/UnpaidBillsTable";
+import { BookmarkletInstructions } from "@/components/power-bills/BookmarkletInstructions";
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -435,6 +436,9 @@ export default function PowerBillsDashboard() {
 
       {/* KPI Cards */}
       <PowerBillKPIs loading={loading} aggregates={aggregates} />
+
+      {/* Bookmarklet Instructions */}
+      <BookmarkletInstructions />
 
       {/* Analytics Row */}
       <div className="grid gap-4 lg:grid-cols-2">

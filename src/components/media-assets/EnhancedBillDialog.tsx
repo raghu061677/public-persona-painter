@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -57,6 +57,65 @@ export function EnhancedBillDialog({
     payment_reference: "",
     notes: "",
   });
+
+  // Check for bookmarklet data on mount
+  useEffect(() => {
+    const savedData = localStorage.getItem('tgspdcl_bill_data');
+    const timestamp = localStorage.getItem('tgspdcl_bill_timestamp');
+    
+    if (savedData && timestamp) {
+      const age = Date.now() - parseInt(timestamp);
+      // Data expires after 5 minutes
+      if (age < 5 * 60 * 1000) {
+        try {
+          const parsed = JSON.parse(savedData);
+          setFormData(prev => ({
+            ...prev,
+            consumer_name: parsed.consumerName || prev.consumer_name,
+            unique_service_number: parsed.uniqueServiceNumber || prev.unique_service_number,
+            service_number: parsed.serviceNumber || prev.service_number,
+            ero_name: parsed.eroName || prev.ero_name,
+            section_name: parsed.sectionName || prev.section_name,
+            bill_amount: parsed.currentMonthBill || "",
+            arrears: parsed.arrears || "",
+            total_due: parsed.totalAmount || "",
+          }));
+          
+          // Parse dates if available
+          if (parsed.billDate) {
+            try {
+              const [day, month, year] = parsed.billDate.split('-');
+              setBillDate(new Date(`${year}-${month}-${day}`));
+            } catch (e) {
+              console.error('Error parsing bill date:', e);
+            }
+          }
+          if (parsed.dueDate) {
+            try {
+              const [day, month, year] = parsed.dueDate.split('-');
+              setDueDate(new Date(`${year}-${month}-${day}`));
+            } catch (e) {
+              console.error('Error parsing due date:', e);
+            }
+          }
+          
+          toast({
+            title: "Data Loaded",
+            description: "Bookmarklet data has been auto-filled. Please verify and save.",
+          });
+          // Clear the data after loading
+          localStorage.removeItem('tgspdcl_bill_data');
+          localStorage.removeItem('tgspdcl_bill_timestamp');
+        } catch (error) {
+          console.error('Error parsing bookmarklet data:', error);
+        }
+      } else {
+        // Clear expired data
+        localStorage.removeItem('tgspdcl_bill_data');
+        localStorage.removeItem('tgspdcl_bill_timestamp');
+      }
+    }
+  }, []);
 
   const resetForm = () => {
     setFormData({

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,6 +47,50 @@ export function PowerBillFetchDialog({
     arrears: "0",
     total_amount: "",
   });
+
+  // Check for bookmarklet data on mount
+  useEffect(() => {
+    const savedData = localStorage.getItem('tgspdcl_bill_data');
+    const timestamp = localStorage.getItem('tgspdcl_bill_timestamp');
+    
+    if (savedData && timestamp) {
+      const age = Date.now() - parseInt(timestamp);
+      // Data expires after 5 minutes
+      if (age < 5 * 60 * 1000) {
+        try {
+          const parsed = JSON.parse(savedData);
+          setFormData(prev => ({
+            ...prev,
+            consumer_name: parsed.consumerName || prev.consumer_name,
+            unique_service_number: parsed.uniqueServiceNumber || prev.unique_service_number,
+            service_number: parsed.serviceNumber || prev.service_number,
+            ero: parsed.eroName || prev.ero,
+            section: parsed.sectionName || prev.section,
+            units: parsed.units || "",
+            bill_date: parsed.billDate || "",
+            due_date: parsed.dueDate || "",
+            current_month_bill: parsed.currentMonthBill || "",
+            acd_amount: parsed.acdAmount || "0",
+            arrears: parsed.arrears || "0",
+            total_amount: parsed.totalAmount || "",
+          }));
+          toast({
+            title: "Data Loaded",
+            description: "Bookmarklet data has been auto-filled. Please verify and save.",
+          });
+          // Clear the data after loading
+          localStorage.removeItem('tgspdcl_bill_data');
+          localStorage.removeItem('tgspdcl_bill_timestamp');
+        } catch (error) {
+          console.error('Error parsing bookmarklet data:', error);
+        }
+      } else {
+        // Clear expired data
+        localStorage.removeItem('tgspdcl_bill_data');
+        localStorage.removeItem('tgspdcl_bill_timestamp');
+      }
+    }
+  }, []);
 
   const tryAutoFetch = async () => {
     if (!formData.unique_service_number.trim()) {

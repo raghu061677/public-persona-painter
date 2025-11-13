@@ -44,6 +44,7 @@ import { toast } from "@/hooks/use-toast";
 import { exportPlanToPPT, exportPlanToExcel, exportPlanToPDF } from "@/utils/planExports";
 import { ExportPlanExcelButton } from "@/components/plans/ExportPlanExcelButton";
 import { WorkOrderPDFButton } from "@/components/plans/WorkOrderPDFButton";
+import { EstimatePDFButton } from "@/components/plans/EstimatePDFButton";
 import { ExportOptionsDialog, ExportOptions } from "@/components/plans/ExportOptionsDialog";
 import { ExportSettingsDialog, ExportSettings } from "@/components/plans/ExportSettingsDialog";
 import { TermsConditionsDialog, TermsData } from "@/components/plans/TermsConditionsDialog";
@@ -899,6 +900,11 @@ export default function PlanDetail() {
                   <DropdownMenuItem asChild>
                     <div className="w-full p-0">
                       <WorkOrderPDFButton planId={id!} planName={plan?.plan_name} />
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <div className="w-full p-0">
+                      <EstimatePDFButton planId={id!} planName={plan?.plan_name} />
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setShowTermsDialog(true)}>

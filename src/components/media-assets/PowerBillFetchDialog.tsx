@@ -11,9 +11,16 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { ExternalLink, Zap, Loader2, Save } from "lucide-react";
+import { ExternalLink, Zap, Loader2, Save, Clipboard, CheckCircle2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface PowerBillFetchDialogProps {
   assetId: string;
@@ -31,6 +38,9 @@ export function PowerBillFetchDialog({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [autoFetching, setAutoFetching] = useState(false);
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pastedText, setPastedText] = useState("");
+  const [parsedData, setParsedData] = useState<any>(null);
   
   // Auto-populate consumer details from asset record
   const [formData, setFormData] = useState({
@@ -47,6 +57,191 @@ export function PowerBillFetchDialog({
     arrears: "0",
     total_amount: "",
   });
+
+  // Smart parser for TGSPDCL bill data
+  const parseTGSPDCLData = (text: string) => {
+    const data: any = {};
+    
+    // Helper function to extract value after various separators
+    const extractValue = (line: string) => {
+      // Try different patterns: →, \t, :, multiple spaces
+      const patterns = [
+        /→\s*(.+)$/,           // Arrow separator
+        /:\s*(.+)$/,           // Colon separator  
+        /\t+(.+)$/,            // Tab separator
+        /\s{2,}(.+)$/,         // Multiple spaces
+      ];
+      
+      for (const pattern of patterns) {
+        const match = line.match(pattern);
+        if (match) return match[1].trim();
+      }
+      return null;
+    };
+
+    // Parse line by line
+    const lines = text.split('\n');
+    
+    for (const line of lines) {
+      const lower = line.toLowerCase();
+      
+      // Units
+      if (lower.includes('units') || lower.includes('unit')) {
+        const value = extractValue(line);
+        if (value) data.units = value.replace(/[^\d.]/g, '');
+      }
+      
+      // Bill Date / Due Date (handle combined format)
+      if (lower.includes('bill date') && lower.includes('due date')) {
+        const value = extractValue(line);
+        if (value) {
+          const dates = value.split('/').map(d => d.trim());
+          if (dates[0]) {
+            data.bill_date = parseDate(dates[0]);
+          }
+          if (dates[1]) {
+            data.due_date = parseDate(dates[1]);
+          }
+        }
+      } else {
+        // Separate Bill Date
+        if (lower.includes('bill date')) {
+          const value = extractValue(line);
+          if (value) data.bill_date = parseDate(value);
+        }
+        // Separate Due Date
+        if (lower.includes('due date')) {
+          const value = extractValue(line);
+          if (value) data.due_date = parseDate(value);
+        }
+      }
+      
+      // Current Month Bill / Total Amount
+      if (lower.includes('current month bill') || lower.includes('bill amount')) {
+        const value = extractValue(line);
+        if (value) data.current_month_bill = value.replace(/[^\d.]/g, '');
+      }
+      
+      // ACD Amount
+      if (lower.includes('acd amount') || lower.includes('acd')) {
+        const value = extractValue(line);
+        if (value) data.acd_amount = value.replace(/[^\d.]/g, '') || '0';
+      }
+      
+      // Arrears
+      if (lower.includes('arrears') || lower.includes('arrear')) {
+        const value = extractValue(line);
+        if (value) data.arrears = value.replace(/[^\d.]/g, '') || '0';
+      }
+      
+      // Total Amount to be Paid
+      if (lower.includes('total amount') || lower.includes('amount to be paid')) {
+        const value = extractValue(line);
+        if (value) data.total_amount = value.replace(/[^\d.]/g, '');
+      }
+      
+      // Energy Charges
+      if (lower.includes('energy charge')) {
+        const value = extractValue(line);
+        if (value) data.energy_charges = value.replace(/[^\d.]/g, '');
+      }
+      
+      // Fixed Charges
+      if (lower.includes('fixed charge')) {
+        const value = extractValue(line);
+        if (value) data.fixed_charges = value.replace(/[^\d.]/g, '');
+      }
+    }
+    
+    return data;
+  };
+
+  // Helper to parse date formats like "05-Nov-25" or "05-11-2025"
+  const parseDate = (dateStr: string) => {
+    try {
+      // Try formats: DD-Mon-YY, DD-MM-YYYY, DD/MM/YYYY
+      const cleaned = dateStr.trim();
+      
+      // Handle DD-Mon-YY format (05-Nov-25)
+      const monthMap: any = {
+        jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+        jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'
+      };
+      
+      const parts = cleaned.split(/[-\/]/);
+      if (parts.length === 3) {
+        const day = parts[0].padStart(2, '0');
+        let month = parts[1];
+        let year = parts[2];
+        
+        // Convert month name to number
+        if (isNaN(Number(month))) {
+          month = monthMap[month.toLowerCase().substring(0, 3)] || month;
+        } else {
+          month = month.padStart(2, '0');
+        }
+        
+        // Convert 2-digit year to 4-digit
+        if (year.length === 2) {
+          year = '20' + year;
+        }
+        
+        return `${year}-${month}-${day}`;
+      }
+      
+      return cleaned;
+    } catch (error) {
+      return dateStr;
+    }
+  };
+
+  // Handle paste and parse
+  const handleParsePaste = () => {
+    if (!pastedText.trim()) {
+      toast({
+        title: "No Data",
+        description: "Please paste some data first",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const parsed = parseTGSPDCLData(pastedText);
+    
+    if (Object.keys(parsed).length === 0) {
+      toast({
+        title: "No Data Extracted",
+        description: "Could not extract bill data from the pasted text. Please check the format.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setParsedData(parsed);
+    toast({
+      title: "Data Parsed",
+      description: `Extracted ${Object.keys(parsed).length} fields. Review and apply.`,
+    });
+  };
+
+  // Apply parsed data to form
+  const handleApplyParsedData = () => {
+    if (!parsedData) return;
+    
+    setFormData(prev => ({
+      ...prev,
+      ...parsedData,
+    }));
+    
+    setPastedText("");
+    setParsedData(null);
+    setPasteOpen(false);
+    
+    toast({
+      title: "Data Applied",
+      description: "Parsed data has been filled into the form. Review and save.",
+    });
+  };
 
   // Check for bookmarklet data on mount
   useEffect(() => {
@@ -299,6 +494,92 @@ export function PowerBillFetchDialog({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Quick Paste Section */}
+          <Collapsible open={pasteOpen} onOpenChange={setPasteOpen}>
+            <div className="space-y-3 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950 dark:to-green-950 p-4 rounded-lg border-2 border-emerald-300 dark:border-emerald-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Clipboard className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  <Label className="text-base font-semibold text-emerald-900 dark:text-emerald-100">
+                    📋 Quick Paste - Smart Data Entry
+                  </Label>
+                </div>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    {pasteOpen ? 'Hide' : 'Show'}
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+              
+              <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                Copy bill details from TGSPDCL and paste here. We'll auto-extract all fields for you!
+              </p>
+
+              <CollapsibleContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Paste Bill Data</Label>
+                  <Textarea
+                    value={pastedText}
+                    onChange={(e) => setPastedText(e.target.value)}
+                    placeholder="Paste your copied bill data here...&#10;Example:&#10;Units → 40&#10;Bill Date / Due Date → 05-Nov-25 / 19-Nov-25&#10;Current Month Bill → 982&#10;ACD Amount → 0&#10;Arrears → 0&#10;Total Amount to be Paid → 982.0"
+                    className="min-h-[120px] font-mono text-sm"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={handleParsePaste}
+                    disabled={!pastedText.trim()}
+                    variant="default"
+                    className="flex-1"
+                  >
+                    <Zap className="mr-2 h-4 w-4" />
+                    Parse Data
+                  </Button>
+                  
+                  {parsedData && (
+                    <Button 
+                      onClick={handleApplyParsedData}
+                      variant="default"
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Apply to Form
+                    </Button>
+                  )}
+                </div>
+
+                {/* Preview Section */}
+                {parsedData && (
+                  <div className="mt-4 p-4 bg-white dark:bg-slate-900 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                    <div className="flex items-center gap-2 mb-3">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      <Label className="font-semibold">Parsed Data Preview</Label>
+                      <Badge variant="secondary">{Object.keys(parsedData).length} fields</Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      {Object.entries(parsedData).map(([key, value]: [string, any]) => (
+                        <div key={key} className="flex flex-col gap-1">
+                          <span className="text-muted-foreground capitalize">
+                            {key.replace(/_/g, ' ')}:
+                          </span>
+                          <span className="font-semibold text-foreground">
+                            {value || '-'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <p className="text-xs text-muted-foreground mt-3 italic">
+                      Review the extracted data above and click "Apply to Form" to fill the fields below
+                    </p>
+                  </div>
+                )}
+              </CollapsibleContent>
+            </div>
+          </Collapsible>
+
           {/* Auto-Fetch Option */}
           <div className="space-y-3 bg-blue-50 dark:bg-blue-950 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
             <Label className="text-base font-semibold text-blue-900 dark:text-blue-100">

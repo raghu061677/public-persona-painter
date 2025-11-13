@@ -15,6 +15,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Palette, FileText } from "lucide-react";
 import { PPTTemplatePreview } from "./PPTTemplatePreview";
+import { LogoUploadSection } from "./LogoUploadSection";
+import { TemplateFavorites } from "./TemplateFavorites";
+import { TemplateExportImport } from "./TemplateExportImport";
 
 export function PPTTemplateSettings() {
   const [loading, setLoading] = useState(true);
@@ -30,6 +33,7 @@ export function PPTTemplateSettings() {
     ppt_footer_text: "Confidential - For Client Review Only",
     auto_generate_ppt_on_completion: false,
     notify_manager_on_ppt_generation: true,
+    logo_url: "",
   });
 
   useEffect(() => {
@@ -58,6 +62,7 @@ export function PPTTemplateSettings() {
           ppt_footer_text: data.ppt_footer_text || "Confidential - For Client Review Only",
           auto_generate_ppt_on_completion: data.auto_generate_ppt_on_completion || false,
           notify_manager_on_ppt_generation: data.notify_manager_on_ppt_generation !== false,
+          logo_url: data.logo_url || "",
         });
       }
     } catch (error) {
@@ -121,8 +126,31 @@ export function PPTTemplateSettings() {
     );
   }
 
+  const handleApplyTemplate = (config: any) => {
+    setSettings({ ...settings, ...config });
+    toast({
+      title: "Template Applied",
+      description: "Template configuration loaded. Don't forget to save!",
+    });
+  };
+
   return (
     <div className="space-y-6">
+      <LogoUploadSection
+        currentLogoUrl={settings.logo_url}
+        onLogoUpdate={(url) => setSettings({ ...settings, logo_url: url })}
+      />
+
+      <TemplateFavorites
+        currentSettings={settings}
+        onApplyTemplate={handleApplyTemplate}
+      />
+
+      <TemplateExportImport
+        currentSettings={settings}
+        onImport={handleApplyTemplate}
+      />
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">

@@ -128,6 +128,9 @@ export default function Topbar({ onSearchOpen }: { onSearchOpen: () => void }) {
               </div>
             </div>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate(ROUTES.PROFILE_SETTINGS)}>
+              Profile Settings
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate(ROUTES.SETTINGS)}>
               Settings
             </DropdownMenuItem>

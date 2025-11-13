@@ -84,6 +84,7 @@ export const ROUTES = {
   
   // Settings
   SETTINGS: "/settings",
+  PROFILE_SETTINGS: "/settings/profile",
   ORGANIZATION_SETTINGS: "/admin/organization-settings",
 } as const;
 

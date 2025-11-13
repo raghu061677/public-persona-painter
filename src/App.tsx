@@ -58,6 +58,7 @@ import ApprovalDelegation from "./pages/ApprovalDelegation";
 import ApprovalAnalytics from "./pages/ApprovalAnalytics";
 import VendorsManagement from "./pages/VendorsManagement";
 import Settings from "./pages/Settings";
+import ProfileSettings from "./pages/ProfileSettings";
 import OrganizationSettings from "./pages/OrganizationSettings";
 import OperationsSettings from "./pages/OperationsSettings";
 import Operations from "./pages/Operations";
@@ -136,6 +137,7 @@ const App = () => (
             <Route path="/admin/operations-settings" element={<AppLayout><OperationsSettings /></AppLayout>} />
             <Route path="/admin/organization-settings" element={<AppLayout><OrganizationSettings /></AppLayout>} />
             <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
+            <Route path="/settings/profile" element={<ProtectedRoute requireAuth><AppLayout><ProfileSettings /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/approval-settings" element={<AppLayout><ApprovalSettings /></AppLayout>} />
             <Route path="/admin/approval-delegation" element={<AppLayout><ApprovalDelegation /></AppLayout>} />
             <Route path="/admin/approval-analytics" element={<AppLayout><ApprovalAnalytics /></AppLayout>} />

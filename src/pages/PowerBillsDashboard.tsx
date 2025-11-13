@@ -10,6 +10,7 @@ import { Zap, Download, RefreshCw, Lightbulb, Sun, Flame, Settings, Upload, File
 import { UploadReceiptDialog } from "@/components/power-bills/UploadReceiptDialog";
 import { PowerBillsAnalyticsChart } from "@/components/power-bills/PowerBillsAnalyticsChart";
 import { PowerBillFetchDialog } from "@/components/media-assets/PowerBillFetchDialog";
+import { BulkBillImportDialog } from "@/components/power-bills/BulkBillImportDialog";
 import { useState as useDialogState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -607,6 +608,7 @@ export default function PowerBillsDashboard() {
                   </DropdownMenuCheckboxItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              <BulkBillImportDialog onImportComplete={fetchAssetsWithBills} />
               <Button 
                 onClick={handleBulkFetch} 
                 disabled={selectedAssets.size === 0 || fetching}

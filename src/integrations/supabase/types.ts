@@ -1373,6 +1373,7 @@ export type Database = {
           longitude: number | null
           photo_url: string
           tag: string
+          tags: string[] | null
           updated_at: string | null
           uploaded_at: string
           uploaded_by: string | null
@@ -1389,6 +1390,7 @@ export type Database = {
           longitude?: number | null
           photo_url: string
           tag: string
+          tags?: string[] | null
           updated_at?: string | null
           uploaded_at?: string
           uploaded_by?: string | null
@@ -1405,6 +1407,7 @@ export type Database = {
           longitude?: number | null
           photo_url?: string
           tag?: string
+          tags?: string[] | null
           updated_at?: string | null
           uploaded_at?: string
           uploaded_by?: string | null
@@ -1594,6 +1597,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      photo_tags: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          name: string
+          usage_count: number | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name: string
+          usage_count?: number | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name?: string
+          usage_count?: number | null
+        }
+        Relationships: []
       }
       plan_approvals: {
         Row: {

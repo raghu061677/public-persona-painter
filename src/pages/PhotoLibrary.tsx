@@ -23,12 +23,29 @@ import {
   Grid3x3,
   List,
   CheckSquare,
-  Play
+  Play,
+  Star,
+  Tag,
+  Plus,
+  X
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { PhotoSlideshow } from "@/components/media-assets/PhotoSlideshow";
 import { useNavigate } from "react-router-dom";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface PhotoItem {
   assetId: string;
@@ -36,9 +53,18 @@ interface PhotoItem {
   assetCity?: string;
   url: string;
   tag: string;
+  tags?: string[];
   uploaded_at: string;
   latitude?: number;
   longitude?: number;
+  isFavorite?: boolean;
+}
+
+interface PhotoTag {
+  id: string;
+  name: string;
+  color: string;
+  usage_count: number;
 }
 
 export default function PhotoLibrary() {
@@ -58,14 +84,22 @@ export default function PhotoLibrary() {
 
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [availableCities, setAvailableCities] = useState<string[]>([]);
+  const [customTags, setCustomTags] = useState<PhotoTag[]>([]);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [selectedPhotoForTagging, setSelectedPhotoForTagging] = useState<PhotoItem | null>(null);
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagColor, setNewTagColor] = useState("#6b7280");
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadPhotos();
+    loadCustomTags();
+    loadFavorites();
   }, []);
 
   useEffect(() => {
     filterPhotos();
-  }, [searchTerm, selectedTag, selectedCity, dateFrom, dateTo, photos]);
+  }, [searchTerm, selectedTag, selectedCity, dateFrom, dateTo, photos, showFavoritesOnly]);
 
   const loadPhotos = async () => {
     try {
@@ -93,11 +127,16 @@ export default function PhotoLibrary() {
               assetCity: asset.city,
               url: photo.url,
               tag: photo.tag,
+              tags: photo.tags || [photo.tag],
               uploaded_at: photo.uploaded_at,
               latitude: photo.latitude,
               longitude: photo.longitude,
+              isFavorite: favorites.has(photo.url),
             });
             tags.add(photo.tag);
+            if (photo.tags) {
+              photo.tags.forEach((t: string) => tags.add(t));
+            }
           });
         }
         if (asset.city) cities.add(asset.city);
@@ -118,8 +157,187 @@ export default function PhotoLibrary() {
     }
   };
 
+  const loadCustomTags = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('photo_tags')
+        .select('*')
+        .order('usage_count', { ascending: false });
+
+      if (error) throw error;
+      setCustomTags(data || []);
+    } catch (error: any) {
+      console.error('Error loading custom tags:', error);
+    }
+  };
+
+  const loadFavorites = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('photo_favorites')
+        .select('photo_id')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      setFavorites(new Set(data?.map(f => f.photo_id) || []));
+    } catch (error: any) {
+      console.error('Error loading favorites:', error);
+    }
+  };
+
+  const toggleFavorite = async (photoUrl: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      if (favorites.has(photoUrl)) {
+        await supabase
+          .from('photo_favorites')
+          .delete()
+          .eq('photo_id', photoUrl)
+          .eq('user_id', user.id);
+        
+        const newFavorites = new Set(favorites);
+        newFavorites.delete(photoUrl);
+        setFavorites(newFavorites);
+      } else {
+        await supabase
+          .from('photo_favorites')
+          .insert({ photo_id: photoUrl, user_id: user.id });
+        
+        setFavorites(new Set([...favorites, photoUrl]));
+      }
+
+      // Update photos
+      setPhotos(photos.map(p => 
+        p.url === photoUrl ? { ...p, isFavorite: !favorites.has(photoUrl) } : p
+      ));
+      
+      toast({
+        title: favorites.has(photoUrl) ? "Removed from favorites" : "Added to favorites",
+      });
+    } catch (error: any) {
+      console.error('Error toggling favorite:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update favorite",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const createCustomTag = async () => {
+    if (!newTagName.trim()) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('photo_tags')
+        .insert({
+          name: newTagName.trim(),
+          color: newTagColor,
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setCustomTags([...customTags, data]);
+      setNewTagName("");
+      setNewTagColor("#6b7280");
+      
+      toast({
+        title: "Tag created",
+        description: `"${data.name}" tag has been created`,
+      });
+    } catch (error: any) {
+      console.error('Error creating tag:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create tag",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const addTagToPhoto = async (photoUrl: string, tagName: string) => {
+    try {
+      // Find the asset containing this photo
+      const { data: assets, error: fetchError } = await supabase
+        .from('media_assets')
+        .select('id, images')
+        .not('images', 'is', null);
+
+      if (fetchError) throw fetchError;
+
+      let targetAssetId = null;
+      let updatedImages = null;
+
+      for (const asset of assets || []) {
+        const imagesData = asset.images as any;
+        if (imagesData?.photos && Array.isArray(imagesData.photos)) {
+          const photoIndex = imagesData.photos.findIndex((p: any) => p.url === photoUrl);
+          if (photoIndex !== -1) {
+            targetAssetId = asset.id;
+            const currentTags = imagesData.photos[photoIndex].tags || [imagesData.photos[photoIndex].tag];
+            if (!currentTags.includes(tagName)) {
+              imagesData.photos[photoIndex].tags = [...currentTags, tagName];
+              updatedImages = imagesData;
+            }
+            break;
+          }
+        }
+      }
+
+      if (targetAssetId && updatedImages) {
+        const { error: updateError } = await supabase
+          .from('media_assets')
+          .update({ images: updatedImages })
+          .eq('id', targetAssetId);
+
+        if (updateError) throw updateError;
+
+        // Update tag usage count
+        const tagToUpdate = customTags.find(t => t.name === tagName);
+        if (tagToUpdate) {
+          await supabase
+            .from('photo_tags')
+            .update({ usage_count: tagToUpdate.usage_count + 1 })
+            .eq('id', tagToUpdate.id);
+        }
+
+        // Reload photos and tags
+        await loadPhotos();
+        await loadCustomTags();
+        
+        toast({
+          title: "Tag added",
+          description: `"${tagName}" added to photo`,
+        });
+      }
+    } catch (error: any) {
+      console.error('Error adding tag:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add tag to photo",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filterPhotos = () => {
     let filtered = [...photos];
+
+    // Favorites filter
+    if (showFavoritesOnly) {
+      filtered = filtered.filter(photo => photo.isFavorite);
+    }
 
     // Search filter
     if (searchTerm) {
@@ -128,13 +346,16 @@ export default function PhotoLibrary() {
         photo.assetId.toLowerCase().includes(term) ||
         photo.assetLocation?.toLowerCase().includes(term) ||
         photo.assetCity?.toLowerCase().includes(term) ||
-        photo.tag.toLowerCase().includes(term)
+        photo.tag.toLowerCase().includes(term) ||
+        photo.tags?.some(t => t.toLowerCase().includes(term))
       );
     }
 
     // Tag filter
     if (selectedTag !== "all") {
-      filtered = filtered.filter(photo => photo.tag === selectedTag);
+      filtered = filtered.filter(photo => 
+        photo.tag === selectedTag || photo.tags?.includes(selectedTag)
+      );
     }
 
     // City filter
@@ -337,6 +558,61 @@ export default function PhotoLibrary() {
             {/* Actions */}
             <div className="space-y-2 lg:col-span-3 flex items-end gap-2">
               <Button
+                variant={showFavoritesOnly ? "default" : "outline"}
+                onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              >
+                <Star className={`h-4 w-4 mr-2 ${showFavoritesOnly ? 'fill-current' : ''}`} />
+                Favorites
+              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Tag className="h-4 w-4 mr-2" />
+                    Manage Tags
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Manage Photo Tags</DialogTitle>
+                    <DialogDescription>
+                      Create and manage custom tags for organizing your photos
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="New tag name"
+                        value={newTagName}
+                        onChange={(e) => setNewTagName(e.target.value)}
+                      />
+                      <Input
+                        type="color"
+                        value={newTagColor}
+                        onChange={(e) => setNewTagColor(e.target.value)}
+                        className="w-20"
+                      />
+                      <Button onClick={createCustomTag}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {customTags.map(tag => (
+                        <div key={tag.id} className="flex items-center justify-between p-2 border rounded">
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-4 h-4 rounded" 
+                              style={{ backgroundColor: tag.color }}
+                            />
+                            <span>{tag.name}</span>
+                            <Badge variant="secondary">{tag.usage_count}</Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              <Button
                 variant="outline"
                 onClick={() => {
                   setSearchTerm("");
@@ -344,6 +620,7 @@ export default function PhotoLibrary() {
                   setSelectedCity("all");
                   setDateFrom("");
                   setDateTo("");
+                  setShowFavoritesOnly(false);
                 }}
               >
                 Clear Filters
@@ -415,13 +692,26 @@ export default function PhotoLibrary() {
                       selectedPhotos.has(photo.url) ? 'ring-2 ring-primary' : ''
                     }`}
                   >
-                    {/* Selection Checkbox */}
-                    <div className="absolute top-2 left-2 z-10">
+                    {/* Selection Checkbox & Favorite */}
+                    <div className="absolute top-2 left-2 z-10 flex gap-2">
                       <Checkbox
                         checked={selectedPhotos.has(photo.url)}
                         onCheckedChange={() => togglePhotoSelection(photo.url)}
                         className="bg-white"
                       />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 bg-white hover:bg-white/90"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(photo.url);
+                        }}
+                      >
+                        <Star 
+                          className={`h-4 w-4 ${photo.isFavorite ? 'fill-yellow-400 text-yellow-400' : ''}`}
+                        />
+                      </Button>
                     </div>
 
                     {/* Image */}
@@ -433,10 +723,15 @@ export default function PhotoLibrary() {
                     />
 
                     {/* Tag Badge */}
-                    <div className="absolute top-2 right-2">
-                      <Badge className={`${getTagColor(photo.tag)} text-white`}>
-                        {getTagIcon(photo.tag)} {photo.tag}
-                      </Badge>
+                    <div className="absolute top-2 right-2 flex flex-wrap gap-1 justify-end max-w-[50%]">
+                      {(photo.tags || [photo.tag]).map((t, i) => (
+                        <Badge 
+                          key={i}
+                          className={`${getTagColor(t)} text-white text-xs`}
+                        >
+                          {getTagIcon(t)} {t}
+                        </Badge>
+                      ))}
                     </div>
 
                     {/* Info Overlay */}
@@ -463,6 +758,38 @@ export default function PhotoLibrary() {
 
                     {/* Hover Actions */}
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Tag className="h-4 w-4 mr-1" />
+                            Tag
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-48" onClick={(e) => e.stopPropagation()}>
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium">Add Tag</p>
+                            {customTags.map(tag => (
+                              <Button
+                                key={tag.id}
+                                size="sm"
+                                variant="ghost"
+                                className="w-full justify-start"
+                                onClick={() => addTagToPhoto(photo.url, tag.name)}
+                              >
+                                <div 
+                                  className="w-3 h-3 rounded mr-2" 
+                                  style={{ backgroundColor: tag.color }}
+                                />
+                                {tag.name}
+                              </Button>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                       <Button
                         size="sm"
                         variant="secondary"
@@ -508,11 +835,16 @@ export default function PhotoLibrary() {
                       className="w-16 h-16 object-cover rounded"
                     />
                     <div className="flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-medium">{photo.assetId}</p>
-                        <Badge className={`${getTagColor(photo.tag)} text-white text-xs`}>
-                          {getTagIcon(photo.tag)} {photo.tag}
-                        </Badge>
+                        {(photo.tags || [photo.tag]).map((t, i) => (
+                          <Badge key={i} className={`${getTagColor(t)} text-white text-xs`}>
+                            {getTagIcon(t)} {t}
+                          </Badge>
+                        ))}
+                        {photo.isFavorite && (
+                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {photo.assetLocation}, {photo.assetCity}

@@ -2,6 +2,17 @@ import * as exifr from "exifr";
 import { supabase } from "@/integrations/supabase/client";
 import { validateProofPhoto } from "@/lib/photoValidation";
 
+export interface ProofPhoto {
+  tag: "Traffic" | "Newspaper" | "Geo-Tagged" | "Other";
+  latitude: number | null;
+  longitude: number | null;
+  validation?: {
+    score: number;
+    issues: string[];
+    suggestions: string[];
+  };
+}
+
 export interface ProofPhotoResult {
   url: string;
   tag: string;
@@ -13,45 +24,119 @@ export interface ProofPhotoResult {
 }
 
 /**
- * Analyze image to detect tag and extract GPS data
+ * Analyze image file to detect tag and extract GPS data
  */
-export async function analyzeImage(file: File): Promise<{
-  tag: string;
-  latitude: number | null;
-  longitude: number | null;
-}> {
-  let exif: any = null;
-  
+export async function analyzeImage(file: File): Promise<ProofPhoto> {
   try {
-    exif = await exifr.parse(file, {
-      gps: true,
-      pick: ['latitude', 'longitude']
-    });
+    // Extract EXIF data
+    const exif = await exifr.parse(file).catch(() => null);
+    
+    // Get filename for keyword detection
+    const originalName = file.name.toLowerCase();
+    
+    // Determine tag based on filename or EXIF GPS
+    let tag: ProofPhoto["tag"] = "Other";
+    
+    if (originalName.includes("traffic")) {
+      tag = "Traffic";
+    } else if (originalName.includes("news") || originalName.includes("paper")) {
+      tag = "Newspaper";
+    } else if (originalName.includes("geo") || originalName.includes("gps") || originalName.includes("location")) {
+      tag = "Geo-Tagged";
+    } else if (exif?.latitude && exif?.longitude) {
+      tag = "Geo-Tagged";
+    }
+    
+    return {
+      tag,
+      latitude: exif?.latitude || null,
+      longitude: exif?.longitude || null,
+    };
   } catch (error) {
-    console.log('No EXIF data found:', error);
+    console.error("Error analyzing image:", error);
+    return {
+      tag: "Other",
+      latitude: null,
+      longitude: null,
+    };
   }
+}
 
-  const originalName = file.name.toLowerCase();
-
-  let tag = "Other";
-
-  // Auto-detect tag based on filename
-  if (originalName.includes("traffic") || originalName.includes("road")) {
-    tag = "Traffic";
-  } else if (originalName.includes("news") || originalName.includes("paper") || originalName.includes("newspaper")) {
-    tag = "Newspaper";
-  } else if (originalName.includes("geo") || originalName.includes("gps") || originalName.includes("location") || originalName.includes("map")) {
-    tag = "Geo-Tagged";
-  } else if (exif?.latitude) {
-    // If GPS data exists, auto-tag as Geo-Tagged
-    tag = "Geo-Tagged";
+/**
+ * Upload proof photo to Supabase Storage and save metadata to database
+ */
+export async function uploadProofPhoto(
+  campaignId: string,
+  assetId: string,
+  file: File,
+  uploadedBy: string
+): Promise<{ success: boolean; error?: string; photoId?: string }> {
+  try {
+    // Analyze the image first
+    const analysis = await analyzeImage(file);
+    
+    // Generate unique filename with timestamp and tag
+    const timestamp = Date.now();
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${timestamp}_${analysis.tag}.${fileExt}`;
+    const filePath = `${campaignId}/${assetId}/${fileName}`;
+    
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('operations-photos')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+    
+    if (uploadError) {
+      console.error("Upload error:", uploadError);
+      return { success: false, error: uploadError.message };
+    }
+    
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('operations-photos')
+      .getPublicUrl(filePath);
+    
+    // Save metadata to database
+    const { data: photoRecord, error: dbError } = await supabase
+      .from('operations_photos')
+      .insert({
+        campaign_id: campaignId,
+        asset_id: assetId,
+        tag: analysis.tag,
+        photo_url: publicUrl,
+        latitude: analysis.latitude,
+        longitude: analysis.longitude,
+        uploaded_by: uploadedBy,
+      })
+      .select()
+      .single();
+    
+    if (dbError) {
+      console.error("Database error:", dbError);
+      // Try to clean up uploaded file
+      await supabase.storage.from('operations-photos').remove([filePath]);
+      return { success: false, error: dbError.message };
+    }
+    
+    console.log("Photo uploaded successfully:", photoRecord);
+    
+    // Note: Notifications disabled for now
+    
+    return { 
+      success: true, 
+      photoId: photoRecord.id 
+    };
+    
+  } catch (error: any) {
+    console.error("Error in uploadProofPhoto:", error);
+    return { 
+      success: false, 
+      error: error.message || "Unknown error occurred" 
+    };
   }
-
-  return {
-    tag,
-    latitude: exif?.latitude || null,
-    longitude: exif?.longitude || null
-  };
 }
 
 /**
@@ -73,11 +158,11 @@ export async function uploadOperationsProofs(
     const file = files[i];
     
     try {
-      // Step 1: Analyze image (10%)
+      // Step 1: Analyze image
       if (onProgress) onProgress(i, 10);
       const { tag, latitude, longitude } = await analyzeImage(file);
 
-      // Step 2: Generate unique filename (20%)
+      // Step 2: Generate filename
       if (onProgress) onProgress(i, 20);
       const timestamp = Date.now();
       const sanitizedTag = tag.toLowerCase().replace(/\s+/g, '_');
@@ -85,7 +170,7 @@ export async function uploadOperationsProofs(
       const fileName = `${timestamp}_${sanitizedTag}.${extension}`;
       const filePath = `${campaignId}/${assetId}/${fileName}`;
 
-      // Step 3: Upload to Supabase Storage (50%)
+      // Step 3: Upload to storage
       if (onProgress) onProgress(i, 30);
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('operations-photos')
@@ -96,7 +181,7 @@ export async function uploadOperationsProofs(
 
       if (uploadError) throw uploadError;
 
-      // Step 4: Get public URL (60%)
+      // Step 4: Get public URL
       if (onProgress) onProgress(i, 60);
       const { data: urlData } = supabase.storage
         .from('operations-photos')
@@ -104,7 +189,7 @@ export async function uploadOperationsProofs(
 
       if (!urlData?.publicUrl) throw new Error('Failed to get public URL');
 
-      // Step 5: Validate photo with AI (80%)
+      // Step 5: Validate photo with AI (optional)
       if (onProgress) onProgress(i, 70);
       let validationScore: number | undefined;
       let validationIssues: string[] = [];
@@ -117,12 +202,11 @@ export async function uploadOperationsProofs(
         validationSuggestions = validation.suggestions;
       } catch (error) {
         console.error("Photo validation failed:", error);
-        // Continue even if validation fails
       }
 
       if (onProgress) onProgress(i, 85);
 
-      // Step 6: Save to database (95%)
+      // Step 6: Save to database
       const { error: dbError } = await supabase
         .from('operations_photos')
         .insert({
@@ -139,47 +223,10 @@ export async function uploadOperationsProofs(
         });
 
       if (dbError) {
-        // Try to cleanup uploaded file
         await supabase.storage.from('operations-photos').remove([filePath]);
         throw dbError;
       }
 
-      // Step 7: Send notifications (background task - don't wait)
-      if (onProgress) onProgress(i, 95);
-      
-      // Send email notification
-      supabase.functions
-        .invoke('send-proof-notification', {
-          body: {
-            campaignId,
-            assetId,
-            photoCount: 1,
-            notificationType: 'upload'
-          }
-        })
-        .then(({ data, error }) => {
-          if (error) console.error('Email notification failed:', error);
-          else console.log('Email notification sent:', data);
-        })
-        .catch(err => console.error('Email notification error:', err));
-
-      // Send WhatsApp notification
-      supabase.functions
-        .invoke('send-whatsapp-notification', {
-          body: {
-            campaignId,
-            assetId,
-            photoCount: 1,
-            notificationType: 'upload'
-          }
-        })
-        .then(({ data, error }) => {
-          if (error) console.error('WhatsApp notification failed:', error);
-          else console.log('WhatsApp notification sent:', data);
-        })
-        .catch(err => console.error('WhatsApp notification error:', err));
-
-      // Step 8: Complete (100%)
       if (onProgress) onProgress(i, 100);
 
       results.push({
@@ -202,26 +249,71 @@ export async function uploadOperationsProofs(
 }
 
 /**
+ * Delete a proof photo (admin only)
+ */
+export async function deleteProofPhoto(
+  photoId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { data: photo, error: fetchError } = await supabase
+      .from('operations_photos')
+      .select('photo_url, campaign_id, asset_id')
+      .eq('id', photoId)
+      .single();
+    
+    if (fetchError || !photo) {
+      return { success: false, error: "Photo not found" };
+    }
+    
+    const urlParts = photo.photo_url.split('/operations-photos/');
+    const filePath = urlParts[1];
+    
+    const { error: storageError } = await supabase.storage
+      .from('operations-photos')
+      .remove([filePath]);
+    
+    if (storageError) {
+      console.error("Storage deletion error:", storageError);
+    }
+    
+    const { error: dbError } = await supabase
+      .from('operations_photos')
+      .delete()
+      .eq('id', photoId);
+    
+    if (dbError) {
+      return { success: false, error: dbError.message };
+    }
+    
+    return { success: true };
+    
+  } catch (error: any) {
+    console.error("Error in deleteProofPhoto:", error);
+    return { 
+      success: false, 
+      error: error.message || "Unknown error occurred" 
+    };
+  }
+}
+
+/**
  * Delete an operations proof photo
  */
 export async function deleteOperationsProof(
   photoId: string,
   photoUrl: string
 ): Promise<void> {
-  // Extract file path from URL
   const urlParts = photoUrl.split('/operations-photos/');
   if (urlParts.length < 2) throw new Error('Invalid photo URL');
   
-  const filePath = urlParts[1].split('?')[0]; // Remove query params
+  const filePath = urlParts[1].split('?')[0];
 
-  // Delete from storage
   const { error: storageError } = await supabase.storage
     .from('operations-photos')
     .remove([filePath]);
 
   if (storageError) throw storageError;
 
-  // Delete from database
   const { error: dbError } = await supabase
     .from('operations_photos')
     .delete()

@@ -113,8 +113,34 @@ Return a JSON with: score (0-100), issues (array of problems found), suggestions
       throw new Error("No response from AI");
     }
 
+    console.log("AI Response content:", content);
+
+    // Strip markdown code fences if present
+    let cleanContent = content.trim();
+    
+    // Remove markdown code fence at the start
+    if (cleanContent.startsWith("```json")) {
+      cleanContent = cleanContent.slice(7); // Remove ```json
+    } else if (cleanContent.startsWith("```")) {
+      cleanContent = cleanContent.slice(3); // Remove ```
+    }
+    
+    // Remove markdown code fence at the end
+    if (cleanContent.endsWith("```")) {
+      cleanContent = cleanContent.slice(0, -3);
+    }
+    
+    cleanContent = cleanContent.trim();
+
     // Parse the JSON response
-    const validation = JSON.parse(content);
+    let validation;
+    try {
+      validation = JSON.parse(cleanContent);
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError);
+      console.error("Content that failed to parse:", cleanContent);
+      throw new Error(`Failed to parse AI response: ${parseError instanceof Error ? parseError.message : "Unknown error"}`);
+    }
 
     // Add quality level based on score
     validation.quality = validation.score >= 80 ? "excellent" : 

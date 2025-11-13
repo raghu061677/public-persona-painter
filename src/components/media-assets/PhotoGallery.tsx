@@ -3,6 +3,8 @@ import { Trash2, MapPin } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PhotoValidationBadge } from "./PhotoValidationBadge";
+import { PhotoValidationResult } from "@/lib/photoValidation";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +30,7 @@ interface ProofPhoto {
   uploaded_at: string;
   latitude?: number;
   longitude?: number;
+  validation?: PhotoValidationResult;
 }
 
 interface PhotoGalleryProps {
@@ -153,10 +156,13 @@ export function PhotoGallery({ assetId, photos, onPhotoDeleted }: PhotoGalleryPr
                   />
                   
                   {/* Tag Badge */}
-                  <div className="absolute top-2 left-2">
+                  <div className="absolute top-2 left-2 flex gap-2">
                     <Badge className={`${getTagColor(photo.tag)} text-white`}>
                       {getTagIcon(photo.tag)} {photo.tag}
                     </Badge>
+                    {photo.validation && (
+                      <PhotoValidationBadge validation={photo.validation} />
+                    )}
                   </div>
 
                   {/* GPS Indicator */}

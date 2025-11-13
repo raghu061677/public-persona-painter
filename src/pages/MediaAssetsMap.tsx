@@ -500,36 +500,35 @@ export default function MediaAssetsMap() {
             
             {/* Filters & Legend Card */}
             {showFilters && (
-              <Card className="absolute top-4 right-4 z-[1000] w-72 shadow-lg">
-                <CardHeader className="pb-3">
+              <Card className="absolute top-4 right-4 z-[1000] w-60 shadow-lg">
+                <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Filter className="h-5 w-5" />
-                      <CardTitle className="text-lg">Filters & Legend</CardTitle>
-                    </div>
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Filter className="h-4 w-4" />
+                      Filters
+                    </CardTitle>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-6 w-6"
                       onClick={() => setShowFilters(false)}
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3 w-3" />
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3">
                   {/* Heatmap Toggle */}
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30 border border-border">
-                    <div className="flex items-center gap-2">
-                      <Layers className="h-4 w-4 text-primary" />
-                      <Label htmlFor="heatmap-toggle" className="text-sm font-medium cursor-pointer">
-                        Asset Density Heatmap
-                      </Label>
-                    </div>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-accent/30 border border-border">
+                    <Label htmlFor="heatmap-toggle" className="text-xs font-medium cursor-pointer flex items-center gap-1.5">
+                      <Layers className="h-3 w-3 text-primary" />
+                      Heatmap
+                    </Label>
                     <Switch
                       id="heatmap-toggle"
                       checked={showHeatmap}
                       onCheckedChange={setShowHeatmap}
+                      className="scale-75"
                     />
                   </div>
 

@@ -1,5 +1,6 @@
 import * as exifr from "exifr";
 import { supabase } from "@/integrations/supabase/client";
+import { validateProofPhoto, PhotoValidationResult } from "@/lib/photoValidation";
 
 interface ProofPhoto {
   url: string;
@@ -7,6 +8,7 @@ interface ProofPhoto {
   uploaded_at: string;
   latitude?: number;
   longitude?: number;
+  validation?: PhotoValidationResult;
 }
 
 interface UploadResult {
@@ -14,6 +16,7 @@ interface UploadResult {
   tag: string;
   latitude?: number;
   longitude?: number;
+  validation?: PhotoValidationResult;
 }
 
 /**
@@ -112,12 +115,23 @@ export async function uploadProofPhoto(
 
   if (onProgress) onProgress(0.7);
 
+  // Validate photo quality using AI
+  let validation: PhotoValidationResult | undefined;
+  try {
+    validation = await validateProofPhoto(urlData.publicUrl, tag as any);
+    if (onProgress) onProgress(0.85);
+  } catch (error) {
+    console.error("Photo validation failed:", error);
+    // Continue even if validation fails
+  }
+
   // Prepare photo metadata
   const photoMetadata: ProofPhoto = {
     url: urlData.publicUrl,
     tag,
     uploaded_at: new Date().toISOString(),
     ...(latitude && longitude ? { latitude, longitude } : {}),
+    ...(validation ? { validation } : {}),
   };
 
   // Update database - append to photos array in images field
@@ -158,5 +172,6 @@ export async function uploadProofPhoto(
     tag,
     latitude,
     longitude,
+    validation,
   };
 }

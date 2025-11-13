@@ -30,6 +30,7 @@ import CampaignDetail from "./pages/CampaignDetail";
 import CampaignEdit from "./pages/CampaignEdit";
 import CampaignBudget from "./pages/CampaignBudget";
 import MobileUpload from "./pages/MobileUpload";
+import MobileOpsUpload from "./pages/MobileOpsUpload";
 import MobileFieldApp from "./pages/MobileFieldApp";
 import MobilePowerBills from "./pages/MobilePowerBills";
 import FinanceDashboard from "./pages/FinanceDashboard";
@@ -81,6 +82,7 @@ const App = () => (
             <Route path="/admin/plans/:id/share/:shareToken" element={<PlanShare />} />
             <Route path="/mobile/field-app" element={<MobileFieldApp />} />
             <Route path="/mobile/upload/:campaignId/:assetId" element={<MobileUpload />} />
+            <Route path="/mobile/upload" element={<MobileOpsUpload />} />
             <Route path="/mobile/power-bills" element={<MobilePowerBills />} />
             
             {/* Protected routes with layout */}

@@ -48,6 +48,7 @@ export const ROUTES = {
   MOBILE_OPERATIONS: "/admin/mobile-operations",
   MOBILE_FIELD_APP: "/mobile/field-app",
   MOBILE_UPLOAD: (campaignId: string, assetId: string) => `/mobile/upload/${campaignId}/${assetId}`,
+  MOBILE_OPS_UPLOAD: "/mobile/upload",
   MOBILE_POWER_BILLS: "/mobile/power-bills",
   
   // Finance

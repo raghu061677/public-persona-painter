@@ -16,6 +16,7 @@ import MediaAssetDetail from "./pages/MediaAssetDetail";
 import MediaAssetEdit from "./pages/MediaAssetEdit";
 import MediaAssetsMap from "./pages/MediaAssetsMap";
 import MediaAssetsImport from "./pages/MediaAssetsImport";
+import MediaAssetsValidation from "./pages/MediaAssetsValidation";
 import ClientsImport from "./pages/ClientsImport";
 import ClientsList from "./pages/ClientsList";
 import ClientNew from "./pages/ClientNew";
@@ -97,6 +98,7 @@ const App = () => (
             <Route path="/admin/media-assets" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><AppLayout><MediaAssetsList /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets/new" element={<ProtectedRoute requiredModule="media_assets" requiredAction="create"><AppLayout><MediaAssetNew /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets/import" element={<ProtectedRoute requiredModule="media_assets" requiredAction="create"><AppLayout><MediaAssetsImport /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/media-assets/validate" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><AppLayout><MediaAssetsValidation /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/clients/import" element={<ProtectedRoute requiredModule="clients" requiredAction="create"><AppLayout><ClientsImport /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets/edit/:id" element={<ProtectedRoute requiredModule="media_assets" requiredAction="update"><AppLayout><MediaAssetEdit /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets/:id" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><AppLayout><MediaAssetDetail /></AppLayout></ProtectedRoute>} />

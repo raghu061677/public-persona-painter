@@ -23,6 +23,7 @@ export const ROUTES = {
   MEDIA_ASSETS_DETAIL: (id: string) => `/admin/media-assets/${id}`,
   MEDIA_ASSETS_MAP: "/admin/media-assets-map",
   MEDIA_ASSETS_IMPORT: "/admin/media-assets/import",
+  MEDIA_ASSETS_VALIDATION: "/admin/media-assets/validate",
   PHOTO_LIBRARY: "/admin/photo-library",
   
   // Clients

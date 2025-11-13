@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Building2, MapPin, TrendingUp, Layers } from "lucide-react";
+import { Plus, Building2, MapPin, TrendingUp, Layers, ShieldCheck } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { ROUTES } from "@/lib/routes";
 import { MediaAssetsTable } from "@/components/media-assets/media-assets-table";
 import { ImportDialog } from "@/components/media-assets/import-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -148,6 +149,13 @@ export default function MediaAssetsList() {
           </Button>
           {isAdmin && (
             <>
+              <Button
+                variant="outline"
+                onClick={() => navigate(ROUTES.MEDIA_ASSETS_VALIDATION)}
+              >
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                Validate Assets
+              </Button>
               <ImportDialog onImportComplete={fetchAssets} />
               <Button 
                 onClick={() => navigate('/admin/media-assets/new')}

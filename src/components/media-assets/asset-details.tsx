@@ -130,15 +130,8 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
         )}
       </div>
 
-      {/* Latest Photos Section */}
-      <div className="mb-6">
-        <LatestPhotosSection assetId={asset.id} />
-      </div>
-
-      {/* Two Column Layout: Details Left, Images Right */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Details - Takes 2 columns */}
-        <div className="lg:col-span-2 space-y-6">
+      {/* Full Width Details Section */}
+      <div className="space-y-6">
           <Tabs defaultValue="overview" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -187,95 +180,95 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
           </div>
         </div>
 
-        {/* Right Column: Image Carousel - Takes 1 column, sticky */}
+      {/* Bottom Section: Latest Photos and Images Side by Side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+        {/* Latest Photos Section */}
+        <div>
+          <LatestPhotosSection assetId={asset.id} />
+        </div>
+
+        {/* Images Section */}
         {allImages.length > 0 && (
-          <div className="lg:col-span-1">
-            <Card className="sticky top-6 border-l-4 border-l-primary">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Images</span>
-                  <span className="text-sm font-normal text-muted-foreground">
-                    {selectedImageIndex + 1} / {allImages.length}
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Main Image Display */}
-                <div className="aspect-[4/3] rounded-lg overflow-hidden border bg-muted relative group">
-                  <img
-                    src={allImages[selectedImageIndex].url}
-                    alt={allImages[selectedImageIndex].name}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
-                      <p className="text-white text-sm font-medium">
-                        {allImages[selectedImageIndex].name}
-                      </p>
-                    </div>
+          <Card className="border-l-4 border-l-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between text-lg">
+                <span>Images</span>
+                <span className="text-sm font-normal text-muted-foreground">
+                  {selectedImageIndex + 1} / {allImages.length}
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Main Image Display */}
+              <div className="aspect-[4/3] rounded-lg overflow-hidden border bg-muted relative group">
+                <img
+                  src={allImages[selectedImageIndex].url}
+                  alt={allImages[selectedImageIndex].name}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <p className="text-white text-sm font-medium">
+                      {allImages[selectedImageIndex].name}
+                    </p>
                   </div>
-                  
-                  {/* Navigation Arrows */}
-                  {allImages.length > 1 && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => setSelectedImageIndex((prev) => 
-                          prev === 0 ? allImages.length - 1 : prev - 1
-                        )}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => setSelectedImageIndex((prev) => 
-                          prev === allImages.length - 1 ? 0 : prev + 1
-                        )}
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
                 </div>
+              </div>
 
-                {/* Thumbnail Grid */}
-                {allImages.length > 1 && (
-                  <div className="grid grid-cols-4 gap-2">
-                    {allImages.map((image, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setSelectedImageIndex(index)}
-                        className={`aspect-square rounded-md overflow-hidden border-2 transition-all hover:scale-105 ${
-                          index === selectedImageIndex
-                            ? 'border-primary ring-2 ring-primary/20'
-                            : 'border-transparent hover:border-muted-foreground/30'
-                        }`}
-                      >
-                        <img
-                          src={image.url}
-                          alt={image.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* View Full Size Button */}
+              {/* Navigation Buttons */}
+              <div className="flex items-center justify-center gap-2">
                 <Button
                   variant="outline"
-                  className="w-full"
-                  onClick={() => window.open(allImages[selectedImageIndex].url, '_blank')}
+                  size="sm"
+                  onClick={() => setSelectedImageIndex(Math.max(0, selectedImageIndex - 1))}
+                  disabled={selectedImageIndex === 0}
                 >
-                  View Full Size
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
-              </CardContent>
-            </Card>
-          </div>
+                <span className="text-sm text-muted-foreground px-3">
+                  {selectedImageIndex + 1} of {allImages.length}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedImageIndex(Math.min(allImages.length - 1, selectedImageIndex + 1))}
+                  disabled={selectedImageIndex === allImages.length - 1}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Thumbnail Grid */}
+              <div className="grid grid-cols-4 gap-2">
+                {allImages.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedImageIndex(idx)}
+                    className={`
+                      aspect-square rounded-md overflow-hidden border-2 transition-all
+                      ${idx === selectedImageIndex ? 'border-primary ring-2 ring-primary ring-offset-2' : 'border-transparent hover:border-muted-foreground'}
+                    `}
+                  >
+                    <img
+                      src={img.url}
+                      alt={img.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+
+              {/* View Full Size Button */}
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="w-full"
+                onClick={() => window.open(allImages[selectedImageIndex].url, '_blank')}
+              >
+                View Full Size
+              </Button>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

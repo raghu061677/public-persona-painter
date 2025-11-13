@@ -106,49 +106,50 @@ export function PowerBillFetchDialog({
     try {
       console.log('Attempting auto-fetch for:', formData.unique_service_number);
       
-      const { data, error } = await supabase.functions.invoke('fetch-tgspdcl-bill', {
+      const { data, error } = await supabase.functions.invoke('fetch-tgspdcl-payment', {
         body: {
           uniqueServiceNumber: formData.unique_service_number.trim(),
+          serviceNumber: formData.service_number?.trim() || '',
           assetId: assetId,
+          billMonth: new Date().toISOString().substring(0, 7), // Current month in YYYY-MM format
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
+      }
 
-      if (data?.success && data.billData) {
-        // Auto-fill Step 3 with fetched bill data
-        const bill = data.billData;
-        setFormData({
-          ...formData,
-          consumer_name: bill.consumer_name || formData.consumer_name,
-          service_number: bill.service_number || formData.service_number,
-          ero: bill.ero_name || bill.ero || formData.ero,
-          section: bill.section_name || formData.section,
-          units: bill.units?.toString() || "",
-          bill_date: bill.bill_date || "",
-          due_date: bill.due_date || "",
-          current_month_bill: bill.bill_amount?.toString() || bill.current_month_bill?.toString() || "",
-          acd_amount: bill.acd_amount?.toString() || "0",
-          arrears: bill.arrears?.toString() || "0",
-          total_amount: bill.total_due?.toString() || bill.bill_amount?.toString() || "",
-        });
+      console.log('Auto-fetch response:', data);
+
+      if (data?.success && data?.billData) {
+        // Auto-fill the form with fetched data
+        setFormData(prev => ({
+          ...prev,
+          units: data.billData.units?.toString() || "",
+          bill_date: data.billData.bill_date || "",
+          due_date: data.billData.due_date || "",
+          current_month_bill: data.billData.current_month_bill?.toString() || "",
+          acd_amount: data.billData.acd_amount?.toString() || "0",
+          arrears: data.billData.arrears?.toString() || "0",
+          total_amount: data.billData.total_due?.toString() || "",
+        }));
 
         toast({
-          title: "Bill Data Fetched Successfully",
-          description: "Bill details from TGSPDCL portal have been auto-populated. Please verify and save.",
+          title: "Success!",
+          description: "Bill details fetched and saved to database successfully",
         });
+
+        // Call parent callback to refresh data
+        onBillFetched?.();
       } else {
-        toast({
-          title: "Auto-fetch Failed",
-          description: data?.message || "Unable to fetch bill automatically. Please enter details manually from the TGSPDCL portal.",
-          variant: "destructive",
-        });
+        throw new Error(data?.error || 'Failed to fetch bill details');
       }
     } catch (error: any) {
-      console.error('Auto-fetch error:', error);
+      console.error('Error auto-fetching bill:', error);
       toast({
-        title: "Auto-fetch Error",
-        description: "Please enter bill details manually from the TGSPDCL portal",
+        title: "Auto-Fetch Failed",
+        description: error.message || "Could not retrieve bill details automatically. Please enter manually.",
         variant: "destructive",
       });
     } finally {

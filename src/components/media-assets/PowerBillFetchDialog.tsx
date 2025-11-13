@@ -38,7 +38,7 @@ export function PowerBillFetchDialog({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [autoFetching, setAutoFetching] = useState(false);
-  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteOpen, setPasteOpen] = useState(true); // Open by default for visibility
   const [pastedText, setPastedText] = useState("");
   const [parsedData, setParsedData] = useState<any>(null);
   

@@ -1566,6 +1566,35 @@ export type Database = {
           },
         ]
       }
+      photo_favorites: {
+        Row: {
+          created_at: string | null
+          id: string
+          photo_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          photo_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          photo_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photo_favorites_photo_id_fkey"
+            columns: ["photo_id"]
+            isOneToOne: false
+            referencedRelation: "operations_photos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_approvals: {
         Row: {
           approval_level: Database["public"]["Enums"]["approval_level"]

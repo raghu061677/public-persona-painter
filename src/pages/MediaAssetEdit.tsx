@@ -1014,7 +1014,7 @@ export default function MediaAssetEdit() {
                     <CardTitle className="text-xl">Status & Visibility</CardTitle>
                   </div>
                 </CardHeader>
-                <CardContent className="pt-6">
+                <CardContent className="pt-6 space-y-6">
                   <div className="flex items-center justify-between rounded-xl border border-primary/20 p-4 bg-gradient-to-br from-primary/5 to-accent/5">
                     <div>
                       <Label className="text-base">Visible on Public Site</Label>
@@ -1025,22 +1025,25 @@ export default function MediaAssetEdit() {
                       onCheckedChange={(checked) => updateField('is_public', checked)} 
                     />
                   </div>
+
+                  {/* Photo Gallery in Sidebar */}
+                  {formData?.images?.photos && formData.images.photos.length > 0 && (
+                    <div className="border-t pt-6">
+                      <PhotoGallery 
+                        assetId={id!} 
+                        photos={formData.images.photos} 
+                        onPhotoDeleted={fetchAsset}
+                      />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
           </div>
 
-          {/* PROOF PHOTOS SECTION - Full Width Below */}
+          {/* PROOF PHOTOS UPLOAD SECTION - Full Width Below */}
           <div className="space-y-6 mt-8">
             <PhotoUploadSection assetId={id!} onUploadComplete={fetchAsset} />
-            
-            {formData?.images?.photos && formData.images.photos.length > 0 && (
-              <PhotoGallery 
-                assetId={id!} 
-                photos={formData.images.photos} 
-                onPhotoDeleted={fetchAsset}
-              />
-            )}
           </div>
         </div>
       </form>

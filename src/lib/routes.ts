@@ -5,87 +5,97 @@
 
 // Public routes
 export const ROUTES = {
-  // Auth
-  HOME: "/",
+  INDEX: "/",
+  DASHBOARD: "/admin/dashboard",
+  
+  // Authentication
   AUTH: "/auth",
   
-  // Main
-  DASHBOARD: "/dashboard",
-  
-  // Clients
-  CLIENTS: "/admin/clients",
-  CLIENTS_NEW: "/admin/clients/new",
-  CLIENTS_IMPORT: "/admin/clients/import",
-  CLIENT_DETAIL: (id: string) => `/admin/clients/${id}`,
-  CLIENT_ANALYTICS: (id: string) => `/admin/clients/${id}/analytics`,
+  // Profile & Settings
+  PROFILE_SETTINGS: "/settings/profile",
+  SETTINGS: "/admin/settings",
+  ORGANIZATION_SETTINGS: "/admin/settings/organization",
   
   // Media Assets
   MEDIA_ASSETS: "/admin/media-assets",
   MEDIA_ASSETS_NEW: "/admin/media-assets/new",
-  MEDIA_ASSETS_IMPORT: "/admin/media-assets/import",
+  MEDIA_ASSETS_EDIT: (id: string) => `/admin/media-assets/edit/${id}`,
+  MEDIA_ASSETS_DETAIL: (id: string) => `/admin/media-assets/${id}`,
   MEDIA_ASSETS_MAP: "/admin/media-assets-map",
-  MEDIA_ASSET_DETAIL: (id: string) => `/admin/media-assets/${id}`,
-  MEDIA_ASSET_EDIT: (id: string) => `/admin/media-assets/edit/${id}`,
+  MEDIA_ASSETS_IMPORT: "/admin/media-assets/import",
+  PHOTO_LIBRARY: "/admin/photo-library",
+  
+  // Clients
+  CLIENTS: "/admin/clients",
+  CLIENTS_NEW: "/admin/clients/new",
+  CLIENTS_DETAIL: (id: string) => `/admin/clients/${id}`,
+  CLIENTS_IMPORT: "/admin/clients/import",
+  CLIENTS_ANALYTICS: "/admin/clients/analytics",
   
   // Plans
   PLANS: "/admin/plans",
   PLANS_NEW: "/admin/plans/new",
-  PLANS_COMPARE: "/admin/plans-compare",
-  PLAN_DETAIL: (id: string) => `/admin/plans/${id}`,
-  PLAN_EDIT: (id: string) => `/admin/plans/edit/${id}`,
-  PLAN_SHARE: (id: string, token: string) => `/admin/plans/${id}/share/${token}`,
+  PLANS_EDIT: (id: string) => `/admin/plans/edit/${id}`,
+  PLANS_DETAIL: (id: string) => `/admin/plans/${id}`,
+  PLANS_SHARE: (id: string, shareToken: string) => `/plans/share/${id}/${shareToken}`,
+  PLANS_COMPARISON: "/admin/plans/comparison",
   
   // Campaigns
   CAMPAIGNS: "/admin/campaigns",
-  CAMPAIGN_DETAIL: (id: string) => `/admin/campaigns/${id}`,
-  CAMPAIGN_EDIT: (id: string) => `/admin/campaigns/edit/${id}`,
+  CAMPAIGNS_NEW: "/admin/campaigns/new",
+  CAMPAIGNS_EDIT: (id: string) => `/admin/campaigns/edit/${id}`,
+  CAMPAIGNS_DETAIL: (id: string) => `/admin/campaigns/${id}`,
+  CAMPAIGNS_ASSET_PROOFS: (id: string) => `/admin/campaigns/${id}/asset-proofs`,
+  CAMPAIGNS_BUDGET: (id: string) => `/admin/campaigns/${id}/budget`,
+  
+  // Finance
+  ESTIMATIONS: "/admin/estimations",
+  INVOICES: "/admin/invoices",
+  INVOICES_DETAIL: (id: string) => `/admin/invoices/${id}`,
+  EXPENSES: "/admin/expenses",
+  FINANCE_DASHBOARD: "/admin/finance",
+  
+  // Power Bills
+  POWER_BILLS_DASHBOARD: "/admin/power-bills",
+  POWER_BILLS_ANALYTICS: "/admin/power-bills/analytics",
+  POWER_BILLS_SCHEDULER: "/admin/power-bills/scheduler",
+  POWER_BILLS_BULK_PAYMENT: "/admin/power-bills/bulk-payment",
+  POWER_BILLS_BULK_UPLOAD: "/admin/power-bills/bulk-upload",
+  POWER_BILLS_RECONCILIATION: "/admin/power-bills/reconciliation",
+  MOBILE_POWER_BILLS: "/mobile/power-bills",
   
   // Operations
   OPERATIONS: "/admin/operations",
-  OPERATIONS_ANALYTICS: "/admin/operations-analytics",
-  OPERATIONS_CALENDAR: "/admin/operations-calendar",
-  OPERATIONS_SETTINGS: "/admin/operations-settings",
-  MOBILE_OPERATIONS: "/admin/mobile-operations",
+  OPERATIONS_CALENDAR: "/admin/operations/calendar",
+  OPERATIONS_ANALYTICS: "/admin/operations/analytics",
+  OPERATIONS_SETTINGS: "/admin/operations/settings",
+  MOBILE_OPS_UPLOAD: "/mobile/operations/:assignmentId",
   MOBILE_FIELD_APP: "/mobile/field-app",
-  MOBILE_UPLOAD: (campaignId: string, assetId: string) => `/mobile/upload/${campaignId}/${assetId}`,
-  MOBILE_OPS_UPLOAD: "/mobile/upload",
-  CAMPAIGN_ASSET_PROOFS: "/admin/operations/:campaignId/assets/:assetId",
-  MOBILE_POWER_BILLS: "/mobile/power-bills",
-  
-  // Finance
-  FINANCE: "/finance",
-  ESTIMATIONS: "/finance/estimations",
-  INVOICES: "/finance/invoices",
-  INVOICE_DETAIL: (id: string) => `/finance/invoices/${id}`,
-  EXPENSES: "/finance/expenses",
+  MOBILE_OPERATIONS: "/mobile/operations",
+  MOBILE_UPLOAD: "/mobile/upload/:campaignId/:assetId",
   
   // Reports
-  REPORTS: "/reports",
-  REPORTS_VACANT_MEDIA: "/reports/vacant-media",
+  REPORTS: "/admin/reports",
+  VACANT_MEDIA_REPORT: "/admin/reports/vacant-media",
   
-  // Power Bills
-  POWER_BILLS: "/admin/power-bills",
-  POWER_BILLS_ANALYTICS: "/admin/power-bills-analytics",
-  POWER_BILLS_BULK_PAYMENT: "/admin/power-bills-bulk-payment",
-  POWER_BILLS_BULK_UPLOAD: "/admin/power-bills/bulk-upload",
-  POWER_BILLS_RECONCILIATION: "/admin/power-bills/reconciliation",
+  // Users & Access
+  USER_MANAGEMENT: "/admin/users",
   
-  // Admin
-  PHOTO_LIBRARY: "/admin/photo-library",
-  IMPORT_DATA: "/admin/import",
-  EXPORT_DATA: "/admin/export",
-  CODE_MANAGEMENT: "/admin/code-management",
+  // Approvals
+  APPROVAL_SETTINGS: "/admin/approvals/settings",
+  APPROVAL_DELEGATION: "/admin/approvals/delegation",
+  APPROVAL_ANALYTICS: "/admin/approvals/analytics",
+  
+  // Data Management
+  IMPORT_DATA: "/admin/data/import",
+  EXPORT_DATA: "/admin/data/export",
   AUDIT_LOGS: "/admin/audit-logs",
-  VENDORS: "/admin/vendors",
-  USERS: "/admin/users",
-  APPROVAL_SETTINGS: "/admin/approval-settings",
-  APPROVAL_DELEGATION: "/admin/approval-delegation",
-  APPROVAL_ANALYTICS: "/admin/approval-analytics",
   
-  // Settings
-  SETTINGS: "/settings",
-  PROFILE_SETTINGS: "/settings/profile",
-  ORGANIZATION_SETTINGS: "/admin/organization-settings",
+  // Code Management
+  CODE_MANAGEMENT: "/admin/code-management",
+  
+  // Vendors
+  VENDORS_MANAGEMENT: "/admin/vendors",
 } as const;
 
 /**
@@ -95,6 +105,6 @@ export const ROLE_DASHBOARDS = {
   admin: ROUTES.DASHBOARD,
   sales: ROUTES.PLANS,
   operations: ROUTES.OPERATIONS,
-  finance: ROUTES.FINANCE,
+  finance: ROUTES.FINANCE_DASHBOARD,
   user: ROUTES.DASHBOARD,
 } as const;

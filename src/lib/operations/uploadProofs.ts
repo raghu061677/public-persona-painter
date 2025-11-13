@@ -124,6 +124,22 @@ export async function uploadProofPhoto(
     
     console.log("Photo uploaded successfully:", photoRecord);
     
+    // Also save to media_photos for centralized gallery
+    const { data: campaignData } = await supabase
+      .from('campaigns')
+      .select('client_id')
+      .eq('id', campaignId)
+      .single();
+
+    await supabase.from('media_photos').insert({
+      asset_id: assetId,
+      campaign_id: campaignId,
+      client_id: campaignData?.client_id,
+      photo_url: publicUrl,
+      category: analysis.tag.toLowerCase() === 'newspaper' ? 'Proof' : 'Mounting',
+      uploaded_by: uploadedBy,
+    });
+    
     // Note: Notifications disabled for now
     
     return { 

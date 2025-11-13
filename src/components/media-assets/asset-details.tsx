@@ -12,6 +12,7 @@ import { AssetOverviewTab } from "./asset-overview-tab";
 import { AssetPowerBillsTab } from "./asset-power-bills-tab";
 import { AssetMaintenanceTab } from "./asset-maintenance-tab";
 import { AssetBookingHistoryTab } from "./asset-booking-history-tab";
+import { LatestPhotosSection } from "./LatestPhotosSection";
 import {
   Carousel,
   CarouselContent,
@@ -127,6 +128,11 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
             </Button>
           </div>
         )}
+      </div>
+
+      {/* Latest Photos Section */}
+      <div className="mb-6">
+        <LatestPhotosSection assetId={asset.asset_id} />
       </div>
 
       {/* Two Column Layout: Details Left, Images Right */}

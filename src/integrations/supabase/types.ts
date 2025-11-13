@@ -1315,6 +1315,48 @@ export type Database = {
         }
         Relationships: []
       }
+      media_photos: {
+        Row: {
+          asset_id: string
+          campaign_id: string | null
+          category: string
+          client_id: string | null
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          photo_url: string
+          updated_at: string | null
+          uploaded_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          asset_id: string
+          campaign_id?: string | null
+          category: string
+          client_id?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          photo_url: string
+          updated_at?: string | null
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          asset_id?: string
+          campaign_id?: string | null
+          category?: string
+          client_id?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          photo_url?: string
+          updated_at?: string | null
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       operations_notifications: {
         Row: {
           asset_id: string

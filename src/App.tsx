@@ -44,6 +44,7 @@ import ExpensesList from "./pages/ExpensesList";
 import ReportsDashboard from "./pages/ReportsDashboard";
 import VacantMediaReport from "./pages/VacantMediaReport";
 import PhotoLibrary from "./pages/PhotoLibrary";
+import PhotoGallery from "./pages/PhotoGallery";
 import ImportData from "./pages/ImportData";
 import ExportData from "./pages/ExportData";
 import UserManagement from "./pages/UserManagement";
@@ -130,6 +131,7 @@ const App = () => (
             <Route path="/reports" element={<AppLayout><ReportsDashboard /></AppLayout>} />
             <Route path="/reports/vacant-media" element={<AppLayout><VacantMediaReport /></AppLayout>} />
             <Route path="/admin/photo-library" element={<AppLayout><PhotoLibrary /></AppLayout>} />
+            <Route path="/admin/gallery" element={<ProtectedRoute><AppLayout><PhotoGallery /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/import" element={<AppLayout><ImportData /></AppLayout>} />
             <Route path="/admin/export" element={<AppLayout><ExportData /></AppLayout>} />
             <Route path="/admin/code-management" element={<AppLayout><CodeManagement /></AppLayout>} />

@@ -91,25 +91,27 @@ serve(async (req) => {
     // Update user status if isActive is provided
     if (typeof isActive === 'boolean') {
       if (isActive) {
-        // Unban user
-        const { error: unbanError } = await supabaseClient.auth.admin.updateUserById(
+        // Activate user - unban if banned and confirm email if not confirmed
+        const { error: updateError } = await supabaseClient.auth.admin.updateUserById(
           userId,
-          { ban_duration: 'none' }
+          { 
+            ban_duration: 'none',
+            email_confirm: true  // Confirm email to activate the user
+          }
         );
-        if (unbanError) {
-          console.error('Error unbanning user:', unbanError);
+        if (updateError) {
+          console.error('Error activating user:', updateError);
+          throw new Error(`Failed to activate user: ${updateError.message}`);
         }
       } else {
-        // Ban user for a very long time (effectively suspended)
-        const banUntil = new Date();
-        banUntil.setFullYear(banUntil.getFullYear() + 100);
-        
+        // Deactivate user - ban them
         const { error: banError } = await supabaseClient.auth.admin.updateUserById(
           userId,
-          { ban_duration: '876000h' } // 100 years
+          { ban_duration: '876000h' } // 100 years (effectively permanent)
         );
         if (banError) {
-          console.error('Error banning user:', banError);
+          console.error('Error deactivating user:', banError);
+          throw new Error(`Failed to deactivate user: ${banError.message}`);
         }
       }
     }

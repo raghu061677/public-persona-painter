@@ -9,7 +9,7 @@ import { ArrowLeft, Edit, Copy, Trash2, Zap, Wrench, History, ChevronLeft, Chevr
 import { getStatusColor } from "@/utils/mediaAssets";
 import { toast } from "@/hooks/use-toast";
 import { AssetOverviewTab } from "./asset-overview-tab";
-import { AssetPowerBillsTab } from "./asset-power-bills-tab";
+import { EnhancedPowerBillsTab } from "./EnhancedPowerBillsTab";
 import { AssetMaintenanceTab } from "./asset-maintenance-tab";
 import { AssetBookingHistoryTab } from "./asset-booking-history-tab";
 import { LatestPhotosSection } from "./LatestPhotosSection";
@@ -161,7 +161,7 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
             </TabsContent>
 
             <TabsContent value="power-bills" className="mt-6">
-              <AssetPowerBillsTab assetId={asset.id} asset={asset} isAdmin={isAdmin} />
+              <EnhancedPowerBillsTab assetId={asset.id} asset={asset} isAdmin={isAdmin} />
             </TabsContent>
 
             <TabsContent value="maintenance" className="mt-6">

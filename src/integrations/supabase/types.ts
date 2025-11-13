@@ -332,13 +332,17 @@ export type Database = {
           bill_date: string | null
           bill_month: string
           bill_url: string | null
+          consumer_address: string | null
           consumer_name: string | null
           created_at: string | null
           created_by: string | null
           current_month_bill: number | null
           direction: string | null
           due_date: string | null
+          energy_charges: number | null
           ero: string | null
+          ero_name: string | null
+          fixed_charges: number | null
           id: string
           location: string | null
           notes: string | null
@@ -347,6 +351,7 @@ export type Database = {
           paid_receipt_url: string | null
           payment_date: string | null
           payment_link: string | null
+          payment_reference: string | null
           payment_status: string | null
           section_name: string | null
           service_number: string | null
@@ -365,13 +370,17 @@ export type Database = {
           bill_date?: string | null
           bill_month: string
           bill_url?: string | null
+          consumer_address?: string | null
           consumer_name?: string | null
           created_at?: string | null
           created_by?: string | null
           current_month_bill?: number | null
           direction?: string | null
           due_date?: string | null
+          energy_charges?: number | null
           ero?: string | null
+          ero_name?: string | null
+          fixed_charges?: number | null
           id?: string
           location?: string | null
           notes?: string | null
@@ -380,6 +389,7 @@ export type Database = {
           paid_receipt_url?: string | null
           payment_date?: string | null
           payment_link?: string | null
+          payment_reference?: string | null
           payment_status?: string | null
           section_name?: string | null
           service_number?: string | null
@@ -398,13 +408,17 @@ export type Database = {
           bill_date?: string | null
           bill_month?: string
           bill_url?: string | null
+          consumer_address?: string | null
           consumer_name?: string | null
           created_at?: string | null
           created_by?: string | null
           current_month_bill?: number | null
           direction?: string | null
           due_date?: string | null
+          energy_charges?: number | null
           ero?: string | null
+          ero_name?: string | null
+          fixed_charges?: number | null
           id?: string
           location?: string | null
           notes?: string | null
@@ -413,6 +427,7 @@ export type Database = {
           paid_receipt_url?: string | null
           payment_date?: string | null
           payment_link?: string | null
+          payment_reference?: string | null
           payment_status?: string | null
           section_name?: string | null
           service_number?: string | null

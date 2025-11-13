@@ -12,7 +12,9 @@ interface BillData {
   unique_service_number: string;
   service_number?: string;
   ero?: string;
+  ero_name?: string;
   section_name?: string;
+  consumer_address?: string;
   area?: string;
   direction?: string;
   location?: string;
@@ -21,11 +23,14 @@ interface BillData {
   bill_date?: string;
   due_date?: string;
   bill_amount?: number;
+  energy_charges?: number;
+  fixed_charges?: number;
   current_month_bill?: number;
   acd_amount?: number;
   arrears?: number;
   total_due?: number;
   payment_link?: string;
+  bill_month?: string;
 }
 
 serve(async (req) => {
@@ -82,8 +87,9 @@ serve(async (req) => {
         ...billData,
         consumer_name: billData.consumer_name || assetData?.consumer_name,
         service_number: billData.service_number || assetData?.service_number,
-        ero: billData.ero || assetData?.ero,
+        ero_name: billData.ero_name || billData.ero || assetData?.ero,
         section_name: billData.section_name || assetData?.section_name,
+        consumer_address: billData.consumer_address || billData.address,
         area: billData.area || assetData?.area,
         direction: billData.direction || assetData?.direction,
         location: billData.location || assetData?.location,
@@ -91,31 +97,23 @@ serve(async (req) => {
 
       const { error: insertError } = await supabase
         .from('asset_power_bills')
-        .upsert({
+        .insert({
           asset_id: assetId,
           unique_service_number: mergedData.unique_service_number,
           consumer_name: mergedData.consumer_name,
           service_number: mergedData.service_number,
-          ero: mergedData.ero,
+          ero_name: mergedData.ero_name,
           section_name: mergedData.section_name,
-          area: mergedData.area,
-          direction: mergedData.direction,
-          location: mergedData.location,
-          address: mergedData.address,
-          bill_month: new Date(),
+          consumer_address: mergedData.consumer_address,
           bill_date: mergedData.bill_date ? new Date(mergedData.bill_date) : null,
-          units: mergedData.units || 0,
-          bill_amount: mergedData.bill_amount || mergedData.current_month_bill || 0,
-          current_month_bill: mergedData.current_month_bill || 0,
-          acd_amount: mergedData.acd_amount || 0,
-          arrears: mergedData.arrears || 0,
-          total_due: mergedData.total_due || 0,
           due_date: mergedData.due_date ? new Date(mergedData.due_date) : null,
-          payment_link: mergedData.payment_link || null,
+          bill_month: mergedData.bill_month || new Date().toISOString(),
+          bill_amount: mergedData.bill_amount || mergedData.current_month_bill || 0,
+          energy_charges: mergedData.energy_charges || 0,
+          fixed_charges: mergedData.fixed_charges || 0,
+          arrears: mergedData.arrears || 0,
+          total_due: mergedData.total_due || mergedData.bill_amount || 0,
           payment_status: 'Pending',
-          paid: false,
-        }, {
-          onConflict: 'asset_id,bill_month',
         });
 
       if (insertError) {
@@ -347,13 +345,17 @@ function parseHTMLForBillData(html: string, uniqueServiceNumber: string): BillDa
     }
     
     // ERO
-    if (/\bERO\b/i.test(text) && !billData.ero) {
+    if (/\bERO\b/i.test(text) && !billData.ero && !billData.ero_name) {
       const nextText = $elem.next().text().trim();
       if (nextText && nextText.length > 2) {
         billData.ero = nextText;
+        billData.ero_name = nextText;
       } else {
         const match = text.match(/ERO\s*[:\-]?\s*(.+?)(?:\n|$)/i);
-        if (match) billData.ero = match[1].trim();
+        if (match) {
+          billData.ero = match[1].trim();
+          billData.ero_name = match[1].trim();
+        }
       }
     }
     
@@ -369,13 +371,41 @@ function parseHTMLForBillData(html: string, uniqueServiceNumber: string): BillDa
     }
     
     // Address
-    if (/Address/i.test(text) && !billData.address) {
+    if (/Address/i.test(text) && !billData.address && !billData.consumer_address) {
       const nextText = $elem.next().text().trim();
       if (nextText && nextText.length > 5) {
         billData.address = nextText;
+        billData.consumer_address = nextText;
       } else {
         const match = text.match(/Address\s*[:\-]?\s*(.+?)(?:\n|$)/i);
-        if (match) billData.address = match[1].trim();
+        if (match) {
+          billData.address = match[1].trim();
+          billData.consumer_address = match[1].trim();
+        }
+      }
+    }
+    
+    // Energy Charges
+    if (/Energy\s*Charge/i.test(text) && !billData.energy_charges) {
+      const nextText = $elem.next().text().trim();
+      const extracted = extractNumber(nextText);
+      if (extracted) {
+        billData.energy_charges = extracted;
+      } else {
+        const match = text.match(/Energy\s*Charge[s]?\s*[:\-]?\s*([\d,.]+)/i);
+        if (match) billData.energy_charges = extractNumber(match[1]);
+      }
+    }
+    
+    // Fixed Charges
+    if (/Fixed\s*Charge/i.test(text) && !billData.fixed_charges) {
+      const nextText = $elem.next().text().trim();
+      const extracted = extractNumber(nextText);
+      if (extracted) {
+        billData.fixed_charges = extracted;
+      } else {
+        const match = text.match(/Fixed\s*Charge[s]?\s*[:\-]?\s*([\d,.]+)/i);
+        if (match) billData.fixed_charges = extractNumber(match[1]);
       }
     }
     

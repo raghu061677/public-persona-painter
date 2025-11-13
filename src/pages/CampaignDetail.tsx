@@ -29,6 +29,7 @@ import { CampaignPDFReport } from "@/components/campaigns/CampaignPDFReport";
 import { CampaignComparisonDialog } from "@/components/campaigns/CampaignComparisonDialog";
 import { CampaignHealthAlerts } from "@/components/campaigns/CampaignHealthAlerts";
 import { GenerateInvoiceDialog } from "@/components/campaigns/GenerateInvoiceDialog";
+import { GenerateProofPPTButton } from "@/components/campaigns/GenerateProofPPTButton";
 
 export default function CampaignDetail() {
   const { id } = useParams();
@@ -197,7 +198,11 @@ export default function CampaignDetail() {
               <span className="text-muted-foreground">{campaign.id}</span>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <GenerateProofPPTButton 
+              campaignId={campaign.id}
+              campaignName={campaign.campaign_name}
+            />
             <GenerateInvoiceDialog 
               campaign={campaign} 
               campaignAssets={campaignAssets}

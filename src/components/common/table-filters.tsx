@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Filter, X, LayoutList } from "lucide-react";
+import { Filter, X, LayoutList, ChevronDown } from "lucide-react";
 import ColumnVisibilityButton from "./column-visibility-button";
 import { TableDensity } from "@/hooks/use-table-density";
 import { FilterPresets } from "./filter-presets";
@@ -79,25 +79,28 @@ export function TableFilters({
   const hasActiveFilters = Object.values(filterValues).some(v => v !== "");
 
   return (
-    <Collapsible defaultOpen>
-      <Card className="border-2 mb-4">
+    <Collapsible defaultOpen={false}>
+      <Card className="border shadow-sm mb-4">
         <CollapsibleTrigger asChild>
-          <CardHeader className="p-4 cursor-pointer hover:bg-muted/20 transition-colors">
+          <CardHeader className="p-3 cursor-pointer hover:bg-muted/30 transition-colors group">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Filter className="h-5 w-5 text-primary" />
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <Filter className="h-4 w-4 text-primary" />
                 </div>
-                <CardTitle className="text-lg font-semibold">
-                  Filters & Columns
-                  {hasActiveFilters && (
-                    <span className="ml-2 text-xs font-normal text-muted-foreground">
-                      ({Object.values(filterValues).filter(v => v !== "").length} active)
-                    </span>
-                  )}
-                </CardTitle>
+                <div>
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    Filters & Columns
+                    {hasActiveFilters && (
+                      <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary rounded-full">
+                        {Object.values(filterValues).filter(v => v !== "").length} active
+                      </span>
+                    )}
+                  </CardTitle>
+                </div>
               </div>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="text-xs gap-1">
+                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
                 Toggle
               </Button>
             </div>
@@ -106,7 +109,7 @@ export function TableFilters({
         <CollapsibleContent>
           {/* Global Search */}
           {enableGlobalSearch && onGlobalSearchFilter && (
-            <CardContent className="p-4 sm:p-6 border-t">
+            <CardContent className="p-3 sm:p-4 border-t bg-muted/5">
               <GlobalSearch
                 data={searchableData}
                 searchableKeys={searchableKeys}
@@ -115,8 +118,9 @@ export function TableFilters({
             </CardContent>
           )}
           
-          <CardContent className="p-4 sm:p-6 border-t">{tableKey && (
-              <div className="mb-4 flex justify-end">
+          <CardContent className="p-3 sm:p-4 border-t bg-muted/5">
+            {tableKey && (
+              <div className="mb-3 flex justify-end">
                 <FilterPresets
                   tableKey={tableKey}
                   currentFilters={filterValues}
@@ -129,24 +133,24 @@ export function TableFilters({
               </div>
             )}
 
-            <div className="flex items-end gap-4 flex-wrap">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {/* Dynamic Filters */}
               {filters.map((filter) => (
-                <div key={filter.key} className="flex-1 min-w-[200px]">
-                  <Label className="text-sm font-medium mb-2">{filter.label}</Label>
+                <div key={filter.key} className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">{filter.label}</Label>
                   {filter.type === "text" ? (
                     <Input
                       placeholder={filter.placeholder || `Search ${filter.label.toLowerCase()}...`}
                       value={filterValues[filter.key] || ""}
                       onChange={(e) => onFilterChange(filter.key, e.target.value)}
-                      className="w-full"
+                      className="h-9 text-sm"
                     />
                   ) : (
                     <Select
                       value={filterValues[filter.key] || ""}
                       onValueChange={(value) => onFilterChange(filter.key, value === "__all__" ? "" : value)}
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="h-9 text-sm">
                         <SelectValue placeholder={filter.placeholder || `Select ${filter.label.toLowerCase()}`} />
                       </SelectTrigger>
                       <SelectContent className="bg-popover z-50">
@@ -161,49 +165,50 @@ export function TableFilters({
                   )}
                 </div>
               ))}
+            </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-2 flex-wrap">
-                {hasActiveFilters && (
-                  <Button
-                    variant="outline"
-                    onClick={onClearFilters}
-                    className="gap-2"
-                  >
-                    <X className="h-4 w-4" />
-                    Clear Filters
-                  </Button>
-                )}
-                
-                {density && onDensityChange && (
-                  <Select value={density} onValueChange={onDensityChange}>
-                    <SelectTrigger className="w-[140px]">
-                      <LayoutList className="h-4 w-4 mr-2" />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover z-50">
-                      <SelectItem value="compact">Compact</SelectItem>
-                      <SelectItem value="normal">Normal</SelectItem>
-                      <SelectItem value="comfortable">Comfortable</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-                
-                {settings && onUpdateSettings && onResetSettings && (
-                  <TableSettingsPanel
-                    settings={settings}
-                    onUpdateSettings={onUpdateSettings}
-                    onResetSettings={onResetSettings}
-                  />
-                )}
-                
-                <ColumnVisibilityButton
-                  allColumns={allColumns}
-                  visibleKeys={visibleColumns}
-                  onChange={onColumnVisibilityChange}
-                  onReset={onResetColumns}
+            {/* Action Buttons Row */}
+            <div className="flex items-center gap-2 flex-wrap mt-4 pt-3 border-t">
+              {hasActiveFilters && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onClearFilters}
+                  className="gap-1.5 h-9 text-xs"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Clear Filters
+                </Button>
+              )}
+              
+              {density && onDensityChange && (
+                <Select value={density} onValueChange={onDensityChange}>
+                  <SelectTrigger className="w-[130px] h-9 text-xs">
+                    <LayoutList className="h-3.5 w-3.5 mr-1.5" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="compact">Compact</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="comfortable">Comfortable</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+              
+              {settings && onUpdateSettings && onResetSettings && (
+                <TableSettingsPanel
+                  settings={settings}
+                  onUpdateSettings={onUpdateSettings}
+                  onResetSettings={onResetSettings}
                 />
-              </div>
+              )}
+              
+              <ColumnVisibilityButton
+                allColumns={allColumns}
+                visibleKeys={visibleColumns}
+                onChange={onColumnVisibilityChange}
+                onReset={onResetColumns}
+              />
             </div>
           </CardContent>
         </CollapsibleContent>

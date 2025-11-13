@@ -1,6 +1,7 @@
 import * as exifr from "exifr";
 import { supabase } from "@/integrations/supabase/client";
 import { validateProofPhoto } from "@/lib/photoValidation";
+import { compressImage, getOptimalCompressionSettings } from "@/lib/imageCompression";
 
 export interface ProofPhoto {
   tag: "Traffic" | "Newspaper" | "Geo-Tagged" | "Other";
@@ -158,23 +159,28 @@ export async function uploadOperationsProofs(
     const file = files[i];
     
     try {
-      // Step 1: Analyze image
-      if (onProgress) onProgress(i, 10);
-      const { tag, latitude, longitude } = await analyzeImage(file);
+      // Step 1: Compress image
+      if (onProgress) onProgress(i, 5);
+      const compressionSettings = getOptimalCompressionSettings(file);
+      const compressedFile = await compressImage(file, compressionSettings);
+      
+      // Step 2: Analyze image
+      if (onProgress) onProgress(i, 15);
+      const { tag, latitude, longitude } = await analyzeImage(compressedFile);
 
-      // Step 2: Generate filename
-      if (onProgress) onProgress(i, 20);
+      // Step 3: Generate filename
+      if (onProgress) onProgress(i, 25);
       const timestamp = Date.now();
       const sanitizedTag = tag.toLowerCase().replace(/\s+/g, '_');
-      const extension = file.name.split('.').pop() || 'jpg';
+      const extension = compressedFile.name.split('.').pop() || 'jpg';
       const fileName = `${timestamp}_${sanitizedTag}.${extension}`;
       const filePath = `${campaignId}/${assetId}/${fileName}`;
 
-      // Step 3: Upload to storage
-      if (onProgress) onProgress(i, 30);
+      // Step 4: Upload to storage
+      if (onProgress) onProgress(i, 35);
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('operations-photos')
-        .upload(filePath, file, {
+        .upload(filePath, compressedFile, {
           cacheControl: '3600',
           upsert: false,
         });

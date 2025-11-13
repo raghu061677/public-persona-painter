@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Upload, X } from "lucide-react";
+import { Upload, X, FileImage, Zap } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { uploadOperationsProofs } from "@/lib/operations/uploadProofs";
 import { cn } from "@/lib/utils";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface PhotoUploadSectionProps {
   campaignId: string;
@@ -19,6 +20,8 @@ interface UploadingFile {
   progress: number;
   status: 'uploading' | 'complete' | 'error';
   tag?: string;
+  originalSize?: number;
+  compressedSize?: number;
 }
 
 export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: PhotoUploadSectionProps) {
@@ -68,11 +71,15 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
       return;
     }
 
+    // Calculate total size
+    const totalSizeMB = files.reduce((sum, f) => sum + f.size, 0) / 1024 / 1024;
+    
     // Initialize uploading state
     const initialFiles: UploadingFile[] = files.map(file => ({
       file,
       progress: 0,
       status: 'uploading' as const,
+      originalSize: file.size,
     }));
     
     setUploadingFiles(initialFiles);
@@ -142,12 +149,24 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Upload Proof Photos</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <FileImage className="h-5 w-5" />
+          Upload Proof Photos
+        </CardTitle>
         <CardDescription>
-          Upload 1-20 images (Traffic, Newspaper, Geo-tagged). Auto-detection enabled.
+          Upload 1-20 images. Auto-compression & tag detection enabled.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Info Alert */}
+        <Alert>
+          <Zap className="h-4 w-4" />
+          <AlertDescription>
+            Images will be automatically compressed to reduce storage costs while maintaining quality.
+            Photos with GPS data are auto-tagged as "Geo-Tagged".
+          </AlertDescription>
+        </Alert>
+
         {/* Drag & Drop Zone */}
         <div
           className={cn(
@@ -164,7 +183,7 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
             {isDragging ? "Drop files here" : "Drag & drop photos here"}
           </p>
           <p className="text-sm text-muted-foreground mb-4">
-            or click to browse (JPG, PNG up to 10MB each)
+            or click to browse (JPG, PNG - auto-compressed)
           </p>
           <input
             type="file"
@@ -192,9 +211,19 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
               <div key={index} className="border rounded-lg p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className="text-sm font-medium truncate">
-                      {uploadFile.file.name}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium truncate block">
+                        {uploadFile.file.name}
+                      </span>
+                      {uploadFile.originalSize && uploadFile.status === 'complete' && (
+                        <span className="text-xs text-muted-foreground">
+                          {(uploadFile.originalSize / 1024 / 1024).toFixed(2)}MB
+                          {uploadFile.compressedSize && 
+                            ` → ${(uploadFile.compressedSize / 1024 / 1024).toFixed(2)}MB`
+                          }
+                        </span>
+                      )}
+                    </div>
                     {uploadFile.tag && (
                       <Badge variant="secondary" className="shrink-0">
                         {uploadFile.tag}

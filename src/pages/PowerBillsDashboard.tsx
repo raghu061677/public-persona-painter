@@ -15,6 +15,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { AnomalyBadge } from "@/components/power-bills/AnomalyBadge";
 import { BillJobsMonitor } from "@/components/power-bills/BillJobsMonitor";
+import PowerBillKPIs from "@/components/power-bills/PowerBillKPIs";
+import SixMonthChart from "@/components/power-bills/SixMonthChart";
+import UnpaidBillsTable from "@/components/power-bills/UnpaidBillsTable";
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -63,6 +66,9 @@ export default function PowerBillsDashboard() {
   const [fetching, setFetching] = useState(false);
   const [totalDues, setTotalDues] = useState(0);
   const [totalAssets, setTotalAssets] = useState(0);
+  const [aggregates, setAggregates] = useState<any>(null);
+  const [monthlyData, setMonthlyData] = useState<any[]>([]);
+  const [unpaidBills, setUnpaidBills] = useState<any[]>([]);
   
   // Column visibility state
   const [showColumns, setShowColumns] = useState({
@@ -95,10 +101,14 @@ export default function PowerBillsDashboard() {
 
       if (assetsError) throw assetsError;
 
-      // Fetch latest bills for these assets with anomaly info
+      // Fetch bills for last 6 months with full details
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      
       const { data: billsData, error: billsError } = await supabase
         .from('asset_power_bills')
-        .select('asset_id, bill_amount, bill_month, payment_status, is_anomaly, anomaly_type, anomaly_details')
+        .select('*')
+        .gte('bill_month', sixMonthsAgo.toISOString().split('T')[0])
         .order('bill_month', { ascending: false });
 
       if (billsError) throw billsError;
@@ -111,8 +121,25 @@ export default function PowerBillsDashboard() {
         }
       });
 
+      // Calculate aggregates
+      let totalDue = 0;
+      let paidCount = 0;
+      let unpaidCount = 0;
+      let totalPaidAmount = 0;
+      let pendingCount = 0;
+
       const assetsWithBills = assetsData?.map(asset => {
         const latestBill = billsByAsset.get(asset.id);
+        if (latestBill) {
+          if (latestBill.payment_status === 'Paid') {
+            paidCount++;
+            totalPaidAmount += latestBill.total_due || 0;
+          } else if (latestBill.payment_status === 'Pending') {
+            unpaidCount++;
+            totalDue += latestBill.total_due || 0;
+            pendingCount++;
+          }
+        }
         return {
           ...asset,
           latest_bill_amount: latestBill?.bill_amount,
@@ -121,17 +148,53 @@ export default function PowerBillsDashboard() {
         };
       }) || [];
 
+      // Compute monthly aggregates for chart
+      const monthlyMap = new Map<string, any>();
+      billsData?.forEach((bill: any) => {
+        if (!bill.bill_month) return;
+        const month = bill.bill_month.substring(0, 7); // YYYY-MM
+        
+        if (!monthlyMap.has(month)) {
+          monthlyMap.set(month, {
+            monthLabel: month,
+            totalAmount: 0,
+            paidAmount: 0,
+            unpaidAmount: 0,
+            billCount: 0,
+          });
+        }
+        
+        const entry = monthlyMap.get(month);
+        entry.billCount++;
+        entry.totalAmount += bill.total_due || 0;
+        
+        if (bill.payment_status === 'Paid') {
+          entry.paidAmount += bill.total_due || 0;
+        } else {
+          entry.unpaidAmount += bill.total_due || 0;
+        }
+      });
+
+      const monthlyDataArray = Array.from(monthlyMap.values())
+        .sort((a, b) => a.monthLabel.localeCompare(b.monthLabel))
+        .slice(-6); // Last 6 months
+
+      // Get unpaid bills for table
+      const unpaid = billsData?.filter((b: any) => b.payment_status !== 'Paid') || [];
+
       setAssets(assetsWithBills);
       setTotalAssets(assetsWithBills.length);
-      
-      // Calculate total dues (pending bills only)
-      const dues = assetsWithBills.reduce((sum, asset) => {
-        if (asset.payment_status === 'Pending' && asset.latest_bill_amount) {
-          return sum + asset.latest_bill_amount;
-        }
-        return sum;
-      }, 0);
-      setTotalDues(dues);
+      setTotalDues(totalDue);
+      setAggregates({
+        totalBills: billsData?.length || 0,
+        paidBills: paidCount,
+        unpaidBills: unpaidCount,
+        totalAmountDue: totalDue,
+        totalPaidAmount,
+        pendingCount,
+      });
+      setMonthlyData(monthlyDataArray);
+      setUnpaidBills(unpaid);
 
     } catch (error) {
       console.error('Error fetching assets:', error);
@@ -370,39 +433,13 @@ export default function PowerBillsDashboard() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Assets</CardTitle>
-            <Zap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalAssets}</div>
-            <p className="text-xs text-muted-foreground">with service numbers</p>
-          </CardContent>
-        </Card>
+      {/* KPI Cards */}
+      <PowerBillKPIs loading={loading} aggregates={aggregates} />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Dues</CardTitle>
-            <Download className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">₹{totalDues.toLocaleString('en-IN')}</div>
-            <p className="text-xs text-muted-foreground">pending payments</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Selected Assets</CardTitle>
-            <Zap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{selectedAssets.size}</div>
-            <p className="text-xs text-muted-foreground">ready for bulk fetch</p>
-          </CardContent>
-        </Card>
+      {/* Analytics Row */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <SixMonthChart data={monthlyData} />
+        <UnpaidBillsTable bills={unpaidBills} />
       </div>
 
       {/* Automation Schedule Card */}

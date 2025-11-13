@@ -9,11 +9,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Loader2, AlertTriangle } from "lucide-react";
+import { CalendarIcon, Loader2, AlertTriangle, Sparkles, ClipboardPaste } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface EnhancedBillDialogProps {
   open: boolean;
@@ -39,6 +41,11 @@ export function EnhancedBillDialog({
   const [dueDate, setDueDate] = useState<Date>();
   const [paidDate, setPaidDate] = useState<Date>();
   
+  // Quick Paste state
+  const [pasteOpen, setPasteOpen] = useState(true);
+  const [pastedText, setPastedText] = useState("");
+  const [parsedData, setParsedData] = useState<any>(null);
+  
   // Auto-populate from asset record
   const [formData, setFormData] = useState({
     consumer_name: existingConsumerInfo?.consumer_name || asset?.consumer_name || "",
@@ -57,6 +64,144 @@ export function EnhancedBillDialog({
     payment_reference: "",
     notes: "",
   });
+
+  // Parse pasted bill data
+  const parseBillData = (text: string) => {
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+    const data: any = {};
+
+    lines.forEach((line, index) => {
+      // Consumer Name
+      if (line.includes('Consumer Name') && lines[index + 1]) {
+        data.consumer_name = lines[index + 1];
+      }
+      
+      // Service Number
+      if (line.includes('Unique Service No') && lines[index + 1]) {
+        data.unique_service_number = lines[index + 1];
+      } else if (line.includes('Service Number') && lines[index + 1]) {
+        data.service_number = lines[index + 1];
+      }
+      
+      // ERO
+      if (line.includes('ERO Name') && lines[index + 1]) {
+        data.ero_name = lines[index + 1];
+      }
+      
+      // Section
+      if (line.includes('Section Name') && lines[index + 1]) {
+        data.section_name = lines[index + 1];
+      }
+      
+      // Bill Month
+      if (line.includes('Bill Month') && lines[index + 1]) {
+        data.bill_month = lines[index + 1];
+      }
+      
+      // Bill Date
+      if (line.includes('Bill Date') && lines[index + 1]) {
+        data.bill_date = lines[index + 1];
+      }
+      
+      // Due Date
+      if (line.includes('Due Date') && lines[index + 1]) {
+        data.due_date = lines[index + 1];
+      }
+      
+      // Current Month Bill
+      if (line.includes('Current Month Bill') && lines[index + 1]) {
+        data.bill_amount = lines[index + 1].replace(/[₹,]/g, '');
+      }
+      
+      // Energy Charges
+      if (line.includes('Energy Charges') && lines[index + 1]) {
+        data.energy_charges = lines[index + 1].replace(/[₹,]/g, '');
+      }
+      
+      // Fixed Charges
+      if (line.includes('Fixed Charges') && lines[index + 1]) {
+        data.fixed_charges = lines[index + 1].replace(/[₹,]/g, '');
+      }
+      
+      // Arrears
+      if (line.includes('Arrears') && lines[index + 1]) {
+        data.arrears = lines[index + 1].replace(/[₹,]/g, '');
+      }
+      
+      // Total Amount
+      if (line.includes('Total Amount Payable') && lines[index + 1]) {
+        data.total_due = lines[index + 1].replace(/[₹,]/g, '');
+      }
+    });
+
+    return data;
+  };
+
+  const handleParse = () => {
+    if (!pastedText.trim()) {
+      toast({
+        title: "No Data",
+        description: "Please paste bill data first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const parsed = parseBillData(pastedText);
+    setParsedData(parsed);
+    
+    toast({
+      title: "Data Parsed",
+      description: "Review the extracted data below",
+    });
+  };
+
+  const handleApplyParsedData = () => {
+    if (!parsedData) return;
+
+    setFormData(prev => ({
+      ...prev,
+      consumer_name: parsedData.consumer_name || prev.consumer_name,
+      service_number: parsedData.service_number || prev.service_number,
+      unique_service_number: parsedData.unique_service_number || prev.unique_service_number,
+      ero_name: parsedData.ero_name || prev.ero_name,
+      section_name: parsedData.section_name || prev.section_name,
+      bill_month: parsedData.bill_month || prev.bill_month,
+      bill_amount: parsedData.bill_amount || prev.bill_amount,
+      energy_charges: parsedData.energy_charges || prev.energy_charges,
+      fixed_charges: parsedData.fixed_charges || prev.fixed_charges,
+      arrears: parsedData.arrears || prev.arrears,
+      total_due: parsedData.total_due || prev.total_due,
+    }));
+
+    // Parse dates
+    if (parsedData.bill_date) {
+      try {
+        const [day, month, year] = parsedData.bill_date.split('-');
+        setBillDate(new Date(`${year}-${month}-${day}`));
+      } catch (e) {
+        console.error('Error parsing bill date:', e);
+      }
+    }
+    if (parsedData.due_date) {
+      try {
+        const [day, month, year] = parsedData.due_date.split('-');
+        setDueDate(new Date(`${year}-${month}-${day}`));
+      } catch (e) {
+        console.error('Error parsing due date:', e);
+      }
+    }
+
+    toast({
+      title: "Data Applied",
+      description: "Parsed data has been filled into the form",
+    });
+    
+    // Clear paste area
+    setPastedText("");
+    setParsedData(null);
+    setPasteOpen(false);
+  };
 
   // Check for bookmarklet data on mount
   useEffect(() => {
@@ -269,9 +414,78 @@ export function EnhancedBillDialog({
         <DialogHeader>
           <DialogTitle>Add Power Bill</DialogTitle>
           <DialogDescription>
-            Fetch bill details from TGSPDCL or enter manually
+            Enter bill details manually or use Quick Paste for faster entry
           </DialogDescription>
         </DialogHeader>
+
+        {/* Quick Paste Section */}
+        <Collapsible open={pasteOpen} onOpenChange={setPasteOpen}>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" className="w-full mb-4">
+              <Sparkles className="h-4 w-4 mr-2" />
+              Quick Paste - Smart Data Entry
+              <span className="ml-auto text-xs text-muted-foreground">
+                {pasteOpen ? "Hide" : "Show"}
+              </span>
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <ClipboardPaste className="h-4 w-4" />
+                  Paste Bill Data
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Copy bill details from TGSPDCL website and paste here. The system will automatically extract the data.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Textarea
+                  value={pastedText}
+                  onChange={(e) => setPastedText(e.target.value)}
+                  placeholder="Paste bill data from TGSPDCL website here..."
+                  className="min-h-[120px] font-mono text-xs"
+                />
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={handleParse} 
+                    size="sm"
+                    type="button"
+                    disabled={!pastedText.trim()}
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Parse Data
+                  </Button>
+                  {parsedData && (
+                    <Button 
+                      onClick={handleApplyParsedData}
+                      size="sm"
+                      type="button"
+                      variant="default"
+                    >
+                      Apply to Form
+                    </Button>
+                  )}
+                </div>
+                
+                {parsedData && (
+                  <div className="mt-4 p-3 bg-muted rounded-lg">
+                    <p className="text-xs font-medium mb-2">Extracted Data:</p>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {Object.entries(parsedData).map(([key, value]) => (
+                        <div key={key} className="flex justify-between">
+                          <span className="text-muted-foreground">{key.replace(/_/g, ' ')}:</span>
+                          <span className="font-medium">{value as string}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Fetch from TGSPDCL Section */}

@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { EnhancedBillDialog } from "./EnhancedBillDialog";
 import { AnomalyBadge } from "@/components/power-bills/AnomalyBadge";
 import { SharedBillIndicator } from "./SharedBillIndicator";
+import { SharedBillExpensesButton } from "@/components/power-bills/SharedBillExpensesButton";
 
 interface EnhancedPowerBillsTabProps {
   assetId: string;
@@ -265,6 +266,7 @@ export function EnhancedPowerBillsTab({ assetId, asset, isAdmin }: EnhancedPower
                   <TableHead>Total Due</TableHead>
                   <TableHead>Payment Status</TableHead>
                   <TableHead>Paid Date</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -295,6 +297,15 @@ export function EnhancedPowerBillsTab({ assetId, asset, isAdmin }: EnhancedPower
                     </TableCell>
                     <TableCell>
                       {bill.paid_date ? format(new Date(bill.paid_date), "dd MMM yyyy") : "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {duplicateUSNAssets.length > 0 && (
+                        <SharedBillExpensesButton
+                          billId={bill.id}
+                          billAmount={bill.bill_amount || 0}
+                          sharedAssetCount={duplicateUSNAssets.length}
+                        />
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

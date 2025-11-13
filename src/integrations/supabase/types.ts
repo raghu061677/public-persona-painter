@@ -1420,6 +1420,7 @@ export type Database = {
       organization_settings: {
         Row: {
           address: string | null
+          auto_generate_ppt_on_completion: boolean | null
           city: string | null
           created_at: string | null
           email: string | null
@@ -1428,9 +1429,18 @@ export type Database = {
           hero_image_url: string | null
           id: string
           logo_url: string | null
+          notify_manager_on_ppt_generation: boolean | null
           organization_name: string | null
           phone: string | null
           pincode: string | null
+          ppt_accent_color: string | null
+          ppt_footer_text: string | null
+          ppt_include_company_logo: boolean | null
+          ppt_layout_style: string | null
+          ppt_primary_color: string | null
+          ppt_secondary_color: string | null
+          ppt_template_name: string | null
+          ppt_watermark_enabled: boolean | null
           primary_color: string | null
           primary_contact: string | null
           require_proof_approval: boolean | null
@@ -1447,6 +1457,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          auto_generate_ppt_on_completion?: boolean | null
           city?: string | null
           created_at?: string | null
           email?: string | null
@@ -1455,9 +1466,18 @@ export type Database = {
           hero_image_url?: string | null
           id?: string
           logo_url?: string | null
+          notify_manager_on_ppt_generation?: boolean | null
           organization_name?: string | null
           phone?: string | null
           pincode?: string | null
+          ppt_accent_color?: string | null
+          ppt_footer_text?: string | null
+          ppt_include_company_logo?: boolean | null
+          ppt_layout_style?: string | null
+          ppt_primary_color?: string | null
+          ppt_secondary_color?: string | null
+          ppt_template_name?: string | null
+          ppt_watermark_enabled?: boolean | null
           primary_color?: string | null
           primary_contact?: string | null
           require_proof_approval?: boolean | null
@@ -1474,6 +1494,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          auto_generate_ppt_on_completion?: boolean | null
           city?: string | null
           created_at?: string | null
           email?: string | null
@@ -1482,9 +1503,18 @@ export type Database = {
           hero_image_url?: string | null
           id?: string
           logo_url?: string | null
+          notify_manager_on_ppt_generation?: boolean | null
           organization_name?: string | null
           phone?: string | null
           pincode?: string | null
+          ppt_accent_color?: string | null
+          ppt_footer_text?: string | null
+          ppt_include_company_logo?: boolean | null
+          ppt_layout_style?: string | null
+          ppt_primary_color?: string | null
+          ppt_secondary_color?: string | null
+          ppt_template_name?: string | null
+          ppt_watermark_enabled?: boolean | null
           primary_color?: string | null
           primary_contact?: string | null
           require_proof_approval?: boolean | null

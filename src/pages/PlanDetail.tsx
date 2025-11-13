@@ -42,6 +42,7 @@ import { generateCampaignCode } from "@/lib/codeGenerator";
 import { calcProRata, calcDiscount, calcProfit } from "@/utils/pricing";
 import { toast } from "@/hooks/use-toast";
 import { exportPlanToPPT, exportPlanToExcel, exportPlanToPDF } from "@/utils/planExports";
+import { ExportPlanExcelButton } from "@/components/plans/ExportPlanExcelButton";
 import { ExportOptionsDialog, ExportOptions } from "@/components/plans/ExportOptionsDialog";
 import { ExportSettingsDialog, ExportSettings } from "@/components/plans/ExportSettingsDialog";
 import { TermsConditionsDialog, TermsData } from "@/components/plans/TermsConditionsDialog";
@@ -888,15 +889,16 @@ export default function PlanDetail() {
                 <DropdownMenuItem onClick={() => handleExportPPT(false)} disabled={exportingPPT}>
                   <Download className="mr-2 h-4 w-4" />
                   {exportingPPT ? "Exporting..." : "Download PPT"}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExportExcel(false)} disabled={exportingExcel}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  {exportingExcel ? "Exporting..." : "Download Excel"}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowTermsDialog(true)}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Download PDF
-                </DropdownMenuItem>
+                 </DropdownMenuItem>
+                 <DropdownMenuItem asChild>
+                   <div className="w-full">
+                     <ExportPlanExcelButton planId={id!} variant="ghost" size="sm" className="w-full justify-start p-0 h-auto font-normal" />
+                   </div>
+                 </DropdownMenuItem>
+                 <DropdownMenuItem onClick={() => setShowTermsDialog(true)}>
+                   <FileText className="mr-2 h-4 w-4" />
+                   Download PDF
+                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => handleExportPPT(true)} disabled={exportingPPT}>
                   <Save className="mr-2 h-4 w-4" />

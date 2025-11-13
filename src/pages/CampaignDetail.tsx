@@ -30,6 +30,7 @@ import { CampaignComparisonDialog } from "@/components/campaigns/CampaignCompari
 import { CampaignHealthAlerts } from "@/components/campaigns/CampaignHealthAlerts";
 import { GenerateInvoiceDialog } from "@/components/campaigns/GenerateInvoiceDialog";
 import { GenerateProofPPTButton } from "@/components/campaigns/GenerateProofPPTButton";
+import { checkAndAutoGeneratePPT } from "@/lib/operations/autoGenerateProofPPT";
 
 export default function CampaignDetail() {
   const { id } = useParams();

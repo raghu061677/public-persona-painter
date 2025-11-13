@@ -23,6 +23,7 @@ import { UserPlus, Upload, CheckCircle2 } from "lucide-react";
 import { getAssetStatusColor } from "@/utils/campaigns";
 import { useNavigate } from "react-router-dom";
 import { BulkOperationsDialog } from "./BulkOperationsDialog";
+import { checkAndAutoGeneratePPT } from "@/lib/operations/autoGenerateProofPPT";
 
 interface OperationsBoardProps {
   campaignId: string;
@@ -146,6 +147,17 @@ export function OperationsBoard({ campaignId, assets, onUpdate }: OperationsBoar
       });
 
       onUpdate();
+      
+      // Check if all assets are verified and auto-generate PPT if enabled
+      if (newStatus === 'Verified') {
+        const pptGenerated = await checkAndAutoGeneratePPT(campaignId);
+        if (pptGenerated) {
+          toast({
+            title: "PPT Auto-Generated",
+            description: "All proofs verified. Proof of Display PPT has been generated automatically.",
+          });
+        }
+      }
     } catch (error: any) {
       toast({
         title: "Error",

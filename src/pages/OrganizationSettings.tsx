@@ -15,6 +15,7 @@ import { InvoiceTemplateSettings } from "@/components/settings/InvoiceTemplateSe
 import { DocumentTemplatesSettings } from "@/components/settings/DocumentTemplatesSettings";
 import { BrandingSettings } from "@/components/settings/BrandingSettings";
 import { SecuritySettings } from "@/components/settings/SecuritySettings";
+import { PPTTemplateSettings } from "@/components/settings/PPTTemplateSettings";
 
 export default function OrganizationSettings() {
   const navigate = useNavigate();
@@ -148,6 +149,8 @@ export default function OrganizationSettings() {
               <DocumentTemplatesSettings />
             </CardContent>
           </Card>
+
+          <PPTTemplateSettings />
         </TabsContent>
 
         <TabsContent value="appearance" className="space-y-6 mt-6">

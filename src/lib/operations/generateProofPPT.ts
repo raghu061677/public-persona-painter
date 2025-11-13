@@ -99,7 +99,7 @@ export async function generateProofOfDisplayPPT(campaignId: string): Promise<voi
     pptx.subject = "Campaign Proof of Installation";
 
     // Add title slide
-    addTitleSlide(pptx, campaign, assetIds.length, photos.length);
+    await addTitleSlide(pptx, campaign, assetIds.length, photos.length);
 
     // Add asset slides
     Object.entries(grouped).forEach(([assetId, data]) => {
@@ -116,13 +116,24 @@ export async function generateProofOfDisplayPPT(campaignId: string): Promise<voi
   }
 }
 
-function addTitleSlide(
+async function addTitleSlide(
   pptx: PptxGenJS,
   campaign: CampaignData,
   totalSites: number,
   totalPhotos: number
-): void {
+): Promise<void> {
   const slide = pptx.addSlide();
+  
+  // Fetch organization settings for customization
+  const { data: settings } = await supabase
+    .from("organization_settings")
+    .select("ppt_primary_color, ppt_secondary_color, ppt_footer_text, organization_name, logo_url")
+    .limit(1)
+    .single();
+
+  const primaryColor = settings?.ppt_primary_color?.replace("#", "") || "1E40AF";
+  const secondaryColor = settings?.ppt_secondary_color?.replace("#", "") || "10B981";
+  const orgName = settings?.organization_name || "Go-Ads 360°";
   
   // Set background color
   slide.background = { color: "F8FAFC" };
@@ -135,7 +146,7 @@ function addTitleSlide(
     h: 1,
     fontSize: 36,
     bold: true,
-    color: "1E40AF",
+    color: primaryColor,
     align: "center",
   });
 
@@ -160,19 +171,20 @@ function addTitleSlide(
   });
 
   // Branding
-  slide.addText("Go-Ads 360°", {
+  slide.addText(orgName, {
     x: 8,
     y: 0.3,
     w: 1.5,
     h: 0.4,
     fontSize: 12,
     bold: true,
-    color: "10B981",
+    color: secondaryColor,
     align: "right",
   });
 
   // Footer
-  slide.addText(`Generated on ${format(new Date(), 'dd MMM yyyy')}`, {
+  const footerText = settings?.ppt_footer_text || `Generated on ${format(new Date(), 'dd MMM yyyy')}`;
+  slide.addText(footerText, {
     x: 0.5,
     y: 7,
     w: 9,

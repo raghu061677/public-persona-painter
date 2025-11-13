@@ -7,6 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { PhotoUploadSection } from "@/components/operations/PhotoUploadSection";
 import { OperationsPhotoGallery } from "@/components/operations/OperationsPhotoGallery";
+import { NotificationSettings } from "@/components/operations/NotificationSettings";
 import { Badge } from "@/components/ui/badge";
 
 interface CampaignAsset {
@@ -175,6 +176,9 @@ export default function CampaignAssetProofs() {
           canDelete={isAdmin}
         />
       )}
+
+      {/* Notification Settings */}
+      <NotificationSettings campaignId={campaignId} />
     </div>
   );
 }

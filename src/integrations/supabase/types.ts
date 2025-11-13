@@ -526,6 +526,7 @@ export type Database = {
           gst_percent: number
           id: string
           notes: string | null
+          notification_settings: Json | null
           plan_id: string | null
           start_date: string
           status: Database["public"]["Enums"]["campaign_status"]
@@ -546,6 +547,7 @@ export type Database = {
           gst_percent: number
           id: string
           notes?: string | null
+          notification_settings?: Json | null
           plan_id?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["campaign_status"]
@@ -566,6 +568,7 @@ export type Database = {
           gst_percent?: number
           id?: string
           notes?: string | null
+          notification_settings?: Json | null
           plan_id?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["campaign_status"]
@@ -1267,6 +1270,54 @@ export type Database = {
           unique_service_number?: string | null
           updated_at?: string | null
           vendor_details?: Json | null
+        }
+        Relationships: []
+      }
+      operations_notifications: {
+        Row: {
+          asset_id: string
+          campaign_id: string
+          created_at: string | null
+          error_message: string | null
+          id: string
+          message: string | null
+          metadata: Json | null
+          notification_type: string
+          recipient: string
+          sent_at: string | null
+          status: string
+          subject: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          asset_id: string
+          campaign_id: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          message?: string | null
+          metadata?: Json | null
+          notification_type: string
+          recipient: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          asset_id?: string
+          campaign_id?: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          message?: string | null
+          metadata?: Json | null
+          notification_type?: string
+          recipient?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }

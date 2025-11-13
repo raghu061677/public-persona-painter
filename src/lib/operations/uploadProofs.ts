@@ -144,7 +144,42 @@ export async function uploadOperationsProofs(
         throw dbError;
       }
 
-      // Step 7: Complete (100%)
+      // Step 7: Send notifications (background task - don't wait)
+      if (onProgress) onProgress(i, 95);
+      
+      // Send email notification
+      supabase.functions
+        .invoke('send-proof-notification', {
+          body: {
+            campaignId,
+            assetId,
+            photoCount: 1,
+            notificationType: 'upload'
+          }
+        })
+        .then(({ data, error }) => {
+          if (error) console.error('Email notification failed:', error);
+          else console.log('Email notification sent:', data);
+        })
+        .catch(err => console.error('Email notification error:', err));
+
+      // Send WhatsApp notification
+      supabase.functions
+        .invoke('send-whatsapp-notification', {
+          body: {
+            campaignId,
+            assetId,
+            photoCount: 1,
+            notificationType: 'upload'
+          }
+        })
+        .then(({ data, error }) => {
+          if (error) console.error('WhatsApp notification failed:', error);
+          else console.log('WhatsApp notification sent:', data);
+        })
+        .catch(err => console.error('WhatsApp notification error:', err));
+
+      // Step 8: Complete (100%)
       if (onProgress) onProgress(i, 100);
 
       results.push({

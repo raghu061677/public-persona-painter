@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Palette, FileText } from "lucide-react";
+import { PPTTemplatePreview } from "./PPTTemplatePreview";
 
 export function PPTTemplateSettings() {
   const [loading, setLoading] = useState(true);
@@ -133,37 +134,32 @@ export function PPTTemplateSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="template-name">Template Name</Label>
-              <Input
-                id="template-name"
-                value={settings.ppt_template_name}
-                onChange={(e) =>
-                  setSettings({ ...settings, ppt_template_name: e.target.value })
-                }
-                placeholder="Modern Professional"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="template-name">Template Name</Label>
+            <Input
+              id="template-name"
+              value={settings.ppt_template_name}
+              onChange={(e) =>
+                setSettings({ ...settings, ppt_template_name: e.target.value })
+              }
+              placeholder="Modern Professional"
+            />
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="layout-style">Layout Style</Label>
-              <Select
-                value={settings.ppt_layout_style}
-                onValueChange={(value) =>
-                  setSettings({ ...settings, ppt_layout_style: value })
-                }
-              >
-                <SelectTrigger id="layout-style">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="modern">Modern</SelectItem>
-                  <SelectItem value="classic">Classic</SelectItem>
-                  <SelectItem value="minimalist">Minimalist</SelectItem>
-                  <SelectItem value="corporate">Corporate</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="space-y-3">
+            <Label>Layout Style</Label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {['modern', 'classic', 'minimalist', 'corporate'].map((layout) => (
+                <PPTTemplatePreview
+                  key={layout}
+                  layout={layout}
+                  primaryColor={settings.ppt_primary_color}
+                  secondaryColor={settings.ppt_secondary_color}
+                  accentColor={settings.ppt_accent_color}
+                  isSelected={settings.ppt_layout_style === layout}
+                  onClick={() => setSettings({ ...settings, ppt_layout_style: layout })}
+                />
+              ))}
             </div>
           </div>
 

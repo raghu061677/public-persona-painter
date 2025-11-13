@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { WatermarkPreview } from './WatermarkPreview';
 
 export function WatermarkSettings() {
   const { hasRole } = useAuth();
@@ -100,17 +101,27 @@ export function WatermarkSettings() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ImageIcon className="h-5 w-5" />
-          Watermark Settings
-        </CardTitle>
-        <CardDescription>
-          Configure how watermarks appear on proof photos
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <div className="space-y-6">
+      <WatermarkPreview
+        position={settings.watermark_position}
+        opacity={settings.watermark_opacity}
+        text={settings.watermark_text}
+        includeLogo={settings.watermark_include_logo}
+        includeTimestamp={settings.watermark_include_timestamp}
+        fontSize={settings.watermark_font_size}
+      />
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ImageIcon className="h-5 w-5" />
+            Watermark Settings
+          </CardTitle>
+          <CardDescription>
+            Configure how watermarks appear on proof photos
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
         {/* Position */}
         <div className="space-y-2">
           <Label>Watermark Position</Label>
@@ -201,17 +212,18 @@ export function WatermarkSettings() {
           />
         </div>
 
-        <Button onClick={handleSave} disabled={saving || !hasRole('admin')} className="w-full">
-          {saving ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            'Save Watermark Settings'
-          )}
-        </Button>
-      </CardContent>
-    </Card>
+          <Button onClick={handleSave} disabled={saving || !hasRole('admin')} className="w-full">
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save Watermark Settings'
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

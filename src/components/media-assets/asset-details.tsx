@@ -132,7 +132,7 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
 
       {/* Latest Photos Section */}
       <div className="mb-6">
-        <LatestPhotosSection assetId={asset.asset_id} />
+        <LatestPhotosSection assetId={asset.id} />
       </div>
 
       {/* Two Column Layout: Details Left, Images Right */}

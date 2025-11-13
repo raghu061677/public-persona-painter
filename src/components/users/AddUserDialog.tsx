@@ -39,6 +39,7 @@ export default function AddUserDialog({
   const { user: currentUser, isAdmin } = useAuth();
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [selectedRole, setSelectedRole] = useState<string>("sales");
   const [submitting, setSubmitting] = useState(false);
 
@@ -63,10 +64,20 @@ export default function AddUserDialog({
       return;
     }
 
-    if (!email || !username) {
+    if (!email || !username || !password) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate password strength
+    if (password.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters long",
         variant: "destructive",
       });
       return;
@@ -85,27 +96,57 @@ export default function AddUserDialog({
 
     setSubmitting(true);
     try {
-      console.log('Creating user via edge function...');
+      console.log('Creating user with password...');
       
-      // Call the edge function to create user and send invite
-      const { data, error } = await supabase.functions.invoke('send-user-invite', {
-        body: {
-          email,
-          role: selectedRole,
-          inviterName: username || 'Admin',
-        },
+      // Create user directly via Supabase Admin API
+      const { data: { user: newUser }, error: createError } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true, // Auto-confirm email
+        user_metadata: {
+          username,
+          role: selectedRole
+        }
       });
 
-      if (error) {
-        console.error('Edge function error:', error);
-        throw new Error(error.message || 'Failed to create user');
+      if (createError) {
+        console.error('User creation error:', createError);
+        throw createError;
       }
 
-      if (!data?.success) {
-        throw new Error(data?.error || 'Failed to send invitation');
+      if (!newUser) {
+        throw new Error('User creation failed - no user data returned');
       }
 
-      console.log('User created successfully');
+      console.log('User created:', newUser.id);
+
+      // Insert profile for the new user
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: newUser.id,
+          username: username
+        });
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        // Don't fail the whole operation if profile creation fails
+      }
+
+      // Insert role for the new user
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert([{
+          user_id: newUser.id,
+          role: selectedRole as any
+        }]);
+
+      if (roleError) {
+        console.error('Role assignment error:', roleError);
+        throw new Error(`Failed to assign role: ${roleError.message}`);
+      }
+
+      console.log('Role assigned successfully:', selectedRole);
 
       // Log audit
       await logAudit({
@@ -128,13 +169,14 @@ export default function AddUserDialog({
       });
 
       toast({
-        title: "User invited successfully",
-        description: `An invitation has been sent to ${email} with ${selectedRole} role`,
+        title: "User created successfully",
+        description: `User ${email} has been created with ${selectedRole} role`,
       });
 
       // Reset form
       setEmail("");
       setUsername("");
+      setPassword("");
       setSelectedRole("sales");
       
       onSuccess();
@@ -176,7 +218,7 @@ export default function AddUserDialog({
             Add New User
           </DialogTitle>
           <DialogDescription>
-            Send an invitation email to create a new user account
+            Create a new user account with credentials
           </DialogDescription>
         </DialogHeader>
 
@@ -201,9 +243,6 @@ export default function AddUserDialog({
               required
               disabled={!isAdmin}
             />
-            <p className="text-xs text-muted-foreground">
-              An invitation will be sent to this email
-            </p>
           </div>
 
           <div className="space-y-2">
@@ -217,6 +256,22 @@ export default function AddUserDialog({
               required
               disabled={!isAdmin}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password">Password *</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Enter password (min 6 characters)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={!isAdmin}
+            />
+            <p className="text-xs text-muted-foreground">
+              Minimum 6 characters required
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -249,7 +304,7 @@ export default function AddUserDialog({
 
           <Alert>
             <AlertDescription className="text-xs">
-              The user will receive an email with a link to set their password and activate their account.
+              The user will be created immediately with the provided credentials. You can send an invitation email later from the user list.
             </AlertDescription>
           </Alert>
 
@@ -264,7 +319,7 @@ export default function AddUserDialog({
             </Button>
             <Button type="submit" disabled={submitting || !isAdmin}>
               <UserPlus className="h-4 w-4 mr-2" />
-              {submitting ? "Sending Invitation..." : "Send Invitation"}
+              {submitting ? "Creating User..." : "Add User"}
             </Button>
           </div>
         </form>

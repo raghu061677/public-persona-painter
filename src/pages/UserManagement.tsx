@@ -427,6 +427,45 @@ export default function UserManagement() {
                         <Button 
                           variant="ghost" 
                           size="icon"
+                          onClick={async () => {
+                            try {
+                              const { data: { user: currentUserData } } = await supabase.auth.getUser();
+                              const { data: profile } = await supabase
+                                .from("profiles")
+                                .select("username")
+                                .eq("id", currentUserData?.id)
+                                .single();
+
+                              // Call edge function to send invite
+                              const { error: inviteError } = await supabase.functions.invoke('send-user-invite', {
+                                body: {
+                                  email: user.email,
+                                  role: user.roles?.[0] || 'user',
+                                  inviterName: profile?.username || 'Admin',
+                                },
+                              });
+
+                              if (inviteError) throw inviteError;
+
+                              toast({
+                                title: "Invitation sent",
+                                description: `Invitation email sent to ${user.email}`,
+                              });
+                            } catch (error: any) {
+                              toast({
+                                title: "Error",
+                                description: error.message,
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                          title="Send invitation"
+                        >
+                          <Mail className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
                           onClick={() => {
                             setEditUser(user);
                             setEditOpen(true);

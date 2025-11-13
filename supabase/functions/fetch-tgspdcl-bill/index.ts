@@ -312,9 +312,49 @@ function parseHTMLForBillData(html: string, uniqueServiceNumber: string): BillDa
     return month ? `${year}-${month}-${day}` : undefined;
   };
 
+  // Simple regex-based field extractor as additional fallback
+  const extractFieldRegex = (label: string): string | null => {
+    const patterns = [
+      new RegExp(`${label}.*?<td.*?>(.*?)<`, "i"),
+      new RegExp(`<b>${label}</b>.*?<td.*?>(.*?)<`, "i"),
+      new RegExp(`${label}:?\\s*</td>.*?<td.*?>(.*?)<`, "i"),
+      new RegExp(`${label}[:\\s]+([^<\\n]+)`, "i")
+    ];
+    
+    for (const pattern of patterns) {
+      const match = html.match(pattern);
+      if (match && match[1]) {
+        return match[1].trim().replace(/<[^>]*>/g, '');
+      }
+    }
+    return null;
+  };
+
   // Look for specific table/div patterns used by TGSPDCL
   const tables = $('table');
   console.log(`Found ${tables.length} tables in HTML`);
+
+  // Try regex extraction first as it's faster and often more reliable
+  if (!billData.consumer_name) {
+    const name = extractFieldRegex("Consumer Name") || extractFieldRegex("Name");
+    if (name && name.length > 3) billData.consumer_name = name;
+  }
+  if (!billData.service_number) {
+    const svc = extractFieldRegex("Service No") || extractFieldRegex("Service Number");
+    if (svc) billData.service_number = svc;
+  }
+  if (!billData.ero_name) {
+    const ero = extractFieldRegex("ERO");
+    if (ero) billData.ero_name = ero;
+  }
+  if (!billData.section_name) {
+    const section = extractFieldRegex("Section");
+    if (section) billData.section_name = section;
+  }
+  if (!billData.consumer_address) {
+    const addr = extractFieldRegex("Address");
+    if (addr) billData.consumer_address = addr;
+  }
 
   // Strategy 1: Look in table cells (td, th)
   $('td, th, div.bill-detail, div.info-row, span.value, p').each((_, elem) => {

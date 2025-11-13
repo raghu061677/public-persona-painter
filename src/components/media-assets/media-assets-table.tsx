@@ -495,7 +495,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
     getSortedRowModel: getSortedRowModel(),
     initialState: {
       pagination: {
-        pageSize: settingsReady ? settings.defaultPageSize : 25,
+        pageSize: settingsReady ? settings.defaultPageSize : 50,
       },
     },
   });
@@ -735,10 +735,10 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
           </Card>
         )}
 
-        <Card className="overflow-hidden border-2 shadow-lg">
-          <CardContent className="p-0">
-            {/* Enhanced horizontal scroll wrapper */}
-            <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-400px)] custom-scrollbar relative">
+        <Card className="h-full flex flex-col overflow-hidden border-2 shadow-lg">
+          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+            {/* Enhanced scrollable table area */}
+            <div className="flex-1 overflow-auto custom-scrollbar">
               <div className="min-w-max">
                 <Table>
                   <TableHeader className="bg-muted/50 sticky top-0 z-10">
@@ -780,7 +780,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
               </div>
             </div>
           </CardContent>
-          <CardContent className="p-4 border-t bg-muted/20">
+          <CardContent className="flex-none p-4 border-t bg-muted/30">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-sm text-muted-foreground font-medium">
                 Showing {table.getRowModel().rows.length} of {table.getFilteredRowModel().rows.length} total assets
@@ -796,7 +796,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                       <SelectValue placeholder={table.getState().pagination.pageSize} />
                     </SelectTrigger>
                     <SelectContent side="top">
-                      {[10, 25, 50, 100].map((pageSize) => (
+                      {[10, 25, 50, 100, 200].map((pageSize) => (
                         <SelectItem key={pageSize} value={`${pageSize}`}>
                           {pageSize}
                         </SelectItem>

@@ -31,15 +31,26 @@ interface PhotoExportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedPhotos: PhotoData[];
+  organizationSettings?: {
+    organization_name?: string;
+    logo_url?: string;
+  };
 }
 
-export function PhotoExportDialog({ open, onOpenChange, selectedPhotos }: PhotoExportDialogProps) {
+export function PhotoExportDialog({ 
+  open, 
+  onOpenChange, 
+  selectedPhotos,
+  organizationSettings 
+}: PhotoExportDialogProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [title, setTitle] = useState("Photo Report");
   const [groupBy, setGroupBy] = useState<'asset' | 'campaign' | 'client' | 'category'>('asset');
   const [layout, setLayout] = useState<'grid' | 'list' | 'detailed'>('grid');
   const [photosPerPage, setPhotosPerPage] = useState(9);
   const [includeMetadata, setIncludeMetadata] = useState(true);
+  const [enableWatermark, setEnableWatermark] = useState(false);
+  const [watermarkType, setWatermarkType] = useState<'logo' | 'asset_id' | 'both'>('both');
 
   const handleExport = async () => {
     if (selectedPhotos.length === 0) {
@@ -59,6 +70,10 @@ export function PhotoExportDialog({ open, onOpenChange, selectedPhotos }: PhotoE
         photosPerPage,
         includeMetadata,
         title,
+        enableWatermark,
+        watermarkType,
+        organizationName: organizationSettings?.organization_name,
+        logoUrl: organizationSettings?.logo_url,
       });
 
       const filename = `photo-report-${new Date().getTime()}.pdf`;
@@ -184,6 +199,49 @@ export function PhotoExportDialog({ open, onOpenChange, selectedPhotos }: PhotoE
               </Select>
             </div>
           )}
+
+          {/* Watermark Options */}
+          <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="watermark">Enable Watermark</Label>
+                <div className="text-sm text-muted-foreground">
+                  Add watermark overlay on photos
+                </div>
+              </div>
+              <Switch
+                id="watermark"
+                checked={enableWatermark}
+                onCheckedChange={setEnableWatermark}
+              />
+            </div>
+
+            {enableWatermark && (
+              <div className="space-y-2 pt-2 border-t">
+                <Label>Watermark Type</Label>
+                <RadioGroup value={watermarkType} onValueChange={(value: any) => setWatermarkType(value)}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="logo" id="logo" />
+                    <Label htmlFor="logo" className="cursor-pointer font-normal">
+                      Company Logo Only
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="asset_id" id="asset_id" />
+                    <Label htmlFor="asset_id" className="cursor-pointer font-normal">
+                      Asset ID Only
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="both" id="both" />
+                    <Label htmlFor="both" className="cursor-pointer font-normal">
+                      Logo + Asset ID
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+          </div>
 
           {/* Include Metadata */}
           <div className="flex items-center justify-between space-x-2 border rounded-lg p-3">

@@ -17,6 +17,10 @@ interface ExportOptions {
   photosPerPage: number;
   includeMetadata: boolean;
   title: string;
+  enableWatermark?: boolean;
+  watermarkType?: 'logo' | 'asset_id' | 'both';
+  organizationName?: string;
+  logoUrl?: string;
 }
 
 export async function generatePhotoReportPDF(
@@ -38,6 +42,94 @@ export async function generatePhotoReportPDF(
       img.onerror = reject;
       img.src = url;
     });
+  };
+
+  // Helper function to add watermark to canvas
+  const addWatermarkToCanvas = async (
+    canvas: HTMLCanvasElement,
+    ctx: CanvasRenderingContext2D,
+    assetId: string
+  ) => {
+    const padding = Math.min(canvas.width, canvas.height) * 0.02;
+    const watermarkHeight = Math.min(canvas.height * 0.08, 60);
+    const watermarkY = canvas.height - watermarkHeight - padding;
+
+    // Semi-transparent background
+    const bgHeight = watermarkHeight + padding;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, canvas.height - bgHeight, canvas.width, bgHeight);
+
+    const fontSize = Math.max(watermarkHeight * 0.4, 12);
+    ctx.font = `bold ${fontSize}px Arial`;
+    ctx.fillStyle = 'white';
+    ctx.textBaseline = 'middle';
+
+    let textX = padding * 2;
+
+    // Add logo if enabled and available
+    if ((options.watermarkType === 'logo' || options.watermarkType === 'both') && options.logoUrl) {
+      try {
+        const logo = await loadImage(options.logoUrl);
+        const logoHeight = watermarkHeight * 0.6;
+        const logoWidth = (logo.width / logo.height) * logoHeight;
+
+        ctx.drawImage(
+          logo,
+          padding * 2,
+          watermarkY + (watermarkHeight - logoHeight) / 2,
+          logoWidth,
+          logoHeight
+        );
+
+        textX = padding * 2 + logoWidth + padding;
+      } catch (error) {
+        console.warn('Could not load logo:', error);
+      }
+    }
+
+    // Add Asset ID if enabled
+    if (options.watermarkType === 'asset_id' || options.watermarkType === 'both') {
+      ctx.fillText(assetId, textX, watermarkY + watermarkHeight / 2);
+    }
+
+    // Add organization name and timestamp
+    if (options.organizationName) {
+      ctx.font = `${fontSize * 0.7}px Arial`;
+      ctx.textAlign = 'right';
+      ctx.fillText(
+        options.organizationName,
+        canvas.width - padding * 2,
+        watermarkY + watermarkHeight / 3
+      );
+      
+      const timestamp = new Date().toLocaleDateString();
+      ctx.fillText(
+        timestamp,
+        canvas.width - padding * 2,
+        watermarkY + (watermarkHeight * 2) / 3
+      );
+    }
+  };
+
+  // Helper function to process image with optional watermark
+  const processImage = async (url: string, assetId: string): Promise<string> => {
+    if (!options.enableWatermark) {
+      return url;
+    }
+
+    const img = await loadImage(url);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) return url;
+
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+
+    await addWatermarkToCanvas(canvas, ctx, assetId);
+
+    return canvas.toDataURL('image/jpeg', 0.9);
   };
 
   // Add header
@@ -82,11 +174,11 @@ export async function generatePhotoReportPDF(
 
     // Render photos based on layout
     if (options.layout === 'grid') {
-      currentY = await renderGridLayout(doc, groupPhotos, currentY, pageWidth, pageHeight, margin, usableWidth, loadImage);
+      currentY = await renderGridLayout(doc, groupPhotos, currentY, pageWidth, pageHeight, margin, usableWidth, processImage);
     } else if (options.layout === 'list') {
-      currentY = await renderListLayout(doc, groupPhotos, currentY, pageWidth, pageHeight, margin, usableWidth, options.includeMetadata, loadImage);
+      currentY = await renderListLayout(doc, groupPhotos, currentY, pageWidth, pageHeight, margin, usableWidth, options.includeMetadata, processImage);
     } else if (options.layout === 'detailed') {
-      currentY = await renderDetailedLayout(doc, groupPhotos, currentY, pageWidth, pageHeight, margin, usableWidth, loadImage);
+      currentY = await renderDetailedLayout(doc, groupPhotos, currentY, pageWidth, pageHeight, margin, usableWidth, processImage);
     }
 
     currentY += 10; // Space between groups
@@ -142,7 +234,7 @@ async function renderGridLayout(
   pageHeight: number,
   margin: number,
   usableWidth: number,
-  loadImage: (url: string) => Promise<HTMLImageElement>
+  processImage: (url: string, assetId: string) => Promise<string>
 ): Promise<number> {
   const cols = 3;
   const imgSize = (usableWidth - ((cols - 1) * 5)) / cols; // 5mm gap between images
@@ -151,7 +243,16 @@ async function renderGridLayout(
 
   for (const photo of photos) {
     try {
-      const img = await loadImage(photo.photo_url);
+      const processedImageUrl = await processImage(photo.photo_url, photo.asset_id);
+      const img = await (async () => {
+        return new Promise<HTMLImageElement>((resolve, reject) => {
+          const image = new Image();
+          image.crossOrigin = 'anonymous';
+          image.onload = () => resolve(image);
+          image.onerror = reject;
+          image.src = processedImageUrl;
+        });
+      })();
       const x = margin + (col * (imgSize + 5));
 
       if (currentY + imgSize > pageHeight - margin) {
@@ -195,7 +296,7 @@ async function renderListLayout(
   margin: number,
   usableWidth: number,
   includeMetadata: boolean,
-  loadImage: (url: string) => Promise<HTMLImageElement>
+  processImage: (url: string, assetId: string) => Promise<string>
 ): Promise<number> {
   const thumbnailSize = 30;
   let currentY = startY;
@@ -207,7 +308,16 @@ async function renderListLayout(
         currentY = margin + 15;
       }
 
-      const img = await loadImage(photo.photo_url);
+      const processedImageUrl = await processImage(photo.photo_url, photo.asset_id);
+      const img = await (async () => {
+        return new Promise<HTMLImageElement>((resolve, reject) => {
+          const image = new Image();
+          image.crossOrigin = 'anonymous';
+          image.onload = () => resolve(image);
+          image.onerror = reject;
+          image.src = processedImageUrl;
+        });
+      })();
       
       // Thumbnail
       doc.addImage(img, 'JPEG', margin, currentY, thumbnailSize, thumbnailSize, undefined, 'FAST');
@@ -243,7 +353,7 @@ async function renderDetailedLayout(
   pageHeight: number,
   margin: number,
   usableWidth: number,
-  loadImage: (url: string) => Promise<HTMLImageElement>
+  processImage: (url: string, assetId: string) => Promise<string>
 ): Promise<number> {
   let currentY = startY;
   const imgWidth = usableWidth * 0.6;
@@ -256,7 +366,16 @@ async function renderDetailedLayout(
         currentY = margin + 15;
       }
 
-      const img = await loadImage(photo.photo_url);
+      const processedImageUrl = await processImage(photo.photo_url, photo.asset_id);
+      const img = await (async () => {
+        return new Promise<HTMLImageElement>((resolve, reject) => {
+          const image = new Image();
+          image.crossOrigin = 'anonymous';
+          image.onload = () => resolve(image);
+          image.onerror = reject;
+          image.src = processedImageUrl;
+        });
+      })();
       
       // Center the image
       const imgX = margin + (usableWidth - imgWidth) / 2;

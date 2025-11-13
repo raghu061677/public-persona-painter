@@ -1317,6 +1317,9 @@ export type Database = {
       }
       media_photos: {
         Row: {
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
           asset_id: string
           campaign_id: string | null
           category: string
@@ -1325,11 +1328,15 @@ export type Database = {
           id: string
           metadata: Json | null
           photo_url: string
+          rejection_reason: string | null
           updated_at: string | null
           uploaded_at: string | null
           uploaded_by: string | null
         }
         Insert: {
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           asset_id: string
           campaign_id?: string | null
           category: string
@@ -1338,11 +1345,15 @@ export type Database = {
           id?: string
           metadata?: Json | null
           photo_url: string
+          rejection_reason?: string | null
           updated_at?: string | null
           uploaded_at?: string | null
           uploaded_by?: string | null
         }
         Update: {
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           asset_id?: string
           campaign_id?: string | null
           category?: string
@@ -1351,6 +1362,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           photo_url?: string
+          rejection_reason?: string | null
           updated_at?: string | null
           uploaded_at?: string | null
           uploaded_by?: string | null

@@ -63,14 +63,12 @@ export function ClientPortalProvider({ children }: { children: ReactNode }) {
 
   const fetchPortalUser = async (authUserId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data } = await (supabase as any)
         .from('client_portal_users')
         .select('*')
         .eq('auth_user_id', authUserId)
         .eq('is_active', true)
-        .single();
-
-      if (error) throw error;
+        .maybeSingle();
 
       setPortalUser(data);
     } catch (error) {

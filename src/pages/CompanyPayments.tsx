@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useCompany } from "@/contexts/CompanyContext";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { SettingsCard, SectionHeader, InfoAlert, InputRow } from "@/components/settings/zoho-style";
+import { SettingsCard, SectionHeader, InfoAlert, InputRow, SettingsContentWrapper } from "@/components/settings/zoho-style";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, Save, CheckCircle2, XCircle } from "lucide-react";
+import { CreditCard, Save, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
 const PAYMENT_GATEWAYS = [
   { id: "razorpay", name: "Razorpay", status: "not_connected", logo: "💳" },
@@ -15,27 +17,100 @@ const PAYMENT_GATEWAYS = [
 ];
 
 export default function CompanyPayments() {
+  const { company } = useCompany();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [enabled, setEnabled] = useState(false);
+  const [formData, setFormData] = useState({
+    online_payments_enabled: false,
+    payment_gateways: {},
+  });
 
-  const handleSave = () => {
+  useEffect(() => {
+    const loadSettings = async () => {
+      if (!company) return;
+
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('organization_settings' as any)
+          .select('*')
+          .eq('company_id', company.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (data) {
+          setFormData({
+            online_payments_enabled: (data as any).online_payments_enabled || false,
+            payment_gateways: (data as any).payment_gateways || {},
+          });
+        }
+      } catch (error: any) {
+        console.error("Error loading payment settings:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, [company]);
+
+  const handleSave = async () => {
+    if (!company) return;
+
     setLoading(true);
-    toast({
-      title: "Settings Saved",
-      description: "Online payment settings have been updated.",
-    });
-    setLoading(false);
+    try {
+      const { data: existing } = await supabase
+        .from('organization_settings' as any)
+        .select('id')
+        .eq('company_id', company.id)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from('organization_settings' as any)
+          .update({
+            online_payments_enabled: formData.online_payments_enabled,
+            payment_gateways: formData.payment_gateways,
+            updated_at: new Date().toISOString(),
+          } as any)
+          .eq('company_id', company.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('organization_settings' as any)
+          .insert({
+            company_id: company.id,
+            online_payments_enabled: formData.online_payments_enabled,
+            payment_gateways: formData.payment_gateways,
+          } as any);
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Settings Saved",
+        description: "Online payment settings have been updated.",
+      });
+    } catch (error: any) {
+      console.error("Error saving payment settings:", error);
+      toast({
+        title: "Failed to save settings",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold mb-1">Online Payments</h1>
-        <p className="text-sm text-muted-foreground">
-          Configure payment gateways for client invoices
-        </p>
-      </div>
+    <SettingsContentWrapper>
+      <SectionHeader
+        title="Online Payments"
+        description="Configure payment gateways for client invoices"
+      />
 
       <InfoAlert>
         <strong>Get Paid Faster:</strong> Enable online payments to receive payments directly through your invoices. Clients can pay using cards, UPI, and net banking.

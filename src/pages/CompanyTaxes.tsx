@@ -26,46 +26,94 @@ export default function CompanyTaxes() {
   });
 
   useEffect(() => {
-    if (company) {
-      const metadata = (company as any).metadata || {};
-      setFormData({
-        gstin: (company as any).gstin || "",
-        pan: (company as any).pan || "",
-        msme_registered: metadata.msme_registered || false,
-        msme_number: metadata.msme_number || "",
-        enable_einvoicing: metadata.enable_einvoicing || false,
-        enable_eway_bill: metadata.enable_eway_bill || false,
-        tds_applicable: metadata.tds_applicable || false,
-        tds_percentage: metadata.tds_percentage || 0,
-      });
-    }
-  }, [company]);
+    const loadSettings = async () => {
+      if (!company) return;
+
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('tax_settings' as any)
+          .select('*')
+          .eq('company_id', company.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (data) {
+          setFormData({
+            gstin: (data as any).gstin || "",
+            pan: (data as any).pan || "",
+            msme_registered: (data as any).msme_registered || false,
+            msme_number: (data as any).msme_number || "",
+            enable_einvoicing: (data as any).enable_einvoicing || false,
+            enable_eway_bill: (data as any).enable_eway_bill || false,
+            tds_applicable: (data as any).tds_applicable || false,
+            tds_percentage: (data as any).tds_percentage || 0,
+          });
+        }
+      } catch (error: any) {
+        console.error("Error loading tax settings:", error);
+        toast({
+          title: "Failed to load settings",
+          description: error.message,
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, [company, toast]);
 
   const handleSave = async () => {
     if (!company) return;
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('companies' as any)
-        .update({
-          gstin: formData.gstin,
-          pan: formData.pan,
-          metadata: {
-            ...((company as any).metadata || {}),
+      // Check if settings exist
+      const { data: existing } = await supabase
+        .from('tax_settings' as any)
+        .select('id')
+        .eq('company_id', company.id)
+        .maybeSingle();
+
+      if (existing) {
+        // Update existing settings
+        const { error } = await supabase
+          .from('tax_settings' as any)
+          .update({
+            gstin: formData.gstin,
+            pan: formData.pan,
             msme_registered: formData.msme_registered,
             msme_number: formData.msme_number,
             enable_einvoicing: formData.enable_einvoicing,
             enable_eway_bill: formData.enable_eway_bill,
             tds_applicable: formData.tds_applicable,
             tds_percentage: formData.tds_percentage,
-          }
-        })
-        .eq('id', company.id);
+            updated_at: new Date().toISOString(),
+          } as any)
+          .eq('company_id', company.id);
 
-      if (error) throw error;
+        if (error) throw error;
+      } else {
+        // Insert new settings
+        const { error } = await supabase
+          .from('tax_settings' as any)
+          .insert({
+            company_id: company.id,
+            gstin: formData.gstin,
+            pan: formData.pan,
+            msme_registered: formData.msme_registered,
+            msme_number: formData.msme_number,
+            enable_einvoicing: formData.enable_einvoicing,
+            enable_eway_bill: formData.enable_eway_bill,
+            tds_applicable: formData.tds_applicable,
+            tds_percentage: formData.tds_percentage,
+          } as any);
 
-      await refreshCompany();
+        if (error) throw error;
+      }
 
       toast({
         title: "Tax settings updated",
@@ -82,6 +130,16 @@ export default function CompanyTaxes() {
       setLoading(false);
     }
   };
+
+  if (loading && !formData.gstin && !formData.pan) {
+    return (
+      <SettingsContentWrapper>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </SettingsContentWrapper>
+    );
+  }
 
   return (
     <SettingsContentWrapper>

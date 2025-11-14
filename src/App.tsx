@@ -32,11 +32,9 @@ import CampaignsList from "./pages/CampaignsList";
 import CampaignDetail from "./pages/CampaignDetail";
 import CampaignEdit from "./pages/CampaignEdit";
 import CampaignBudget from "./pages/CampaignBudget";
-import MobileUpload from "./pages/MobileUpload";
-import MobileOpsUpload from "./pages/MobileOpsUpload";
 import CampaignAssetProofs from "./pages/CampaignAssetProofs";
-import MobileFieldApp from "./pages/MobileFieldApp";
 import MobilePowerBills from "./pages/MobilePowerBills";
+import MobilePage from "./pages/mobile/index";
 import FinanceDashboard from "./pages/FinanceDashboard";
 import EstimationsList from "./pages/EstimationsList";
 import InvoicesList from "./pages/InvoicesList";
@@ -69,7 +67,6 @@ import OperationsSettings from "./pages/OperationsSettings";
 import Operations from "./pages/Operations";
 import OperationsCalendar from "./pages/OperationsCalendar";
 import OperationsAnalytics from "./pages/OperationsAnalytics";
-import MobileOperations from "./pages/MobileOperations";
 import PlanComparison from "./pages/PlanComparison";
 import ProformasList from "./pages/ProformasList";
 import ProformaDetail from "./pages/ProformaDetail";
@@ -101,15 +98,12 @@ const App = () => (
             <BrowserRouter>
               <Routes>
             {/* Public routes */}
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<Auth />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/onboarding" element={<ProtectedRoute><CompanyOnboarding /></ProtectedRoute>} />
             <Route path="/install" element={<Install />} />
             <Route path="/admin/plans/:id/share/:shareToken" element={<PlanShare />} />
-            <Route path="/mobile/field-app" element={<MobileFieldApp />} />
-            <Route path="/mobile/upload/:campaignId/:assetId" element={<MobileUpload />} />
-            <Route path="/mobile/upload" element={<MobileOpsUpload />} />
-            <Route path="/mobile/power-bills" element={<MobilePowerBills />} />
+            <Route path="/mobile/*" element={<MobilePage />} />
             
             {/* Protected routes with layout */}
             <Route path="/dashboard" element={<ProtectedRoute requireAuth><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
@@ -143,8 +137,6 @@ const App = () => (
             <Route path="/admin/operations" element={<AppLayout><Operations /></AppLayout>} />
             <Route path="/admin/operations-analytics" element={<AppLayout><OperationsAnalytics /></AppLayout>} />
             <Route path="/admin/operations-calendar" element={<AppLayout><OperationsCalendar /></AppLayout>} />
-            <Route path="/admin/mobile-operations" element={<MobileOperations />} />
-            <Route path="/admin/mobile-upload" element={<AppLayout><MobileFieldApp /></AppLayout>} />
             <Route path="/finance" element={<AppLayout><FinanceDashboard /></AppLayout>} />
             <Route path="/finance/estimations" element={<AppLayout><EstimationsList /></AppLayout>} />
             <Route path="/finance/proformas" element={<AppLayout><ProformasList /></AppLayout>} />

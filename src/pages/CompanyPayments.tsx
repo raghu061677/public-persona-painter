@@ -123,10 +123,13 @@ export default function CompanyPayments() {
         />
 
         <InputRow label="Enable Online Payments" description="Allow clients to pay invoices online">
-          <Switch checked={enabled} onCheckedChange={setEnabled} />
+          <Switch 
+            checked={formData.online_payments_enabled} 
+            onCheckedChange={(checked) => setFormData({ ...formData, online_payments_enabled: checked })} 
+          />
         </InputRow>
 
-        {enabled && (
+        {formData.online_payments_enabled && (
           <div className="space-y-3 mt-4">
             {PAYMENT_GATEWAYS.map((gateway) => (
               <div
@@ -161,7 +164,7 @@ export default function CompanyPayments() {
         )}
       </SettingsCard>
 
-      {enabled && (
+      {formData.online_payments_enabled && (
         <>
           <SettingsCard>
             <SectionHeader
@@ -240,6 +243,6 @@ export default function CompanyPayments() {
           {loading ? "Saving..." : "Save Changes"}
         </Button>
       </div>
-    </div>
+    </SettingsContentWrapper>
   );
 }

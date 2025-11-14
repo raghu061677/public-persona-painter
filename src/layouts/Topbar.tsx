@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ROUTES } from "@/lib/routes";
 import ThemePicker from "@/components/ThemePicker";
+import { GlobalLayoutSettings } from "@/components/settings/GlobalLayoutSettings";
 import { Bell, Search, Plus } from "lucide-react";
 
 export default function Topbar({ onSearchOpen }: { onSearchOpen: () => void }) {
@@ -79,6 +80,9 @@ export default function Topbar({ onSearchOpen }: { onSearchOpen: () => void }) {
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1 md:gap-2 shrink-0">
+        {/* Global Layout Settings */}
+        <GlobalLayoutSettings />
+        
         {/* Quick Create - Desktop only */}
         <div className="hidden md:block">
           <QuickAddDrawer

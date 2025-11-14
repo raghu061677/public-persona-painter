@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getPlanStatusConfig } from "@/utils/statusBadges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getPlanStatusConfig } from "@/utils/statusBadges";
 import {
   Table,
   TableBody,
@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket, Download, Sparkles, ChevronDown, Info, FolderOpen, Edit } from "lucide-react";
+import { Plus, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket, Download, Sparkles, ChevronDown, Info, FolderOpen, Edit, ClipboardList, Users, TrendingUp } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,6 +47,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { PageCustomization, PageCustomizationOption } from "@/components/ui/page-customization";
+import { EnhancedFilterToggle } from "@/components/common/EnhancedFilterToggle";
+import { useLayoutSettings } from "@/hooks/use-layout-settings";
 
 export default function PlansList() {
   const navigate = useNavigate();
@@ -57,9 +60,11 @@ export default function PlansList() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [selectedPlans, setSelectedPlans] = useState<Set<string>>(new Set());
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
-  const [showFilters, setShowFilters] = useState(false);
   const [showTemplatesDialog, setShowTemplatesDialog] = useState(false);
   const [showBulkConversionDialog, setShowBulkConversionDialog] = useState(false);
+  
+  // Layout settings with persistence
+  const { getSetting, updateSetting, isReady: layoutReady } = useLayoutSettings('plans');
 
   const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("plans");
   const { 
@@ -421,57 +426,61 @@ export default function PlansList() {
     }
   };
 
+  if (!layoutReady || !settingsReady || !columnPrefsReady) {
+    return null;
+  }
+
+  // Customization options
+  const customizationOptions: PageCustomizationOption[] = [
+    {
+      id: 'show-stats',
+      label: 'Statistics Cards',
+      description: 'Display plan summary metrics',
+      enabled: getSetting('showStats', false),
+      onChange: (val) => updateSetting('showStats', val),
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-6 py-8 max-w-7xl">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-7xl space-y-4">
         {/* Header Section */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <FileText className="h-8 w-8 text-primary" />
-              <h1 className="text-2xl font-bold tracking-tight">Plan List</h1>
-            </div>
-            <div className="flex items-center gap-3">
-              {isAdmin && (
-                <Button
-                  onClick={() => setFilterStatus(filterStatus === 'Approved' ? '' : 'Approved')}
-                  variant={filterStatus === 'Approved' ? "default" : "outline"}
-                  className={filterStatus === 'Approved' ? "bg-green-600 hover:bg-green-700" : "border-green-600 text-green-600 hover:bg-green-50"}
-                >
-                  <Rocket className="mr-2 h-4 w-4" />
-                  Ready to Convert ({plans.filter(p => p.status === 'Approved').length})
-                </Button>
-              )}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <FileText className="h-6 sm:h-8 w-6 sm:w-8 text-primary" />
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              Plan List
+            </h1>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <PageCustomization options={customizationOptions} />
+            {isAdmin && (
               <Button
-                onClick={() => setShowTemplatesDialog(true)}
-                variant="outline"
-                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                onClick={() => setFilterStatus(filterStatus === 'Approved' ? '' : 'Approved')}
+                variant={filterStatus === 'Approved' ? "default" : "outline"}
+                size="sm"
               >
-                <FolderOpen className="mr-2 h-4 w-4" />
-                Templates
+                <Rocket className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Ready ({plans.filter(p => p.status === 'Approved').length})</span>
+                <span className="sm:hidden">Ready</span>
               </Button>
-              {isAdmin && (
-                <Button
-                  onClick={() => {
-                    toast({
-                      title: "AI Plan Creation",
-                      description: "AI-powered plan creation is coming soon!",
-                    });
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Create With AI
-                </Button>
-              )}
-              <Button
-                onClick={() => navigate('/admin/plans/new')}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Plan
-              </Button>
-            </div>
+            )}
+            <Button
+              onClick={() => setShowTemplatesDialog(true)}
+              variant="outline"
+              size="sm"
+            >
+              <FolderOpen className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Templates</span>
+            </Button>
+            <Button
+              onClick={() => navigate('/admin/plans/new')}
+              size="default"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Add Plan</span>
+              <span className="sm:hidden">Add</span>
+            </Button>
           </div>
         </div>
 
@@ -479,42 +488,17 @@ export default function PlansList() {
         {/* Filters Bar */}
         <Card className="mb-4">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3 flex-wrap">
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className="gap-2"
-              >
-                Display
-                <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-              </Button>
-              
-              <div className="flex-1 flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Filter by Plan ID, Customer Name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="flex-1 h-10 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                />
-                <Button size="icon" className="bg-blue-600 hover:bg-blue-700 text-white h-10 w-10">
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </Button>
-              </div>
-
-              <Button variant="ghost" size="icon" onClick={() => setShowFilters(!showFilters)}>
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </Button>
-            </div>
-
-            {/* Collapsible Advanced Filters */}
-            {showFilters && (
-              <div className="mt-4 pt-4 border-t space-y-4">
+            <EnhancedFilterToggle
+              open={getSetting('showFilters', false)}
+              onOpenChange={(val) => updateSetting('showFilters', val)}
+              activeFiltersCount={[searchTerm, filterStatus].filter(Boolean).length}
+              showClearButton={true}
+              onClearFilters={() => {
+                setSearchTerm('');
+                setFilterStatus('');
+              }}
+            >
+              <div className="space-y-4">
                 <TableFilters
                   filters={[
                     {
@@ -557,7 +541,7 @@ export default function PlansList() {
                   }}
                 />
               </div>
-            )}
+            </EnhancedFilterToggle>
           </CardContent>
         </Card>
 

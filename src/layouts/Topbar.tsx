@@ -55,30 +55,30 @@ export default function Topbar({ onSearchOpen }: { onSearchOpen: () => void }) {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between bg-card/80 backdrop-blur-sm border-b border-border h-14 md:h-16 px-3 md:px-4 shadow-sm">
+    <header className="sticky top-0 z-50 flex items-center justify-between bg-card/95 backdrop-blur-md border-b border-border h-14 md:h-16 px-3 md:px-4 lg:px-6 shadow-sm w-full shrink-0">
       {/* Left: Brand */}
-      <div className="flex items-center gap-2">
-        <span className="font-semibold text-foreground text-sm md:text-base">Go-Ads 360°</span>
+      <div className="flex items-center gap-2 min-w-0 shrink-0">
+        <span className="font-semibold text-foreground text-sm md:text-base truncate">Go-Ads 360°</span>
       </div>
 
       {/* Middle: Search trigger */}
-      <div className="flex-1 max-w-md mx-2 md:mx-4">
+      <div className="flex-1 max-w-md mx-2 md:mx-4 min-w-0">
         <Button
           variant="outline"
-          className="w-full justify-start text-muted-foreground hover:text-foreground h-9 md:h-10"
+          className="w-full justify-start text-muted-foreground hover:text-foreground h-9 md:h-10 min-w-0"
           onClick={onSearchOpen}
         >
-          <Search className="w-4 h-4 mr-2" />
-          <span className="hidden sm:inline text-sm">Search or jump to...</span>
-          <span className="sm:hidden text-sm">Search...</span>
-          <kbd className="hidden lg:inline-flex ml-auto pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-xs font-medium text-muted-foreground">
+          <Search className="w-4 h-4 mr-2 shrink-0" />
+          <span className="hidden sm:inline text-sm truncate">Search or jump to...</span>
+          <span className="sm:hidden text-sm truncate">Search...</span>
+          <kbd className="hidden lg:inline-flex ml-auto pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-xs font-medium text-muted-foreground shrink-0">
             <span className="text-xs">⌘</span>K
           </kbd>
         </Button>
       </div>
 
       {/* Right: Actions */}
-      <div className="flex items-center gap-1 md:gap-2">
+      <div className="flex items-center gap-1 md:gap-2 shrink-0">
         {/* Quick Create - Desktop only */}
         <div className="hidden md:block">
           <QuickAddDrawer

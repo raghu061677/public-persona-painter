@@ -142,6 +142,28 @@ export default function CompanyOnboarding() {
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
+        {/* Navigation Header */}
+        <div className="flex items-center justify-between mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/dashboard')}
+            className="gap-2"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (confirm('Are you sure you want to skip company registration? You can complete it later from settings.')) {
+                navigate('/dashboard');
+              }
+            }}
+          >
+            Skip for Now
+          </Button>
+        </div>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl flex items-center gap-2">

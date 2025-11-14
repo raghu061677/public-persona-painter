@@ -14,21 +14,34 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Vendor libraries - separate into their own chunks for better caching
-          'vendor-xlsx': ['xlsx'],
-          'vendor-pptxgenjs': ['pptxgenjs'],
-          'vendor-leaflet': ['leaflet', 'react-leaflet', 'leaflet.markercluster', 'leaflet.heat'],
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-ui': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select', '@radix-ui/react-tabs'],
-          'vendor-charts': ['recharts', 'highcharts', 'highcharts-react-official'],
-          'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
-          'vendor-supabase': ['@supabase/supabase-js'],
-          'vendor-utils': ['date-fns', 'clsx', 'tailwind-merge', 'class-variance-authority'],
+        manualChunks: (id) => {
+          // Split large vendor libraries into separate chunks
+          if (id.includes('node_modules')) {
+            if (id.includes('xlsx')) return 'vendor-xlsx';
+            if (id.includes('pptxgenjs')) return 'vendor-pptx';
+            if (id.includes('leaflet') || id.includes('react-leaflet')) return 'vendor-maps';
+            if (id.includes('recharts') || id.includes('highcharts')) return 'vendor-charts';
+            if (id.includes('react') || id.includes('react-dom')) return 'vendor-react';
+            if (id.includes('@radix-ui')) return 'vendor-ui';
+            if (id.includes('@supabase')) return 'vendor-supabase';
+            if (id.includes('@tanstack/react-table')) return 'vendor-table';
+            if (id.includes('jspdf') || id.includes('html2canvas')) return 'vendor-pdf';
+            if (id.includes('exceljs')) return 'vendor-excel';
+            // Group other node_modules
+            return 'vendor-misc';
+          }
         },
       },
     },
-    chunkSizeWarningLimit: 1000, // Increase warning limit since we're now splitting properly
+    chunkSizeWarningLimit: 1500,
+    // Optimize for better tree-shaking
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: false,
+        drop_debugger: true,
+      },
+    },
   },
   plugins: [
     react(),
@@ -99,8 +112,11 @@ export default defineConfig(({ mode }) => ({
         prefer_related_applications: false
       },
       workbox: {
-        maximumFileSizeToCacheInBytes: 15 * 1024 * 1024, // 15 MB - increased for large bundle
+        maximumFileSizeToCacheInBytes: 20 * 1024 * 1024, // 20 MB limit
+        // Don't cache very large chunks - they'll be loaded on demand
         globPatterns: ["**/*.{js,css,html,ico,png,svg,json,woff,woff2}"],
+        // Exclude very large vendor chunks from precaching
+        globIgnores: ['**/vendor-xlsx*.js', '**/vendor-pptx*.js', '**/vendor-pdf*.js'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

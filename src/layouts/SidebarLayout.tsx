@@ -13,6 +13,7 @@ import { useState, useMemo } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSwipe } from "@/hooks/use-swipe";
 
 interface MenuItem {
   label: string;
@@ -94,6 +95,20 @@ const MENU_SECTIONS: MenuSection[] = [
 
 export default function SidebarLayout({ children }: { children: React.ReactNode }) {
   const { open, toggle } = useSidebarStore();
+  
+  // Swipe to close sidebar on mobile
+  const swipeHandlers = useSwipe({
+    onSwipedLeft: () => {
+      if (open && window.innerWidth < 768) {
+        toggle();
+      }
+    },
+    onSwipedRight: () => {
+      if (!open && window.innerWidth < 768) {
+        toggle();
+      }
+    },
+  });
   const { canView, loading: permLoading } = usePermissions();
   const { isAdmin, roles } = useAuth();
   const [expandedSections, setExpandedSections] = useState<string[]>([

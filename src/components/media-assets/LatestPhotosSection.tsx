@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Camera, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { PhotoLightbox } from "./PhotoLightbox";
 
 interface LatestPhotosSectionProps {
   assetId: string;
@@ -22,6 +23,8 @@ interface MediaPhoto {
 export function LatestPhotosSection({ assetId }: LatestPhotosSectionProps) {
   const [photos, setPhotos] = useState<MediaPhoto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -58,6 +61,11 @@ export function LatestPhotosSection({ assetId }: LatestPhotosSectionProps) {
     return colors[category] || "bg-gray-500";
   };
 
+  const handlePhotoClick = (index: number) => {
+    setSelectedPhotoIndex(index);
+    setLightboxOpen(true);
+  };
+
   if (loading) {
     return (
       <Card>
@@ -75,59 +83,68 @@ export function LatestPhotosSection({ assetId }: LatestPhotosSectionProps) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Camera className="h-5 w-5" />
-            Latest Photos
-          </CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate(`/admin/gallery?asset=${assetId}`)}
-          >
-            View All
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {photos.length === 0 ? (
-          <div className="text-center py-8">
-            <Camera className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-            <p className="text-muted-foreground">No photos uploaded yet</p>
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Camera className="h-5 w-5" />
+              Latest Photos
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(`/admin/gallery?asset=${assetId}`)}
+            >
+              View All
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {photos.map((photo) => (
-              <div
-                key={photo.id}
-                className="relative group cursor-pointer"
-                onClick={() => window.open(photo.photo_url, '_blank')}
-              >
-                <div className="aspect-square overflow-hidden rounded-lg bg-muted">
-                  <img
-                    src={photo.photo_url}
-                    alt={photo.category}
-                    className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300"
-                  />
+        </CardHeader>
+        <CardContent>
+          {photos.length === 0 ? (
+            <div className="text-center py-8">
+              <Camera className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+              <p className="text-muted-foreground">No photos uploaded yet</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {photos.map((photo, index) => (
+                <div
+                  key={photo.id}
+                  className="relative group cursor-pointer"
+                  onClick={() => handlePhotoClick(index)}
+                >
+                  <div className="aspect-square overflow-hidden rounded-lg bg-muted">
+                    <img
+                      src={photo.photo_url}
+                      alt={photo.category}
+                      className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300"
+                    />
+                  </div>
+                  <div className="absolute top-2 right-2">
+                    <Badge className={getCategoryColor(photo.category)}>
+                      {photo.category}
+                    </Badge>
+                  </div>
+                  <div className="mt-2">
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(photo.uploaded_at), 'PP')}
+                    </p>
+                  </div>
                 </div>
-                <div className="absolute top-2 right-2">
-                  <Badge className={getCategoryColor(photo.category)}>
-                    {photo.category}
-                  </Badge>
-                </div>
-                <div className="mt-2">
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(photo.uploaded_at), 'PP')}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <PhotoLightbox
+        photos={photos}
+        initialIndex={selectedPhotoIndex}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
+    </>
   );
 }

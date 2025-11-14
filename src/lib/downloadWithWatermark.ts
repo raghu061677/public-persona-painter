@@ -261,7 +261,7 @@ export async function downloadImageWithWatermark({
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         
-        // Generate filename: {City}-{Area}-{Location}-{Category}-{Date}.png
+        // Generate filename: {Location}-{Area}-{City}-{Category}-{Date}.png
         const dateStr = format(new Date(), 'yyyyMMdd');
         const locationPart = assetData.location
           .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special chars
@@ -271,7 +271,7 @@ export async function downloadImageWithWatermark({
         
         let fileName: string;
         if (assetData.city && assetData.area) {
-          fileName = `${assetData.city}-${assetData.area}-${locationPart}-${category}-${dateStr}.png`;
+          fileName = `${locationPart}-${assetData.area}-${assetData.city}-${category}-${dateStr}.png`;
         } else if (assetId) {
           fileName = `${assetId}-${locationPart}-${category}-${dateStr}.png`;
         } else {

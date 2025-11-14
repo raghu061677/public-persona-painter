@@ -479,6 +479,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
     "id",
     "images",
     "location",
+    "area",
     "city",
     "media_type",
     "dimensions",

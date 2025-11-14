@@ -26,6 +26,8 @@ import { BulkActionsDropdown, commonBulkActions } from "@/components/common/bulk
 import { useTableSettings, formatCurrency as formatCurrencyUtil, formatDate as formatDateUtil } from "@/hooks/use-table-settings";
 import { useTableDensity } from "@/hooks/use-table-density";
 import { Checkbox } from "@/components/ui/checkbox";
+import { SkeletonStats, SkeletonTable } from "@/components/ui/loading-skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function CampaignsList() {
   const navigate = useNavigate();
@@ -196,6 +198,24 @@ export default function CampaignsList() {
       setSelectedCampaigns(new Set(filteredCampaigns.map(c => c.id)));
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-6 py-8 space-y-6">
+          <div className="flex items-center justify-between mb-8">
+            <div className="space-y-2">
+              <Skeleton className="h-9 w-48" />
+              <Skeleton className="h-5 w-64" />
+            </div>
+            <Skeleton className="h-10 w-32" />
+          </div>
+          <SkeletonStats count={4} />
+          <SkeletonTable rows={10} columns={6} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

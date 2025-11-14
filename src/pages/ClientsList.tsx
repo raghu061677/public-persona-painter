@@ -48,6 +48,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { BulkActionsDropdown, commonBulkActions } from "@/components/common/bulk-actions-dropdown";
 import { useTableSettings, formatDate as formatDateUtil } from "@/hooks/use-table-settings";
 import { useTableDensity } from "@/hooks/use-table-density";
+import { SkeletonStats, SkeletonTable } from "@/components/ui/loading-skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
 
 const INDIAN_STATES = [
@@ -538,6 +540,25 @@ export default function ClientsList() {
       description: `Exported ${exportData.length} clients to Excel`,
     });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-6 py-8 space-y-6">
+          <div className="flex items-center justify-between mb-8">
+            <div className="space-y-2">
+              <Skeleton className="h-9 w-40" />
+              <Skeleton className="h-5 w-64" />
+            </div>
+            <Skeleton className="h-10 w-32" />
+          </div>
+          
+          <SkeletonStats count={4} />
+          <SkeletonTable rows={10} columns={6} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

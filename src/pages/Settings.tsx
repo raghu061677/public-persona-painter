@@ -17,6 +17,8 @@ import { AlertThresholdSettings } from "@/components/settings/AlertThresholdSett
 import { WatermarkSettings } from "@/components/settings/WatermarkSettings";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { ActivityLogViewer } from "@/components/audit/ActivityLogViewer";
+import { RolePermissionsSettings } from "@/components/settings/RolePermissionsSettings";
+import { CompanyBrandingSettings } from "@/components/settings/CompanyBrandingSettings";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -661,7 +663,9 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="appearance" className="space-y-6 mt-6">
+          <CompanyBrandingSettings />
           <ThemeCustomization />
+          {isAdmin && <RolePermissionsSettings />}
           {isAdmin && <WatermarkSettings />}
           {isAdmin && <ActivityLogViewer />}
         </TabsContent>

@@ -68,7 +68,7 @@ export default function BookingRequests() {
           owner_company:companies!booking_requests_owner_company_id_fkey(name),
           asset:media_assets(id, location, city, area, media_type)
         `)
-        .eq('owner_company_id', companyId)
+        .eq('owner_company_id', company?.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

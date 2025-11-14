@@ -22,7 +22,8 @@ import {
   Edit,
   AlertCircle,
   CheckCircle,
-  Clock
+  Clock,
+  Send
 } from "lucide-react";
 import { formatINR, getInvoiceStatusColor, getDaysOverdue } from "@/utils/finance";
 import { toast } from "sonner";
@@ -31,6 +32,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { ClientDocuments } from "@/components/clients/ClientDocuments";
+import { SendPortalInviteDialog } from "@/components/clients/SendPortalInviteDialog";
 
 interface Client {
   id: string;
@@ -107,6 +109,7 @@ export default function ClientDetail() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
   
   const [stats, setStats] = useState({
     totalRevenue: 0,
@@ -312,6 +315,23 @@ export default function ClientDetail() {
               {client.company}
             </p>
           )}
+        </div>
+        
+        <div className="flex gap-2">
+          <Button
+            variant="default"
+            onClick={() => setShowInviteDialog(true)}
+          >
+            <Send className="mr-2 h-4 w-4" />
+            Send Portal Invite
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => navigate(`/admin/clients/edit/${client.id}`)}
+          >
+            <Edit className="mr-2 h-4 w-4" />
+            Edit Client
+          </Button>
         </div>
       </div>
 
@@ -872,6 +892,15 @@ export default function ClientDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Portal Invite Dialog */}
+      <SendPortalInviteDialog
+        open={showInviteDialog}
+        onOpenChange={setShowInviteDialog}
+        clientId={client.id}
+        clientName={client.name}
+        defaultEmail={client.email || undefined}
+      />
     </div>
   );
 }

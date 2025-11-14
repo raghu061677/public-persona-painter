@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Edit, Copy, Trash2, Zap, Wrench, History, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Edit, Copy, Trash2, Zap, Wrench, History, ChevronLeft, ChevronRight, Check, X } from "lucide-react";
 import { getStatusColor } from "@/utils/mediaAssets";
 import { toast } from "@/hooks/use-toast";
 import { AssetOverviewTab } from "./asset-overview-tab";
@@ -13,6 +13,14 @@ import { EnhancedPowerBillsTab } from "./EnhancedPowerBillsTab";
 import { AssetMaintenanceTab } from "./asset-maintenance-tab";
 import { AssetBookingHistoryTab } from "./asset-booking-history-tab";
 import { LatestPhotosSection } from "./LatestPhotosSection";
+import { AssetBookingCalendar } from "./AssetBookingCalendar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Carousel,
   CarouselContent,
@@ -30,6 +38,9 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
   const navigate = useNavigate();
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [editingStatus, setEditingStatus] = useState(false);
+  const [editingVisibility, setEditingVisibility] = useState(false);
+  const [currentAsset, setCurrentAsset] = useState(asset);
 
   // Collect all images from images.photos array
   const allImages: { url: string; name: string; tag?: string }[] = [];
@@ -85,6 +96,55 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
     navigate(`/admin/media-assets/new?duplicate=${asset.id}`);
   };
 
+  const handleStatusUpdate = async (newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('media_assets')
+        .update({ status: newStatus as any })
+        .eq('id', asset.id);
+
+      if (error) throw error;
+
+      setCurrentAsset({ ...currentAsset, status: newStatus as any });
+      setEditingStatus(false);
+      toast({
+        title: "Success",
+        description: "Asset status updated successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleVisibilityToggle = async () => {
+    try {
+      const newVisibility = !currentAsset.is_public;
+      const { error } = await supabase
+        .from('media_assets')
+        .update({ is_public: newVisibility })
+        .eq('id', asset.id);
+
+      if (error) throw error;
+
+      setCurrentAsset({ ...currentAsset, is_public: newVisibility });
+      setEditingVisibility(false);
+      toast({
+        title: "Success",
+        description: `Asset is now ${newVisibility ? 'public' : 'private'}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update visibility",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Button
@@ -99,12 +159,12 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">{asset.id}</h1>
+          <h1 className="text-3xl font-bold mb-2">{currentAsset.id}</h1>
           <div className="flex items-center gap-3">
-            <Badge className={getStatusColor(asset.status)}>
-              {asset.status}
+            <Badge className={getStatusColor(currentAsset.status)}>
+              {currentAsset.status}
             </Badge>
-            <span className="text-muted-foreground">{asset.media_type}</span>
+            <span className="text-muted-foreground">{currentAsset.media_type}</span>
           </div>
         </div>
         {isAdmin && (
@@ -152,32 +212,32 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
             </TabsList>
 
             <TabsContent value="overview" className="mt-6">
-              <AssetOverviewTab asset={asset} />
+              <AssetOverviewTab asset={currentAsset} />
             </TabsContent>
 
             <TabsContent value="power-bills" className="mt-6">
-              <EnhancedPowerBillsTab assetId={asset.id} asset={asset} isAdmin={isAdmin} />
+              <EnhancedPowerBillsTab assetId={currentAsset.id} asset={currentAsset} isAdmin={isAdmin} />
             </TabsContent>
 
             <TabsContent value="maintenance" className="mt-6">
-              <AssetMaintenanceTab assetId={asset.id} isAdmin={isAdmin} />
+              <AssetMaintenanceTab assetId={currentAsset.id} isAdmin={isAdmin} />
             </TabsContent>
 
             <TabsContent value="booking-history" className="mt-6">
-              <AssetBookingHistoryTab assetId={asset.id} />
+              <AssetBookingHistoryTab assetId={currentAsset.id} />
             </TabsContent>
           </Tabs>
 
           {/* Footer Metadata */}
           <div className="pt-6 border-t text-sm text-muted-foreground space-y-1">
-            {asset.created_at && (
-              <p>Created: {new Date(asset.created_at).toLocaleString()}</p>
+            {currentAsset.created_at && (
+              <p>Created: {new Date(currentAsset.created_at).toLocaleString()}</p>
             )}
-            {asset.updated_at && (
-              <p>Last updated: {new Date(asset.updated_at).toLocaleString()}</p>
+            {currentAsset.updated_at && (
+              <p>Last updated: {new Date(currentAsset.updated_at).toLocaleString()}</p>
             )}
-            {asset.created_by && (
-              <p>Created by: {asset.created_by}</p>
+            {currentAsset.created_by && (
+              <p>Created by: {currentAsset.created_by}</p>
             )}
           </div>
         </div>
@@ -268,27 +328,102 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
           {/* Status & Visibility Section */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Status & Visibility</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Status & Visibility</CardTitle>
+                {isAdmin && !editingStatus && !editingVisibility && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditingStatus(true)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
+              <div className="space-y-3">
+                {/* Status */}
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Status</span>
-                  <Badge className={getStatusColor(asset.status)}>
-                    {asset.status}
-                  </Badge>
+                  {editingStatus ? (
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={currentAsset.status}
+                        onValueChange={handleStatusUpdate}
+                      >
+                        <SelectTrigger className="w-[140px] h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Available">Available</SelectItem>
+                          <SelectItem value="Booked">Booked</SelectItem>
+                          <SelectItem value="Under Maintenance">Under Maintenance</SelectItem>
+                          <SelectItem value="Blocked">Blocked</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setEditingStatus(false)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Badge className={getStatusColor(currentAsset.status)}>
+                      {currentAsset.status}
+                    </Badge>
+                  )}
                 </div>
+
+                {/* Visibility */}
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Visibility</span>
-                  <Badge variant={asset.is_public ? "default" : "secondary"}>
-                    {asset.is_public ? "Public" : "Private"}
-                  </Badge>
+                  {editingVisibility ? (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleVisibilityToggle}
+                      >
+                        <Check className="h-4 w-4 mr-1" />
+                        Make {currentAsset.is_public ? "Private" : "Public"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setEditingVisibility(false)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Badge variant={currentAsset.is_public ? "default" : "secondary"}>
+                        {currentAsset.is_public ? "Public" : "Private"}
+                      </Badge>
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => setEditingVisibility(true)}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
-                {asset.next_available_from && (
+
+                {currentAsset.next_available_from && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Available From</span>
                     <span className="text-sm font-medium">
-                      {new Date(asset.next_available_from).toLocaleDateString()}
+                      {new Date(currentAsset.next_available_from).toLocaleDateString()}
                     </span>
                   </div>
                 )}
@@ -296,8 +431,11 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
             </CardContent>
           </Card>
 
+          {/* Booking Calendar */}
+          <AssetBookingCalendar assetId={currentAsset.id} />
+
           {/* Latest Photos Section */}
-          <LatestPhotosSection assetId={asset.id} />
+          <LatestPhotosSection assetId={currentAsset.id} />
         </div>
       </div>
 
@@ -305,7 +443,7 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8 lg:hidden">
         {/* Latest Photos Section */}
         <div>
-          <LatestPhotosSection assetId={asset.id} />
+          <LatestPhotosSection assetId={currentAsset.id} />
         </div>
 
         {/* Images Section */}

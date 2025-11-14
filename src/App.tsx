@@ -74,6 +74,7 @@ import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 import ComponentShowcase from "./pages/ComponentShowcase";
 import DashboardBuilder from "./pages/DashboardBuilder";
+import DataExportImport from "./pages/DataExportImport";
 
 const queryClient = new QueryClient();
 
@@ -138,6 +139,7 @@ const App = () => (
             <Route path="/admin/photo-library" element={<ProtectedRoute><AppLayout><PhotoGallery /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/import" element={<AppLayout><ImportData /></AppLayout>} />
             <Route path="/admin/export" element={<AppLayout><ExportData /></AppLayout>} />
+            <Route path="/admin/data-export-import" element={<AppLayout><DataExportImport /></AppLayout>} />
             <Route path="/admin/code-management" element={<AppLayout><CodeManagement /></AppLayout>} />
             <Route path="/admin/power-bills" element={<AppLayout><PowerBillsDashboard /></AppLayout>} />
             <Route path="/admin/power-bills-analytics" element={<AppLayout><PowerBillsAnalytics /></AppLayout>} />
@@ -155,7 +157,6 @@ const App = () => (
             <Route path="/admin/approval-settings" element={<AppLayout><ApprovalSettings /></AppLayout>} />
             <Route path="/admin/approval-delegation" element={<AppLayout><ApprovalDelegation /></AppLayout>} />
             <Route path="/admin/approval-analytics" element={<AppLayout><ApprovalAnalytics /></AppLayout>} />
-            <Route path="/admin/ui-showcase" element={<ProtectedRoute requireAuth><AppLayout><ComponentShowcase /></AppLayout></ProtectedRoute>} />
             
             {/* Operations Photo Upload */}
             <Route path="/admin/operations/:campaignId/assets/:assetId" element={<AppLayout><CampaignAssetProofs /></AppLayout>} />

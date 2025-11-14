@@ -90,7 +90,7 @@ const MENU_SECTIONS: MenuSection[] = [
       { label: "UI Components", icon: Palette, path: "/admin/ui-showcase", module: "dashboard" },
       { label: "Dashboard Builder", icon: LayoutDashboard, path: "/admin/dashboard-builder", module: "dashboard" },
       { label: "Import", icon: Upload, path: "/admin/import", module: "settings", roles: ['admin'] },
-      { label: "Export", icon: Download, path: "/admin/export", module: "settings", roles: ['admin'] },
+      { label: "Export/Import", icon: Download, path: "/admin/data-export-import", module: "settings", roles: ['admin'] },
     ],
   },
 ];

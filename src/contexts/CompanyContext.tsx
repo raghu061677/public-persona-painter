@@ -58,7 +58,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         .select('*')
         .eq('user_id', user.id)
         .eq('status', 'active')
-        .order('created_at', { ascending: true })
+        .order('joined_at', { ascending: true })
         .limit(1)
         .maybeSingle();
 

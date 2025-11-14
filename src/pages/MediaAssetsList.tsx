@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SkeletonTable } from "@/components/ui/loading-skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { FloatingActionButton } from "@/components/ui/floating-action-button";
 
 export default function MediaAssetsList() {
   const navigate = useNavigate();
@@ -139,12 +140,6 @@ export default function MediaAssetsList() {
           </div>
           <div className="flex items-center gap-2">
             <ImportDialog onImportComplete={fetchAssets} />
-            {isAdmin && (
-              <Button onClick={() => navigate(ROUTES.MEDIA_ASSETS_NEW)} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Asset
-              </Button>
-            )}
           </div>
         </div>
       </div>
@@ -214,6 +209,15 @@ export default function MediaAssetsList() {
           </div>
         </main>
       </div>
+
+      {/* Floating Quick Add Button */}
+      {isAdmin && (
+        <FloatingActionButton
+          onClick={() => navigate(ROUTES.MEDIA_ASSETS_NEW)}
+          label="Add Asset"
+          aria-label="Add new media asset"
+        />
+      )}
     </div>
   );
 }

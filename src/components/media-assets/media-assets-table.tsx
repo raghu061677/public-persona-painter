@@ -66,6 +66,7 @@ import {
   type VisibilityState,
   type RowSelectionState,
   type ColumnDef,
+  type ColumnResizeMode,
 } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import AddPlanFromAssetsModal from "./add-plan-from-assets-modal";
@@ -111,9 +112,13 @@ const DraggableHeader = ({ header, table }: { header: any; table: any }) => {
 
   const ref = useRef<HTMLTableCellElement>(null);
 
+  const [isResizing, setIsResizing] = useState(false);
+
   const [, dropRef] = useDrop({
     accept: "column",
     hover(item: any, monitor) {
+      if (isResizing) return; // Don't reorder while resizing
+      
       const dragIndex = columnOrder.indexOf(item.id);
       const hoverIndex = columnOrder.indexOf(column.id);
 
@@ -142,42 +147,59 @@ const DraggableHeader = ({ header, table }: { header: any; table: any }) => {
   });
 
   const [{ isDragging }, dragRef] = useDrag({
+    type: "column",
+    item: () => ({ id: column.id }),
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
-    item: () => ({ ...column, id: column.id }),
-    type: "column",
+    canDrag: () => !isResizing,
   });
 
   dragRef(dropRef(ref));
 
-  const isSorted = column.getIsSorted();
-  const [canSort, setCanSort] = useState(false);
-
-  useEffect(() => {
-    setCanSort(header.column.getCanSort());
-  }, [header.column]);
-
   return (
     <TableHead
       ref={ref}
-      key={header.id}
       colSpan={header.colSpan}
-      className="relative group cursor-grab whitespace-nowrap p-2"
-      style={{ opacity: isDragging ? 0.5 : 1 }}
+      style={{ 
+        opacity: isDragging ? 0.5 : 1,
+        width: header.getSize(),
+        position: 'relative',
+      }}
+      className="cursor-move select-none"
     >
-      <div
-        {...{
-          className: cn("flex items-center gap-2", {
-            "cursor-pointer select-none": canSort,
-          }),
-          onClick: header.column.getToggleSortingHandler(),
-        }}
-      >
-        <GripVertical className="h-4 w-4 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-        {flexRender(header.column.columnDef.header, header.getContext())}
-        {isSorted && <ArrowUpDown className="h-4 w-4" />}
+      <div className="flex items-center gap-2">
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
+        <div className="flex items-center flex-1">
+          {flexRender(header.column.columnDef.header, header.getContext())}
+          {header.column.getCanSort() && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={header.column.getToggleSortingHandler()}
+              className="ml-2 h-8 w-8 p-0"
+            >
+              <ArrowUpDown className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
+      {/* Column Resize Handle */}
+      <div
+        onMouseDown={header.getResizeHandler()}
+        onTouchStart={header.getResizeHandler()}
+        onMouseEnter={() => setIsResizing(false)}
+        onMouseLeave={() => setIsResizing(false)}
+        className={cn(
+          "absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none",
+          "hover:bg-primary/50 active:bg-primary",
+          header.column.getIsResizing() && "bg-primary"
+        )}
+        style={{
+          transform: header.column.getIsResizing() ? 'scaleX(2)' : undefined,
+          userSelect: 'none',
+        }}
+      />
     </TableHead>
   );
 };
@@ -465,6 +487,8 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
     }, {} as VisibilityState);
   }, [visibleKeys, allColumnKeys]);
 
+  const columnResizeMode: ColumnResizeMode = "onChange";
+
   const table = useReactTable({
     data: filteredData,
     columns,
@@ -477,6 +501,8 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
       globalFilter: "", // For tracking in cells
     } as any,
     enableRowSelection: true,
+    enableColumnResizing: true,
+    columnResizeMode,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -740,10 +766,10 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
             {/* Enhanced scrollable table area */}
             <div className="flex-1 overflow-auto custom-scrollbar">
               <div className="min-w-max">
-                <Table>
-                  <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                <Table style={{ width: table.getCenterTotalSize() }}>
+                  <TableHeader className="sticky top-0 z-10 bg-background shadow-sm">
                     {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                      <TableRow key={headerGroup.id}>
                         {headerGroup.headers.map((header) => (
                           <DraggableHeader key={header.id} header={header} table={table} />
                         ))}
@@ -755,10 +781,25 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                       table.getRowModel().rows.map((row) => (
                         <TableRow 
                           key={row.id}
-                          className={`hover:bg-muted/50 transition-colors ${getRowClassName()}`}
+                          data-state={row.getIsSelected() && "selected"}
+                          onClick={(e) => {
+                            if (
+                              e.target instanceof HTMLElement &&
+                              (e.target.closest("button") ||
+                                e.target.closest('input[type="checkbox"]'))
+                            ) {
+                              return;
+                            }
+                            navigate(`/admin/media-assets/${row.original.id}`);
+                          }}
+                          className={cn("cursor-pointer hover:bg-muted/50", getRowClassName())}
                         >
                           {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id} className={`whitespace-nowrap ${getCellClassName()}`}>
+                            <TableCell 
+                              key={cell.id}
+                              style={{ width: cell.column.getSize() }}
+                              className={getCellClassName()}
+                            >
                               {flexRender(cell.column.columnDef.cell, cell.getContext())}
                             </TableCell>
                           ))}

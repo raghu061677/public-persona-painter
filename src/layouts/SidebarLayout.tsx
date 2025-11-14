@@ -1,12 +1,12 @@
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/store/sidebarStore";
 import {
-  Home, Map, MapPin, Filter, Layers, Briefcase, Users,
-  Wallet, BarChart2, Image, Upload, Download, Settings,
-  Menu, ChevronDown, ChevronRight, Target, TrendingUp,
-  FileText, Building2, CreditCard, Smartphone, MessageSquare,
+  Home, Map, Layers, Briefcase, Users,
+  Wallet, BarChart2, Image, Settings,
+  Menu, ChevronDown, ChevronRight, TrendingUp,
+  FileText, Building2, Smartphone,
   UserCog, FileSpreadsheet, Receipt, LayoutDashboard, Brain, Zap, Palette,
-  Search, SlidersHorizontal, X
+  Search, SlidersHorizontal, X, Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import { useSwipe } from "@/hooks/use-swipe";
 import { useMenuPreferences } from "@/hooks/useMenuPreferences";
 import { MenuPersonalizationDialog } from "@/components/sidebar/MenuPersonalizationDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Separator } from "@/components/ui/separator";
 
 interface MenuItem {
   label: string;
@@ -35,370 +36,250 @@ interface MenuSection {
   items: MenuItem[];
 }
 
-const MENU_SECTIONS: MenuSection[] = [
+// Platform Admin sections (only visible if isPlatformAdmin)
+const PLATFORM_ADMIN_SECTIONS: MenuSection[] = [
   {
-    title: "Main",
+    title: "Platform Administration",
     items: [
-      { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard", module: "dashboard" },
+      { label: "Platform Dashboard", icon: LayoutDashboard, path: "/admin/platform", module: "settings", roles: ['admin'] },
+      { label: "Companies", icon: Building2, path: "/admin/companies", module: "settings", roles: ['admin'] },
+      { label: "Platform Users", icon: UserCog, path: "/admin/user-management", module: "users", roles: ['admin'] },
+      { label: "Global Settings", icon: Settings, path: "/admin/platform-admin-setup", module: "settings", roles: ['admin'] },
     ],
   },
   {
-    title: "Inventory",
+    title: "Platform Data",
     items: [
+      { label: "Usage Analytics", icon: TrendingUp, path: "/admin/tenant-analytics", module: "reports", roles: ['admin'] },
+      { label: "Audit Logs", icon: FileText, path: "/admin/audit-logs", module: "settings", roles: ['admin'] },
+    ],
+  },
+];
+
+// Company Workspace sections (visible when company is selected)
+const COMPANY_WORKSPACE_SECTIONS: MenuSection[] = [
+  {
+    title: "Company Workspace",
+    items: [
+      { label: "Overview", icon: LayoutDashboard, path: "/admin/dashboard", module: "dashboard" },
       { label: "Media Assets", icon: Map, path: "/admin/media-assets", module: "media_assets" },
-      { label: "Map View", icon: MapPin, path: "/admin/media-assets-map", module: "media_assets" },
-      { label: "Vacant", icon: Filter, path: "/reports/vacant-media", module: "reports" },
-      { label: "Photo Library", icon: Image, path: "/admin/photo-library", module: "media_assets" },
-    ],
-  },
-  {
-    title: "Sales & Marketing",
-    items: [
       { label: "Plans", icon: Layers, path: "/admin/plans", module: "plans" },
-      { label: "Clients", icon: Users, path: "/admin/clients", module: "clients" },
-      { label: "Leads", icon: Target, path: "/admin/leads", module: "clients" },
-    ],
-  },
-  {
-    title: "Execution",
-    items: [
       { label: "Campaigns", icon: Briefcase, path: "/admin/campaigns", module: "campaigns" },
       { label: "Operations", icon: TrendingUp, path: "/admin/operations", module: "operations" },
-      { label: "Mobile Field App", icon: Smartphone, path: "/admin/mobile-upload", module: "operations" },
+      { label: "Clients", icon: Users, path: "/admin/clients", module: "clients" },
     ],
   },
   {
     title: "Finance",
     items: [
-      { label: "Finance", icon: Wallet, path: "/finance", module: "invoices" },
-      { label: "Invoices", icon: FileText, path: "/finance/invoices", module: "invoices" },
-      { label: "Estimations", icon: FileSpreadsheet, path: "/finance/estimations", module: "invoices" },
-      { label: "Expenses", icon: Receipt, path: "/finance/expenses", module: "expenses" },
+      { label: "Finance Dashboard", icon: Wallet, path: "/admin/finance", module: "invoices" },
+      { label: "Estimations", icon: FileSpreadsheet, path: "/admin/estimations", module: "invoices" },
+      { label: "Invoices", icon: FileText, path: "/admin/invoices", module: "invoices" },
+      { label: "Expenses", icon: Receipt, path: "/admin/expenses", module: "expenses" },
       { label: "Power Bills", icon: Zap, path: "/admin/power-bills", module: "expenses" },
-      { label: "Bill Sharing", icon: Users, path: "/admin/power-bills-sharing", module: "expenses" },
     ],
   },
   {
-    title: "Administration",
+    title: "Operations",
     items: [
-      { label: "Companies Management", icon: Building2, path: "/admin/companies", module: "settings", roles: ['admin'] },
-      { label: "Create Company", icon: Building2, path: "/onboarding", module: "settings", roles: ['admin'] },
-      { label: "Company Settings", icon: Settings, path: "/admin/company-settings", module: "settings", roles: ['admin'] },
-      { label: "Organization Settings", icon: Settings, path: "/admin/organization-settings", module: "settings" },
-      { label: "User Management", icon: UserCog, path: "/admin/users", module: "users" },
-      { label: "Vendors", icon: Building2, path: "/admin/vendors", module: "settings" },
-      { label: "Documents", icon: FileText, path: "/admin/documents", module: "settings" },
-      { label: "Rate Cards", icon: CreditCard, path: "/admin/rate-cards", module: "settings" },
-    ],
-  },
-  {
-    title: "Platform Admin",
-    items: [
-      { label: "Platform Dashboard", icon: LayoutDashboard, path: "/admin/platform", module: "settings", roles: ['admin'] },
-      { label: "Companies", icon: Building2, path: "/admin/companies", module: "settings", roles: ['admin'] },
-    ],
-  },
-  {
-    title: "Analytics & Tools",
-    items: [
-      { label: "AI Assistant", icon: Brain, path: "/admin/assistant", module: "dashboard" },
-      { label: "Reports", icon: BarChart2, path: "/reports", module: "reports" },
-      { label: "UI Components", icon: Palette, path: "/admin/ui-showcase", module: "dashboard" },
-      { label: "Dashboard Builder", icon: LayoutDashboard, path: "/admin/dashboard-builder", module: "dashboard" },
-      { label: "Import", icon: Upload, path: "/admin/import", module: "settings", roles: ['admin'] },
-      { label: "Export/Import", icon: Download, path: "/admin/data-export-import", module: "settings", roles: ['admin'] },
+      { label: "Operations Board", icon: TrendingUp, path: "/admin/operations", module: "operations" },
+      { label: "Mobile Field App", icon: Smartphone, path: "/mobile", module: "operations" },
+      { label: "Photo Library", icon: Image, path: "/admin/photo-library", module: "media_assets" },
     ],
   },
 ];
 
-export default function SidebarLayout({ children }: { children: React.ReactNode }) {
-  const { open, toggle } = useSidebarStore();
-  const [expandedSections, setExpandedSections] = useState<string[]>([
-    "Main", "Inventory", "Sales & Marketing", "Execution", "Finance", "Administration", "Analytics & Tools"
-  ]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [personalizationOpen, setPersonalizationOpen] = useState(false);
-  
-  const swipeHandlers = useSwipe({
-    onSwipedLeft: () => {
-      if (open && window.innerWidth < 768) {
-        toggle();
-      }
-    },
-    onSwipedRight: () => {
-      if (!open && window.innerWidth < 768) {
-        toggle();
-      }
-    },
-  });
-  
-  const { canView, loading: permLoading } = usePermissions();
-  const { isAdmin, roles } = useAuth();
-  const { isPlatformAdmin } = useCompany();
-  const { preferences, loading: prefsLoading } = useMenuPreferences();
+// Company Settings (only visible for company admins)
+const COMPANY_SETTINGS_SECTION: MenuSection = {
+  title: "Company Settings",
+  items: [
+    { label: "Profile", icon: Building2, path: "/admin/company-settings/profile", module: "settings", roles: ['admin'] },
+    { label: "Branding", icon: Palette, path: "/admin/company-settings/branding", module: "settings", roles: ['admin'] },
+    { label: "Users & Roles", icon: UserCog, path: "/admin/user-management", module: "users", roles: ['admin'] },
+    { label: "Taxes", icon: Receipt, path: "/admin/company-settings/taxes", module: "settings", roles: ['admin'] },
+    { label: "General", icon: Settings, path: "/admin/company-settings/general", module: "settings", roles: ['admin'] },
+    { label: "Integrations", icon: Zap, path: "/admin/company-settings/integrations", module: "settings", roles: ['admin'] },
+  ],
+};
 
-  // Filter menu items based on permissions, search, and personalization
+// User General sections (visible to all authenticated users)
+const USER_GENERAL_SECTIONS: MenuSection[] = [
+  {
+    title: "My Workspace",
+    items: [
+      { label: "My Dashboard", icon: Home, path: "/dashboard", module: "dashboard" },
+      { label: "My Profile", icon: UserCog, path: "/settings/profile", module: "settings" },
+      { label: "Analytics", icon: BarChart2, path: "/admin/analytics", module: "reports" },
+      { label: "AI Assistant", icon: Brain, path: "/admin/assistant", module: "dashboard" },
+    ],
+  },
+];
+
+export function SidebarLayout({ children }: { children: React.ReactNode }) {
+  const { open, toggle } = useSidebarStore();
+  const { canView, hasAnyPermission, loading: permissionsLoading } = usePermissions();
+  const { user, isAdmin, roles } = useAuth();
+  const { company, isPlatformAdmin } = useCompany();
+  
+  const allSections = [
+    ...PLATFORM_ADMIN_SECTIONS,
+    ...COMPANY_WORKSPACE_SECTIONS,
+    COMPANY_SETTINGS_SECTION,
+    ...USER_GENERAL_SECTIONS,
+  ];
+  
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(
+    new Set(allSections.map(s => s.title))
+  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showPersonalization, setShowPersonalization] = useState(false);
+  const { preferences } = useMenuPreferences();
+  const hiddenItems = preferences.hidden_sections || [];
+  const favoriteItems: string[] = [];
+
+  const swipeHandlers = useSwipe({
+    onSwipedLeft: () => { if (open) toggle(); },
+    onSwipedRight: () => { if (!open) toggle(); },
+  });
+
+  const visibleSections = useMemo(() => {
+    if (permissionsLoading) return [];
+    const sections: MenuSection[] = [];
+    if (isPlatformAdmin) sections.push(...PLATFORM_ADMIN_SECTIONS);
+    if (company?.id) sections.push(...COMPANY_WORKSPACE_SECTIONS);
+    if (company?.id && (isAdmin || isPlatformAdmin)) sections.push(COMPANY_SETTINGS_SECTION);
+    sections.push(...USER_GENERAL_SECTIONS);
+    return sections;
+  }, [permissionsLoading, isPlatformAdmin, company, isAdmin]);
+
   const filteredSections = useMemo(() => {
-    if (permLoading) return [];
-    
-    let sections = MENU_SECTIONS.map(section => ({
+    return visibleSections.map(section => ({
       ...section,
       items: section.items.filter(item => {
-        // Hide Platform Admin section for non-platform admins
-        if (section.title === "Platform Admin" && !isPlatformAdmin) {
-          return false;
-        }
-        
-        // Check role requirement if specified
-        if (item.roles && !isAdmin) {
-          const hasRequiredRole = item.roles.some(role => roles.includes(role));
-          if (!hasRequiredRole) return false;
-        }
-        
-        // Check module permission
-        if (item.module && !canView(item.module)) {
-          return false;
-        }
-        
+        if (hiddenItems.includes(item.path)) return false;
+        if (searchQuery && !item.label.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+        if (item.roles && item.roles.length > 0 && !item.roles.some(role => roles.includes(role))) return false;
+        if (isAdmin || isPlatformAdmin) return true;
+        if (item.module) return hasAnyPermission(item.module);
         return true;
       })
     })).filter(section => section.items.length > 0);
+  }, [visibleSections, searchQuery, roles, isAdmin, isPlatformAdmin, hasAnyPermission, hiddenItems]);
 
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      sections = sections.map(section => ({
-        ...section,
-        items: section.items.filter(item => 
-          item.label.toLowerCase().includes(query) ||
-          section.title.toLowerCase().includes(query)
-        )
-      })).filter(section => section.items.length > 0);
-    }
-
-    // Filter hidden sections
-    if (!prefsLoading && preferences.hidden_sections.length > 0) {
-      sections = sections.filter(section => 
-        !preferences.hidden_sections.includes(section.title)
-      );
-    }
-
-    // Apply custom ordering
-    if (!prefsLoading && preferences.section_order.length > 0) {
-      const orderedSections = preferences.section_order
-        .map(title => sections.find(s => s.title === title))
-        .filter(Boolean) as typeof sections;
-      
-      sections.forEach(section => {
-        if (!preferences.section_order.includes(section.title)) {
-          orderedSections.push(section);
-        }
-      });
-      
-      return orderedSections;
-    }
-
-    return sections;
-  }, [canView, isAdmin, roles, permLoading, searchQuery, preferences, prefsLoading]);
+  const favoriteMenuItems = useMemo(() => {
+    return filteredSections.flatMap(section => section.items).filter(item => favoriteItems.includes(item.path));
+  }, [filteredSections, favoriteItems]);
 
   const toggleSection = (title: string) => {
-    setExpandedSections((prev) =>
-      prev.includes(title) ? prev.filter((s) => s !== title) : [...prev, title]
-    );
+    setExpandedSections(prev => {
+      const newSet = new Set(prev);
+      newSet.has(title) ? newSet.delete(title) : newSet.add(title);
+      return newSet;
+    });
   };
 
   return (
-    <>
-      <TooltipProvider delayDuration={0}>
-        {/* Mobile backdrop overlay */}
-        {open && (
-          <div
-            className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-fade-in"
-            onClick={toggle}
-            aria-hidden="true"
-          />
-        )}
-        
-        <aside
-          ref={swipeHandlers.ref}
-          className={cn(
-            "h-screen transition-all duration-300 bg-sidebar-background border-r border-sidebar-border flex flex-col z-50 shrink-0",
-            "fixed md:relative left-0 top-0",
-            open ? "w-60 translate-x-0" : "w-60 md:w-16 -translate-x-full md:translate-x-0"
-          )}
-        >
-          {/* Header */}
-          <div className="flex items-center gap-3 p-4 border-b border-sidebar-border shrink-0">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={toggle} 
-              className="shrink-0"
-              aria-label={open ? "Close sidebar" : "Open sidebar"}
-            >
-              <Menu className="w-5 h-5" />
-            </Button>
-            {open && (
-              <span className="text-lg font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent whitespace-nowrap">
-                Go-Ads
-              </span>
+    <div className="flex h-screen bg-background">
+      {open && <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden" onClick={toggle} />}
+      
+      <aside {...swipeHandlers} className={cn("fixed lg:static inset-y-0 left-0 z-50 flex flex-col border-r border-border/40 bg-background transition-all duration-300 ease-in-out", open ? "w-64" : "w-0 lg:w-16")}>
+        <div className="flex items-center justify-between h-14 px-4 border-b border-border/40">
+          {open && <div className="flex items-center gap-2"><Shield className="h-5 w-5 text-primary" /><span className="font-semibold text-foreground">Go-Ads 360°</span></div>}
+          <Button variant="ghost" size="icon" onClick={toggle} className={cn("h-8 w-8", !open && "mx-auto")}><Menu className="h-4 w-4" /></Button>
+        </div>
+
+        <ScrollArea className="flex-1">
+          <div className="p-3 border-b border-border/40">
+            {open && company && (
+              <div className="mb-3 p-2 bg-muted/50 rounded-md">
+                <div className="flex items-center gap-2">
+                  {company.logo_url ? <img src={company.logo_url} alt={company.name} className="h-8 w-8 rounded object-cover" /> : <Building2 className="h-8 w-8 text-muted-foreground" />}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{company.name}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{company.type}</p>
+                  </div>
+                </div>
+              </div>
             )}
+            {open && (<>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-semibold text-foreground">Menu</h2>
+                <Button variant="ghost" size="icon" onClick={() => setShowPersonalization(true)} className="h-8 w-8"><SlidersHorizontal className="h-4 w-4" /></Button>
+              </div>
+              <div className="relative mb-3">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search menu..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 h-9" />
+                {searchQuery && <Button variant="ghost" size="icon" onClick={() => setSearchQuery("")} className="absolute right-1 top-1 h-7 w-7"><X className="h-3 w-3" /></Button>}
+              </div>
+            </>)}
           </div>
 
-          {/* Search & Personalization (only when expanded) */}
-          {open && (
-            <div className="p-3 space-y-2 border-b border-sidebar-border shrink-0">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search menu..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-9 h-9"
-                />
-                {searchQuery && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                    onClick={() => setSearchQuery("")}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full gap-2"
-                onClick={() => setPersonalizationOpen(true)}
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                Customize Menu
-              </Button>
+          {open && favoriteMenuItems.length > 0 && (
+            <div className="px-3 py-2">
+              <h3 className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Favorites</h3>
+              <nav className="space-y-1">
+                {favoriteMenuItems.map((item) => {
+                  const Icon = item.icon;
+                  return <NavLink key={item.path} to={item.path} className={({ isActive }) => cn("flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors", isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground")}><Icon className="h-4 w-4 shrink-0" /><span>{item.label}</span></NavLink>;
+                })}
+              </nav>
+              <Separator className="my-3" />
             </div>
           )}
-          
-          {/* Navigation */}
-          <ScrollArea className="flex-1 px-3 py-4">
-            <nav className="space-y-6">
-              {filteredSections.map((section) => (
-                <div key={section.title}>
-                  {open && (
-                    <button
-                      onClick={() => toggleSection(section.title)}
-                      className="flex items-center justify-between w-full px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
-                    >
-                      <span>{section.title}</span>
-                      {expandedSections.includes(section.title) ? (
-                        <ChevronDown className="w-3 h-3" />
-                      ) : (
-                        <ChevronRight className="w-3 h-3" />
-                      )}
-                    </button>
-                  )}
+
+          <div className="px-3 pb-4">
+            {permissionsLoading ? (
+              <div className="flex items-center justify-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div></div>
+            ) : (
+              <nav className="space-y-2">
+                {filteredSections.map((section, sectionIndex) => {
+                  const isExpanded = expandedSections.has(section.title);
+                  const isPlatformSection = section.title === "Platform Administration" || section.title === "Platform Data";
+                  const isCompanySection = section.title === "Company Workspace" || section.title === "Finance" || section.title === "Operations";
+                  const isSettingsSection = section.title === "Company Settings";
                   
-                  {(open ? expandedSections.includes(section.title) : true) && (
-                    <div className="mt-1 space-y-0.5">
-                      {section.items.map(({ label, icon: Icon, path }) => {
-                        const linkContent = (
-                          <NavLink
-                            key={path}
-                            to={path}
-                            className={({ isActive }) =>
-                              cn(
-                                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                                isActive
-                                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                                  : "text-sidebar-foreground"
-                              )
-                            }
-                          >
-                            <Icon className="w-4 h-4 shrink-0" />
-                            {open && <span className="truncate">{label}</span>}
-                          </NavLink>
-                        );
-
-                        // Show tooltip in collapsed/mini mode
-                        if (!open) {
-                          return (
-                            <Tooltip key={path}>
-                              <TooltipTrigger asChild>
-                                {linkContent}
-                              </TooltipTrigger>
-                              <TooltipContent side="right">
-                                {label}
-                              </TooltipContent>
-                            </Tooltip>
-                          );
-                        }
-
-                        return linkContent;
-                      })}
+                  return (
+                    <div key={section.title} className="mb-2">
+                      {sectionIndex > 0 && (isPlatformSection || isCompanySection || isSettingsSection) && open && <Separator className="my-4" />}
+                      {open ? (
+                        <button onClick={() => toggleSection(section.title)} className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors group">
+                          <span>{section.title}</span>
+                          {isExpanded ? <ChevronDown className="h-3 w-3 text-muted-foreground group-hover:text-foreground transition-colors" /> : <ChevronRight className="h-3 w-3 text-muted-foreground group-hover:text-foreground transition-colors" />}
+                        </button>
+                      ) : <div className="h-px bg-border/40 my-2" />}
+                      
+                      {(isExpanded || !open) && (
+                        <nav className="space-y-1 mt-1">
+                          {section.items.map((item) => {
+                            const Icon = item.icon;
+                            const isFavorite = favoriteItems.includes(item.path);
+                            return (
+                              <TooltipProvider key={item.path}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <NavLink to={item.path} className={({ isActive }) => cn("flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors relative", isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground", !open && "justify-center")}>
+                                      <Icon className="h-4 w-4 shrink-0" />
+                                      {open && <><span className="flex-1">{item.label}</span>{isFavorite && <span className="text-yellow-500">★</span>}</>}
+                                    </NavLink>
+                                  </TooltipTrigger>
+                                  {!open && <TooltipContent side="right"><p>{item.label}</p></TooltipContent>}
+                                </Tooltip>
+                              </TooltipProvider>
+                            );
+                          })}
+                        </nav>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
+                  );
+                })}
+              </nav>
+            )}
+          </div>
+        </ScrollArea>
+      </aside>
 
-              {/* Settings at bottom of nav */}
-              <div className="pt-4 border-t border-sidebar-border">
-                {open ? (
-                  <NavLink
-                    to="/settings"
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                        "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                        isActive
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                          : "text-sidebar-foreground"
-                      )
-                    }
-                  >
-                    <Settings className="w-4 h-4 shrink-0" />
-                    <span className="truncate">Settings</span>
-                  </NavLink>
-                ) : (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <NavLink
-                        to="/settings"
-                        className={({ isActive }) =>
-                          cn(
-                            "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                            "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                            isActive
-                              ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                              : "text-sidebar-foreground"
-                          )
-                        }
-                      >
-                        <Settings className="w-4 h-4 shrink-0" />
-                      </NavLink>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      Settings
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-              </div>
-            </nav>
-          </ScrollArea>
-        </aside>
-      </TooltipProvider>
-      
-      {/* Main content area */}
-      <div className="flex-1 w-full md:w-auto overflow-hidden">
-        {children}
-      </div>
-
-      {/* Menu Personalization Dialog */}
-      <MenuPersonalizationDialog
-        open={personalizationOpen}
-        onOpenChange={setPersonalizationOpen}
-        sections={MENU_SECTIONS}
-      />
-    </>
+      <main className="flex-1 overflow-auto">{children}</main>
+      <MenuPersonalizationDialog open={showPersonalization} onOpenChange={setShowPersonalization} sections={filteredSections} />
+    </div>
   );
 }

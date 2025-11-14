@@ -6,8 +6,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
+import { ClientPortalProvider } from "@/contexts/ClientPortalContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import AppLayout from "@/layouts/AppLayout";
+import { ClientPortalLayout } from "@/layouts/ClientPortalLayout";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import MediaAssetsList from "./pages/MediaAssetsList";
@@ -176,10 +178,12 @@ const App = () => (
             <Route path="/admin/dashboard-builder" element={<AppLayout><DashboardBuilder /></AppLayout>} />
             
             {/* Client Portal Routes */}
-          <Route path="/portal/auth" element={<ClientPortalAuth />} />
-          <Route path="/portal/dashboard" element={<ClientPortalDashboard />} />
-          <Route path="/portal/campaigns/:id" element={<ClientCampaignView />} />
-          <Route path="/portal/invoices" element={<ClientInvoices />} />
+            <Route path="/portal/auth" element={<ClientPortalAuth />} />
+            <Route path="/portal" element={<ClientPortalProvider><ClientPortalLayout /></ClientPortalProvider>}>
+              <Route path="dashboard" element={<ClientPortalDashboard />} />
+              <Route path="campaigns/:id" element={<ClientCampaignView />} />
+              <Route path="invoices" element={<ClientInvoices />} />
+            </Route>
             
             {/* Access Denied */}
             <Route path="/access-denied" element={<AccessDenied />} />

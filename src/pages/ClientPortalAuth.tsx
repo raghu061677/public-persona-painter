@@ -27,19 +27,14 @@ export default function ClientPortalAuth() {
 
   const loadCompanyBranding = async () => {
     try {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('companies')
-        .select('name, logo_url, theme_color')
+        .select('name, logo_url, theme_color, secondary_color')
         .eq('status', 'active')
         .limit(1)
         .maybeSingle();
 
-      if (data) {
-        setCompanyBranding(data);
-        if (data.theme_color) {
-          document.documentElement.style.setProperty('--primary', data.theme_color);
-        }
-      }
+      setCompanyBranding(data);
     } catch (error) {
       console.error('Error loading branding:', error);
     }
@@ -80,14 +75,14 @@ export default function ClientPortalAuth() {
     setLoading(true);
 
     try {
-      const { data: portalUser, error: userError } = await supabase
+      const { data: portalUser } = await (supabase as any)
         .from('client_portal_users')
         .select('email, client_id')
         .eq('email', email)
         .eq('is_active', true)
         .maybeSingle();
 
-      if (userError || !portalUser) {
+      if (!portalUser) {
         throw new Error('Email not found. Contact your account manager.');
       }
 

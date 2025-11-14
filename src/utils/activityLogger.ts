@@ -19,6 +19,7 @@ export type ResourceType =
   | 'invoice'
   | 'expense'
   | 'operation_photo'
+  | 'booking_request'
   | 'user';
 
 export async function logActivity(

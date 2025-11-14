@@ -5,6 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   Select,
   SelectContent,
@@ -12,9 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, MapPin, Building2, ArrowRight } from "lucide-react";
+import { Search, MapPin, Building2, ArrowRight, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCompany } from "@/contexts/CompanyContext";
+import { logActivity } from "@/utils/activityLogger";
 
 interface MarketplaceAsset {
   id: string;
@@ -40,6 +44,18 @@ export default function Marketplace() {
   const [selectedCity, setSelectedCity] = useState<string>("all");
   const [selectedMediaType, setSelectedMediaType] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("Available");
+  
+  // Booking dialog state
+  const [bookingDialog, setBookingDialog] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<MarketplaceAsset | null>(null);
+  const [bookingForm, setBookingForm] = useState({
+    startDate: "",
+    endDate: "",
+    proposedRate: "",
+    campaignName: "",
+    clientName: "",
+    notes: "",
+  });
 
   useEffect(() => {
     fetchMarketplaceAssets();
@@ -107,6 +123,67 @@ export default function Marketplace() {
   const mediaTypes = Array.from(new Set(assets.map(a => a.media_type))).sort();
 
   const canRequestBooking = company?.type === 'agency' || isPlatformAdmin;
+
+  const handleBookingRequest = async () => {
+    if (!selectedAsset || !company?.id) return;
+
+    if (!bookingForm.startDate || !bookingForm.endDate || !bookingForm.proposedRate) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('booking_requests').insert({
+        asset_id: selectedAsset.id,
+        requester_company_id: company.id,
+        owner_company_id: selectedAsset.company_id,
+        requested_by: (await supabase.auth.getUser()).data.user?.id,
+        start_date: bookingForm.startDate,
+        end_date: bookingForm.endDate,
+        proposed_rate: parseFloat(bookingForm.proposedRate),
+        campaign_name: bookingForm.campaignName || null,
+        client_name: bookingForm.clientName || null,
+        notes: bookingForm.notes || null,
+      });
+
+      if (error) throw error;
+
+      await logActivity(
+        'create',
+        'booking_request',
+        selectedAsset.id,
+        `Booking request for ${selectedAsset.id}`,
+        { asset_id: selectedAsset.id, company_id: selectedAsset.company_id }
+      );
+
+      toast({
+        title: "Success",
+        description: "Booking request sent successfully",
+      });
+
+      setBookingDialog(false);
+      setSelectedAsset(null);
+      setBookingForm({
+        startDate: "",
+        endDate: "",
+        proposedRate: "",
+        campaignName: "",
+        clientName: "",
+        notes: "",
+      });
+    } catch (error: any) {
+      console.error('Error creating booking request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send booking request",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="flex-1 space-y-6 p-4 sm:p-8 pt-6">
@@ -227,14 +304,16 @@ export default function Marketplace() {
                   >
                     View Details
                   </Button>
-                  {canRequestBooking && asset.status === 'Available' && (
+                  {canRequestBooking && asset.status === 'Available' && asset.company_id !== company?.id && (
                     <Button
                       className="flex-1"
                       onClick={() => {
-                        toast({
-                          title: "Booking Request",
-                          description: "Contact the media owner to book this asset",
-                        });
+                        setSelectedAsset(asset);
+                        setBookingForm(prev => ({
+                          ...prev,
+                          proposedRate: asset.card_rate.toString(),
+                        }));
+                        setBookingDialog(true);
                       }}
                     >
                       Request Booking
@@ -247,6 +326,102 @@ export default function Marketplace() {
           ))}
         </div>
       )}
+
+      {/* Booking Request Dialog */}
+      <Dialog open={bookingDialog} onOpenChange={setBookingDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Request Booking</DialogTitle>
+          </DialogHeader>
+
+          {selectedAsset && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-sm font-medium">{selectedAsset.id}</p>
+                <p className="text-sm text-muted-foreground">
+                  {selectedAsset.location}, {selectedAsset.area}, {selectedAsset.city}
+                </p>
+              </div>
+
+              <div className="grid gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="startDate">Start Date *</Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={bookingForm.startDate}
+                      onChange={(e) => setBookingForm(prev => ({ ...prev, startDate: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="endDate">End Date *</Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={bookingForm.endDate}
+                      onChange={(e) => setBookingForm(prev => ({ ...prev, endDate: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="proposedRate">Proposed Rate (₹/month) *</Label>
+                  <Input
+                    id="proposedRate"
+                    type="number"
+                    placeholder="Enter proposed rate"
+                    value={bookingForm.proposedRate}
+                    onChange={(e) => setBookingForm(prev => ({ ...prev, proposedRate: e.target.value }))}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Card Rate: ₹{selectedAsset.card_rate.toLocaleString()}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="campaignName">Campaign Name</Label>
+                  <Input
+                    id="campaignName"
+                    placeholder="Enter campaign name"
+                    value={bookingForm.campaignName}
+                    onChange={(e) => setBookingForm(prev => ({ ...prev, campaignName: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="clientName">Client Name</Label>
+                  <Input
+                    id="clientName"
+                    placeholder="Enter client name"
+                    value={bookingForm.clientName}
+                    onChange={(e) => setBookingForm(prev => ({ ...prev, clientName: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Additional Notes</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Enter any additional information..."
+                    value={bookingForm.notes}
+                    onChange={(e) => setBookingForm(prev => ({ ...prev, notes: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBookingDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleBookingRequest}>
+              Send Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

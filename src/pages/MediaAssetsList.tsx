@@ -86,7 +86,7 @@ export default function MediaAssetsList() {
   const totalAssets = assets.length;
   const availableAssets = assets.filter(a => a.status === 'Available').length;
   const uniqueCities = new Set(assets.map(a => a.city).filter(Boolean)).size;
-  const totalValue = assets.reduce((sum, a) => sum + (a.card_rate || 0), 0);
+  const totalValue = assets.reduce((sum, a) => sum + (Number(a.card_rate) || 0), 0);
 
   const statCards = [
     {
@@ -112,7 +112,7 @@ export default function MediaAssetsList() {
     },
     {
       title: "Total Value",
-      value: `₹${(totalValue / 100000).toFixed(1)}L`,
+      value: totalValue,
       icon: TrendingUp,
       color: "text-amber-600",
       bgColor: "bg-amber-50 dark:bg-amber-950/20"
@@ -179,7 +179,7 @@ export default function MediaAssetsList() {
                         </p>
                         <p className="text-2xl font-bold">
                           {stat.title === "Total Value" 
-                            ? `₹${(Number(stat.value) / 100000).toFixed(1)}L`
+                            ? `₹${(stat.value / 100000).toFixed(1)}L`
                             : Number(stat.value).toLocaleString()
                           }
                         </p>

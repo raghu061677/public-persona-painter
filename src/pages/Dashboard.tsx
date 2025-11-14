@@ -36,6 +36,7 @@ import GuidedTour from "@/components/onboarding/GuidedTour";
 import { ManagerDashboard } from "@/components/dashboard/ManagerDashboard";
 import { InstallationDashboard } from "@/components/dashboard/InstallationDashboard";
 import { MonitoringDashboard } from "@/components/dashboard/MonitoringDashboard";
+import { PageCustomization, PageCustomizationOption } from "@/components/ui/page-customization";
 
 const COLORS = [
   'hsl(var(--chart-1))',
@@ -49,6 +50,12 @@ const Dashboard = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string>('sales');
+  
+  // Page customization state
+  const [showMetrics, setShowMetrics] = useState(true);
+  const [showCharts, setShowCharts] = useState(true);
+  const [showQuickActions, setShowQuickActions] = useState(true);
+  const [showWidgets, setShowWidgets] = useState(true);
 
   const [metrics, setMetrics] = useState({
     totalAssets: 0,

@@ -25,6 +25,7 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Detect intent using AI
+    const startTime = Date.now();
     const intentResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -79,6 +80,8 @@ Extract any filters from the query (city, client_name, date_range, status, etc.)
     } catch {
       parsedIntent = { intent: "general", filters: {} };
     }
+
+    const responseTime = Date.now() - startTime;
 
     console.log("Detected intent:", parsedIntent);
 
@@ -304,6 +307,19 @@ Extract any filters from the query (city, client_name, date_range, status, etc.)
         };
         responseType = "text";
       }
+    }
+
+    // Log the query
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData?.user) {
+      await supabase.from('ai_assistant_logs').insert({
+        user_id: userData.user.id,
+        company_id: companyId,
+        query_text: message,
+        intent: parsedIntent.intent,
+        response_type: responseType,
+        response_time_ms: responseTime
+      });
     }
 
     return new Response(

@@ -82,6 +82,7 @@ import CompaniesManagement from "./pages/CompaniesManagement";
 import CompanyTesting from "./pages/CompanyTesting";
 import Marketplace from "./pages/Marketplace";
 import AIAssistant from "./pages/AIAssistant";
+import AnalyticsDashboard from "./pages/AnalyticsDashboard";
 import BookingRequests from "./pages/BookingRequests";
 import ClientPortalDashboard from "./pages/ClientPortalDashboard";
 import ClientCampaignView from "./pages/ClientCampaignView";
@@ -173,6 +174,7 @@ const App = () => (
             <Route path="/admin/approval-settings" element={<AppLayout><ApprovalSettings /></AppLayout>} />
             <Route path="/admin/approval-delegation" element={<AppLayout><ApprovalDelegation /></AppLayout>} />
             <Route path="/admin/approval-analytics" element={<AppLayout><ApprovalAnalytics /></AppLayout>} />
+            <Route path="/admin/analytics" element={<AppLayout><AnalyticsDashboard /></AppLayout>} />
             
             {/* Operations Photo Upload */}
             <Route path="/admin/operations/:campaignId/assets/:assetId" element={<AppLayout><CampaignAssetProofs /></AppLayout>} />

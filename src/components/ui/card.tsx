@@ -8,9 +8,9 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
     className={cn(
       "rounded-lg border bg-card text-card-foreground shadow-sm",
       "transition-all duration-300 ease-in-out",
-      "hover:shadow-md hover:-translate-y-0.5",
+      "hover:shadow-md md:hover:-translate-y-0.5",
       "hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]",
-      "w-full", // Ensure cards take full width of container
+      "w-full min-w-0", // Ensure cards take full width and handle overflow
       className
     )} 
     {...props} 

@@ -159,7 +159,7 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
       
       <aside
         className={cn(
-          "h-screen transition-all duration-300 bg-sidebar-background border-r border-sidebar-border flex flex-col z-50",
+          "h-screen transition-all duration-300 bg-sidebar-background border-r border-sidebar-border flex flex-col z-50 shrink-0",
           // Mobile: slide in/out from left, Desktop: resize
           "fixed md:relative left-0 top-0",
           open ? "w-60 translate-x-0" : "w-60 md:w-16 -translate-x-full md:translate-x-0"

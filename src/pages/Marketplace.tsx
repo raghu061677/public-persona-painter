@@ -137,7 +137,7 @@ export default function Marketplace() {
     }
 
     try {
-      const { error } = await supabase.from('booking_requests').insert({
+      const { error } = await supabase.from('booking_requests' as any).insert({
         asset_id: selectedAsset.id,
         requester_company_id: company.id,
         owner_company_id: selectedAsset.company_id,

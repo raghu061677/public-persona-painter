@@ -65,7 +65,7 @@ export function CompanyBrandingSettings() {
 
       // Update company branding
       const { error: updateError } = await supabase
-        .from('companies')
+        .from('companies' as any)
         .update({
           logo_url: logoUrl,
           theme_color: primaryColor,

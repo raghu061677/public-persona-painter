@@ -9,7 +9,7 @@ export async function logPortalAccess(
 ): Promise<void> {
   try {
     await supabase
-      .from('client_portal_access_logs')
+      .from('client_portal_access_logs' as any)
       .insert({
         client_id: clientId,
         action,

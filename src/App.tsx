@@ -81,6 +81,7 @@ import CompanyOnboarding from "./pages/CompanyOnboarding";
 import CompaniesManagement from "./pages/CompaniesManagement";
 import CompanyTesting from "./pages/CompanyTesting";
 import Marketplace from "./pages/Marketplace";
+import AIAssistant from "./pages/AIAssistant";
 import BookingRequests from "./pages/BookingRequests";
 import ClientPortalDashboard from "./pages/ClientPortalDashboard";
 import ClientCampaignView from "./pages/ClientCampaignView";
@@ -148,6 +149,7 @@ const App = () => (
             <Route path="/finance/expenses" element={<AppLayout><ExpensesList /></AppLayout>} />
             <Route path="/reports" element={<AppLayout><ReportsDashboard /></AppLayout>} />
             <Route path="/reports/vacant-media" element={<AppLayout><VacantMediaReport /></AppLayout>} />
+            <Route path="/admin/ai-assistant" element={<AppLayout><AIAssistant /></AppLayout>} />
             <Route path="/admin/gallery" element={<ProtectedRoute><AppLayout><PhotoGallery /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/photo-library" element={<ProtectedRoute><AppLayout><PhotoGallery /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/import" element={<AppLayout><ImportData /></AppLayout>} />

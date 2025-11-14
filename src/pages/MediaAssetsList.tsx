@@ -198,7 +198,7 @@ export default function MediaAssetsList() {
 
       {/* Table Area */}
       <div className="flex-1 overflow-hidden">
-        <div className="h-full overflow-auto p-6">
+        <div className="h-full overflow-x-auto overflow-y-auto p-6">
           <MediaAssetsTable 
             assets={assets} 
             onRefresh={fetchAssets}

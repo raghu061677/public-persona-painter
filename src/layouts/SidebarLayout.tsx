@@ -80,7 +80,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             {/* PLATFORM ADMINISTRATION */}
             {isPlatformAdmin && (
               <>
-                <SidebarSection label="Platform Administration">
+                <SidebarSection label="Platform Administration" collapsed={collapsed}>
                   <SidebarItem
                     icon={LayoutDashboard}
                     label="Platform Dashboard"
@@ -125,7 +125,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             {/* COMPANY WORKSPACE */}
             {company && (
               <>
-                <SidebarSection label="Company Workspace">
+                <SidebarSection label="Company Workspace" collapsed={collapsed}>
                   <SidebarItem
                     icon={LayoutDashboard}
                     label="Overview"
@@ -217,7 +217,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             {/* COMPANY SETTINGS */}
             {company && (isCompanyAdmin || isPlatformAdmin) && (
               <>
-                <SidebarSection label="Company Settings">
+                <SidebarSection label="Company Settings" collapsed={collapsed}>
                   {/* Organization Settings */}
                   <SidebarGroup icon={Building2} label="Organization" collapsed={collapsed}>
                     <SidebarItem
@@ -362,7 +362,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             )}
 
             {/* USER PERSONAL MENU */}
-            <SidebarSection label="My Account">
+            <SidebarSection label="My Account" collapsed={collapsed}>
               <SidebarItem
                 icon={User}
                 label="My Profile"
@@ -376,24 +376,17 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                 collapsed={collapsed}
               />
               
-              {!collapsed && (
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-3 w-full px-4 py-2.5 mx-2 rounded-xl text-sm font-medium text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-all duration-200"
-                >
-                  <LogOut className="h-5 w-5 shrink-0" />
-                  <span className="truncate">Logout</span>
-                </button>
-              )}
-              
-              {collapsed && (
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center justify-center w-full p-2.5 mx-1 rounded-xl text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-all duration-200"
-                >
-                  <LogOut className="h-5 w-5" />
-                </button>
-              )}
+              <button
+                onClick={handleLogout}
+                className={cn(
+                  "flex items-center rounded-xl text-sm font-medium text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-all duration-200",
+                  collapsed ? "justify-center w-full p-2.5 mx-1" : "gap-3 w-full px-4 py-2.5 mx-2"
+                )}
+                title={collapsed ? "Logout" : undefined}
+              >
+                <LogOut className="h-5 w-5 shrink-0" />
+                {!collapsed && <span className="truncate">Logout</span>}
+              </button>
             </SidebarSection>
           </div>
         </ScrollArea>

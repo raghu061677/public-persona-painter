@@ -15,16 +15,17 @@ export function SidebarItem({ icon: Icon, label, href, collapsed }: SidebarItemP
       to={href}
       className={({ isActive }) =>
         cn(
-          "flex items-center gap-3 px-4 py-2.5 mx-2 rounded-xl text-sm font-medium transition-all duration-200 relative",
+          "flex items-center transition-all duration-200 relative rounded-xl text-sm font-medium",
+          collapsed ? "justify-center p-2.5 mx-1" : "gap-3 px-4 py-2.5 mx-2",
           "hover:bg-accent/50",
           isActive && [
             "bg-primary/10 text-primary font-semibold",
-            "before:absolute before:left-0 before:top-1 before:bottom-1 before:w-1 before:bg-primary before:rounded-r-full"
+            !collapsed && "before:absolute before:left-0 before:top-1 before:bottom-1 before:w-1 before:bg-primary before:rounded-r-full"
           ],
-          !isActive && "text-muted-foreground",
-          collapsed && "justify-center px-2"
+          !isActive && "text-muted-foreground"
         )
       }
+      title={collapsed ? label : undefined}
     >
       <Icon className="h-5 w-5 shrink-0" />
       {!collapsed && <span className="truncate">{label}</span>}

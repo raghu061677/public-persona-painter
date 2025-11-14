@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-type Theme = 'light' | 'dark' | 'brand-blue' | 'brand-green';
+type Theme = 'classic' | 'modern' | 'dark' | 'light' | 'brand-blue' | 'brand-green';
 type FontFamily = 'inter' | 'poppins' | 'roboto' | 'open-sans' | 'lato' | 'montserrat' | 'nunito' | 'work-sans';
 type FontSize = 'small' | 'medium' | 'large' | 'extra-large';
 
@@ -55,7 +55,7 @@ const applyFontSize = (size: FontSize) => {
 };
 
 export const useThemeStore = create<ThemeState>((set) => ({
-  theme: (localStorage.getItem('theme') as Theme) || 'light',
+  theme: (localStorage.getItem('theme') as Theme) || 'modern',
   fontFamily: (localStorage.getItem('fontFamily') as FontFamily) || 'inter',
   fontSize: (localStorage.getItem('fontSize') as FontSize) || 'medium',
   cardColors: JSON.parse(localStorage.getItem('cardColors') || JSON.stringify(defaultCardColors)),
@@ -63,7 +63,16 @@ export const useThemeStore = create<ThemeState>((set) => ({
   setTheme: (theme) => {
     localStorage.setItem('theme', theme);
     set({ theme });
-    document.documentElement.className = theme;
+    // Remove all theme classes
+    document.documentElement.classList.remove('classic', 'modern', 'dark', 'light', 'brand-blue', 'brand-green');
+    // Add new theme class
+    document.documentElement.classList.add(theme);
+    // Add dark class for tailwind dark: variants
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   },
   
   setFontFamily: (font) => {

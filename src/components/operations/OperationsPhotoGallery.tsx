@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
-import { deleteOperationsProof } from "@/lib/operations/uploadProofs";
+import { deleteOperationsProof } from "@/lib/photos";
 import { format } from "date-fns";
 
 interface OperationsPhoto {

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { uploadOperationsProofs } from "@/lib/operations/uploadProofs";
+import { uploadOperationsProofBatch } from "@/lib/photos";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
@@ -154,7 +154,7 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
       setIsUploading(true);
       setIsProcessing(false);
 
-      const results = await uploadOperationsProofs(
+      const results = await uploadOperationsProofBatch(
         campaignId,
         assetId,
         watermarkedFiles,
@@ -163,8 +163,8 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
             const updated = [...prev];
             updated[fileIndex] = {
               ...updated[fileIndex],
-              progress,
-              status: progress === 100 ? 'complete' : 'uploading',
+              progress: progress.progress,
+              status: progress.progress === 100 ? 'complete' : 'uploading',
             };
             return updated;
           });

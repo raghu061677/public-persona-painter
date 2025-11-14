@@ -3,7 +3,7 @@ import { Upload, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { uploadProofPhoto } from "@/lib/media-assets/uploadProofs";
+import { uploadAssetProof } from "@/lib/photos";
 
 interface PhotoUploadSectionProps {
   assetId: string;
@@ -81,9 +81,9 @@ export function PhotoUploadSection({ assetId, onUploadComplete }: PhotoUploadSec
           idx === i ? { ...item, progress: 30, tag: 'Analyzing...' } : item
         ));
 
-        const result = await uploadProofPhoto(assetId, file, (progress) => {
+        const result = await uploadAssetProof(assetId, file, (progress) => {
           setUploadingFiles(prev => prev.map((item, idx) => 
-            idx === i ? { ...item, progress: 30 + (progress * 0.7) } : item
+            idx === i ? { ...item, progress: 30 + (progress.progress * 0.7) } : item
           ));
         });
 

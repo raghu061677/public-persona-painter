@@ -25,6 +25,29 @@ export function PhotoLightbox({ photos, initialIndex, isOpen, onClose }: PhotoLi
   const imageRef = useRef<HTMLDivElement>(null);
   const touchStartDistance = useRef<number>(0);
 
+  const resetZoom = () => {
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
+  };
+
+  const handlePrevious = () => {
+    setCurrentIndex((prev) => (prev === 0 ? photos.length - 1 : prev - 1));
+    resetZoom();
+  };
+
+  const handleNext = () => {
+    setCurrentIndex((prev) => (prev === photos.length - 1 ? 0 : prev + 1));
+    resetZoom();
+  };
+
+  const handleZoomIn = () => {
+    setScale(prev => Math.min(5, prev + 0.5));
+  };
+
+  const handleZoomOut = () => {
+    setScale(prev => Math.max(0.5, prev - 0.5));
+  };
+
   useEffect(() => {
     setCurrentIndex(initialIndex);
     resetZoom();
@@ -97,29 +120,6 @@ export function PhotoLightbox({ photos, initialIndex, isOpen, onClose }: PhotoLi
   if (!isOpen || photos.length === 0) return null;
 
   const currentPhoto = photos[currentIndex];
-
-  const handlePrevious = () => {
-    setCurrentIndex((prev) => (prev === 0 ? photos.length - 1 : prev - 1));
-    resetZoom();
-  };
-
-  const handleNext = () => {
-    setCurrentIndex((prev) => (prev === photos.length - 1 ? 0 : prev + 1));
-    resetZoom();
-  };
-
-  const resetZoom = () => {
-    setScale(1);
-    setPosition({ x: 0, y: 0 });
-  };
-
-  const handleZoomIn = () => {
-    setScale(prev => Math.min(5, prev + 0.5));
-  };
-
-  const handleZoomOut = () => {
-    setScale(prev => Math.max(0.5, prev - 0.5));
-  };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (scale > 1) {

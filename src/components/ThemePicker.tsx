@@ -1,15 +1,15 @@
 import { useThemeStore } from '@/store/themeStore';
-import { Palette, Sun, Moon, Droplet } from 'lucide-react';
+import { Palette, Sun, Moon, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
 
 const themes = [
-  { value: 'light', label: 'Light', icon: Sun },
+  { value: 'classic', label: 'Classic', icon: Monitor },
+  { value: 'modern', label: 'Modern', icon: Palette },
   { value: 'dark', label: 'Dark', icon: Moon },
-  { value: 'brand-blue', label: 'Ocean Blue', icon: Droplet },
-  { value: 'brand-green', label: 'Emerald', icon: Droplet },
+  { value: 'light', label: 'Light', icon: Sun },
 ] as const;
 
 export default function ThemePicker() {
@@ -17,7 +17,16 @@ export default function ThemePicker() {
 
   // Apply theme on mount
   useEffect(() => {
-    document.documentElement.className = theme;
+    // Remove all theme classes
+    document.documentElement.classList.remove('classic', 'modern', 'dark', 'light', 'brand-blue', 'brand-green');
+    // Add current theme
+    document.documentElement.classList.add(theme);
+    // Add dark class for tailwind
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   }, [theme]);
 
   const saveTheme = async (value: typeof theme) => {

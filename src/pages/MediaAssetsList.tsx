@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, TrendingUp, Layers, ShieldCheck, Map as MapIcon } from "lucide-react";
+import { Plus, TrendingUp, Layers, ShieldCheck, Map as MapIcon, Filter, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ROUTES } from "@/lib/routes";
 import { MediaAssetsTable } from "@/components/media-assets/media-assets-table";
@@ -17,6 +17,7 @@ export default function MediaAssetsList() {
   const navigate = useNavigate();
   const [assets, setAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(true);
   const { isAdmin } = useAuth();
 
   useEffect(() => {
@@ -94,28 +95,32 @@ export default function MediaAssetsList() {
       value: totalAssets,
       icon: Layers,
       color: "text-blue-600",
-      bgColor: "bg-blue-50 dark:bg-blue-950/20"
+      bgColor: "bg-blue-50 dark:bg-blue-950/20",
+      borderColor: "border-l-blue-500"
     },
     {
       title: "Available",
       value: availableAssets,
       icon: ShieldCheck,
       color: "text-green-600",
-      bgColor: "bg-green-50 dark:bg-green-950/20"
+      bgColor: "bg-green-50 dark:bg-green-950/20",
+      borderColor: "border-l-green-500"
     },
     {
       title: "Cities",
       value: uniqueCities,
       icon: MapIcon,
       color: "text-purple-600",
-      bgColor: "bg-purple-50 dark:bg-purple-950/20"
+      bgColor: "bg-purple-50 dark:bg-purple-950/20",
+      borderColor: "border-l-purple-500"
     },
     {
       title: "Total Value",
       value: totalValue,
       icon: TrendingUp,
       color: "text-amber-600",
-      bgColor: "bg-amber-50 dark:bg-amber-950/20"
+      bgColor: "bg-amber-50 dark:bg-amber-950/20",
+      borderColor: "border-l-amber-500"
     }
   ];
 
@@ -145,46 +150,64 @@ export default function MediaAssetsList() {
     <div className="h-full w-full flex flex-col bg-background">
       <ImportDialog onImportComplete={fetchAssets} />
 
-      {/* Header with Stats */}
-      <div className="flex-none border-b bg-card">
-        <div className="px-6 py-4 space-y-6">
+      {/* Modern Header with Stats */}
+      <div className="flex-none border-b bg-card/95 backdrop-blur-sm">
+        <div className="px-6 py-5 space-y-6">
           {/* Title and Actions */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Media Assets</h1>
-              <p className="text-sm text-muted-foreground mt-1">
+              <h1 className="text-3xl font-bold tracking-tight">Media Assets</h1>
+              <p className="text-sm text-muted-foreground mt-1.5">
                 Manage and track all OOH advertising assets
               </p>
             </div>
             
-            {isAdmin && (
-              <Button onClick={() => navigate(ROUTES.MEDIA_ASSETS_NEW)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Asset
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                className="gap-2"
+              >
+                {showFilters ? <X className="h-4 w-4" /> : <Filter className="h-4 w-4" />}
+                {showFilters ? 'Hide' : 'Show'} Filters
               </Button>
-            )}
+              {isAdmin && (
+                <Button onClick={() => navigate(ROUTES.MEDIA_ASSETS_NEW)} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Asset
+                </Button>
+              )}
+            </div>
           </div>
 
-          {/* Quick Stats - Horizontal */}
+          {/* Quick Stats - Modern Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {statCards.map((stat, index) => {
               const Icon = stat.icon;
               return (
-                <Card key={index} className="shadow-sm">
-                  <CardContent className="p-4">
+                <Card 
+                  key={index} 
+                  className={cn(
+                    "transition-all duration-200 hover:shadow-md border-l-4",
+                    stat.borderColor,
+                    "modern:shadow-card modern:hover:shadow-elegant"
+                  )}
+                >
+                  <CardContent className="p-5">
                     <div className="flex items-start justify-between">
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         <p className="text-sm font-medium text-muted-foreground">
                           {stat.title}
                         </p>
-                        <p className="text-2xl font-bold">
+                        <p className="text-2xl font-bold tracking-tight">
                           {stat.title === "Total Value" 
                             ? `₹${(stat.value / 100000).toFixed(1)}L`
                             : Number(stat.value).toLocaleString()
                           }
                         </p>
                       </div>
-                      <div className={cn("p-2 rounded-lg", stat.bgColor)}>
+                      <div className={cn("p-2.5 rounded-xl", stat.bgColor)}>
                         <Icon className={cn("h-5 w-5", stat.color)} />
                       </div>
                     </div>
@@ -196,13 +219,18 @@ export default function MediaAssetsList() {
         </div>
       </div>
 
-      {/* Table Area */}
+      {/* Table Area with Modern Layout */}
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-x-auto overflow-y-auto p-6">
-          <MediaAssetsTable 
-            assets={assets} 
-            onRefresh={fetchAssets}
-          />
+          <div className={cn(
+            "bg-card rounded-xl border transition-all duration-200",
+            "modern:shadow-card modern:rounded-2xl"
+          )}>
+            <MediaAssetsTable 
+              assets={assets} 
+              onRefresh={fetchAssets}
+            />
+          </div>
         </div>
       </div>
     </div>

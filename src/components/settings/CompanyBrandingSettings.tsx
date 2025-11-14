@@ -211,19 +211,59 @@ export function CompanyBrandingSettings() {
           </p>
         </div>
 
-        {/* Preview */}
-        <div className="p-4 border rounded-lg bg-muted/50">
-          <p className="text-sm font-medium mb-3">Preview</p>
-          <div className="flex gap-2">
-            <Button style={{ backgroundColor: primaryColor, borderColor: primaryColor }}>
-              Primary Button
-            </Button>
-            <Button 
-              variant="outline" 
-              style={{ borderColor: secondaryColor, color: secondaryColor }}
-            >
-              Secondary Button
-            </Button>
+        {/* Preview - Client Portal Mockup */}
+        <div className="border rounded-lg overflow-hidden">
+          <div className="p-4 bg-muted/50 border-b">
+            <p className="text-sm font-medium mb-1">Client Portal Preview</p>
+            <p className="text-xs text-muted-foreground">See how your branding will appear to clients</p>
+          </div>
+          
+          <div className="p-6 bg-background">
+            {/* Mock Portal Header */}
+            <div className="flex items-center gap-4 mb-6 pb-4 border-b">
+              {logoPreview && (
+                <div className="w-12 h-12 border rounded overflow-hidden bg-white flex items-center justify-center">
+                  <img
+                    src={logoPreview}
+                    alt="Company logo preview"
+                    className="max-w-full max-h-full object-contain"
+                  />
+                </div>
+              )}
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg" style={{ color: primaryColor }}>
+                  {company?.name || 'Your Company Name'}
+                </h3>
+                <p className="text-sm text-muted-foreground">Client Portal Dashboard</p>
+              </div>
+            </div>
+
+            {/* Mock Content */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 border rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-1">Active Campaigns</p>
+                  <p className="text-2xl font-bold" style={{ color: primaryColor }}>12</p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-1">Pending Invoices</p>
+                  <p className="text-2xl font-bold" style={{ color: secondaryColor }}>3</p>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button size="sm" style={{ backgroundColor: primaryColor, borderColor: primaryColor }}>
+                  View Campaigns
+                </Button>
+                <Button 
+                  size="sm"
+                  variant="outline" 
+                  style={{ borderColor: secondaryColor, color: secondaryColor }}
+                >
+                  Download Reports
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 

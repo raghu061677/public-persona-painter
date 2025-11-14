@@ -37,12 +37,12 @@ export default function CompaniesManagement() {
   const loadCompanies = async () => {
     try {
       const { data, error } = await supabase
-        .from('companies')
+        .from('companies' as any)
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setCompanies((data as Company[]) || []);
+      setCompanies((data as any) || []);
     } catch (error: any) {
       console.error('Error loading companies:', error);
       toast({
@@ -58,7 +58,7 @@ export default function CompaniesManagement() {
   const updateCompanyStatus = async (companyId: string, newStatus: 'active' | 'suspended' | 'cancelled') => {
     try {
       const { error } = await supabase
-        .from('companies')
+        .from('companies' as any)
         .update({ status: newStatus as any })
         .eq('id', companyId);
 

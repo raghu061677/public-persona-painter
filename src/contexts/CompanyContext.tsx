@@ -54,7 +54,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
       // Get user's company association
       const { data: companyUserData, error: cuError } = await supabase
-        .from('company_users')
+        .from('company_users' as any)
         .select('*')
         .eq('user_id', user.id)
         .eq('status', 'active')
@@ -66,20 +66,20 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      setCompanyUser(companyUserData as CompanyUser);
+      setCompanyUser(companyUserData as any);
 
       if (companyUserData) {
         // Get company details
         const { data: companyData, error: companyError } = await supabase
-          .from('companies')
+          .from('companies' as any)
           .select('*')
-          .eq('id', companyUserData.company_id)
+          .eq('id', (companyUserData as any).company_id)
           .single();
 
         if (companyError) {
           console.error('Error fetching company:', companyError);
         } else {
-          setCompany(companyData as Company);
+          setCompany(companyData as any);
           setIsPlatformAdmin((companyData as any).type === 'platform_admin');
         }
       }

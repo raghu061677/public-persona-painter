@@ -42,7 +42,7 @@ export default function CompanyOnboarding() {
     try {
       // Create company
       const { data: companyData, error: companyError } = await supabase
-        .from('companies')
+        .from('companies' as any)
         .insert({
           name: formData.name,
           legal_name: formData.legal_name,
@@ -67,7 +67,7 @@ export default function CompanyOnboarding() {
 
       // Link user to company as admin
       const { error: linkError } = await supabase
-        .from('company_users')
+        .from('company_users' as any)
         .insert({
           company_id: (companyData as any).id,
           user_id: user.id,

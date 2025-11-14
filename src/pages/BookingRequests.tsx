@@ -61,7 +61,7 @@ export default function BookingRequests() {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('booking_requests')
+        .from('booking_requests' as any)
         .select(`
           *,
           requester_company:companies!booking_requests_requester_company_id_fkey(name),
@@ -90,7 +90,7 @@ export default function BookingRequests() {
 
     try {
       const { error } = await supabase
-        .from('booking_requests')
+        .from('booking_requests' as any)
         .update({
           status: 'approved',
           reviewed_by: (await supabase.auth.getUser()).data.user?.id,
@@ -138,7 +138,7 @@ export default function BookingRequests() {
 
     try {
       const { error } = await supabase
-        .from('booking_requests')
+        .from('booking_requests' as any)
         .update({
           status: 'rejected',
           reviewed_by: (await supabase.auth.getUser()).data.user?.id,

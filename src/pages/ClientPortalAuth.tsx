@@ -29,7 +29,7 @@ export default function ClientPortalAuth() {
     try {
       // Check if token exists and is valid
       const { data: access, error } = await supabase
-        .from('client_portal_access')
+        .from('client_portal_access' as any)
         .select('*, client:clients(*)')
         .eq('token', token)
         .eq('is_active', true)
@@ -59,11 +59,11 @@ export default function ClientPortalAuth() {
 
       // Mark token as used and update last accessed
       await supabase
-        .from('client_portal_access')
+        .from('client_portal_access' as any)
         .update({
           used_at: new Date().toISOString(),
           last_accessed_at: new Date().toISOString(),
-        } as any)
+        })
         .eq('token', token);
 
       // Create a temporary session for client portal

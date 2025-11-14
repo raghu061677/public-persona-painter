@@ -9,6 +9,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
 import { ClientPortalProvider } from "@/contexts/ClientPortalContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import AppLayout from "@/layouts/AppLayout";
 import { ClientPortalLayout } from "@/layouts/ClientPortalLayout";
 import { SettingsLayout } from "@/layouts/SettingsLayout";
@@ -128,14 +129,15 @@ const AccessDenied = lazy(() => import("./pages/AccessDenied"));
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <AuthProvider>
-        <CompanyProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <AuthProvider>
+          <CompanyProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
               <Suspense fallback={<LoadingFallback />}>
                 <Routes>
             {/* Public routes */}
@@ -289,6 +291,7 @@ const App = () => (
       </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

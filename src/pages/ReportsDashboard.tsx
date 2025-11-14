@@ -12,6 +12,11 @@ import {
   FileText,
 } from "lucide-react";
 import { formatINR, getFYRange } from "@/utils/finance";
+import { RevenueChart } from "@/components/charts/RevenueChart";
+import { OccupancyChart } from "@/components/charts/OccupancyChart";
+import { ClientRevenueChart } from "@/components/charts/ClientRevenueChart";
+import { CampaignTimelineChart } from "@/components/charts/CampaignTimelineChart";
+import { AssetHeatMap } from "@/components/charts/AssetHeatMap";
 
 export default function ReportsDashboard() {
   const navigate = useNavigate();
@@ -139,44 +144,65 @@ export default function ReportsDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">Reports & Analytics</h1>
-          <p className="text-muted-foreground mt-1">
-            Financial Year {fyRange.label} • Comprehensive business insights
-          </p>
-        </div>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
+            <p className="text-muted-foreground mt-2">
+              Real-time insights and performance metrics powered by Highcharts
+            </p>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {reportCards.map((report) => {
-            const Icon = report.icon;
-            return (
-              <Card
-                key={report.title}
-                className="hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => navigate(report.route)}
-              >
-                <CardHeader>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className={`p-3 rounded-lg ${report.bgColor}`}>
-                      <Icon className={`h-6 w-6 ${report.color}`} />
-                    </div>
-                    <span className={`text-sm font-semibold ${report.color}`}>
-                      {report.stat}
-                    </span>
-                  </div>
-                  <CardTitle className="text-lg">{report.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {report.description}
-                  </p>
-                  <Button variant="outline" size="sm" className="w-full">
-                    View Report
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {/* Revenue & Expenses */}
+          <RevenueChart />
+
+          {/* Two columns */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <OccupancyChart />
+            <ClientRevenueChart />
+          </div>
+
+          {/* Campaign Timeline */}
+          <CampaignTimelineChart />
+
+          {/* Asset Heatmap */}
+          <AssetHeatMap />
+
+          {/* Report Cards */}
+          <div className="mt-8">
+            <h2 className="text-2xl font-bold mb-4">Detailed Reports</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {reportCards.map((report) => {
+                const Icon = report.icon;
+                return (
+                  <Card
+                    key={report.title}
+                    className="hover:shadow-lg transition-shadow cursor-pointer"
+                    onClick={() => navigate(report.route)}
+                  >
+                    <CardHeader>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className={`p-3 rounded-lg ${report.bgColor}`}>
+                          <Icon className={`h-6 w-6 ${report.color}`} />
+                        </div>
+                        <span className={`text-sm font-semibold ${report.color}`}>
+                          {report.stat}
+                        </span>
+                      </div>
+                      <CardTitle className="text-lg">{report.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        {report.description}
+                      </p>
+                      <Button variant="outline" size="sm" className="w-full">
+                        View Report
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </div>

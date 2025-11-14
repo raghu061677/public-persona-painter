@@ -22,6 +22,7 @@ import { toast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { OperationsBoard } from "@/components/campaigns/OperationsBoard";
 import { ProofGallery } from "@/components/campaigns/ProofGallery";
+import { CampaignPerformanceChart } from "@/components/charts/CampaignPerformanceChart";
 import { ExportProofDialog } from "@/components/campaigns/ExportProofDialog";
 import { CampaignTimelineCard } from "@/components/campaigns/CampaignTimelineCard";
 import { CampaignPerformanceMetrics } from "@/components/campaigns/CampaignPerformanceMetrics";
@@ -249,6 +250,9 @@ export default function CampaignDetail() {
             )}
           </div>
         </div>
+
+        {/* Real-time Performance Chart */}
+        <CampaignPerformanceChart campaignId={campaign.id} />
 
         {/* Progress */}
         <Card className="mb-6">

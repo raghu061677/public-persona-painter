@@ -811,10 +811,6 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
           density={density}
           onDensityChange={setDensity}
           tableKey="media-assets"
-          enableGlobalSearch
-          searchableData={assets}
-          searchableKeys={["id", "media_id", "location", "area", "city", "media_type", "status"]}
-          onGlobalSearchFilter={setGlobalSearchFiltered}
           settings={settings}
           onUpdateSettings={updateSettings}
           onResetSettings={resetSettings}

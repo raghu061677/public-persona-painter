@@ -16,8 +16,8 @@ export const ResponsiveCard = React.forwardRef<HTMLDivElement, ResponsiveCardPro
       <Card
         ref={ref}
         className={cn(
-          "transition-all duration-300",
-          hover && "hover:shadow-elegant hover:scale-[1.02]",
+          "transition-all duration-300 w-full",
+          hover && "hover:shadow-elegant md:hover:scale-[1.02]", // Disable scale on mobile
           className
         )}
         {...props}

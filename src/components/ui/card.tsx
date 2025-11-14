@@ -10,6 +10,7 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
       "transition-all duration-300 ease-in-out",
       "hover:shadow-md hover:-translate-y-0.5",
       "hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]",
+      "w-full", // Ensure cards take full width of container
       className
     )} 
     {...props} 

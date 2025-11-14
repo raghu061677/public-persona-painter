@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download, Smartphone, Wifi, Bell, CheckCircle2 } from "lucide-react";
+import { Download, Smartphone, Wifi, Bell, CheckCircle2, Zap, Shield, HardDrive, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -58,16 +59,19 @@ const Install = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 flex items-center justify-center p-4">
-      <div className="max-w-4xl w-full space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4 py-8">
+      <div className="max-w-6xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex justify-center mb-4">
-            <img src="/favicon-192x192.png" alt="Go-Ads 360°" className="w-24 h-24 rounded-2xl shadow-lg" />
+            <div className="relative">
+              <img src="/favicon-192x192.png" alt="Go-Ads 360°" className="w-24 h-24 rounded-2xl shadow-lg" />
+              <div className="absolute -inset-1 bg-gradient-to-r from-primary to-secondary rounded-2xl blur opacity-20"></div>
+            </div>
           </div>
-          <h1 className="text-4xl font-bold text-foreground">Install Go-Ads 360°</h1>
+          <h1 className="text-4xl md:text-5xl font-bold text-foreground">Install Go-Ads 360°</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Get the full app experience with offline access, instant loading, and push notifications.
+            Get the full app experience with offline access, instant loading, and push notifications. Install once, work anywhere.
           </p>
         </div>
 
@@ -109,89 +113,250 @@ const Install = () => {
           </Card>
         )}
 
-        {/* Features */}
-        <div className="grid md:grid-cols-3 gap-6">
-          <Card>
+        {/* Key Benefits */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="border-2 hover:border-primary/50 transition-colors">
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
+                <div className="p-3 rounded-lg bg-primary/10">
                   <Wifi className="w-6 h-6 text-primary" />
                 </div>
-                <CardTitle>Works Offline</CardTitle>
+                <CardTitle className="text-lg">Works Offline</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
-                Access your campaigns, media assets, and plans even without an internet connection.
+              <p className="text-sm text-muted-foreground">
+                Access campaigns, media assets, and plans even without internet. Changes sync automatically when you're back online.
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-2 hover:border-primary/50 transition-colors">
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Smartphone className="w-6 h-6 text-primary" />
+                <div className="p-3 rounded-lg bg-primary/10">
+                  <Zap className="w-6 h-6 text-primary" />
                 </div>
-                <CardTitle>Native Experience</CardTitle>
+                <CardTitle className="text-lg">Lightning Fast</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
-                Launches instantly from your home screen just like a native app.
+              <p className="text-sm text-muted-foreground">
+                Instant loading and smooth performance. Launch directly from your home screen without opening a browser.
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-2 hover:border-primary/50 transition-colors">
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
+                <div className="p-3 rounded-lg bg-primary/10">
                   <Bell className="w-6 h-6 text-primary" />
                 </div>
-                <CardTitle>Push Notifications</CardTitle>
+                <CardTitle className="text-lg">Push Notifications</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
-                Get instant updates about approvals, campaigns, and operations.
+              <p className="text-sm text-muted-foreground">
+                Get instant updates about approvals, campaign progress, and important operations tasks.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-2 hover:border-primary/50 transition-colors">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-lg bg-primary/10">
+                  <HardDrive className="w-6 h-6 text-primary" />
+                </div>
+                <CardTitle className="text-lg">Save Data</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Efficient caching reduces data usage. Perfect for field operations with limited connectivity.
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Manual Installation Instructions */}
+        {/* Platform-Specific Instructions */}
         <Card>
           <CardHeader>
-            <CardTitle>Manual Installation Instructions</CardTitle>
+            <CardTitle>Platform-Specific Installation Guide</CardTitle>
             <CardDescription>
-              If the install button doesn't work, follow these steps:
+              Choose your platform for detailed installation instructions
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <h3 className="font-semibold text-foreground">On iPhone/iPad (Safari):</h3>
-              <ol className="list-decimal list-inside space-y-1 text-muted-foreground ml-4">
-                <li>Tap the Share button (square with arrow pointing up)</li>
-                <li>Scroll down and tap "Add to Home Screen"</li>
-                <li>Tap "Add" in the top right corner</li>
-              </ol>
-            </div>
-            <div className="space-y-2">
-              <h3 className="font-semibold text-foreground">On Android (Chrome):</h3>
-              <ol className="list-decimal list-inside space-y-1 text-muted-foreground ml-4">
-                <li>Tap the menu button (three dots) in the top right</li>
-                <li>Tap "Add to Home screen" or "Install app"</li>
-                <li>Tap "Add" or "Install" to confirm</li>
-              </ol>
-            </div>
-            <div className="space-y-2">
-              <h3 className="font-semibold text-foreground">On Desktop (Chrome/Edge):</h3>
-              <ol className="list-decimal list-inside space-y-1 text-muted-foreground ml-4">
-                <li>Click the install icon in the address bar</li>
-                <li>Or go to menu → Install Go-Ads 360°</li>
-                <li>Click "Install" to confirm</li>
-              </ol>
+          <CardContent>
+            <Tabs defaultValue="ios" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="ios">iOS / iPad</TabsTrigger>
+                <TabsTrigger value="android">Android</TabsTrigger>
+                <TabsTrigger value="desktop">Desktop</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="ios" className="space-y-4 mt-4">
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-foreground flex items-center gap-2">
+                    <Smartphone className="w-5 h-5 text-primary" />
+                    Installing on iPhone or iPad (Safari)
+                  </h3>
+                  <ol className="space-y-3 text-muted-foreground">
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">1</span>
+                      <span>Open this page in <strong>Safari browser</strong> (required for iOS installation)</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">2</span>
+                      <span>Tap the <strong>Share button</strong> (square icon with arrow pointing up) at the bottom of the screen</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">3</span>
+                      <span>Scroll down and tap <strong>"Add to Home Screen"</strong></span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">4</span>
+                      <span>You can customize the app name if desired, then tap <strong>"Add"</strong> in the top right</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">5</span>
+                      <span>Go-Ads 360° will now appear on your home screen. Tap the icon to launch the app!</span>
+                    </li>
+                  </ol>
+                  <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      <strong>💡 Tip:</strong> Once installed, the app works just like a native iOS app with full screen display and offline capabilities.
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="android" className="space-y-4 mt-4">
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-foreground flex items-center gap-2">
+                    <Smartphone className="w-5 h-5 text-primary" />
+                    Installing on Android (Chrome)
+                  </h3>
+                  <ol className="space-y-3 text-muted-foreground">
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">1</span>
+                      <span>Open this page in <strong>Chrome browser</strong> (recommended for best experience)</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">2</span>
+                      <span>Look for the install banner at the bottom of the screen, or tap the <strong>menu button</strong> (three vertical dots) in the top right</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">3</span>
+                      <span>Select <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong></span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">4</span>
+                      <span>Review the app name and tap <strong>"Add"</strong> or <strong>"Install"</strong> to confirm</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">5</span>
+                      <span>The app will be added to your home screen and app drawer. Launch it anytime!</span>
+                    </li>
+                  </ol>
+                  <div className="mt-4 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <p className="text-sm text-green-800 dark:text-green-200">
+                      <strong>💡 Tip:</strong> You can also use the "Install" button at the top of this page for a quick one-click installation!
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="desktop" className="space-y-4 mt-4">
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-foreground flex items-center gap-2">
+                      <Download className="w-5 h-5 text-primary" />
+                      Installing on Chrome / Edge (Windows, Mac, Linux)
+                    </h3>
+                    <ol className="space-y-3 text-muted-foreground">
+                      <li className="flex gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">1</span>
+                        <span>Look for the <strong>install icon</strong> (computer with arrow) in the address bar on the right side</span>
+                      </li>
+                      <li className="flex gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">2</span>
+                        <span>Click the icon and then click <strong>"Install"</strong></span>
+                      </li>
+                      <li className="flex gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">3</span>
+                        <span>Alternatively, click the <strong>menu button</strong> (three dots) → More tools → <strong>"Install Go-Ads 360°"</strong></span>
+                      </li>
+                      <li className="flex gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">4</span>
+                        <span>The app will open in its own window and be added to your applications</span>
+                      </li>
+                    </ol>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-foreground flex items-center gap-2">
+                      <Download className="w-5 h-5 text-primary" />
+                      Installing on Safari (Mac)
+                    </h3>
+                    <ol className="space-y-3 text-muted-foreground">
+                      <li className="flex gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">1</span>
+                        <span>Safari doesn't support PWA installation on macOS. We recommend using <strong>Chrome or Edge</strong> for the best experience</span>
+                      </li>
+                      <li className="flex gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">2</span>
+                        <span>You can still bookmark the page for quick access from your Favorites Bar</span>
+                      </li>
+                    </ol>
+                  </div>
+
+                  <div className="mt-4 p-4 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <p className="text-sm text-purple-800 dark:text-purple-200">
+                      <strong>💡 Benefits:</strong> The desktop app runs in its own window, appears in your taskbar/dock, and launches faster than opening a browser tab!
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+
+        {/* Additional Benefits */}
+        <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-secondary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-primary" />
+              Why Install Go-Ads 360°?
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <h4 className="font-semibold text-foreground flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-primary" />
+                  Productivity Boost
+                </h4>
+                <ul className="text-sm text-muted-foreground space-y-1 ml-6 list-disc">
+                  <li>Launch instantly from home screen</li>
+                  <li>No browser tabs clutter</li>
+                  <li>Work offline during site visits</li>
+                  <li>Faster page loads with caching</li>
+                </ul>
+              </div>
+              <div className="space-y-2">
+                <h4 className="font-semibold text-foreground flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-primary" />
+                  Professional Experience
+                </h4>
+                <ul className="text-sm text-muted-foreground space-y-1 ml-6 list-disc">
+                  <li>Full-screen native app feel</li>
+                  <li>Push notifications for updates</li>
+                  <li>Seamless cross-device sync</li>
+                  <li>Reduced data consumption</li>
+                </ul>
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -152,6 +152,12 @@ const App = () => (
             <Route path="/reports" element={<AppLayout><ReportsDashboard /></AppLayout>} />
             <Route path="/reports/vacant-media" element={<AppLayout><VacantMediaReport /></AppLayout>} />
             <Route path="/admin/ai-assistant" element={<AppLayout><AIAssistant /></AppLayout>} />
+            <Route path="/admin/assistant" element={<AppLayout><AIAssistant /></AppLayout>} />
+            <Route path="/admin/marketplace" element={<AppLayout><Marketplace /></AppLayout>} />
+            <Route path="/admin/tenant-analytics" element={<AppLayout><TenantAnalytics /></AppLayout>} />
+            <Route path="/admin/proformas" element={<AppLayout><ProformasList /></AppLayout>} />
+            <Route path="/admin/proformas/:id" element={<AppLayout><ProformaDetail /></AppLayout>} />
+            <Route path="/admin/estimations" element={<AppLayout><EstimationsList /></AppLayout>} />
             <Route path="/admin/gallery" element={<ProtectedRoute><AppLayout><PhotoGallery /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/photo-library" element={<ProtectedRoute><AppLayout><PhotoGallery /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/import" element={<AppLayout><ImportData /></AppLayout>} />

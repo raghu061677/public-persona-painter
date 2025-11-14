@@ -265,6 +265,37 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
             </Card>
           )}
 
+          {/* Status & Visibility Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Status & Visibility</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Status</span>
+                  <Badge className={getStatusColor(asset.status)}>
+                    {asset.status}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Visibility</span>
+                  <Badge variant={asset.is_public ? "default" : "secondary"}>
+                    {asset.is_public ? "Public" : "Private"}
+                  </Badge>
+                </div>
+                {asset.next_available_from && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Available From</span>
+                    <span className="text-sm font-medium">
+                      {new Date(asset.next_available_from).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Latest Photos Section */}
           <LatestPhotosSection assetId={asset.id} />
         </div>

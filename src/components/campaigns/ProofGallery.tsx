@@ -3,7 +3,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle, XCircle, Image as ImageIcon, CheckCircle2 } from "lucide-react";
+import { CheckCircle, XCircle, Image as ImageIcon, CheckCircle2, Download } from "lucide-react";
 import { ProofApprovalDialog } from "./ProofApprovalDialog";
 
 interface ProofGalleryProps {
@@ -14,6 +14,29 @@ interface ProofGalleryProps {
 export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [approvalAsset, setApprovalAsset] = useState<any>(null);
+
+  const handleDownload = async (asset: any, photoUrl: string, photoType: string) => {
+    try {
+      const { downloadImageWithWatermark } = await import('@/lib/downloadWithWatermark');
+      
+      await downloadImageWithWatermark({
+        assetData: {
+          city: asset.city,
+          area: asset.area,
+          location: asset.location,
+          direction: asset.direction,
+          dimension: asset.dimension,
+          total_sqft: asset.total_sqft,
+          illumination_type: asset.illumination_type,
+        },
+        imageUrl: photoUrl,
+        category: photoType,
+        assetId: asset.asset_id,
+      });
+    } catch (error) {
+      console.error('Error downloading with watermark:', error);
+    }
+  };
   
   const photoTypes = [
     { key: 'newspaperPhoto', label: 'Newspaper' },
@@ -79,15 +102,24 @@ export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
                     <div key={photoType.key} className="space-y-2">
                       <p className="text-sm font-medium">{photoType.label}</p>
                       {photo?.url ? (
-                        <div
-                          className="relative aspect-square rounded-lg overflow-hidden cursor-pointer border hover:border-primary transition-colors"
-                          onClick={() => setSelectedPhoto(photo.url)}
-                        >
+                        <div className="relative aspect-square rounded-lg overflow-hidden border hover:border-primary transition-colors group">
                           <img
                             src={photo.url}
                             alt={photoType.label}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover cursor-pointer"
+                            onClick={() => setSelectedPhoto(photo.url)}
                           />
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownload(asset, photo.url, photoType.label);
+                            }}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
                         </div>
                       ) : (
                         <div className="aspect-square rounded-lg border-2 border-dashed flex items-center justify-center text-muted-foreground">

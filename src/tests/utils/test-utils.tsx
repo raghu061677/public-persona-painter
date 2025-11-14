@@ -1,5 +1,6 @@
 import { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -36,5 +37,7 @@ const customRender = (
   options?: Omit<RenderOptions, 'wrapper'>
 ) => render(ui, { wrapper: AllProviders, ...options });
 
+// Export all testing utilities
 export * from '@testing-library/react';
 export { customRender as render };
+export { userEvent };

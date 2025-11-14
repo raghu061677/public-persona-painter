@@ -3,6 +3,7 @@ import SidebarLayout from "@/layouts/SidebarLayout";
 import Topbar from "@/layouts/Topbar";
 import CommandPalette from "@/components/CommandPalette";
 import { QuickAddDrawer } from "@/components/ui/quick-add-drawer";
+import { BreadcrumbNav } from "@/components/ui/breadcrumb-nav";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -30,6 +31,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <Topbar onSearchOpen={() => setCommandOpen(true)} />
             <main className="flex-1 overflow-y-auto overflow-x-hidden bg-secondary/20 p-3 sm:p-4 md:p-6 lg:p-8 pb-20 md:pb-6">
               <div className="w-full max-w-[1600px] mx-auto">
+                <BreadcrumbNav />
                 {children}
               </div>
             </main>

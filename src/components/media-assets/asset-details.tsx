@@ -130,8 +130,10 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
         )}
       </div>
 
-      {/* Full Width Details Section */}
-      <div className="space-y-6">
+      {/* Two Column Layout: Tables on Left, Images on Right */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Full Details (2/3 width) */}
+        <div className="lg:col-span-2 space-y-6">
           <Tabs defaultValue="overview" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -180,8 +182,96 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
           </div>
         </div>
 
-      {/* Bottom Section: Latest Photos and Images Side by Side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+        {/* Right Column - Image Preview (1/3 width) */}
+        <div className="lg:col-span-1 space-y-6">
+          {/* Images Preview Card */}
+          {allImages.length > 0 && (
+            <Card className="border-l-4 border-l-primary sticky top-6">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between text-lg">
+                  <span>Images</span>
+                  <span className="text-sm font-normal text-muted-foreground">
+                    {selectedImageIndex + 1} / {allImages.length}
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Main Image Display */}
+                <div className="relative aspect-square bg-muted rounded-lg overflow-hidden">
+                  <img
+                    src={allImages[selectedImageIndex].url}
+                    alt={allImages[selectedImageIndex].name}
+                    className="w-full h-full object-cover"
+                  />
+                  {allImages[selectedImageIndex].tag && (
+                    <div className="absolute top-2 right-2">
+                      <Badge variant="secondary" className="bg-background/80 backdrop-blur">
+                        {allImages[selectedImageIndex].tag}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+
+                {/* Navigation Controls */}
+                {allImages.length > 1 && (
+                  <div className="flex items-center justify-between">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setSelectedImageIndex((prev) => 
+                        prev === 0 ? allImages.length - 1 : prev - 1
+                      )}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      {allImages[selectedImageIndex].name}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setSelectedImageIndex((prev) => 
+                        prev === allImages.length - 1 ? 0 : prev + 1
+                      )}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+
+                {/* Thumbnail Strip */}
+                {allImages.length > 1 && (
+                  <div className="grid grid-cols-4 gap-2">
+                    {allImages.map((img, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedImageIndex(idx)}
+                        className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                          idx === selectedImageIndex
+                            ? 'border-primary ring-2 ring-primary/20'
+                            : 'border-transparent hover:border-muted-foreground/20'
+                        }`}
+                      >
+                        <img
+                          src={img.url}
+                          alt={img.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Latest Photos Section */}
+          <LatestPhotosSection assetId={asset.id} />
+        </div>
+      </div>
+
+      {/* Bottom Section: Latest Photos (moved to right column above) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8 lg:hidden">
         {/* Latest Photos Section */}
         <div>
           <LatestPhotosSection assetId={asset.id} />

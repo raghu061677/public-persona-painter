@@ -36,20 +36,60 @@ export default function MediaAssetsList() {
 
   const fetchAssets = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    
+    // Fetch media assets
+    const { data: assetsData, error: assetsError } = await supabase
       .from('media_assets')
       .select('*')
       .order('id', { ascending: true });
 
-    if (error) {
+    if (assetsError) {
       toast({
         title: "Error",
         description: "Failed to fetch media assets",
         variant: "destructive",
       });
-    } else {
-      setAssets(data || []);
+      setLoading(false);
+      return;
     }
+
+    // Fetch latest photos for each asset
+    const { data: photosData } = await supabase
+      .from('media_photos')
+      .select('asset_id, photo_url, uploaded_at')
+      .order('uploaded_at', { ascending: false });
+
+    // Group photos by asset_id and get the latest one
+    const latestPhotoMap = new Map();
+    if (photosData) {
+      photosData.forEach((photo) => {
+        if (!latestPhotoMap.has(photo.asset_id)) {
+          latestPhotoMap.set(photo.asset_id, photo.photo_url);
+        }
+      });
+    }
+
+    // Merge latest photos into assets data
+    const enrichedAssets = (assetsData || []).map(asset => {
+      const images = typeof asset.images === 'object' && asset.images !== null 
+        ? asset.images as any 
+        : {};
+      
+      const existingPhotos = Array.isArray(images.photos) ? images.photos : [];
+      const latestPhoto = latestPhotoMap.get(asset.id);
+      
+      return {
+        ...asset,
+        images: {
+          ...images,
+          photos: latestPhoto 
+            ? [{ url: latestPhoto, tag: 'Latest', uploaded_at: new Date().toISOString() }, ...existingPhotos]
+            : existingPhotos
+        }
+      };
+    });
+
+    setAssets(enrichedAssets);
     setLoading(false);
   };
 

@@ -82,7 +82,7 @@ export default function UserPermissionsView() {
         MODULES.forEach(module => {
           const perm = permsData?.find(p => p.role === role && p.module === module.key);
           // Admin has all permissions by default
-          permsMap[role][module.key] = role === 'admin' ? true : (perm?.can_view || false);
+          permsMap[role][module.key] = role === 'admin' ? true : ((perm as any)?.can_view || false);
         });
       });
 

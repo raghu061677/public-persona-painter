@@ -142,7 +142,7 @@ export default function MediaAssetsList() {
   }
 
   return (
-    <div className="h-screen w-full flex flex-col bg-background overflow-hidden">
+    <div className="h-full w-full flex flex-col bg-background">
       <ImportDialog onImportComplete={fetchAssets} />
 
       {/* Header with Stats */}
@@ -197,12 +197,14 @@ export default function MediaAssetsList() {
       </div>
 
       {/* Table Area */}
-      <main className="flex-1 overflow-auto py-4">
-        <MediaAssetsTable 
-          assets={assets} 
-          onRefresh={fetchAssets}
-        />
-      </main>
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full overflow-auto p-6">
+          <MediaAssetsTable 
+            assets={assets} 
+            onRefresh={fetchAssets}
+          />
+        </div>
+      </div>
     </div>
   );
 }

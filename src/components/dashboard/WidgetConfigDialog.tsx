@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 
-interface Widget {
+export interface Widget {
   id: string;
   type: string;
   metric: string;
@@ -13,6 +13,11 @@ interface Widget {
   visualizationType: string;
   title: string;
   config: any;
+  filters?: {
+    city?: string;
+    clientId?: string;
+    assetType?: string;
+  };
 }
 
 interface WidgetConfigDialogProps {

@@ -22,7 +22,7 @@ import { useState } from "react";
  * with import/export functionality
  */
 export function GlobalLayoutSettings() {
-  const { allSettings, resetAllSettings, exportSettings, importSettings } = useAllLayoutSettings();
+  const { allSettings, updateSetting, resetAllSettings, exportSettings, importSettings } = useAllLayoutSettings();
   const [open, setOpen] = useState(false);
 
   const handleExport = () => {
@@ -62,6 +62,10 @@ export function GlobalLayoutSettings() {
     }
   };
 
+  const handleToggle = (pageId: string, key: string, value: boolean) => {
+    updateSetting(pageId, key, value);
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -91,7 +95,7 @@ export function GlobalLayoutSettings() {
                   <Switch
                     id={`dashboard-${key}`}
                     checked={value as boolean}
-                    disabled
+                    onCheckedChange={(checked) => handleToggle('dashboard', key, checked)}
                   />
                 </div>
               ))}
@@ -112,7 +116,7 @@ export function GlobalLayoutSettings() {
                   <Switch
                     id={`plans-${key}`}
                     checked={value as boolean}
-                    disabled
+                    onCheckedChange={(checked) => handleToggle('plans', key, checked)}
                   />
                 </div>
               ))}
@@ -135,7 +139,7 @@ export function GlobalLayoutSettings() {
                       <Switch
                         id={`${pageId}-${key}`}
                         checked={value as boolean}
-                        disabled
+                        onCheckedChange={(checked) => handleToggle(pageId, key, checked)}
                       />
                     </div>
                   ))}

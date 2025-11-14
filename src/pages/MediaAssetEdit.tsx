@@ -18,7 +18,7 @@ import { ArrowLeft, Save, Calendar as CalendarIcon, ExternalLink, HelpCircle, Ma
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { PhotoUploadSection } from "@/components/media-assets/PhotoUploadSection";
-import { PhotoGallery } from "@/components/media-assets/PhotoGallery";
+import { UnifiedPhotoGallery } from "@/components/common/UnifiedPhotoGallery";
 
 export default function MediaAssetEdit() {
   const { id } = useParams();
@@ -1022,10 +1022,12 @@ export default function MediaAssetEdit() {
                     </div>
                   </CardHeader>
                   <CardContent className="pt-6">
-                    <PhotoGallery 
-                      assetId={formData.id} 
+                    <UnifiedPhotoGallery 
                       photos={formData.images.photos}
                       onPhotoDeleted={fetchAsset}
+                      canDelete={isAdmin}
+                      bucket="media-assets"
+                      title="Asset Photos"
                     />
                   </CardContent>
                 </Card>

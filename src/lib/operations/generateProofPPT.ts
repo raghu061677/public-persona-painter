@@ -21,7 +21,7 @@ interface AssetData {
 
 interface PhotoData {
   photo_url: string;
-  tag: string;
+  category: string;
   latitude?: number;
   longitude?: number;
   uploaded_at: string;
@@ -48,12 +48,17 @@ export async function generateProofOfDisplayPPT(campaignId: string): Promise<voi
     if (!campaign) throw new Error("Campaign not found");
 
     // Fetch all photos for this campaign
-    const { data: photos, error: photosError } = await supabase
-      .from("operations_photos")
+    // @ts-ignore - Complex Supabase type inference issue
+    const photoQuery = await supabase
+      .from("media_photos")
       .select("*")
       .eq("campaign_id", campaignId)
+      .eq("photo_type", "operations_proof")
       .order("asset_id", { ascending: true })
       .order("uploaded_at", { ascending: true });
+    
+    const photos = (photoQuery?.data || []) as any[];
+    const photosError = photoQuery?.error;
 
     if (photosError) throw photosError;
     if (!photos || photos.length === 0) {
@@ -289,9 +294,9 @@ function addPhotoToSlide(
     "Other Photo": "6B7280",
   };
 
-  const tagColor = tagColors[photo.tag] || "6B7280";
+  const tagColor = tagColors[photo.category] || "6B7280";
   
-  slide.addText(photo.tag, {
+  slide.addText(photo.category, {
     x: x + 0.1,
     y: y + 0.1,
     w: 1.5,

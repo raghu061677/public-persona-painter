@@ -73,6 +73,7 @@ import ProformaDetail from "./pages/ProformaDetail";
 import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 import ComponentShowcase from "./pages/ComponentShowcase";
+import DashboardBuilder from "./pages/DashboardBuilder";
 
 const queryClient = new QueryClient();
 
@@ -158,6 +159,8 @@ const App = () => (
             
             {/* Operations Photo Upload */}
             <Route path="/admin/operations/:campaignId/assets/:assetId" element={<AppLayout><CampaignAssetProofs /></AppLayout>} />
+            <Route path="/admin/ui-showcase" element={<AppLayout><ComponentShowcase /></AppLayout>} />
+            <Route path="/admin/dashboard-builder" element={<AppLayout><DashboardBuilder /></AppLayout>} />
             
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />

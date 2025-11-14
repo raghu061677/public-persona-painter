@@ -5,7 +5,7 @@ import {
   Wallet, BarChart2, Image, Upload, Download, Settings,
   Menu, ChevronDown, ChevronRight, Target, TrendingUp,
   FileText, Building2, CreditCard, Smartphone, MessageSquare,
-  UserCog, FileSpreadsheet, Receipt, LayoutDashboard, Brain, Zap
+  UserCog, FileSpreadsheet, Receipt, LayoutDashboard, Brain, Zap, Palette
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NavLink } from "react-router-dom";
@@ -87,7 +87,8 @@ const MENU_SECTIONS: MenuSection[] = [
     items: [
       { label: "AI Assistant", icon: Brain, path: "/admin/assistant", module: "dashboard" },
       { label: "Reports", icon: BarChart2, path: "/reports", module: "reports" },
-      { label: "UI Components", icon: Layers, path: "/admin/ui-showcase", module: "dashboard" },
+      { label: "UI Components", icon: Palette, path: "/admin/ui-showcase", module: "dashboard" },
+      { label: "Dashboard Builder", icon: LayoutDashboard, path: "/admin/dashboard-builder", module: "dashboard" },
       { label: "Import", icon: Upload, path: "/admin/import", module: "settings", roles: ['admin'] },
       { label: "Export", icon: Download, path: "/admin/export", module: "settings", roles: ['admin'] },
     ],

@@ -162,6 +162,14 @@ export async function uploadPhoto(
     }
 
     // Stage 5: Save to database
+    // Map PhotoTag to category (media_photos expects: Mounting, Display, Proof, Monitoring, General)
+    const categoryMap: Record<PhotoTag, string> = {
+      'Traffic': 'Proof',
+      'Newspaper': 'Proof',
+      'Geo-Tagged': 'Proof',
+      'Other': 'General'
+    };
+
     const { data: photoRecord, error: dbError } = await supabase
       .from('media_photos')
       .insert({
@@ -169,18 +177,18 @@ export async function uploadPhoto(
         campaign_id: metadata.campaign_id,
         client_id: metadata.client_id,
         photo_url: urlData.publicUrl,
-        photo_type: metadata.photo_type,
-        category: tag,
+        category: categoryMap[tag] || 'General',
         uploaded_by: (await supabase.auth.getUser()).data.user?.id,
         metadata: {
+          photo_tag: tag,
+          photo_type: metadata.photo_type,
           latitude,
           longitude,
+          validation_score: validation?.score,
+          validation_issues: validation?.issues || [],
+          validation_suggestions: validation?.suggestions || [],
           ...metadata
-        },
-        validation_score: validation?.score,
-        validation_issues: validation?.issues || [],
-        validation_suggestions: validation?.suggestions || [],
-        tags: [tag]
+        }
       })
       .select()
       .single();

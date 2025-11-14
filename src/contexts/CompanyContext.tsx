@@ -65,7 +65,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      setCompanyUser(companyUserData);
+      setCompanyUser(companyUserData as CompanyUser);
 
       if (companyUserData) {
         // Get company details
@@ -78,8 +78,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         if (companyError) {
           console.error('Error fetching company:', companyError);
         } else {
-          setCompany(companyData);
-          setIsPlatformAdmin(companyData.type === 'platform_admin');
+          setCompany(companyData as Company);
+          setIsPlatformAdmin((companyData as any).type === 'platform_admin');
         }
       }
     } catch (error) {

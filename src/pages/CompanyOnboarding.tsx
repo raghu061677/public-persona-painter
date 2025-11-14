@@ -41,12 +41,24 @@ export default function CompanyOnboarding() {
 
     try {
       // Create company
-      const { data: company, error: companyError } = await supabase
+      const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .insert({
-          ...formData,
+          name: formData.name,
+          legal_name: formData.legal_name,
+          type: formData.type as any,
+          gstin: formData.gstin,
+          pan: formData.pan,
+          address_line1: formData.address_line1,
+          address_line2: formData.address_line2,
+          city: formData.city,
+          state: formData.state,
+          pincode: formData.pincode,
+          phone: formData.phone,
+          email: formData.email,
+          website: formData.website,
           created_by: user.id,
-          status: 'pending'
+          status: 'pending' as any
         })
         .select()
         .single();
@@ -57,7 +69,7 @@ export default function CompanyOnboarding() {
       const { error: linkError } = await supabase
         .from('company_users')
         .insert({
-          company_id: company.id,
+          company_id: (companyData as any).id,
           user_id: user.id,
           role: 'admin',
           is_primary: true,

@@ -79,6 +79,7 @@ import DashboardBuilder from "./pages/DashboardBuilder";
 import DataExportImport from "./pages/DataExportImport";
 import CompanyOnboarding from "./pages/CompanyOnboarding";
 import CompaniesManagement from "./pages/CompaniesManagement";
+import Marketplace from "./pages/Marketplace";
 import ClientPortalDashboard from "./pages/ClientPortalDashboard";
 import ClientCampaignView from "./pages/ClientCampaignView";
 import ClientInvoices from "./pages/ClientInvoices";
@@ -122,6 +123,7 @@ const App = () => (
             <Route path="/admin/media-assets/edit/:id" element={<ProtectedRoute requiredModule="media_assets" requiredAction="update"><AppLayout><MediaAssetEdit /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets/:id" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><AppLayout><MediaAssetDetail /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets-map" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><AppLayout><MediaAssetsMap /></AppLayout></ProtectedRoute>} />
+            <Route path="/marketplace" element={<ProtectedRoute requireAuth><AppLayout><Marketplace /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/plans" element={<ProtectedRoute requiredModule="plans" requiredAction="view"><AppLayout><PlansList /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/plans/new" element={<ProtectedRoute requiredModule="plans" requiredAction="create"><AppLayout><PlanNew /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/plans/edit/:id" element={<ProtectedRoute requiredModule="plans" requiredAction="update"><AppLayout><PlanEdit /></AppLayout></ProtectedRoute>} />

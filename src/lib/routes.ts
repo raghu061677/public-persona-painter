@@ -101,6 +101,7 @@ export const ROUTES = {
   
   // Multi-Company & Platform Admin
   COMPANY_ONBOARDING: "/onboarding",
+  PLATFORM_ADMIN_SETUP: "/admin/platform-admin-setup",
   COMPANIES_MANAGEMENT: "/admin/companies",
   COMPANY_SETTINGS: "/admin/company-settings",
   PLATFORM_ADMIN_DASHBOARD: "/admin/platform",

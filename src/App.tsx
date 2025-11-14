@@ -113,6 +113,7 @@ const CompanyIntegrations = lazy(() => import("./pages/CompanyIntegrations"));
 const CompanyDeveloper = lazy(() => import("./pages/CompanyDeveloper"));
 const CompanyWorkflows = lazy(() => import("./pages/CompanyWorkflows"));
 const PlatformAdminDashboard = lazy(() => import("./pages/PlatformAdminDashboard"));
+const PlatformAdminSetup = lazy(() => import("./pages/PlatformAdminSetup"));
 const CompanyTesting = lazy(() => import("./pages/CompanyTesting"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
 const AIAssistant = lazy(() => import("./pages/AIAssistant"));
@@ -248,6 +249,10 @@ const App = () => (
             
             {/* Company Onboarding */}
             <Route path="/onboarding" element={<CompanyOnboarding />} />
+            
+            {/* Platform Admin Setup */}
+            <Route path="/admin/platform-admin-setup" element={<PlatformAdminSetup />} />
+            
             <Route path="/admin/approval-settings" element={<AppLayout><ApprovalSettings /></AppLayout>} />
             <Route path="/admin/approval-delegation" element={<AppLayout><ApprovalDelegation /></AppLayout>} />
             <Route path="/admin/approval-analytics" element={<AppLayout><ApprovalAnalytics /></AppLayout>} />

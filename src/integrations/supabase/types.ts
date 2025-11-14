@@ -3392,6 +3392,10 @@ export type Database = {
         Returns: Json
       }
       seed_demo_companies: { Args: never; Returns: Json }
+      setup_platform_admin: {
+        Args: { p_company_name?: string; p_user_email: string }
+        Returns: Json
+      }
       test_company_rls_isolation: {
         Args: { test_company_id: string; test_user_id: string }
         Returns: Json

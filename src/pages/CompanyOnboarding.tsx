@@ -5,17 +5,27 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, FileText, MapPin, Phone, Mail } from "lucide-react";
+import { Building2, FileText, MapPin, Phone, Mail, CheckCircle2, ChevronRight, ChevronLeft } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const STEPS = [
+  { id: 1, title: "Company Type", description: "Choose your business model" },
+  { id: 2, title: "Basic Details", description: "Company name and legal information" },
+  { id: 3, title: "Tax Information", description: "GSTIN and PAN details" },
+  { id: 4, title: "Address", description: "Office location details" },
+  { id: 5, title: "Contact", description: "Communication details" },
+  { id: 6, title: "Review", description: "Verify and submit" },
+];
 
 export default function CompanyOnboarding() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -32,6 +42,39 @@ export default function CompanyOnboarding() {
     email: "",
     website: ""
   });
+
+  const validateStep = (step: number): boolean => {
+    switch (step) {
+      case 1:
+        return !!formData.type;
+      case 2:
+        return !!formData.name && !!formData.legal_name;
+      case 3:
+        return !!formData.gstin && !!formData.pan;
+      case 4:
+        return !!formData.address_line1 && !!formData.city && !!formData.state && !!formData.pincode;
+      case 5:
+        return !!formData.phone && !!formData.email;
+      default:
+        return true;
+    }
+  };
+
+  const handleNext = () => {
+    if (!validateStep(currentStep)) {
+      toast({
+        title: "Required Fields Missing",
+        description: "Please fill in all required fields before proceeding.",
+        variant: "destructive"
+      });
+      return;
+    }
+    setCurrentStep((prev) => Math.min(prev + 1, STEPS.length));
+  };
+
+  const handlePrevious = () => {
+    setCurrentStep((prev) => Math.max(prev - 1, 1));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

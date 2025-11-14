@@ -14,9 +14,18 @@ interface PhotoLightboxProps {
   initialIndex: number;
   isOpen: boolean;
   onClose: () => void;
+  assetData?: {
+    location: string;
+    direction: string;
+    dimension: string;
+    total_sqft: number;
+    illumination_type?: string;
+    city?: string;
+    area?: string;
+  };
 }
 
-export function PhotoLightbox({ photos, initialIndex, isOpen, onClose }: PhotoLightboxProps) {
+export function PhotoLightbox({ photos, initialIndex, isOpen, onClose, assetData }: PhotoLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -267,8 +276,8 @@ export function PhotoLightbox({ photos, initialIndex, isOpen, onClose }: PhotoLi
           draggable={false}
         />
         
-        {/* Photo Info Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
+        {/* Photo Info Overlay - Bottom */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-6">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <Badge className={getCategoryColor(currentPhoto.category)}>
@@ -285,6 +294,60 @@ export function PhotoLightbox({ photos, initialIndex, isOpen, onClose }: PhotoLi
             )}
           </div>
         </div>
+
+        {/* Asset Details Panel - Top Right */}
+        {assetData && (
+          <div className="absolute top-20 right-4 bg-card/95 backdrop-blur-sm border border-border rounded-lg p-4 shadow-lg max-w-xs">
+            <h3 className="text-sm font-semibold text-foreground mb-3 border-b border-border pb-2">
+              Asset Information
+            </h3>
+            <div className="space-y-2.5">
+              {assetData.city && assetData.area && (
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground">Location</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {assetData.city} - {assetData.area}
+                  </span>
+                  <span className="text-xs text-muted-foreground mt-0.5">
+                    {assetData.location}
+                  </span>
+                </div>
+              )}
+              
+              {assetData.direction && (
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground">Direction</span>
+                  <span className="text-sm font-medium text-foreground">{assetData.direction}</span>
+                </div>
+              )}
+              
+              {assetData.dimension && (
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground">Dimension</span>
+                  <span className="text-sm font-medium text-foreground">{assetData.dimension}</span>
+                </div>
+              )}
+              
+              {assetData.total_sqft && (
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground">Total Area</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {assetData.total_sqft.toFixed(2)} sq.ft
+                  </span>
+                </div>
+              )}
+              
+              {assetData.illumination_type && (
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground">Illumination</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {assetData.illumination_type}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

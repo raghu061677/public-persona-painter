@@ -14,7 +14,7 @@ export interface AssetWatermarkData {
   direction?: string;
   dimension?: string;
   total_sqft?: number;
-  illumination_type?: string;
+  illumination?: string;
 }
 
 interface WatermarkOptions {
@@ -143,7 +143,7 @@ export async function downloadImageWithWatermark({
     if (fieldsToShow.includes('direction') && assetData.direction) fieldCount++;
     if (fieldsToShow.includes('dimension') && assetData.dimension) fieldCount++;
     if (fieldsToShow.includes('area') && assetData.total_sqft) fieldCount++;
-    if (fieldsToShow.includes('illumination') && assetData.illumination_type) fieldCount++;
+    if (fieldsToShow.includes('illumination') && assetData.illumination) fieldCount++;
     
     const panelHeight = 35 + (fieldCount * lineHeight) + 20;
     const panelWidth = settings.panel_width;
@@ -246,8 +246,8 @@ export async function downloadImageWithWatermark({
       y += lineHeight;
     }
 
-    if (fieldsToShow.includes('illumination') && assetData.illumination_type) {
-      drawText('Illumination:', assetData.illumination_type, y);
+    if (fieldsToShow.includes('illumination') && assetData.illumination) {
+      drawText('Lighting Type:', assetData.illumination, y);
     }
 
     // Convert canvas to blob and download

@@ -19,7 +19,7 @@ interface PhotoLightboxProps {
     direction: string;
     dimension: string;
     total_sqft: number;
-    illumination_type?: string;
+    illumination?: string;
     city?: string;
     area?: string;
   };
@@ -173,7 +173,7 @@ export function PhotoLightbox({ photos, initialIndex, isOpen, onClose, assetData
           direction: assetData.direction,
           dimension: assetData.dimension,
           total_sqft: assetData.total_sqft,
-          illumination_type: assetData.illumination_type,
+          illumination: assetData.illumination,
         },
         imageUrl: currentPhoto.photo_url,
         category: currentPhoto.category,
@@ -347,25 +347,23 @@ export function PhotoLightbox({ photos, initialIndex, isOpen, onClose, assetData
               
               {assetData.dimension && (
                 <div className="flex flex-col">
-                  <span className="text-xs text-muted-foreground">Dimension</span>
+                  <span className="text-xs text-muted-foreground">Size/Dimension</span>
                   <span className="text-sm font-medium text-foreground">{assetData.dimension}</span>
                 </div>
               )}
+              
+              <div className="flex flex-col">
+                <span className="text-xs text-muted-foreground">Lighting Type</span>
+                <span className="text-sm font-medium text-foreground">
+                  {assetData.illumination || 'Non-lit'}
+                </span>
+              </div>
               
               {assetData.total_sqft && (
                 <div className="flex flex-col">
                   <span className="text-xs text-muted-foreground">Total Area</span>
                   <span className="text-sm font-medium text-foreground">
                     {assetData.total_sqft.toFixed(2)} sq.ft
-                  </span>
-                </div>
-              )}
-              
-              {assetData.illumination_type && (
-                <div className="flex flex-col">
-                  <span className="text-xs text-muted-foreground">Illumination</span>
-                  <span className="text-sm font-medium text-foreground">
-                    {assetData.illumination_type}
                   </span>
                 </div>
               )}

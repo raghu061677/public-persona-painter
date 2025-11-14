@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { PageContainer } from "@/components/ui/page-container";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -202,7 +203,7 @@ export default function CampaignsList() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-6 py-8 space-y-6">
+        <PageContainer className="space-y-6">
           <div className="flex items-center justify-between mb-8">
             <div className="space-y-2">
               <Skeleton className="h-9 w-48" />
@@ -212,14 +213,14 @@ export default function CampaignsList() {
           </div>
           <SkeletonStats count={4} />
           <SkeletonTable rows={10} columns={6} />
-        </div>
+        </PageContainer>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-6 py-8">
+      <PageContainer>
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold">Campaigns</h1>
@@ -444,7 +445,7 @@ export default function CampaignsList() {
             navigate('/admin/campaigns');
           }}
         />
-      </div>
+      </PageContainer>
     </div>
   );
 }

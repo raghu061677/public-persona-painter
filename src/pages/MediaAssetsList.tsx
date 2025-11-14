@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, MapPin, TrendingUp, Layers, ShieldCheck, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Plus, TrendingUp, Layers, ShieldCheck, Map as MapIcon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ROUTES } from "@/lib/routes";
 import { MediaAssetsTable } from "@/components/media-assets/media-assets-table";
@@ -12,27 +12,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SkeletonTable } from "@/components/ui/loading-skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
-import { FloatingActionButton } from "@/components/ui/floating-action-button";
 
 export default function MediaAssetsList() {
   const navigate = useNavigate();
   const [assets, setAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { isAdmin } = useAuth();
-  
-  // Sidebar collapse state - default collapsed on smaller screens
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    const saved = localStorage.getItem('media-assets-sidebar-collapsed');
-    return saved !== null ? JSON.parse(saved) : window.innerWidth < 1366;
-  });
 
   useEffect(() => {
     fetchAssets();
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem('media-assets-sidebar-collapsed', JSON.stringify(sidebarCollapsed));
-  }, [sidebarCollapsed]);
 
   const fetchAssets = async () => {
     setLoading(true);
@@ -117,7 +106,7 @@ export default function MediaAssetsList() {
     {
       title: "Cities",
       value: uniqueCities,
-      icon: MapPin,
+      icon: MapIcon,
       color: "text-purple-600",
       bgColor: "bg-purple-50 dark:bg-purple-950/20"
     },
@@ -154,108 +143,66 @@ export default function MediaAssetsList() {
 
   return (
     <div className="h-screen w-full flex flex-col bg-background overflow-hidden">
-      {/* Top Header Bar */}
+      <ImportDialog onImportComplete={fetchAssets} />
+
+      {/* Header with Stats */}
       <div className="flex-none border-b bg-card">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="shrink-0"
-              title={sidebarCollapsed ? "Show Sidebar" : "Hide Sidebar"}
-            >
-              {sidebarCollapsed ? (
-                <PanelLeftOpen className="h-4 w-4" />
-              ) : (
-                <PanelLeftClose className="h-4 w-4" />
-              )}
-            </Button>
+        <div className="px-6 py-4 space-y-6">
+          {/* Title and Actions */}
+          <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Media Assets</h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground mt-1">
                 Manage and track all OOH advertising assets
               </p>
             </div>
+            
+            {isAdmin && (
+              <Button onClick={() => navigate(ROUTES.MEDIA_ASSETS_NEW)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Asset
+              </Button>
+            )}
           </div>
-          <div className="flex items-center gap-2">
-            <ImportDialog onImportComplete={fetchAssets} />
+
+          {/* Quick Stats - Horizontal */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {statCards.map((stat, index) => {
+              const Icon = stat.icon;
+              return (
+                <Card key={index} className="shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">
+                          {stat.title}
+                        </p>
+                        <p className="text-2xl font-bold">
+                          {stat.title === "Total Value" 
+                            ? `₹${(Number(stat.value) / 100000).toFixed(1)}L`
+                            : Number(stat.value).toLocaleString()
+                          }
+                        </p>
+                      </div>
+                      <div className={cn("p-2 rounded-lg", stat.bgColor)}>
+                        <Icon className={cn("h-5 w-5", stat.color)} />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Collapsible Sidebar */}
-        <aside
-          className={cn(
-            "flex-none border-r bg-card transition-all duration-300 overflow-y-auto",
-            sidebarCollapsed ? "w-0 border-r-0" : "w-80"
-          )}
-        >
-          <div className={cn("p-6 space-y-6", sidebarCollapsed && "hidden")}>
-            {/* Stats Cards */}
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                <h3 className="font-semibold text-sm">Quick Stats</h3>
-              </div>
-              <div className="grid grid-cols-1 gap-3">
-                {statCards.map((stat, index) => (
-                  <Card key={index} className="shadow-sm">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs text-muted-foreground font-medium">
-                            {stat.title}
-                          </p>
-                          <p className="text-2xl font-bold mt-1">{stat.value}</p>
-                        </div>
-                        <div className={cn("p-3 rounded-lg", stat.bgColor)}>
-                          <stat.icon className={cn("h-5 w-5", stat.color)} />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-
-            {/* Info Section */}
-            <div className="pt-4 border-t">
-              <div className="flex items-center gap-2 mb-3">
-                <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                <h3 className="font-semibold text-sm">Filter Info</h3>
-              </div>
-              <div className="space-y-2 text-xs text-muted-foreground">
-                <p>• Use table filters for advanced search</p>
-                <p>• Click column headers to sort</p>
-                <p>• Toggle columns with the settings icon</p>
-                <p>• Select rows for bulk actions</p>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        {/* Table Area */}
-        <main className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-auto py-4">
-            <MediaAssetsTable 
-              assets={assets} 
-              onRefresh={fetchAssets}
-            />
-          </div>
-        </main>
-      </div>
-
-      {/* Floating Quick Add Button */}
-      {isAdmin && (
-        <FloatingActionButton
-          onClick={() => navigate(ROUTES.MEDIA_ASSETS_NEW)}
-          label="Add Asset"
-          aria-label="Add new media asset"
+      {/* Table Area */}
+      <main className="flex-1 overflow-auto py-4">
+        <MediaAssetsTable 
+          assets={assets} 
+          onRefresh={fetchAssets}
         />
-      )}
+      </main>
     </div>
   );
 }

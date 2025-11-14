@@ -87,6 +87,7 @@ const MENU_SECTIONS: MenuSection[] = [
     items: [
       { label: "AI Assistant", icon: Brain, path: "/admin/assistant", module: "dashboard" },
       { label: "Reports", icon: BarChart2, path: "/reports", module: "reports" },
+      { label: "UI Components", icon: Layers, path: "/admin/ui-showcase", module: "dashboard" },
       { label: "Import", icon: Upload, path: "/admin/import", module: "settings", roles: ['admin'] },
       { label: "Export", icon: Download, path: "/admin/export", module: "settings", roles: ['admin'] },
     ],

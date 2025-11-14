@@ -72,6 +72,7 @@ import ProformasList from "./pages/ProformasList";
 import ProformaDetail from "./pages/ProformaDetail";
 import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
+import ComponentShowcase from "./pages/ComponentShowcase";
 
 const queryClient = new QueryClient();
 
@@ -153,6 +154,7 @@ const App = () => (
             <Route path="/admin/approval-settings" element={<AppLayout><ApprovalSettings /></AppLayout>} />
             <Route path="/admin/approval-delegation" element={<AppLayout><ApprovalDelegation /></AppLayout>} />
             <Route path="/admin/approval-analytics" element={<AppLayout><ApprovalAnalytics /></AppLayout>} />
+            <Route path="/admin/ui-showcase" element={<ProtectedRoute requireAuth><AppLayout><ComponentShowcase /></AppLayout></ProtectedRoute>} />
             
             {/* Operations Photo Upload */}
             <Route path="/admin/operations/:campaignId/assets/:assetId" element={<AppLayout><CampaignAssetProofs /></AppLayout>} />

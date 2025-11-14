@@ -9,6 +9,7 @@ import { ROUTES } from "@/lib/routes";
 import { MediaAssetsTable } from "@/components/media-assets/media-assets-table";
 import { ImportDialog } from "@/components/media-assets/import-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SkeletonStats, SkeletonTable } from "@/components/ui/loading-skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function MediaAssetsList() {
@@ -63,14 +64,10 @@ export default function MediaAssetsList() {
           </div>
           
           {/* Stats Cards Skeleton */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-32" />
-            ))}
-          </div>
+          <SkeletonStats count={4} />
           
           {/* Table Skeleton */}
-          <Skeleton className="h-96" />
+          <SkeletonTable rows={10} columns={6} />
         </div>
       </div>
     );

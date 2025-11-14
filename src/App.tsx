@@ -91,6 +91,8 @@ const DashboardBuilder = lazy(() => import("./pages/DashboardBuilder"));
 const DataExportImport = lazy(() => import("./pages/DataExportImport"));
 const CompanyOnboarding = lazy(() => import("./pages/CompanyOnboarding"));
 const CompaniesManagement = lazy(() => import("./pages/CompaniesManagement"));
+const CompanySettings = lazy(() => import("./pages/CompanySettings"));
+const PlatformAdminDashboard = lazy(() => import("./pages/PlatformAdminDashboard"));
 const CompanyTesting = lazy(() => import("./pages/CompanyTesting"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
 const AIAssistant = lazy(() => import("./pages/AIAssistant"));
@@ -127,6 +129,8 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute requireAuth><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/dashboard" element={<ProtectedRoute requireAuth><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/companies" element={<ProtectedRoute requireAuth><AppLayout><CompaniesManagement /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/platform" element={<ProtectedRoute requireAuth><AppLayout><PlatformAdminDashboard /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/company-settings" element={<ProtectedRoute requireAuth><AppLayout><CompanySettings /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/company-testing" element={<ProtectedRoute requireAuth><AppLayout><CompanyTesting /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/booking-requests" element={<ProtectedRoute requireAuth><AppLayout><BookingRequests /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/clients" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><AppLayout><ClientsList /></AppLayout></ProtectedRoute>} />

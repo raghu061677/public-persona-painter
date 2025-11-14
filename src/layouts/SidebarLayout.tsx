@@ -15,6 +15,7 @@ import { useState, useMemo } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCompany } from "@/contexts/CompanyContext";
 import { useSwipe } from "@/hooks/use-swipe";
 import { useMenuPreferences } from "@/hooks/useMenuPreferences";
 import { MenuPersonalizationDialog } from "@/components/sidebar/MenuPersonalizationDialog";
@@ -80,11 +81,19 @@ const MENU_SECTIONS: MenuSection[] = [
   {
     title: "Administration",
     items: [
+      { label: "Company Settings", icon: Building2, path: "/admin/company-settings", module: "settings", roles: ['admin'] },
       { label: "Organization Settings", icon: Settings, path: "/admin/organization-settings", module: "settings" },
       { label: "User Management", icon: UserCog, path: "/admin/users", module: "users" },
       { label: "Vendors", icon: Building2, path: "/admin/vendors", module: "settings" },
       { label: "Documents", icon: FileText, path: "/admin/documents", module: "settings" },
       { label: "Rate Cards", icon: CreditCard, path: "/admin/rate-cards", module: "settings" },
+    ],
+  },
+  {
+    title: "Platform Admin",
+    items: [
+      { label: "Platform Dashboard", icon: LayoutDashboard, path: "/admin/platform", module: "settings", roles: ['admin'] },
+      { label: "Companies", icon: Building2, path: "/admin/companies", module: "settings", roles: ['admin'] },
     ],
   },
   {
@@ -123,6 +132,7 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
   
   const { canView, loading: permLoading } = usePermissions();
   const { isAdmin, roles } = useAuth();
+  const { isPlatformAdmin } = useCompany();
   const { preferences, loading: prefsLoading } = useMenuPreferences();
 
   // Filter menu items based on permissions, search, and personalization
@@ -132,6 +142,11 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
     let sections = MENU_SECTIONS.map(section => ({
       ...section,
       items: section.items.filter(item => {
+        // Hide Platform Admin section for non-platform admins
+        if (section.title === "Platform Admin" && !isPlatformAdmin) {
+          return false;
+        }
+        
         // Check role requirement if specified
         if (item.roles && !isAdmin) {
           const hasRequiredRole = item.roles.some(role => roles.includes(role));

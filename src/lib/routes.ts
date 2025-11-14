@@ -98,6 +98,18 @@ export const ROUTES = {
   
   // Vendors
   VENDORS_MANAGEMENT: "/admin/vendors",
+  
+  // Multi-Company & Platform Admin
+  COMPANY_ONBOARDING: "/onboarding",
+  COMPANIES_MANAGEMENT: "/admin/companies",
+  COMPANY_SETTINGS: "/admin/company-settings",
+  PLATFORM_ADMIN_DASHBOARD: "/admin/platform",
+  
+  // Client Portal
+  CLIENT_PORTAL_AUTH: "/portal/auth",
+  CLIENT_PORTAL_DASHBOARD: "/portal/dashboard",
+  CLIENT_PORTAL_CAMPAIGNS: "/portal/campaigns",
+  CLIENT_PORTAL_INVOICES: "/portal/invoices",
 } as const;
 
 /**

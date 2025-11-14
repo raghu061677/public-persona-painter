@@ -7,11 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Bell } from "lucide-react";
+import { Bell, Loader2 } from "lucide-react";
 import { SettingsCard, SettingsContentWrapper, SectionHeader, InputRow, InfoAlert } from "@/components/settings/zoho-style";
 
 export default function CompanyReminders() {
-  const { company, refreshCompany } = useCompany();
+  const { company } = useCompany();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -30,43 +30,81 @@ export default function CompanyReminders() {
   });
 
   useEffect(() => {
-    if (company) {
-      const metadata = (company as any).metadata || {};
-      const reminders = metadata.reminders || {};
-      setFormData({
-        invoice_reminders_enabled: reminders.invoice_reminders_enabled !== false,
-        invoice_reminder_days_before: reminders.invoice_reminder_days_before || 3,
-        invoice_reminder_days_after: reminders.invoice_reminder_days_after || 7,
-        payment_reminders_enabled: reminders.payment_reminders_enabled !== false,
-        payment_reminder_frequency: reminders.payment_reminder_frequency || "weekly",
-        campaign_deadline_reminders: reminders.campaign_deadline_reminders !== false,
-        campaign_reminder_days: reminders.campaign_reminder_days || 5,
-        power_bill_reminders: reminders.power_bill_reminders !== false,
-        power_bill_reminder_days: reminders.power_bill_reminder_days || 5,
-        operations_reminders: reminders.operations_reminders !== false,
-        operations_reminder_hours: reminders.operations_reminder_hours || 24,
-      });
-    }
-  }, [company]);
+    const loadSettings = async () => {
+      if (!company) return;
+
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('notification_settings' as any)
+          .select('*')
+          .eq('company_id', company.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (data) {
+          const reminders = (data as any).reminders || {};
+          setFormData({
+            invoice_reminders_enabled: reminders.invoice_reminders_enabled !== false,
+            invoice_reminder_days_before: reminders.invoice_reminder_days_before || 3,
+            invoice_reminder_days_after: reminders.invoice_reminder_days_after || 7,
+            payment_reminders_enabled: reminders.payment_reminders_enabled !== false,
+            payment_reminder_frequency: reminders.payment_reminder_frequency || "weekly",
+            campaign_deadline_reminders: reminders.campaign_deadline_reminders !== false,
+            campaign_reminder_days: reminders.campaign_reminder_days || 5,
+            power_bill_reminders: reminders.power_bill_reminders !== false,
+            power_bill_reminder_days: reminders.power_bill_reminder_days || 5,
+            operations_reminders: reminders.operations_reminders !== false,
+            operations_reminder_hours: reminders.operations_reminder_hours || 24,
+          });
+        }
+      } catch (error: any) {
+        console.error("Error loading reminder settings:", error);
+        toast({
+          title: "Failed to load settings",
+          description: error.message,
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, [company, toast]);
 
   const handleSave = async () => {
     if (!company) return;
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('companies' as any)
-        .update({
-          metadata: {
-            ...((company as any).metadata || {}),
+      const { data: existing } = await supabase
+        .from('notification_settings' as any)
+        .select('id')
+        .eq('company_id', company.id)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from('notification_settings' as any)
+          .update({
             reminders: formData,
-          }
-        })
-        .eq('id', company.id);
+            updated_at: new Date().toISOString(),
+          } as any)
+          .eq('company_id', company.id);
 
-      if (error) throw error;
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('notification_settings' as any)
+          .insert({
+            company_id: company.id,
+            reminders: formData,
+          } as any);
 
-      await refreshCompany();
+        if (error) throw error;
+      }
 
       toast({
         title: "Reminder settings updated",
@@ -83,6 +121,16 @@ export default function CompanyReminders() {
       setLoading(false);
     }
   };
+
+  if (loading && formData.invoice_reminder_days_before === 3 && formData.invoice_reminder_days_after === 7) {
+    return (
+      <SettingsContentWrapper>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </SettingsContentWrapper>
+    );
+  }
 
   return (
     <SettingsContentWrapper>
@@ -262,6 +310,7 @@ export default function CompanyReminders() {
 
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={loading}>
+          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {loading ? "Saving..." : "Save Changes"}
         </Button>
       </div>

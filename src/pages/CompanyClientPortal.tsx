@@ -11,7 +11,7 @@ import { SettingsCard, SettingsContentWrapper, SectionHeader, InputRow, InfoAler
 import { ClientPortalPreview } from "@/components/settings/ClientPortalPreview";
 
 export default function CompanyClientPortal() {
-  const { company, refreshCompany } = useCompany();
+  const { company } = useCompany();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -29,49 +29,87 @@ export default function CompanyClientPortal() {
   });
 
   useEffect(() => {
-    if (company) {
-      const metadata = (company as any).metadata || {};
-      const portal = metadata.client_portal || {};
-      setFormData({
-        portal_enabled: portal.portal_enabled !== false,
-        portal_welcome_message: portal.portal_welcome_message || "",
-        portal_footer_text: portal.portal_footer_text || "",
-        allow_document_download: portal.allow_document_download !== false,
-        allow_payment_online: portal.allow_payment_online !== false,
-        show_campaign_progress: portal.show_campaign_progress !== false,
-        show_proof_gallery: portal.show_proof_gallery !== false,
-        require_login: portal.require_login !== false,
-        session_timeout_minutes: portal.session_timeout_minutes || 30,
-        enable_notifications: portal.enable_notifications !== false,
-      });
-    }
-  }, [company]);
+    const loadSettings = async () => {
+      if (!company) return;
+
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('organization_settings' as any)
+          .select('*')
+          .eq('company_id', company.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (data) {
+          const portal = (data as any).client_portal_settings || {};
+          setFormData({
+            portal_enabled: portal.portal_enabled !== false,
+            portal_welcome_message: portal.portal_welcome_message || "",
+            portal_footer_text: portal.portal_footer_text || "",
+            allow_document_download: portal.allow_document_download !== false,
+            allow_payment_online: portal.allow_payment_online !== false,
+            show_campaign_progress: portal.show_campaign_progress !== false,
+            show_proof_gallery: portal.show_proof_gallery !== false,
+            require_login: portal.require_login !== false,
+            session_timeout_minutes: portal.session_timeout_minutes || 30,
+            enable_notifications: portal.enable_notifications !== false,
+          });
+        }
+      } catch (error: any) {
+        console.error("Error loading client portal settings:", error);
+        toast({
+          title: "Failed to load settings",
+          description: error.message,
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, [company, toast]);
 
   const handleSave = async () => {
     if (!company) return;
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('companies' as any)
-        .update({
-          metadata: {
-            ...((company as any).metadata || {}),
-            client_portal: formData,
-          }
-        })
-        .eq('id', company.id);
+      const { data: existing } = await supabase
+        .from('organization_settings' as any)
+        .select('id')
+        .eq('company_id', company.id)
+        .maybeSingle();
 
-      if (error) throw error;
+      if (existing) {
+        const { error } = await supabase
+          .from('organization_settings' as any)
+          .update({
+            client_portal_settings: formData,
+            updated_at: new Date().toISOString(),
+          } as any)
+          .eq('company_id', company.id);
 
-      await refreshCompany();
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('organization_settings' as any)
+          .insert({
+            company_id: company.id,
+            client_portal_settings: formData,
+          } as any);
+
+        if (error) throw error;
+      }
 
       toast({
         title: "Client portal settings updated",
         description: "Your client portal configuration has been saved successfully",
       });
     } catch (error: any) {
-      console.error("Error updating portal settings:", error);
+      console.error("Error updating client portal:", error);
       toast({
         title: "Failed to update settings",
         description: error.message,

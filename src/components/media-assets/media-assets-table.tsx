@@ -193,7 +193,7 @@ const DraggableHeader = ({ header, table, isFrozen, onToggleFreeze }: {
       }}
       className={cn(
         "cursor-move select-none",
-        isFrozen && "bg-muted/30"
+        isFrozen && "frozen-column"
       )}
     >
       <div className="flex items-center gap-2">
@@ -495,7 +495,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
     toggleFrozen,
     isFrozen,
     isReady: frozenReady 
-  } = useFrozenColumns("media-assets");
+  } = useFrozenColumns("media-assets", ["select", "id", "images", "location"]);
   
   const { 
     settings, 
@@ -848,8 +848,8 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
 
         <Card className="h-full flex flex-col overflow-hidden border-2 shadow-lg">
           <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
-            {/* Enhanced scrollable table area */}
-            <div className="flex-1 overflow-auto custom-scrollbar">
+            {/* Enhanced scrollable table area with horizontal and vertical scroll */}
+            <div className="flex-1 overflow-auto custom-scrollbar" style={{ maxHeight: 'calc(100vh - 380px)' }}>
               <div className="min-w-max">
                 <Table style={{ width: table.getCenterTotalSize() }}>
                   <TableHeader className="sticky top-0 z-10 bg-background shadow-sm">
@@ -898,7 +898,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                               }}
                               className={cn(
                                 getCellClassName(),
-                                isFrozen(cell.column.id) && "bg-muted/30"
+                                isFrozen(cell.column.id) && "frozen-column"
                               )}
                             >
                               {flexRender(cell.column.columnDef.cell, cell.getContext())}

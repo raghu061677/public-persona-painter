@@ -239,13 +239,11 @@ export default function MediaAssetsList() {
 
         {/* Table Area */}
         <main className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-auto">
-            <div className="p-6">
-              <MediaAssetsTable 
-                assets={assets} 
-                onRefresh={fetchAssets}
-              />
-            </div>
+          <div className="flex-1 overflow-auto py-4">
+            <MediaAssetsTable 
+              assets={assets} 
+              onRefresh={fetchAssets}
+            />
           </div>
         </main>
       </div>

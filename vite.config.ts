@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
+import { visualizer } from "rollup-plugin-visualizer";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -10,8 +11,34 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor libraries - separate into their own chunks for better caching
+          'vendor-xlsx': ['xlsx'],
+          'vendor-pptxgenjs': ['pptxgenjs'],
+          'vendor-leaflet': ['leaflet', 'react-leaflet', 'leaflet.markercluster', 'leaflet.heat'],
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-ui': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select', '@radix-ui/react-tabs'],
+          'vendor-charts': ['recharts', 'highcharts', 'highcharts-react-official'],
+          'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-utils': ['date-fns', 'clsx', 'tailwind-merge', 'class-variance-authority'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000, // Increase warning limit since we're now splitting properly
+  },
   plugins: [
     react(),
+    // Bundle analyzer - generates stats.html
+    visualizer({
+      open: false,
+      gzipSize: true,
+      brotliSize: true,
+      filename: 'dist/stats.html',
+    }),
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",

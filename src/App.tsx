@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,85 +13,94 @@ import AppLayout from "@/layouts/AppLayout";
 import { ClientPortalLayout } from "@/layouts/ClientPortalLayout";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { OfflineIndicator } from "@/components/pwa/OfflineIndicator";
-import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
-import MediaAssetsList from "./pages/MediaAssetsList";
-import MediaAssetNew from "./pages/MediaAssetNew";
-import MediaAssetDetail from "./pages/MediaAssetDetail";
-import MediaAssetEdit from "./pages/MediaAssetEdit";
-import MediaAssetsMap from "./pages/MediaAssetsMap";
-import MediaAssetsImport from "./pages/MediaAssetsImport";
-import MediaAssetsValidation from "./pages/MediaAssetsValidation";
-import TenantAnalytics from "./pages/TenantAnalytics";
-import ClientsImport from "./pages/ClientsImport";
-import ClientsList from "./pages/ClientsList";
-import ClientNew from "./pages/ClientNew";
-import ClientAnalytics from "./pages/ClientAnalytics";
-import ClientDetail from "./pages/ClientDetail";
-import PlansList from "./pages/PlansList";
-import PlanNew from "./pages/PlanNew";
-import PlanEdit from "./pages/PlanEdit";
-import PlanDetail from "./pages/PlanDetail";
-import PlanShare from "./pages/PlanShare";
-import CampaignsList from "./pages/CampaignsList";
-import CampaignDetail from "./pages/CampaignDetail";
-import CampaignEdit from "./pages/CampaignEdit";
-import CampaignBudget from "./pages/CampaignBudget";
-import CampaignAssetProofs from "./pages/CampaignAssetProofs";
-import MobilePowerBills from "./pages/MobilePowerBills";
-import MobilePage from "./pages/mobile/index";
-import FinanceDashboard from "./pages/FinanceDashboard";
-import EstimationsList from "./pages/EstimationsList";
-import InvoicesList from "./pages/InvoicesList";
-import InvoiceDetail from "./pages/InvoiceDetail";
-import ExpensesList from "./pages/ExpensesList";
-import ReportsDashboard from "./pages/ReportsDashboard";
-import VacantMediaReport from "./pages/VacantMediaReport";
-import PhotoGallery from "./pages/PhotoGallery";
-import ImportData from "./pages/ImportData";
-import ExportData from "./pages/ExportData";
-import UserManagement from "./pages/UserManagement";
-import CodeManagement from "./pages/CodeManagement";
-import PowerBillsDashboard from "./pages/PowerBillsDashboard";
-import PowerBillsAnalytics from "./pages/PowerBillsAnalytics";
-import PowerBillsBulkPayment from "./pages/PowerBillsBulkPayment";
-import PowerBillsBulkUpload from "./pages/PowerBillsBulkUpload";
-import PowerBillsReconciliation from "./pages/PowerBillsReconciliation";
-import PowerBillsSharing from "./pages/PowerBillsSharing";
-import PowerBillsScheduler from "./pages/PowerBillsScheduler";
-import AuditLogs from "./pages/AuditLogs";
-import ApprovalSettings from "./pages/ApprovalSettings";
-import ApprovalDelegation from "./pages/ApprovalDelegation";
-import ApprovalAnalytics from "./pages/ApprovalAnalytics";
-import VendorsManagement from "./pages/VendorsManagement";
-import Settings from "./pages/Settings";
-import ProfileSettings from "./pages/ProfileSettings";
-import ClientPortalAuth from "./pages/ClientPortalAuth";
-import OrganizationSettings from "./pages/OrganizationSettings";
-import OperationsSettings from "./pages/OperationsSettings";
-import Operations from "./pages/Operations";
-import OperationsCalendar from "./pages/OperationsCalendar";
-import OperationsAnalytics from "./pages/OperationsAnalytics";
-import PlanComparison from "./pages/PlanComparison";
-import ProformasList from "./pages/ProformasList";
-import ProformaDetail from "./pages/ProformaDetail";
-import Install from "./pages/Install";
-import NotFound from "./pages/NotFound";
-import ComponentShowcase from "./pages/ComponentShowcase";
-import DashboardBuilder from "./pages/DashboardBuilder";
-import DataExportImport from "./pages/DataExportImport";
-import CompanyOnboarding from "./pages/CompanyOnboarding";
-import CompaniesManagement from "./pages/CompaniesManagement";
-import CompanyTesting from "./pages/CompanyTesting";
-import Marketplace from "./pages/Marketplace";
-import AIAssistant from "./pages/AIAssistant";
-import AnalyticsDashboard from "./pages/AnalyticsDashboard";
-import CustomDashboard from "./pages/CustomDashboard";
-import BookingRequests from "./pages/BookingRequests";
-import ClientPortalDashboard from "./pages/ClientPortalDashboard";
-import ClientCampaignView from "./pages/ClientCampaignView";
-import ClientInvoices from "./pages/ClientInvoices";
-import AccessDenied from "./pages/AccessDenied";
+
+// Loading component for lazy-loaded routes
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+  </div>
+);
+
+// Lazy load all pages for code splitting
+const Auth = lazy(() => import("./pages/Auth"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const MediaAssetsList = lazy(() => import("./pages/MediaAssetsList"));
+const MediaAssetNew = lazy(() => import("./pages/MediaAssetNew"));
+const MediaAssetDetail = lazy(() => import("./pages/MediaAssetDetail"));
+const MediaAssetEdit = lazy(() => import("./pages/MediaAssetEdit"));
+const MediaAssetsMap = lazy(() => import("./pages/MediaAssetsMap"));
+const MediaAssetsImport = lazy(() => import("./pages/MediaAssetsImport"));
+const MediaAssetsValidation = lazy(() => import("./pages/MediaAssetsValidation"));
+const TenantAnalytics = lazy(() => import("./pages/TenantAnalytics"));
+const ClientsImport = lazy(() => import("./pages/ClientsImport"));
+const ClientsList = lazy(() => import("./pages/ClientsList"));
+const ClientNew = lazy(() => import("./pages/ClientNew"));
+const ClientAnalytics = lazy(() => import("./pages/ClientAnalytics"));
+const ClientDetail = lazy(() => import("./pages/ClientDetail"));
+const PlansList = lazy(() => import("./pages/PlansList"));
+const PlanNew = lazy(() => import("./pages/PlanNew"));
+const PlanEdit = lazy(() => import("./pages/PlanEdit"));
+const PlanDetail = lazy(() => import("./pages/PlanDetail"));
+const PlanShare = lazy(() => import("./pages/PlanShare"));
+const CampaignsList = lazy(() => import("./pages/CampaignsList"));
+const CampaignDetail = lazy(() => import("./pages/CampaignDetail"));
+const CampaignEdit = lazy(() => import("./pages/CampaignEdit"));
+const CampaignBudget = lazy(() => import("./pages/CampaignBudget"));
+const CampaignAssetProofs = lazy(() => import("./pages/CampaignAssetProofs"));
+const MobilePowerBills = lazy(() => import("./pages/MobilePowerBills"));
+const MobilePage = lazy(() => import("./pages/mobile/index"));
+const FinanceDashboard = lazy(() => import("./pages/FinanceDashboard"));
+const EstimationsList = lazy(() => import("./pages/EstimationsList"));
+const InvoicesList = lazy(() => import("./pages/InvoicesList"));
+const InvoiceDetail = lazy(() => import("./pages/InvoiceDetail"));
+const ExpensesList = lazy(() => import("./pages/ExpensesList"));
+const ReportsDashboard = lazy(() => import("./pages/ReportsDashboard"));
+const VacantMediaReport = lazy(() => import("./pages/VacantMediaReport"));
+const PhotoGallery = lazy(() => import("./pages/PhotoGallery"));
+const ImportData = lazy(() => import("./pages/ImportData"));
+const ExportData = lazy(() => import("./pages/ExportData"));
+const UserManagement = lazy(() => import("./pages/UserManagement"));
+const CodeManagement = lazy(() => import("./pages/CodeManagement"));
+const PowerBillsDashboard = lazy(() => import("./pages/PowerBillsDashboard"));
+const PowerBillsAnalytics = lazy(() => import("./pages/PowerBillsAnalytics"));
+const PowerBillsBulkPayment = lazy(() => import("./pages/PowerBillsBulkPayment"));
+const PowerBillsBulkUpload = lazy(() => import("./pages/PowerBillsBulkUpload"));
+const PowerBillsReconciliation = lazy(() => import("./pages/PowerBillsReconciliation"));
+const PowerBillsSharing = lazy(() => import("./pages/PowerBillsSharing"));
+const PowerBillsScheduler = lazy(() => import("./pages/PowerBillsScheduler"));
+const AuditLogs = lazy(() => import("./pages/AuditLogs"));
+const ApprovalSettings = lazy(() => import("./pages/ApprovalSettings"));
+const ApprovalDelegation = lazy(() => import("./pages/ApprovalDelegation"));
+const ApprovalAnalytics = lazy(() => import("./pages/ApprovalAnalytics"));
+const VendorsManagement = lazy(() => import("./pages/VendorsManagement"));
+const Settings = lazy(() => import("./pages/Settings"));
+const ProfileSettings = lazy(() => import("./pages/ProfileSettings"));
+const ClientPortalAuth = lazy(() => import("./pages/ClientPortalAuth"));
+const OrganizationSettings = lazy(() => import("./pages/OrganizationSettings"));
+const OperationsSettings = lazy(() => import("./pages/OperationsSettings"));
+const Operations = lazy(() => import("./pages/Operations"));
+const OperationsCalendar = lazy(() => import("./pages/OperationsCalendar"));
+const OperationsAnalytics = lazy(() => import("./pages/OperationsAnalytics"));
+const PlanComparison = lazy(() => import("./pages/PlanComparison"));
+const ProformasList = lazy(() => import("./pages/ProformasList"));
+const ProformaDetail = lazy(() => import("./pages/ProformaDetail"));
+const Install = lazy(() => import("./pages/Install"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const ComponentShowcase = lazy(() => import("./pages/ComponentShowcase"));
+const DashboardBuilder = lazy(() => import("./pages/DashboardBuilder"));
+const DataExportImport = lazy(() => import("./pages/DataExportImport"));
+const CompanyOnboarding = lazy(() => import("./pages/CompanyOnboarding"));
+const CompaniesManagement = lazy(() => import("./pages/CompaniesManagement"));
+const CompanyTesting = lazy(() => import("./pages/CompanyTesting"));
+const Marketplace = lazy(() => import("./pages/Marketplace"));
+const AIAssistant = lazy(() => import("./pages/AIAssistant"));
+const AnalyticsDashboard = lazy(() => import("./pages/AnalyticsDashboard"));
+const CustomDashboard = lazy(() => import("./pages/CustomDashboard"));
+const BookingRequests = lazy(() => import("./pages/BookingRequests"));
+const ClientPortalDashboard = lazy(() => import("./pages/ClientPortalDashboard"));
+const ClientCampaignView = lazy(() => import("./pages/ClientCampaignView"));
+const ClientInvoices = lazy(() => import("./pages/ClientInvoices"));
+const AccessDenied = lazy(() => import("./pages/AccessDenied"));
 
 const queryClient = new QueryClient();
 
@@ -103,7 +113,8 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
-              <Routes>
+              <Suspense fallback={<LoadingFallback />}>
+                <Routes>
             {/* Public routes */}
             <Route path="/" element={<Auth />} />
                   <Route path="/auth" element={<Auth />} />
@@ -206,15 +217,16 @@ const App = () => (
             
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
-          </Routes>
-          <InstallPrompt />
-          <OfflineIndicator />
-        </BrowserRouter>
-      </TooltipProvider>
-    </CompanyProvider>
-  </AuthProvider>
-</ThemeProvider>
-</QueryClientProvider>
+              </Routes>
+            </Suspense>
+            <InstallPrompt />
+            <OfflineIndicator />
+            </BrowserRouter>
+          </TooltipProvider>
+        </CompanyProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  </QueryClientProvider>
 );
 
 export default App;

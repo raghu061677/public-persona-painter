@@ -62,19 +62,19 @@ export function WatermarkCustomizer() {
       if (!user) return;
 
       const { data: companyUser } = await supabase
-        .from('company_users')
+        .from('company_users' as any)
         .select('company_id')
         .eq('user_id', user.id)
         .single();
 
       if (!companyUser) return;
-      setCompanyId(companyUser.company_id);
+      setCompanyId((companyUser as any).company_id);
 
       // Fetch watermark settings
       const { data, error } = await supabase
-        .from('watermark_settings')
+        .from('watermark_settings' as any)
         .select('*')
-        .eq('company_id', companyUser.company_id)
+        .eq('company_id', (companyUser as any).company_id)
         .single();
 
       if (error && error.code !== 'PGRST116') {
@@ -83,17 +83,17 @@ export function WatermarkCustomizer() {
 
       if (data) {
         setSettings({
-          id: data.id,
-          position: data.position as any,
-          background_color: data.background_color,
-          text_color: data.text_color,
-          border_color: data.border_color,
-          show_logo: data.show_logo,
-          logo_url: data.logo_url || undefined,
-          fields_to_show: data.fields_to_show as string[],
-          panel_width: data.panel_width,
-          panel_padding: data.panel_padding,
-          font_size: data.font_size,
+          id: (data as any).id,
+          position: (data as any).position as any,
+          background_color: (data as any).background_color,
+          text_color: (data as any).text_color,
+          border_color: (data as any).border_color,
+          show_logo: (data as any).show_logo,
+          logo_url: (data as any).logo_url || undefined,
+          fields_to_show: (data as any).fields_to_show as string[],
+          panel_width: (data as any).panel_width,
+          panel_padding: (data as any).panel_padding,
+          font_size: (data as any).font_size,
         });
       }
     } catch (error) {
@@ -121,7 +121,7 @@ export function WatermarkCustomizer() {
       if (settings.id) {
         // Update existing
         const { error } = await supabase
-          .from('watermark_settings')
+          .from('watermark_settings' as any)
           .update(payload)
           .eq('id', settings.id);
 
@@ -129,13 +129,13 @@ export function WatermarkCustomizer() {
       } else {
         // Insert new
         const { data, error } = await supabase
-          .from('watermark_settings')
+          .from('watermark_settings' as any)
           .insert(payload)
           .select()
           .single();
 
         if (error) throw error;
-        setSettings(prev => ({ ...prev, id: data.id }));
+        setSettings(prev => ({ ...prev, id: (data as any)?.id }));
       }
 
       toast({

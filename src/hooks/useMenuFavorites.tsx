@@ -27,10 +27,10 @@ export function useMenuFavorites() {
 
   const fetchFavorites = async () => {
     try {
-      const { data, error } = await supabase
-        .from('user_menu_favorites')
+      const { data, error } = await (supabase
+        .from('user_menu_favorites' as any)
         .select('*')
-        .order('display_order', { ascending: true });
+        .order('display_order', { ascending: true }) as any);
 
       if (error) throw error;
       setFavorites(data || []);
@@ -45,8 +45,8 @@ export function useMenuFavorites() {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('user_menu_favorites')
+      const { data, error } = await (supabase
+        .from('user_menu_favorites' as any)
         .insert({
           user_id: user.id,
           menu_item_path: path,
@@ -54,7 +54,7 @@ export function useMenuFavorites() {
           display_order: favorites.length,
         })
         .select()
-        .single();
+        .single() as any);
 
       if (error) throw error;
       
@@ -74,10 +74,10 @@ export function useMenuFavorites() {
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from('user_menu_favorites')
+      const { error } = await (supabase
+        .from('user_menu_favorites' as any)
         .delete()
-        .eq('menu_item_path', path);
+        .eq('menu_item_path', path) as any);
 
       if (error) throw error;
       
@@ -103,10 +103,10 @@ export function useMenuFavorites() {
       }));
 
       for (const update of updates) {
-        await supabase
-          .from('user_menu_favorites')
+        await (supabase
+          .from('user_menu_favorites' as any)
           .update({ display_order: update.display_order })
-          .eq('id', update.id);
+          .eq('id', update.id) as any);
       }
 
       setFavorites(newOrder);

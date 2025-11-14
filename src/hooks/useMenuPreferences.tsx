@@ -29,10 +29,10 @@ export function useMenuPreferences() {
 
   const fetchPreferences = async () => {
     try {
-      const { data, error } = await supabase
-        .from('user_menu_preferences')
+      const { data, error } = await (supabase
+        .from('user_menu_preferences' as any)
         .select('*')
-        .single();
+        .single() as any);
 
       if (error && error.code !== 'PGRST116') throw error;
       
@@ -40,7 +40,7 @@ export function useMenuPreferences() {
         setPreferences({
           id: data.id,
           hidden_sections: data.hidden_sections || [],
-          section_order: (data.section_order as string[]) || [],
+          section_order: data.section_order || [],
         });
       }
     } catch (error) {
@@ -56,13 +56,13 @@ export function useMenuPreferences() {
     try {
       const newPreferences = { ...preferences, ...updates };
       
-      const { error } = await supabase
-        .from('user_menu_preferences')
+      const { error } = await (supabase
+        .from('user_menu_preferences' as any)
         .upsert({
           user_id: user.id,
           hidden_sections: newPreferences.hidden_sections,
           section_order: newPreferences.section_order,
-        });
+        }) as any);
 
       if (error) throw error;
       

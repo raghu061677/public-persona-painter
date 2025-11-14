@@ -10,6 +10,8 @@ import { ClientPortalProvider } from "@/contexts/ClientPortalContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import AppLayout from "@/layouts/AppLayout";
 import { ClientPortalLayout } from "@/layouts/ClientPortalLayout";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
+import { OfflineIndicator } from "@/components/pwa/OfflineIndicator";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import MediaAssetsList from "./pages/MediaAssetsList";
@@ -204,12 +206,14 @@ const App = () => (
             
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </CompanyProvider>
-    </AuthProvider>
-  </ThemeProvider>
+          </Routes>
+          <InstallPrompt />
+          <OfflineIndicator />
+        </BrowserRouter>
+      </TooltipProvider>
+    </CompanyProvider>
+  </AuthProvider>
+</ThemeProvider>
 </QueryClientProvider>
 );
 

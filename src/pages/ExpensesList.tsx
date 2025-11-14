@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -28,6 +29,7 @@ import { formatDate } from "@/utils/plans";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { PowerBillExpenseDialog } from "@/components/expenses/PowerBillExpenseDialog";
+import { PageCustomization, PageCustomizationOption } from "@/components/ui/page-customization";
 
 export default function ExpensesList() {
   const [expenses, setExpenses] = useState<any[]>([]);
@@ -41,6 +43,10 @@ export default function ExpensesList() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [billToDelete, setBillToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
+  
+  // Page customization state
+  const [showSearch, setShowSearch] = useState(true);
+  const [showSummaryCards, setShowSummaryCards] = useState(true);
 
   useEffect(() => {
     checkAdminStatus();
@@ -117,6 +123,10 @@ export default function ExpensesList() {
       bill.service_number?.toLowerCase().includes(term)
     );
   });
+
+  // Calculate totals
+  const totalExpenses = filteredExpenses.reduce((sum, exp) => sum + (exp.total_amount || 0), 0);
+  const totalPowerBills = filteredPowerBills.reduce((sum, bill) => sum + (bill.total_amount || 0), 0);
 
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
@@ -211,6 +221,68 @@ export default function ExpensesList() {
           </div>
         </div>
 
+        {/* Summary Cards */}
+        {showSummaryCards && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+                  Total Regular Expenses
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold">{formatINR(totalExpenses)}</div>
+                <p className="text-xs text-muted-foreground">{filteredExpenses.length} entries</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+                  Total Power Bills
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold">{formatINR(totalPowerBills)}</div>
+                <p className="text-xs text-muted-foreground">{filteredPowerBills.length} bills</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+                  Pending Bills
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold">
+                  {filteredPowerBills.filter(b => b.payment_status === 'Pending').length}
+                </div>
+                <p className="text-xs text-muted-foreground">Requires payment</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+                  This Month
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold">
+                  {formatINR(
+                    filteredExpenses
+                      .filter(e => new Date(e.created_at).getMonth() === new Date().getMonth())
+                      .reduce((sum, e) => sum + (e.total_amount || 0), 0)
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">Current month total</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+        
+        {/* Tabs for Expenses */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList>
             <TabsTrigger value="regular">

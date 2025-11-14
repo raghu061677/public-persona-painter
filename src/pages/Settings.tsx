@@ -19,10 +19,12 @@ import { NotificationSettings } from "@/components/settings/NotificationSettings
 import { ActivityLogViewer } from "@/components/audit/ActivityLogViewer";
 import { RolePermissionsSettings } from "@/components/settings/RolePermissionsSettings";
 import { CompanyBrandingSettings } from "@/components/settings/CompanyBrandingSettings";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function Settings() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { canView } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [migrating, setMigrating] = useState(false);
@@ -40,6 +42,9 @@ export default function Settings() {
   const [heroPreview, setHeroPreview] = useState<string>("");
 
   const isAdmin = roles.includes("admin");
+  const canViewUserManagement = canView('user_management');
+  const canViewCompanySettings = canView('company_settings');
+  const canViewRolePermissions = canView('role_permissions');
 
   useEffect(() => {
     loadUserData();
@@ -312,12 +317,12 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className={`grid w-full ${canViewCompanySettings ? 'grid-cols-7' : 'grid-cols-5'}`}>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
-          <TabsTrigger value="branding">Branding</TabsTrigger>
-          <TabsTrigger value="alerts">Alerts</TabsTrigger>
+          {canViewCompanySettings && <TabsTrigger value="branding">Branding</TabsTrigger>}
+          {canViewCompanySettings && <TabsTrigger value="alerts">Alerts</TabsTrigger>}
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="help">Help</TabsTrigger>
         </TabsList>
@@ -516,107 +521,103 @@ export default function Settings() {
           <NotificationSettings />
         </TabsContent>
 
-        <TabsContent value="branding" className="space-y-6 mt-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Palette className="h-5 w-5" />
-                <CardTitle>Organization Branding</CardTitle>
-              </div>
-              <CardDescription>
-                Upload your company logo and hero images for landing page
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <Label htmlFor="org-name">Organization Name</Label>
-                <Input
-                  id="org-name"
-                  value={orgName}
-                  onChange={(e) => setOrgName(e.target.value)}
-                  placeholder="Enter organization name"
-                  className="mt-2"
-                  disabled={!isAdmin}
-                />
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="logo-upload" className="flex items-center gap-2 mb-2">
-                    <Upload className="h-4 w-4" />
-                    Company Logo
-                  </Label>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Used in dashboard, invoices, and documents (recommended: 200x60px)
-                  </p>
-                  <Input
-                    id="logo-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogoChange}
-                    className="cursor-pointer"
-                    disabled={!isAdmin}
-                  />
-                  {logoPreview && (
-                    <div className="mt-4 p-4 border rounded-lg bg-muted/50">
-                      <img
-                        src={logoPreview}
-                        alt="Logo preview"
-                        className="h-16 object-contain"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="hero-upload" className="flex items-center gap-2 mb-2">
-                    <Image className="h-4 w-4" />
-                    Hero Section Image
-                  </Label>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Used in landing page hero section (recommended: 1920x1080px)
-                  </p>
-                  <Input
-                    id="hero-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleHeroChange}
-                    className="cursor-pointer"
-                    disabled={!isAdmin}
-                  />
-                  {heroPreview && (
-                    <div className="mt-4 p-4 border rounded-lg bg-muted/50">
-                      <img
-                        src={heroPreview}
-                        alt="Hero preview"
-                        className="w-full max-w-md object-cover rounded-lg"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <Button
-                onClick={handleUploadBranding}
-                disabled={uploading || !isAdmin || (!logoFile && !heroFile && orgName === orgSettings?.organization_name)}
-              >
-                {uploading ? "Uploading..." : "Save Branding"}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="alerts" className="space-y-6 mt-6">
-          {isAdmin ? (
-            <AlertThresholdSettings />
-          ) : (
+        {canViewCompanySettings && (
+          <TabsContent value="branding" className="space-y-6 mt-6">
             <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Only admins can configure alert thresholds.</p>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Palette className="h-5 w-5" />
+                  <CardTitle>Organization Branding</CardTitle>
+                </div>
+                <CardDescription>
+                  Upload your company logo and hero images for landing page
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <Label htmlFor="org-name">Organization Name</Label>
+                  <Input
+                    id="org-name"
+                    value={orgName}
+                    onChange={(e) => setOrgName(e.target.value)}
+                    placeholder="Enter organization name"
+                    className="mt-2"
+                    disabled={!isAdmin}
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="logo-upload" className="flex items-center gap-2 mb-2">
+                      <Upload className="h-4 w-4" />
+                      Company Logo
+                    </Label>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Used in dashboard, invoices, and documents (recommended: 200x60px)
+                    </p>
+                    <Input
+                      id="logo-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoChange}
+                      className="cursor-pointer"
+                      disabled={!isAdmin}
+                    />
+                    {logoPreview && (
+                      <div className="mt-4 p-4 border rounded-lg bg-muted/50">
+                        <img
+                          src={logoPreview}
+                          alt="Logo preview"
+                          className="h-16 object-contain"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="hero-upload" className="flex items-center gap-2 mb-2">
+                      <Image className="h-4 w-4" />
+                      Hero Section Image
+                    </Label>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Used in landing page hero section (recommended: 1920x1080px)
+                    </p>
+                    <Input
+                      id="hero-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleHeroChange}
+                      className="cursor-pointer"
+                      disabled={!isAdmin}
+                    />
+                    {heroPreview && (
+                      <div className="mt-4 p-4 border rounded-lg bg-muted/50">
+                        <img
+                          src={heroPreview}
+                          alt="Hero preview"
+                          className="w-full max-w-md object-cover rounded-lg"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleUploadBranding}
+                  disabled={uploading || !isAdmin || (!logoFile && !heroFile && orgName === orgSettings?.organization_name)}
+                >
+                  {uploading ? "Uploading..." : "Save Branding"}
+                </Button>
               </CardContent>
             </Card>
-          )}
-        </TabsContent>
+          </TabsContent>
+        )}
+
+        {canViewCompanySettings && (
+          <TabsContent value="alerts" className="space-y-6 mt-6">
+            <AlertThresholdSettings />
+          </TabsContent>
+        )}
 
         <TabsContent value="security" className="space-y-6 mt-6">
           <Card>
@@ -663,10 +664,10 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="appearance" className="space-y-6 mt-6">
-          <CompanyBrandingSettings />
+          {canViewCompanySettings && <CompanyBrandingSettings />}
           <ThemeCustomization />
-          {isAdmin && <RolePermissionsSettings />}
-          {isAdmin && <WatermarkSettings />}
+          {canViewRolePermissions && <RolePermissionsSettings />}
+          {canViewCompanySettings && <WatermarkSettings />}
           {isAdmin && <ActivityLogViewer />}
         </TabsContent>
 

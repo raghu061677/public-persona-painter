@@ -157,7 +157,7 @@ export default function UserManagement() {
         permsMap[role] = {};
         MODULES.forEach(module => {
           const perm = permsData?.find(p => p.role === role && p.module === module.key);
-          permsMap[role][module.key] = perm?.can_view || false;
+          permsMap[role][module.key] = (perm as any)?.can_view || false;
         });
       });
       
@@ -249,7 +249,7 @@ export default function UserManagement() {
     try {
       const { error } = await supabase
         .from("role_permissions")
-        .update({ can_view: !currentValue })
+        .update({ can_view: !currentValue } as any)
         .eq("role", role)
         .eq("module", module);
 

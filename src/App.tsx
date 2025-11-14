@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
@@ -224,7 +224,7 @@ const App = () => (
             
             {/* Company Settings with SettingsLayout */}
             <Route path="/admin/company-settings" element={<ProtectedRoute requireAuth><SettingsLayout /></ProtectedRoute>}>
-              <Route index element={<CompanySettings />} />
+              <Route index element={<Navigate to="/admin/company-settings/profile" replace />} />
               <Route path="profile" element={<CompanyProfile />} />
               <Route path="branding" element={<CompanyBranding />} />
               <Route path="roles" element={<CompanyRoles />} />

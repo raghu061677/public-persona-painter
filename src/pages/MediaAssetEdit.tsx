@@ -1005,6 +1005,33 @@ export default function MediaAssetEdit() {
 
             {/* RIGHT COLUMN */}
             <div className="lg:col-span-1 space-y-6">
+              {/* Image Preview Card */}
+              {formData?.images?.photos && formData.images.photos.length > 0 && (
+                <Card className="overflow-hidden border-primary/20 shadow-lg sticky top-4">
+                  <CardHeader className="bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 border-b">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          <FileText className="h-5 w-5 text-primary" />
+                        </div>
+                        <CardTitle className="text-xl">Asset Images</CardTitle>
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        {formData.images.photos.length} photo{formData.images.photos.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <PhotoGallery 
+                      assetId={formData.id} 
+                      photos={formData.images.photos}
+                      onPhotoDeleted={fetchAsset}
+                    />
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Status & Visibility Card */}
               <Card className="overflow-hidden border-primary/20 shadow-lg sticky top-4">
                 <CardHeader className="bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 border-b">
                   <div className="flex items-center gap-2">
@@ -1026,16 +1053,23 @@ export default function MediaAssetEdit() {
                     />
                   </div>
 
-                  {/* Photo Gallery in Sidebar */}
-                  {formData?.images?.photos && formData.images.photos.length > 0 && (
-                    <div className="border-t pt-6">
-                      <PhotoGallery 
-                        assetId={id!} 
-                        photos={formData.images.photos} 
-                        onPhotoDeleted={fetchAsset}
-                      />
-                    </div>
-                  )}
+                  <div className="input-group">
+                    <Label>Status</Label>
+                    <Select 
+                      value={formData.status} 
+                      onValueChange={(value) => updateField('status', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Available">Available</SelectItem>
+                        <SelectItem value="Booked">Booked</SelectItem>
+                        <SelectItem value="Blocked">Blocked</SelectItem>
+                        <SelectItem value="Maintenance">Maintenance</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </CardContent>
               </Card>
             </div>

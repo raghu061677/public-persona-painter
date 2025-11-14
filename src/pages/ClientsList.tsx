@@ -52,6 +52,10 @@ import { useTableDensity } from "@/hooks/use-table-density";
 import { SkeletonStats, SkeletonTable } from "@/components/ui/loading-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
+import { PageCustomization } from "@/components/ui/page-customization";
+import { useLayoutSettings } from "@/hooks/use-layout-settings";
+import { EnhancedFilterToggle } from "@/components/common/EnhancedFilterToggle";
+import { MobileBottomNav, MobileBottomNavButton } from "@/components/ui/mobile-bottom-nav";
 
 const INDIAN_STATES = [
   { code: "AP", name: "Andhra Pradesh" },

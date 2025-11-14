@@ -29,6 +29,10 @@ import { useTableDensity } from "@/hooks/use-table-density";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SkeletonStats, SkeletonTable } from "@/components/ui/loading-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageCustomization } from "@/components/ui/page-customization";
+import { useLayoutSettings } from "@/hooks/use-layout-settings";
+import { EnhancedFilterToggle } from "@/components/common/EnhancedFilterToggle";
+import { MobileBottomNav, MobileBottomNavButton } from "@/components/ui/mobile-bottom-nav";
 
 export default function CampaignsList() {
   const navigate = useNavigate();
@@ -48,6 +52,9 @@ export default function CampaignsList() {
     resetSettings,
     isReady: settingsReady 
   } = useTableSettings("campaigns");
+  
+  const layoutSettings = useLayoutSettings('campaigns-list');
+  const [showFilters, setShowFilters] = useState(true);
 
   // Auto-refresh
   useEffect(() => {

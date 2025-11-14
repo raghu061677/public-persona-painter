@@ -477,6 +477,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
   } = useColumnPrefs("media-assets", allColumnKeys, [
     "select",
     "id",
+    "actions",
     "images",
     "location",
     "area",
@@ -486,7 +487,6 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
     "total_sqft",
     "status",
     "card_rate",
-    "actions",
   ]);
 
   const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("media-assets");

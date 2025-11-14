@@ -80,6 +80,7 @@ import DashboardBuilder from "./pages/DashboardBuilder";
 import DataExportImport from "./pages/DataExportImport";
 import CompanyOnboarding from "./pages/CompanyOnboarding";
 import CompaniesManagement from "./pages/CompaniesManagement";
+import CompanyTesting from "./pages/CompanyTesting";
 import Marketplace from "./pages/Marketplace";
 import BookingRequests from "./pages/BookingRequests";
 import ClientPortalDashboard from "./pages/ClientPortalDashboard";
@@ -114,6 +115,8 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute requireAuth><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/dashboard" element={<ProtectedRoute requireAuth><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/companies" element={<ProtectedRoute requireAuth><AppLayout><CompaniesManagement /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/company-testing" element={<ProtectedRoute requireAuth><AppLayout><CompanyTesting /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/booking-requests" element={<ProtectedRoute requireAuth><AppLayout><BookingRequests /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/clients" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><AppLayout><ClientsList /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/clients/new" element={<ProtectedRoute requiredModule="clients" requiredAction="create"><AppLayout><ClientNew /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/clients/:id" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><AppLayout><ClientDetail /></AppLayout></ProtectedRoute>} />

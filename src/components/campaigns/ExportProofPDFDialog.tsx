@@ -49,9 +49,10 @@ export function ExportProofPDFDialog({ campaignId, campaignName }: ExportProofPD
       // Load all photos for these assets
       const assetIds = campaignAssets.map((a) => a.asset_id);
       const { data: photosData, error: photosError } = await supabase
-        .from('operations_photos')
+        .from('media_photos')
         .select('*')
         .eq('campaign_id', campaignId)
+        .eq('photo_type', 'operations_proof')
         .in('asset_id', assetIds)
         .order('uploaded_at', { ascending: false });
 

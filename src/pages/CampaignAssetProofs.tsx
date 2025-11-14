@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { PhotoUploadSection } from "@/components/operations/PhotoUploadSection";
-import { OperationsPhotoGallery } from "@/components/operations/OperationsPhotoGallery";
+import { UnifiedPhotoGallery } from "@/components/common/UnifiedPhotoGallery";
 import { NotificationSettings } from "@/components/operations/NotificationSettings";
 import { Badge } from "@/components/ui/badge";
 
@@ -79,12 +79,17 @@ export default function CampaignAssetProofs() {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('operations_photos')
+      // @ts-ignore - Complex Supabase type inference issue
+      const photoQuery = await supabase
+        .from('media_photos')
         .select('*')
         .eq('campaign_id', campaignId)
         .eq('asset_id', assetId)
+        .eq('photo_type', 'operations_proof')
         .order('uploaded_at', { ascending: false });
+      
+      const data = (photoQuery?.data || []) as any[];
+      const error = photoQuery?.error;
 
       if (error) throw error;
       setPhotos(data || []);
@@ -170,10 +175,13 @@ export default function CampaignAssetProofs() {
 
       {/* Photo Gallery */}
       {!loading && (
-        <OperationsPhotoGallery
+        <UnifiedPhotoGallery
           photos={photos}
           onPhotoDeleted={handlePhotoDeleted}
           canDelete={isAdmin}
+          bucket="operations-photos"
+          title="Campaign Proof Photos"
+          description="Installation verification photos"
         />
       )}
 

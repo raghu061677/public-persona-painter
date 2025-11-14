@@ -855,13 +855,44 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                     {table.getHeaderGroups().map((headerGroup) => (
                       <TableRow key={headerGroup.id}>
                         {headerGroup.headers.map((header) => (
-                          <DraggableHeader 
-                            key={header.id} 
-                            header={header} 
-                            table={table}
-                            isFrozen={isFrozen(header.column.id)}
-                            onToggleFreeze={() => toggleFrozen(header.column.id)}
-                          />
+                          <TableHead
+                            key={header.id}
+                            colSpan={header.colSpan}
+                            style={{
+                              width: header.getSize(),
+                              minWidth: header.column.columnDef.minSize,
+                              maxWidth: header.column.columnDef.maxSize,
+                            }}
+                            className={cn(
+                              getCellClassName(),
+                              "group relative",
+                              isFrozen(header.column.id) && "bg-muted/30"
+                            )}
+                          >
+                            {header.isPlaceholder ? null : (
+                              <div className="flex items-center gap-2">
+                                {header.column.getCanSort() ? (
+                                  <div
+                                    className={cn(
+                                      "flex-1 flex items-center gap-2 cursor-pointer select-none",
+                                      header.column.getIsSorted() && "text-primary font-semibold"
+                                    )}
+                                    onClick={header.column.getToggleSortingHandler()}
+                                  >
+                                    {flexRender(header.column.columnDef.header, header.getContext())}
+                                    {{
+                                      asc: " ↑",
+                                      desc: " ↓",
+                                    }[header.column.getIsSorted() as string] ?? null}
+                                  </div>
+                                ) : (
+                                  <div className="flex-1">
+                                    {flexRender(header.column.columnDef.header, header.getContext())}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </TableHead>
                         ))}
                       </TableRow>
                     ))}
@@ -869,31 +900,22 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                   <TableBody>
                     {table.getRowModel().rows?.length ? (
                       table.getRowModel().rows.map((row) => (
-                        <TableRow 
+                        <TableRow
                           key={row.id}
                           data-state={row.getIsSelected() && "selected"}
-                          onClick={(e) => {
-                            if (
-                              e.target instanceof HTMLElement &&
-                              (e.target.closest("button") ||
-                                e.target.closest('input[type="checkbox"]'))
-                            ) {
-                              return;
-                            }
-                            navigate(`/admin/media-assets/${row.original.id}`);
-                          }}
-                          className={cn("cursor-pointer hover:bg-muted/50", getRowClassName())}
+                          className={cn(
+                            getRowClassName(),
+                            "cursor-pointer hover:bg-muted/50 transition-colors"
+                          )}
+                          onClick={() => navigate(`/admin/media-assets/${row.original.id}`)}
                         >
                           {row.getVisibleCells().map((cell) => (
-                            <TableCell 
+                            <TableCell
                               key={cell.id}
-                              style={{ 
+                              style={{
                                 width: cell.column.getSize(),
-                                position: isFrozen(cell.column.id) ? 'sticky' : 'relative',
-                                left: isFrozen(cell.column.id) ? 0 : undefined,
-                                zIndex: isFrozen(cell.column.id) ? 20 : undefined,
-                                backgroundColor: isFrozen(cell.column.id) ? 'hsl(var(--background))' : undefined,
-                                boxShadow: isFrozen(cell.column.id) ? '2px 0 4px rgba(0,0,0,0.1)' : undefined,
+                                minWidth: cell.column.columnDef.minSize,
+                                maxWidth: cell.column.columnDef.maxSize,
                               }}
                               className={cn(
                                 getCellClassName(),
@@ -907,19 +929,15 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={table.getAllColumns().length} className="h-32 text-center">
-                          <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                            <Layers className="h-12 w-12 opacity-20" />
-                            <p className="text-lg font-medium">No assets found</p>
-                            <p className="text-sm">Try adjusting your filters</p>
-                          </div>
+                        <TableCell colSpan={columns.length} className="h-24 text-center">
+                          No results.
                         </TableCell>
                       </TableRow>
                     )}
                   </TableBody>
                 </Table>
               </div>
-            </CardContent>
+          </CardContent>
           <CardContent className="flex-none p-4 border-t bg-muted/30">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-sm text-muted-foreground font-medium">

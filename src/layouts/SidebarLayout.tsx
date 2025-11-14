@@ -217,10 +217,22 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           {open && favoriteMenuItems.length > 0 && (
             <div className="px-3 py-2">
               <h3 className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Favorites</h3>
-              <nav className="space-y-1">
+              <nav className="space-y-0.5">
                 {favoriteMenuItems.map((item) => {
                   const Icon = item.icon;
-                  return <NavLink key={item.path} to={item.path} className={({ isActive }) => cn("flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors", isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground")}><Icon className="h-4 w-4 shrink-0" /><span>{item.label}</span></NavLink>;
+                  return (
+                    <NavLink 
+                      key={item.path} 
+                      to={item.path} 
+                      className={({ isActive }) => cn(
+                        "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+                        isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      )}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </NavLink>
+                  );
                 })}
               </nav>
               <Separator className="my-3" />
@@ -249,7 +261,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                       ) : <div className="h-px bg-border/40 my-2" />}
                       
                       {(isExpanded || !open) && (
-                        <nav className="space-y-1 mt-1">
+                        <nav className="space-y-0.5 mt-1">
                           {section.items.map((item) => {
                             const Icon = item.icon;
                             const isFavorite = favoriteItems.includes(item.path);
@@ -257,9 +269,21 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                               <TooltipProvider key={item.path}>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <NavLink to={item.path} className={({ isActive }) => cn("flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors relative", isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground", !open && "justify-center")}>
+                                    <NavLink 
+                                      to={item.path} 
+                                      className={({ isActive }) => cn(
+                                        "flex items-center rounded-md text-sm font-medium transition-colors relative",
+                                        isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                                        open ? "gap-3 px-3 py-2.5" : "justify-center p-2.5 mx-1"
+                                      )}
+                                    >
                                       <Icon className="h-4 w-4 shrink-0" />
-                                      {open && <><span className="flex-1">{item.label}</span>{isFavorite && <span className="text-yellow-500">★</span>}</>}
+                                      {open && (
+                                        <>
+                                          <span className="flex-1 truncate">{item.label}</span>
+                                          {isFavorite && <span className="text-yellow-500 text-xs">★</span>}
+                                        </>
+                                      )}
                                     </NavLink>
                                   </TooltipTrigger>
                                   {!open && <TooltipContent side="right"><p>{item.label}</p></TooltipContent>}

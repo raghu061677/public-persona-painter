@@ -85,6 +85,7 @@ import BookingRequests from "./pages/BookingRequests";
 import ClientPortalDashboard from "./pages/ClientPortalDashboard";
 import ClientCampaignView from "./pages/ClientCampaignView";
 import ClientInvoices from "./pages/ClientInvoices";
+import AccessDenied from "./pages/AccessDenied";
 
 const queryClient = new QueryClient();
 
@@ -184,6 +185,9 @@ const App = () => (
           <Route path="/portal/dashboard" element={<ClientPortalDashboard />} />
           <Route path="/portal/campaigns/:id" element={<ClientCampaignView />} />
           <Route path="/portal/invoices" element={<ClientInvoices />} />
+            
+            {/* Access Denied */}
+            <Route path="/access-denied" element={<AccessDenied />} />
             
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />

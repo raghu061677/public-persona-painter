@@ -20,6 +20,7 @@ import UserActivityDashboard from "@/components/users/UserActivityDashboard";
 import BulkImportDialog from "@/components/users/BulkImportDialog";
 import PasswordResetDialog from "@/components/users/PasswordResetDialog";
 import { RoleManagementDialog } from "@/components/users/RoleManagementDialog";
+import { AccessRequestsManager } from "@/components/users/AccessRequestsManager";
 import { logAudit } from "@/utils/auditLog";
 import {
   Table,
@@ -377,6 +378,7 @@ export default function UserManagement() {
           <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="permissions">Role Permissions</TabsTrigger>
           <TabsTrigger value="user-access">User Access</TabsTrigger>
+          <TabsTrigger value="access-requests">Access Requests</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4 mt-6">
@@ -545,6 +547,10 @@ export default function UserManagement() {
               <UserPermissionsView />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="access-requests" className="space-y-4 mt-6">
+          <AccessRequestsManager />
         </TabsContent>
       </Tabs>
 

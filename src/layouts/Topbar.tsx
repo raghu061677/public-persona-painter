@@ -17,6 +17,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { ROUTES } from "@/lib/routes";
 import ThemePicker from "@/components/ThemePicker";
 import { Bell, Search, Plus } from "lucide-react";
+import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 
 export default function Topbar({ onSearchOpen }: { onSearchOpen: () => void }) {
   const navigate = useNavigate();
@@ -93,15 +94,7 @@ export default function Topbar({ onSearchOpen }: { onSearchOpen: () => void }) {
 
         <ThemePicker />
         
-        <Button variant="ghost" size="icon" className="relative h-9 w-9 md:h-10 md:w-10" title="Notifications">
-          <Bell className="w-4 h-4" />
-          <Badge 
-            variant="destructive" 
-            className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-          >
-            3
-          </Badge>
-        </Button>
+        <NotificationCenter />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

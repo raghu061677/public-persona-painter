@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Eye, Download } from "lucide-react";
+import { Loader2, Eye, Download, Sparkles, Minimize2, LayoutGrid } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface WatermarkSettings {
@@ -34,6 +34,57 @@ const AVAILABLE_FIELDS = [
   { value: 'area', label: 'Total Area (sq.ft)' },
   { value: 'illumination', label: 'Illumination Type' },
 ];
+
+const PRESET_TEMPLATES = {
+  minimal: {
+    name: 'Minimal',
+    description: 'Clean and simple with essential info only',
+    icon: Minimize2,
+    settings: {
+      position: 'bottom-right' as const,
+      background_color: 'rgba(0, 0, 0, 0.6)',
+      text_color: 'rgba(255, 255, 255, 1)',
+      border_color: 'rgba(255, 255, 255, 0.3)',
+      show_logo: false,
+      fields_to_show: ['location', 'dimension'],
+      panel_width: 320,
+      panel_padding: 20,
+      font_size: 14,
+    }
+  },
+  standard: {
+    name: 'Standard',
+    description: 'Balanced view with key asset details',
+    icon: LayoutGrid,
+    settings: {
+      position: 'bottom-right' as const,
+      background_color: 'rgba(0, 0, 0, 0.75)',
+      text_color: 'rgba(255, 255, 255, 1)',
+      border_color: 'rgba(16, 185, 129, 0.8)',
+      show_logo: true,
+      fields_to_show: ['location', 'address', 'direction', 'dimension'],
+      panel_width: 380,
+      panel_padding: 30,
+      font_size: 16,
+    }
+  },
+  detailed: {
+    name: 'Detailed',
+    description: 'Comprehensive information display',
+    icon: Sparkles,
+    settings: {
+      position: 'bottom-right' as const,
+      background_color: 'rgba(15, 23, 42, 0.9)',
+      text_color: 'rgba(255, 255, 255, 1)',
+      border_color: 'rgba(16, 185, 129, 1)',
+      show_logo: true,
+      fields_to_show: ['location', 'address', 'direction', 'dimension', 'area', 'illumination'],
+      panel_width: 450,
+      panel_padding: 40,
+      font_size: 18,
+    }
+  }
+};
 
 export function WatermarkCustomizer() {
   const [loading, setLoading] = useState(true);
@@ -163,6 +214,18 @@ export function WatermarkCustomizer() {
     }));
   };
 
+  const applyPreset = (presetKey: keyof typeof PRESET_TEMPLATES) => {
+    const preset = PRESET_TEMPLATES[presetKey];
+    setSettings(prev => ({
+      ...prev,
+      ...preset.settings,
+    }));
+    toast({
+      title: "Preset Applied",
+      description: `${preset.name} template has been applied. Save to keep changes.`,
+    });
+  };
+
   if (loading) {
     return (
       <Card>
@@ -175,6 +238,51 @@ export function WatermarkCustomizer() {
 
   return (
     <div className="space-y-6">
+      {/* Preset Templates Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Templates</CardTitle>
+          <CardDescription>
+            Apply a preset template and customize further if needed
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {Object.entries(PRESET_TEMPLATES).map(([key, preset]) => {
+              const Icon = preset.icon;
+              return (
+                <button
+                  key={key}
+                  onClick={() => applyPreset(key as keyof typeof PRESET_TEMPLATES)}
+                  className="group relative flex flex-col items-start gap-3 rounded-lg border border-border bg-card p-4 text-left transition-all hover:border-primary hover:shadow-md"
+                >
+                  <div className="flex items-center gap-3 w-full">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-sm">{preset.name}</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {preset.description}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Badge variant="secondary" className="text-xs">
+                      {preset.settings.fields_to_show.length} fields
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {preset.settings.panel_width}px
+                    </Badge>
+                  </div>
+                  <div className="absolute inset-0 rounded-lg ring-2 ring-transparent group-hover:ring-primary/20 transition-all" />
+                </button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Watermark Customization</CardTitle>

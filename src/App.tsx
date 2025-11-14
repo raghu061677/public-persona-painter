@@ -100,6 +100,18 @@ const CompanyReminders = lazy(() => import("./pages/CompanyReminders"));
 const CompanyClientPortal = lazy(() => import("./pages/CompanyClientPortal"));
 const CompanyCurrencies = lazy(() => import("./pages/CompanyCurrencies"));
 const CompanyPDFTemplates = lazy(() => import("./pages/CompanyPDFTemplates"));
+const CompanyRoles = lazy(() => import("./pages/CompanyRoles"));
+const CompanyDirectTaxes = lazy(() => import("./pages/CompanyDirectTaxes"));
+const CompanyEInvoicing = lazy(() => import("./pages/CompanyEInvoicing"));
+const CompanyGeneral = lazy(() => import("./pages/CompanyGeneral"));
+const CompanyEmailNotifications = lazy(() => import("./pages/CompanyEmailNotifications"));
+const CompanySMSNotifications = lazy(() => import("./pages/CompanySMSNotifications"));
+const CompanyDigitalSignature = lazy(() => import("./pages/CompanyDigitalSignature"));
+const CompanyPayments = lazy(() => import("./pages/CompanyPayments"));
+const CompanySales = lazy(() => import("./pages/CompanySales"));
+const CompanyIntegrations = lazy(() => import("./pages/CompanyIntegrations"));
+const CompanyDeveloper = lazy(() => import("./pages/CompanyDeveloper"));
+const CompanyWorkflows = lazy(() => import("./pages/CompanyWorkflows"));
 const PlatformAdminDashboard = lazy(() => import("./pages/PlatformAdminDashboard"));
 const CompanyTesting = lazy(() => import("./pages/CompanyTesting"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
@@ -215,11 +227,23 @@ const App = () => (
               <Route index element={<CompanySettings />} />
               <Route path="profile" element={<CompanyProfile />} />
               <Route path="branding" element={<CompanyBranding />} />
+              <Route path="roles" element={<CompanyRoles />} />
               <Route path="taxes" element={<CompanyTaxes />} />
+              <Route path="direct-taxes" element={<CompanyDirectTaxes />} />
+              <Route path="einvoicing" element={<CompanyEInvoicing />} />
+              <Route path="general" element={<CompanyGeneral />} />
               <Route path="currencies" element={<CompanyCurrencies />} />
               <Route path="reminders" element={<CompanyReminders />} />
               <Route path="client-portal" element={<CompanyClientPortal />} />
               <Route path="pdf-templates" element={<CompanyPDFTemplates />} />
+              <Route path="email-notifications" element={<CompanyEmailNotifications />} />
+              <Route path="sms-notifications" element={<CompanySMSNotifications />} />
+              <Route path="digital-signature" element={<CompanyDigitalSignature />} />
+              <Route path="payments" element={<CompanyPayments />} />
+              <Route path="sales" element={<CompanySales />} />
+              <Route path="integrations" element={<CompanyIntegrations />} />
+              <Route path="developer" element={<CompanyDeveloper />} />
+              <Route path="workflows" element={<CompanyWorkflows />} />
             </Route>
             
             {/* Company Onboarding */}

@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, UserPlus, Shield } from "lucide-react";
+import { Users, UserPlus, Shield, Palette } from "lucide-react";
+import { CompanyBrandingSettings } from "./CompanyBrandingSettings";
 
 export function UserManagementSettings() {
   const navigate = useNavigate();
@@ -78,6 +79,9 @@ export function UserManagementSettings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Company Branding */}
+      <CompanyBrandingSettings />
     </>
   );
 }

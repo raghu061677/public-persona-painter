@@ -64,15 +64,15 @@ export default function BookingRequests() {
         .from('booking_requests')
         .select(`
           *,
-          requester_company:companies!booking_requests_requester_company_id_fkey (name, type),
-          owner_company:companies!booking_requests_owner_company_id_fkey (name),
-          media_asset:media_assets!booking_requests_asset_id_fkey (id, location, area, city, media_type)
+          requester_company:companies!booking_requests_requester_company_id_fkey(name),
+          owner_company:companies!booking_requests_owner_company_id_fkey(name),
+          asset:media_assets(id, location, city, area, media_type)
         `)
-        .or(`requester_company_id.eq.${company.id},owner_company_id.eq.${company.id}`)
+        .eq('owner_company_id', companyId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setRequests(data || []);
+      setRequests((data || []) as any);
     } catch (error: any) {
       console.error('Error fetching booking requests:', error);
       toast({

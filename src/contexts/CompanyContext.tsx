@@ -10,6 +10,7 @@ interface Company {
   gstin?: string;
   logo_url?: string;
   theme_color?: string;
+  secondary_color?: string;
   status: 'pending' | 'active' | 'suspended' | 'cancelled';
 }
 

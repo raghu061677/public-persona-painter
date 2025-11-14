@@ -63,6 +63,7 @@ import ApprovalAnalytics from "./pages/ApprovalAnalytics";
 import VendorsManagement from "./pages/VendorsManagement";
 import Settings from "./pages/Settings";
 import ProfileSettings from "./pages/ProfileSettings";
+import ClientPortalAuth from "./pages/ClientPortalAuth";
 import OrganizationSettings from "./pages/OrganizationSettings";
 import OperationsSettings from "./pages/OperationsSettings";
 import Operations from "./pages/Operations";
@@ -179,9 +180,10 @@ const App = () => (
             <Route path="/admin/dashboard-builder" element={<AppLayout><DashboardBuilder /></AppLayout>} />
             
             {/* Client Portal Routes */}
-            <Route path="/portal/dashboard" element={<ClientPortalDashboard />} />
-            <Route path="/portal/campaigns/:id" element={<ClientCampaignView />} />
-            <Route path="/portal/invoices" element={<ClientInvoices />} />
+          <Route path="/portal/auth" element={<ClientPortalAuth />} />
+          <Route path="/portal/dashboard" element={<ClientPortalDashboard />} />
+          <Route path="/portal/campaigns/:id" element={<ClientCampaignView />} />
+          <Route path="/portal/invoices" element={<ClientInvoices />} />
             
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />

@@ -129,7 +129,7 @@ export default function MediaAssetsList() {
                 <ImportDialog onImportComplete={fetchAssets} />
                 <Button
                   size="default"
-                  onClick={() => navigate(ROUTES.ADMIN.MEDIA_ASSETS.NEW)}
+                  onClick={() => navigate(ROUTES.MEDIA_ASSETS_NEW)}
                   className="shadow-lg hover:shadow-xl transition-shadow gap-2"
                 >
                   <Plus className="h-5 w-5" />
@@ -201,93 +201,6 @@ export default function MediaAssetsList() {
             </Card>
           </div>
         )}
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{totalAssets}</p>
-                    <p className="text-xs text-muted-foreground font-medium">Total Assets</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-green-500 shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-green-50/50 to-green-100/30 dark:from-green-950/20 dark:to-green-900/20">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-xl bg-green-500/20 flex items-center justify-center">
-                    <Building2 className="h-6 w-6 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">{availableAssets}</p>
-                    <p className="text-xs text-muted-foreground font-medium">Available</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-blue-500 shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-blue-50/50 to-blue-100/30 dark:from-blue-950/20 dark:to-blue-900/20">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                    <MapPin className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{uniqueCities}</p>
-                    <p className="text-xs text-muted-foreground font-medium">Cities</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-amber-500 shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-amber-50/50 to-amber-100/30 dark:from-amber-950/20 dark:to-amber-900/20">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                    <TrendingUp className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                      ₹{(totalValue / 100000).toFixed(1)}L
-                    </p>
-                    <p className="text-xs text-muted-foreground font-medium">Portfolio Value</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            variant="outline"
-            size="default"
-            onClick={() => navigate(ROUTES.MEDIA_ASSETS_MAP)}
-            className="shadow-sm hover:shadow-md transition-all"
-          >
-            <MapPin className="mr-2 h-4 w-4" />
-            Map View
-          </Button>
-          {isAdmin && (
-            <>
-              <Button
-                variant="outline"
-                size="default"
-                onClick={() => navigate(ROUTES.MEDIA_ASSETS_VALIDATION)}
-                className="shadow-sm hover:shadow-md transition-all"
-              >
-                <ShieldCheck className="mr-2 h-4 w-4" />
-                Validate Assets
-              </Button>
-              <ImportDialog onImportComplete={fetchAssets} />
-            </>
-          )}
-          {isAdmin && (
-            <Button
-              onClick={() => navigate(ROUTES.MEDIA_ASSETS_NEW)}
-              className="shadow-md hover:shadow-lg transition-all bg-primary hover:bg-primary/90"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add New Asset
-            </Button>
-          )}
-        </div>
       </div>
 
       {/* Table Section - Full height with scroll */}

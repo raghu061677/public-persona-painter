@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { generateClientCode } from "@/lib/codeGenerator";
+import { PageContainer } from "@/components/ui/page-container";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -544,7 +545,7 @@ export default function ClientsList() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-6 py-8 space-y-6">
+        <PageContainer className="space-y-6">
           <div className="flex items-center justify-between mb-8">
             <div className="space-y-2">
               <Skeleton className="h-9 w-40" />
@@ -555,14 +556,14 @@ export default function ClientsList() {
           
           <SkeletonStats count={4} />
           <SkeletonTable rows={10} columns={6} />
-        </div>
+        </PageContainer>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-6 py-8">
+      <PageContainer>
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold">Clients</h1>
@@ -991,7 +992,7 @@ export default function ClientsList() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
+      </PageContainer>
     </div>
   );
 }

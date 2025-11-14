@@ -24,6 +24,7 @@ import {
   NavigationMenu,
   NavigationMenuLink,
 } from "@/components/ui/navigation-menu";
+import { SmartSearch } from "@/components/common/SmartSearch";
 
 export default function Topbar({ onSearchOpen }: { onSearchOpen: () => void }) {
   const navigate = useNavigate();
@@ -93,20 +94,9 @@ export default function Topbar({ onSearchOpen }: { onSearchOpen: () => void }) {
         </NavigationMenu>
       </div>
 
-      {/* Middle: Search trigger */}
+      {/* Middle: Search */}
       <div className="flex-1 max-w-md mx-2 md:mx-4 min-w-0">
-        <Button
-          variant="outline"
-          className="w-full justify-start text-muted-foreground hover:text-foreground h-9 md:h-10 min-w-0"
-          onClick={onSearchOpen}
-        >
-          <Search className="w-4 h-4 mr-2 shrink-0" />
-          <span className="hidden sm:inline text-sm truncate">Search or jump to...</span>
-          <span className="sm:hidden text-sm truncate">Search...</span>
-          <kbd className="hidden lg:inline-flex ml-auto pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-xs font-medium text-muted-foreground shrink-0">
-            <span className="text-xs">⌘</span>K
-          </kbd>
-        </Button>
+        <SmartSearch />
       </div>
 
       {/* Right: Actions */}

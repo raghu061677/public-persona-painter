@@ -15,6 +15,7 @@ import { ClientPortalLayout } from "@/layouts/ClientPortalLayout";
 import { SettingsLayout } from "@/layouts/SettingsLayout";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { OfflineIndicator } from "@/components/pwa/OfflineIndicator";
+import { AIAssistantChat } from "@/components/assistant/AIAssistantChat";
 
 // Loading component for lazy-loaded routes
 const LoadingFallback = () => (
@@ -285,6 +286,7 @@ const App = () => (
             </Suspense>
             <InstallPrompt />
             <OfflineIndicator />
+            <AIAssistantChat />
             </BrowserRouter>
           </TooltipProvider>
         </CompanyProvider>

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { CompanyProvider } from "@/contexts/CompanyContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import AppLayout from "@/layouts/AppLayout";
 import Index from "./pages/Index";
@@ -76,6 +77,11 @@ import NotFound from "./pages/NotFound";
 import ComponentShowcase from "./pages/ComponentShowcase";
 import DashboardBuilder from "./pages/DashboardBuilder";
 import DataExportImport from "./pages/DataExportImport";
+import CompanyOnboarding from "./pages/CompanyOnboarding";
+import CompaniesManagement from "./pages/CompaniesManagement";
+import ClientPortalDashboard from "./pages/ClientPortalDashboard";
+import ClientCampaignView from "./pages/ClientCampaignView";
+import ClientInvoices from "./pages/ClientInvoices";
 
 const queryClient = new QueryClient();
 
@@ -83,14 +89,16 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
+        <CompanyProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
             {/* Public routes */}
             <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/onboarding" element={<ProtectedRoute><CompanyOnboarding /></ProtectedRoute>} />
             <Route path="/install" element={<Install />} />
             <Route path="/admin/plans/:id/share/:shareToken" element={<PlanShare />} />
             <Route path="/mobile/field-app" element={<MobileFieldApp />} />
@@ -101,6 +109,7 @@ const App = () => (
             {/* Protected routes with layout */}
             <Route path="/dashboard" element={<ProtectedRoute requireAuth><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/dashboard" element={<ProtectedRoute requireAuth><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/companies" element={<ProtectedRoute requireAuth><AppLayout><CompaniesManagement /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/clients" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><AppLayout><ClientsList /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/clients/new" element={<ProtectedRoute requiredModule="clients" requiredAction="create"><AppLayout><ClientNew /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/clients/:id" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><AppLayout><ClientDetail /></AppLayout></ProtectedRoute>} />
@@ -165,14 +174,20 @@ const App = () => (
             <Route path="/admin/ui-showcase" element={<AppLayout><ComponentShowcase /></AppLayout>} />
             <Route path="/admin/dashboard-builder" element={<AppLayout><DashboardBuilder /></AppLayout>} />
             
+            {/* Client Portal Routes */}
+            <Route path="/portal/dashboard" element={<ClientPortalDashboard />} />
+            <Route path="/portal/campaigns/:id" element={<ClientCampaignView />} />
+            <Route path="/portal/invoices" element={<ClientInvoices />} />
+            
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
+      </CompanyProvider>
+    </AuthProvider>
+  </ThemeProvider>
+</QueryClientProvider>
 );
 
 export default App;

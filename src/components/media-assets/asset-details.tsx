@@ -244,6 +244,9 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
 
         {/* Right Column - Image Preview (1/3 width) */}
         <div className="lg:col-span-1 space-y-6">
+          {/* Latest Photos Section - Top Priority */}
+          <LatestPhotosSection assetId={currentAsset.id} />
+
           {/* Images Preview Card */}
           {allImages.length > 0 && (
             <Card className="border-l-4 border-l-primary sticky top-6">
@@ -433,9 +436,6 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
 
           {/* Booking Calendar */}
           <AssetBookingCalendar assetId={currentAsset.id} />
-
-          {/* Latest Photos Section */}
-          <LatestPhotosSection assetId={currentAsset.id} />
         </div>
       </div>
 

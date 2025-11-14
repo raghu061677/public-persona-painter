@@ -11,6 +11,7 @@ import { ClientPortalProvider } from "@/contexts/ClientPortalContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import AppLayout from "@/layouts/AppLayout";
 import { ClientPortalLayout } from "@/layouts/ClientPortalLayout";
+import { SettingsLayout } from "@/layouts/SettingsLayout";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { OfflineIndicator } from "@/components/pwa/OfflineIndicator";
 
@@ -92,6 +93,7 @@ const DataExportImport = lazy(() => import("./pages/DataExportImport"));
 const CompanyOnboarding = lazy(() => import("./pages/CompanyOnboarding"));
 const CompaniesManagement = lazy(() => import("./pages/CompaniesManagement"));
 const CompanySettings = lazy(() => import("./pages/CompanySettings"));
+const CompanyProfile = lazy(() => import("./pages/CompanyProfile"));
 const PlatformAdminDashboard = lazy(() => import("./pages/PlatformAdminDashboard"));
 const CompanyTesting = lazy(() => import("./pages/CompanyTesting"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
@@ -130,7 +132,13 @@ const App = () => (
             <Route path="/admin/dashboard" element={<ProtectedRoute requireAuth><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/companies" element={<ProtectedRoute requireAuth><AppLayout><CompaniesManagement /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/platform" element={<ProtectedRoute requireAuth><AppLayout><PlatformAdminDashboard /></AppLayout></ProtectedRoute>} />
-            <Route path="/admin/company-settings" element={<ProtectedRoute requireAuth><AppLayout><CompanySettings /></AppLayout></ProtectedRoute>} />
+            
+            {/* Company Settings with nested routes */}
+            <Route path="/admin/company-settings" element={<ProtectedRoute requireAuth><AppLayout><SettingsLayout /></AppLayout></ProtectedRoute>}>
+              <Route index element={<CompanySettings />} />
+              <Route path="profile" element={<CompanyProfile />} />
+            </Route>
+            
             <Route path="/admin/company-testing" element={<ProtectedRoute requireAuth><AppLayout><CompanyTesting /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/booking-requests" element={<ProtectedRoute requireAuth><AppLayout><BookingRequests /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/clients" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><AppLayout><ClientsList /></AppLayout></ProtectedRoute>} />

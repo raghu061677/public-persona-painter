@@ -5,6 +5,7 @@ export type CurrencyFormat = "en-IN" | "en-US" | "en-GB";
 
 export interface TableSettings {
   defaultPageSize: number;
+  pageSize: number;
   autoRefreshInterval: number; // in seconds, 0 = disabled
   dateFormat: DateFormat;
   currencyFormat: CurrencyFormat;
@@ -15,6 +16,7 @@ export interface TableSettings {
 
 const defaultSettings: TableSettings = {
   defaultPageSize: 25,
+  pageSize: 25,
   autoRefreshInterval: 0,
   dateFormat: "DD/MM/YYYY",
   currencyFormat: "en-IN",

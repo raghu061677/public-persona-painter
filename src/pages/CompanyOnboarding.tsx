@@ -149,202 +149,393 @@ export default function CompanyOnboarding() {
               Company Registration
             </CardTitle>
             <CardDescription>
-              Register your company to start using Go-Ads 360°. Your registration will be reviewed by our team.
+              Complete the steps below to register your company. Your registration will be reviewed by our team.
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Progress Indicator */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between">
+                {STEPS.map((step, index) => (
+                  <div key={step.id} className="flex flex-col items-center flex-1">
+                    <div className="flex items-center w-full">
+                      {index > 0 && (
+                        <div className={cn(
+                          "flex-1 h-0.5 transition-colors",
+                          currentStep > step.id - 1 ? "bg-primary" : "bg-border"
+                        )} />
+                      )}
+                      <div className={cn(
+                        "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors",
+                        currentStep > step.id ? "bg-primary border-primary text-primary-foreground" :
+                        currentStep === step.id ? "border-primary text-primary" :
+                        "border-border text-muted-foreground"
+                      )}>
+                        {currentStep > step.id ? (
+                          <CheckCircle2 className="h-5 w-5" />
+                        ) : (
+                          <span className="text-sm font-semibold">{step.id}</span>
+                        )}
+                      </div>
+                      {index < STEPS.length - 1 && (
+                        <div className={cn(
+                          "flex-1 h-0.5 transition-colors",
+                          currentStep > step.id ? "bg-primary" : "bg-border"
+                        )} />
+                      )}
+                    </div>
+                    <div className="mt-2 text-center">
+                      <p className={cn(
+                        "text-xs font-medium transition-colors hidden sm:block",
+                        currentStep === step.id ? "text-primary" : "text-muted-foreground"
+                      )}>
+                        {step.title}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Company Type */}
-              <div className="space-y-2">
-                <Label htmlFor="type">Company Type *</Label>
-                <Select
-                  value={formData.type}
-                  onValueChange={(value: "media_owner" | "agency") =>
-                    setFormData({ ...formData, type: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="media_owner">Media Owner</SelectItem>
-                    <SelectItem value="agency">Agency</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground">
-                  {formData.type === 'media_owner' 
-                    ? 'You own outdoor advertising assets (billboards, hoardings, etc.)'
-                    : 'You run advertising campaigns for clients'}
-                </p>
-              </div>
-
-              {/* Basic Information */}
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Company Name *</Label>
-                  <Input
-                    id="name"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Go-Ads Media Pvt Ltd"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="legal_name">Legal Name</Label>
-                  <Input
-                    id="legal_name"
-                    value={formData.legal_name}
-                    onChange={(e) => setFormData({ ...formData, legal_name: e.target.value })}
-                    placeholder="Go-Ads Media Private Limited"
-                  />
-                </div>
-              </div>
-
-              {/* Tax Information */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-muted-foreground" />
-                  <h3 className="font-semibold">Tax Information</h3>
-                </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="gstin">GSTIN</Label>
-                    <Input
-                      id="gstin"
-                      value={formData.gstin}
-                      onChange={(e) => setFormData({ ...formData, gstin: e.target.value })}
-                      placeholder="29XXXXX1234X1Z5"
-                      maxLength={15}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="pan">PAN</Label>
-                    <Input
-                      id="pan"
-                      value={formData.pan}
-                      onChange={(e) => setFormData({ ...formData, pan: e.target.value })}
-                      placeholder="ABCDE1234F"
-                      maxLength={10}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Address */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-muted-foreground" />
-                  <h3 className="font-semibold">Address</h3>
-                </div>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="address_line1">Address Line 1</Label>
-                    <Input
-                      id="address_line1"
-                      value={formData.address_line1}
-                      onChange={(e) => setFormData({ ...formData, address_line1: e.target.value })}
-                      placeholder="Building/Street"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="address_line2">Address Line 2</Label>
-                    <Input
-                      id="address_line2"
-                      value={formData.address_line2}
-                      onChange={(e) => setFormData({ ...formData, address_line2: e.target.value })}
-                      placeholder="Area/Landmark"
-                    />
-                  </div>
-                  <div className="grid md:grid-cols-3 gap-4">
+              {/* Step Content */}
+              <div className="min-h-[400px]">
+                {/* Step 1: Company Type */}
+                {currentStep === 1 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Choose Your Business Model</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Select the type that best describes your business
+                      </p>
+                    </div>
                     <div className="space-y-2">
-                      <Label htmlFor="city">City</Label>
+                      <Label htmlFor="type">Company Type *</Label>
+                      <Select
+                        value={formData.type}
+                        onValueChange={(value: "media_owner" | "agency") =>
+                          setFormData({ ...formData, type: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="media_owner">Media Owner</SelectItem>
+                          <SelectItem value="agency">Agency</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-sm text-muted-foreground">
+                        {formData.type === 'media_owner' 
+                          ? 'You own outdoor advertising assets (billboards, hoardings, etc.)'
+                          : 'You run advertising campaigns for clients'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 2: Basic Details */}
+                {currentStep === 2 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Company Information</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Provide your company's basic details
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Company Name *</Label>
                       <Input
-                        id="city"
-                        value={formData.city}
-                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                        placeholder="Hyderabad"
+                        id="name"
+                        required
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="Go-Ads Media Pvt Ltd"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="state">State</Label>
+                      <Label htmlFor="legal_name">Legal Name *</Label>
                       <Input
-                        id="state"
-                        value={formData.state}
-                        onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                        placeholder="Telangana"
+                        id="legal_name"
+                        required
+                        value={formData.legal_name}
+                        onChange={(e) => setFormData({ ...formData, legal_name: e.target.value })}
+                        placeholder="Go-Ads Media Private Limited"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 3: Tax Information */}
+                {currentStep === 3 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Tax Information</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Enter your GST and PAN details
+                      </p>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="gstin">GSTIN *</Label>
+                        <Input
+                          id="gstin"
+                          required
+                          value={formData.gstin}
+                          onChange={(e) => setFormData({ ...formData, gstin: e.target.value })}
+                          placeholder="29XXXXX1234X1Z5"
+                          maxLength={15}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="pan">PAN *</Label>
+                        <Input
+                          id="pan"
+                          required
+                          value={formData.pan}
+                          onChange={(e) => setFormData({ ...formData, pan: e.target.value })}
+                          placeholder="ABCDE1234F"
+                          maxLength={10}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 4: Address */}
+                {currentStep === 4 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Office Location</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Enter your company's registered address
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address_line1">Address Line 1 *</Label>
+                      <Input
+                        id="address_line1"
+                        required
+                        value={formData.address_line1}
+                        onChange={(e) => setFormData({ ...formData, address_line1: e.target.value })}
+                        placeholder="Building/Street"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="pincode">Pincode</Label>
+                      <Label htmlFor="address_line2">Address Line 2</Label>
                       <Input
-                        id="pincode"
-                        value={formData.pincode}
-                        onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
-                        placeholder="500001"
-                        maxLength={6}
+                        id="address_line2"
+                        value={formData.address_line2}
+                        onChange={(e) => setFormData({ ...formData, address_line2: e.target.value })}
+                        placeholder="Area/Landmark"
+                      />
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="city">City *</Label>
+                        <Input
+                          id="city"
+                          required
+                          value={formData.city}
+                          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                          placeholder="Hyderabad"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="state">State *</Label>
+                        <Input
+                          id="state"
+                          required
+                          value={formData.state}
+                          onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                          placeholder="Telangana"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="pincode">Pincode *</Label>
+                        <Input
+                          id="pincode"
+                          required
+                          value={formData.pincode}
+                          onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                          placeholder="500001"
+                          maxLength={6}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 5: Contact Information */}
+                {currentStep === 5 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Contact Details</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        How can we reach you?
+                      </p>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone *</Label>
+                        <Input
+                          id="phone"
+                          type="tel"
+                          required
+                          value={formData.phone}
+                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          placeholder="+91 98765 43210"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email *</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          required
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          placeholder="contact@company.com"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="website">Website</Label>
+                      <Input
+                        id="website"
+                        type="url"
+                        value={formData.website}
+                        onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                        placeholder="https://www.company.com"
                       />
                     </div>
                   </div>
-                </div>
+                )}
+
+                {/* Step 6: Review */}
+                {currentStep === 6 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Review Your Information</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Please verify all details before submitting
+                      </p>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div className="border rounded-lg p-4 space-y-3">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <Building2 className="h-4 w-4" />
+                          Company Type
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          {formData.type === 'media_owner' ? 'Media Owner' : 'Agency'}
+                        </p>
+                      </div>
+
+                      <div className="border rounded-lg p-4 space-y-3">
+                        <h4 className="font-medium">Basic Information</h4>
+                        <div className="grid md:grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Company Name:</span>
+                            <p className="font-medium">{formData.name}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Legal Name:</span>
+                            <p className="font-medium">{formData.legal_name}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="border rounded-lg p-4 space-y-3">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          Tax Information
+                        </h4>
+                        <div className="grid md:grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">GSTIN:</span>
+                            <p className="font-medium">{formData.gstin}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">PAN:</span>
+                            <p className="font-medium">{formData.pan}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="border rounded-lg p-4 space-y-3">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <MapPin className="h-4 w-4" />
+                          Address
+                        </h4>
+                        <div className="text-sm space-y-1">
+                          <p>{formData.address_line1}</p>
+                          {formData.address_line2 && <p>{formData.address_line2}</p>}
+                          <p>{formData.city}, {formData.state} {formData.pincode}</p>
+                        </div>
+                      </div>
+
+                      <div className="border rounded-lg p-4 space-y-3">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <Phone className="h-4 w-4" />
+                          Contact Information
+                        </h4>
+                        <div className="grid md:grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Phone:</span>
+                            <p className="font-medium">{formData.phone}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Email:</span>
+                            <p className="font-medium">{formData.email}</p>
+                          </div>
+                          {formData.website && (
+                            <div className="md:col-span-2">
+                              <span className="text-muted-foreground">Website:</span>
+                              <p className="font-medium">{formData.website}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Contact Information */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Phone className="h-5 w-5 text-muted-foreground" />
-                  <h3 className="font-semibold">Contact Information</h3>
-                </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="+91 98765 43210"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="contact@company.com"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="website">Website</Label>
-                  <Input
-                    id="website"
-                    type="url"
-                    value={formData.website}
-                    onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                    placeholder="https://www.company.com"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-4 pt-4">
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1"
-                >
-                  {isSubmitting ? "Submitting..." : "Submit for Approval"}
-                </Button>
+              {/* Navigation Buttons */}
+              <div className="flex justify-between items-center pt-4 border-t">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate('/dashboard')}
-                  disabled={isSubmitting}
+                  onClick={handlePrevious}
+                  disabled={currentStep === 1 || isSubmitting}
                 >
-                  Cancel
+                  <ChevronLeft className="h-4 w-4 mr-2" />
+                  Previous
                 </Button>
+
+                <div className="text-sm text-muted-foreground">
+                  Step {currentStep} of {STEPS.length}
+                </div>
+
+                {currentStep < STEPS.length ? (
+                  <Button
+                    type="button"
+                    onClick={handleNext}
+                    disabled={isSubmitting}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Submitting..." : "Submit for Approval"}
+                  </Button>
+                )}
               </div>
             </form>
           </CardContent>

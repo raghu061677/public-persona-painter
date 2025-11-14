@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { X, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { X, ChevronLeft, ChevronRight, Download, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -18,9 +18,16 @@ interface PhotoLightboxProps {
 
 export function PhotoLightbox({ photos, initialIndex, isOpen, onClose }: PhotoLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const imageRef = useRef<HTMLDivElement>(null);
+  const touchStartDistance = useRef<number>(0);
 
   useEffect(() => {
     setCurrentIndex(initialIndex);
+    resetZoom();
   }, [initialIndex]);
 
   useEffect(() => {
@@ -32,9 +39,60 @@ export function PhotoLightbox({ photos, initialIndex, isOpen, onClose }: PhotoLi
       if (e.key === "ArrowRight") handleNext();
     };
 
+    const handleWheel = (e: WheelEvent) => {
+      if (!isOpen) return;
+      e.preventDefault();
+      
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      setScale(prev => Math.max(0.5, Math.min(5, prev + delta)));
+    };
+
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("wheel", handleWheel, { passive: false });
+    
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("wheel", handleWheel);
+    };
   }, [isOpen, currentIndex]);
+
+  // Touch handlers for pinch-to-zoom
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const distance = Math.hypot(
+          e.touches[0].pageX - e.touches[1].pageX,
+          e.touches[0].pageY - e.touches[1].pageY
+        );
+        touchStartDistance.current = distance;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const distance = Math.hypot(
+          e.touches[0].pageX - e.touches[1].pageX,
+          e.touches[0].pageY - e.touches[1].pageY
+        );
+        
+        const delta = (distance - touchStartDistance.current) * 0.01;
+        setScale(prev => Math.max(0.5, Math.min(5, prev + delta)));
+        touchStartDistance.current = distance;
+      }
+    };
+
+    const container = imageRef.current;
+    if (container && isOpen) {
+      container.addEventListener("touchstart", handleTouchStart);
+      container.addEventListener("touchmove", handleTouchMove, { passive: false });
+      
+      return () => {
+        container.removeEventListener("touchstart", handleTouchStart);
+        container.removeEventListener("touchmove", handleTouchMove);
+      };
+    }
+  }, [isOpen]);
 
   if (!isOpen || photos.length === 0) return null;
 
@@ -42,10 +100,45 @@ export function PhotoLightbox({ photos, initialIndex, isOpen, onClose }: PhotoLi
 
   const handlePrevious = () => {
     setCurrentIndex((prev) => (prev === 0 ? photos.length - 1 : prev - 1));
+    resetZoom();
   };
 
   const handleNext = () => {
     setCurrentIndex((prev) => (prev === photos.length - 1 ? 0 : prev + 1));
+    resetZoom();
+  };
+
+  const resetZoom = () => {
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
+  };
+
+  const handleZoomIn = () => {
+    setScale(prev => Math.min(5, prev + 0.5));
+  };
+
+  const handleZoomOut = () => {
+    setScale(prev => Math.max(0.5, prev - 0.5));
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (scale > 1) {
+      setIsDragging(true);
+      setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging && scale > 1) {
+      setPosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y,
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
   };
 
   const handleDownload = () => {
@@ -83,15 +176,44 @@ export function PhotoLightbox({ photos, initialIndex, isOpen, onClose }: PhotoLi
         <X className="h-6 w-6" />
       </Button>
 
-      {/* Download Button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute top-4 right-16 text-white hover:bg-white/10"
-        onClick={handleDownload}
-      >
-        <Download className="h-6 w-6" />
-      </Button>
+      {/* Zoom Controls */}
+      <div className="absolute top-4 right-16 flex gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-white hover:bg-white/10"
+          onClick={handleZoomOut}
+          disabled={scale <= 0.5}
+        >
+          <ZoomOut className="h-5 w-5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-white hover:bg-white/10"
+          onClick={resetZoom}
+          disabled={scale === 1}
+        >
+          <Maximize2 className="h-5 w-5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-white hover:bg-white/10"
+          onClick={handleZoomIn}
+          disabled={scale >= 5}
+        >
+          <ZoomIn className="h-5 w-5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-white hover:bg-white/10"
+          onClick={handleDownload}
+        >
+          <Download className="h-6 w-6" />
+        </Button>
+      </div>
 
       {/* Previous Button */}
       {photos.length > 1 && (
@@ -125,13 +247,24 @@ export function PhotoLightbox({ photos, initialIndex, isOpen, onClose }: PhotoLi
 
       {/* Image Container */}
       <div 
-        className="relative max-w-7xl max-h-[90vh] w-full mx-4"
+        ref={imageRef}
+        className="relative max-w-7xl max-h-[90vh] w-full mx-4 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        style={{ cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
       >
         <img
           src={currentPhoto.photo_url}
           alt={currentPhoto.category}
-          className="w-full h-full object-contain"
+          className="w-full h-full object-contain transition-transform"
+          style={{
+            transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
+            transformOrigin: 'center',
+          }}
+          draggable={false}
         />
         
         {/* Photo Info Overlay */}

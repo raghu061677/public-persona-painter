@@ -136,6 +136,26 @@ export function useAllLayoutSettings() {
     return defaultSettings;
   });
 
+  const updateSetting = (pageId: string, key: string, value: boolean) => {
+    setAllSettings((prev) => {
+      const newSettings = {
+        ...prev,
+        [pageId]: {
+          ...prev[pageId],
+          [key]: value,
+        },
+      };
+
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newSettings));
+      } catch (error) {
+        console.error('Failed to save layout settings:', error);
+      }
+
+      return newSettings;
+    });
+  };
+
   const resetAllSettings = () => {
     setAllSettings(defaultSettings);
     try {
@@ -180,6 +200,7 @@ export function useAllLayoutSettings() {
 
   return {
     allSettings,
+    updateSetting,
     resetAllSettings,
     exportSettings,
     importSettings,

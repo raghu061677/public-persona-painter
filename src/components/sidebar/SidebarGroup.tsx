@@ -16,8 +16,11 @@ export function SidebarGroup({ icon: Icon, label, children, defaultOpen = true, 
 
   if (collapsed) {
     return (
-      <div className="px-2 py-1">
-        <div className="flex items-center justify-center p-2 rounded-xl hover:bg-accent/50 transition-colors">
+      <div className="px-1 py-1">
+        <div 
+          className="flex items-center justify-center p-2.5 rounded-xl hover:bg-accent/50 transition-colors"
+          title={label}
+        >
           <Icon className="h-5 w-5 text-muted-foreground" />
         </div>
       </div>

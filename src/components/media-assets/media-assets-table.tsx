@@ -85,7 +85,7 @@ import {
 import { cn } from "@/lib/utils";
 import AddPlanFromAssetsModal from "./add-plan-from-assets-modal";
 import { BulkEditDialog } from "./BulkEditDialog";
-import { TableViewsDialog } from "./TableViewsDialog";
+// import { TableViewsDialog } from "./TableViewsDialog"; // Temporarily disabled until Supabase types regenerate
 import { ActionCell, ImageCell } from "./asset-table-cells";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
@@ -266,8 +266,8 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
   // Bulk Edit Dialog
   const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
   
-  // Table Views Dialog
-  const [isTableViewsOpen, setIsTableViewsOpen] = useState(false);
+  // Table Views Dialog - Temporarily disabled
+  // const [isTableViewsOpen, setIsTableViewsOpen] = useState(false);
   
   // Advanced filter states
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
@@ -798,40 +798,27 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
           ).length}
         />
 
-        {/* Advanced Filters with Table Views Button */}
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <TableFilters
-              filters={filterConfigs}
-              filterValues={filterValues}
-              onFilterChange={handleFilterChange}
-              onClearFilters={handleClearFilters}
-              allColumns={allColumnsForVisibilityButton}
-              visibleColumns={visibleKeys}
-              onColumnVisibilityChange={setVisibleKeys}
-              onResetColumns={resetColumnPrefs}
-              density={density}
-              onDensityChange={setDensity}
-              tableKey="media-assets"
-              enableGlobalSearch
-              searchableData={assets}
-              searchableKeys={["id", "media_id", "location", "area", "city", "media_type", "status"]}
-              onGlobalSearchFilter={setGlobalSearchFiltered}
-              settings={settings}
-              onUpdateSettings={updateSettings}
-              onResetSettings={resetSettings}
-            />
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsTableViewsOpen(true)}
-            className="shrink-0"
-          >
-            <Save className="mr-2 h-4 w-4" />
-            Table Views
-          </Button>
-        </div>
+        {/* Advanced Filters */}
+        <TableFilters
+          filters={filterConfigs}
+          filterValues={filterValues}
+          onFilterChange={handleFilterChange}
+          onClearFilters={handleClearFilters}
+          allColumns={allColumnsForVisibilityButton}
+          visibleColumns={visibleKeys}
+          onColumnVisibilityChange={setVisibleKeys}
+          onResetColumns={resetColumnPrefs}
+          density={density}
+          onDensityChange={setDensity}
+          tableKey="media-assets"
+          enableGlobalSearch
+          searchableData={assets}
+          searchableKeys={["id", "media_id", "location", "area", "city", "media_type", "status"]}
+          onGlobalSearchFilter={setGlobalSearchFiltered}
+          settings={settings}
+          onUpdateSettings={updateSettings}
+          onResetSettings={resetSettings}
+        />
 
         {selectedAssetIds.length > 0 && (
           <Card className="mb-4 bg-primary/5 border-primary/20">
@@ -1022,6 +1009,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
         }}
       />
 
+      {/* Temporarily disabled until Supabase types regenerate
       <TableViewsDialog
         open={isTableViewsOpen}
         onOpenChange={setIsTableViewsOpen}
@@ -1029,6 +1017,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
         currentConfig={getCurrentTableConfig()}
         onLoadView={handleLoadTableView}
       />
+      */}
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>

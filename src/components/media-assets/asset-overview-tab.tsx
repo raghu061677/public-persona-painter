@@ -84,20 +84,20 @@ export function AssetOverviewTab({ asset }: AssetOverviewTabProps) {
               <p className="font-medium">{asset.media_type}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Dimensions</p>
+              <p className="text-sm text-muted-foreground">Size/Dimension</p>
               <p className="font-medium">{asset.dimensions}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Total Area</p>
-              <p className="font-medium">{asset.total_sqft} sq ft</p>
+              <p className="text-sm text-muted-foreground">Lighting Type</p>
+              <p className="font-medium">{asset.illumination || 'Non-lit'}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Category</p>
               <p className="font-medium">{asset.category}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Illumination</p>
-              <p className="font-medium">{asset.illumination || 'N/A'}</p>
+              <p className="text-sm text-muted-foreground">Total Area</p>
+              <p className="font-medium">{asset.total_sqft} sq ft</p>
             </div>
             {asset.media_id && (
               <div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import SidebarLayout from "@/layouts/SidebarLayout";
+import { SidebarLayout } from "@/layouts/SidebarLayout";
 import Topbar from "@/layouts/Topbar";
 import CommandPalette from "@/components/CommandPalette";
 import { QuickAddDrawer } from "@/components/ui/quick-add-drawer";

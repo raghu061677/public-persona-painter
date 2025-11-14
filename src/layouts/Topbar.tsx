@@ -18,9 +18,16 @@ import { ROUTES } from "@/lib/routes";
 import ThemePicker from "@/components/ThemePicker";
 import { GlobalLayoutSettings } from "@/components/settings/GlobalLayoutSettings";
 import { Bell, Search, Plus } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import {
+  NavigationMenu,
+  NavigationMenuLink,
+} from "@/components/ui/navigation-menu";
 
 export default function Topbar({ onSearchOpen }: { onSearchOpen: () => void }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [userEmail, setUserEmail] = useState<string>("");
   const isMobile = useIsMobile();
@@ -60,6 +67,19 @@ export default function Topbar({ onSearchOpen }: { onSearchOpen: () => void }) {
       {/* Left: Brand */}
       <div className="flex items-center gap-2 min-w-0 shrink-0">
         <span className="font-semibold text-foreground text-sm md:text-base truncate">Go-Ads 360°</span>
+        <NavigationMenu className="hidden lg:flex">
+          <NavigationMenuLink asChild>
+            <Link
+              to="/marketplace"
+              className={cn(
+                "group inline-flex h-10 w-max items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50",
+                location.pathname === "/marketplace" && "bg-accent"
+              )}
+            >
+              Marketplace
+            </Link>
+          </NavigationMenuLink>
+        </NavigationMenu>
       </div>
 
       {/* Middle: Search trigger */}

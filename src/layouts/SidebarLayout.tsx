@@ -43,7 +43,7 @@ const PLATFORM_ADMIN_SECTIONS: MenuSection[] = [
     items: [
       { label: "Platform Dashboard", icon: LayoutDashboard, path: "/admin/platform", module: "settings", roles: ['admin'] },
       { label: "Companies", icon: Building2, path: "/admin/companies", module: "settings", roles: ['admin'] },
-      { label: "Platform Users", icon: UserCog, path: "/admin/user-management", module: "users", roles: ['admin'] },
+      { label: "Platform Users", icon: UserCog, path: "/admin/users", module: "users", roles: ['admin'] },
       { label: "Global Settings", icon: Settings, path: "/admin/platform-admin-setup", module: "settings", roles: ['admin'] },
     ],
   },
@@ -95,7 +95,7 @@ const COMPANY_SETTINGS_SECTION: MenuSection = {
   items: [
     { label: "Profile", icon: Building2, path: "/admin/company-settings/profile", module: "settings", roles: ['admin'] },
     { label: "Branding", icon: Palette, path: "/admin/company-settings/branding", module: "settings", roles: ['admin'] },
-    { label: "Users & Roles", icon: UserCog, path: "/admin/user-management", module: "users", roles: ['admin'] },
+    { label: "Users & Roles", icon: UserCog, path: "/admin/users", module: "users", roles: ['admin'] },
     { label: "Taxes", icon: Receipt, path: "/admin/company-settings/taxes", module: "settings", roles: ['admin'] },
     { label: "General", icon: Settings, path: "/admin/company-settings/general", module: "settings", roles: ['admin'] },
     { label: "Integrations", icon: Zap, path: "/admin/company-settings/integrations", module: "settings", roles: ['admin'] },

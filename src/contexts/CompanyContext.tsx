@@ -52,13 +52,15 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
 
-      // Get user's company association
+      // Get user's company association (handle multiple companies - take first active)
       const { data: companyUserData, error: cuError } = await supabase
         .from('company_users' as any)
         .select('*')
         .eq('user_id', user.id)
         .eq('status', 'active')
-        .single();
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
 
       if (cuError) {
         console.error('Error fetching company user:', cuError);

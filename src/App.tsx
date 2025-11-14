@@ -94,6 +94,12 @@ const CompanyOnboarding = lazy(() => import("./pages/CompanyOnboarding"));
 const CompaniesManagement = lazy(() => import("./pages/CompaniesManagement"));
 const CompanySettings = lazy(() => import("./pages/CompanySettings"));
 const CompanyProfile = lazy(() => import("./pages/CompanyProfile"));
+const CompanyBranding = lazy(() => import("./pages/CompanyBranding"));
+const CompanyTaxes = lazy(() => import("./pages/CompanyTaxes"));
+const CompanyReminders = lazy(() => import("./pages/CompanyReminders"));
+const CompanyClientPortal = lazy(() => import("./pages/CompanyClientPortal"));
+const CompanyCurrencies = lazy(() => import("./pages/CompanyCurrencies"));
+const CompanyPDFTemplates = lazy(() => import("./pages/CompanyPDFTemplates"));
 const PlatformAdminDashboard = lazy(() => import("./pages/PlatformAdminDashboard"));
 const CompanyTesting = lazy(() => import("./pages/CompanyTesting"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
@@ -203,6 +209,21 @@ const App = () => (
             <Route path="/admin/organization-settings" element={<AppLayout><OrganizationSettings /></AppLayout>} />
             <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
             <Route path="/settings/profile" element={<ProtectedRoute requireAuth><AppLayout><ProfileSettings /></AppLayout></ProtectedRoute>} />
+            
+            {/* Company Settings with SettingsLayout */}
+            <Route path="/admin/company-settings" element={<ProtectedRoute requireAuth><SettingsLayout /></ProtectedRoute>}>
+              <Route index element={<CompanySettings />} />
+              <Route path="profile" element={<CompanyProfile />} />
+              <Route path="branding" element={<CompanyBranding />} />
+              <Route path="taxes" element={<CompanyTaxes />} />
+              <Route path="currencies" element={<CompanyCurrencies />} />
+              <Route path="reminders" element={<CompanyReminders />} />
+              <Route path="client-portal" element={<CompanyClientPortal />} />
+              <Route path="pdf-templates" element={<CompanyPDFTemplates />} />
+            </Route>
+            
+            {/* Company Onboarding */}
+            <Route path="/onboarding" element={<CompanyOnboarding />} />
             <Route path="/admin/approval-settings" element={<AppLayout><ApprovalSettings /></AppLayout>} />
             <Route path="/admin/approval-delegation" element={<AppLayout><ApprovalDelegation /></AppLayout>} />
             <Route path="/admin/approval-analytics" element={<AppLayout><ApprovalAnalytics /></AppLayout>} />

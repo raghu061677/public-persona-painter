@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Palette, Upload, Image as ImageIcon } from "lucide-react";
+import { ClientPortalPreview } from "./ClientPortalPreview";
 
 export function CompanyBrandingSettings() {
   const { company, refreshCompany } = useCompany();
@@ -218,53 +219,12 @@ export function CompanyBrandingSettings() {
             <p className="text-xs text-muted-foreground">See how your branding will appear to clients</p>
           </div>
           
-          <div className="p-6 bg-background">
-            {/* Mock Portal Header */}
-            <div className="flex items-center gap-4 mb-6 pb-4 border-b">
-              {logoPreview && (
-                <div className="w-12 h-12 border rounded overflow-hidden bg-white flex items-center justify-center">
-                  <img
-                    src={logoPreview}
-                    alt="Company logo preview"
-                    className="max-w-full max-h-full object-contain"
-                  />
-                </div>
-              )}
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg" style={{ color: primaryColor }}>
-                  {company?.name || 'Your Company Name'}
-                </h3>
-                <p className="text-sm text-muted-foreground">Client Portal Dashboard</p>
-              </div>
-            </div>
-
-            {/* Mock Content */}
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 border rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">Active Campaigns</p>
-                  <p className="text-2xl font-bold" style={{ color: primaryColor }}>12</p>
-                </div>
-                <div className="p-4 border rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">Pending Invoices</p>
-                  <p className="text-2xl font-bold" style={{ color: secondaryColor }}>3</p>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button size="sm" style={{ backgroundColor: primaryColor, borderColor: primaryColor }}>
-                  View Campaigns
-                </Button>
-                <Button 
-                  size="sm"
-                  variant="outline" 
-                  style={{ borderColor: secondaryColor, color: secondaryColor }}
-                >
-                  Download Reports
-                </Button>
-              </div>
-            </div>
-          </div>
+          <ClientPortalPreview
+            logoUrl={logoPreview}
+            primaryColor={primaryColor}
+            secondaryColor={secondaryColor}
+            companyName={company?.name || "Your Company"}
+          />
         </div>
 
         <Button onClick={handleSave} disabled={loading} className="w-full">

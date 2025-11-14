@@ -18,6 +18,7 @@ import MediaAssetEdit from "./pages/MediaAssetEdit";
 import MediaAssetsMap from "./pages/MediaAssetsMap";
 import MediaAssetsImport from "./pages/MediaAssetsImport";
 import MediaAssetsValidation from "./pages/MediaAssetsValidation";
+import TenantAnalytics from "./pages/TenantAnalytics";
 import ClientsImport from "./pages/ClientsImport";
 import ClientsList from "./pages/ClientsList";
 import ClientNew from "./pages/ClientNew";
@@ -191,6 +192,8 @@ const App = () => (
             
             {/* Access Denied */}
             <Route path="/access-denied" element={<AccessDenied />} />
+            
+            <Route path="/admin/tenant-analytics" element={<ProtectedRoute><AppLayout><TenantAnalytics /></AppLayout></ProtectedRoute>} />
             
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />

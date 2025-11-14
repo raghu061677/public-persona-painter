@@ -193,7 +193,7 @@ const DraggableHeader = ({ header, table, isFrozen, onToggleFreeze }: {
       }}
       className={cn(
         "cursor-move select-none",
-        isFrozen && "frozen-column"
+        isFrozen && "bg-muted/30"
       )}
     >
       <div className="flex items-center gap-2">
@@ -491,11 +491,11 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
   const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("media-assets");
   
   const { 
-    frozenColumns,
+    frozenColumns, 
     toggleFrozen,
     isFrozen,
     isReady: frozenReady 
-  } = useFrozenColumns("media-assets", ["select", "id", "images", "location"]);
+  } = useFrozenColumns("media-assets");
   
   const { 
     settings, 
@@ -848,11 +848,10 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
 
         <Card className="h-full flex flex-col overflow-hidden border-2 shadow-lg">
           <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
-            {/* Enhanced scrollable table area with horizontal and vertical scroll */}
-            <div className="flex-1 overflow-auto custom-scrollbar" style={{ maxHeight: 'calc(100vh - 380px)' }}>
-              <div className="min-w-max">
-                <Table style={{ width: table.getCenterTotalSize() }}>
-                  <TableHeader className="sticky top-0 z-10 bg-background shadow-sm">
+            {/* Scrollable table area */}
+            <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(100vh - 380px)' }}>
+              <Table style={{ width: table.getCenterTotalSize() }}>
+                <TableHeader className="sticky top-0 z-20 bg-background shadow-sm">
                     {table.getHeaderGroups().map((headerGroup) => (
                       <TableRow key={headerGroup.id}>
                         {headerGroup.headers.map((header) => (
@@ -898,7 +897,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                               }}
                               className={cn(
                                 getCellClassName(),
-                                isFrozen(cell.column.id) && "frozen-column"
+                                isFrozen(cell.column.id) && "bg-muted/30"
                               )}
                             >
                               {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -920,8 +919,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                   </TableBody>
                 </Table>
               </div>
-            </div>
-          </CardContent>
+            </CardContent>
           <CardContent className="flex-none p-4 border-t bg-muted/30">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-sm text-muted-foreground font-medium">

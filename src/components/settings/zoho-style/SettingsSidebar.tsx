@@ -49,8 +49,6 @@ const navigationGroups: NavGroup[] = [
     items: [
       { label: "Profile", path: "/admin/company-settings/profile", icon: Building2 },
       { label: "Branding", path: "/admin/company-settings/branding", icon: Palette },
-      { label: "Branches", path: "/admin/company-settings/branches", icon: Boxes },
-      { label: "Manage Subscription", path: "/admin/company-settings/subscription", icon: CreditCard },
     ]
   },
   {
@@ -65,7 +63,6 @@ const navigationGroups: NavGroup[] = [
     items: [
       { label: "Taxes", path: "/admin/company-settings/taxes", icon: Calculator },
       { label: "Direct Taxes", path: "/admin/company-settings/direct-taxes", icon: FileBarChart },
-      { label: "e-Way Bills", path: "/admin/company-settings/eway-bills", icon: FileText },
       { label: "e-Invoicing", path: "/admin/company-settings/einvoicing", icon: Receipt },
     ]
   },

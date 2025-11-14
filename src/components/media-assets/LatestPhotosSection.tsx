@@ -10,6 +10,7 @@ import { PhotoLightbox } from "./PhotoLightbox";
 
 interface LatestPhotosSectionProps {
   assetId: string;
+  asset?: any; // Asset data to pass to lightbox
 }
 
 interface MediaPhoto {
@@ -20,7 +21,7 @@ interface MediaPhoto {
   campaign_id: string | null;
 }
 
-export function LatestPhotosSection({ assetId }: LatestPhotosSectionProps) {
+export function LatestPhotosSection({ assetId, asset }: LatestPhotosSectionProps) {
   const [photos, setPhotos] = useState<MediaPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -144,6 +145,15 @@ export function LatestPhotosSection({ assetId }: LatestPhotosSectionProps) {
         initialIndex={selectedPhotoIndex}
         isOpen={lightboxOpen}
         onClose={() => setLightboxOpen(false)}
+        assetData={asset ? {
+          location: asset.location,
+          direction: asset.direction,
+          dimension: asset.dimension,
+          total_sqft: asset.total_sqft,
+          illumination_type: asset.illumination_type,
+          city: asset.city,
+          area: asset.area,
+        } : undefined}
       />
     </>
   );

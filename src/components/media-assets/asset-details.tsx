@@ -245,7 +245,7 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
         {/* Right Column - Image Preview (1/3 width) */}
         <div className="lg:col-span-1 space-y-6">
           {/* Latest Photos Section - Top Priority */}
-          <LatestPhotosSection assetId={currentAsset.id} />
+      <LatestPhotosSection assetId={currentAsset.id} asset={currentAsset} />
 
           {/* Images Preview Card */}
           {allImages.length > 0 && (

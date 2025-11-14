@@ -33,7 +33,7 @@ export default function CompanyTesting() {
   const seedDemoCompanies = async () => {
     setSeedingDemo(true);
     try {
-      const { data, error } = await supabase.rpc('seed_demo_companies');
+      const { data, error } = await supabase.rpc('seed_demo_companies' as any);
       
       if (error) throw error;
 

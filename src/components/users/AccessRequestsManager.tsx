@@ -47,7 +47,7 @@ export function AccessRequestsManager() {
   const loadRequests = async () => {
     try {
       const { data, error } = await supabase
-        .from('access_requests')
+        .from('access_requests' as any)
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -56,7 +56,7 @@ export function AccessRequestsManager() {
       // Get user emails
       const { data: { users } } = await supabase.auth.admin.listUsers();
       
-      const requestsWithUserInfo = (data || []).map(req => {
+      const requestsWithUserInfo = (data || []).map((req: any) => {
         const user = users?.find((u: any) => u.id === req.user_id);
         return {
           ...req,
@@ -65,7 +65,7 @@ export function AccessRequestsManager() {
         };
       });
 
-      setRequests(requestsWithUserInfo);
+      setRequests(requestsWithUserInfo as any);
     } catch (error: any) {
       console.error('Error loading requests:', error);
       toast({
@@ -95,7 +95,7 @@ export function AccessRequestsManager() {
 
       // Update request status
       const { error: updateError } = await supabase
-        .from('access_requests')
+        .from('access_requests' as any)
         .update({
           status: 'approved',
           reviewed_at: new Date().toISOString(),
@@ -129,7 +129,7 @@ export function AccessRequestsManager() {
     setProcessing(true);
     try {
       const { error } = await supabase
-        .from('access_requests')
+        .from('access_requests' as any)
         .update({
           status: 'denied',
           reviewed_at: new Date().toISOString(),

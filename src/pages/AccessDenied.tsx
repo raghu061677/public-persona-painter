@@ -34,7 +34,7 @@ export default function AccessDenied() {
     try {
       // Insert access request record
       const { error: insertError } = await supabase
-        .from('access_requests')
+        .from('access_requests' as any)
         .insert({
           user_id: user.id,
           requested_role: requiredRole,

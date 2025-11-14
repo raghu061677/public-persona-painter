@@ -35,6 +35,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
+import {
   GripVertical,
   ArrowUpDown,
   ChevronLeft,
@@ -43,11 +51,17 @@ import {
   ChevronsRight,
   Filter,
   Layers,
+  Edit3,
+  Save,
+  Pin,
+  PinOff,
+  MoreVertical,
 } from "lucide-react";
 import { DndProvider, useDrag, useDrop, type XYCoord } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import { useTableDensity } from "@/hooks/use-table-density";
+import { useFrozenColumns } from "@/hooks/use-frozen-columns";
 import { useTableSettings, formatCurrency as formatCurrencyUtil, formatDate as formatDateUtil } from "@/hooks/use-table-settings";
 import ColumnVisibilityButton from "@/components/common/column-visibility-button";
 import { TableFilters } from "@/components/common/table-filters";
@@ -70,6 +84,8 @@ import {
 } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import AddPlanFromAssetsModal from "./add-plan-from-assets-modal";
+import { BulkEditDialog } from "./BulkEditDialog";
+import { TableViewsDialog } from "./TableViewsDialog";
 import { ActionCell, ImageCell } from "./asset-table-cells";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
@@ -105,7 +121,12 @@ interface Asset {
   updated_at?: string;
 }
 
-const DraggableHeader = ({ header, table }: { header: any; table: any }) => {
+const DraggableHeader = ({ header, table, isFrozen, onToggleFreeze }: { 
+  header: any; 
+  table: any; 
+  isFrozen: boolean;
+  onToggleFreeze: () => void;
+}) => {
   const { getState, setColumnOrder } = table;
   const { columnOrder } = getState();
   const { column } = header;
@@ -164,24 +185,49 @@ const DraggableHeader = ({ header, table }: { header: any; table: any }) => {
       style={{ 
         opacity: isDragging ? 0.5 : 1,
         width: header.getSize(),
-        position: 'relative',
+        position: isFrozen ? 'sticky' : 'relative',
+        left: isFrozen ? 0 : undefined,
+        zIndex: isFrozen ? 30 : 20,
+        backgroundColor: 'hsl(var(--background))',
+        boxShadow: isFrozen ? '2px 0 4px rgba(0,0,0,0.1)' : undefined,
       }}
-      className="cursor-move select-none"
+      className={cn(
+        "cursor-move select-none",
+        isFrozen && "bg-muted/30"
+      )}
     >
       <div className="flex items-center gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+              <MoreVertical className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={onToggleFreeze}>
+              {isFrozen ? (
+                <>
+                  <PinOff className="mr-2 h-4 w-4" />
+                  Unfreeze Column
+                </>
+              ) : (
+                <>
+                  <Pin className="mr-2 h-4 w-4" />
+                  Freeze Column
+                </>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={header.column.getToggleSortingHandler()}>
+              <ArrowUpDown className="mr-2 h-4 w-4" />
+              Sort
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <GripVertical className="h-4 w-4 text-muted-foreground" />
         <div className="flex items-center flex-1">
           {flexRender(header.column.columnDef.header, header.getContext())}
-          {header.column.getCanSort() && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={header.column.getToggleSortingHandler()}
-              className="ml-2 h-8 w-8 p-0"
-            >
-              <ArrowUpDown className="h-4 w-4" />
-            </Button>
-          )}
+          {isFrozen && <Pin className="ml-2 h-3 w-3 text-primary" />}
         </div>
       </div>
       {/* Column Resize Handle */}
@@ -216,6 +262,12 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<Asset[]>(assets);
+  
+  // Bulk Edit Dialog
+  const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
+  
+  // Table Views Dialog
+  const [isTableViewsOpen, setIsTableViewsOpen] = useState(false);
   
   // Advanced filter states
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
@@ -439,6 +491,13 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
   const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("media-assets");
   
   const { 
+    frozenColumns,
+    toggleFrozen,
+    isFrozen,
+    isReady: frozenReady 
+  } = useFrozenColumns("media-assets");
+  
+  const { 
     settings, 
     updateSettings, 
     resetSettings,
@@ -602,7 +661,32 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
     return Array.from(cities).sort();
   }, [assets]);
 
-  if (!isReady || !settingsReady) {
+  const getCurrentTableConfig = () => ({
+    columnOrder,
+    columnVisibility,
+    sorting,
+    columnSizes: table.getAllColumns().reduce((acc, col) => {
+      acc[col.id] = col.getSize();
+      return acc;
+    }, {} as Record<string, number>),
+    frozenColumns,
+    density,
+  });
+
+  const handleLoadTableView = (config: any) => {
+    if (config.columnOrder) setColumnOrder(config.columnOrder);
+    if (config.sorting) setSorting(config.sorting);
+    if (config.density) setDensity(config.density);
+    
+    // Note: Column sizes are stored but need to be reapplied manually after table remounts
+    // The column resize state is managed by TanStack Table internally
+    toast({
+      title: "View Loaded",
+      description: "Table configuration has been applied",
+    });
+  };
+
+  if (!isReady || !settingsReady || !frozenReady) {
     return (
       <div className="space-y-4">
         <Card>
@@ -714,27 +798,40 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
           ).length}
         />
 
-        {/* Advanced Filters */}
-        <TableFilters
-          filters={filterConfigs}
-          filterValues={filterValues}
-          onFilterChange={handleFilterChange}
-          onClearFilters={handleClearFilters}
-          allColumns={allColumnsForVisibilityButton}
-          visibleColumns={visibleKeys}
-          onColumnVisibilityChange={setVisibleKeys}
-          onResetColumns={resetColumnPrefs}
-          density={density}
-          onDensityChange={setDensity}
-          tableKey="media-assets"
-          enableGlobalSearch
-          searchableData={assets}
-          searchableKeys={["id", "media_id", "location", "area", "city", "media_type", "status"]}
-          onGlobalSearchFilter={setGlobalSearchFiltered}
-          settings={settings}
-          onUpdateSettings={updateSettings}
-          onResetSettings={resetSettings}
-        />
+        {/* Advanced Filters with Table Views Button */}
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <TableFilters
+              filters={filterConfigs}
+              filterValues={filterValues}
+              onFilterChange={handleFilterChange}
+              onClearFilters={handleClearFilters}
+              allColumns={allColumnsForVisibilityButton}
+              visibleColumns={visibleKeys}
+              onColumnVisibilityChange={setVisibleKeys}
+              onResetColumns={resetColumnPrefs}
+              density={density}
+              onDensityChange={setDensity}
+              tableKey="media-assets"
+              enableGlobalSearch
+              searchableData={assets}
+              searchableKeys={["id", "media_id", "location", "area", "city", "media_type", "status"]}
+              onGlobalSearchFilter={setGlobalSearchFiltered}
+              settings={settings}
+              onUpdateSettings={updateSettings}
+              onResetSettings={resetSettings}
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsTableViewsOpen(true)}
+            className="shrink-0"
+          >
+            <Save className="mr-2 h-4 w-4" />
+            Table Views
+          </Button>
+        </div>
 
         {selectedAssetIds.length > 0 && (
           <Card className="mb-4 bg-primary/5 border-primary/20">
@@ -751,6 +848,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
               <BulkActionsDropdown
                 selectedCount={selectedAssetIds.length}
                 actions={[
+                  { id: "bulkEdit", label: "Bulk Edit", icon: Edit3 },
                   commonBulkActions.addToPlan,
                   commonBulkActions.export,
                   commonBulkActions.delete,
@@ -771,7 +869,13 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                     {table.getHeaderGroups().map((headerGroup) => (
                       <TableRow key={headerGroup.id}>
                         {headerGroup.headers.map((header) => (
-                          <DraggableHeader key={header.id} header={header} table={table} />
+                          <DraggableHeader 
+                            key={header.id} 
+                            header={header} 
+                            table={table}
+                            isFrozen={isFrozen(header.column.id)}
+                            onToggleFreeze={() => toggleFrozen(header.column.id)}
+                          />
                         ))}
                       </TableRow>
                     ))}
@@ -797,8 +901,18 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                           {row.getVisibleCells().map((cell) => (
                             <TableCell 
                               key={cell.id}
-                              style={{ width: cell.column.getSize() }}
-                              className={getCellClassName()}
+                              style={{ 
+                                width: cell.column.getSize(),
+                                position: isFrozen(cell.column.id) ? 'sticky' : 'relative',
+                                left: isFrozen(cell.column.id) ? 0 : undefined,
+                                zIndex: isFrozen(cell.column.id) ? 20 : undefined,
+                                backgroundColor: isFrozen(cell.column.id) ? 'hsl(var(--background))' : undefined,
+                                boxShadow: isFrozen(cell.column.id) ? '2px 0 4px rgba(0,0,0,0.1)' : undefined,
+                              }}
+                              className={cn(
+                                getCellClassName(),
+                                isFrozen(cell.column.id) && "bg-muted/30"
+                              )}
                             >
                               {flexRender(cell.column.columnDef.cell, cell.getContext())}
                             </TableCell>
@@ -896,6 +1010,24 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
         open={isPlanModalOpen}
         onClose={() => setIsPlanModalOpen(false)}
         assetIds={selectedAssetIds}
+      />
+
+      <BulkEditDialog
+        open={isBulkEditOpen}
+        onOpenChange={setIsBulkEditOpen}
+        selectedAssetIds={selectedAssetIds}
+        onSuccess={() => {
+          onRefresh();
+          setRowSelection({});
+        }}
+      />
+
+      <TableViewsDialog
+        open={isTableViewsOpen}
+        onOpenChange={setIsTableViewsOpen}
+        tableKey="media-assets"
+        currentConfig={getCurrentTableConfig()}
+        onLoadView={handleLoadTableView}
       />
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

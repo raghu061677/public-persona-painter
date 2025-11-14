@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_requests: {
+        Row: {
+          created_at: string
+          current_roles: Json | null
+          denial_reason: string | null
+          id: string
+          requested_action: string
+          requested_module: string
+          requested_role: Database["public"]["Enums"]["app_role"]
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_roles?: Json | null
+          denial_reason?: string | null
+          id?: string
+          requested_action: string
+          requested_module: string
+          requested_role: Database["public"]["Enums"]["app_role"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_roles?: Json | null
+          denial_reason?: string | null
+          id?: string
+          requested_action?: string
+          requested_module?: string
+          requested_role?: Database["public"]["Enums"]["app_role"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       activity_logs: {
         Row: {
           action: string
@@ -55,6 +100,47 @@ export type Database = {
           user_name?: string | null
         }
         Relationships: []
+      }
+      ai_assistant_logs: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          id: string
+          intent: string | null
+          query_text: string
+          response_time_ms: number | null
+          response_type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          intent?: string | null
+          query_text: string
+          response_time_ms?: number | null
+          response_type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          intent?: string | null
+          query_text?: string
+          response_time_ms?: number | null
+          response_type?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_assistant_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       alert_settings: {
         Row: {
@@ -347,6 +433,7 @@ export type Database = {
           fixed_charges: number | null
           id: string
           is_anomaly: boolean | null
+          is_primary_bill: boolean | null
           last_reconciled_at: string | null
           location: string | null
           notes: string | null
@@ -357,8 +444,11 @@ export type Database = {
           payment_link: string | null
           payment_reference: string | null
           payment_status: string | null
+          primary_bill_id: string | null
           section_name: string | null
           service_number: string | null
+          share_percentage: number | null
+          shared_with_assets: Json | null
           total_due: number | null
           unique_service_number: string | null
           units: number | null
@@ -389,6 +479,7 @@ export type Database = {
           fixed_charges?: number | null
           id?: string
           is_anomaly?: boolean | null
+          is_primary_bill?: boolean | null
           last_reconciled_at?: string | null
           location?: string | null
           notes?: string | null
@@ -399,8 +490,11 @@ export type Database = {
           payment_link?: string | null
           payment_reference?: string | null
           payment_status?: string | null
+          primary_bill_id?: string | null
           section_name?: string | null
           service_number?: string | null
+          share_percentage?: number | null
+          shared_with_assets?: Json | null
           total_due?: number | null
           unique_service_number?: string | null
           units?: number | null
@@ -431,6 +525,7 @@ export type Database = {
           fixed_charges?: number | null
           id?: string
           is_anomaly?: boolean | null
+          is_primary_bill?: boolean | null
           last_reconciled_at?: string | null
           location?: string | null
           notes?: string | null
@@ -441,8 +536,11 @@ export type Database = {
           payment_link?: string | null
           payment_reference?: string | null
           payment_status?: string | null
+          primary_bill_id?: string | null
           section_name?: string | null
           service_number?: string | null
+          share_percentage?: number | null
+          shared_with_assets?: Json | null
           total_due?: number | null
           unique_service_number?: string | null
           units?: number | null
@@ -454,6 +552,13 @@ export type Database = {
             columns: ["asset_id"]
             isOneToOne: false
             referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_power_bills_primary_bill_id_fkey"
+            columns: ["primary_bill_id"]
+            isOneToOne: false
+            referencedRelation: "asset_power_bills"
             referencedColumns: ["id"]
           },
         ]
@@ -501,6 +606,88 @@ export type Database = {
             columns: ["bill_id"]
             isOneToOne: false
             referencedRelation: "asset_power_bills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_requests: {
+        Row: {
+          asset_id: string
+          campaign_name: string | null
+          client_name: string | null
+          created_at: string
+          end_date: string
+          id: string
+          notes: string | null
+          owner_company_id: string
+          proposed_rate: number
+          rejection_reason: string | null
+          requested_by: string
+          requester_company_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["booking_status"]
+          updated_at: string
+        }
+        Insert: {
+          asset_id: string
+          campaign_name?: string | null
+          client_name?: string | null
+          created_at?: string
+          end_date: string
+          id?: string
+          notes?: string | null
+          owner_company_id: string
+          proposed_rate: number
+          rejection_reason?: string | null
+          requested_by: string
+          requester_company_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["booking_status"]
+          updated_at?: string
+        }
+        Update: {
+          asset_id?: string
+          campaign_name?: string | null
+          client_name?: string | null
+          created_at?: string
+          end_date?: string
+          id?: string
+          notes?: string | null
+          owner_company_id?: string
+          proposed_rate?: number
+          rejection_reason?: string | null
+          requested_by?: string
+          requester_company_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["booking_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_requests_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_requests_owner_company_id_fkey"
+            columns: ["owner_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_requests_requester_company_id_fkey"
+            columns: ["requester_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -634,6 +821,7 @@ export type Database = {
           campaign_name: string
           client_id: string
           client_name: string
+          company_id: string | null
           created_at: string | null
           created_by: string
           end_date: string
@@ -655,6 +843,7 @@ export type Database = {
           campaign_name: string
           client_id: string
           client_name: string
+          company_id?: string | null
           created_at?: string | null
           created_by: string
           end_date: string
@@ -676,6 +865,7 @@ export type Database = {
           campaign_name?: string
           client_id?: string
           client_name?: string
+          company_id?: string | null
           created_at?: string | null
           created_by?: string
           end_date?: string
@@ -693,6 +883,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "campaigns_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "campaigns_plan_id_fkey"
             columns: ["plan_id"]
@@ -783,6 +980,111 @@ export type Database = {
         }
         Relationships: []
       }
+      client_portal_access_logs: {
+        Row: {
+          action: string
+          client_id: string
+          created_at: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          resource_id: string | null
+          resource_type: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          client_id: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          resource_id?: string | null
+          resource_type?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          resource_id?: string | null
+          resource_type?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      client_portal_users: {
+        Row: {
+          auth_user_id: string | null
+          client_id: string
+          created_at: string | null
+          email: string
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          is_active: boolean | null
+          last_login: string | null
+          magic_link_expires_at: string | null
+          magic_link_token: string | null
+          name: string | null
+          phone: string | null
+          role: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          auth_user_id?: string | null
+          client_id: string
+          created_at?: string | null
+          email: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          is_active?: boolean | null
+          last_login?: string | null
+          magic_link_expires_at?: string | null
+          magic_link_token?: string | null
+          name?: string | null
+          phone?: string | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          auth_user_id?: string | null
+          client_id?: string
+          created_at?: string | null
+          email?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          is_active?: boolean | null
+          last_login?: string | null
+          magic_link_expires_at?: string | null
+          magic_link_token?: string | null
+          name?: string | null
+          phone?: string | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_users_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_users_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
@@ -793,6 +1095,7 @@ export type Database = {
           billing_state: string | null
           city: string | null
           company: string | null
+          company_id: string | null
           contact_person: string | null
           created_at: string | null
           created_by: string | null
@@ -820,6 +1123,7 @@ export type Database = {
           billing_state?: string | null
           city?: string | null
           company?: string | null
+          company_id?: string | null
           contact_person?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -847,6 +1151,7 @@ export type Database = {
           billing_state?: string | null
           city?: string | null
           company?: string | null
+          company_id?: string | null
           contact_person?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -865,7 +1170,15 @@ export type Database = {
           state?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clients_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       code_counters: {
         Row: {
@@ -896,6 +1209,207 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      companies: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          gstin: string | null
+          id: string
+          legal_name: string | null
+          logo_url: string | null
+          metadata: Json | null
+          name: string
+          pan: string | null
+          phone: string | null
+          pincode: string | null
+          secondary_color: string | null
+          state: string | null
+          status: Database["public"]["Enums"]["company_status"]
+          theme_color: string | null
+          type: Database["public"]["Enums"]["company_type"]
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          gstin?: string | null
+          id?: string
+          legal_name?: string | null
+          logo_url?: string | null
+          metadata?: Json | null
+          name: string
+          pan?: string | null
+          phone?: string | null
+          pincode?: string | null
+          secondary_color?: string | null
+          state?: string | null
+          status?: Database["public"]["Enums"]["company_status"]
+          theme_color?: string | null
+          type: Database["public"]["Enums"]["company_type"]
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          gstin?: string | null
+          id?: string
+          legal_name?: string | null
+          logo_url?: string | null
+          metadata?: Json | null
+          name?: string
+          pan?: string | null
+          phone?: string | null
+          pincode?: string | null
+          secondary_color?: string | null
+          state?: string | null
+          status?: Database["public"]["Enums"]["company_status"]
+          theme_color?: string | null
+          type?: Database["public"]["Enums"]["company_type"]
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      company_users: {
+        Row: {
+          company_id: string
+          id: string
+          invited_by: string | null
+          is_primary: boolean | null
+          joined_at: string
+          role: Database["public"]["Enums"]["app_role"]
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          id?: string
+          invited_by?: string | null
+          is_primary?: boolean | null
+          joined_at?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          id?: string
+          invited_by?: string | null
+          is_primary?: boolean | null
+          joined_at?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_users_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dashboard_configurations: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          id: string
+          is_default: boolean | null
+          layout: Json
+          name: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          layout?: Json
+          name: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          layout?: Json
+          name?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_configurations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      default_role_settings: {
+        Row: {
+          auto_assign_role: boolean
+          company_id: string | null
+          created_at: string
+          default_role: Database["public"]["Enums"]["app_role"]
+          id: string
+          notify_admins_on_signup: boolean
+          require_admin_approval: boolean
+          updated_at: string
+        }
+        Insert: {
+          auto_assign_role?: boolean
+          company_id?: string | null
+          created_at?: string
+          default_role?: Database["public"]["Enums"]["app_role"]
+          id?: string
+          notify_admins_on_signup?: boolean
+          require_admin_approval?: boolean
+          updated_at?: string
+        }
+        Update: {
+          auto_assign_role?: boolean
+          company_id?: string | null
+          created_at?: string
+          default_role?: Database["public"]["Enums"]["app_role"]
+          id?: string
+          notify_admins_on_signup?: boolean
+          require_admin_approval?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "default_role_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_logs: {
         Row: {
@@ -948,6 +1462,7 @@ export type Database = {
         Row: {
           client_id: string
           client_name: string
+          company_id: string | null
           created_at: string | null
           created_by: string
           estimation_date: string
@@ -965,6 +1480,7 @@ export type Database = {
         Insert: {
           client_id: string
           client_name: string
+          company_id?: string | null
           created_at?: string | null
           created_by: string
           estimation_date: string
@@ -982,6 +1498,7 @@ export type Database = {
         Update: {
           client_id?: string
           client_name?: string
+          company_id?: string | null
           created_at?: string | null
           created_by?: string
           estimation_date?: string
@@ -998,6 +1515,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "estimations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "estimations_plan_id_fkey"
             columns: ["plan_id"]
             isOneToOne: false
@@ -1013,6 +1537,7 @@ export type Database = {
           bill_month: string | null
           campaign_id: string | null
           category: Database["public"]["Enums"]["expense_category"]
+          company_id: string | null
           created_at: string | null
           gst_amount: number
           gst_percent: number
@@ -1031,6 +1556,7 @@ export type Database = {
           bill_month?: string | null
           campaign_id?: string | null
           category: Database["public"]["Enums"]["expense_category"]
+          company_id?: string | null
           created_at?: string | null
           gst_amount: number
           gst_percent?: number
@@ -1049,6 +1575,7 @@ export type Database = {
           bill_month?: string | null
           campaign_id?: string | null
           category?: Database["public"]["Enums"]["expense_category"]
+          company_id?: string | null
           created_at?: string | null
           gst_amount?: number
           gst_percent?: number
@@ -1074,6 +1601,13 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -1128,6 +1662,7 @@ export type Database = {
           balance_due: number
           client_id: string
           client_name: string
+          company_id: string | null
           created_at: string | null
           created_by: string
           due_date: string
@@ -1148,6 +1683,7 @@ export type Database = {
           balance_due: number
           client_id: string
           client_name: string
+          company_id?: string | null
           created_at?: string | null
           created_by: string
           due_date: string
@@ -1168,6 +1704,7 @@ export type Database = {
           balance_due?: number
           client_id?: string
           client_name?: string
+          company_id?: string | null
           created_at?: string | null
           created_by?: string
           due_date?: string
@@ -1186,6 +1723,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "invoices_estimation_id_fkey"
             columns: ["estimation_id"]
             isOneToOne: false
@@ -1197,6 +1741,7 @@ export type Database = {
       leads: {
         Row: {
           company: string | null
+          company_id: string | null
           created_at: string | null
           email: string | null
           id: string
@@ -1214,6 +1759,7 @@ export type Database = {
         }
         Insert: {
           company?: string | null
+          company_id?: string | null
           created_at?: string | null
           email?: string | null
           id?: string
@@ -1231,6 +1777,7 @@ export type Database = {
         }
         Update: {
           company?: string | null
+          company_id?: string | null
           created_at?: string | null
           email?: string | null
           id?: string
@@ -1246,7 +1793,15 @@ export type Database = {
           updated_at?: string | null
           zoho_lead_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "leads_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       media_assets: {
         Row: {
@@ -1257,6 +1812,7 @@ export type Database = {
           card_rate: number
           category: Database["public"]["Enums"]["media_category"]
           city: string
+          company_id: string | null
           concession_fee: number | null
           consumer_name: string | null
           created_at: string | null
@@ -1303,6 +1859,7 @@ export type Database = {
           card_rate: number
           category?: Database["public"]["Enums"]["media_category"]
           city: string
+          company_id?: string | null
           concession_fee?: number | null
           consumer_name?: string | null
           created_at?: string | null
@@ -1349,6 +1906,7 @@ export type Database = {
           card_rate?: number
           category?: Database["public"]["Enums"]["media_category"]
           city?: string
+          company_id?: string | null
           concession_fee?: number | null
           consumer_name?: string | null
           created_at?: string | null
@@ -1387,7 +1945,15 @@ export type Database = {
           updated_at?: string | null
           vendor_details?: Json | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "media_assets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       media_photos: {
         Row: {
@@ -1440,6 +2006,51 @@ export type Database = {
           updated_at?: string | null
           uploaded_at?: string | null
           uploaded_by?: string | null
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          action_label: string | null
+          action_url: string | null
+          category: string
+          created_at: string
+          id: string
+          message: string
+          metadata: Json | null
+          read: boolean
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          action_label?: string | null
+          action_url?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          message: string
+          metadata?: Json | null
+          read?: boolean
+          read_at?: string | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          action_label?: string | null
+          action_url?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          message?: string
+          metadata?: Json | null
+          read?: boolean
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1990,6 +2601,7 @@ export type Database = {
         Row: {
           client_id: string
           client_name: string
+          company_id: string | null
           created_at: string | null
           created_by: string
           duration_days: number
@@ -2000,6 +2612,7 @@ export type Database = {
           gst_percent: number
           id: string
           notes: string | null
+          owner_company_id: string | null
           plan_name: string
           plan_type: Database["public"]["Enums"]["plan_type"]
           share_link_active: boolean | null
@@ -2012,6 +2625,7 @@ export type Database = {
         Insert: {
           client_id: string
           client_name: string
+          company_id?: string | null
           created_at?: string | null
           created_by: string
           duration_days: number
@@ -2022,6 +2636,7 @@ export type Database = {
           gst_percent?: number
           id: string
           notes?: string | null
+          owner_company_id?: string | null
           plan_name: string
           plan_type?: Database["public"]["Enums"]["plan_type"]
           share_link_active?: boolean | null
@@ -2034,6 +2649,7 @@ export type Database = {
         Update: {
           client_id?: string
           client_name?: string
+          company_id?: string | null
           created_at?: string | null
           created_by?: string
           duration_days?: number
@@ -2044,6 +2660,7 @@ export type Database = {
           gst_percent?: number
           id?: string
           notes?: string | null
+          owner_company_id?: string | null
           plan_name?: string
           plan_type?: Database["public"]["Enums"]["plan_type"]
           share_link_active?: boolean | null
@@ -2053,7 +2670,22 @@ export type Database = {
           total_amount?: number
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "plans_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plans_owner_company_id_fkey"
+            columns: ["owner_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       power_bill_jobs: {
         Row: {
@@ -2121,6 +2753,33 @@ export type Database = {
         }
         Relationships: []
       }
+      recent_searches: {
+        Row: {
+          created_at: string
+          filters: Json | null
+          id: string
+          search_query: string
+          search_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          filters?: Json | null
+          id?: string
+          search_query: string
+          search_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          filters?: Json | null
+          id?: string
+          search_query?: string
+          search_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       reminder_settings: {
         Row: {
           created_at: string | null
@@ -2153,7 +2812,10 @@ export type Database = {
       }
       role_permissions: {
         Row: {
-          can_access: boolean
+          can_create: boolean | null
+          can_delete: boolean | null
+          can_update: boolean | null
+          can_view: boolean | null
           created_at: string | null
           id: string
           module: string
@@ -2161,7 +2823,10 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          can_access?: boolean
+          can_create?: boolean | null
+          can_delete?: boolean | null
+          can_update?: boolean | null
+          can_view?: boolean | null
           created_at?: string | null
           id?: string
           module: string
@@ -2169,12 +2834,84 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          can_access?: boolean
+          can_create?: boolean | null
+          can_delete?: boolean | null
+          can_update?: boolean | null
+          can_view?: boolean | null
           created_at?: string | null
           id?: string
           module?: string
           role?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      saved_searches: {
+        Row: {
+          created_at: string
+          filters: Json
+          id: string
+          is_favorite: boolean
+          last_used_at: string | null
+          name: string
+          search_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          filters?: Json
+          id?: string
+          is_favorite?: boolean
+          last_used_at?: string | null
+          name: string
+          search_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          filters?: Json
+          id?: string
+          is_favorite?: boolean
+          last_used_at?: string | null
+          name?: string
+          search_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      table_views: {
+        Row: {
+          configuration: Json
+          created_at: string | null
+          id: string
+          is_default: boolean | null
+          table_key: string
+          updated_at: string | null
+          user_id: string
+          view_name: string
+        }
+        Insert: {
+          configuration: Json
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          table_key: string
+          updated_at?: string | null
+          user_id: string
+          view_name: string
+        }
+        Update: {
+          configuration?: Json
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          table_key?: string
+          updated_at?: string | null
+          user_id?: string
+          view_name?: string
         }
         Relationships: []
       }
@@ -2344,6 +3081,63 @@ export type Database = {
         }
         Relationships: []
       }
+      user_menu_favorites: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          id: string
+          menu_item_label: string
+          menu_item_path: string
+          pinned_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          menu_item_label: string
+          menu_item_path: string
+          pinned_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          menu_item_label?: string
+          menu_item_path?: string
+          pinned_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_menu_preferences: {
+        Row: {
+          created_at: string | null
+          hidden_sections: string[] | null
+          id: string
+          section_order: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          hidden_sections?: string[] | null
+          id?: string
+          section_order?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          hidden_sections?: string[] | null
+          id?: string
+          section_order?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -2391,6 +3185,65 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      watermark_settings: {
+        Row: {
+          background_color: string
+          border_color: string
+          company_id: string | null
+          created_at: string
+          fields_to_show: Json
+          font_size: number
+          id: string
+          logo_url: string | null
+          panel_padding: number
+          panel_width: number
+          position: Database["public"]["Enums"]["watermark_position"]
+          show_logo: boolean
+          text_color: string
+          updated_at: string
+        }
+        Insert: {
+          background_color?: string
+          border_color?: string
+          company_id?: string | null
+          created_at?: string
+          fields_to_show?: Json
+          font_size?: number
+          id?: string
+          logo_url?: string | null
+          panel_padding?: number
+          panel_width?: number
+          position?: Database["public"]["Enums"]["watermark_position"]
+          show_logo?: boolean
+          text_color?: string
+          updated_at?: string
+        }
+        Update: {
+          background_color?: string
+          border_color?: string
+          company_id?: string | null
+          created_at?: string
+          fields_to_show?: Json
+          font_size?: number
+          id?: string
+          logo_url?: string | null
+          panel_padding?: number
+          panel_width?: number
+          position?: Database["public"]["Enums"]["watermark_position"]
+          show_logo?: boolean
+          text_color?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watermark_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       whatsapp_logs: {
         Row: {
@@ -2492,6 +3345,7 @@ export type Database = {
       generate_invoice_id: { Args: never; Returns: string }
       generate_plan_id: { Args: never; Returns: string }
       generate_share_token: { Args: never; Returns: string }
+      get_current_user_company_id: { Args: never; Returns: string }
       get_financial_year: { Args: never; Returns: string }
       get_next_code_number: {
         Args: {
@@ -2501,6 +3355,7 @@ export type Database = {
         }
         Returns: number
       }
+      get_user_company_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2508,6 +3363,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       log_activity: {
         Args: {
           p_action: string
@@ -2535,6 +3391,15 @@ export type Database = {
         }
         Returns: Json
       }
+      seed_demo_companies: { Args: never; Returns: Json }
+      test_company_rls_isolation: {
+        Args: { test_company_id: string; test_user_id: string }
+        Returns: Json
+      }
+      user_in_company: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:
@@ -2554,6 +3419,12 @@ export type Database = {
         | "Mounted"
         | "PhotoUploaded"
         | "Verified"
+      booking_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "cancelled"
+        | "completed"
       campaign_status:
         | "Planned"
         | "Assigned"
@@ -2561,6 +3432,8 @@ export type Database = {
         | "PhotoUploaded"
         | "Verified"
         | "Completed"
+      company_status: "pending" | "active" | "suspended" | "cancelled"
+      company_type: "media_owner" | "agency" | "platform_admin"
       document_type:
         | "KYC"
         | "GST_Certificate"
@@ -2585,6 +3458,11 @@ export type Database = {
       payment_status: "Pending" | "Paid"
       plan_status: "Draft" | "Sent" | "Approved" | "Rejected" | "Converted"
       plan_type: "Quotation" | "Proposal" | "Estimate"
+      watermark_position:
+        | "bottom-right"
+        | "bottom-left"
+        | "top-right"
+        | "top-left"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2731,6 +3609,13 @@ export const Constants = {
         "PhotoUploaded",
         "Verified",
       ],
+      booking_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "cancelled",
+        "completed",
+      ],
       campaign_status: [
         "Planned",
         "Assigned",
@@ -2739,6 +3624,8 @@ export const Constants = {
         "Verified",
         "Completed",
       ],
+      company_status: ["pending", "active", "suspended", "cancelled"],
+      company_type: ["media_owner", "agency", "platform_admin"],
       document_type: [
         "KYC",
         "GST_Certificate",
@@ -2765,6 +3652,12 @@ export const Constants = {
       payment_status: ["Pending", "Paid"],
       plan_status: ["Draft", "Sent", "Approved", "Rejected", "Converted"],
       plan_type: ["Quotation", "Proposal", "Estimate"],
+      watermark_position: [
+        "bottom-right",
+        "bottom-left",
+        "top-right",
+        "top-left",
+      ],
     },
   },
 } as const

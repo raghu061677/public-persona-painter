@@ -135,10 +135,13 @@ export default function CompanyDirectTaxes() {
           label="Enable TDS Deduction"
           description="Automatically calculate and deduct TDS on applicable transactions"
         >
-          <Switch checked={tdsEnabled} onCheckedChange={setTdsEnabled} />
+          <Switch 
+            checked={formData.tds_enabled} 
+            onCheckedChange={(checked) => setFormData({ ...formData, tds_enabled: checked })} 
+          />
         </InputRow>
 
-        {tdsEnabled && (
+        {formData.tds_enabled && (
           <>
             <InputRow label="Default TDS Rate (%)" description="Applied when no specific rate is configured">
               <Input type="number" placeholder="10" step="0.01" className="w-32" />
@@ -165,10 +168,13 @@ export default function CompanyDirectTaxes() {
           label="Enable TCS Collection"
           description="Automatically calculate and collect TCS on applicable invoices"
         >
-          <Switch checked={tcsEnabled} onCheckedChange={setTcsEnabled} />
+          <Switch 
+            checked={formData.tcs_enabled} 
+            onCheckedChange={(checked) => setFormData({ ...formData, tcs_enabled: checked })} 
+          />
         </InputRow>
 
-        {tcsEnabled && (
+        {formData.tcs_enabled && (
           <>
             <InputRow label="Default TCS Rate (%)" description="Applied to invoices exceeding threshold">
               <Input type="number" placeholder="0.1" step="0.01" className="w-32" />
@@ -213,6 +219,6 @@ export default function CompanyDirectTaxes() {
           {loading ? "Saving..." : "Save Changes"}
         </Button>
       </div>
-    </div>
+    </SettingsContentWrapper>
   );
 }

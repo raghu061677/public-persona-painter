@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export function useFrozenColumns(tableKey: string, defaultFrozen: string[] = []) {
+export function useFrozenColumns(tableKey: string) {
   const [frozenColumns, setFrozenColumns] = useState<string[]>([]);
   const [isReady, setIsReady] = useState(false);
 
@@ -13,11 +13,7 @@ export function useFrozenColumns(tableKey: string, defaultFrozen: string[] = [])
         setFrozenColumns(JSON.parse(stored));
       } catch (e) {
         console.error('Failed to parse frozen columns:', e);
-        setFrozenColumns(defaultFrozen);
       }
-    } else {
-      // Set default frozen columns if none stored
-      setFrozenColumns(defaultFrozen);
     }
     
     setIsReady(true);

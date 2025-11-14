@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Routes, Route, useLocation } from "react-router-dom";
 import { db, auth } from "@/lib/supabase-wrapper";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   Camera, 
   List, 
@@ -15,7 +18,8 @@ import {
   RefreshCw,
   MapPin,
   Receipt,
-  Briefcase
+  Briefcase,
+  Search
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -497,22 +501,370 @@ function MobileOperationsUpload() {
 
 // Mobile Power Bills View Component
 function MobilePowerBillsView() {
+  const navigate = useNavigate();
+  const [bills, setBills] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filter, setFilter] = useState<'all' | 'pending' | 'paid'>('all');
+  const [selectedBill, setSelectedBill] = useState<any | null>(null);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [paymentDate, setPaymentDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [paidAmount, setPaidAmount] = useState("");
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [updating, setUpdating] = useState(false);
+
+  useEffect(() => {
+    fetchBills();
+  }, []);
+
+  const fetchBills = async () => {
+    try {
+      setRefreshing(true);
+      
+      const { data: { user } } = await auth.getUser();
+      if (!user) {
+        toast({ title: "Please login to view power bills", variant: "destructive" });
+        navigate('/auth');
+        return;
+      }
+
+      const { data, error } = await db
+        .from('asset_power_bills')
+        .select(`
+          *,
+          media_assets (
+            location,
+            area,
+            city,
+            media_type
+          )
+        `)
+        .order('bill_month', { ascending: false });
+
+      if (error) throw error;
+      setBills(data || []);
+    } catch (error: any) {
+      toast({ title: "Error loading bills", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleMarkAsPaid = async () => {
+    if (!selectedBill) return;
+    
+    setUpdating(true);
+    try {
+      let receiptUrl = null;
+
+      // Upload receipt if provided
+      if (receiptFile) {
+        const fileExt = receiptFile.name.split('.').pop();
+        const fileName = `receipt-${selectedBill.id}-${Date.now()}.${fileExt}`;
+        const filePath = `${selectedBill.asset_id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('power-receipts')
+          .upload(filePath, receiptFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('power-receipts')
+          .getPublicUrl(filePath);
+
+        receiptUrl = publicUrl;
+      }
+
+      const { error } = await db
+        .from('asset_power_bills')
+        .update({
+          paid: true,
+          payment_status: 'Paid',
+          payment_date: paymentDate,
+          paid_amount: parseFloat(paidAmount) || selectedBill.bill_amount,
+          paid_receipt_url: receiptUrl,
+        })
+        .eq('id', selectedBill.id);
+
+      if (error) throw error;
+
+      toast({ title: "Success", description: "Bill marked as paid" });
+      setShowPaymentDialog(false);
+      setSelectedBill(null);
+      fetchBills();
+    } catch (error: any) {
+      toast({ title: "Error updating bill", description: error.message, variant: "destructive" });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const filteredBills = bills.filter(bill => {
+    const matchesSearch = 
+      bill.consumer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      bill.service_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      bill.media_assets?.location?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesFilter = 
+      filter === 'all' ? true :
+      filter === 'pending' ? !bill.paid :
+      filter === 'paid' ? bill.paid : true;
+    
+    return matchesSearch && matchesFilter;
+  });
+
+  const unpaidCount = bills.filter(b => !b.paid).length;
+  const totalUnpaid = bills.filter(b => !b.paid).reduce((sum, b) => sum + (b.bill_amount || 0), 0);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background pb-24 p-4 flex items-center justify-center">
+        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background pb-24 p-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Power Bills</CardTitle>
-          <CardDescription>
-            View and manage power bills on mobile
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <Receipt className="h-16 w-16 mx-auto mb-4" />
-            <p>Power bills management coming soon</p>
+    <div className="min-h-screen bg-background pb-24">
+      {/* Header with Stats */}
+      <div className="bg-primary text-primary-foreground p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold">Power Bills</h1>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-primary-foreground"
+            onClick={() => fetchBills()}
+            disabled={refreshing}
+          >
+            <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+          </Button>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-primary-foreground/10 rounded-lg p-3">
+            <p className="text-xs opacity-90">Unpaid Bills</p>
+            <p className="text-2xl font-bold">{unpaidCount}</p>
           </div>
-        </CardContent>
-      </Card>
+          <div className="bg-primary-foreground/10 rounded-lg p-3">
+            <p className="text-xs opacity-90">Total Unpaid</p>
+            <p className="text-2xl font-bold">₹{totalUnpaid.toLocaleString('en-IN')}</p>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search by location, service number..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-2 pl-10 rounded-lg bg-primary-foreground/10 text-primary-foreground placeholder:text-primary-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary-foreground/50"
+          />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-60" />
+        </div>
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="flex gap-2 p-4 bg-muted/50 overflow-x-auto">
+        {[
+          { id: 'all', label: 'All', count: bills.length },
+          { id: 'pending', label: 'Pending', count: bills.filter(b => !b.paid).length },
+          { id: 'paid', label: 'Paid', count: bills.filter(b => b.paid).length },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setFilter(tab.id as any)}
+            className={cn(
+              "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
+              filter === tab.id
+                ? "bg-primary text-primary-foreground"
+                : "bg-background text-muted-foreground hover:bg-muted"
+            )}
+          >
+            {tab.label} ({tab.count})
+          </button>
+        ))}
+      </div>
+
+      {/* Bills List */}
+      <div className="p-4 space-y-3">
+        {filteredBills.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center text-muted-foreground">
+              <Receipt className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>No bills found</p>
+            </CardContent>
+          </Card>
+        ) : (
+          filteredBills.map(bill => (
+            <Card 
+              key={bill.id}
+              className={cn(
+                "cursor-pointer transition-all hover:shadow-md",
+                !bill.paid && "border-l-4 border-l-destructive"
+              )}
+              onClick={() => {
+                setSelectedBill(bill);
+                if (!bill.paid) {
+                  setPaidAmount(bill.bill_amount.toString());
+                  setShowPaymentDialog(true);
+                }
+              }}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-base flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-yellow-500" />
+                      {bill.media_assets?.location || 'Unknown Location'}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {bill.media_assets?.area}, {bill.media_assets?.city}
+                    </p>
+                  </div>
+                  <Badge variant={bill.paid ? "secondary" : "destructive"}>
+                    {bill.paid ? "Paid" : "Unpaid"}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Bill Month</p>
+                    <p className="font-medium">{bill.bill_month}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Amount</p>
+                    <p className="font-medium text-lg">₹{bill.bill_amount.toLocaleString('en-IN')}</p>
+                  </div>
+                  {bill.service_number && (
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground">Service Number</p>
+                      <p className="font-medium">{bill.service_number}</p>
+                    </div>
+                  )}
+                  {bill.paid && bill.payment_date && (
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground">Paid On</p>
+                      <p className="font-medium">{format(new Date(bill.payment_date), 'PP')}</p>
+                    </div>
+                  )}
+                </div>
+
+                {!bill.paid && (
+                  <Button 
+                    className="w-full mt-3" 
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedBill(bill);
+                      setPaidAmount(bill.bill_amount.toString());
+                      setShowPaymentDialog(true);
+                    }}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Mark as Paid
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* Payment Dialog */}
+      {showPaymentDialog && selectedBill && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
+          <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-500" />
+                Mark Bill as Paid
+              </CardTitle>
+              <CardDescription>
+                {selectedBill.media_assets?.location}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Bill Amount</Label>
+                <p className="text-2xl font-bold">₹{selectedBill.bill_amount.toLocaleString('en-IN')}</p>
+              </div>
+
+              <div>
+                <Label htmlFor="paid_amount">Paid Amount</Label>
+                <Input
+                  id="paid_amount"
+                  type="number"
+                  value={paidAmount}
+                  onChange={(e) => setPaidAmount(e.target.value)}
+                  placeholder="Enter paid amount"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="payment_date">Payment Date</Label>
+                <Input
+                  id="payment_date"
+                  type="date"
+                  value={paymentDate}
+                  onChange={(e) => setPaymentDate(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="receipt">Upload Receipt (Optional)</Label>
+                <Input
+                  id="receipt"
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+                />
+                {receiptFile && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {receiptFile.name}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowPaymentDialog(false);
+                    setSelectedBill(null);
+                    setReceiptFile(null);
+                  }}
+                  disabled={updating}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleMarkAsPaid}
+                  disabled={updating || !paidAmount}
+                >
+                  {updating ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Confirm Payment
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

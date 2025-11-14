@@ -150,7 +150,7 @@ export function LatestPhotosSection({ assetId, asset }: LatestPhotosSectionProps
           direction: asset.direction,
           dimension: asset.dimension,
           total_sqft: asset.total_sqft,
-          illumination_type: asset.illumination_type,
+          illumination: asset.illumination,
           city: asset.city,
           area: asset.area,
         } : undefined}

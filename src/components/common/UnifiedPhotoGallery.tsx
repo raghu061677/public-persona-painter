@@ -44,7 +44,7 @@ interface UnifiedPhotoGalleryProps {
     direction?: string;
     dimension?: string;
     total_sqft?: number;
-    illumination_type?: string;
+    illumination?: string;
   };
 }
 
@@ -228,7 +228,7 @@ export function UnifiedPhotoGallery({
           direction: assetData.direction,
           dimension: assetData.dimension,
           total_sqft: assetData.total_sqft,
-          illumination_type: assetData.illumination_type,
+          illumination: assetData.illumination,
         },
         imageUrl: photo.photo_url,
         category: photo.category,

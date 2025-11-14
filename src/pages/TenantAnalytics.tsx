@@ -62,22 +62,22 @@ export default function TenantAnalytics() {
 
       const metricsPromises = companies.map(async (company: any) => {
         const { data: invoices } = await supabase
-          .from('invoices')
+          .from('invoices' as any)
           .select('total_amount')
           .eq('company_id', company.id);
 
         const { data: assets } = await supabase
-          .from('media_assets')
+          .from('media_assets' as any)
           .select('id, status')
           .eq('company_id', company.id);
 
         const { data: campaigns } = await supabase
-          .from('campaigns')
+          .from('campaigns' as any)
           .select('id, status')
           .eq('company_id', company.id);
 
         const { data: clients } = await supabase
-          .from('clients')
+          .from('clients' as any)
           .select('id')
           .eq('company_id', company.id);
 

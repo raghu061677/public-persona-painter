@@ -9,12 +9,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Shield, Key, Palette, Upload, Image, Hash, Zap, RefreshCw, Settings as SettingsIcon, HelpCircle } from "lucide-react";
+import { User, Shield, Key, Palette, Upload, Image, Hash, Zap, RefreshCw, Settings as SettingsIcon, HelpCircle, ImageDown } from "lucide-react";
 import { migrateClientIds } from "@/utils/migrateClientIds";
 import { ThemeCustomization } from "@/components/settings/ThemeCustomization";
 import { ColorLegend } from "@/components/settings/ColorLegend";
 import { AlertThresholdSettings } from "@/components/settings/AlertThresholdSettings";
 import { WatermarkSettings } from "@/components/settings/WatermarkSettings";
+import { WatermarkCustomizer } from "@/components/settings/WatermarkCustomizer";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { ActivityLogViewer } from "@/components/audit/ActivityLogViewer";
 import { RolePermissionsSettings } from "@/components/settings/RolePermissionsSettings";
@@ -317,11 +318,12 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className={`grid w-full ${canViewCompanySettings ? 'grid-cols-7' : 'grid-cols-5'}`}>
+        <TabsList className={`grid w-full ${canViewCompanySettings ? 'grid-cols-8' : 'grid-cols-5'}`}>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           {canViewCompanySettings && <TabsTrigger value="branding">Branding</TabsTrigger>}
+          {canViewCompanySettings && <TabsTrigger value="watermark">Watermark</TabsTrigger>}
           {canViewCompanySettings && <TabsTrigger value="alerts">Alerts</TabsTrigger>}
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="help">Help</TabsTrigger>
@@ -616,6 +618,12 @@ export default function Settings() {
         {canViewCompanySettings && (
           <TabsContent value="alerts" className="space-y-6 mt-6">
             <AlertThresholdSettings />
+          </TabsContent>
+        )}
+
+        {canViewCompanySettings && (
+          <TabsContent value="watermark" className="space-y-6 mt-6">
+            <WatermarkCustomizer />
           </TabsContent>
         )}
 

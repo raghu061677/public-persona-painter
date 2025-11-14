@@ -5,7 +5,7 @@
  */
 
 import { useState } from "react";
-import { Trash2, MapPin, Eye, Calendar, Tag, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Trash2, MapPin, Eye, Calendar, Tag, CheckCircle2, AlertTriangle, Download } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,16 @@ interface UnifiedPhotoGalleryProps {
   bucket: 'media-assets' | 'operations-photos';
   title?: string;
   description?: string;
+  assetData?: {
+    asset_id?: string;
+    city?: string;
+    area?: string;
+    location: string;
+    direction?: string;
+    dimension?: string;
+    total_sqft?: number;
+    illumination_type?: string;
+  };
 }
 
 export function UnifiedPhotoGallery({
@@ -44,7 +54,8 @@ export function UnifiedPhotoGallery({
   canDelete = false,
   bucket,
   title = "Photos",
-  description
+  description,
+  assetData
 }: UnifiedPhotoGalleryProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<UnifiedPhoto | null>(null);
@@ -194,6 +205,40 @@ export function UnifiedPhotoGallery({
     setSlideshowOpen(true);
   };
 
+  const handleDownload = async (photo: UnifiedPhoto) => {
+    if (!assetData) {
+      // Fallback without watermark
+      const link = document.createElement("a");
+      link.href = photo.photo_url;
+      link.download = `photo-${photo.id}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
+    try {
+      const { downloadImageWithWatermark } = await import('@/lib/downloadWithWatermark');
+      
+      await downloadImageWithWatermark({
+        assetData: {
+          city: assetData.city,
+          area: assetData.area,
+          location: assetData.location,
+          direction: assetData.direction,
+          dimension: assetData.dimension,
+          total_sqft: assetData.total_sqft,
+          illumination_type: assetData.illumination_type,
+        },
+        imageUrl: photo.photo_url,
+        category: photo.category,
+        assetId: assetData.asset_id,
+      });
+    } catch (error) {
+      console.error('Error downloading with watermark:', error);
+    }
+  };
+
   if (!photos || photos.length === 0) {
     return (
       <Card>
@@ -272,20 +317,33 @@ export function UnifiedPhotoGallery({
                   )}
                 </div>
 
-                {/* Delete button - only show if canDelete */}
-                {canDelete && (
+                {/* Action buttons */}
+                <div className="absolute bottom-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Button
-                    variant="destructive"
+                    variant="secondary"
                     size="icon"
-                    className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                    className="h-8 w-8"
                     onClick={(e) => {
                       e.stopPropagation();
-                      openDeleteDialog(photo);
+                      handleDownload(photo);
                     }}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Download className="h-4 w-4" />
                   </Button>
-                )}
+                  {canDelete && (
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openDeleteDialog(photo);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
 
                 {/* Upload date */}
                 <div className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">

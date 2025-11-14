@@ -81,6 +81,7 @@ const MENU_SECTIONS: MenuSection[] = [
   {
     title: "Administration",
     items: [
+      { label: "Companies Management", icon: Building2, path: "/admin/companies", module: "settings", roles: ['admin'] },
       { label: "Create Company", icon: Building2, path: "/onboarding", module: "settings", roles: ['admin'] },
       { label: "Company Settings", icon: Settings, path: "/admin/company-settings", module: "settings", roles: ['admin'] },
       { label: "Organization Settings", icon: Settings, path: "/admin/organization-settings", module: "settings" },

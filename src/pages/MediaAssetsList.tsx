@@ -3,15 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Building2, MapPin, TrendingUp, Layers, ShieldCheck } from "lucide-react";
+import { Plus, MapPin, TrendingUp, Layers, ShieldCheck, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ROUTES } from "@/lib/routes";
 import { MediaAssetsTable } from "@/components/media-assets/media-assets-table";
 import { ImportDialog } from "@/components/media-assets/import-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SkeletonStats, SkeletonTable } from "@/components/ui/loading-skeleton";
+import { SkeletonTable } from "@/components/ui/loading-skeleton";
 import { useAuth } from "@/contexts/AuthContext";
-import { PageCustomization, PageCustomizationOption } from "@/components/ui/page-customization";
+import { cn } from "@/lib/utils";
 
 export default function MediaAssetsList() {
   const navigate = useNavigate();
@@ -19,14 +19,19 @@ export default function MediaAssetsList() {
   const [loading, setLoading] = useState(true);
   const { isAdmin } = useAuth();
   
-  // Page customization state
-  const [showStats, setShowStats] = useState(true);
-  const [showHeader, setShowHeader] = useState(true);
-  const [showActionButtons, setShowActionButtons] = useState(true);
+  // Sidebar collapse state - default collapsed on smaller screens
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('media-assets-sidebar-collapsed');
+    return saved !== null ? JSON.parse(saved) : window.innerWidth < 1366;
+  });
 
   useEffect(() => {
     fetchAssets();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('media-assets-sidebar-collapsed', JSON.stringify(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   const fetchAssets = async () => {
     setLoading(true);
@@ -52,160 +57,162 @@ export default function MediaAssetsList() {
   const availableAssets = assets.filter(a => a.status === 'Available').length;
   const uniqueCities = new Set(assets.map(a => a.city).filter(Boolean)).size;
   const totalValue = assets.reduce((sum, a) => sum + (a.card_rate || 0), 0);
-  
-  // Customization options
-  const customizationOptions: PageCustomizationOption[] = [
+
+  const statCards = [
     {
-      id: 'show-header',
-      label: 'Page Header',
-      description: 'Show page title and description',
-      enabled: showHeader,
-      onChange: setShowHeader,
+      title: "Total Assets",
+      value: totalAssets,
+      icon: Layers,
+      color: "text-blue-600",
+      bgColor: "bg-blue-50 dark:bg-blue-950/20"
     },
     {
-      id: 'show-stats',
-      label: 'Statistics Cards',
-      description: 'Display summary statistics',
-      enabled: showStats,
-      onChange: setShowStats,
+      title: "Available",
+      value: availableAssets,
+      icon: ShieldCheck,
+      color: "text-green-600",
+      bgColor: "bg-green-50 dark:bg-green-950/20"
     },
     {
-      id: 'show-actions',
-      label: 'Action Buttons',
-      description: 'Show add and import buttons',
-      enabled: showActionButtons,
-      onChange: setShowActionButtons,
+      title: "Cities",
+      value: uniqueCities,
+      icon: MapPin,
+      color: "text-purple-600",
+      bgColor: "bg-purple-50 dark:bg-purple-950/20"
     },
+    {
+      title: "Total Value",
+      value: `₹${(totalValue / 100000).toFixed(1)}L`,
+      icon: TrendingUp,
+      color: "text-amber-600",
+      bgColor: "bg-amber-50 dark:bg-amber-950/20"
+    }
   ];
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-        <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
-          {/* Header Skeleton */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="h-screen flex flex-col bg-background">
+        <div className="flex-none p-6 border-b">
+          <div className="flex items-center justify-between">
             <div className="space-y-2">
-              <Skeleton className="h-10 w-64" />
-              <Skeleton className="h-5 w-96" />
+              <Skeleton className="h-8 w-64" />
+              <Skeleton className="h-4 w-96" />
             </div>
             <div className="flex gap-2">
-              <Skeleton className="h-10 w-24" />
-              <Skeleton className="h-10 w-32" />
+              <Skeleton className="h-9 w-24" />
+              <Skeleton className="h-9 w-32" />
             </div>
           </div>
-          
-          {/* Stats Cards Skeleton */}
-          <SkeletonStats count={4} />
-          
-          {/* Table Skeleton */}
-          <SkeletonTable rows={10} columns={6} />
+        </div>
+        <div className="flex-1 overflow-hidden p-6">
+          <SkeletonTable rows={15} columns={8} />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="flex-none px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        {/* Header Section with Customization */}
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-          {showHeader && (
-            <div className="flex-1">
-              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-primary via-primary to-primary/70 bg-clip-text text-transparent">
-                Media Assets Inventory
-              </h1>
-              <p className="text-sm sm:text-base text-muted-foreground mt-2 flex items-center gap-2">
-                <Layers className="h-4 w-4" />
-                Complete management of your outdoor advertising portfolio
+    <div className="h-screen w-full flex flex-col bg-background overflow-hidden">
+      {/* Top Header Bar */}
+      <div className="flex-none border-b bg-card">
+        <div className="flex items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="shrink-0"
+              title={sidebarCollapsed ? "Show Sidebar" : "Hide Sidebar"}
+            >
+              {sidebarCollapsed ? (
+                <PanelLeftOpen className="h-4 w-4" />
+              ) : (
+                <PanelLeftClose className="h-4 w-4" />
+              )}
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Media Assets</h1>
+              <p className="text-sm text-muted-foreground">
+                Manage and track all OOH advertising assets
               </p>
             </div>
-          )}
-          
-          <div className="flex items-center gap-2 flex-wrap">
-            <PageCustomization options={customizationOptions} />
-          
-            {showActionButtons && isAdmin && (
-              <>
-                <ImportDialog onImportComplete={fetchAssets} />
-                <Button
-                  size="default"
-                  onClick={() => navigate(ROUTES.MEDIA_ASSETS_NEW)}
-                  className="shadow-lg hover:shadow-xl transition-shadow gap-2"
-                >
-                  <Plus className="h-5 w-5" />
-                  <span className="hidden sm:inline">Add New Asset</span>
-                  <span className="sm:hidden">Add</span>
-                </Button>
-              </>
+          </div>
+          <div className="flex items-center gap-2">
+            <ImportDialog onImportComplete={fetchAssets} />
+            {isAdmin && (
+              <Button onClick={() => navigate(ROUTES.MEDIA_ASSETS_NEW)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Asset
+              </Button>
             )}
           </div>
         </div>
-
-        {/* Enhanced Stats Cards */}
-        {showStats && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <Card className="border-l-4 border-l-primary shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-primary/5 to-primary/10">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
-                    <Layers className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xl sm:text-2xl font-bold truncate">{totalAssets}</p>
-                    <p className="text-xs sm:text-sm text-muted-foreground">Total Assets</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-accent shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-accent/5 to-accent/10">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-accent/20 flex items-center justify-center shrink-0">
-                    <ShieldCheck className="h-5 w-5 sm:h-6 sm:w-6 text-accent" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xl sm:text-2xl font-bold truncate">{availableAssets}</p>
-                    <p className="text-xs sm:text-sm text-muted-foreground">Available</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-blue-500 shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-blue-500/5 to-blue-500/10">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-blue-500/20 flex items-center justify-center shrink-0">
-                    <MapPin className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xl sm:text-2xl font-bold truncate">{uniqueCities}</p>
-                    <p className="text-xs sm:text-sm text-muted-foreground">Cities</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-green-500 shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-green-500/5 to-green-500/10">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-green-500/20 flex items-center justify-center shrink-0">
-                    <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-green-500" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-lg sm:text-xl font-bold truncate">₹{(totalValue / 100000).toFixed(1)}L</p>
-                    <p className="text-xs sm:text-sm text-muted-foreground">Total Value</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
       </div>
 
-      {/* Table Section - Full height with scroll */}
-      <div className="flex-1 px-6 pb-6 overflow-hidden">
-        <MediaAssetsTable assets={assets} onRefresh={fetchAssets} />
+      {/* Main Content Area */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Collapsible Sidebar */}
+        <aside
+          className={cn(
+            "flex-none border-r bg-card transition-all duration-300 overflow-y-auto",
+            sidebarCollapsed ? "w-0 border-r-0" : "w-80"
+          )}
+        >
+          <div className={cn("p-6 space-y-6", sidebarCollapsed && "hidden")}>
+            {/* Stats Cards */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-semibold text-sm">Quick Stats</h3>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                {statCards.map((stat, index) => (
+                  <Card key={index} className="shadow-sm">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-muted-foreground font-medium">
+                            {stat.title}
+                          </p>
+                          <p className="text-2xl font-bold mt-1">{stat.value}</p>
+                        </div>
+                        <div className={cn("p-3 rounded-lg", stat.bgColor)}>
+                          <stat.icon className={cn("h-5 w-5", stat.color)} />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* Info Section */}
+            <div className="pt-4 border-t">
+              <div className="flex items-center gap-2 mb-3">
+                <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-semibold text-sm">Filter Info</h3>
+              </div>
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p>• Use table filters for advanced search</p>
+                <p>• Click column headers to sort</p>
+                <p>• Toggle columns with the settings icon</p>
+                <p>• Select rows for bulk actions</p>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Table Area */}
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-auto">
+            <div className="p-6">
+              <MediaAssetsTable 
+                assets={assets} 
+                onRefresh={fetchAssets}
+              />
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   );

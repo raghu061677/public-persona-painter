@@ -16,7 +16,61 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "robots.txt", "offline.html", "favicon-16x16.png", "favicon-32x32.png", "favicon-192x192.png", "apple-touch-icon.png"],
-      manifest: false, // Using public/manifest.json instead
+      manifestFilename: "manifest.json",
+      manifest: {
+        name: "Go-Ads 360° - OOH Media Management",
+        short_name: "Go-Ads 360°",
+        description: "Complete OOH advertising management platform for media owners and agencies",
+        start_url: "/",
+        display: "standalone",
+        background_color: "#ffffff",
+        theme_color: "#1e40af",
+        orientation: "portrait-primary",
+        icons: [
+          {
+            src: "/favicon-192x192.png",
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "any"
+          },
+          {
+            src: "/favicon-192x192.png",
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "maskable"
+          },
+          {
+            src: "/apple-touch-icon.png",
+            sizes: "180x180",
+            type: "image/png"
+          }
+        ],
+        categories: ["business", "productivity", "utilities"],
+        shortcuts: [
+          {
+            name: "Dashboard",
+            short_name: "Dashboard",
+            description: "View your dashboard",
+            url: "/admin/dashboard",
+            icons: [{ src: "/favicon-192x192.png", sizes: "192x192" }]
+          },
+          {
+            name: "Media Assets",
+            short_name: "Assets",
+            description: "Manage media assets",
+            url: "/admin/media-assets",
+            icons: [{ src: "/favicon-192x192.png", sizes: "192x192" }]
+          },
+          {
+            name: "Campaigns",
+            short_name: "Campaigns",
+            description: "View campaigns",
+            url: "/admin/campaigns",
+            icons: [{ src: "/favicon-192x192.png", sizes: "192x192" }]
+          }
+        ],
+        prefer_related_applications: false
+      },
       workbox: {
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB
         globPatterns: ["**/*.{js,css,html,ico,png,svg,json,woff,woff2}"],
@@ -63,7 +117,7 @@ export default defineConfig(({ mode }) => ({
           },
         ],
         navigateFallback: "/offline.html",
-        navigateFallbackDenylist: [/^\/api/, /^\/admin\/plans\/.*\/share/],
+        navigateFallbackDenylist: [/^\/api/, /^\/admin\/plans\/.*\/share/, /manifest\.json$/],
       },
     }),
   ].filter(Boolean),

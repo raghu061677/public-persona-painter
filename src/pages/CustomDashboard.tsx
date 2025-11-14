@@ -3,22 +3,15 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { SectionHeader } from "@/components/ui/section-header";
-import { Plus, Settings, Trash2, Save, Layout } from "lucide-react";
+import { Plus, Settings, Trash2, Save, Layout, Share2, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { DashboardWidget } from "@/components/dashboard/DashboardWidget";
-import { WidgetConfigDialog } from "@/components/dashboard/WidgetConfigDialog";
+import { WidgetConfigDialog, Widget } from "@/components/dashboard/WidgetConfigDialog";
 import { DashboardLayoutSelector } from "@/components/dashboard/DashboardLayoutSelector";
+import { DashboardSharingDialog } from "@/components/dashboard/DashboardSharingDialog";
+import { WidgetFiltersDialog, WidgetFilters } from "@/components/dashboard/WidgetFiltersDialog";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
-
-interface Widget {
-  id: string;
-  type: string;
-  metric: string;
-  timeRange: string;
-  visualizationType: string;
-  title: string;
-  config: any;
-}
+import { Badge } from "@/components/ui/badge";
 
 interface DashboardConfig {
   id: string;
@@ -35,6 +28,9 @@ export default function CustomDashboard() {
   const [showWidgetConfig, setShowWidgetConfig] = useState(false);
   const [editingWidget, setEditingWidget] = useState<Widget | null>(null);
   const [showLayoutSelector, setShowLayoutSelector] = useState(false);
+  const [showSharingDialog, setShowSharingDialog] = useState(false);
+  const [showFiltersDialog, setShowFiltersDialog] = useState(false);
+  const [globalFilters, setGlobalFilters] = useState<WidgetFilters>({});
 
   useEffect(() => {
     fetchDashboards();
@@ -194,7 +190,7 @@ export default function CustomDashboard() {
         title="Custom Dashboard" 
         description="Build your personalized analytics view with customizable widgets"
         actions={
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={handleCreateDashboard}>
               <Plus className="h-4 w-4 mr-2" />
               New Dashboard
@@ -202,6 +198,19 @@ export default function CustomDashboard() {
             <Button variant="outline" size="sm" onClick={() => setShowLayoutSelector(true)}>
               <Layout className="h-4 w-4 mr-2" />
               Layout
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowFiltersDialog(true)}>
+              <Filter className="h-4 w-4 mr-2" />
+              Filters
+              {Object.values(globalFilters).filter(Boolean).length > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {Object.values(globalFilters).filter(Boolean).length}
+                </Badge>
+              )}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowSharingDialog(true)} disabled={!currentDashboard}>
+              <Share2 className="h-4 w-4 mr-2" />
+              Share
             </Button>
             <Button variant="outline" size="sm" onClick={handleAddWidget}>
               <Plus className="h-4 w-4 mr-2" />
@@ -291,7 +300,7 @@ export default function CustomDashboard() {
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </div>
-                          <DashboardWidget widget={widget} />
+                          <DashboardWidget widget={widget} globalFilters={globalFilters} />
                         </Card>
                       </div>
                     )}
@@ -319,6 +328,28 @@ export default function CustomDashboard() {
         onSelectLayout={(layout) => {
           // Apply layout logic here
           setShowLayoutSelector(false);
+        }}
+      />
+
+      {/* Sharing Dialog */}
+      {currentDashboard && (
+        <DashboardSharingDialog
+          open={showSharingDialog}
+          onOpenChange={setShowSharingDialog}
+          dashboardId={currentDashboard.id}
+          dashboardName={currentDashboard.name}
+          widgets={widgets}
+        />
+      )}
+
+      {/* Filters Dialog */}
+      <WidgetFiltersDialog
+        open={showFiltersDialog}
+        onOpenChange={setShowFiltersDialog}
+        filters={globalFilters}
+        onApplyFilters={(filters) => {
+          setGlobalFilters(filters);
+          toast.success('Filters applied to all widgets');
         }}
       />
     </div>

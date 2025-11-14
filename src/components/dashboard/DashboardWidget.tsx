@@ -13,16 +13,32 @@ interface WidgetProps {
     visualizationType: string;
     title: string;
     config: any;
+    filters?: {
+      city?: string;
+      clientId?: string;
+      assetType?: string;
+    };
+  };
+  globalFilters?: {
+    city?: string;
+    clientId?: string;
+    assetType?: string;
   };
 }
 
-export function DashboardWidget({ widget }: WidgetProps) {
+export function DashboardWidget({ widget, globalFilters }: WidgetProps) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  // Merge widget-specific filters with global filters
+  const activeFilters = {
+    ...globalFilters,
+    ...widget.filters
+  };
+
   useEffect(() => {
     fetchWidgetData();
-  }, [widget]);
+  }, [widget, globalFilters]);
 
   const fetchWidgetData = async () => {
     setLoading(true);
@@ -85,10 +101,20 @@ export function DashboardWidget({ widget }: WidgetProps) {
   };
 
   const fetchBookingRequests = async (companyId: string, startDate: Date) => {
-    const { data } = await supabase
+    let query = supabase
       .from('booking_requests' as any)
-      .select('*')
-      .gte('created_at', startDate.toISOString()) as any;
+      .select('*, media_assets!inner(*)')
+      .gte('created_at', startDate.toISOString());
+
+    // Apply filters
+    if (activeFilters.city && activeFilters.city !== 'all') {
+      query = query.eq('media_assets.city', activeFilters.city);
+    }
+    if (activeFilters.assetType && activeFilters.assetType !== 'all') {
+      query = query.eq('media_assets.media_type', activeFilters.assetType);
+    }
+
+    const { data } = await query as any;
 
     const total = data?.length || 0;
     const approved = data?.filter((r: any) => r.status === 'approved').length || 0;
@@ -127,11 +153,18 @@ export function DashboardWidget({ widget }: WidgetProps) {
   };
 
   const fetchRevenue = async (companyId: string, startDate: Date) => {
-    const { data } = await supabase
+    let query = supabase
       .from('invoices' as any)
-      .select('total_amount, status')
+      .select('total_amount, status, client_id')
       .eq('company_id', companyId)
-      .gte('invoice_date', startDate.toISOString().split('T')[0]) as any;
+      .gte('invoice_date', startDate.toISOString().split('T')[0]);
+
+    // Apply client filter
+    if (activeFilters.clientId && activeFilters.clientId !== 'all') {
+      query = query.eq('client_id', activeFilters.clientId);
+    }
+
+    const { data } = await query as any;
 
     const total = data?.reduce((sum: number, inv: any) => sum + (inv.total_amount || 0), 0) || 0;
     
@@ -142,11 +175,18 @@ export function DashboardWidget({ widget }: WidgetProps) {
   };
 
   const fetchCampaigns = async (companyId: string, startDate: Date) => {
-    const { data } = await supabase
+    let query = supabase
       .from('campaigns' as any)
       .select('*')
       .eq('company_id', companyId)
-      .gte('created_at', startDate.toISOString()) as any;
+      .gte('created_at', startDate.toISOString());
+
+    // Apply client filter
+    if (activeFilters.clientId && activeFilters.clientId !== 'all') {
+      query = query.eq('client_id', activeFilters.clientId);
+    }
+
+    const { data } = await query as any;
 
     return {
       value: data?.length || 0,
@@ -155,11 +195,21 @@ export function DashboardWidget({ widget }: WidgetProps) {
   };
 
   const fetchVacantMedia = async (companyId: string) => {
-    const { data } = await supabase
-      .from('media_assets')
+    let query = supabase
+      .from('media_assets' as any)
       .select('*')
       .eq('company_id', companyId)
       .eq('status', 'Available');
+
+    // Apply filters
+    if (activeFilters.city && activeFilters.city !== 'all') {
+      query = query.eq('city', activeFilters.city);
+    }
+    if (activeFilters.assetType && activeFilters.assetType !== 'all') {
+      query = query.eq('media_type', activeFilters.assetType);
+    }
+
+    const { data } = await query as any;
 
     return {
       value: data?.length || 0,

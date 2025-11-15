@@ -232,7 +232,11 @@ export default function MediaAssetsControlCenter() {
               {/* View Content */}
               {currentView === "table" && (
                 <div className="bg-card rounded-lg border">
-                  <MediaAssetsTable assets={filteredAssets} onRefresh={fetchAssets} />
+                  <MediaAssetsTable 
+                    key={`table-${filteredAssets.length}-${loading}`}
+                    assets={filteredAssets} 
+                    onRefresh={fetchAssets} 
+                  />
                 </div>
               )}
 

@@ -127,7 +127,28 @@ const ClientCampaignView = lazy(() => import("./pages/ClientCampaignView"));
 const ClientInvoices = lazy(() => import("./pages/ClientInvoices"));
 const AccessDenied = lazy(() => import("./pages/AccessDenied"));
 
-const queryClient = new QueryClient();
+// Optimized Query Client with caching
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes  
+      retry: 1,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
+  },
+});
+
+// Preload critical routes on idle for faster navigation
+if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+  requestIdleCallback(() => {
+    import("./pages/Dashboard");
+    import("./pages/MediaAssetsList");
+    import("./pages/PlansList");
+    import("./pages/CampaignsList");
+  }, { timeout: 3000 });
+}
 
 const App = () => (
   <ErrorBoundary>

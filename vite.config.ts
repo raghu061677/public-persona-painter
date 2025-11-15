@@ -24,31 +24,20 @@ export default defineConfig(({ mode }) => ({
       "@supabase/realtime-js",
       "@supabase/storage-js",
       "@supabase/functions-js"
-    ]
+    ],
+    dedupe: ["react", "react-dom"]
   },
   build: {
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          // DO NOT split React into chunks - keep it together
-          if (id.includes('node_modules')) {
-            // Keep React as a single monolithic chunk
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react/jsx-runtime') || id.includes('scheduler')) {
-              return 'react-vendor';
-            }
-            // Other vendor chunks
-            if (id.includes('xlsx')) return 'vendor-xlsx';
-            if (id.includes('pptxgenjs')) return 'vendor-pptx';
-            if (id.includes('leaflet') || id.includes('react-leaflet')) return 'vendor-maps';
-            if (id.includes('recharts') || id.includes('highcharts')) return 'vendor-charts';
-            if (id.includes('@radix-ui')) return 'vendor-ui';
-            if (id.includes('@supabase')) return 'vendor-supabase';
-            if (id.includes('@tanstack/react-table')) return 'vendor-table';
-            if (id.includes('jspdf') || id.includes('html2canvas')) return 'vendor-pdf';
-            if (id.includes('exceljs')) return 'vendor-excel';
-            // Group other node_modules
-            return 'vendor-misc';
-          }
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react/jsx-runtime'],
+          'vendor-xlsx': ['xlsx'],
+          'vendor-pptx': ['pptxgenjs'],
+          'vendor-charts': ['recharts', 'highcharts', 'highcharts-react-official'],
+          'vendor-ui': ['@radix-ui/react-accordion', '@radix-ui/react-alert-dialog', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-popover', '@radix-ui/react-select', '@radix-ui/react-tabs', '@radix-ui/react-toast'],
+          'vendor-supabase': ['@supabase/supabase-js', '@supabase/postgrest-js', '@supabase/realtime-js', '@supabase/storage-js', '@supabase/functions-js'],
+          'vendor-table': ['@tanstack/react-table', '@tanstack/react-query'],
         },
       },
     },

@@ -2,7 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import heroImage from "@/assets/hero-professional.jpg";
+import heroImage1 from "@/assets/hero-1.jpeg";
+import heroImage2 from "@/assets/hero-2.jpeg";
+import heroImage3 from "@/assets/hero-3.png";
+import heroImage4 from "@/assets/hero-4.png";
+import heroImage5 from "@/assets/hero-5.png";
 
 interface Slide {
   id: number;
@@ -25,7 +29,7 @@ const slides: Slide[] = [
     secondaryCTA: "List Your Inventory Free",
     primaryLink: "/marketplace",
     secondaryLink: "/auth",
-    backgroundImage: heroImage,
+    backgroundImage: heroImage1,
     altText: "Collage of outdoor advertising assets including billboards and digital displays across Indian cities"
   },
   {
@@ -36,7 +40,7 @@ const slides: Slide[] = [
     secondaryCTA: "Watch 2-Min Demo",
     primaryLink: "/auth",
     secondaryLink: "/auth",
-    backgroundImage: heroImage,
+    backgroundImage: heroImage2,
     altText: "Screenshot of Go-Ads plan builder interface with media asset map and real-time pricing"
   },
   {
@@ -47,7 +51,7 @@ const slides: Slide[] = [
     secondaryCTA: "Calculate Your ROI",
     primaryLink: "/auth",
     secondaryLink: "/auth",
-    backgroundImage: heroImage,
+    backgroundImage: heroImage3,
     altText: "Comparison showing vacant billboard transformed into active campaign with revenue growth chart"
   },
   {
@@ -58,7 +62,7 @@ const slides: Slide[] = [
     secondaryCTA: "See All Features",
     primaryLink: "/auth",
     secondaryLink: "/auth",
-    backgroundImage: heroImage,
+    backgroundImage: heroImage4,
     altText: "Mobile interface for uploading campaign proof photos with GPS validation"
   },
   {
@@ -69,7 +73,7 @@ const slides: Slide[] = [
     secondaryCTA: "Book Enterprise Demo",
     primaryLink: "/auth",
     secondaryLink: "/auth",
-    backgroundImage: heroImage,
+    backgroundImage: heroImage5,
     altText: "Abstract network security visualization with India map showing secure multi-tenant infrastructure"
   }
 ];

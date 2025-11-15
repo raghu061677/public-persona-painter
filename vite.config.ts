@@ -12,7 +12,12 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
   },
   optimizeDeps: {
-    include: ["react", "react-dom", "react/jsx-runtime"],
+    include: [
+      "react",
+      "react-dom",
+      "react/jsx-runtime",
+      "recharts"
+    ],
   },
   build: {
     rollupOptions: {
@@ -39,9 +44,9 @@ export default defineConfig(({ mode }) => ({
           }
         },
         chunkFileNames(chunkInfo) {
-          // Force vendor-charts to load after vendor-react
-          if (chunkInfo.name === "vendor-charts") {
-            return "vendor-react-dependent-[name]-[hash].js";
+          // vendor-charts must ALWAYS load AFTER vendor-react
+          if (chunkInfo.name.includes("vendor-charts")) {
+            return "zzz-react-dependant-[name]-[hash].js";
           }
           return "[name]-[hash].js";
         },

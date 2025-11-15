@@ -3,12 +3,8 @@
   <head>
     <!-- CRITICAL: React global injection BEFORE any other scripts -->
     <script>
-      window.React = {
-        ...window.React,
-        forwardRef: function(...args) {
-          return (window.__ReactBackup || window.ReactOriginal || window.React).forwardRef(...args);
-        }
-      };
+      // Pre-bootstrap React placeholder to prevent forwardRef crash
+      window.React = {};
     </script>
     
     <meta charset="UTF-8" />
@@ -52,6 +48,7 @@
   <body>
     <div id="root"></div>
     <script type="module">
+      // Load React BEFORE any vendor bundle executes
       import * as React from "react";
       window.React = React;
       window.ReactOriginal = React;

@@ -4,6 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Eye, Plus, MapPin, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency, getStatusColor } from "@/utils/mediaAssets";
+import { useImpactScore } from "@/hooks/use-impact-score";
+import { useTrafficData } from "@/hooks/use-traffic-data";
+import { TrafficBadge } from "../god-mode/TrafficBadge";
+import { ImpactScoreBadge } from "../god-mode/ImpactScoreBadge";
 
 interface GalleryViewProps {
   assets: any[];

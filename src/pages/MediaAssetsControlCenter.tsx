@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { GodModeHUD } from "@/components/media-assets/god-mode/GodModeHUD";
 
 export default function MediaAssetsControlCenter() {
   const navigate = useNavigate();
@@ -280,6 +281,9 @@ export default function MediaAssetsControlCenter() {
         onOpenChange={setIsCommandOpen}
         onViewChange={setCurrentView}
       />
+
+      {/* God Mode HUD */}
+      <GodModeHUD assets={filteredAssets} isVisible={true} />
     </div>
   );
 }

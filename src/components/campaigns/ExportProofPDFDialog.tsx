@@ -58,8 +58,8 @@ export function ExportProofPDFDialog({ campaignId, campaignName }: ExportProofPD
         return;
       }
 
-      // Load photos - use type assertion to avoid deep type inference
-      const photosResponse: any = await supabase
+      // Load photos - avoid deep type inference
+      const photosQuery: any = supabase
         .from('media_photos')
         .select('*')
         .eq('campaign_id', campaignId)
@@ -67,8 +67,9 @@ export function ExportProofPDFDialog({ campaignId, campaignName }: ExportProofPD
         .in('asset_id', assetIds)
         .order('uploaded_at', { ascending: false });
       
-      const photosData = photosResponse.data;
-      const photosError = photosResponse.error;
+      const photosResult = await photosQuery;
+      const photosData = photosResult.data;
+      const photosError = photosResult.error;
 
       if (photosError) throw photosError;
 
@@ -90,7 +91,7 @@ export function ExportProofPDFDialog({ campaignId, campaignName }: ExportProofPD
       setAssets(assetsWithPhotos);
 
       // Auto-select all photos
-      const allPhotoUrls = new Set(photosData?.map((p) => p.photo_url) || []);
+      const allPhotoUrls = new Set<string>(photosData?.map((p: any) => p.photo_url as string) || []);
       setSelectedPhotos(allPhotoUrls);
     } catch (error: any) {
       console.error('Error loading assets:', error);

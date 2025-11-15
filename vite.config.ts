@@ -22,9 +22,6 @@ export default defineConfig(({ mode }) => ({
     ],
   },
   build: {
-    commonjsOptions: {
-      include: [/react/, /react-dom/]
-    },
     rollupOptions: {
       output: {
         manualChunks: (id) => {

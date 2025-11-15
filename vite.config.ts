@@ -204,7 +204,7 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "@supabase/postgrest-js": "@supabase/postgrest-js/dist/module/index.js",
     },
+    conditions: ['import', 'module', 'browser', 'default'],
   },
 }));

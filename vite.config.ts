@@ -117,11 +117,31 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         maximumFileSizeToCacheInBytes: 20 * 1024 * 1024, // 20 MB limit
-        // Don't cache very large chunks - they'll be loaded on demand
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,json,woff,woff2}"],
-        // Exclude very large vendor chunks from precaching
-        globIgnores: ['**/vendor-xlsx*.js', '**/vendor-pptx*.js', '**/vendor-pdf*.js'],
+        // Only cache essential files, let vendor chunks load on demand to avoid dependency order issues
+        globPatterns: ["**/*.{css,html,ico,png,woff,woff2}"],
+        // Exclude ALL vendor JS chunks from precaching to prevent loading order issues
+        globIgnores: [
+          '**/vendor-*.js',
+          '**/assets/vendor-*.js',
+          '**/*.js.map'
+        ],
         runtimeCaching: [
+          {
+            // Cache JavaScript files on demand with NetworkFirst strategy
+            urlPattern: /\.js$/i,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "js-runtime-cache",
+              networkTimeoutSeconds: 5,
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24, // 1 day
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: "CacheFirst",

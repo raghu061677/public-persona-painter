@@ -29,6 +29,8 @@ interface HeaderBarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onAIFilterClick: () => void;
+  isGodModeVisible?: boolean;
+  onToggleGodMode?: () => void;
 }
 
 export function HeaderBar({
@@ -39,6 +41,8 @@ export function HeaderBar({
   searchQuery,
   onSearchChange,
   onAIFilterClick,
+  isGodModeVisible,
+  onToggleGodMode,
 }: HeaderBarProps) {
   return (
     <div className="h-12 border-b border-border bg-card flex items-center px-4 gap-3 sticky top-0 z-30">
@@ -76,6 +80,19 @@ export function HeaderBar({
         <Sparkles className="h-4 w-4" />
         AI Filters
       </Button>
+
+      {/* God Mode Toggle */}
+      {onToggleGodMode && (
+        <Button
+          variant={isGodModeVisible ? "secondary" : "outline"}
+          size="sm"
+          onClick={onToggleGodMode}
+          className="gap-2"
+        >
+          <Sparkles className="h-4 w-4" />
+          God Mode
+        </Button>
+      )}
 
       {/* View Switcher */}
       <div className="flex items-center gap-1 border border-border rounded-lg p-1">

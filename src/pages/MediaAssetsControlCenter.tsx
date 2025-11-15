@@ -194,8 +194,8 @@ export default function MediaAssetsControlCenter() {
       <AnimatedSidebar />
 
       {/* Main Content */}
-      <div className="flex-1 pl-14 pt-16">
-        <div className="flex flex-col h-[calc(100vh-4rem)]">
+      <div className="flex-1 pl-14 pt-14">
+        <div className="flex flex-col h-[calc(100vh-3.5rem)]">
           {/* Header */}
           <HeaderBar
             currentView={currentView}
@@ -209,7 +209,7 @@ export default function MediaAssetsControlCenter() {
 
           {/* Content Area */}
           <div className="flex-1 overflow-hidden relative">
-            <div className="h-full overflow-auto px-6 py-2 space-y-2">
+            <div className="h-full overflow-auto pr-6 py-1 space-y-2">
               {/* Summary Cards */}
               <SummaryCards
                 totalAssets={totalAssets}

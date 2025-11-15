@@ -41,7 +41,7 @@ export function HeaderBar({
   onAIFilterClick,
 }: HeaderBarProps) {
   return (
-    <div className="h-12 border-b border-border bg-card flex items-center px-6 gap-4 sticky top-0 z-30">
+    <div className="h-12 border-b border-border bg-card flex items-center px-4 gap-3 sticky top-0 z-30">
       {/* Breadcrumb */}
       <Breadcrumb>
         <BreadcrumbList>

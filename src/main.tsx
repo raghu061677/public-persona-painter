@@ -1,11 +1,12 @@
 import * as React from "react";
+
+// CRITICAL: Global React injection MUST execute before any other imports
+(window as any).React = React;
+
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { useThemeStore } from "@/store/themeStore";
-
-// Global React injection for vendor-charts bundle
-window.React = React;
 
 // Initialize theme on app load
 const initializeTheme = () => {

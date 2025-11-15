@@ -17,11 +17,15 @@ export default defineConfig(({ mode }) => ({
         manualChunks: (id) => {
           // Split large vendor libraries into separate chunks
           if (id.includes('node_modules')) {
+            // React must come first to ensure it's loaded before other libraries
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react/jsx-runtime')) {
+              return 'vendor-react';
+            }
+            // Other vendor chunks that depend on React
             if (id.includes('xlsx')) return 'vendor-xlsx';
             if (id.includes('pptxgenjs')) return 'vendor-pptx';
             if (id.includes('leaflet') || id.includes('react-leaflet')) return 'vendor-maps';
             if (id.includes('recharts') || id.includes('highcharts')) return 'vendor-charts';
-            if (id.includes('react') || id.includes('react-dom')) return 'vendor-react';
             if (id.includes('@radix-ui')) return 'vendor-ui';
             if (id.includes('@supabase')) return 'vendor-supabase';
             if (id.includes('@tanstack/react-table')) return 'vendor-table';

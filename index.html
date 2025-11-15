@@ -1,11 +1,6 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <!-- CRITICAL: React global injection BEFORE any other scripts -->
-    <script>
-      // Pre-bootstrap React placeholder to prevent forwardRef crash
-      window.React = {};
-    </script>
     
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
@@ -47,13 +42,6 @@
 
   <body>
     <div id="root"></div>
-    <script type="module">
-      // Load React BEFORE any vendor bundle executes
-      import * as React from "react";
-      window.React = React;
-      window.ReactOriginal = React;
-      window.__ReactBackup = React;
-    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

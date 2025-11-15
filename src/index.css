@@ -62,51 +62,54 @@ All colors MUST be HSL.
     --font-family: Inter, sans-serif;
     --base-font-size: 16px;
     
-    --background: 210 40% 98%;
-    --foreground: 215 25% 27%;
+    /* Go-Ads Brand Colors */
+    --background: 210 40% 98%; /* #F3F6FB Sky Light */
+    --foreground: 214 76% 15%; /* #10243A Deep Navy */
 
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 27%;
+    --card-foreground: 214 76% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 27%;
+    --popover-foreground: 214 76% 15%;
 
-    --primary: 211 100% 48%;
+    --primary: 209 80% 36%; /* #1155A3 Primary Blue */
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 211 100% 65%;
+    --primary-glow: 209 80% 50%;
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 38 91% 56%; /* #F7A326 Warm Orange */
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 214 31% 91%; /* #E2E8F0 Light Gray */
+    --muted-foreground: 215 16% 47%; /* #94A3B8 Muted Text */
 
-    --accent: 174 72% 36%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 45 100% 81%; /* #FFE7A3 Soft Yellow Glow */
+    --accent-foreground: 214 76% 15%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 160 84% 39%;
+    --border: 214 31% 91%;
+    --input: 214 31% 91%;
+    --ring: 209 80% 36%;
 
     --radius: 0.75rem;
 
     /* Chart colors */
-    --chart-1: 160 84% 39%;
-    --chart-2: 170 100% 41%;
-    --chart-3: 180 100% 45%;
-    --chart-4: 190 94% 43%;
-    --chart-5: 200 98% 39%;
+    --chart-1: 209 80% 36%;
+    --chart-2: 38 91% 56%;
+    --chart-3: 45 100% 81%;
+    --chart-4: 214 76% 15%;
+    --chart-5: 215 16% 47%;
 
-    /* Custom design tokens */
-    --gradient-primary: linear-gradient(135deg, hsl(160 84% 39%), hsl(170 100% 41%));
-    --gradient-hero: linear-gradient(135deg, hsl(160 84% 39%) 0%, hsl(170 100% 41%) 50%, hsl(180 100% 45%) 100%);
+    /* Custom design tokens - Go-Ads Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(209 80% 36%), hsl(217 90% 55%));
+    --gradient-hero-light: linear-gradient(135deg, hsl(0 0% 99%), hsl(210 40% 98%), hsl(215 90% 95%));
+    --gradient-hero-night: linear-gradient(135deg, hsl(222 87% 5%), hsl(217 71% 13%), hsl(215 100% 24%));
+    --gradient-cta: linear-gradient(135deg, hsl(209 80% 36%), hsl(217 90% 55%));
     --gradient-subtle: linear-gradient(180deg, hsl(210 40% 98%), hsl(0 0% 100%));
     
-    --shadow-elegant: 0 20px 60px -10px hsl(160 84% 39% / 0.15);
-    --shadow-glow: 0 0 40px hsl(160 84% 49% / 0.25);
+    --shadow-elegant: 0 20px 60px -10px hsl(209 80% 36% / 0.15);
+    --shadow-glow: 0 0 40px hsl(209 80% 50% / 0.25);
     --shadow-card: 0 4px 20px hsl(220 13% 8% / 0.08);
     
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -195,34 +198,35 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 215 28% 9%;
+    /* Go-Ads Dark/Night Theme */
+    --background: 222 87% 5%; /* #020617 Deep Space */
     --foreground: 210 40% 98%;
 
-    --card: 215 28% 11%;
+    --card: 214 76% 15%; /* #10243A Deep Navy */
     --card-foreground: 210 40% 98%;
 
-    --popover: 215 28% 11%;
+    --popover: 214 76% 15%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 211 100% 48%;
+    --primary: 209 80% 36%; /* #1155A3 Primary Blue */
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 211 100% 65%;
+    --primary-glow: 209 80% 50%;
 
-    --secondary: 215 20% 17%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 38 91% 56%; /* #F7A326 Warm Orange */
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 215 20% 17%;
+    --muted: 217 33% 18%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 174 72% 36%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 45 100% 81%; /* #FFE7A3 Soft Yellow Glow */
+    --accent-foreground: 214 76% 15%;
 
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 215 20% 17%;
-    --input: 215 20% 17%;
-    --ring: 211 100% 48%;
+    --border: 217 33% 18%;
+    --input: 217 33% 18%;
+    --ring: 209 80% 36%;
 
     /* Chart colors for dark mode */
     --chart-1: 211 100% 48%;

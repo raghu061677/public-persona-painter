@@ -2,19 +2,22 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { AnnouncementBanner } from "@/components/landing/AnnouncementBanner";
-import { HeroGodMode } from "@/components/landing/god-mode/HeroGodMode";
+import { HeroCosmicMode } from "@/components/landing/cosmic/HeroCosmicMode";
+import { ScenesCarousel } from "@/components/landing/cosmic/ScenesCarousel";
+import { WhoItsFor } from "@/components/landing/cosmic/WhoItsFor";
+import { AIFeatureStrip } from "@/components/landing/cosmic/AIFeatureStrip";
 import { MarketplacePreview } from "@/components/landing/god-mode/MarketplacePreview";
-import { AIFeaturesShowcase } from "@/components/landing/god-mode/AIFeaturesShowcase";
 import { EnhancedValueProposition } from "@/components/landing/god-mode/EnhancedValueProposition";
 import { SocialProofSection } from "@/components/landing/god-mode/SocialProofSection";
 import { CaseStudySection } from "@/components/landing/god-mode/CaseStudySection";
-import { HowItWorks } from "@/components/landing/HowItWorks";
+import { CompactSteps } from "@/components/landing/cosmic/CompactSteps";
 import { ConversionBanner } from "@/components/landing/ConversionBanner";
 import { EnhancedSecurity } from "@/components/landing/god-mode/EnhancedSecurity";
 import { EnhancedFAQ } from "@/components/landing/god-mode/EnhancedFAQ";
 import { FinalCTA } from "@/components/landing/FinalCTA";
 import { PremiumFooter } from "@/components/landing/god-mode/PremiumFooter";
 import { DarkModeToggle } from "@/components/landing/god-mode/DarkModeToggle";
+import { MobileStickyCTA } from "@/components/landing/cosmic/MobileStickyCTA";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -65,26 +68,32 @@ const Landing = () => {
       </nav>
 
       <main>
-        {/* Hero God Mode */}
-        <HeroGodMode />
+        {/* Hero Cosmic Mode */}
+        <HeroCosmicMode />
+
+        {/* Scenes Carousel */}
+        <ScenesCarousel />
+
+        {/* Who It's For */}
+        <WhoItsFor />
+
+        {/* AI Feature Strip */}
+        <AIFeatureStrip />
 
         {/* Marketplace Preview */}
         <MarketplacePreview />
 
-        {/* AI Features Showcase */}
-        <AIFeaturesShowcase />
-
         {/* Enhanced Value Proposition */}
         <EnhancedValueProposition />
+
+        {/* Compact Steps */}
+        <CompactSteps />
 
         {/* Social Proof */}
         <SocialProofSection />
 
         {/* Case Study */}
         <CaseStudySection />
-
-        {/* How It Works */}
-        <HowItWorks />
 
         {/* Mid-Page Conversion Banner */}
         <ConversionBanner />
@@ -99,9 +108,11 @@ const Landing = () => {
         <FinalCTA />
       </main>
 
-
       {/* Premium Footer */}
       <PremiumFooter />
+
+      {/* Mobile Sticky CTA */}
+      <MobileStickyCTA />
     </div>
   );
 };

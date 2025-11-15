@@ -80,15 +80,15 @@ export function SummaryCards({
         const Icon = card.icon;
         return (
           <Card key={card.title} className="overflow-hidden">
-            <CardContent className="p-3">
-              <div className="flex items-start justify-between mb-2">
-                <div className={cn("p-2 rounded-lg", card.bgColor)}>
-                  <Icon className={cn("h-4 w-4", card.color)} />
+            <CardContent className="p-2.5">
+              <div className="flex items-start justify-between mb-1.5">
+                <div className={cn("p-1.5 rounded-lg", card.bgColor)}>
+                  <Icon className={cn("h-3.5 w-3.5", card.color)} />
                 </div>
               </div>
-              <div className="space-y-1">
-                <p className="text-2xl font-bold">{card.value}</p>
-                <p className="text-xs text-muted-foreground">{card.title}</p>
+              <div className="space-y-0.5">
+                <p className="text-xl font-bold leading-tight">{card.value}</p>
+                <p className="text-xs text-muted-foreground leading-tight">{card.title}</p>
               </div>
             </CardContent>
           </Card>

@@ -209,7 +209,7 @@ export default function MediaAssetsControlCenter() {
 
           {/* Content Area */}
           <div className="flex-1 overflow-hidden relative">
-            <div className="h-full overflow-auto px-6 pt-4 space-y-3">
+            <div className="h-full overflow-auto px-6 py-2 space-y-2">
               {/* Summary Cards */}
               <SummaryCards
                 totalAssets={totalAssets}

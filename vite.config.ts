@@ -16,20 +16,25 @@ export default defineConfig(({ mode }) => ({
       "react",
       "react-dom",
       "react/jsx-runtime",
-      "recharts"
+      "recharts",
+      "highcharts",
+      "highcharts-react-official"
     ],
   },
   build: {
+    commonjsOptions: {
+      include: [/react/, /react-dom/]
+    },
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Split large vendor libraries into separate chunks
+          // DO NOT split React into chunks - keep it together
           if (id.includes('node_modules')) {
-            // React must come first to ensure it's loaded before other libraries
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react/jsx-runtime')) {
-              return 'vendor-react';
+            // Keep React as a single monolithic chunk
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react/jsx-runtime') || id.includes('scheduler')) {
+              return 'react-vendor';
             }
-            // Other vendor chunks that depend on React
+            // Other vendor chunks
             if (id.includes('xlsx')) return 'vendor-xlsx';
             if (id.includes('pptxgenjs')) return 'vendor-pptx';
             if (id.includes('leaflet') || id.includes('react-leaflet')) return 'vendor-maps';
@@ -42,13 +47,6 @@ export default defineConfig(({ mode }) => ({
             // Group other node_modules
             return 'vendor-misc';
           }
-        },
-        chunkFileNames(chunkInfo) {
-          // vendor-charts must ALWAYS load AFTER vendor-react
-          if (chunkInfo.name.includes("vendor-charts")) {
-            return "zzz-react-dependant-[name]-[hash].js";
-          }
-          return "[name]-[hash].js";
         },
       },
     },

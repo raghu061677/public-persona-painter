@@ -101,6 +101,41 @@ export function LatestPhotosSection({ assetId, asset }: LatestPhotosSectionProps
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
+          
+          {/* Asset Information */}
+          {asset && (
+            <div className="mt-4 pt-4 border-t space-y-2 text-sm">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-muted-foreground">Location:</span>
+                  <p className="font-medium">{asset.city} - {asset.area}</p>
+                  <p className="text-xs text-muted-foreground">{asset.location}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Size/Dimension:</span>
+                  <p className="font-medium">{asset.dimensions}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-muted-foreground">Direction:</span>
+                  <p className="font-medium">{asset.direction || 'N/A'}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Lighting Type:</span>
+                  <p className="font-medium">{asset.illumination || 'Non-lit'}</p>
+                </div>
+              </div>
+              
+              {asset.total_sqft && (
+                <div>
+                  <span className="text-muted-foreground">Total Area:</span>
+                  <p className="font-medium">{asset.total_sqft.toFixed(2)} sq.ft</p>
+                </div>
+              )}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {photos.length === 0 ? (

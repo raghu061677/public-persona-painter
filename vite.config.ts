@@ -18,13 +18,13 @@ export default defineConfig(({ mode }) => ({
       "react/jsx-runtime",
       "recharts",
       "highcharts",
-      "highcharts-react-official"
-    ],
-    exclude: ["@supabase/supabase-js", "@supabase/postgrest-js", "@supabase/realtime-js", "@supabase/storage-js", "@supabase/functions-js"],
-    esbuildOptions: {
-      mainFields: ['module', 'main'],
-      resolveExtensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json'],
-    }
+      "highcharts-react-official",
+      "@supabase/supabase-js",
+      "@supabase/postgrest-js",
+      "@supabase/realtime-js",
+      "@supabase/storage-js",
+      "@supabase/functions-js"
+    ]
   },
   build: {
     rollupOptions: {

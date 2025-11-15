@@ -26,6 +26,7 @@ export default function MediaAssetsControlCenter() {
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
+  const [isGodModeVisible, setIsGodModeVisible] = useState(true);
 
   useEffect(() => {
     fetchAssets();
@@ -206,6 +207,8 @@ export default function MediaAssetsControlCenter() {
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             onAIFilterClick={() => setIsPanelOpen(true)}
+            isGodModeVisible={isGodModeVisible}
+            onToggleGodMode={() => setIsGodModeVisible(!isGodModeVisible)}
           />
 
           {/* Content Area */}
@@ -283,7 +286,7 @@ export default function MediaAssetsControlCenter() {
       />
 
       {/* God Mode HUD */}
-      <GodModeHUD assets={filteredAssets} isVisible={true} />
+      <GodModeHUD assets={filteredAssets} isVisible={isGodModeVisible} />
     </div>
   );
 }

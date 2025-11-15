@@ -75,12 +75,12 @@ export function SummaryCards({
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
       {cards.map((card) => {
         const Icon = card.icon;
         return (
           <Card key={card.title} className="overflow-hidden">
-            <CardContent className="p-4">
+            <CardContent className="p-3">
               <div className="flex items-start justify-between mb-2">
                 <div className={cn("p-2 rounded-lg", card.bgColor)}>
                   <Icon className={cn("h-4 w-4", card.color)} />

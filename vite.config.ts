@@ -38,6 +38,13 @@ export default defineConfig(({ mode }) => ({
             return 'vendor-misc';
           }
         },
+        chunkFileNames(chunkInfo) {
+          // Force vendor-charts to load after vendor-react
+          if (chunkInfo.name === "vendor-charts") {
+            return "vendor-react-dependent-[name]-[hash].js";
+          }
+          return "[name]-[hash].js";
+        },
       },
     },
     chunkSizeWarningLimit: 1500,

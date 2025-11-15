@@ -58,8 +58,8 @@ export default defineConfig(({ mode }) => ({
     }),
     mode === "development" && componentTagger(),
     VitePWA({
-      registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "robots.txt", "offline.html", "favicon-16x16.png", "favicon-32x32.png", "favicon-192x192.png", "apple-touch-icon.png"],
+      registerType: "prompt",
+      includeAssets: ["favicon.ico", "robots.txt", "favicon-16x16.png", "favicon-32x32.png", "favicon-192x192.png", "apple-touch-icon.png"],
       manifestFilename: "manifest.json",
       manifest: {
         name: "Go-Ads 360° - OOH Media Management",

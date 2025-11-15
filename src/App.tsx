@@ -28,7 +28,7 @@ const LoadingFallback = () => (
 const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
-const MediaAssetsList = lazy(() => import("./pages/MediaAssetsList"));
+const MediaAssetsList = lazy(() => import("./pages/MediaAssetsControlCenter"));
 const MediaAssetNew = lazy(() => import("./pages/MediaAssetNew"));
 const MediaAssetDetail = lazy(() => import("./pages/MediaAssetDetail"));
 const MediaAssetEdit = lazy(() => import("./pages/MediaAssetEdit"));

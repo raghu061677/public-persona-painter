@@ -25,6 +25,7 @@ const LoadingFallback = () => (
 );
 
 // Lazy load all pages for code splitting
+const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const MediaAssetsList = lazy(() => import("./pages/MediaAssetsList"));
@@ -168,7 +169,7 @@ const App = () => (
               <Suspense fallback={<LoadingFallback />}>
                 <Routes>
             {/* Public routes */}
-            <Route path="/" element={<Auth />} />
+            <Route path="/" element={<Landing />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/onboarding" element={<ProtectedRoute><CompanyOnboarding /></ProtectedRoute>} />
             <Route path="/install" element={<Install />} />

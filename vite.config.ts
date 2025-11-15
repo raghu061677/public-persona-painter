@@ -18,8 +18,10 @@ export default defineConfig(({ mode }) => ({
       "react/jsx-runtime",
       "recharts",
       "highcharts",
-      "highcharts-react-official"
+      "highcharts-react-official",
+      "@supabase/supabase-js"
     ],
+    exclude: ["@supabase/postgrest-js"]
   },
   build: {
     rollupOptions: {

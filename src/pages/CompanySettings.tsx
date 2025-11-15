@@ -8,15 +8,21 @@ export default function CompanySettings() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Redirect to profile page by default
+    // Redirect to profile page by default - runs once on mount
     if (!isLoading) {
       navigate("/admin/company-settings/profile", { replace: true });
     }
   }, [isLoading, navigate]);
 
-  return (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-    </div>
-  );
+  // Show loading while redirecting
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // This should not be reached as we redirect in useEffect, but provide fallback
+  return null;
 }

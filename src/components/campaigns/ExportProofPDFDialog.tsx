@@ -45,10 +45,20 @@ export function ExportProofPDFDialog({ campaignId, campaignName }: ExportProofPD
         .eq('campaign_id', campaignId);
 
       if (assetsError) throw assetsError;
+      if (!campaignAssets) {
+        setAssets([]);
+        return;
+      }
 
       // Load all photos for these assets
-      const assetIds = campaignAssets.map((a) => a.asset_id);
-      const { data: photosData, error: photosError } = await supabase
+      const assetIds = campaignAssets.map((a: any) => a.asset_id);
+      
+      if (assetIds.length === 0) {
+        setAssets([]);
+        return;
+      }
+
+      const photosQuery = supabase
         .from('media_photos')
         .select('*')
         .eq('campaign_id', campaignId)
@@ -56,13 +66,24 @@ export function ExportProofPDFDialog({ campaignId, campaignName }: ExportProofPD
         .in('asset_id', assetIds)
         .order('uploaded_at', { ascending: false });
 
+      const { data: photosData, error: photosError } = await photosQuery;
+
       if (photosError) throw photosError;
 
-      // Group photos by asset
-      const assetsWithPhotos = campaignAssets.map((asset) => ({
-        ...asset,
-        photos: photosData?.filter((p) => p.asset_id === asset.asset_id) || [],
-      }));
+      // Group photos by asset with explicit typing
+      const assetsWithPhotos: any[] = [];
+      
+      for (const asset of campaignAssets) {
+        const assetPhotos = photosData?.filter((p: any) => p.asset_id === asset.asset_id) || [];
+        assetsWithPhotos.push({
+          asset_id: asset.asset_id,
+          location: asset.location,
+          area: asset.area,
+          city: asset.city,
+          media_type: asset.media_type,
+          photos: assetPhotos,
+        });
+      }
 
       setAssets(assetsWithPhotos);
 

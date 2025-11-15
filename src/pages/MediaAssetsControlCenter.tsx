@@ -209,7 +209,7 @@ export default function MediaAssetsControlCenter() {
 
           {/* Content Area */}
           <div className="flex-1 overflow-hidden relative">
-            <div className="h-full overflow-auto p-6">
+            <div className="h-full overflow-auto px-6 pt-4 space-y-3">
               {/* Summary Cards */}
               <SummaryCards
                 totalAssets={totalAssets}
@@ -222,7 +222,7 @@ export default function MediaAssetsControlCenter() {
               />
 
               {/* Add New Button */}
-              <div className="mb-4">
+              <div>
                 <Button onClick={() => navigate("/media-assets/new")} className="gap-2">
                   <Plus className="h-4 w-4" />
                   Add New Asset

@@ -58,15 +58,17 @@ export function ExportProofPDFDialog({ campaignId, campaignName }: ExportProofPD
         return;
       }
 
-      const photosQuery = supabase
+      // Load photos - use type assertion to avoid deep type inference
+      const photosResponse: any = await supabase
         .from('media_photos')
         .select('*')
         .eq('campaign_id', campaignId)
         .eq('photo_type', 'operations_proof')
         .in('asset_id', assetIds)
         .order('uploaded_at', { ascending: false });
-
-      const { data: photosData, error: photosError } = await photosQuery;
+      
+      const photosData = photosResponse.data;
+      const photosError = photosResponse.error;
 
       if (photosError) throw photosError;
 

@@ -58,7 +58,8 @@ export default defineConfig(({ mode }) => ({
     }),
     mode === "development" && componentTagger(),
     VitePWA({
-      registerType: "prompt",
+      registerType: "autoUpdate",
+      injectRegister: 'auto',
       includeAssets: ["favicon.ico", "robots.txt", "favicon-16x16.png", "favicon-32x32.png", "favicon-192x192.png", "apple-touch-icon.png"],
       manifestFilename: "manifest.json",
       manifest: {
@@ -116,14 +117,15 @@ export default defineConfig(({ mode }) => ({
         prefer_related_applications: false
       },
       workbox: {
-        maximumFileSizeToCacheInBytes: 20 * 1024 * 1024, // 20 MB limit
-        // Only cache essential files, let vendor chunks load on demand to avoid dependency order issues
+        maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
+        // Minimal precaching - only essential static assets
         globPatterns: ["**/*.{css,html,ico,png,woff,woff2}"],
-        // Exclude ALL vendor JS chunks from precaching to prevent loading order issues
+        // Exclude all JS to prevent dependency order issues
         globIgnores: [
-          '**/vendor-*.js',
-          '**/assets/vendor-*.js',
-          '**/*.js.map'
+          '**/node_modules/**',
+          '**/*.js',
+          '**/*.js.map',
+          '**/manifest.json'
         ],
         runtimeCaching: [
           {
@@ -183,8 +185,8 @@ export default defineConfig(({ mode }) => ({
             },
           },
         ],
-        navigateFallback: null,
-        navigateFallbackDenylist: [/^\/_/, /\/api\//],
+        navigateFallback: undefined,
+        navigateFallbackDenylist: [/^\/_/, /\/api\//, /\/manifest\.json$/],
       },
     }),
   ].filter(Boolean),

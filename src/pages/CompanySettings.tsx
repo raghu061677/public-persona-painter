@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Loader2 } from "lucide-react";
+import { PageHeader } from "@/components/navigation/PageHeader";
+import { ROUTES, ROUTE_LABELS } from "@/config/routes";
 
 export default function CompanySettings() {
   const { isLoading } = useCompany();

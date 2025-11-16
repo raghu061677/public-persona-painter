@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Shield, Plus, Edit, Trash2 } from "lucide-react";
 import { RolePermissionsMatrix } from "@/components/users/RolePermissionsMatrix";
+import { PageHeader } from "@/components/navigation/PageHeader";
+import { ROUTES, ROUTE_LABELS } from "@/config/routes";
 
 const DEFAULT_ROLES = [
   { name: "admin", label: "Administrator", description: "Full system access", color: "destructive" },
@@ -22,12 +24,15 @@ export default function CompanyRoles() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold mb-1">Roles & Permissions</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage user roles and their access permissions
-        </p>
-      </div>
+      <PageHeader
+        title={ROUTE_LABELS[ROUTES.SETTINGS_ROLES]}
+        description="Manage user roles and their access permissions"
+        breadcrumbs={[
+          { label: "Dashboard", path: ROUTES.DASHBOARD },
+          { label: "Settings", path: ROUTES.SETTINGS },
+          { label: "Roles & Permissions" }
+        ]}
+      />
 
       <InfoAlert>
         <strong>Role-Based Access Control:</strong> Define what each role can access and modify in the system. Users are assigned roles during invitation.

@@ -210,7 +210,6 @@ const App = () => (
             <Route path="/admin/media-assets/:id" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><AppLayout><MediaAssetDetail /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets-map" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><AppLayout><MediaAssetsMap /></AppLayout></ProtectedRoute>} />
             <Route path="/marketplace" element={<ProtectedRoute requireAuth><AppLayout><Marketplace /></AppLayout></ProtectedRoute>} />
-            <Route path="/admin/booking-requests" element={<ProtectedRoute requireAuth><AppLayout><BookingRequests /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/plans" element={<ProtectedRoute requiredModule="plans" requiredAction="view"><AppLayout><PlansList /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/plans/new" element={<ProtectedRoute requiredModule="plans" requiredAction="create"><AppLayout><PlanNew /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/plans/edit/:id" element={<ProtectedRoute requiredModule="plans" requiredAction="update"><AppLayout><PlanEdit /></AppLayout></ProtectedRoute>} />
@@ -237,8 +236,6 @@ const App = () => (
             <Route path="/reports/vacant-media" element={<AppLayout><VacantMediaReport /></AppLayout>} />
             <Route path="/admin/ai-assistant" element={<AppLayout><AIAssistant /></AppLayout>} />
             <Route path="/admin/assistant" element={<AppLayout><AIAssistant /></AppLayout>} />
-            <Route path="/marketplace" element={<AppLayout><Marketplace /></AppLayout>} />
-            <Route path="/admin/booking-requests" element={<AppLayout><BookingRequests /></AppLayout>} />
             <Route path="/admin/tenant-analytics" element={<AppLayout><TenantAnalytics /></AppLayout>} />
             <Route path="/admin/proformas" element={<AppLayout><ProformasList /></AppLayout>} />
             <Route path="/admin/proformas/:id" element={<AppLayout><ProformaDetail /></AppLayout>} />

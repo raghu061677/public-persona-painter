@@ -29,7 +29,8 @@ export const MobileStickyCTA = () => {
     >
       <Button
         onClick={() => navigate("/auth")}
-        className="w-full bg-gradient-to-r from-[#1155A3] to-[#1D73E8] text-white font-medium py-6 rounded-full shadow-lg"
+        variant="gradient"
+        className="w-full font-semibold py-6 rounded-xl shadow-glow"
       >
         <Sparkles className="mr-2 h-4 w-4" />
         Start Free 14-Day Trial

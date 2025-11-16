@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import { ImportClientsDialog } from "@/components/clients/ImportClientsDialog";
 import { ImportHistoryDialog } from "@/components/clients/ImportHistoryDialog";
 import * as XLSX from "xlsx";
+import { PageHeader } from "@/components/navigation/PageHeader";
+import { ROUTES } from "@/config/routes";
 import { toast } from "@/hooks/use-toast";
 
 export default function ClientsImport() {
@@ -108,75 +110,76 @@ export default function ClientsImport() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button 
-          variant="ghost" 
-          size="icon"
-          onClick={() => navigate('/admin/import')}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Import Clients</h1>
-          <p className="text-muted-foreground mt-1">
-            Bulk upload client data from Excel spreadsheets
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Import Clients"
+        description="Upload client data from Excel files"
+        breadcrumbs={[
+          { label: "Dashboard", path: ROUTES.DASHBOARD },
+          { label: "Clients", path: ROUTES.CLIENTS },
+          { label: "Import" },
+        ]}
+        showBackButton
+        backPath={ROUTES.CLIENTS}
+        actions={
+          <>
+            <ImportHistoryDialog key={refreshKey} />
+            <Button onClick={handleDownloadSample} variant="outline">
+              <Download className="mr-2 h-4 w-4" />
+              Download Sample
+            </Button>
+            <ImportClientsDialog onImportComplete={handleImportComplete} />
+          </>
+        }
+      />
 
       <Card>
         <CardHeader>
-          <CardTitle>Excel File Requirements</CardTitle>
+          <CardTitle>Import Instructions</CardTitle>
           <CardDescription>
-            Your Excel file should contain the following columns (case-insensitive):
+            Follow these steps to import your client data
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <h4 className="font-medium mb-2">Required Columns:</h4>
-              <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                <li>name / Name / CLIENT_NAME</li>
-                <li>state / State / STATE (for ID generation)</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-medium mb-2">Optional Columns:</h4>
-              <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                <li>email / Email / EMAIL</li>
-                <li>phone / Phone / PHONE</li>
-                <li>company / Company / COMPANY</li>
-                <li>gst_number / GST / GSTIN</li>
-                <li>address / Address / ADDRESS</li>
-                <li>city / City / CITY</li>
-                <li>contact_person / Contact Person</li>
-                <li>notes / Notes / NOTES</li>
-                <li>billing_address_line1, billing_city, etc.</li>
-              </ul>
-            </div>
+          <div className="space-y-2">
+            <h4 className="font-medium">Step 1: Download Sample File</h4>
+            <p className="text-sm text-muted-foreground">
+              Click the "Download Sample" button to get a template Excel file with the correct format.
+            </p>
           </div>
-
-          <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-            <h4 className="font-medium">Important Notes:</h4>
-            <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-              <li>Client IDs will be auto-generated based on state (e.g., TS-0001, KA-0002)</li>
-              <li>Duplicate records (same email or GST number) will be skipped</li>
-              <li>The system supports .xlsx and .xls file formats</li>
-              <li>All imported data will be validated before insertion</li>
+          
+          <div className="space-y-2">
+            <h4 className="font-medium">Step 2: Prepare Your Data</h4>
+            <p className="text-sm text-muted-foreground">
+              Fill in your client data using the sample file as a template. Required fields are:
+            </p>
+            <ul className="text-sm text-muted-foreground list-disc list-inside ml-4 space-y-1">
+              <li>name - Client name (required)</li>
+              <li>state - State code (required for ID generation)</li>
+              <li>email - Valid email address</li>
+              <li>phone - 10-digit phone number</li>
+              <li>gst_number - Valid GST format (optional)</li>
             </ul>
           </div>
 
-          <div className="flex justify-center gap-3 pt-4">
-            <Button 
-              variant="outline" 
-              onClick={handleDownloadSample}
-              className="gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Download Sample File
-            </Button>
-            <ImportHistoryDialog />
-            <ImportClientsDialog onImportComplete={handleImportComplete} />
+          <div className="space-y-2">
+            <h4 className="font-medium">Step 3: Import the File</h4>
+            <p className="text-sm text-muted-foreground">
+              Click "Import Clients" and select your prepared Excel file. The system will:
+            </p>
+            <ul className="text-sm text-muted-foreground list-disc list-inside ml-4 space-y-1">
+              <li>Validate all data fields</li>
+              <li>Auto-generate client IDs based on state</li>
+              <li>Check for duplicate records</li>
+              <li>Show a preview before final import</li>
+            </ul>
+          </div>
+
+          <div className="space-y-2">
+            <h4 className="font-medium">Step 4: Review & Confirm</h4>
+            <p className="text-sm text-muted-foreground">
+              Review the import summary showing successful imports, errors, and skipped records.
+              You can view detailed logs in the Import History.
+            </p>
           </div>
         </CardContent>
       </Card>

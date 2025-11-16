@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Building2, UserPlus, Users, Pencil } from "lucide-react";
+import { Building2, UserPlus, Users, Pencil, Trash2, CheckCircle, Shield } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -24,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -32,6 +33,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Company {
   id: string;
@@ -74,6 +85,9 @@ export default function CompanyManagement() {
   const [userName, setUserName] = useState("");
   const [userRole, setUserRole] = useState<"admin" | "sales" | "operations" | "finance">("sales");
   const [submitting, setSubmitting] = useState(false);
+  const [deleteCompanyId, setDeleteCompanyId] = useState<string | null>(null);
+  const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
+  const [assignAllModules, setAssignAllModules] = useState(true);
 
   useEffect(() => {
     if (isPlatformAdmin) {
@@ -196,6 +210,69 @@ export default function CompanyManagement() {
     }
   };
 
+  const handleCleanupDuplicates = async () => {
+    try {
+      setSubmitting(true);
+      const { data, error } = await supabase.functions.invoke('cleanup-duplicate-companies');
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: data.message || "Duplicate companies cleaned up",
+      });
+
+      setCleanupDialogOpen(false);
+      loadCompanies();
+    } catch (error: any) {
+      toast({
+        title: "Error cleaning duplicates",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteCompany = async () => {
+    if (!deleteCompanyId) return;
+
+    try {
+      setSubmitting(true);
+      
+      // First, delete all company users
+      await supabase
+        .from('company_users')
+        .delete()
+        .eq('company_id', deleteCompanyId);
+
+      // Then delete the company
+      const { error } = await supabase
+        .from('companies')
+        .delete()
+        .eq('id', deleteCompanyId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Company deleted successfully",
+      });
+
+      setDeleteCompanyId(null);
+      loadCompanies();
+    } catch (error: any) {
+      toast({
+        title: "Error deleting company",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleAddUserToCompany = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCompany || !userEmail || !userPassword || !userName) {
@@ -254,9 +331,32 @@ export default function CompanyManagement() {
 
       if (roleError) throw roleError;
 
+      // Optionally assign all module permissions
+      if (assignAllModules) {
+        const { data: permData, error: permError } = await supabase.functions.invoke(
+          'assign-user-permissions',
+          {
+            body: {
+              userId: authData.user.id,
+              role: userRole,
+              modules: 'all'
+            }
+          }
+        );
+
+        if (permError) {
+          console.error('Error assigning permissions:', permError);
+          toast({
+            title: "Warning",
+            description: "User created but permissions assignment failed. Please assign manually.",
+            variant: "default",
+          });
+        }
+      }
+
       toast({
         title: "Success",
-        description: `User ${userName} added to ${selectedCompany.name}`,
+        description: `User ${userName} added to ${selectedCompany.name} with full access`,
       });
 
       setAddUserToCompanyOpen(false);
@@ -297,13 +397,18 @@ export default function CompanyManagement() {
           <h1 className="text-3xl font-bold">Company Management</h1>
           <p className="text-muted-foreground">Manage companies and their users</p>
         </div>
-        <Dialog open={addCompanyOpen} onOpenChange={setAddCompanyOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Building2 className="mr-2 h-4 w-4" />
-              Add Company
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setCleanupDialogOpen(true)}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Cleanup Duplicates
+          </Button>
+          <Dialog open={addCompanyOpen} onOpenChange={setAddCompanyOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Building2 className="mr-2 h-4 w-4" />
+                Add Company
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create New Company</DialogTitle>
@@ -364,6 +469,7 @@ export default function CompanyManagement() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card>
@@ -400,17 +506,28 @@ export default function CompanyManagement() {
                   </TableCell>
                   <TableCell>{company.gstin || '-'}</TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedCompany(company);
-                        loadCompanyUsers(company.id);
-                      }}
-                    >
-                      <Users className="h-4 w-4 mr-2" />
-                      Manage Users
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCompany(company);
+                          loadCompanyUsers(company.id);
+                        }}
+                      >
+                        <Users className="h-4 w-4 mr-2" />
+                        Manage Users
+                      </Button>
+                      {company.type !== 'platform_admin' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteCompanyId(company.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -418,6 +535,44 @@ export default function CompanyManagement() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Cleanup Duplicates Dialog */}
+      <AlertDialog open={cleanupDialogOpen} onOpenChange={setCleanupDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cleanup Duplicate Companies</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will scan for companies with the same name and keep only the oldest one.
+              All duplicate companies will be permanently deleted. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCleanupDuplicates} disabled={submitting}>
+              {submitting ? "Cleaning..." : "Cleanup Duplicates"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Company Confirmation */}
+      <AlertDialog open={!!deleteCompanyId} onOpenChange={() => setDeleteCompanyId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Company</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this company? This will also remove all associated users.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCompany} disabled={submitting}>
+              {submitting ? "Deleting..." : "Delete Company"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {selectedCompany && (
         <Card>
@@ -487,6 +642,18 @@ export default function CompanyManagement() {
                           <SelectItem value="finance">Finance</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="assignAllModules"
+                        checked={assignAllModules}
+                        onChange={(e) => setAssignAllModules(e.target.checked)}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="assignAllModules" className="text-sm font-normal">
+                        Assign all module permissions based on role
+                      </Label>
                     </div>
                     <div className="flex justify-end gap-2">
                       <Button type="button" variant="outline" onClick={() => setAddUserToCompanyOpen(false)}>

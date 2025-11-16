@@ -14,10 +14,10 @@ export const HeroCosmicMode = () => {
       {/* Enhanced bottom gradient for text readability */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent pointer-events-none" />
       
-      {/* Content container - complete bottom positioning */}
-      <div className="relative z-10 w-full h-full flex items-end">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4 md:pb-6 w-full">
-          <div className="max-w-2xl">
+      {/* Content container - absolute bottom edge */}
+      <div className="absolute bottom-0 left-0 right-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-0 w-full">
+          <div className="max-w-2xl pb-2">
             <motion.div className="flex flex-col gap-4 text-left">
               {/* Motion Text Heading */}
               <div className="space-y-1">

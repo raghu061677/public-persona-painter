@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { AnnouncementBanner } from "@/components/landing/AnnouncementBanner";
 import { HeroCosmicMode } from "@/components/landing/cosmic/HeroCosmicMode";
-import { CosmicMetrics } from "@/components/landing/cosmic/CosmicMetrics";
+import { WhyGoAdsExists } from "@/components/landing/cosmic/WhyGoAdsExists";
 import { WhyGoAdsMatters } from "@/components/landing/cosmic/WhyGoAdsMatters";
 import { ForAgenciesOwners } from "@/components/landing/cosmic/ForAgenciesOwners";
 import { AIFeaturesGrid } from "@/components/landing/cosmic/AIFeaturesGrid";
@@ -74,8 +74,8 @@ const Landing = () => {
         {/* Hero Section */}
         <HeroCosmicMode />
 
-        {/* How Go-Ads Changes Your Day */}
-        <CosmicMetrics />
+        {/* Why Go-Ads Exists - The Problem We Solve */}
+        <WhyGoAdsExists />
 
         {/* Why Go-Ads Matters Now */}
         <WhyGoAdsMatters />

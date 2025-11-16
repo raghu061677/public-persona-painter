@@ -28,16 +28,14 @@ const Landing = () => {
 
       {/* Navbar - Sticky with Blur */}
       <nav 
-        className="sticky top-0 z-50 transition-all duration-350 border-b border-border/10"
+        className="sticky top-0 z-50 transition-all duration-350 border-b border-border/10 bg-white/85 dark:bg-gray-900/90 backdrop-blur-md"
         style={{
-          background: "rgba(255, 255, 255, 0.85)",
-          backdropFilter: "blur(12px)",
           boxShadow: "0 2px 12px rgba(0, 0, 0, 0.04)",
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center bg-white dark:bg-gray-900 px-3 py-1.5 rounded-lg">
+            <div className="flex items-center">
               <img 
                 src="/logo.png" 
                 alt="Go-Ads 360° Logo" 

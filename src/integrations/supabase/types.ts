@@ -2892,6 +2892,36 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          blocked_until: string | null
+          created_at: string | null
+          id: string
+          key: string
+          last_request: string | null
+          requests: number[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          blocked_until?: string | null
+          created_at?: string | null
+          id?: string
+          key: string
+          last_request?: string | null
+          requests?: number[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          blocked_until?: string | null
+          created_at?: string | null
+          id?: string
+          key?: string
+          last_request?: string | null
+          requests?: number[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       recent_searches: {
         Row: {
           created_at: string
@@ -3478,6 +3508,7 @@ export type Database = {
         }
         Returns: Json
       }
+      delete_user_account: { Args: never; Returns: undefined }
       generate_campaign_id: { Args: never; Returns: string }
       generate_estimation_id: { Args: never; Returns: string }
       generate_expense_id: { Args: never; Returns: string }

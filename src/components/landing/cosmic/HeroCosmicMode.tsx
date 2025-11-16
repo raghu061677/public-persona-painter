@@ -113,10 +113,10 @@ export const HeroCosmicMode = () => {
         </motion.div>
       </div>
 
-      {/* Text content - absolute bottom edge */}
-      <div className="absolute bottom-0 left-0 right-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-0 w-full">
-          <div className="max-w-2xl pb-2">
+      {/* Text content - left middle */}
+      <div className="absolute left-0 top-1/2 -translate-y-1/2 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="max-w-2xl">
             <motion.div className="flex flex-col gap-4 text-left">
               {/* Motion Text Heading */}
               <div className="space-y-1">

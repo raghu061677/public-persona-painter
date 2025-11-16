@@ -162,6 +162,27 @@ export function ClientPortalLayout() {
               <Button
                 variant="ghost"
                 className="text-primary-foreground hover:bg-primary-foreground/10"
+                onClick={() => navigate('/portal/proofs')}
+              >
+                Proofs
+              </Button>
+              <Button
+                variant="ghost"
+                className="text-primary-foreground hover:bg-primary-foreground/10"
+                onClick={() => navigate('/portal/payments')}
+              >
+                Payments
+              </Button>
+              <Button
+                variant="ghost"
+                className="text-primary-foreground hover:bg-primary-foreground/10"
+                onClick={() => navigate('/portal/downloads')}
+              >
+                Downloads
+              </Button>
+              <Button
+                variant="ghost"
+                className="text-primary-foreground hover:bg-primary-foreground/10"
                 onClick={handleSignOut}
               >
                 <LogOut className="h-4 w-4 mr-2" />
@@ -187,6 +208,36 @@ export function ClientPortalLayout() {
                     }}
                   >
                     Dashboard
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      navigate('/portal/proofs');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Proofs
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      navigate('/portal/payments');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Payments
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      navigate('/portal/downloads');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Downloads
                   </Button>
                   <Button
                     variant="outline"

@@ -770,6 +770,59 @@ export type Database = {
           },
         ]
       }
+      campaign_creatives: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          campaign_id: string
+          created_at: string | null
+          file_name: string
+          file_size: number | null
+          file_type: string
+          file_url: string
+          id: string
+          notes: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          campaign_id: string
+          created_at?: string | null
+          file_name: string
+          file_size?: number | null
+          file_type: string
+          file_url: string
+          id?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          campaign_id?: string
+          created_at?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string
+          file_url?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_creatives_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_templates: {
         Row: {
           asset_preferences: Json | null
@@ -2156,6 +2209,56 @@ export type Database = {
         }
         Relationships: []
       }
+      operations_tasks: {
+        Row: {
+          asset_id: string
+          assigned_to: string | null
+          campaign_id: string
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          scheduled_date: string | null
+          status: string
+          task_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          asset_id: string
+          assigned_to?: string | null
+          campaign_id: string
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          scheduled_date?: string | null
+          status?: string
+          task_type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          asset_id?: string
+          assigned_to?: string | null
+          campaign_id?: string
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          scheduled_date?: string | null
+          status?: string
+          task_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operations_tasks_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_settings: {
         Row: {
           address: string | null
@@ -2267,6 +2370,39 @@ export type Database = {
           watermark_opacity?: number | null
           watermark_position?: string | null
           watermark_text?: string | null
+        }
+        Relationships: []
+      }
+      payment_reminders: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          id: string
+          invoice_id: string
+          method: string
+          reminder_number: number
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          invoice_id: string
+          method: string
+          reminder_number: number
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          invoice_id?: string
+          method?: string
+          reminder_number?: number
+          sent_at?: string | null
+          status?: string
         }
         Relationships: []
       }

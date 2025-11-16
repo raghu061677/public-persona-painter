@@ -39,17 +39,17 @@ export function PageHeader({
   };
 
   return (
-    <div className={cn("space-y-4 mb-6", className)}>
+    <div className={cn("space-y-4 mb-8 animate-fade-in", className)}>
       {/* Breadcrumbs */}
       {breadcrumbs && breadcrumbs.length > 0 && (
-        <nav className="flex items-center space-x-1 text-sm text-muted-foreground">
+        <nav className="flex items-center space-x-1 text-sm text-muted-foreground animate-fade-in">
           {breadcrumbs.map((breadcrumb, index) => (
             <div key={index} className="flex items-center">
               {index > 0 && <ChevronRight className="h-4 w-4 mx-1" />}
               {breadcrumb.path ? (
                 <Link
                   to={breadcrumb.path}
-                  className="hover:text-foreground transition-colors flex items-center animate-fade-in"
+                  className="hover:text-foreground transition-all duration-200 flex items-center hover-scale"
                 >
                   {index === 0 && <Home className="h-4 w-4 mr-1" />}
                   {breadcrumb.label}
@@ -65,30 +65,34 @@ export function PageHeader({
       )}
 
       {/* Title and Actions */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4 flex-1">
           {showBackButton && (
             <Button
               variant="ghost"
               size="icon"
               onClick={handleBack}
-              className="hover-scale"
+              className="hover-scale shrink-0 mt-1"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
           )}
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight animate-fade-in">
+          <div className="space-y-1.5">
+            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
               {title}
             </h1>
             {description && (
-              <p className="text-muted-foreground mt-1 animate-fade-in">
+              <p className="text-muted-foreground text-base max-w-3xl">
                 {description}
               </p>
             )}
           </div>
         </div>
-        {actions && <div className="flex items-center gap-2 animate-fade-in">{actions}</div>}
+        {actions && (
+          <div className="flex items-center gap-2 shrink-0">
+            {actions}
+          </div>
+        )}
       </div>
     </div>
   );

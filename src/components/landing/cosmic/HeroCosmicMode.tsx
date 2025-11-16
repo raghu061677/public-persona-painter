@@ -50,7 +50,7 @@ export const HeroCosmicMode = () => {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.3 }}
-                className="bg-background/20 dark:bg-background/30 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl"
+                className="bg-black/5 dark:bg-black/20 backdrop-blur-sm p-8 md:p-12"
               >
                 <motion.h1
                   initial={{ opacity: 0, y: 30 }}

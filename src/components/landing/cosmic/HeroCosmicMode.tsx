@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
-import { WebGLBillboard } from "./WebGLBillboard";
+import { HeroImageCarousel } from "./HeroImageCarousel";
 
 export const HeroCosmicMode = () => {
   const navigate = useNavigate();
@@ -146,8 +146,8 @@ export const HeroCosmicMode = () => {
             transition={{ duration: 1, delay: 0.4 }}
             className="relative h-[500px] lg:h-[650px]"
           >
-            <div className="relative h-full w-full rounded-[32px] overflow-hidden">
-              <WebGLBillboard />
+            <div className="relative h-full w-full">
+              <HeroImageCarousel />
             </div>
           </motion.div>
         </div>

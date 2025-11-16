@@ -632,8 +632,45 @@ export default function PlanDetail() {
 
   const handleConvertToCampaign = async () => {
     try {
+      // Validation 1: Check authentication
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!user) {
+        throw new Error("You must be logged in to convert a plan to campaign");
+      }
+
+      // Validation 2: Check if plan is approved
+      if (plan.status !== 'Approved') {
+        toast({
+          title: "Cannot Convert Plan",
+          description: `Plan must be approved before conversion. Current status: ${plan.status}`,
+          variant: "destructive",
+        });
+        setShowConvertDialog(false);
+        return;
+      }
+
+      // Validation 3: Check for duplicate conversion
+      const { data: existingCampaign } = await supabase
+        .from('campaigns')
+        .select('id')
+        .eq('plan_id', plan.id)
+        .maybeSingle();
+
+      if (existingCampaign) {
+        toast({
+          title: "Plan Already Converted",
+          description: "This plan has already been converted to a campaign",
+          variant: "destructive",
+        });
+        setShowConvertDialog(false);
+        navigate(`/admin/campaigns/${existingCampaign.id}`);
+        return;
+      }
+
+      // Validation 4: Check if plan has items
+      if (!planItems || planItems.length === 0) {
+        throw new Error("Plan must have at least one asset to convert to campaign");
+      }
 
       // Generate campaign ID based on start date
       const startDate = campaignData.start_date ? new Date(campaignData.start_date) : new Date(plan.start_date);
@@ -662,7 +699,9 @@ export default function PlanDetail() {
         .select()
         .single();
 
-      if (campaignError) throw campaignError;
+      if (campaignError) {
+        throw new Error(`Failed to create campaign: ${campaignError.message}`);
+      }
 
       // Create campaign assets from plan items
       const campaignAssets = planItems.map(item => ({
@@ -682,34 +721,50 @@ export default function PlanDetail() {
         .from('campaign_assets')
         .insert(campaignAssets as any);
 
-      if (assetsError) throw assetsError;
+      if (assetsError) {
+        // Rollback: Delete the campaign if assets fail
+        await supabase.from('campaigns').delete().eq('id', campaignId);
+        throw new Error(`Failed to create campaign assets: ${assetsError.message}`);
+      }
 
       // Update plan status
-      await supabase
+      const { error: planUpdateError } = await supabase
         .from('plans')
         .update({ status: 'Converted' })
         .eq('id', id);
 
+      if (planUpdateError) {
+        console.error("Failed to update plan status:", planUpdateError);
+        // Don't throw - campaign is created, just log the error
+      }
+
       // Update media assets status to Booked
       const assetIds = planItems.map(item => item.asset_id);
-      await supabase
+      const { error: assetsUpdateError } = await supabase
         .from('media_assets')
         .update({ status: 'Booked' })
         .in('id', assetIds);
 
+      if (assetsUpdateError) {
+        console.error("Failed to update media assets status:", assetsUpdateError);
+        // Don't throw - campaign is created, just log the error
+      }
+
       toast({
-        title: "Success",
-        description: "Campaign created successfully",
+        title: "Campaign Created Successfully",
+        description: `Campaign ${campaignId} has been created with ${planItems.length} assets`,
       });
 
       setShowConvertDialog(false);
       navigate(`/admin/campaigns/${campaignId}`);
     } catch (error: any) {
+      console.error("Campaign conversion error:", error);
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Conversion Failed",
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
+      setShowConvertDialog(false);
     }
   };
 

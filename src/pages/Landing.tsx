@@ -82,7 +82,7 @@ const Landing = () => {
         </div>
       </nav>
 
-      <main>
+      <main className="space-y-0">
         {/* Hero Section */}
         <HeroCosmicMode />
 

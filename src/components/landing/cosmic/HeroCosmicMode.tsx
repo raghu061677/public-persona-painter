@@ -14,7 +14,58 @@ export const HeroCosmicMode = () => {
       {/* Enhanced bottom gradient for text readability */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent pointer-events-none" />
       
-      {/* Content container - absolute bottom edge */}
+      {/* CTA Buttons - Centered in hero */}
+      <div className="absolute inset-0 z-10 flex items-center justify-center">
+        <motion.div
+          className="flex flex-col sm:flex-row gap-3"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          {/* Primary - Blue Gradient */}
+          <motion.div
+            whileHover={{ scale: 1.05, y: -4 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Button
+              size="sm"
+              onClick={() => navigate("/auth")}
+              className="px-4 py-2 text-xs font-bold rounded-lg text-white shadow-2xl relative overflow-hidden group"
+              style={{ 
+                background: "linear-gradient(135deg, #0061FF, #00A3FF)",
+                boxShadow: "0 8px 32px rgba(0, 97, 255, 0.5), 0 4px 16px rgba(0, 0, 0, 0.3)",
+              }}
+            >
+              <span className="relative z-10">Start Free 14-Day Trial →</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            </Button>
+          </motion.div>
+
+          {/* Secondary - Glass with Blue Border */}
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => navigate("/marketplace")}
+              className="px-4 py-2 text-xs font-bold rounded-lg relative overflow-hidden"
+              style={{ 
+                background: "rgba(255, 255, 255, 0.15)",
+                backdropFilter: "blur(8px)",
+                border: "2px solid rgba(255, 255, 255, 0.5)",
+                color: "white",
+                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
+              }}
+            >
+              Explore Platform →
+            </Button>
+          </motion.div>
+        </motion.div>
+      </div>
+
+      {/* Text content - absolute bottom edge */}
       <div className="absolute bottom-0 left-0 right-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-0 w-full">
           <div className="max-w-2xl pb-2">
@@ -56,8 +107,8 @@ export const HeroCosmicMode = () => {
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              className="text-sm md:text-base leading-relaxed max-w-xl"
+                transition={{ duration: 0.6, delay: 0.5 }}
+                className="text-sm md:text-base leading-relaxed max-w-xl"
                 style={{ 
                   color: "rgba(255, 255, 255, 0.96)",
                   textShadow: "0 3px 16px rgba(0, 0, 0, 0.5), 0 1px 6px rgba(0, 0, 0, 0.4)",
@@ -68,58 +119,6 @@ export const HeroCosmicMode = () => {
                 plan campaigns faster, organize inventory better, and deliver proof with complete clarity—without 
                 spreadsheets, WhatsApp chaos, or inconsistent photos.
               </motion.p>
-
-              {/* CTA Buttons with stagger */}
-              <motion.div
-                className="flex flex-col sm:flex-row gap-3 mt-1"
-              >
-                {/* Primary - Blue Gradient */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.65 }}
-                  whileHover={{ scale: 1.05, y: -4 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Button
-                    size="lg"
-                    onClick={() => navigate("/auth")}
-                    className="w-full sm:w-auto px-6 py-5 text-sm font-bold rounded-xl text-white shadow-2xl relative overflow-hidden group"
-                    style={{ 
-                      background: "linear-gradient(135deg, #0061FF, #00A3FF)",
-                      boxShadow: "0 8px 32px rgba(0, 97, 255, 0.5), 0 4px 16px rgba(0, 0, 0, 0.3)",
-                    }}
-                  >
-                    <span className="relative z-10">Start Free 14-Day Trial →</span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  </Button>
-                </motion.div>
-
-                {/* Secondary - Glass with Blue Border */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.7 }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    onClick={() => navigate("/marketplace")}
-                    className="w-full sm:w-auto px-6 py-5 text-sm font-bold rounded-xl relative overflow-hidden"
-                    style={{ 
-                      background: "rgba(255, 255, 255, 0.15)",
-                      backdropFilter: "blur(8px)",
-                      border: "2px solid rgba(255, 255, 255, 0.5)",
-                      color: "white",
-                      boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
-                    }}
-                  >
-                    Explore Platform →
-                  </Button>
-                </motion.div>
-              </motion.div>
             </motion.div>
           </div>
         </div>

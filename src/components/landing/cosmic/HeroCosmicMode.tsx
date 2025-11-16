@@ -11,32 +11,23 @@ export const HeroCosmicMode = () => {
       {/* Full-page image carousel background */}
       <HeroImageCarousel />
       
-      {/* Content container - centered with glassmorphism */}
+      {/* Enhanced bottom gradient for text readability */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
+      
+      {/* Content container - centered, NO background */}
       <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Premium Glassmorphism Panel */}
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="relative rounded-3xl p-8 md:p-12 lg:p-16 text-center"
-            style={{
-              background: "rgba(255, 255, 255, 0.28)",
-              backdropFilter: "blur(10px)",
-              border: "1px solid rgba(255, 255, 255, 0.3)",
-              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
-            }}
-          >
+        <div className="max-w-5xl mx-auto text-center">
+          <motion.div className="flex flex-col gap-8">
             {/* Motion Text Heading */}
-            <div className="space-y-3 mb-8">
+            <div className="space-y-4">
               <motion.h1
                 initial={{ opacity: 0, y: 30, letterSpacing: "0.05em" }}
                 animate={{ opacity: 1, y: 0, letterSpacing: "-0.02em" }}
                 transition={{ duration: 0.65, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black leading-[1.1]"
+                className="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black leading-[1.1]"
                 style={{ 
-                  color: "#1a1a1a",
-                  textShadow: "0 2px 20px rgba(0, 0, 0, 0.15)",
+                  color: "rgba(255, 255, 255, 0.98)",
+                  textShadow: "0 4px 20px rgba(0, 0, 0, 0.5), 0 2px 10px rgba(0, 0, 0, 0.4)",
                 }}
               >
                 Accelerate Your Reach
@@ -50,10 +41,10 @@ export const HeroCosmicMode = () => {
                   delay: 0.35, 
                   ease: [0.34, 1.56, 0.64, 1]
                 }}
-                className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black leading-[1.1]"
+                className="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black leading-[1.1]"
                 style={{ 
                   color: "#F4C542",
-                  textShadow: "0 2px 24px rgba(244, 197, 66, 0.4)",
+                  textShadow: "0 4px 28px rgba(244, 197, 66, 0.6), 0 2px 14px rgba(0, 0, 0, 0.5)",
                 }}
               >
                 Across Every City Street
@@ -65,10 +56,10 @@ export const HeroCosmicMode = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.5 }}
-              className="text-base md:text-lg lg:text-xl leading-relaxed mb-10 max-w-3xl mx-auto"
+              className="text-lg md:text-xl lg:text-2xl leading-relaxed max-w-4xl mx-auto"
               style={{ 
-                color: "#2a2a2a",
-                textShadow: "0 1px 3px rgba(255, 255, 255, 0.8)",
+                color: "rgba(255, 255, 255, 0.96)",
+                textShadow: "0 3px 16px rgba(0, 0, 0, 0.5), 0 1px 6px rgba(0, 0, 0, 0.4)",
                 fontWeight: 500,
               }}
             >
@@ -79,7 +70,7 @@ export const HeroCosmicMode = () => {
 
             {/* CTA Buttons with stagger */}
             <motion.div
-              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+              className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-4"
             >
               {/* Primary - Blue Gradient */}
               <motion.div
@@ -95,7 +86,7 @@ export const HeroCosmicMode = () => {
                   className="px-10 py-7 text-lg font-bold rounded-2xl text-white shadow-2xl relative overflow-hidden group"
                   style={{ 
                     background: "linear-gradient(135deg, #0061FF, #00A3FF)",
-                    boxShadow: "0 8px 24px rgba(0, 97, 255, 0.35)",
+                    boxShadow: "0 8px 32px rgba(0, 97, 255, 0.5), 0 4px 16px rgba(0, 0, 0, 0.3)",
                   }}
                 >
                   <span className="relative z-10">Start Free 14-Day Trial →</span>
@@ -117,11 +108,11 @@ export const HeroCosmicMode = () => {
                   onClick={() => navigate("/marketplace")}
                   className="px-10 py-7 text-lg font-bold rounded-2xl relative overflow-hidden"
                   style={{ 
-                    background: "rgba(255, 255, 255, 0.5)",
+                    background: "rgba(255, 255, 255, 0.15)",
                     backdropFilter: "blur(8px)",
-                    border: "2px solid #0061FF",
-                    color: "#0061FF",
-                    boxShadow: "0 4px 16px rgba(0, 97, 255, 0.15)",
+                    border: "2px solid rgba(255, 255, 255, 0.5)",
+                    color: "white",
+                    boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
                   }}
                 >
                   Explore Platform →

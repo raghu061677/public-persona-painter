@@ -15,11 +15,15 @@ import { format } from "date-fns";
 
 interface AuditLog {
   id: string;
-  user_email: string;
+  user_id: string | null;
+  user_name: string | null;
   action: string;
   resource_type: string;
   resource_id: string | null;
-  details: Record<string, any>;
+  resource_name: string | null;
+  details: any;
+  ip_address: string | null;
+  user_agent: string | null;
   created_at: string;
 }
 
@@ -44,13 +48,13 @@ export default function AuditLogs() {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('audit_logs' as any)
+        .from('activity_logs')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(500);
 
       if (error) throw error;
-      setLogs(data as any || []);
+      setLogs(data || []);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -64,8 +68,9 @@ export default function AuditLogs() {
 
   const filteredLogs = logs.filter(log => {
     const matchesSearch = 
-      log.user_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.resource_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.resource_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.resource_id?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesAction = filterAction === "all" || log.action === filterAction;
@@ -76,14 +81,15 @@ export default function AuditLogs() {
 
   const exportLogs = () => {
     const csv = [
-      ['Timestamp', 'User', 'Action', 'Resource Type', 'Resource ID', 'Details'].join(','),
+      ['Timestamp', 'User', 'Action', 'Resource Type', 'Resource ID', 'Resource Name', 'Details'].join(','),
       ...filteredLogs.map(log => [
         format(new Date(log.created_at), 'yyyy-MM-dd HH:mm:ss'),
-        log.user_email,
+        log.user_name || 'Unknown',
         log.action,
         log.resource_type,
         log.resource_id || '',
-        JSON.stringify(log.details),
+        log.resource_name || '',
+        JSON.stringify(log.details || {}),
       ].join(','))
     ].join('\n');
 
@@ -218,7 +224,7 @@ export default function AuditLogs() {
                       <TableCell className="font-mono text-xs">
                         {format(new Date(log.created_at), 'MMM dd, yyyy HH:mm:ss')}
                       </TableCell>
-                      <TableCell className="font-medium">{log.user_email}</TableCell>
+                      <TableCell className="font-medium">{log.user_name || 'Unknown'}</TableCell>
                       <TableCell>{getActionBadge(log.action)}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{log.resource_type}</Badge>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCompany } from "@/contexts/CompanyContext";
 import { ROUTES } from "@/lib/routes";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -78,7 +79,8 @@ const MODULES = [
 const ROLES = ['admin', 'sales', 'operations', 'finance'];
 
 export default function UserManagement() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
+  const { company, isPlatformAdmin } = useCompany();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -106,12 +108,18 @@ export default function UserManagement() {
   } | null>(null);
 
   useEffect(() => {
-    if (!isAdmin) {
+    // Allow both admins and platform admins to access
+    if (!isAdmin && !isPlatformAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "You need admin privileges to access user management. Please contact your platform administrator.",
+        variant: "destructive",
+      });
       navigate(ROUTES.DASHBOARD);
       return;
     }
     loadData();
-  }, [isAdmin, navigate]);
+  }, [isAdmin, isPlatformAdmin, navigate]);
 
   const loadData = async () => {
     try {

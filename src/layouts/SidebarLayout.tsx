@@ -90,7 +90,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                   <SidebarItem
                     icon={Building2}
                     label="Companies"
-                    href="/admin/companies"
+                    href="/admin/company-management"
                     collapsed={collapsed}
                   />
                   <SidebarItem

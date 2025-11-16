@@ -13,105 +13,6 @@ export const HeroCosmicMode = () => {
       
       {/* Enhanced bottom gradient for text readability */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent pointer-events-none" />
-      
-      {/* CTA Buttons - Centered in hero */}
-      <div className="absolute inset-0 z-10 flex items-center justify-center">
-        <motion.div
-          className="flex flex-col sm:flex-row gap-3"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
-          {/* Blue Button - Start Trial */}
-          <motion.div
-            whileHover={{ scale: 1.05, y: -4 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Button
-              size="sm"
-              onClick={() => navigate("/auth")}
-              className="px-4 py-2 text-xs font-bold rounded-lg relative overflow-hidden group transition-all duration-300"
-              style={{ 
-                background: "rgba(255, 255, 255, 0.15)",
-                backdropFilter: "blur(8px)",
-                border: "2px solid rgba(255, 255, 255, 0.6)",
-                color: "white",
-                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "linear-gradient(135deg, #0061FF, #00A3FF)";
-                e.currentTarget.style.boxShadow = "0 8px 32px rgba(0, 97, 255, 0.6)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)";
-                e.currentTarget.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.3)";
-              }}
-            >
-              <span className="relative z-10">Start Free 14-Day Trial →</span>
-            </Button>
-          </motion.div>
-
-          {/* Gold Button - AI Assistant */}
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => navigate("/admin/assistant")}
-              className="px-4 py-2 text-xs font-bold rounded-lg relative overflow-hidden transition-all duration-300"
-              style={{ 
-                background: "rgba(255, 255, 255, 0.15)",
-                backdropFilter: "blur(8px)",
-                border: "2px solid rgba(255, 255, 255, 0.6)",
-                color: "white",
-                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "linear-gradient(135deg, #F4C542, #FFD700)";
-                e.currentTarget.style.boxShadow = "0 8px 32px rgba(244, 197, 66, 0.6)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)";
-                e.currentTarget.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.3)";
-              }}
-            >
-              AI Assistant →
-            </Button>
-          </motion.div>
-
-          {/* Mixed Gradient Button - Explore Platform */}
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => navigate("/marketplace")}
-              className="px-4 py-2 text-xs font-bold rounded-lg relative overflow-hidden transition-all duration-300"
-              style={{ 
-                background: "rgba(255, 255, 255, 0.15)",
-                backdropFilter: "blur(8px)",
-                border: "2px solid rgba(255, 255, 255, 0.6)",
-                color: "white",
-                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "linear-gradient(135deg, #0061FF, #F4C542)";
-                e.currentTarget.style.boxShadow = "0 8px 32px rgba(0, 97, 255, 0.4), 0 8px 32px rgba(244, 197, 66, 0.4)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)";
-                e.currentTarget.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.3)";
-              }}
-            >
-              Explore Platform →
-            </Button>
-          </motion.div>
-        </motion.div>
-      </div>
 
       {/* Text content - left middle */}
       <div className="absolute left-0 top-1/2 -translate-y-1/2 z-10">
@@ -165,11 +66,108 @@ export const HeroCosmicMode = () => {
               >
                 Go-Ads 360° is an intelligent OOH workflow platform that helps agencies and media owners 
                 plan campaigns faster, organize inventory better, and deliver proof with complete clarity—without 
-                spreadsheets, WhatsApp chaos, or inconsistent photos.
-              </motion.p>
-            </motion.div>
+                  spreadsheets, WhatsApp chaos, or inconsistent photos.
+                </motion.p>
+              </motion.div>
+
+              {/* CTA Buttons - Below text */}
+              <motion.div
+                className="flex flex-col sm:flex-row gap-3 mt-6"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.6 }}
+              >
+                {/* Blue Button - Start Trial */}
+                <motion.div
+                  whileHover={{ scale: 1.05, y: -4 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Button
+                    size="sm"
+                    onClick={() => navigate("/auth")}
+                    className="px-4 py-2 text-xs font-bold rounded-lg relative overflow-hidden group transition-all duration-300"
+                    style={{ 
+                      background: "rgba(255, 255, 255, 0.15)",
+                      backdropFilter: "blur(8px)",
+                      border: "2px solid rgba(255, 255, 255, 0.6)",
+                      color: "white",
+                      boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "linear-gradient(135deg, #0061FF, #00A3FF)";
+                      e.currentTarget.style.boxShadow = "0 8px 32px rgba(0, 97, 255, 0.6)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)";
+                      e.currentTarget.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.3)";
+                    }}
+                  >
+                    <span className="relative z-10">Start Free 14-Day Trial →</span>
+                  </Button>
+                </motion.div>
+
+                {/* Gold Button - AI Assistant */}
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate("/admin/assistant")}
+                    className="px-4 py-2 text-xs font-bold rounded-lg relative overflow-hidden transition-all duration-300"
+                    style={{ 
+                      background: "rgba(255, 255, 255, 0.15)",
+                      backdropFilter: "blur(8px)",
+                      border: "2px solid rgba(255, 255, 255, 0.6)",
+                      color: "white",
+                      boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "linear-gradient(135deg, #F4C542, #FFD700)";
+                      e.currentTarget.style.boxShadow = "0 8px 32px rgba(244, 197, 66, 0.6)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)";
+                      e.currentTarget.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.3)";
+                    }}
+                  >
+                    AI Assistant →
+                  </Button>
+                </motion.div>
+
+                {/* Mixed Gradient Button - Explore Platform */}
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate("/marketplace")}
+                    className="px-4 py-2 text-xs font-bold rounded-lg relative overflow-hidden transition-all duration-300"
+                    style={{ 
+                      background: "rgba(255, 255, 255, 0.15)",
+                      backdropFilter: "blur(8px)",
+                      border: "2px solid rgba(255, 255, 255, 0.6)",
+                      color: "white",
+                      boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "linear-gradient(135deg, #0061FF, #F4C542)";
+                      e.currentTarget.style.boxShadow = "0 8px 32px rgba(0, 97, 255, 0.4), 0 8px 32px rgba(244, 197, 66, 0.4)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)";
+                      e.currentTarget.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.3)";
+                    }}
+                  >
+                    Explore Platform →
+                  </Button>
+                </motion.div>
+              </motion.div>
+            </div>
           </div>
-        </div>
       </div>
     </section>
   );

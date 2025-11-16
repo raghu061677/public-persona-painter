@@ -28,7 +28,7 @@ export const HeroImageCarousel = () => {
   };
 
   return (
-    <div className="absolute inset-0 w-full h-full overflow-hidden">
+    <div className="absolute inset-0 w-full h-full overflow-hidden group">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentIndex}
@@ -53,21 +53,21 @@ export const HeroImageCarousel = () => {
       {/* Subtle bottom gradient for readability */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-black/5 to-transparent pointer-events-none" />
 
-      {/* Navigation Arrows */}
+      {/* Navigation Arrows - Only visible on hover */}
       <button
         onClick={goToPrevious}
-        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 transition-all duration-300 group"
+        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-white/10 hover:bg-white/30 backdrop-blur-sm border border-white/20 transition-all duration-300 opacity-0 group-hover:opacity-100"
         aria-label="Previous slide"
       >
-        <ChevronLeft className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
+        <ChevronLeft className="w-6 h-6 text-white hover:scale-110 transition-transform" />
       </button>
 
       <button
         onClick={goToNext}
-        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 transition-all duration-300 group"
+        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-white/10 hover:bg-white/30 backdrop-blur-sm border border-white/20 transition-all duration-300 opacity-0 group-hover:opacity-100"
         aria-label="Next slide"
       >
-        <ChevronRight className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
+        <ChevronRight className="w-6 h-6 text-white hover:scale-110 transition-transform" />
       </button>
 
       {/* Carousel Indicators */}

@@ -4,19 +4,14 @@ import { Menu } from "lucide-react";
 import { AnnouncementBanner } from "@/components/landing/AnnouncementBanner";
 import { HeroCosmicMode } from "@/components/landing/cosmic/HeroCosmicMode";
 import { CosmicMetrics } from "@/components/landing/cosmic/CosmicMetrics";
+import { WhyGoAdsMatters } from "@/components/landing/cosmic/WhyGoAdsMatters";
+import { ForAgenciesOwners } from "@/components/landing/cosmic/ForAgenciesOwners";
+import { AIFeaturesGrid } from "@/components/landing/cosmic/AIFeaturesGrid";
 import { CategoryBrowser } from "@/components/landing/cosmic/CategoryBrowser";
-import { CosmicCarousel } from "@/components/landing/cosmic/CosmicCarousel";
+import { ThreeStepFlow } from "@/components/landing/cosmic/ThreeStepFlow";
 import { CosmicProofGallery } from "@/components/landing/cosmic/CosmicProofGallery";
-import { ScenesCarousel } from "@/components/landing/cosmic/ScenesCarousel";
-import { WhoItsFor } from "@/components/landing/cosmic/WhoItsFor";
-import { AIFeatureStrip } from "@/components/landing/cosmic/AIFeatureStrip";
-import { MarketplacePreview } from "@/components/landing/god-mode/MarketplacePreview";
-import { EnhancedValueProposition } from "@/components/landing/god-mode/EnhancedValueProposition";
-import { SocialProofSection } from "@/components/landing/god-mode/SocialProofSection";
-import { CaseStudySection } from "@/components/landing/god-mode/CaseStudySection";
-import { CompactSteps } from "@/components/landing/cosmic/CompactSteps";
-import { ConversionBanner } from "@/components/landing/ConversionBanner";
 import { EnhancedSecurity } from "@/components/landing/god-mode/EnhancedSecurity";
+import { SocialProofSection } from "@/components/landing/god-mode/SocialProofSection";
 import { EnhancedFAQ } from "@/components/landing/god-mode/EnhancedFAQ";
 import { FinalCTA } from "@/components/landing/FinalCTA";
 import { PremiumFooter } from "@/components/landing/god-mode/PremiumFooter";
@@ -79,47 +74,32 @@ const Landing = () => {
         {/* Hero Section */}
         <HeroCosmicMode />
 
-        {/* Cosmic Metrics */}
+        {/* How Go-Ads Changes Your Day */}
         <CosmicMetrics />
 
-        {/* Category Browser */}
+        {/* Why Go-Ads Matters Now */}
+        <WhyGoAdsMatters />
+
+        {/* Built for Agencies & Media Owners */}
+        <ForAgenciesOwners />
+
+        {/* Powered by AI at Every Step */}
+        <AIFeaturesGrid />
+
+        {/* Discover Media Across India */}
         <CategoryBrowser />
 
-        {/* Cosmic Carousel */}
-        <CosmicCarousel />
+        {/* From Lead to Live Campaign */}
+        <ThreeStepFlow />
 
-        {/* Scenes Carousel */}
-        <ScenesCarousel />
-
-        {/* Who It's For */}
-        <WhoItsFor />
-
-        {/* AI Feature Strip */}
-        <AIFeatureStrip />
-
-        {/* Marketplace Preview */}
-        <MarketplacePreview />
-
-        {/* Enhanced Value Proposition */}
-        <EnhancedValueProposition />
-
-        {/* Compact Steps */}
-        <CompactSteps />
-
-        {/* Social Proof */}
-        <SocialProofSection />
-
-        {/* Case Study */}
-        <CaseStudySection />
-
-        {/* Cosmic Proof Gallery */}
+        {/* Live Asset Portfolio */}
         <CosmicProofGallery />
-
-        {/* Mid-Page Conversion Banner */}
-        <ConversionBanner />
 
         {/* Enhanced Security */}
         <EnhancedSecurity />
+
+        {/* Social Proof */}
+        <SocialProofSection />
 
         {/* Enhanced FAQ */}
         <EnhancedFAQ />

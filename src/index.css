@@ -62,57 +62,55 @@ All colors MUST be HSL.
     --font-family: Inter, sans-serif;
     --base-font-size: 16px;
     
-    /* Go-Ads Brand Colors - Light Mode */
-    --background: 220 43% 97%; /* #F3F6FB Sky Light */
-    --foreground: 211 56% 15%; /* #10243A Deep Navy */
+    /* Ultra Cosmic V4 - Light Mode */
+    --background: 220 100% 98%; /* #F8FBFF Light Sky */
+    --foreground: 215 56% 18%; /* #132339 Deep Navy */
 
     --card: 0 0% 100%; /* Pure White */
-    --card-foreground: 211 56% 15%;
+    --card-foreground: 215 56% 18%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 211 56% 15%;
+    --popover-foreground: 215 56% 18%;
 
-    --primary: 221 100% 57%; /* #2563FF Go-Ads Blue */
+    --primary: 213 100% 44%; /* #0064E0 Brand Blue */
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 221 100% 67%;
-    --primary-hover: 221 100% 46%; /* #174DCC Darker blue */
+    --primary-glow: 206 100% 64%; /* #39A7FF Neon Blue */
+    --primary-hover: 213 100% 53%; /* #00A5FF Light Blue */
 
-    --secondary: 36 92% 56%; /* #F7A326 Warm Orange */
+    --secondary: 45 100% 50%; /* #FFB400 Gold */
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 214 32% 91%; /* #E2E8F0 Light Gray */
-    --muted-foreground: 215 16% 65%; /* #94A3B8 Muted Text */
+    --muted: 217 33% 97%; /* #EAF3FF Soft Grey */
+    --muted-foreground: 215 17% 42%; /* #5C708A Text Soft */
 
-    --accent: 45 100% 82%; /* #FFE7A3 Soft Yellow Glow */
-    --accent-foreground: 211 56% 15%;
+    --accent: 45 100% 50%; /* #FFB400 Gold */
+    --accent-foreground: 215 56% 18%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 211 68% 36%;
+    --ring: 213 100% 44%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
     /* Chart colors */
-    --chart-1: 211 68% 36%;
-    --chart-2: 36 92% 56%;
-    --chart-3: 45 100% 82%;
-    --chart-4: 211 56% 15%;
-    --chart-5: 215 16% 65%;
+    --chart-1: 213 100% 44%;
+    --chart-2: 45 100% 50%;
+    --chart-3: 206 100% 64%;
+    --chart-4: 215 56% 18%;
+    --chart-5: 215 17% 42%;
 
-    /* Custom design tokens - Go-Ads Gradients */
-    --gradient-primary: linear-gradient(90deg, #2563FF, #4F8BFF);
-    --gradient-hero: linear-gradient(90deg, #005CFF, #4F8BFF);
-    --gradient-hero-light: linear-gradient(135deg, hsl(0 0% 99%), hsl(220 43% 97%), hsl(215 90% 95%));
-    --gradient-hero-night: linear-gradient(135deg, hsl(222 87% 5%), hsl(217 71% 13%), hsl(215 100% 24%));
-    --gradient-cta: linear-gradient(135deg, hsl(221 100% 57%), hsl(217 90% 55%));
-    --gradient-subtle: linear-gradient(180deg, hsl(220 43% 97%), hsl(0 0% 100%));
+    /* Custom design tokens - Ultra Cosmic V4 Light */
+    --gradient-primary: linear-gradient(135deg, #0064E0, #00A5FF);
+    --gradient-hero: linear-gradient(145deg, #E9F4FF, #FFFFFF);
+    --gradient-cta: linear-gradient(135deg, #0263D8, #00A5FF);
+    --gradient-subtle: linear-gradient(180deg, #F8FBFF, #EAF3FF);
     
-    --shadow-elegant: 0 20px 60px -10px rgba(37, 99, 255, 0.2);
-    --shadow-glow: 0 0 40px rgba(37, 99, 255, 0.4);
-    --shadow-card: 0 4px 20px hsl(220 13% 8% / 0.08);
+    --shadow-elegant: 0 2px 16px rgba(0, 0, 0, 0.06);
+    --shadow-glow: 0 0 30px rgba(0, 100, 224, 0.25);
+    --shadow-card: 0 2px 16px rgba(0, 0, 0, 0.06);
     --shadow-navbar: 0 2px 12px rgba(0, 0, 0, 0.06);
     
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -125,7 +123,68 @@ All colors MUST be HSL.
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 213 100% 44%;
+  }
+
+  .dark {
+    /* Ultra Cosmic V4 - Dark Mode */
+    --background: 217 71% 5%; /* #040A18 Cosmic Dark */
+    --foreground: 0 0% 100%; /* #FFFFFF Pure White */
+
+    --card: 215 43% 8%; /* rgba(255,255,255,0.04) with backdrop blur */
+    --card-foreground: 214 18% 87%; /* #DCE3F0 Soft White */
+
+    --popover: 217 71% 5%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 213 100% 44%; /* #0064E0 Brand Blue */
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 206 100% 64%; /* #39A7FF Neon Blue */
+    --primary-hover: 213 100% 53%; /* #00A5FF Light Blue */
+
+    --secondary: 45 100% 50%; /* #FFB400 Gold */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 215 31% 10%; /* #071426 Dark Section */
+    --muted-foreground: 214 18% 87%;
+
+    --accent: 45 100% 50%; /* #FFB400 Gold */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 217 35% 12%;
+    --input: 217 35% 12%;
+    --ring: 206 100% 64%;
+
+    --radius: 1rem;
+
+    --chart-1: 213 100% 44%;
+    --chart-2: 45 100% 50%;
+    --chart-3: 206 100% 64%;
+    --chart-4: 0 0% 100%;
+    --chart-5: 214 18% 87%;
+
+    /* Custom design tokens - Ultra Cosmic V4 Dark */
+    --gradient-primary: linear-gradient(135deg, #0064E0, #00A5FF);
+    --gradient-hero: radial-gradient(circle at top, #09203F, #040A18);
+    --gradient-cta: linear-gradient(135deg, #0064E0, #00A5FF);
+    --gradient-subtle: linear-gradient(180deg, #071426, #040A18);
+    
+    --shadow-elegant: 0 10px 40px rgba(0, 100, 224, 0.2);
+    --shadow-glow: 0 0 40px rgba(57, 167, 255, 0.4);
+    --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.3);
+    --shadow-navbar: 0 2px 12px rgba(0, 0, 0, 0.5);
+
+    --sidebar-background: 217 71% 5%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 0 0% 98%;
+    --sidebar-primary-foreground: 240 5.9% 10%;
+    --sidebar-accent: 215 31% 10%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 217 35% 12%;
+    --sidebar-ring: 206 100% 64%;
   }
 
   /* Brand Blue Theme */

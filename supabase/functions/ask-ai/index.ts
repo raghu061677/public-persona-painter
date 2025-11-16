@@ -3,11 +3,13 @@ import { corsHeaders } from '../_shared/cors.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')!;
 
 interface IntentResult {
   action: string;
   filters?: Record<string, any>;
   format?: 'table' | 'cards' | 'text';
+  summary?: string;
 }
 
 Deno.serve(async (req) => {
@@ -28,8 +30,8 @@ Deno.serve(async (req) => {
 
     console.log('Processing query:', query);
 
-    // Detect intent
-    const intent = await detectIntent(query);
+    // Use AI to detect intent and understand query
+    const intent = await detectIntentWithAI(query);
     console.log('Detected intent:', intent);
 
     // Execute query based on intent
@@ -81,92 +83,160 @@ Deno.serve(async (req) => {
   }
 });
 
-// Simple local intent detection
-function detectIntentLocal(query: string): IntentResult | null {
+// AI-powered intent detection using Lovable AI
+async function detectIntentWithAI(query: string): Promise<IntentResult> {
+  try {
+    const systemPrompt = `You are a business intelligence assistant for an OOH (Out-of-Home) advertising management platform.
+Your job is to understand user queries and extract structured intent.
+
+Available actions:
+- get_vacant_media: For queries about available/vacant advertising assets
+- get_campaigns: For queries about advertising campaigns
+- get_invoices: For queries about invoices, payments, billing
+- get_clients: For queries about clients/customers
+- get_expenses: For queries about expenses, costs
+- get_summary: For general summaries or KPIs
+
+Extract filters from the query:
+- area/city: Location filters
+- status: Status filters (Available, InProgress, Pending, etc.)
+- price_min/price_max: Price range filters
+- date_from/date_to: Date range filters
+- media_type: Type of media (bus_shelter, hoarding, unipole, etc.)
+
+Always provide a helpful summary that will be shown to the user.`;
+
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: query }
+        ],
+        tools: [
+          {
+            type: 'function',
+            function: {
+              name: 'extract_intent',
+              description: 'Extract the user intent and filters from their query',
+              parameters: {
+                type: 'object',
+                properties: {
+                  action: {
+                    type: 'string',
+                    enum: ['get_vacant_media', 'get_campaigns', 'get_invoices', 'get_clients', 'get_expenses', 'get_summary', 'unknown']
+                  },
+                  filters: {
+                    type: 'object',
+                    properties: {
+                      area: { type: 'string' },
+                      city: { type: 'string' },
+                      status: { type: 'string' },
+                      price_min: { type: 'number' },
+                      price_max: { type: 'number' },
+                      date_from: { type: 'string' },
+                      date_to: { type: 'string' },
+                      media_type: { type: 'string' },
+                      client_name: { type: 'string' }
+                    }
+                  },
+                  format: {
+                    type: 'string',
+                    enum: ['table', 'cards', 'text']
+                  },
+                  summary: {
+                    type: 'string',
+                    description: 'A friendly summary of what you understood from the query'
+                  }
+                },
+                required: ['action', 'format', 'summary']
+              }
+            }
+          }
+        ],
+        tool_choice: { type: 'function', function: { name: 'extract_intent' } }
+      })
+    });
+
+    if (!response.ok) {
+      console.error('AI API error:', response.status, await response.text());
+      return { action: 'unknown', format: 'text', summary: 'I had trouble understanding your query.' };
+    }
+
+    const data = await response.json();
+    const toolCall = data.choices[0]?.message?.tool_calls?.[0];
+    
+    if (toolCall?.function?.arguments) {
+      const intent = JSON.parse(toolCall.function.arguments);
+      console.log('AI extracted intent:', intent);
+      return intent;
+    }
+
+    return { action: 'unknown', format: 'text', summary: 'I couldn\'t understand your query.' };
+  } catch (error: any) {
+    console.error('Error in AI intent detection:', error);
+    // Fallback to simple keyword matching
+    return detectIntentLocal(query);
+  }
+}
+
+// Fallback local intent detection
+function detectIntentLocal(query: string): IntentResult {
   const lowerQuery = query.toLowerCase();
 
-  // Vacant media patterns
   if (lowerQuery.includes('vacant') || lowerQuery.includes('available')) {
-    const filters: Record<string, any> = {};
-    
-    // Extract city/area if mentioned
-    const cityMatch = lowerQuery.match(/in ([a-z]+)/i);
-    if (cityMatch) {
-      filters.area = cityMatch[1];
-    }
-
-    return { action: 'get_vacant_media', filters, format: 'table' };
+    return { action: 'get_vacant_media', filters: {}, format: 'table', summary: 'Searching for vacant media assets...' };
   }
-
-  // Campaign patterns
   if (lowerQuery.includes('campaign')) {
-    const filters: Record<string, any> = {};
-    
-    if (lowerQuery.includes('active') || lowerQuery.includes('running')) {
-      filters.status = 'InProgress';
-    }
-
-    return { action: 'get_campaigns', filters, format: 'table' };
+    return { action: 'get_campaigns', filters: {}, format: 'table', summary: 'Fetching campaign information...' };
   }
-
-  // Invoice patterns
-  if (lowerQuery.includes('invoice') || lowerQuery.includes('payment') || lowerQuery.includes('pending')) {
-    const filters: Record<string, any> = {};
-    
-    if (lowerQuery.includes('pending') || lowerQuery.includes('overdue')) {
-      filters.status = 'Pending';
-    }
-
-    return { action: 'get_invoices', filters, format: 'table' };
+  if (lowerQuery.includes('invoice') || lowerQuery.includes('payment')) {
+    return { action: 'get_invoices', filters: {}, format: 'table', summary: 'Retrieving invoice data...' };
   }
-
-  // Client patterns
   if (lowerQuery.includes('client') || lowerQuery.includes('customer')) {
-    return { action: 'get_clients', filters: {}, format: 'table' };
+    return { action: 'get_clients', filters: {}, format: 'table', summary: 'Loading client information...' };
   }
-
-  // Expense patterns
   if (lowerQuery.includes('expense') || lowerQuery.includes('cost')) {
-    return { action: 'get_expenses', filters: {}, format: 'table' };
+    return { action: 'get_expenses', filters: {}, format: 'table', summary: 'Gathering expense data...' };
   }
 
-  return null;
+  return { action: 'unknown', format: 'text', summary: 'I can help you with vacant media, campaigns, invoices, clients, or expenses.' };
 }
 
-async function detectIntent(query: string): Promise<IntentResult> {
-  // Try local detection first
-  const localIntent = detectIntentLocal(query);
-  if (localIntent) {
-    return localIntent;
-  }
-
-  // Fallback to a default response
-  return {
-    action: 'unknown',
-    format: 'text'
-  };
-}
-
-// Query executors
+// Query executors with enhanced filtering
 async function getVacantMedia(supabase: any, companyId: string, filters: Record<string, any>) {
   let query = supabase
     .from('media_assets')
-    .select('id, location, area, city, media_type, card_rate, status')
+    .select('id, location, area, city, media_type, card_rate, status, dimensions')
     .eq('company_id', companyId)
     .eq('status', 'Available');
 
-  if (filters.area) {
-    query = query.ilike('area', `%${filters.area}%`);
-  }
+  // Apply filters
+  if (filters.area) query = query.ilike('area', `%${filters.area}%`);
+  if (filters.city) query = query.ilike('city', `%${filters.city}%`);
+  if (filters.media_type) query = query.eq('media_type', filters.media_type);
+  if (filters.price_max) query = query.lte('card_rate', filters.price_max);
+  if (filters.price_min) query = query.gte('card_rate', filters.price_min);
 
-  const { data, error } = await query.limit(50);
+  const { data, error } = await query.order('area', { ascending: true }).limit(50);
 
   if (error) throw error;
+
+  const filterDesc = [];
+  if (filters.area) filterDesc.push(`in ${filters.area}`);
+  if (filters.city) filterDesc.push(`in ${filters.city}`);
+  if (filters.price_max) filterDesc.push(`under ₹${filters.price_max}`);
+  if (filters.media_type) filterDesc.push(`type: ${filters.media_type}`);
 
   return {
     type: 'table',
     data: data || [],
-    summary: `Found ${data?.length || 0} vacant assets${filters.area ? ` in ${filters.area}` : ''}`
+    summary: `Found ${data?.length || 0} vacant assets${filterDesc.length ? ' ' + filterDesc.join(', ') : ''}`
   };
 }
 
@@ -176,18 +246,24 @@ async function getCampaigns(supabase: any, companyId: string, filters: Record<st
     .select('id, campaign_name, client_name, status, start_date, end_date, grand_total')
     .eq('company_id', companyId);
 
-  if (filters.status) {
-    query = query.eq('status', filters.status);
-  }
+  // Apply filters
+  if (filters.status) query = query.eq('status', filters.status);
+  if (filters.client_name) query = query.ilike('client_name', `%${filters.client_name}%`);
+  if (filters.date_from) query = query.gte('start_date', filters.date_from);
+  if (filters.date_to) query = query.lte('end_date', filters.date_to);
 
-  const { data, error } = await query.order('created_at', { ascending: false }).limit(20);
+  const { data, error } = await query.order('created_at', { ascending: false }).limit(30);
 
   if (error) throw error;
+
+  const filterDesc = [];
+  if (filters.status) filterDesc.push(`status: ${filters.status}`);
+  if (filters.client_name) filterDesc.push(`for ${filters.client_name}`);
 
   return {
     type: 'table',
     data: data || [],
-    summary: `Found ${data?.length || 0} campaigns${filters.status ? ` with status ${filters.status}` : ''}`
+    summary: `Found ${data?.length || 0} campaigns${filterDesc.length ? ' (' + filterDesc.join(', ') + ')' : ''}`
   };
 }
 
@@ -197,55 +273,74 @@ async function getInvoices(supabase: any, companyId: string, filters: Record<str
     .select('id, client_name, invoice_date, due_date, total_amount, balance_due, status')
     .eq('company_id', companyId);
 
-  if (filters.status) {
-    query = query.eq('status', filters.status);
-  }
+  // Apply filters
+  if (filters.status) query = query.eq('status', filters.status);
+  if (filters.client_name) query = query.ilike('client_name', `%${filters.client_name}%`);
+  if (filters.date_from) query = query.gte('invoice_date', filters.date_from);
+  if (filters.date_to) query = query.lte('invoice_date', filters.date_to);
 
-  const { data, error } = await query.order('invoice_date', { ascending: false }).limit(20);
+  const { data, error } = await query.order('invoice_date', { ascending: false }).limit(30);
 
   if (error) throw error;
 
   const totalDue = data?.reduce((sum: number, inv: any) => sum + (inv.balance_due || 0), 0) || 0;
+  const pendingCount = data?.filter((inv: any) => inv.status === 'Pending').length || 0;
+
+  const filterDesc = [];
+  if (filters.status) filterDesc.push(`status: ${filters.status}`);
+  if (filters.client_name) filterDesc.push(`for ${filters.client_name}`);
 
   return {
     type: 'table',
     data: data || [],
-    summary: `Found ${data?.length || 0} invoices. Total due: ₹${totalDue.toLocaleString()}`
+    summary: `Found ${data?.length || 0} invoices${filterDesc.length ? ' (' + filterDesc.join(', ') + ')' : ''}. Total outstanding: ₹${totalDue.toLocaleString()} (${pendingCount} pending)`
   };
 }
 
 async function getClients(supabase: any, companyId: string, filters: Record<string, any>) {
-  const { data, error } = await supabase
+  let query = supabase
     .from('clients')
     .select('id, name, company, city, phone, email')
-    .eq('company_id', companyId)
-    .order('name', { ascending: true })
-    .limit(50);
+    .eq('company_id', companyId);
+
+  // Apply filters
+  if (filters.city) query = query.ilike('city', `%${filters.city}%`);
+  if (filters.client_name) query = query.ilike('name', `%${filters.client_name}%`);
+
+  const { data, error } = await query.order('name', { ascending: true }).limit(50);
 
   if (error) throw error;
+
+  const filterDesc = [];
+  if (filters.city) filterDesc.push(`in ${filters.city}`);
 
   return {
     type: 'table',
     data: data || [],
-    summary: `Found ${data?.length || 0} clients`
+    summary: `Found ${data?.length || 0} clients${filterDesc.length ? ' ' + filterDesc.join(', ') : ''}`
   };
 }
 
 async function getExpenses(supabase: any, companyId: string, filters: Record<string, any>) {
-  const { data, error } = await supabase
+  let query = supabase
     .from('expenses')
-    .select('id, category, vendor_name, total_amount, payment_status, notes')
-    .eq('company_id', companyId)
-    .order('created_at', { ascending: false })
-    .limit(20);
+    .select('id, category, vendor_name, total_amount, payment_status, notes, created_at')
+    .eq('company_id', companyId);
+
+  // Apply filters
+  if (filters.date_from) query = query.gte('created_at', filters.date_from);
+  if (filters.date_to) query = query.lte('created_at', filters.date_to);
+
+  const { data, error } = await query.order('created_at', { ascending: false }).limit(30);
 
   if (error) throw error;
 
   const totalExpenses = data?.reduce((sum: number, exp: any) => sum + (exp.total_amount || 0), 0) || 0;
+  const pendingCount = data?.filter((exp: any) => exp.payment_status === 'Pending').length || 0;
 
   return {
     type: 'table',
     data: data || [],
-    summary: `Found ${data?.length || 0} expenses. Total: ₹${totalExpenses.toLocaleString()}`
+    summary: `Found ${data?.length || 0} expenses. Total: ₹${totalExpenses.toLocaleString()} (${pendingCount} pending payment)`
   };
 }

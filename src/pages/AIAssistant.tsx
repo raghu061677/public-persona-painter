@@ -1,30 +1,39 @@
 import { useState, useRef, useEffect } from 'react';
-import { useCompany } from '@/contexts/CompanyContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Send, Loader2, Bot, User, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { Card, CardContent } from '@/components/ui/card';
+import { Send, Bot, User, Sparkles } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useCompany } from '@/contexts/CompanyContext';
+import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  type: 'user' | 'assistant';
   content: string;
-  data?: any;
-  responseType?: string;
+  data?: any[];
+  summary?: string;
+  responseType?: 'table' | 'cards' | 'text';
   timestamp: Date;
 }
+
+const QUICK_QUERIES = [
+  'Show vacant media assets in Hyderabad',
+  'Active campaigns for this month',
+  'Pending invoices with overdue amounts',
+  'List all clients in major cities',
+  'Recent expenses for printing and mounting',
+  'Vacant bus shelters under ₹50,000'
+];
 
 export default function AIAssistant() {
   const { company } = useCompany();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      role: 'assistant',
-      content: 'Hello! I\'m your AI business assistant. I can help you with:\n\n• Finding vacant media assets\n• Checking pending invoices\n• Client summaries and analytics\n• Campaign performance metrics\n• Power bill tracking\n\nWhat would you like to know?',
+      type: 'assistant',
+      content: 'Hello! I\'m your AI-powered business assistant powered by Gemini. I can understand complex queries like:\n\n• "Show vacant bus shelters in Hyderabad under ₹50K"\n• "Active campaigns for Matrix this month"\n• "Pending invoices over ₹1 lakh"\n\nI support filters for location, price range, dates, status, and more. What would you like to know?',
       timestamp: new Date()
     }
   ]);
@@ -40,193 +49,171 @@ export default function AIAssistant() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || !company) return;
+  const handleSendMessage = async (queryText?: string) => {
+    const query = queryText || input;
+    if (!query.trim() || !company) return;
 
     const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
+      id: `user-${Date.now()}`,
+      type: 'user',
+      content: query,
       timestamp: new Date()
     };
-
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('business-ai-assistant', {
+      const { data, error } = await supabase.functions.invoke('ask-ai', {
         body: {
-          message: input,
+          query,
+          userId: company.id,
           companyId: company.id
         }
       });
 
       if (error) {
-        if (error.message.includes('429') || error.message.includes('Rate limit')) {
+        console.error('Edge function error:', error);
+        if (error.message?.includes('429') || error.message?.includes('Rate limit')) {
           throw new Error('Rate limit exceeded. Please wait a moment and try again.');
         }
-        if (error.message.includes('402') || error.message.includes('Payment')) {
+        if (error.message?.includes('402') || error.message?.includes('Payment')) {
           throw new Error('AI credits exhausted. Please contact support to add credits.');
         }
         throw error;
       }
 
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: data.data.summary || data.data.text || 'Here are your results:',
+        id: `assistant-${Date.now()}`,
+        type: 'assistant',
+        content: data.summary || 'Here are the results:',
         data: data.data,
-        responseType: data.responseType,
+        summary: data.summary,
+        responseType: data.type,
         timestamp: new Date()
       };
-
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error: any) {
       console.error('Error querying AI:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to get response. Please try again.',
-        variant: 'destructive'
-      });
+      toast.error(error.message || 'Failed to process query');
+      
+      const errorMessage: Message = {
+        id: `error-${Date.now()}`,
+        type: 'assistant',
+        content: 'Sorry, I encountered an error. Please try again.',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const renderMessageContent = (message: Message) => {
-    if (message.role === 'user') {
-      return <p className="text-sm whitespace-pre-wrap">{message.content}</p>;
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
-
-    if (message.responseType === 'table' && message.data) {
-      return (
-        <div className="space-y-3">
-          <p className="text-sm">{message.content}</p>
-          {message.data.data.length > 0 && (
-            <div className="border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {message.data.columns.map((col: string, idx: number) => (
-                      <TableHead key={idx}>{col}</TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {message.data.data.map((row: any[], rowIdx: number) => (
-                    <TableRow key={rowIdx}>
-                      {row.map((cell, cellIdx) => (
-                        <TableCell key={cellIdx}>{cell}</TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    if (message.responseType === 'cards' && message.data) {
-      return (
-        <div className="space-y-3">
-          <p className="text-sm">{message.content}</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {message.data.cards?.map((card: any, idx: number) => (
-              <Card key={idx}>
-                <CardHeader className="pb-3">
-                  <CardDescription className="text-xs">{card.label}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    <p className="text-2xl font-bold">{card.value}</p>
-                    {card.variant === 'success' && <TrendingUp className="h-5 w-5 text-green-600" />}
-                    {card.variant === 'warning' && <AlertCircle className="h-5 w-5 text-amber-600" />}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          {message.data.table && message.data.table.data.length > 0 && (
-            <div className="border rounded-lg overflow-hidden mt-4">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {message.data.table.columns.map((col: string, idx: number) => (
-                      <TableHead key={idx}>{col}</TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {message.data.table.data.map((row: any[], rowIdx: number) => (
-                    <TableRow key={rowIdx}>
-                      {row.map((cell, cellIdx) => (
-                        <TableCell key={cellIdx}>{cell}</TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    return <p className="text-sm whitespace-pre-wrap">{message.content}</p>;
   };
 
-  const quickQuestions = [
-    "Show me vacant media in Hyderabad",
-    "What are my pending invoices?",
-    "Give me client summary",
-    "Show campaign analytics",
-    "Check unpaid power bills"
-  ];
+  const renderMessageContent = (message: Message) => {
+    if (message.type === 'user') {
+      return <p className="text-sm">{message.content}</p>;
+    }
 
-  return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col">
-      <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-6">
-        <div className="flex items-center gap-3">
-          <Bot className="h-8 w-8" />
-          <div>
-            <h1 className="text-2xl font-bold">AI Business Assistant</h1>
-            <p className="text-sm text-primary-foreground/80">
-              Ask me anything about your media business
-            </p>
+    if (message.responseType === 'table' && message.data && message.data.length > 0) {
+      const columns = Object.keys(message.data[0]);
+      
+      return (
+        <div className="space-y-3">
+          <p className="text-sm font-medium">{message.content}</p>
+          <div className="rounded-md border max-h-80 overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {columns.map(col => (
+                    <TableHead key={col} className="capitalize whitespace-nowrap">
+                      {col.replace(/_/g, ' ')}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {message.data.map((row: any, idx: number) => (
+                  <TableRow key={idx}>
+                    {columns.map(col => (
+                      <TableCell key={col}>
+                        {typeof row[col] === 'number' && (col.includes('amount') || col.includes('rate'))
+                          ? `₹${row[col].toLocaleString()}`
+                          : row[col]?.toString() || '-'}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         </div>
+      );
+    }
+
+    return <p className="text-sm">{message.content}</p>;
+  };
+
+  return (
+    <div className="container mx-auto p-6 max-w-5xl h-[calc(100vh-4rem)] flex flex-col">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">AI Assistant</h1>
+        <p className="text-muted-foreground">Ask complex business questions in natural language - powered by Gemini</p>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      {messages.length === 1 && (
+        <Card className="mb-4">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+              <h3 className="font-semibold">AI-Powered Insights - Try asking:</h3>
+            </div>
+            <p className="text-sm text-muted-foreground mb-3">
+              I can understand complex queries with multiple filters like location, price range, dates, and more!
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {QUICK_QUERIES.map((query, idx) => (
+                <Button
+                  key={idx}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSendMessage(query)}
+                  disabled={isLoading}
+                  className="text-xs"
+                >
+                  {query}
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="flex-1 overflow-y-auto space-y-4 mb-4">
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex gap-3 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
           >
-            {message.role === 'assistant' && (
+            {message.type === 'assistant' && (
               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <Bot className="h-5 w-5 text-primary" />
+                <Bot className="h-4 w-4 text-primary" />
               </div>
             )}
-            <div
-              className={`max-w-3xl rounded-lg p-4 ${
-                message.role === 'user'
-                  ? 'bg-primary text-primary-foreground ml-auto'
-                  : 'bg-muted'
-              }`}
-            >
-              {renderMessageContent(message)}
-              <p className="text-xs opacity-70 mt-2">
-                {message.timestamp.toLocaleTimeString()}
-              </p>
-            </div>
-            {message.role === 'user' && (
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center">
-                <User className="h-5 w-5 text-secondary" />
+            <Card className={`max-w-[80%] ${message.type === 'user' ? 'bg-primary text-primary-foreground' : ''}`}>
+              <CardContent className="p-4">
+                {renderMessageContent(message)}
+              </CardContent>
+            </Card>
+            {message.type === 'user' && (
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                <User className="h-4 w-4 text-primary-foreground" />
               </div>
             )}
           </div>
@@ -234,42 +221,38 @@ export default function AIAssistant() {
         {isLoading && (
           <div className="flex gap-3">
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <Bot className="h-5 w-5 text-primary" />
+              <Bot className="h-4 w-4 text-primary animate-pulse" />
             </div>
-            <div className="bg-muted rounded-lg p-4">
-              <Loader2 className="h-5 w-5 animate-spin" />
-            </div>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t bg-background p-4 space-y-3">
-        <div className="flex flex-wrap gap-2">
-          {quickQuestions.map((question, idx) => (
-            <Button
-              key={idx}
-              variant="outline"
-              size="sm"
-              onClick={() => setInput(question)}
-              disabled={isLoading}
-            >
-              {question}
-            </Button>
-          ))}
-        </div>
-        <form onSubmit={handleSubmit} className="flex gap-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about your business data..."
-            disabled={isLoading}
-            className="flex-1"
-          />
-          <Button type="submit" disabled={isLoading || !input.trim()}>
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          </Button>
-        </form>
+      <div className="flex gap-2">
+        <Input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder="Try: 'Show vacant bus shelters in Hyderabad under ₹50K' or 'Active campaigns this month'"
+          disabled={isLoading}
+          className="flex-1"
+        />
+        <Button
+          onClick={() => handleSendMessage()}
+          disabled={!input.trim() || isLoading}
+          size="icon"
+        >
+          <Send className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );

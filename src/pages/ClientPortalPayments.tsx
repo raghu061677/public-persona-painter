@@ -91,14 +91,31 @@ export default function ClientPortalPayments() {
 
   const handleDownloadInvoice = async (invoiceId: string) => {
     try {
-      // TODO: Implement actual invoice PDF download
-      toast({
-        title: 'Coming Soon',
-        description: 'Invoice download functionality will be available soon'
+      // Generate invoice PDF via edge function
+      const { data, error } = await supabase.functions.invoke('generate-invoice-pdf-portal', {
+        body: { invoice_id: invoiceId }
       });
+
+      if (error) throw error;
+
+      if (data?.html) {
+        // Open HTML in new window for printing/PDF save
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(data.html);
+          printWindow.document.close();
+          printWindow.print();
+        }
+
+        toast({
+          title: 'Invoice Ready',
+          description: 'Invoice opened for download. Use browser print to save as PDF.'
+        });
+      }
 
       logPortalAccess(portalUser!.client_id, 'download_invoice', 'invoice', invoiceId);
     } catch (error) {
+      console.error('Error downloading invoice:', error);
       toast({
         title: 'Error',
         description: 'Failed to download invoice',

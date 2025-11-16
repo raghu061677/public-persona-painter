@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useClientPortal } from "@/contexts/ClientPortalContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,35 +26,41 @@ interface Invoice {
 }
 
 export default function ClientPortalDashboard() {
-  const { user } = useAuth();
+  const { portalUser } = useClientPortal();
   const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadClientData();
-  }, [user]);
+    if (portalUser) {
+      loadClientData();
+    }
+  }, [portalUser]);
 
   const loadClientData = async () => {
-    if (!user) return;
+    if (!portalUser) return;
 
     try {
-      // Get client ID from user metadata or profile
-      // For now, we'll load all campaigns and invoices
-      // In production, you'd filter by client_id from the authenticated client user
-
-      const { data: campaignsData } = await supabase
+      // Load campaigns for this specific client
+      const { data: campaignsData, error: campaignsError } = await supabase
         .from('campaigns')
         .select('*')
+        .eq('client_id', portalUser.client_id)
         .order('created_at', { ascending: false })
         .limit(5);
 
-      const { data: invoicesData } = await supabase
+      if (campaignsError) throw campaignsError;
+
+      // Load invoices for this specific client
+      const { data: invoicesData, error: invoicesError } = await supabase
         .from('invoices')
         .select('*')
+        .eq('client_id', portalUser.client_id)
         .order('invoice_date', { ascending: false })
         .limit(5);
+
+      if (invoicesError) throw invoicesError;
 
       setCampaigns(campaignsData || []);
       setInvoices(invoicesData || []);

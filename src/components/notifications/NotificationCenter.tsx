@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Bell, Check, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +26,7 @@ interface Notification {
 }
 
 export function NotificationCenter() {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -257,7 +259,7 @@ export function NotificationCenter() {
                             className="h-auto p-0 text-xs"
                             onClick={() => {
                               markAsRead(notification.id);
-                              window.location.href = notification.action_url!;
+                              navigate(notification.action_url!);
                             }}
                           >
                             {notification.action_label || "View"}

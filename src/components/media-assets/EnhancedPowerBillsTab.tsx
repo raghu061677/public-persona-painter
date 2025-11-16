@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +21,7 @@ interface EnhancedPowerBillsTabProps {
 }
 
 export function EnhancedPowerBillsTab({ assetId, asset, isAdmin }: EnhancedPowerBillsTabProps) {
+  const navigate = useNavigate();
   const [bills, setBills] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -188,7 +190,7 @@ export function EnhancedPowerBillsTab({ assetId, asset, isAdmin }: EnhancedPower
                 variant="outline"
                 size="sm"
                 className="mt-2"
-                onClick={() => window.location.href = "/admin/power-bills-sharing"}
+                onClick={() => navigate("/admin/power-bills-sharing")}
               >
                 Configure Bill Sharing
               </Button>

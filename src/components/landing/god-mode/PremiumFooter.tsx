@@ -48,7 +48,7 @@ export const PremiumFooter = () => {
               <span className="text-2xl font-bold">Go-Ads 360°</span>
             </div>
             <p className="text-white/70 mb-6 leading-relaxed">
-              India's leading AI-powered OOH advertising platform. Connecting 2,500+ media owners with 10,000+ agencies.
+              Go-Ads 360° is an AI-powered OOH workflow platform for agencies and media owners. Start with your current sites and campaigns—then grow into marketplaces, AI planning, and advanced analytics over time.
             </p>
             
             {/* Social Links */}

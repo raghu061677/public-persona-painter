@@ -8,6 +8,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Building2, Check, X, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PageContainer } from "@/components/ui/page-container";
+import { LoadingState } from "@/components/ui/loading-state";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatCard } from "@/components/ui/stat-card";
 
 interface Company {
   id: string;
@@ -83,43 +86,66 @@ export default function CompaniesManagement() {
   if (!isPlatformAdmin) {
     return (
       <PageContainer>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">
-              You don't have permission to access this page.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Building2}
+          title="Access Denied"
+          description="You don't have permission to access this page."
+        />
       </PageContainer>
     );
   }
 
+  const activeCompanies = companies.filter(c => c.status === 'active').length;
+  const pendingCompanies = companies.filter(c => c.status === 'pending').length;
+  const suspendedCompanies = companies.filter(c => c.status === 'suspended').length;
+
   return (
     <PageContainer>
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Companies</h1>
-            <p className="text-muted-foreground">Manage company registrations and status</p>
+            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              Companies
+            </h1>
+            <p className="text-muted-foreground mt-2">Manage company registrations and status</p>
           </div>
         </div>
 
+        {!isLoading && companies.length > 0 && (
+          <div className="grid gap-6 md:grid-cols-3">
+            <StatCard
+              title="Active Companies"
+              value={activeCompanies}
+              icon={Building2}
+              description="Currently active"
+            />
+            <StatCard
+              title="Pending Approval"
+              value={pendingCompanies}
+              icon={Building2}
+              description="Awaiting review"
+            />
+            <StatCard
+              title="Suspended"
+              value={suspendedCompanies}
+              icon={Building2}
+              description="Temporarily suspended"
+            />
+          </div>
+        )}
+
         <div className="grid gap-4">
           {isLoading ? (
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-center text-muted-foreground">Loading...</p>
-              </CardContent>
-            </Card>
+            <LoadingState message="Loading companies..." />
           ) : companies.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-center text-muted-foreground">No companies registered yet</p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Building2}
+              title="No companies registered"
+              description="Companies will appear here once they register on the platform"
+            />
           ) : (
             companies.map((company) => (
-              <Card key={company.id}>
+              <Card key={company.id} className="hover-scale transition-all duration-200">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">

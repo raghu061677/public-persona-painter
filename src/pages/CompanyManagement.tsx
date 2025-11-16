@@ -8,7 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Building2, UserPlus, Users, Pencil, Trash2, CheckCircle, Shield } from "lucide-react";
+import { Building2, UserPlus, Users, Pencil, Trash2, CheckCircle, Shield, Plus, Download } from "lucide-react";
+import { LoadingState } from "@/components/ui/loading-state";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatCard } from "@/components/ui/stat-card";
 import {
   Table,
   TableBody,
@@ -422,34 +425,39 @@ export default function CompanyManagement() {
 
   if (!isPlatformAdmin) {
     return (
-      <div className="container mx-auto p-6">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">
-              You need platform admin privileges to access this page.
-            </p>
-          </CardContent>
-        </Card>
+      <div className="container mx-auto p-6 animate-fade-in">
+        <EmptyState
+          icon={Building2}
+          title="Access Denied"
+          description="You need platform admin privileges to access this page."
+        />
       </div>
     );
   }
 
+  const totalUsers = companies.reduce((sum, company) => {
+    const users = companyUsers[company.id] || [];
+    return sum + users.length;
+  }, 0);
+
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-6 space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Company Management</h1>
-          <p className="text-muted-foreground">Manage companies and their users</p>
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            Company Management
+          </h1>
+          <p className="text-muted-foreground mt-2">Manage companies and users in the system</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setCleanupDialogOpen(true)}>
+          <Button variant="outline" onClick={() => setCleanupDialogOpen(true)} className="hover-scale">
             <Trash2 className="mr-2 h-4 w-4" />
             Cleanup Duplicates
           </Button>
           <Dialog open={addCompanyOpen} onOpenChange={setAddCompanyOpen}>
             <DialogTrigger asChild>
-              <Button>
-                <Building2 className="mr-2 h-4 w-4" />
+              <Button className="hover-scale">
+                <Plus className="mr-2 h-4 w-4" />
                 Add Company
               </Button>
             </DialogTrigger>
@@ -516,15 +524,41 @@ export default function CompanyManagement() {
         </div>
       </div>
 
-      <Card>
+      <div className="grid gap-6 md:grid-cols-3 mb-6">
+        <StatCard
+          title="Total Companies"
+          value={companies.length}
+          icon={Building2}
+          description="Registered companies"
+        />
+        <StatCard
+          title="Total Users"
+          value={totalUsers}
+          icon={Users}
+          description="Across all companies"
+        />
+        <StatCard
+          title="Active Companies"
+          value={companies.filter(c => c.status === 'active').length}
+          icon={Building2}
+          description="Currently active"
+        />
+      </div>
+
+      <Card className="hover-scale transition-all duration-200">
         <CardHeader>
-          <CardTitle>Companies</CardTitle>
-          <CardDescription>All registered companies in the platform</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            All Companies
+          </CardTitle>
+          <CardDescription>
+            {companies.length} {companies.length === 1 ? 'company' : 'companies'} in the system
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="hover:bg-muted/50">
                 <TableHead>Name</TableHead>
                 <TableHead>Legal Name</TableHead>
                 <TableHead>Type</TableHead>
@@ -535,7 +569,7 @@ export default function CompanyManagement() {
             </TableHeader>
             <TableBody>
               {companies.map((company) => (
-                <TableRow key={company.id}>
+                <TableRow key={company.id} className="hover:bg-muted/50 transition-colors">
                   <TableCell className="font-medium">{company.name}</TableCell>
                   <TableCell>{company.legal_name}</TableCell>
                   <TableCell>

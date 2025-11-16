@@ -38,37 +38,68 @@ export const CategoryBrowser = () => {
           {categories.map((category, index) => (
             <motion.div
               key={index}
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0, scale: 0.9, rotateY: -5 }}
+              whileInView={{ opacity: 1, scale: 1, rotateY: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: index * 0.1 }}
-              whileHover={{ scale: 1.05, rotateY: 5 }}
+              transition={{ duration: 0.5, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}
+              whileHover={{ scale: 1.05, rotateY: 3, y: -8 }}
               className="group relative cursor-pointer"
             >
-              {/* Neon Glow Border */}
-              <div className={`absolute -inset-1 bg-gradient-to-r ${category.gradient} rounded-[24px] blur-xl opacity-0 group-hover:opacity-50 transition-opacity duration-500`} />
-              
-              {/* Card */}
-              <div className="relative bg-white/5 backdrop-blur-lg border border-white/10 rounded-[24px] overflow-hidden h-[320px]">
-                {/* Image */}
-                <div className="relative h-48 overflow-hidden">
-                  <img
-                    src={category.image}
-                    alt={category.name}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#001B4A] via-transparent to-transparent opacity-60" />
-                </div>
-
-                {/* Content */}
-                <div className="p-6">
-                  <div className={`inline-block px-4 py-1.5 bg-gradient-to-r ${category.gradient} rounded-full text-white text-sm font-semibold mb-3`}>
-                    {category.count}
+              {/* Floating Animation */}
+              <motion.div
+                animate={{ y: [0, -4, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: index * 0.2 }}
+                className="relative"
+              >
+                {/* Neon Glow Border */}
+                <motion.div
+                  className={`absolute -inset-1 bg-gradient-to-r ${category.gradient} rounded-[24px] blur-xl opacity-0 transition-opacity duration-500`}
+                  whileHover={{ opacity: 0.6 }}
+                  animate={{
+                    opacity: [0, 0.2, 0],
+                  }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: index * 0.5 }}
+                />
+                
+                {/* Card */}
+                <div className="relative bg-white/5 backdrop-blur-lg border border-white/10 rounded-[24px] overflow-hidden h-[320px] shadow-[0_8px_20px_rgba(0,85,255,0.25)]">
+                  {/* Image with Depth */}
+                  <div className="relative h-48 overflow-hidden">
+                    <motion.img
+                      src={category.image}
+                      alt={category.name}
+                      className="w-full h-full object-cover"
+                      whileHover={{ scale: 1.15 }}
+                      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#001B4A] via-transparent to-transparent opacity-60" />
+                    {/* Neon Edge Glow */}
+                    <motion.div
+                      className={`absolute inset-0 bg-gradient-to-r ${category.gradient} opacity-0 mix-blend-overlay`}
+                      whileHover={{ opacity: 0.2 }}
+                      transition={{ duration: 0.3 }}
+                    />
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">{category.name}</h3>
-                  <p className="text-white/70 text-sm">Explore locations →</p>
+
+                  {/* Content */}
+                  <div className="p-6">
+                    <motion.div
+                      className={`inline-block px-4 py-1.5 bg-gradient-to-r ${category.gradient} rounded-full text-white text-sm font-semibold mb-3 shadow-lg`}
+                      whileHover={{ scale: 1.05 }}
+                    >
+                      {category.count}
+                    </motion.div>
+                    <h3 className="text-2xl font-bold text-white mb-2">{category.name}</h3>
+                    <motion.p
+                      className="text-white/70 text-sm flex items-center gap-1"
+                      whileHover={{ x: 4 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      Explore locations →
+                    </motion.p>
+                  </div>
                 </div>
-              </div>
+              </motion.div>
             </motion.div>
           ))}
         </div>

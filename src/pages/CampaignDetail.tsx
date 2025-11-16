@@ -32,6 +32,8 @@ import { CampaignHealthAlerts } from "@/components/campaigns/CampaignHealthAlert
 import { GenerateInvoiceDialog } from "@/components/campaigns/GenerateInvoiceDialog";
 import { GenerateProofPPTButton } from "@/components/campaigns/GenerateProofPPTButton";
 import { checkAndAutoGeneratePPT } from "@/lib/operations/autoGenerateProofPPT";
+import { CreativeUploadSection } from "@/components/campaigns/CreativeUploadSection";
+import { useCampaignWorkflows } from "@/hooks/useCampaignWorkflows";
 
 export default function CampaignDetail() {
   const { id } = useParams();
@@ -40,6 +42,9 @@ export default function CampaignDetail() {
   const [campaignAssets, setCampaignAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+
+  // Enable automated workflows
+  useCampaignWorkflows(id);
 
   const refreshData = () => {
     fetchCampaign();
@@ -474,6 +479,7 @@ export default function CampaignDetail() {
         <Tabs defaultValue="assets" className="space-y-4">
           <TabsList>
             <TabsTrigger value="assets">Assets ({campaignAssets.length})</TabsTrigger>
+            <TabsTrigger value="creatives">Creatives</TabsTrigger>
             <TabsTrigger value="operations">Operations</TabsTrigger>
             <TabsTrigger value="proof">Proof Gallery</TabsTrigger>
           </TabsList>
@@ -520,6 +526,10 @@ export default function CampaignDetail() {
                 </Table>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="creatives">
+            <CreativeUploadSection campaignId={campaign.id} onUploadComplete={refreshData} />
           </TabsContent>
 
           <TabsContent value="operations">

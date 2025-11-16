@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Search, Filter, TrendingUp, AlertCircle, CheckCircle, Clock, Calendar } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { OperationsNotifications } from "@/components/operations/OperationsNotifications";
+import { OperationsTasksList } from "@/components/operations/OperationsTasksList";
 
 interface Campaign {
   id: string;
@@ -377,6 +378,9 @@ export default function Operations() {
           })
         )}
       </div>
+
+      {/* Tasks Section */}
+      <OperationsTasksList />
     </div>
   );
 }

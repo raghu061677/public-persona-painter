@@ -57,6 +57,7 @@ const FinanceDashboard = lazy(() => import("./pages/FinanceDashboard"));
 const EstimationsList = lazy(() => import("./pages/EstimationsList"));
 const InvoicesList = lazy(() => import("./pages/InvoicesList"));
 const InvoiceDetail = lazy(() => import("./pages/InvoiceDetail"));
+const Invoices = lazy(() => import("./pages/Invoices"));
 const ExpensesList = lazy(() => import("./pages/ExpensesList"));
 const ReportsDashboard = lazy(() => import("./pages/ReportsDashboard"));
 const VacantMediaReport = lazy(() => import("./pages/VacantMediaReport"));
@@ -227,6 +228,8 @@ const App = () => (
             <Route path="/finance/proformas/:id" element={<AppLayout><ProformaDetail /></AppLayout>} />
             <Route path="/finance/invoices" element={<AppLayout><InvoicesList /></AppLayout>} />
             <Route path="/finance/invoices/:id" element={<AppLayout><InvoiceDetail /></AppLayout>} />
+            <Route path="/admin/invoices" element={<AppLayout><Invoices /></AppLayout>} />
+            <Route path="/admin/invoices/:id" element={<AppLayout><InvoiceDetail /></AppLayout>} />
             <Route path="/finance/expenses" element={<AppLayout><ExpensesList /></AppLayout>} />
             <Route path="/reports" element={<AppLayout><ReportsDashboard /></AppLayout>} />
             <Route path="/reports/vacant-media" element={<AppLayout><VacantMediaReport /></AppLayout>} />

@@ -62,9 +62,9 @@ All colors MUST be HSL.
     --font-family: Inter, sans-serif;
     --base-font-size: 16px;
     
-    /* Ultra Cosmic V4 - Light Mode */
-    --background: 220 100% 98%; /* #F8FBFF Light Sky */
-    --foreground: 215 56% 18%; /* #132339 Deep Navy */
+    /* Super Premium Light Mode (Default) */
+    --background: 220 100% 99%; /* #F8FAFF Ultra Light Sky */
+    --foreground: 0 0% 10%; /* #1a1a1a Deep Charcoal */
 
     --card: 0 0% 100%; /* Pure White */
     --card-foreground: 215 56% 18%;
@@ -72,19 +72,19 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 215 56% 18%;
 
-    --primary: 213 100% 44%; /* #0064E0 Brand Blue */
+    --primary: 219 100% 50%; /* #0061FF Brand Blue */
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 206 100% 64%; /* #39A7FF Neon Blue */
-    --primary-hover: 213 100% 53%; /* #00A5FF Light Blue */
+    --primary-glow: 210 100% 65%; /* #00A3FF Light Blue */
+    --primary-hover: 210 100% 55%; /* #0089FF Hover Blue */
 
-    --secondary: 45 100% 50%; /* #FFB400 Gold */
+    --secondary: 44 96% 62%; /* #F4C542 Luxury Gold */
     --secondary-foreground: 0 0% 100%;
 
     --muted: 217 33% 97%; /* #EAF3FF Soft Grey */
     --muted-foreground: 215 17% 42%; /* #5C708A Text Soft */
 
-    --accent: 45 100% 50%; /* #FFB400 Gold */
-    --accent-foreground: 215 56% 18%;
+    --accent: 44 96% 62%; /* #F4C542 Luxury Gold */
+    --accent-foreground: 0 0% 10%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;

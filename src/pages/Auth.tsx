@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { getRoleDashboard } from "@/utils/roleBasedRedirect";
+import { motion } from "framer-motion";
 
 const authSchema = z.object({
   email: z.string().trim().email({ message: "Invalid email address" }).max(255),
@@ -159,7 +160,19 @@ const Auth = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
+        <CardHeader className="space-y-4">
+          <motion.div 
+            className="flex justify-center"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          >
+            <img 
+              src="/logo.png" 
+              alt="Go-Ads 360° Logo" 
+              className="h-16 w-auto object-contain"
+            />
+          </motion.div>
           <CardTitle className="text-2xl font-bold text-center">
             {isLogin ? "Welcome back" : "Create an account"}
           </CardTitle>

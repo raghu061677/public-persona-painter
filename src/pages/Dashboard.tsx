@@ -34,7 +34,8 @@ import { PendingApprovalsWidget } from "@/components/dashboard/PendingApprovalsW
 import PowerBillsWidget from "@/components/dashboard/PowerBillsWidget";
 import { ApprovedPlansWidget } from "@/components/dashboard/ApprovedPlansWidget";
 import RoleBasedDashboard, { getRoleDashboardLayout } from "@/components/dashboard/RoleBasedDashboard";
-// import GuidedTour from "@/components/onboarding/GuidedTour"; // Temporarily disabled - will re-implement later
+import GuidedTour from "@/components/onboarding/GuidedTour";
+import { WelcomeDialog } from "@/components/onboarding/WelcomeDialog";
 import { ManagerDashboard } from "@/components/dashboard/ManagerDashboard";
 import { InstallationDashboard } from "@/components/dashboard/InstallationDashboard";
 import { MonitoringDashboard } from "@/components/dashboard/MonitoringDashboard";
@@ -52,6 +53,7 @@ const Dashboard = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string>('sales');
+  const [startTour, setStartTour] = useState(false);
   
   // Page customization state
   const [showMetrics, setShowMetrics] = useState(true);
@@ -202,7 +204,8 @@ const Dashboard = () => {
   if (userRole === 'manager') {
     return (
       <>
-        {/* <GuidedTour role={userRole} /> */}
+        <WelcomeDialog onStartTour={() => setStartTour(true)} />
+        {startTour && <GuidedTour role={userRole} />}
         <RoleBasedDashboard role={userRole}>
           <ManagerDashboard />
         </RoleBasedDashboard>
@@ -213,7 +216,8 @@ const Dashboard = () => {
   if (userRole === 'installation') {
     return (
       <>
-        {/* <GuidedTour role={userRole} /> */}
+        <WelcomeDialog onStartTour={() => setStartTour(true)} />
+        {startTour && <GuidedTour role={userRole} />}
         <RoleBasedDashboard role={userRole}>
           <InstallationDashboard />
         </RoleBasedDashboard>
@@ -224,7 +228,8 @@ const Dashboard = () => {
   if (userRole === 'monitoring') {
     return (
       <>
-        {/* <GuidedTour role={userRole} /> */}
+        <WelcomeDialog onStartTour={() => setStartTour(true)} />
+        {startTour && <GuidedTour role={userRole} />}
         <RoleBasedDashboard role={userRole}>
           <MonitoringDashboard />
         </RoleBasedDashboard>
@@ -235,7 +240,8 @@ const Dashboard = () => {
   // Default dashboard for admin, sales, operations, finance
   return (
     <>
-      {/* <GuidedTour role={userRole} /> */}
+      <WelcomeDialog onStartTour={() => setStartTour(true)} />
+      {startTour && <GuidedTour role={userRole} />}
       <RoleBasedDashboard role={userRole}>
         <div className="space-y-6 animate-fade-in">
           {/* Metric Cards */}

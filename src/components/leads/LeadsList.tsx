@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Filter, Download } from "lucide-react";
+import { Plus, Search, Filter, Download, Sparkles } from "lucide-react";
+import { AILeadParserDialog } from "./AILeadParserDialog";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import {
@@ -33,6 +34,7 @@ export function LeadsList() {
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [showAIParser, setShowAIParser] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -109,6 +111,10 @@ export function LeadsList() {
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowAIParser(true)}>
+              <Sparkles className="mr-2 h-4 w-4" />
+              AI Parse Lead
+            </Button>
             <Button size="sm">
               <Plus className="mr-2 h-4 w-4" />
               New Lead
@@ -173,9 +179,21 @@ export function LeadsList() {
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+        </Table>
         )}
       </CardContent>
+      
+      <AILeadParserDialog
+        open={showAIParser}
+        onClose={() => setShowAIParser(false)}
+        onParsedData={(data) => {
+          console.log('Parsed lead data:', data);
+          toast({
+            title: "Lead Data Ready",
+            description: "You can now create a new lead with this data",
+          });
+        }}
+      />
     </Card>
   );
 }

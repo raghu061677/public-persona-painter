@@ -41,8 +41,8 @@ export const CaseStudySection = () => {
                   <div className="text-xs text-muted-foreground mb-2">BEFORE</div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <div className="text-2xl font-bold text-muted-foreground">₹18L</div>
-                      <div className="text-xs text-muted-foreground">Monthly Revenue</div>
+                      <div className="text-2xl font-bold text-muted-foreground">Baseline</div>
+                      <div className="text-xs text-muted-foreground">Revenue</div>
                     </div>
                     <div>
                       <div className="text-2xl font-bold text-muted-foreground">45%</div>

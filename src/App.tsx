@@ -118,6 +118,7 @@ const CompanyWorkflows = lazy(() => import("./pages/CompanyWorkflows"));
 const PlatformAdminDashboard = lazy(() => import("./pages/PlatformAdminDashboard"));
 const PlatformAdminSetup = lazy(() => import("./pages/PlatformAdminSetup"));
 const CompanyTesting = lazy(() => import("./pages/CompanyTesting"));
+const CompanyManagement = lazy(() => import("./pages/CompanyManagement"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
 const AIAssistant = lazy(() => import("./pages/AIAssistant"));
 const AnalyticsDashboard = lazy(() => import("./pages/AnalyticsDashboard"));
@@ -183,6 +184,7 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute requireAuth><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/dashboard" element={<ProtectedRoute requireAuth><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/companies" element={<ProtectedRoute requireAuth><AppLayout><CompaniesManagement /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/company-management" element={<ProtectedRoute requireAuth><AppLayout><CompanyManagement /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/platform" element={<ProtectedRoute requireAuth><AppLayout><PlatformAdminDashboard /></AppLayout></ProtectedRoute>} />
             
             {/* Company Settings with nested routes */}

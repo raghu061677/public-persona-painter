@@ -129,6 +129,7 @@ const ClientPortalDashboard = lazy(() => import("./pages/ClientPortalDashboard")
 const ClientPortalProofs = lazy(() => import("./pages/ClientPortalProofs"));
 const ClientPortalPayments = lazy(() => import("./pages/ClientPortalPayments"));
 const ClientPortalDownloads = lazy(() => import("./pages/ClientPortalDownloads"));
+const WorkflowTest = lazy(() => import("./pages/WorkflowTest"));
 const ClientCampaignView = lazy(() => import("./pages/ClientCampaignView"));
 const ClientInvoices = lazy(() => import("./pages/ClientInvoices"));
 const AccessDenied = lazy(() => import("./pages/AccessDenied"));
@@ -219,6 +220,7 @@ const App = () => (
             <Route path="/admin/campaigns/:id" element={<ProtectedRoute requiredModule="campaigns" requiredAction="view"><AppLayout><CampaignDetail /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/campaigns/:id/budget" element={<ProtectedRoute requiredModule="campaigns" requiredAction="view"><AppLayout><CampaignBudget /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/operations" element={<AppLayout><Operations /></AppLayout>} />
+            <Route path="/admin/workflow-test" element={<AppLayout><WorkflowTest /></AppLayout>} />
             <Route path="/admin/operations-analytics" element={<AppLayout><OperationsAnalytics /></AppLayout>} />
             <Route path="/admin/operations-calendar" element={<AppLayout><OperationsCalendar /></AppLayout>} />
             <Route path="/finance" element={<AppLayout><FinanceDashboard /></AppLayout>} />

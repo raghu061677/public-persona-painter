@@ -88,6 +88,9 @@ export default function CompanyManagement() {
   const [deleteCompanyId, setDeleteCompanyId] = useState<string | null>(null);
   const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
   const [assignAllModules, setAssignAllModules] = useState(true);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (isPlatformAdmin) {
@@ -235,23 +238,50 @@ export default function CompanyManagement() {
     }
   };
 
-  const handleDeleteCompany = async () => {
-    if (!deleteCompanyId) return;
+  const handleExportData = async (companyId: string) => {
+    try {
+      setIsExporting(true);
+      const { data, error } = await supabase.functions.invoke('export-company-data', {
+        body: { companyId }
+      });
 
+      if (error) throw error;
+
+      // Create blob and download
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `company-${companyId}-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Success",
+        description: "Company data exported successfully",
+      });
+
+      return true;
+    } catch (error: any) {
+      toast({
+        title: "Export Error",
+        description: error.message,
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDeleteCompany = async (companyId: string) => {
     try {
       setSubmitting(true);
-      
-      // First, delete all company users
-      await supabase
-        .from('company_users')
-        .delete()
-        .eq('company_id', deleteCompanyId);
-
-      // Then delete the company
-      const { error } = await supabase
-        .from('companies')
-        .delete()
-        .eq('id', deleteCompanyId);
+      const { data, error } = await supabase.functions.invoke('delete-company', {
+        body: { companyId }
+      });
 
       if (error) throw error;
 
@@ -260,17 +290,31 @@ export default function CompanyManagement() {
         description: "Company deleted successfully",
       });
 
-      setDeleteCompanyId(null);
+      setExportDialogOpen(false);
+      setCompanyToDelete(null);
       loadCompanies();
     } catch (error: any) {
       toast({
-        title: "Error deleting company",
+        title: "Error",
         description: error.message,
         variant: "destructive",
       });
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const initiateDelete = (company: Company) => {
+    if (company.type === 'platform_admin') {
+      toast({
+        title: "Cannot Delete",
+        description: "Platform admin companies cannot be deleted",
+        variant: "destructive",
+      });
+      return;
+    }
+    setCompanyToDelete(company);
+    setExportDialogOpen(true);
   };
 
   const handleAddUserToCompany = async (e: React.FormEvent) => {
@@ -522,7 +566,7 @@ export default function CompanyManagement() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setDeleteCompanyId(company.id)}
+                          onClick={() => initiateDelete(company)}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
@@ -555,20 +599,41 @@ export default function CompanyManagement() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete Company Confirmation */}
-      <AlertDialog open={!!deleteCompanyId} onOpenChange={() => setDeleteCompanyId(null)}>
+      {/* Export & Delete Dialog */}
+      <AlertDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Company</AlertDialogTitle>
+            <AlertDialogTitle>Export Data Before Deletion</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this company? This will also remove all associated users.
-              This action cannot be undone.
+              Before deleting "{companyToDelete?.name}", we recommend exporting all data as a backup.
+              This includes users, clients, media assets, plans, campaigns, invoices, and more.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteCompany} disabled={submitting}>
-              {submitting ? "Deleting..." : "Delete Company"}
+            <AlertDialogCancel onClick={() => setCompanyToDelete(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                if (companyToDelete) {
+                  const exported = await handleExportData(companyToDelete.id);
+                  if (!exported) {
+                    setExportDialogOpen(false);
+                    setCompanyToDelete(null);
+                  }
+                }
+              }}
+              disabled={isExporting || submitting}
+            >
+              {isExporting ? "Exporting..." : "Export Data"}
+            </Button>
+            <AlertDialogAction
+              onClick={() => companyToDelete && handleDeleteCompany(companyToDelete.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={submitting}
+            >
+              {submitting ? "Deleting..." : "Delete Without Export"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

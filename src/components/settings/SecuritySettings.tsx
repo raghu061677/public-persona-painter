@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Key, Shield, Lock } from "lucide-react";
+import { GDPRCompliance } from "./GDPRCompliance";
 
 export function SecuritySettings() {
   const { toast } = useToast();
@@ -118,6 +119,8 @@ export function SecuritySettings() {
           </Button>
         </CardContent>
       </Card>
+
+      <GDPRCompliance />
     </>
   );
 }

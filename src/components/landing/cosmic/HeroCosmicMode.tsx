@@ -22,7 +22,7 @@ export const HeroCosmicMode = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
-          {/* Primary - Blue Gradient */}
+          {/* Start Trial Button - Transparent */}
           <motion.div
             whileHover={{ scale: 1.05, y: -4 }}
             whileTap={{ scale: 0.98 }}
@@ -30,10 +30,13 @@ export const HeroCosmicMode = () => {
             <Button
               size="sm"
               onClick={() => navigate("/auth")}
-              className="px-4 py-2 text-xs font-bold rounded-lg text-white shadow-2xl relative overflow-hidden group"
+              className="px-4 py-2 text-xs font-bold rounded-lg relative overflow-hidden group"
               style={{ 
-                background: "linear-gradient(135deg, #0061FF, #00A3FF)",
-                boxShadow: "0 8px 32px rgba(0, 97, 255, 0.5), 0 4px 16px rgba(0, 0, 0, 0.3)",
+                background: "rgba(255, 255, 255, 0.15)",
+                backdropFilter: "blur(8px)",
+                border: "2px solid rgba(255, 255, 255, 0.6)",
+                color: "white",
+                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
               }}
             >
               <span className="relative z-10">Start Free 14-Day Trial →</span>
@@ -41,7 +44,29 @@ export const HeroCosmicMode = () => {
             </Button>
           </motion.div>
 
-          {/* Secondary - Glass with Blue Border */}
+          {/* Explore Media Button - Transparent */}
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => navigate("/admin/media-assets")}
+              className="px-4 py-2 text-xs font-bold rounded-lg relative overflow-hidden"
+              style={{ 
+                background: "rgba(255, 255, 255, 0.15)",
+                backdropFilter: "blur(8px)",
+                border: "2px solid rgba(255, 255, 255, 0.6)",
+                color: "white",
+                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
+              }}
+            >
+              Explore Media →
+            </Button>
+          </motion.div>
+
+          {/* Explore Platform Button - Transparent */}
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.98 }}
@@ -54,7 +79,7 @@ export const HeroCosmicMode = () => {
               style={{ 
                 background: "rgba(255, 255, 255, 0.15)",
                 backdropFilter: "blur(8px)",
-                border: "2px solid rgba(255, 255, 255, 0.5)",
+                border: "2px solid rgba(255, 255, 255, 0.6)",
                 color: "white",
                 boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
               }}

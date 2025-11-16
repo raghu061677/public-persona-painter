@@ -5,7 +5,7 @@ import {
   FileText, Receipt, Zap, UserCog, Palette, FileSpreadsheet,
   Bell, LogOut, User, Menu, Shield, DollarSign, Smartphone,
   Image, Settings, FileCheck, CreditCard, Globe, Mail, MessageSquare,
-  Lock, Database, Upload, Download, HardDrive
+  Lock, Database, Upload, Download, HardDrive, Sparkles, ShoppingBag
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -207,6 +207,24 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                     icon={Image}
                     label="Photo Library"
                     href="/admin/photo-library"
+                    collapsed={collapsed}
+                  />
+                  <SidebarItem
+                    icon={Sparkles}
+                    label="AI Assistant"
+                    href="/admin/ai-assistant"
+                    collapsed={collapsed}
+                  />
+                  <SidebarItem
+                    icon={Globe}
+                    label="Marketplace"
+                    href="/marketplace"
+                    collapsed={collapsed}
+                  />
+                  <SidebarItem
+                    icon={ShoppingBag}
+                    label="Booking Requests"
+                    href="/admin/booking-requests"
                     collapsed={collapsed}
                   />
                 </SidebarSection>

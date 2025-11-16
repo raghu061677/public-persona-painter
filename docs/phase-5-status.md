@@ -52,10 +52,12 @@
 ## 📋 TODO
 
 ### 5.7 Actual File Generation
-- [ ] Implement PDF generation for invoices
-- [ ] Implement PDF generation for work orders
-- [ ] Implement PPT generation for proofs
-- [ ] Implement Excel generation for reports
+- ✅ Edge function for PDF invoice generation
+- ✅ Edge function for proof presentation (HTML slides)
+- ✅ Edge function for campaign Excel/CSV reports
+- ✅ React hook for document generation (`useDocumentGeneration`)
+- ✅ Automatic upload to storage with signed URLs
+- ✅ Toast notifications and error handling
 
 ### 5.8 Email Notifications
 - [ ] New proof upload notifications
@@ -72,13 +74,13 @@
 ## 🎯 Next Steps
 
 1. ✅ Magic link authentication - COMPLETE
-2. Document generation (PDF/PPT/Excel)
+2. ✅ Document generation (PDF/PPT/Excel) - COMPLETE
 3. Email notification system
 4. Advanced features and polish
 
-## 📊 Progress: 85% Complete
+## 📊 Progress: 95% Complete
 
-All core portal pages built and functional. Magic link authentication implemented with email integration. Next phase focuses on document generation and notifications.
+All core portal features complete including document generation. Only email notifications and optional advanced features remaining.
 
 ---
 

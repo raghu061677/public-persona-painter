@@ -3,6 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { AnnouncementBanner } from "@/components/landing/AnnouncementBanner";
 import { HeroCosmicMode } from "@/components/landing/cosmic/HeroCosmicMode";
+import { CosmicMetrics } from "@/components/landing/cosmic/CosmicMetrics";
+import { CategoryBrowser } from "@/components/landing/cosmic/CategoryBrowser";
+import { CosmicCarousel } from "@/components/landing/cosmic/CosmicCarousel";
+import { CosmicProofGallery } from "@/components/landing/cosmic/CosmicProofGallery";
 import { ScenesCarousel } from "@/components/landing/cosmic/ScenesCarousel";
 import { WhoItsFor } from "@/components/landing/cosmic/WhoItsFor";
 import { AIFeatureStrip } from "@/components/landing/cosmic/AIFeatureStrip";
@@ -72,8 +76,17 @@ const Landing = () => {
       </nav>
 
       <main>
-        {/* Hero Cosmic Mode */}
+        {/* Hero Section */}
         <HeroCosmicMode />
+
+        {/* Cosmic Metrics */}
+        <CosmicMetrics />
+
+        {/* Category Browser */}
+        <CategoryBrowser />
+
+        {/* Cosmic Carousel */}
+        <CosmicCarousel />
 
         {/* Scenes Carousel */}
         <ScenesCarousel />
@@ -98,6 +111,9 @@ const Landing = () => {
 
         {/* Case Study */}
         <CaseStudySection />
+
+        {/* Cosmic Proof Gallery */}
+        <CosmicProofGallery />
 
         {/* Mid-Page Conversion Banner */}
         <ConversionBanner />

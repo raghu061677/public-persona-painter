@@ -191,11 +191,7 @@ const App = () => (
             <Route path="/admin/company-management" element={<ProtectedRoute requireAuth><AppLayout><CompanyManagement /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/platform" element={<ProtectedRoute requireAuth><AppLayout><PlatformAdminDashboard /></AppLayout></ProtectedRoute>} />
             
-            {/* Company Settings with nested routes */}
-            <Route path="/admin/company-settings" element={<ProtectedRoute requireAuth><AppLayout><SettingsLayout /></AppLayout></ProtectedRoute>}>
-              <Route index element={<CompanySettings />} />
-              <Route path="profile" element={<CompanyProfile />} />
-            </Route>
+            {/* Duplicate route removed - see line 268 for actual company settings routes */}
             
             <Route path="/admin/company-testing" element={<ProtectedRoute requireAuth><AppLayout><CompanyTesting /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/booking-requests" element={<ProtectedRoute requireAuth><AppLayout><BookingRequests /></AppLayout></ProtectedRoute>} />

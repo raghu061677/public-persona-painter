@@ -1,17 +1,17 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import heroHighway from "@/assets/hero-highway.png";
-import heroMountain from "@/assets/hero-mountain.png";
-import heroCity from "@/assets/hero-city.png";
+import heroNightHighway from "@/assets/hero-night-highway.png";
+import billboard1 from "@/assets/billboard-1.png";
+import billboard2 from "@/assets/billboard-2.png";
 
 export const CosmicCarousel = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const slides = [
-    { image: heroHighway, title: "Highway Dominance", location: "National Highways" },
-    { image: heroMountain, title: "Scenic Routes", location: "Mountain Corridors" },
-    { image: heroCity, title: "Urban Impact", location: "City Centers" },
+    { image: heroNightHighway, title: "Night Highway Dominance", location: "National Highways" },
+    { image: billboard1, title: "Premium Billboards", location: "City Centers" },
+    { image: billboard2, title: "Strategic Locations", location: "Urban Corridors" },
   ];
 
   useEffect(() => {

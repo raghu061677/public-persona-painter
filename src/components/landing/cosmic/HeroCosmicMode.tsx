@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Play, Sparkles, TrendingUp, Users, Building2 } from "lucide-react";
-import heroCity from "@/assets/hero-city.png";
+import heroNightHighway from "@/assets/hero-night-highway.png";
 
 export const HeroCosmicMode = () => {
   const navigate = useNavigate();
@@ -132,8 +132,8 @@ export const HeroCosmicMode = () => {
               <div className="relative bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-lg rounded-[24px] border-2 border-white/20 p-4 shadow-2xl">
                 <div className="aspect-[4/3] rounded-[18px] overflow-hidden">
                   <img
-                    src={heroCity}
-                    alt="Go-Ads OOH Media"
+                    src={heroNightHighway}
+                    alt="Go-Ads OOH Media - Night Highway"
                     className="w-full h-full object-cover"
                   />
                 </div>

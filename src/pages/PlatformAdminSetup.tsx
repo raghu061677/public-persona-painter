@@ -4,8 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, CheckCircle2, AlertCircle } from "lucide-react";
+import { Shield, CheckCircle2, AlertCircle, Home, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { ROUTES } from "@/lib/routes";
 
 export default function PlatformAdminSetup() {
   const { user } = useAuth();
@@ -62,8 +63,29 @@ export default function PlatformAdminSetup() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="max-w-2xl w-full">
+    <div className="min-h-screen bg-background p-4">
+      {/* Navigation Header */}
+      <div className="max-w-2xl mx-auto mb-6 flex items-center justify-between">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => navigate(ROUTES.DASHBOARD)}
+          className="gap-2"
+        >
+          <Home className="h-4 w-4" />
+          Dashboard
+        </Button>
+      </div>
+
+      <div className="max-w-2xl mx-auto">
+      <Card className="w-full">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <Shield className="h-16 w-16 text-primary" />
@@ -162,6 +184,7 @@ export default function PlatformAdminSetup() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

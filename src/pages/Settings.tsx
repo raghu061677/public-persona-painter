@@ -21,11 +21,14 @@ import { ActivityLogViewer } from "@/components/audit/ActivityLogViewer";
 import { RolePermissionsSettings } from "@/components/settings/RolePermissionsSettings";
 import { CompanyBrandingSettings } from "@/components/settings/CompanyBrandingSettings";
 import { usePermissions } from "@/hooks/usePermissions";
+import { DemoModeSettings } from "@/components/demo/DemoModeSettings";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Settings() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { canView } = usePermissions();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [migrating, setMigrating] = useState(false);
@@ -41,6 +44,7 @@ export default function Settings() {
   const [heroFile, setHeroFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>("");
   const [heroPreview, setHeroPreview] = useState<string>("");
+  const [companyId, setCompanyId] = useState<string>("");
 
   const isAdmin = roles.includes("admin");
   const canViewUserManagement = canView('user_management');
@@ -57,6 +61,18 @@ export default function Settings() {
       if (!user) {
         navigate("/auth");
         return;
+      }
+
+      // Load company ID
+      const { data: companyData } = await supabase
+        .from("company_users")
+        .select("company_id")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .single();
+      
+      if (companyData) {
+        setCompanyId(companyData.company_id);
       }
 
       // Load profile
@@ -318,13 +334,14 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className={`grid w-full ${canViewCompanySettings ? 'grid-cols-8' : 'grid-cols-5'}`}>
+        <TabsList className={`grid w-full ${canViewCompanySettings ? 'grid-cols-9' : 'grid-cols-5'}`}>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           {canViewCompanySettings && <TabsTrigger value="branding">Branding</TabsTrigger>}
           {canViewCompanySettings && <TabsTrigger value="watermark">Watermark</TabsTrigger>}
           {canViewCompanySettings && <TabsTrigger value="alerts">Alerts</TabsTrigger>}
+          {canViewCompanySettings && <TabsTrigger value="demo">Demo</TabsTrigger>}
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="help">Help</TabsTrigger>
         </TabsList>
@@ -618,6 +635,12 @@ export default function Settings() {
         {canViewCompanySettings && (
           <TabsContent value="alerts" className="space-y-6 mt-6">
             <AlertThresholdSettings />
+          </TabsContent>
+        )}
+
+        {canViewCompanySettings && (
+          <TabsContent value="demo" className="space-y-6 mt-6">
+            <DemoModeSettings companyId={companyId} />
           </TabsContent>
         )}
 

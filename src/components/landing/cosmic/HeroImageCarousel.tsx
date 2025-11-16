@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import hero1 from "@/assets/hero-1.jpeg";
 import hero2 from "@/assets/hero-2.jpeg";
 import hero3 from "@/assets/hero-3.png";
@@ -12,43 +13,73 @@ export const HeroImageCarousel = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const timer = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % heroImages.length);
-    }, 4000); // Change image every 4 seconds
-
-    return () => clearInterval(interval);
+    }, 5000);
+    return () => clearInterval(timer);
   }, []);
 
+  const goToPrevious = () => {
+    setCurrentIndex((prev) => (prev - 1 + heroImages.length) % heroImages.length);
+  };
+
+  const goToNext = () => {
+    setCurrentIndex((prev) => (prev + 1) % heroImages.length);
+  };
+
   return (
-    <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-2xl">
+    <div className="absolute inset-0 w-full h-full overflow-hidden">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentIndex}
           initial={{ opacity: 0, scale: 1.05 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 0.8, ease: "easeInOut" }}
+          animate={{ opacity: 1, scale: 1.1 }}
+          exit={{ opacity: 0 }}
+          transition={{ 
+            opacity: { duration: 1 },
+            scale: { duration: 8, ease: "linear" }
+          }}
           className="absolute inset-0"
         >
           <img
             src={heroImages[currentIndex]}
-            alt={`Go-Ads OOH Media ${currentIndex + 1}`}
+            alt={`Hero ${currentIndex + 1}`}
             className="w-full h-full object-cover"
+            loading="eager"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent" />
         </motion.div>
       </AnimatePresence>
 
+      {/* Subtle bottom gradient for readability */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-black/5 to-transparent pointer-events-none" />
+
+      {/* Navigation Arrows */}
+      <button
+        onClick={goToPrevious}
+        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 transition-all duration-300 group"
+        aria-label="Previous slide"
+      >
+        <ChevronLeft className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
+      </button>
+
+      <button
+        onClick={goToNext}
+        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 transition-all duration-300 group"
+        aria-label="Next slide"
+      >
+        <ChevronRight className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
+      </button>
+
       {/* Carousel Indicators */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3 z-20">
         {heroImages.map((_, index) => (
           <button
             key={index}
             onClick={() => setCurrentIndex(index)}
-            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+            className={`h-2 rounded-full transition-all duration-500 ${
               index === currentIndex
-                ? "bg-[#FFB400] w-8"
-                : "bg-white/50 hover:bg-white/80"
+                ? "bg-white w-12 shadow-lg shadow-white/50"
+                : "bg-white/40 w-2 hover:bg-white/60 hover:w-8"
             }`}
             aria-label={`Go to slide ${index + 1}`}
           />

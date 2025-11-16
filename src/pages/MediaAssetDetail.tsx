@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { AssetDetails } from "@/components/media-assets/asset-details";
 import { useAuth } from "@/contexts/AuthContext";
+import { PageHeader } from "@/components/navigation/PageHeader";
+import { ROUTES } from "@/config/routes";
 
 export default function MediaAssetDetail() {
   const { id } = useParams();
@@ -40,6 +42,16 @@ export default function MediaAssetDetail() {
   if (loading) {
     return (
       <div className="flex-1 space-y-4 p-4 sm:p-8 pt-6">
+        <PageHeader
+          title="Loading..."
+          breadcrumbs={[
+            { label: "Dashboard", path: ROUTES.DASHBOARD },
+            { label: "Media Assets", path: ROUTES.MEDIA_ASSETS },
+            { label: "Loading..." },
+          ]}
+          showBackButton
+          backPath={ROUTES.MEDIA_ASSETS}
+        />
         <div className="flex items-center justify-center min-h-[400px]">
           <p className="text-muted-foreground">Loading asset details...</p>
         </div>
@@ -50,6 +62,16 @@ export default function MediaAssetDetail() {
   if (!asset) {
     return (
       <div className="flex-1 space-y-4 p-4 sm:p-8 pt-6">
+        <PageHeader
+          title="Not Found"
+          breadcrumbs={[
+            { label: "Dashboard", path: ROUTES.DASHBOARD },
+            { label: "Media Assets", path: ROUTES.MEDIA_ASSETS },
+            { label: "Not Found" },
+          ]}
+          showBackButton
+          backPath={ROUTES.MEDIA_ASSETS}
+        />
         <div className="flex items-center justify-center min-h-[400px]">
           <p className="text-muted-foreground">Asset not found</p>
         </div>
@@ -59,6 +81,17 @@ export default function MediaAssetDetail() {
 
   return (
     <div className="flex-1 space-y-4 p-4 sm:p-8 pt-6">
+      <PageHeader
+        title={asset.id}
+        description={`${asset.media_type} at ${asset.location}, ${asset.area}`}
+        breadcrumbs={[
+          { label: "Dashboard", path: ROUTES.DASHBOARD },
+          { label: "Media Assets", path: ROUTES.MEDIA_ASSETS },
+          { label: asset.id },
+        ]}
+        showBackButton
+        backPath={ROUTES.MEDIA_ASSETS}
+      />
       <AssetDetails asset={asset} isAdmin={isAdmin} />
     </div>
   );

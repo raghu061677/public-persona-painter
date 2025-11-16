@@ -6,6 +6,8 @@ import { QuickAddDrawer } from "@/components/ui/quick-add-drawer";
 import { BreadcrumbNav } from "@/components/ui/breadcrumb-nav";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NotificationCenter } from "@/components/notifications/NotificationCenter";
+import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false);
@@ -24,8 +26,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <>
+    <OnboardingGate>
       <div className="flex h-screen w-full overflow-hidden bg-background">
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
+          <NotificationCenter />
+        </div>
         <SidebarLayout>
           <div className="flex flex-col flex-1 h-full w-full min-w-0">
             <Topbar onSearchOpen={() => setCommandOpen(true)} />
@@ -54,6 +59,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
       
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
-    </>
+    </OnboardingGate>
   );
 }

@@ -126,6 +126,9 @@ const AnalyticsDashboard = lazy(() => import("./pages/AnalyticsDashboard"));
 const CustomDashboard = lazy(() => import("./pages/CustomDashboard"));
 const BookingRequests = lazy(() => import("./pages/BookingRequests"));
 const ClientPortalDashboard = lazy(() => import("./pages/ClientPortalDashboard"));
+const ClientPortalProofs = lazy(() => import("./pages/ClientPortalProofs"));
+const ClientPortalPayments = lazy(() => import("./pages/ClientPortalPayments"));
+const ClientPortalDownloads = lazy(() => import("./pages/ClientPortalDownloads"));
 const ClientCampaignView = lazy(() => import("./pages/ClientCampaignView"));
 const ClientInvoices = lazy(() => import("./pages/ClientInvoices"));
 const AccessDenied = lazy(() => import("./pages/AccessDenied"));
@@ -307,6 +310,9 @@ const App = () => (
             <Route path="/portal/auth" element={<ClientPortalAuth />} />
             <Route path="/portal" element={<ClientPortalProvider><ClientPortalLayout /></ClientPortalProvider>}>
               <Route path="dashboard" element={<ClientPortalDashboard />} />
+              <Route path="proofs" element={<ClientPortalProofs />} />
+              <Route path="payments" element={<ClientPortalPayments />} />
+              <Route path="downloads" element={<ClientPortalDownloads />} />
               <Route path="campaigns/:id" element={<ClientCampaignView />} />
               <Route path="invoices" element={<ClientInvoices />} />
             </Route>

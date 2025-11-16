@@ -8,9 +8,8 @@ export const HeroCosmicMode = () => {
   const navigate = useNavigate();
 
   const impactPoints = [
-    "Plan multi-city OOH campaigns in minutes, not days",
-    "Replace scattered Excel sheets with one live inventory & plan builder",
-    "Give clients real proof photos instead of WhatsApp chaos"
+    "Plan campaigns, track bookings, assign mounting, upload proof photos, and share proposals instantly—without touching Excel or WhatsApp.",
+    "Built for modern OOH teams who want speed, accuracy, and transparency."
   ];
 
   return (
@@ -52,7 +51,7 @@ export const HeroCosmicMode = () => {
               transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
               className="text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-6"
             >
-              <span className="text-white">Accelerate Your Reach</span>
+              <span className="text-foreground">Accelerate Your Reach</span>
               <br />
               <motion.span
                 animate={{
@@ -63,8 +62,8 @@ export const HeroCosmicMode = () => {
                   backgroundPosition: { duration: 3, repeat: Infinity, ease: "linear" },
                   y: { duration: 4, repeat: Infinity, ease: "easeInOut" }
                 }}
-                className="bg-gradient-to-r from-[#FACC15] via-[#FFD700] to-[#FACC15] bg-clip-text text-transparent bg-[length:200%_auto]"
-                style={{ filter: "drop-shadow(0 0 20px rgba(250, 204, 21, 0.3))" }}
+                className="bg-gradient-to-r from-[#FFB400] via-[#FFD700] to-[#FFB400] bg-clip-text text-transparent bg-[length:200%_auto]"
+                style={{ filter: "drop-shadow(0 0 20px rgba(255, 180, 0, 0.3))" }}
               >
                 Across Every City Street
               </motion.span>
@@ -74,48 +73,52 @@ export const HeroCosmicMode = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-              className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed"
+              className="text-xl md:text-2xl text-muted-foreground mb-4 leading-relaxed"
             >
-              The AI-powered OOH platform for agencies and media owners who are done with Excel chaos.
+              Go-Ads 360° is an intelligent OOH workflow platform that helps agencies and media owners plan campaigns faster, organize inventory better, and deliver proof with complete clarity.
+            </motion.p>
+            
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="text-lg md:text-xl text-muted-foreground/80 mb-8 leading-relaxed"
+            >
+              Whether you manage 5 sites or 500, Go-Ads brings everything into one clean, powerful system.
             </motion.p>
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-              className="space-y-3 mb-10"
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="space-y-2 mb-10"
             >
               {impactPoints.map((point, i) => (
-                <motion.div
+                <motion.p
                   key={i}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.4 + i * 0.1 }}
-                  className="flex items-start gap-3"
+                  transition={{ delay: 0.5 + i * 0.1 }}
+                  className="text-muted-foreground/70 text-sm md:text-base"
                 >
-                  <CheckCircle2 className="w-5 h-5 text-[#10B981] mt-0.5 flex-shrink-0" />
-                  <span className="text-white/80 text-sm md:text-base">{point}</span>
-                </motion.div>
+                  {point}
+                </motion.p>
               ))}
             </motion.div>
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.5 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
               className="flex flex-col sm:flex-row gap-4"
             >
               <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.98 }}>
                 <Button
                   size="lg"
                   onClick={() => navigate("/auth")}
-                  className="relative px-8 py-6 text-lg font-semibold rounded-xl overflow-hidden"
-                  style={{
-                    background: "linear-gradient(90deg, #0066FF, #0094FF, #00D4FF)",
-                    boxShadow: "0 0 30px rgba(0, 148, 255, 0.5), 0 8px 20px rgba(0, 102, 255, 0.3)",
-                  }}
+                  className="relative px-8 py-6 text-lg font-semibold rounded-xl overflow-hidden bg-gradient-to-r from-[#0064E0] to-[#00A5FF] hover:from-[#0052C9] hover:to-[#0094FF] shadow-lg"
                 >
-                  <span className="relative z-10 text-white">Start Free Trial</span>
+                  <span className="relative z-10">Start Free 14-Day Trial →</span>
                   <motion.div
                     className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
                     animate={{ x: ["-100%", "100%"] }}
@@ -129,9 +132,9 @@ export const HeroCosmicMode = () => {
                   size="lg"
                   variant="outline"
                   onClick={() => navigate("/marketplace")}
-                  className="px-8 py-6 text-lg font-semibold border-2 border-white/30 text-white bg-white/5 backdrop-blur-sm hover:bg-white/10 rounded-xl"
+                  className="px-8 py-6 text-lg font-semibold border-2 border-primary/30 hover:bg-primary/10 rounded-xl"
                 >
-                  Explore Marketplace
+                  Watch 2-Min Overview →
                 </Button>
               </motion.div>
             </motion.div>

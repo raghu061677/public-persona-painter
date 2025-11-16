@@ -3,10 +3,11 @@ import { Zap, FileCheck, TrendingUp, Users } from "lucide-react";
 
 export const CosmicMetrics = () => {
   const benefits = [
-    { icon: Zap, title: "From Excel to Live Inventory", description: "See which sites are actually free or blocked, without opening a single spreadsheet.", gradient: "from-blue-500 to-cyan-400", delay: 0 },
-    { icon: FileCheck, title: "From WhatsApp Chaos to Clear Proof", description: "Upload and organize campaign photos by plan, asset, and date—so approvals are never lost in chat.", gradient: "from-purple-500 to-pink-400", delay: 0.1 },
-    { icon: TrendingUp, title: "From Guesswork to Smarter Rates", description: "Use past campaigns and AI-assisted suggestions to quote with confidence, not guesswork.", gradient: "from-orange-500 to-yellow-400", delay: 0.2 },
-    { icon: Users, title: "From Manual Follow-ups to Guided Workflows", description: "Leads, plans, campaigns, and proofs move through one connected pipeline.", gradient: "from-green-500 to-emerald-400", delay: 0.3 },
+    { icon: Zap, title: "Plan Faster", description: "Convert a client brief into a ready proposal in minutes, not days.", gradient: "from-blue-500 to-cyan-400", delay: 0 },
+    { icon: FileCheck, title: "Bring Clarity to Inventory", description: "See which sites are available, booked, or blocked—without opening Excel.", gradient: "from-purple-500 to-pink-400", delay: 0.1 },
+    { icon: TrendingUp, title: "Real Proof, Not Chat Chaos", description: "Every campaign photo is auto-organized by asset, date, and plan.", gradient: "from-orange-500 to-yellow-400", delay: 0.2 },
+    { icon: Users, title: "Quote Smarter", description: "Use previous campaigns and AI logic to avoid under-pricing or over-pricing.", gradient: "from-green-500 to-emerald-400", delay: 0.3 },
+    { icon: Users, title: "Work Like a Team", description: "Give your sales, operations, and admin teams one shared workspace.", gradient: "from-pink-500 to-rose-400", delay: 0.4 },
   ];
 
   return (
@@ -14,8 +15,8 @@ export const CosmicMetrics = () => {
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#001B4A]/10 to-transparent" />
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">How Go-Ads 360° <span className="text-[#FACC15]">Changes Your Day</span></h2>
-          <p className="text-xl text-white/80 max-w-2xl mx-auto">Built for real teams doing OOH work, not fake vanity metrics</p>
+          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">How Go-Ads 360° <span className="text-[#FFB400]">Improves Your OOH Operations</span></h2>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">Real impact for modern OOH teams</p>
         </motion.div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {benefits.map((benefit, index) => (

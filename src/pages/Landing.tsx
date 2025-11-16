@@ -32,7 +32,7 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
-              <img src="/logo.webp" alt="Go-Ads 360° Logo" className="h-14 w-auto sm:h-16 md:h-20" />
+              <img src="/logo.png" alt="Go-Ads 360° Logo" className="h-14 w-auto sm:h-16 md:h-20" />
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <button 

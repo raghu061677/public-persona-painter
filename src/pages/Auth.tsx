@@ -228,10 +228,10 @@ const Auth = () => {
               disabled={loading}
               style={{
                 background: isLogin 
-                  ? "linear-gradient(135deg, #F4C542, #FFD700)" 
+                  ? "linear-gradient(135deg, #2C3E50, #34495E)" 
                   : "linear-gradient(135deg, #0061FF, #00A3FF)",
                 boxShadow: isLogin
-                  ? "0 4px 12px rgba(244, 197, 66, 0.3)"
+                  ? "0 4px 12px rgba(44, 62, 80, 0.3)"
                   : "0 4px 12px rgba(0, 97, 255, 0.25)"
               }}
             >

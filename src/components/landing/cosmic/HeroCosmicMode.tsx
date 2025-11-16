@@ -22,7 +22,7 @@ export const HeroCosmicMode = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
-          {/* Start Trial Button - Transparent */}
+          {/* Blue Button - Start Trial */}
           <motion.div
             whileHover={{ scale: 1.05, y: -4 }}
             whileTap={{ scale: 0.98 }}
@@ -30,7 +30,7 @@ export const HeroCosmicMode = () => {
             <Button
               size="sm"
               onClick={() => navigate("/auth")}
-              className="px-4 py-2 text-xs font-bold rounded-lg relative overflow-hidden group"
+              className="px-4 py-2 text-xs font-bold rounded-lg relative overflow-hidden group transition-all duration-300"
               style={{ 
                 background: "rgba(255, 255, 255, 0.15)",
                 backdropFilter: "blur(8px)",
@@ -38,13 +38,20 @@ export const HeroCosmicMode = () => {
                 color: "white",
                 boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
               }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "linear-gradient(135deg, #0061FF, #00A3FF)";
+                e.currentTarget.style.boxShadow = "0 8px 32px rgba(0, 97, 255, 0.6)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)";
+                e.currentTarget.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.3)";
+              }}
             >
               <span className="relative z-10">Start Free 14-Day Trial →</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             </Button>
           </motion.div>
 
-          {/* Explore Media Button - Transparent */}
+          {/* Gold Button - AI Assistant */}
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.98 }}
@@ -52,8 +59,8 @@ export const HeroCosmicMode = () => {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => navigate("/admin/media-assets")}
-              className="px-4 py-2 text-xs font-bold rounded-lg relative overflow-hidden"
+              onClick={() => navigate("/admin/assistant")}
+              className="px-4 py-2 text-xs font-bold rounded-lg relative overflow-hidden transition-all duration-300"
               style={{ 
                 background: "rgba(255, 255, 255, 0.15)",
                 backdropFilter: "blur(8px)",
@@ -61,12 +68,20 @@ export const HeroCosmicMode = () => {
                 color: "white",
                 boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
               }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "linear-gradient(135deg, #F4C542, #FFD700)";
+                e.currentTarget.style.boxShadow = "0 8px 32px rgba(244, 197, 66, 0.6)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)";
+                e.currentTarget.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.3)";
+              }}
             >
-              Explore Media →
+              AI Assistant →
             </Button>
           </motion.div>
 
-          {/* Explore Platform Button - Transparent */}
+          {/* Mixed Gradient Button - Explore Platform */}
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.98 }}
@@ -75,13 +90,21 @@ export const HeroCosmicMode = () => {
               size="sm"
               variant="outline"
               onClick={() => navigate("/marketplace")}
-              className="px-4 py-2 text-xs font-bold rounded-lg relative overflow-hidden"
+              className="px-4 py-2 text-xs font-bold rounded-lg relative overflow-hidden transition-all duration-300"
               style={{ 
                 background: "rgba(255, 255, 255, 0.15)",
                 backdropFilter: "blur(8px)",
                 border: "2px solid rgba(255, 255, 255, 0.6)",
                 color: "white",
                 boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "linear-gradient(135deg, #0061FF, #F4C542)";
+                e.currentTarget.style.boxShadow = "0 8px 32px rgba(0, 97, 255, 0.4), 0 8px 32px rgba(244, 197, 66, 0.4)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)";
+                e.currentTarget.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.3)";
               }}
             >
               Explore Platform →

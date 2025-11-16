@@ -26,11 +26,12 @@ import {
   formatDate 
 } from "@/utils/plans";
 import { generatePlanCode } from "@/lib/codeGenerator";
-import { ArrowLeft, Calendar as CalendarIcon, Info } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Info, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AssetSelectionTable } from "@/components/plans/AssetSelectionTable";
 import { SelectedAssetsTable } from "@/components/plans/SelectedAssetsTable";
 import { PlanSummaryCard } from "@/components/plans/PlanSummaryCard";
+import { AIVacantAssetsDialog } from "@/components/plans/AIVacantAssetsDialog";
 
 export default function PlanNew() {
   const navigate = useNavigate();
@@ -39,6 +40,7 @@ export default function PlanNew() {
   const [availableAssets, setAvailableAssets] = useState<any[]>([]);
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [assetPricing, setAssetPricing] = useState<Record<string, any>>({});
+  const [showAIRecommendations, setShowAIRecommendations] = useState(false);
   
   const [formData, setFormData] = useState({
     id: "",
@@ -572,11 +574,24 @@ export default function PlanNew() {
           {/* Available Assets - Full Width */}
           <Card className="rounded-2xl shadow-md hover:shadow-lg transition-all duration-200">
             <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/20 dark:to-blue-900/20">
-              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-700 dark:text-slate-200">
-                <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                Available Media Assets
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1.5">Browse and add assets to your plan</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-700 dark:text-slate-200">
+                    <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                    Available Media Assets
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1.5">Browse and add assets to your plan</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAIRecommendations(true)}
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  AI Recommendations
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="pt-6">
               <AssetSelectionTable
@@ -607,6 +622,17 @@ export default function PlanNew() {
             </Button>
           </div>
         </form>
+
+        <AIVacantAssetsDialog
+          open={showAIRecommendations}
+          onClose={() => setShowAIRecommendations(false)}
+          onSelectAssets={(assetIds) => {
+            assetIds.forEach(id => {
+              const asset = availableAssets.find(a => a.id === id);
+              if (asset) toggleAssetSelection(id, asset);
+            });
+          }}
+        />
       </div>
     </div>
   );

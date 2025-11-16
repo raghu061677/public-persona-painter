@@ -126,11 +126,14 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
     setShowPreview(false);
     setIsProcessing(true);
 
+    // Check photo quality for small batches
+    const shouldCheckQuality = files.length <= 4;
+
     try {
       // Step 1: Add watermarks
       toast({
         title: "Processing Images",
-        description: "Adding watermarks and preparing for upload...",
+        description: shouldCheckQuality ? "Adding watermarks and checking quality..." : "Adding watermarks and preparing for upload...",
       });
 
       const watermarkedFiles = await addWatermarkBatch(
@@ -170,6 +173,32 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
           });
         }
       );
+
+      // Run AI quality check on uploaded photos (async, non-blocking)
+      if (shouldCheckQuality && results.length > 0) {
+        setTimeout(async () => {
+          try {
+            for (const result of results) {
+              const { data: qualityData } = await supabase.functions.invoke('ai-photo-quality', {
+                body: { 
+                  photoUrl: result.url,
+                  photoType: result.tag || 'general'
+                }
+              });
+              
+              if (qualityData && !qualityData.passed) {
+                toast({
+                  title: `Photo Quality Warning - ${result.tag || 'photo'}`,
+                  description: `Score: ${qualityData.score}/100. ${qualityData.issues?.join(', ') || 'Quality issues detected'}`,
+                  variant: "destructive",
+                });
+              }
+            }
+          } catch (error) {
+            console.error('Quality check error:', error);
+          }
+        }, 2000);
+      }
 
       // Log activity for each uploaded photo
       for (let i = 0; i < results.length; i++) {

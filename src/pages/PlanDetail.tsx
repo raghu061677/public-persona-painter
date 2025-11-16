@@ -28,7 +28,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Share2, Trash2, Copy, Rocket, MoreVertical, Ban, Activity, ExternalLink, Download, FileText, Plus, X, FileSpreadsheet, FileImage, Save, Wand2, Edit, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Share2, Trash2, Copy, Rocket, MoreVertical, Ban, Activity, ExternalLink, Download, FileText, Plus, X, FileSpreadsheet, FileImage, Save, Wand2, Edit, CheckCircle2, Sparkles } from "lucide-react";
+import { AIProposalGeneratorDialog } from "@/components/plans/AIProposalGeneratorDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -76,6 +77,7 @@ export default function PlanDetail() {
   const [showBulkPrintingDialog, setShowBulkPrintingDialog] = useState(false);
   const [showAddAssetsDialog, setShowAddAssetsDialog] = useState(false);
   const [showSaveAsTemplateDialog, setShowSaveAsTemplateDialog] = useState(false);
+  const [showAIProposalDialog, setShowAIProposalDialog] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [exportingPPT, setExportingPPT] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
@@ -1404,8 +1406,13 @@ export default function PlanDetail() {
           planType={plan.plan_type}
           durationDays={plan.duration_days}
           gstPercent={plan.gst_percent}
-          notes={plan.notes}
           planItems={planItems}
+        />
+
+        <AIProposalGeneratorDialog
+          open={showAIProposalDialog}
+          onClose={() => setShowAIProposalDialog(false)}
+          planId={plan.id}
         />
 
 

@@ -81,6 +81,7 @@ const VendorsManagement = lazy(() => import("./pages/VendorsManagement"));
 const Settings = lazy(() => import("./pages/Settings"));
 const ProfileSettings = lazy(() => import("./pages/ProfileSettings"));
 const ClientPortalAuth = lazy(() => import("./pages/ClientPortalAuth"));
+const MagicLinkAuth = lazy(() => import("./pages/portal/MagicLinkAuth"));
 const OrganizationSettings = lazy(() => import("./pages/OrganizationSettings"));
 const OperationsSettings = lazy(() => import("./pages/OperationsSettings"));
 const Operations = lazy(() => import("./pages/Operations"));
@@ -305,7 +306,8 @@ const App = () => (
             <Route path="/admin/dashboard-builder" element={<AppLayout><DashboardBuilder /></AppLayout>} />
             
             {/* Client Portal Routes */}
-            <Route path="/portal/auth" element={<ClientPortalAuth />} />
+            <Route path="/portal/auth" element={<MagicLinkAuth />} />
+            <Route path="/portal/auth/verify" element={<MagicLinkAuth />} />
             <Route path="/portal" element={<ClientPortalProvider><ClientPortalLayout /></ClientPortalProvider>}>
               <Route path="dashboard" element={<ClientPortalDashboard />} />
               <Route path="proofs" element={<ClientPortalProofs />} />

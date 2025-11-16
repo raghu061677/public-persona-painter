@@ -15,6 +15,8 @@ import {
   Copy,
   GanttChartSquare,
 } from "lucide-react";
+import { LoadingState } from "@/components/ui/loading-state";
+import { StatCard } from "@/components/ui/stat-card";
 import {
   BarChart,
   Bar,
@@ -235,34 +237,39 @@ const Dashboard = () => {
     <>
       {/* <GuidedTour role={userRole} /> */}
       <RoleBasedDashboard role={userRole}>
-        <div className="space-y-6">
+        <div className="space-y-6 animate-fade-in">
           {/* Metric Cards */}
           {shouldShowWidget('revenue') && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4" data-tour="dashboard">
-              <MetricCard
+              <StatCard
                 title="Total Assets"
                 value={metrics.totalAssets}
-                icon={<ClipboardList />}
+                icon={ClipboardList}
+                description="Total inventory"
               />
-              <MetricCard
+              <StatCard
                 title="Active Campaigns"
                 value={metrics.activeCampaigns}
-                icon={<GanttChartSquare />}
+                icon={GanttChartSquare}
+                description="Currently running"
               />
-              <MetricCard
+              <StatCard
                 title="New Leads"
                 value={metrics.leadsThisMonth}
-                icon={<Users />}
+                icon={Users}
+                description="This month"
               />
-              <MetricCard
-                title="Revenue (₹)"
-                value={metrics.revenueThisMonth.toLocaleString()}
-                icon={<IndianRupee />}
+              <StatCard
+                title="Revenue"
+                value={`₹${(metrics.revenueThisMonth / 100000).toFixed(1)}L`}
+                icon={IndianRupee}
+                description="This month"
               />
-              <MetricCard
+              <StatCard
                 title="Pending Tasks"
                 value={metrics.pendingTasks}
-                icon={<FileText />}
+                icon={FileText}
+                description="Require attention"
               />
             </div>
           )}
@@ -291,9 +298,12 @@ const Dashboard = () => {
 
             {/* Revenue Overview Chart */}
             <div className="lg:col-span-4">
-              <Card>
+              <Card className="hover-scale transition-all duration-200">
                 <CardHeader>
-                  <CardTitle>Revenue Overview</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <IndianRupee className="h-5 w-5" />
+                    Revenue Overview
+                  </CardTitle>
                   <CardDescription>
                     Monthly revenue totals for the current year.
                   </CardDescription>
@@ -336,9 +346,12 @@ const Dashboard = () => {
               </Card>
             </div>
             <div className="lg:col-span-12 xl:col-span-4">
-              <Card>
+              <Card className="hover-scale transition-all duration-200">
                 <CardHeader>
-                  <CardTitle>Asset Status</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <ClipboardList className="h-5 w-5" />
+                    Asset Status
+                  </CardTitle>
                   <CardDescription>Distribution of all media assets.</CardDescription>
                 </CardHeader>
                 <CardContent>

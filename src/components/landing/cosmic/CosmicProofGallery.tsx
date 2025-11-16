@@ -1,27 +1,80 @@
 import { motion } from "framer-motion";
 import { MapPin, Maximize2, Download, Share2 } from "lucide-react";
-import billboard1 from "@/assets/billboard-1.png";
-import billboard2 from "@/assets/billboard-2.png";
-import shelter1 from "@/assets/shelter-1.png";
-import shelter2 from "@/assets/shelter-2.png";
-import digital1 from "@/assets/digital-1.png";
-import digital2 from "@/assets/digital-2.png";
-import unipole1 from "@/assets/unipole-1.png";
-import unipole2 from "@/assets/unipole-2.png";
-import unipole3 from "@/assets/unipole-3.png";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
+interface MediaAsset {
+  id: string;
+  image: string;
+  city: string;
+  area: string;
+  dimensions: string;
+  illumination: string | null;
+}
 
 export const CosmicProofGallery = () => {
-  const assets = [
-    { id: "HYD-BB-001", image: billboard1, city: "Hyderabad", area: "Hitech City", dimensions: "40x10 ft", illumination: "LED Backlit" },
-    { id: "HYD-BB-002", image: billboard2, city: "Hyderabad", area: "Gachibowli", dimensions: "40x10 ft", illumination: "LED Backlit" },
-    { id: "HYD-BS-003", image: shelter1, city: "Hyderabad", area: "Jubilee Hills", dimensions: "10x5 ft", illumination: "Solar Powered" },
-    { id: "HYD-BS-004", image: shelter2, city: "Hyderabad", area: "Banjara Hills", dimensions: "10x5 ft", illumination: "Solar Powered" },
-    { id: "HYD-DS-005", image: digital1, city: "Hyderabad", area: "Financial District", dimensions: "20x10 ft", illumination: "Digital LED" },
-    { id: "HYD-DS-006", image: digital2, city: "Hyderabad", area: "Madhapur", dimensions: "20x10 ft", illumination: "Digital LED" },
-    { id: "HYD-UP-007", image: unipole1, city: "Hyderabad", area: "Outer Ring Road", dimensions: "40x20 ft", illumination: "LED Frontlit" },
-    { id: "HYD-UP-008", image: unipole2, city: "Hyderabad", area: "Highway Exit", dimensions: "40x20 ft", illumination: "LED Frontlit" },
-    { id: "HYD-UP-009", image: unipole3, city: "Hyderabad", area: "Airport Road", dimensions: "40x20 ft", illumination: "LED Frontlit" },
-  ];
+  const [assets, setAssets] = useState<MediaAsset[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPublicAssets = async () => {
+      try {
+        const { data: mediaAssets, error: assetsError } = await supabase
+          .from('media_assets')
+          .select('id, city, area, dimensions, illumination, image_urls, images')
+          .eq('is_public', true)
+          .limit(9);
+
+        if (assetsError) throw assetsError;
+
+        const assetsWithPhotos = await Promise.all(
+          (mediaAssets || []).map(async (asset) => {
+            let imageUrl = '/placeholder.svg';
+            
+            // Try to get from image_urls array first
+            if (asset.image_urls && asset.image_urls.length > 0) {
+              imageUrl = asset.image_urls[0];
+            } 
+            // Try legacy images JSON format
+            else if (asset.images && typeof asset.images === 'object') {
+              const imagesObj = asset.images as any;
+              imageUrl = imagesObj.front || imagesObj.back || imagesObj.side || '/placeholder.svg';
+            }
+            // Fallback: fetch from media_photos table
+            else {
+              const { data: photos } = await supabase
+                .from('media_photos')
+                .select('photo_url')
+                .eq('asset_id', asset.id)
+                .limit(1)
+                .single();
+              
+              if (photos?.photo_url) {
+                imageUrl = photos.photo_url;
+              }
+            }
+
+            return {
+              id: asset.id,
+              image: imageUrl,
+              city: asset.city,
+              area: asset.area,
+              dimensions: asset.dimensions,
+              illumination: asset.illumination || 'Standard',
+            };
+          })
+        );
+
+        setAssets(assetsWithPhotos);
+      } catch (error) {
+        console.error('Error fetching public assets:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPublicAssets();
+  }, []);
 
   return (
     <section className="relative py-24 overflow-hidden">
@@ -49,7 +102,25 @@ export const CosmicProofGallery = () => {
 
         {/* Gallery Grid */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {assets.map((asset, index) => (
+          {loading ? (
+            // Loading skeleton
+            Array.from({ length: 9 }).map((_, index) => (
+              <div key={index} className="relative">
+                <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-[20px] overflow-hidden h-[400px] animate-pulse">
+                  <div className="h-64 bg-white/10" />
+                  <div className="p-5">
+                    <div className="h-4 bg-white/10 rounded mb-2" />
+                    <div className="h-4 bg-white/10 rounded w-3/4" />
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : assets.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <p className="text-white/60 text-lg">No public assets available at the moment.</p>
+            </div>
+          ) : (
+            assets.map((asset, index) => (
             <motion.div
               key={asset.id}
               initial={{ opacity: 0, y: 30 }}
@@ -111,7 +182,8 @@ export const CosmicProofGallery = () => {
                 </div>
               </div>
             </motion.div>
-          ))}
+            ))
+          )}
         </div>
 
         {/* View All Button */}

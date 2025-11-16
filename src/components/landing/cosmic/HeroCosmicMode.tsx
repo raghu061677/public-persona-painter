@@ -7,7 +7,7 @@ export const HeroCosmicMode = () => {
   const navigate = useNavigate();
 
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden">
+    <section className="relative h-[70vh] flex items-center overflow-hidden">
       {/* Full-page image carousel background */}
       <HeroImageCarousel />
       

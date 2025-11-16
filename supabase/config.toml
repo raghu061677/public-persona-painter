@@ -17,3 +17,24 @@ verify_jwt = false
 
 [functions.send-power-bill-reminders]
 verify_jwt = false
+
+[functions.ai-assistant]
+verify_jwt = true
+
+[functions.ai-lead-parser]
+verify_jwt = true
+
+[functions.ai-vacant-assets]
+verify_jwt = true
+
+[functions.ai-photo-quality]
+verify_jwt = true
+
+[functions.ai-proposal-generator]
+verify_jwt = true
+
+[functions.generate-invoice-pdf-portal]
+verify_jwt = false
+
+[functions.rate-limiter]
+verify_jwt = false

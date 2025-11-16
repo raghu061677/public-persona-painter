@@ -32,12 +32,11 @@ export const HeroImageCarousel = () => {
       <AnimatePresence mode="wait">
         <motion.div
           key={currentIndex}
-          initial={{ opacity: 0, scale: 1.05 }}
-          animate={{ opacity: 1, scale: 1.1 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ 
-            opacity: { duration: 1 },
-            scale: { duration: 8, ease: "linear" }
+            opacity: { duration: 1 }
           }}
           className="absolute inset-0"
         >

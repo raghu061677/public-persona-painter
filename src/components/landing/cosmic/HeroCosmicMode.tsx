@@ -16,16 +16,16 @@ export const HeroCosmicMode = () => {
       
       {/* Content container - bottom left positioning */}
       <div className="relative z-10 w-full h-full flex items-end">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 md:pb-20 lg:pb-24 w-full">
-          <div className="max-w-3xl">
-            <motion.div className="flex flex-col gap-5 text-left">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 md:pb-10 lg:pb-12 w-full">
+          <div className="max-w-2xl">
+            <motion.div className="flex flex-col gap-4 text-left">
               {/* Motion Text Heading */}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <motion.h1
                   initial={{ opacity: 0, y: 30, letterSpacing: "0.05em" }}
                   animate={{ opacity: 1, y: 0, letterSpacing: "-0.02em" }}
                   transition={{ duration: 0.65, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                  className="text-3xl md:text-4xl lg:text-5xl font-black leading-[1.15]"
+                  className="text-2xl md:text-3xl lg:text-4xl font-black leading-tight"
                   style={{ 
                     color: "rgba(255, 255, 255, 0.98)",
                     textShadow: "0 4px 20px rgba(0, 0, 0, 0.5), 0 2px 10px rgba(0, 0, 0, 0.4)",
@@ -42,7 +42,7 @@ export const HeroCosmicMode = () => {
                     delay: 0.35, 
                     ease: [0.34, 1.56, 0.64, 1]
                   }}
-                  className="text-3xl md:text-4xl lg:text-5xl font-black leading-[1.15]"
+                  className="text-2xl md:text-3xl lg:text-4xl font-black leading-tight"
                   style={{ 
                     color: "#F4C542",
                     textShadow: "0 4px 28px rgba(244, 197, 66, 0.6), 0 2px 14px rgba(0, 0, 0, 0.5)",
@@ -56,8 +56,8 @@ export const HeroCosmicMode = () => {
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.6, delay: 0.5 }}
-                className="text-base md:text-lg leading-relaxed max-w-2xl"
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="text-sm md:text-base leading-relaxed max-w-xl"
                 style={{ 
                   color: "rgba(255, 255, 255, 0.96)",
                   textShadow: "0 3px 16px rgba(0, 0, 0, 0.5), 0 1px 6px rgba(0, 0, 0, 0.4)",
@@ -71,7 +71,7 @@ export const HeroCosmicMode = () => {
 
               {/* CTA Buttons with stagger */}
               <motion.div
-                className="flex flex-col sm:flex-row gap-4 mt-2"
+                className="flex flex-col sm:flex-row gap-3 mt-1"
               >
                 {/* Primary - Blue Gradient */}
                 <motion.div
@@ -84,7 +84,7 @@ export const HeroCosmicMode = () => {
                   <Button
                     size="lg"
                     onClick={() => navigate("/auth")}
-                    className="w-full sm:w-auto px-8 py-6 text-base font-bold rounded-2xl text-white shadow-2xl relative overflow-hidden group"
+                    className="w-full sm:w-auto px-6 py-5 text-sm font-bold rounded-xl text-white shadow-2xl relative overflow-hidden group"
                     style={{ 
                       background: "linear-gradient(135deg, #0061FF, #00A3FF)",
                       boxShadow: "0 8px 32px rgba(0, 97, 255, 0.5), 0 4px 16px rgba(0, 0, 0, 0.3)",
@@ -107,7 +107,7 @@ export const HeroCosmicMode = () => {
                     size="lg"
                     variant="outline"
                     onClick={() => navigate("/marketplace")}
-                    className="w-full sm:w-auto px-8 py-6 text-base font-bold rounded-2xl relative overflow-hidden"
+                    className="w-full sm:w-auto px-6 py-5 text-sm font-bold rounded-xl relative overflow-hidden"
                     style={{ 
                       background: "rgba(255, 255, 255, 0.15)",
                       backdropFilter: "blur(8px)",

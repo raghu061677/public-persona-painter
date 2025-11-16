@@ -6,10 +6,10 @@ import digital1 from "@/assets/digital-1.png";
 
 export const CategoryBrowser = () => {
   const categories = [
-    { name: "Billboards", image: billboard1, description: "Map your prime sites and track bookings over time.", gradient: "from-blue-600 to-cyan-500" },
-    { name: "Bus Shelters", image: shelter1, description: "Handle shorter campaigns with quick photo proofs.", gradient: "from-purple-600 to-pink-500" },
-    { name: "Unipoles", image: unipole1, description: "Highlight high-visibility sites with better rate logic.", gradient: "from-orange-600 to-yellow-500" },
-    { name: "Digital Screens", image: digital1, description: "Show loop durations and proof videos together.", gradient: "from-green-600 to-emerald-500" },
+    { name: "Billboards", image: billboard1, description: "Show premium front-lit and back-lit sites with clear specs and visuals.", gradient: "from-blue-600 to-cyan-500" },
+    { name: "Bus Shelters", image: shelter1, description: "Track shorter campaigns with quick mounting and proof cycles.", gradient: "from-purple-600 to-pink-500" },
+    { name: "Unipoles", image: unipole1, description: "Highlight high-visibility junctions and long-range visibility sites.", gradient: "from-orange-600 to-yellow-500" },
+    { name: "Digital Screens", image: digital1, description: "Manage loops, durations, and proof videos—all in one place.", gradient: "from-green-600 to-emerald-500" },
   ];
 
   return (
@@ -17,8 +17,8 @@ export const CategoryBrowser = () => {
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#001B4A]/10 to-transparent" />
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">Discover Your Next <span className="text-[#FACC15]">High-Impact Media Corridor</span></h2>
-          <p className="text-xl text-white/80 max-w-3xl mx-auto">Start with your existing hoardings, bus shelters, and unipoles. Go-Ads 360° helps you organize, price, and prove every campaign in one place.</p>
+          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">Discover Your <span className="text-[#FFB400]">High-Impact Media Corridors</span></h2>
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">Start with your existing hoardings, bus shelters, unipoles, and digital screens. Go-Ads helps you organize them visually, map them to corridors, and track performance over time.</p>
         </motion.div>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {categories.map((category, index) => (

@@ -222,7 +222,19 @@ const Auth = () => {
                 disabled={loading}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button 
+              type="submit" 
+              className="w-full font-bold" 
+              disabled={loading}
+              style={{
+                background: isLogin 
+                  ? "linear-gradient(135deg, #F4C542, #FFD700)" 
+                  : "linear-gradient(135deg, #0061FF, #00A3FF)",
+                boxShadow: isLogin
+                  ? "0 4px 12px rgba(244, 197, 66, 0.3)"
+                  : "0 4px 12px rgba(0, 97, 255, 0.25)"
+              }}
+            >
               {loading ? "Loading..." : isLogin ? "Login" : "Sign Up"}
             </Button>
           </form>

@@ -16,8 +16,9 @@ export const FinalCTA = () => {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button 
             size="lg"
+            variant="gradient"
             onClick={() => navigate("/auth")}
-            className="text-lg"
+            className="text-lg font-semibold rounded-xl px-8 py-6 shadow-glow"
           >
             Start Free 14-Day Trial (No Card Required) →
           </Button>
@@ -25,7 +26,7 @@ export const FinalCTA = () => {
             size="lg"
             variant="outline"
             onClick={() => navigate("/auth")}
-            className="text-lg"
+            className="text-lg font-medium rounded-xl px-8 py-6"
           >
             Book a Personalized Demo →
           </Button>

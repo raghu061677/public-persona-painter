@@ -23,6 +23,7 @@ export default {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
           glow: "hsl(var(--primary-glow))",
+          hover: "hsl(var(--primary-hover))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -63,11 +64,13 @@ export default {
         'gradient-primary': 'var(--gradient-primary)',
         'gradient-hero': 'var(--gradient-hero)',
         'gradient-subtle': 'var(--gradient-subtle)',
+        'hero-cosmic': 'radial-gradient(circle at 20% 20%, #001B4A 0%, #020617 60%, #000000 100%)',
       },
       boxShadow: {
         'elegant': 'var(--shadow-elegant)',
         'glow': 'var(--shadow-glow)',
         'card': 'var(--shadow-card)',
+        'navbar': 'var(--shadow-navbar)',
       },
       transitionTimingFunction: {
         'smooth': 'var(--transition-smooth)',

@@ -133,6 +133,9 @@ export function PhotoSlideshow({
   if (photos.length === 0) return null;
 
   const currentPhoto = photos[currentIndex];
+  
+  // Safety check: if currentPhoto is undefined, don't render
+  if (!currentPhoto) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

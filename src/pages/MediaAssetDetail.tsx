@@ -34,7 +34,37 @@ export default function MediaAssetDetail() {
       });
       navigate('/admin/media-assets');
     } else {
-      setAsset(data);
+      // Fetch photos from media_photos table
+      const { data: photosData } = await supabase
+        .from('media_photos')
+        .select('*')
+        .eq('asset_id', id)
+        .order('uploaded_at', { ascending: false });
+
+      // Transform photos data to match expected format
+      const photos = photosData?.map(photo => {
+        const metadata = photo.metadata as Record<string, any> | null;
+        return {
+          url: photo.photo_url,
+          tag: photo.category,
+          uploaded_at: photo.uploaded_at,
+          latitude: metadata?.latitude,
+          longitude: metadata?.longitude,
+          validation: {
+            score: metadata?.validation_score,
+            issues: metadata?.validation_issues,
+            suggestions: metadata?.validation_suggestions,
+          },
+        };
+      }) || [];
+
+      // Add photos to asset data
+      setAsset({
+        ...data,
+        images: {
+          photos: photos,
+        },
+      });
     }
     setLoading(false);
   };

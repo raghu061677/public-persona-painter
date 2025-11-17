@@ -113,7 +113,7 @@ const Auth = () => {
         }
       } else {
         const redirectUrl = `${window.location.origin}/`;
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: validation.data.email,
           password: validation.data.password,
           options: {
@@ -138,12 +138,47 @@ const Auth = () => {
               description: error.message,
             });
           }
-        } else {
+        } else if (data.user) {
+          // Auto-create a default company for the new user
+          try {
+            const { data: existingCompany } = await supabase
+              .from('company_users')
+              .select('company_id')
+              .eq('user_id', data.user.id)
+              .single();
+
+            if (!existingCompany) {
+              // Create a default company
+              const { data: newCompany, error: companyError } = await supabase
+                .from('companies')
+                .insert({
+                  name: validation.data.username || validation.data.email.split('@')[0],
+                  type: 'media_owner',
+                  status: 'active',
+                  created_by: data.user.id,
+                })
+                .select()
+                .single();
+
+              if (!companyError && newCompany) {
+                // Link user to company
+                await supabase.from('company_users').insert({
+                  user_id: data.user.id,
+                  company_id: newCompany.id,
+                  role: 'admin',
+                  is_primary: true,
+                });
+              }
+            }
+          } catch (companySetupError) {
+            console.error('Error setting up company:', companySetupError);
+          }
+
           toast({
             title: "Account created!",
-            description: "Welcome to Go-Ads. You can now login.",
+            description: "Welcome to Go-Ads 360°. Redirecting to dashboard...",
           });
-          setIsLogin(true);
+          // Let the auth state change handle the redirect
         }
       }
     } catch (error) {

@@ -1954,7 +1954,7 @@ export type Database = {
           card_rate: number
           category: Database["public"]["Enums"]["media_category"]
           city: string
-          company_id: string | null
+          company_id: string
           concession_fee: number | null
           consumer_name: string | null
           created_at: string | null
@@ -2001,7 +2001,7 @@ export type Database = {
           card_rate: number
           category?: Database["public"]["Enums"]["media_category"]
           city: string
-          company_id?: string | null
+          company_id: string
           concession_fee?: number | null
           consumer_name?: string | null
           created_at?: string | null
@@ -2048,7 +2048,7 @@ export type Database = {
           card_rate?: number
           category?: Database["public"]["Enums"]["media_category"]
           city?: string
-          company_id?: string | null
+          company_id?: string
           concession_fee?: number | null
           consumer_name?: string | null
           created_at?: string | null
@@ -2833,7 +2833,7 @@ export type Database = {
         Row: {
           client_id: string
           client_name: string
-          company_id: string | null
+          company_id: string
           created_at: string | null
           created_by: string
           duration_days: number
@@ -2857,7 +2857,7 @@ export type Database = {
         Insert: {
           client_id: string
           client_name: string
-          company_id?: string | null
+          company_id: string
           created_at?: string | null
           created_by: string
           duration_days: number
@@ -2881,7 +2881,7 @@ export type Database = {
         Update: {
           client_id?: string
           client_name?: string
-          company_id?: string | null
+          company_id?: string
           created_at?: string | null
           created_by?: string
           duration_days?: number

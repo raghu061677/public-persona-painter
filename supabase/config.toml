@@ -44,3 +44,9 @@ verify_jwt = true
 
 [functions.rate-limiter]
 verify_jwt = false
+
+[functions.delete-company]
+verify_jwt = false
+
+[functions.export-company-data]
+verify_jwt = true

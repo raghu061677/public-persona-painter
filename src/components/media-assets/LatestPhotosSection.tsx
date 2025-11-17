@@ -19,6 +19,11 @@ interface MediaPhoto {
   category: string;
   uploaded_at: string;
   campaign_id: string | null;
+  latitude?: number;
+  longitude?: number;
+  validation_score?: number;
+  validation_issues?: string[];
+  validation_suggestions?: string[];
 }
 
 export function LatestPhotosSection({ assetId, asset }: LatestPhotosSectionProps) {
@@ -28,19 +33,29 @@ export function LatestPhotosSection({ assetId, asset }: LatestPhotosSectionProps
 
   useEffect(() => {
     loadLatestPhotos();
-  }, [assetId]);
+  }, [assetId, asset]);
 
   const loadLatestPhotos = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('media_photos')
-        .select('id, photo_url, category, uploaded_at, campaign_id')
-        .eq('asset_id', assetId)
-        .order('uploaded_at', { ascending: false });
-
-      if (error) throw error;
-      setPhotos(data || []);
+      // Load photos from the asset's images.photos field
+      if (asset?.images?.photos && Array.isArray(asset.images.photos)) {
+        const transformedPhotos = asset.images.photos.map((photo: any, index: number) => ({
+          id: `${assetId}-${index}`,
+          photo_url: photo.url,
+          category: photo.tag || 'Other Photo',
+          uploaded_at: photo.uploaded_at || new Date().toISOString(),
+          campaign_id: null,
+          latitude: photo.latitude,
+          longitude: photo.longitude,
+          validation_score: photo.validation?.score,
+          validation_issues: photo.validation?.issues,
+          validation_suggestions: photo.validation?.suggestions,
+        }));
+        setPhotos(transformedPhotos);
+      } else {
+        setPhotos([]);
+      }
     } catch (error) {
       console.error('Error loading photos:', error);
     } finally {
@@ -130,58 +145,19 @@ export function LatestPhotosSection({ assetId, asset }: LatestPhotosSectionProps
           )}
         </CardHeader>
         <CardContent>
-          {photos.length === 0 ? (
-            <div className="text-center py-8">
-              <Camera className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-              <p className="text-muted-foreground">No photos uploaded yet</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {photos.map((photo, index) => (
-                <div
-                  key={photo.id}
-                  className="relative group cursor-pointer"
-                  onClick={() => handlePhotoClick(index)}
-                >
-                  <div className="aspect-square overflow-hidden rounded-lg bg-muted">
-                    <img
-                      src={photo.photo_url}
-                      alt={photo.category}
-                      className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300"
-                    />
-                  </div>
-                  <div className="absolute top-2 right-2">
-                    <Badge className={getCategoryColor(photo.category)}>
-                      {photo.category}
-                    </Badge>
-                  </div>
-                  <div className="mt-2">
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(photo.uploaded_at), 'PP')}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <UnifiedPhotoGallery
+            photos={photos}
+            onPhotoDeleted={loadLatestPhotos}
+            canDelete={false}
+            bucket="media-assets"
+            title=""
+            assetData={assetInfo ? {
+              asset_id: assetId,
+              ...assetInfo
+            } : undefined}
+          />
         </CardContent>
       </Card>
-
-      <PhotoLightbox
-        photos={photos}
-        initialIndex={selectedPhotoIndex}
-        isOpen={lightboxOpen}
-        onClose={() => setLightboxOpen(false)}
-        assetData={asset ? {
-          location: asset.location,
-          direction: asset.direction,
-          dimension: asset.dimension,
-          total_sqft: asset.total_sqft,
-          illumination: asset.illumination,
-          city: asset.city,
-          area: asset.area,
-        } : undefined}
-      />
     </>
   );
 }

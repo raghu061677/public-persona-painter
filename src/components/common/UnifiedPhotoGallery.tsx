@@ -320,31 +320,31 @@ export function UnifiedPhotoGallery({
                 </div>
                 
                 {/* Asset Information Overlay */}
-                {assetInfo && (
+                {assetData && (
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="text-white space-y-1 text-xs">
                       <div>
-                        <span className="font-semibold">Location:</span> {assetInfo.city} - {assetInfo.area}
+                        <span className="font-semibold">Location:</span> {assetData.city} - {assetData.area}
                       </div>
-                      <div className="text-[10px] opacity-90">{assetInfo.location}</div>
+                      <div className="text-[10px] opacity-90">{assetData.location}</div>
                       <div className="flex gap-3 mt-1">
                         <div>
-                          <span className="font-semibold">Size:</span> {assetInfo.dimensions}
+                          <span className="font-semibold">Size:</span> {assetData.dimension}
                         </div>
-                        {assetInfo.direction && (
+                        {assetData.direction && (
                           <div>
-                            <span className="font-semibold">Direction:</span> {assetInfo.direction}
+                            <span className="font-semibold">Direction:</span> {assetData.direction}
                           </div>
                         )}
                       </div>
-                      {assetInfo.illumination && (
+                      {assetData.illumination && (
                         <div>
-                          <span className="font-semibold">Lighting:</span> {assetInfo.illumination}
+                          <span className="font-semibold">Lighting:</span> {assetData.illumination}
                         </div>
                       )}
-                      {assetInfo.total_sqft && (
+                      {assetData.total_sqft && (
                         <div>
-                          <span className="font-semibold">Total Area:</span> {assetInfo.total_sqft} sq.ft
+                          <span className="font-semibold">Total Area:</span> {assetData.total_sqft} sq.ft
                         </div>
                       )}
                     </div>

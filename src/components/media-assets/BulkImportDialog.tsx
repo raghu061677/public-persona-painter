@@ -62,6 +62,34 @@ export function BulkImportDialog({ open, onOpenChange, onSuccess }: BulkImportDi
       setProgress(0);
       setResults(null);
 
+      // Get current user's company_id
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to import assets",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!companyUser) {
+        toast({
+          title: "Error",
+          description: "Company not found for user",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -82,7 +110,7 @@ export function BulkImportDialog({ open, onOpenChange, onSuccess }: BulkImportDi
           }
 
           // Insert asset
-          const { error } = await supabase.from('media_assets').insert({
+          const { error } = await supabase.from('media_assets').insert([{
             id: row.id,
             city: row.city,
             area: row.area,
@@ -98,7 +126,8 @@ export function BulkImportDialog({ open, onOpenChange, onSuccess }: BulkImportDi
             mounting_charges: row.mounting_charges || 0,
             status: row.status || 'Available',
             is_public: row.is_public ?? true,
-          });
+            company_id: companyUser.company_id,
+          }]);
 
           if (error) {
             errors.push({ row: i + 2, id: row.id, error: error.message });

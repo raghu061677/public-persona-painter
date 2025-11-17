@@ -129,6 +129,23 @@ export default function MediaAssetsImport() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Get user's company_id
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!companyUser) {
+        toast({
+          title: "Error",
+          description: "Company not found for user",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       addLog('Parsing Excel file...');
       const rows = await parseExcelFile(file);
       addLog(`Found ${rows.length} rows in Excel file`);
@@ -204,9 +221,10 @@ export default function MediaAssetsImport() {
             is_public: row.isPublic !== false,
             search_tokens,
             created_by: user.id,
+            company_id: companyUser.company_id,
           };
 
-          const { error } = await supabase.from('media_assets').insert(insertData);
+          const { error } = await supabase.from('media_assets').insert([insertData]);
 
           if (error) {
             addLog(`Row ${i + 1}: Failed - ${error.message}`);

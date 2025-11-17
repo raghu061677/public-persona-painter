@@ -140,13 +140,6 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "ai_assistant_logs_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "public_media_assets_safe"
-            referencedColumns: ["company_id"]
-          },
         ]
       }
       alert_settings: {
@@ -719,25 +712,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "booking_requests_owner_company_id_fkey"
-            columns: ["owner_company_id"]
-            isOneToOne: false
-            referencedRelation: "public_media_assets_safe"
-            referencedColumns: ["company_id"]
-          },
-          {
             foreignKeyName: "booking_requests_requester_company_id_fkey"
             columns: ["requester_company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "booking_requests_requester_company_id_fkey"
-            columns: ["requester_company_id"]
-            isOneToOne: false
-            referencedRelation: "public_media_assets_safe"
-            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -998,13 +977,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "campaigns_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "public_media_assets_safe"
-            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "campaigns_plan_id_fkey"
@@ -1294,13 +1266,6 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "clients_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "public_media_assets_safe"
-            referencedColumns: ["company_id"]
-          },
         ]
       }
       code_counters: {
@@ -1450,13 +1415,6 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "company_users_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "public_media_assets_safe"
-            referencedColumns: ["company_id"]
-          },
         ]
       }
       dashboard_configurations: {
@@ -1498,13 +1456,6 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "dashboard_configurations_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "public_media_assets_safe"
-            referencedColumns: ["company_id"]
-          },
         ]
       }
       default_role_settings: {
@@ -1545,13 +1496,6 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "companies"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "default_role_settings_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: true
-            referencedRelation: "public_media_assets_safe"
-            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -1666,13 +1610,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "estimations_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "public_media_assets_safe"
-            referencedColumns: ["company_id"]
-          },
-          {
             foreignKeyName: "estimations_plan_id_fkey"
             columns: ["plan_id"]
             isOneToOne: false
@@ -1760,13 +1697,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "expenses_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "public_media_assets_safe"
-            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -1888,13 +1818,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invoices_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "public_media_assets_safe"
-            referencedColumns: ["company_id"]
-          },
-          {
             foreignKeyName: "invoices_estimation_id_fkey"
             columns: ["estimation_id"]
             isOneToOne: false
@@ -1965,13 +1888,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "leads_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "public_media_assets_safe"
-            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -2124,13 +2040,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "media_assets_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "public_media_assets_safe"
-            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -2948,25 +2857,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "plans_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "public_media_assets_safe"
-            referencedColumns: ["company_id"]
-          },
-          {
             foreignKeyName: "plans_owner_company_id_fkey"
             columns: ["owner_company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "plans_owner_company_id_fkey"
-            columns: ["owner_company_id"]
-            isOneToOne: false
-            referencedRelation: "public_media_assets_safe"
-            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -3559,13 +3454,6 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "watermark_settings_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: true
-            referencedRelation: "public_media_assets_safe"
-            referencedColumns: ["company_id"]
-          },
         ]
       }
       whatsapp_logs: {
@@ -3650,6 +3538,7 @@ export type Database = {
       public_media_assets_safe: {
         Row: {
           area: string | null
+          card_rate: number | null
           category: Database["public"]["Enums"]["media_category"] | null
           city: string | null
           company_city: string | null
@@ -3673,7 +3562,15 @@ export type Database = {
           status: Database["public"]["Enums"]["media_asset_status"] | null
           total_sqft: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "media_assets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {

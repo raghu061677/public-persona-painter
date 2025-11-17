@@ -114,14 +114,16 @@ export function PhotoSlideshow({
     setIsFullscreen(false);
   };
 
-  const getTagColor = (tag: string) => {
+  const getTagColor = (tag: string | undefined | null) => {
+    if (!tag) return "bg-gray-500";
     if (tag.includes("Traffic")) return "bg-blue-500";
     if (tag.includes("Newspaper")) return "bg-purple-500";
     if (tag.includes("Geo")) return "bg-green-500";
     return "bg-gray-500";
   };
 
-  const getTagIcon = (tag: string) => {
+  const getTagIcon = (tag: string | undefined | null) => {
+    if (!tag) return "📷";
     if (tag.includes("Traffic")) return "🚗";
     if (tag.includes("Newspaper")) return "📰";
     if (tag.includes("Geo")) return "📍";

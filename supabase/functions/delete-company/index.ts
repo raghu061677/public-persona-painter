@@ -20,18 +20,40 @@ serve(async (req) => {
     const { companyId } = await req.json();
 
     if (!companyId) {
-      throw new Error('Company ID is required');
+      return new Response(
+        JSON.stringify({ error: 'Company ID is required' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
     }
 
     // Check if it's a platform_admin company
-    const { data: company } = await supabaseClient
+    const { data: company, error: companyError } = await supabaseClient
       .from('companies')
       .select('type')
       .eq('id', companyId)
       .single();
 
+    if (companyError) {
+      return new Response(
+        JSON.stringify({ error: `Company not found: ${companyError.message}` }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404,
+        }
+      );
+    }
+
     if (company?.type === 'platform_admin') {
-      throw new Error('Cannot delete platform admin company');
+      return new Response(
+        JSON.stringify({ error: 'Cannot delete platform admin company' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 403,
+        }
+      );
     }
 
     // Delete all related data in order
@@ -53,19 +75,28 @@ serve(async (req) => {
       .delete()
       .eq('id', companyId);
 
-    if (error) throw error;
+    if (error) {
+      return new Response(
+        JSON.stringify({ error: `Failed to delete company: ${error.message}` }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
+    }
 
     return new Response(
       JSON.stringify({ success: true, message: 'Company and all related data deleted successfully' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Delete company error:', errorMessage);
     return new Response(
       JSON.stringify({ error: errorMessage }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 500,
       }
     );
   }

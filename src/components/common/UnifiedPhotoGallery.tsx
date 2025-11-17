@@ -294,7 +294,7 @@ export function UnifiedPhotoGallery({
                   loading="lazy"
                 />
                 
-                {/* Overlay with badges */}
+                {/* Overlay with badges and asset info */}
                 <div className="absolute top-2 left-2 right-2 flex flex-wrap gap-1">
                   <Badge className={`${getTagColor(photo.category)} border`}>
                     <span className="mr-1">{getTagIcon(photo.category)}</span>
@@ -318,6 +318,38 @@ export function UnifiedPhotoGallery({
                     </TooltipProvider>
                   )}
                 </div>
+                
+                {/* Asset Information Overlay */}
+                {assetInfo && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="text-white space-y-1 text-xs">
+                      <div>
+                        <span className="font-semibold">Location:</span> {assetInfo.city} - {assetInfo.area}
+                      </div>
+                      <div className="text-[10px] opacity-90">{assetInfo.location}</div>
+                      <div className="flex gap-3 mt-1">
+                        <div>
+                          <span className="font-semibold">Size:</span> {assetInfo.dimensions}
+                        </div>
+                        {assetInfo.direction && (
+                          <div>
+                            <span className="font-semibold">Direction:</span> {assetInfo.direction}
+                          </div>
+                        )}
+                      </div>
+                      {assetInfo.illumination && (
+                        <div>
+                          <span className="font-semibold">Lighting:</span> {assetInfo.illumination}
+                        </div>
+                      )}
+                      {assetInfo.total_sqft && (
+                        <div>
+                          <span className="font-semibold">Total Area:</span> {assetInfo.total_sqft} sq.ft
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Action buttons */}
                 <div className="absolute bottom-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

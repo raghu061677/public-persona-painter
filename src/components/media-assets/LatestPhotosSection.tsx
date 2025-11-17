@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Camera, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { PhotoLightbox } from "./PhotoLightbox";
+import { UnifiedPhotoGallery } from "@/components/common/UnifiedPhotoGallery";
 
 interface LatestPhotosSectionProps {
   assetId: string;
@@ -24,8 +24,6 @@ interface MediaPhoto {
 export function LatestPhotosSection({ assetId, asset }: LatestPhotosSectionProps) {
   const [photos, setPhotos] = useState<MediaPhoto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -39,8 +37,7 @@ export function LatestPhotosSection({ assetId, asset }: LatestPhotosSectionProps
         .from('media_photos')
         .select('id, photo_url, category, uploaded_at, campaign_id')
         .eq('asset_id', assetId)
-        .order('uploaded_at', { ascending: false })
-        .limit(3);
+        .order('uploaded_at', { ascending: false });
 
       if (error) throw error;
       setPhotos(data || []);
@@ -49,22 +46,6 @@ export function LatestPhotosSection({ assetId, asset }: LatestPhotosSectionProps
     } finally {
       setLoading(false);
     }
-  };
-
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      Mounting: "bg-blue-500",
-      Display: "bg-green-500",
-      Proof: "bg-purple-500",
-      Monitoring: "bg-orange-500",
-      General: "bg-gray-500",
-    };
-    return colors[category] || "bg-gray-500";
-  };
-
-  const handlePhotoClick = (index: number) => {
-    setSelectedPhotoIndex(index);
-    setLightboxOpen(true);
   };
 
   if (loading) {
@@ -83,6 +64,17 @@ export function LatestPhotosSection({ assetId, asset }: LatestPhotosSectionProps
     );
   }
 
+  // Format asset info for UnifiedPhotoGallery
+  const assetInfo = asset ? {
+    city: asset.city,
+    area: asset.area,
+    location: asset.location,
+    dimensions: asset.dimensions,
+    direction: asset.direction,
+    illumination: asset.illumination,
+    total_sqft: asset.total_sqft
+  } : null;
+
   return (
     <>
       <Card>
@@ -90,14 +82,14 @@ export function LatestPhotosSection({ assetId, asset }: LatestPhotosSectionProps
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Camera className="h-5 w-5" />
-              Latest Photos
+              All Photos
             </CardTitle>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate(`/admin/gallery?asset=${assetId}`)}
             >
-              View All
+              View in Gallery
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>

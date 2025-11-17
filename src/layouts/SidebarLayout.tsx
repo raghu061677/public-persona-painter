@@ -54,16 +54,41 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         {/* Header */}
         <div className="flex items-center justify-between h-14 px-4 border-b border-border/40">
           {!collapsed && (
-            <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-foreground">Go-Ads 360°</span>
+            <div className="flex items-center gap-3">
+              {company?.logo_url ? (
+                <img 
+                  src={company.logo_url} 
+                  alt={company.name}
+                  className="h-8 w-auto object-contain max-w-[120px] rounded"
+                />
+              ) : (
+                <>
+                  <Shield className="h-5 w-5 text-primary" />
+                  <span className="font-semibold text-foreground">
+                    {company?.name || 'Go-Ads 360°'}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+          {collapsed && (
+            <div className="mx-auto">
+              {company?.logo_url ? (
+                <img 
+                  src={company.logo_url} 
+                  alt={company.name}
+                  className="h-8 w-8 object-contain rounded"
+                />
+              ) : (
+                <Shield className="h-5 w-5 text-primary" />
+              )}
             </div>
           )}
           <Button
             variant="ghost"
             size="icon"
             onClick={toggle}
-            className={cn("h-8 w-8", collapsed && "mx-auto")}
+            className={cn("h-8 w-8", !collapsed && "ml-auto")}
           >
             <Menu className="h-4 w-4" />
           </Button>

@@ -6,13 +6,7 @@ import { Button } from '@/components/ui/button';
 import { LogOut, Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { toast } from '@/hooks/use-toast';
-
-interface CompanyBranding {
-  name: string;
-  logo_url: string | null;
-  theme_color: string;
-  secondary_color: string;
-}
+import { CompanyBranding, applyCompanyBranding, getCompanyLogo, getCompanyName } from '@/lib/branding';
 
 export function ClientPortalLayout() {
   const { signOut, portalUser, loading } = useClientPortal();
@@ -41,65 +35,11 @@ export function ClientPortalLayout() {
 
       if (data) {
         setBranding(data);
-        applyBranding(data);
+        applyCompanyBranding(data);
       }
     } catch (error) {
       console.error('Error loading branding:', error);
     }
-  };
-
-  const applyBranding = (brandingData: CompanyBranding) => {
-    const root = document.documentElement;
-    
-    if (brandingData.theme_color) {
-      const hsl = hexToHSL(brandingData.theme_color);
-      if (hsl) {
-        root.style.setProperty('--primary', hsl);
-      }
-    }
-    
-    if (brandingData.secondary_color) {
-      const hsl = hexToHSL(brandingData.secondary_color);
-      if (hsl) {
-        root.style.setProperty('--secondary', hsl);
-      }
-    }
-  };
-
-  const hexToHSL = (hex: string): string | null => {
-    hex = hex.replace(/^#/, '');
-    const r = parseInt(hex.substring(0, 2), 16) / 255;
-    const g = parseInt(hex.substring(2, 4), 16) / 255;
-    const b = parseInt(hex.substring(4, 6), 16) / 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    let h = 0;
-    let s = 0;
-    const l = (max + min) / 2;
-
-    if (max !== min) {
-      const d = max - min;
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-
-      switch (max) {
-        case r:
-          h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-          break;
-        case g:
-          h = ((b - r) / d + 2) / 6;
-          break;
-        case b:
-          h = ((r - g) / d + 4) / 6;
-          break;
-      }
-    }
-
-    h = Math.round(h * 360);
-    s = Math.round(s * 100);
-    const lPercent = Math.round(l * 100);
-
-    return `${h} ${s}% ${lPercent}%`;
   };
 
   const handleSignOut = async () => {

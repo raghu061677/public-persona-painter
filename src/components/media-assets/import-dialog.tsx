@@ -29,6 +29,34 @@ export function ImportDialog({ onImportComplete }: ImportDialogProps) {
     setIsImporting(true);
 
     try {
+      // Get current user's company_id
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to import assets",
+          variant: "destructive",
+        });
+        setIsImporting(false);
+        return;
+      }
+
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!companyUser) {
+        toast({
+          title: "Error",
+          description: "Company not found for user",
+          variant: "destructive",
+        });
+        setIsImporting(false);
+        return;
+      }
+
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       const sheetName = workbook.SheetNames[0];
@@ -83,6 +111,7 @@ export function ImportDialog({ onImportComplete }: ImportDialogProps) {
             ownership: row.ownership || row.Ownership || 'own',
             printing_charges: parseNumeric(row.printing_charges || row['Printing Charges'], 0),
             mounting_charges: parseNumeric(row.mounting_charges || row['Mounting Charges'], 0),
+            company_id: companyUser.company_id,
           };
 
           // Remove null/undefined values to prevent database errors
@@ -130,7 +159,7 @@ export function ImportDialog({ onImportComplete }: ImportDialogProps) {
           // Insert only if it doesn't exist
           const { error } = await supabase
             .from('media_assets')
-            .insert(asset);
+            .insert([asset]);
 
           if (error) {
             errorDetails.push(`Row ${rowNum} (${asset.id}): ${error.message}`);

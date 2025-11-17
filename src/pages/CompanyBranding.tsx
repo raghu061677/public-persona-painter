@@ -1,14 +1,17 @@
 import { useState, useEffect } from "react";
 import { useCompany } from "@/contexts/CompanyContext";
 import { supabase } from "@/integrations/supabase/client";
+import { storage } from "@/lib/supabase-wrapper";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Palette } from "lucide-react";
+import { Upload, Palette, Eye, Loader2 } from "lucide-react";
 import { SettingsCard, SettingsContentWrapper, SectionHeader, InputRow, TwoColumnRow } from "@/components/settings/zoho-style";
 import { ClientPortalPreview } from "@/components/settings/ClientPortalPreview";
 import { WatermarkCustomizer } from "@/components/settings/WatermarkCustomizer";
+import { CompanyLogo } from "@/components/branding/CompanyLogo";
+import { applyCompanyBranding, hexToHSL } from "@/lib/branding";
 
 export default function CompanyBranding() {
   const { company, refreshCompany } = useCompany();
@@ -30,12 +33,38 @@ export default function CompanyBranding() {
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate file size (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Logo must be under 2MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       setLogoFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setLogoPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePreview = () => {
+    if (company) {
+      applyCompanyBranding({
+        name: company.name,
+        logo_url: logoPreview,
+        theme_color: primaryColor,
+        secondary_color: secondaryColor,
+      });
+      
+      toast({
+        title: 'Preview Applied',
+        description: 'Check the sidebar and interface for live preview',
+      });
     }
   };
 
@@ -84,9 +113,13 @@ export default function CompanyBranding() {
         description: "Your company branding has been saved successfully",
       });
 
-      // Apply colors immediately
-      document.documentElement.style.setProperty('--primary', hexToHSL(primaryColor));
-      document.documentElement.style.setProperty('--secondary', hexToHSL(secondaryColor));
+      // Apply colors immediately for live preview
+      applyCompanyBranding({
+        name: company.name,
+        logo_url: logoUrl,
+        theme_color: primaryColor,
+        secondary_color: secondaryColor,
+      });
 
     } catch (error: any) {
       console.error("Error updating branding:", error);
@@ -100,32 +133,6 @@ export default function CompanyBranding() {
     }
   };
 
-  const hexToHSL = (hex: string): string => {
-    hex = hex.replace(/^#/, '');
-    const r = parseInt(hex.substring(0, 2), 16) / 255;
-    const g = parseInt(hex.substring(2, 4), 16) / 255;
-    const b = parseInt(hex.substring(4, 6), 16) / 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    let h = 0;
-    let s = 0;
-    const l = (max + min) / 2;
-
-    if (max !== min) {
-      const d = max - min;
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-
-      switch (max) {
-        case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-        case g: h = ((b - r) / d + 2) / 6; break;
-        case b: h = ((r - g) / d + 4) / 6; break;
-      }
-    }
-
-    return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
-  };
-
   return (
     <SettingsContentWrapper>
       <SectionHeader
@@ -137,18 +144,27 @@ export default function CompanyBranding() {
         title="Logo & Colors"
         description="Upload your logo and choose your brand colors"
       >
-        <InputRow label="Organization Logo" description="Recommended size: 200x60px">
-          <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center min-h-[160px]">
-            {logoPreview ? (
-              <img src={logoPreview} alt="Logo preview" className="max-h-24 object-contain mb-4" />
-            ) : (
-              <Upload className="h-12 w-12 text-muted-foreground mb-4" />
-            )}
+        <InputRow label="Organization Logo" description="Recommended size: 200x60px (PNG, SVG, or JPG). Max 2MB">
+          <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center min-h-[160px] hover:border-primary/50 transition-colors">
+            <div className="mb-4 flex items-center justify-center w-32 h-24 bg-muted rounded">
+              {logoPreview ? (
+                <img src={logoPreview} alt="Logo preview" className="max-w-full max-h-full object-contain p-2" />
+              ) : (
+                <CompanyLogo logoUrl={null} companyName={company?.name} size="lg" />
+              )}
+            </div>
+            <Label htmlFor="logo-upload" className="cursor-pointer">
+              <div className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
+                <Upload className="h-4 w-4" />
+                <span>Upload Logo</span>
+              </div>
+            </Label>
             <Input
+              id="logo-upload"
               type="file"
               accept="image/*"
               onChange={handleLogoChange}
-              className="max-w-xs"
+              className="hidden"
             />
           </div>
         </InputRow>

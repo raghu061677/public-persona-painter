@@ -102,6 +102,7 @@ const CompaniesManagement = lazy(() => import("./pages/CompaniesManagement"));
 const CompanySettings = lazy(() => import("./pages/CompanySettings"));
 const CompanyProfile = lazy(() => import("./pages/CompanyProfile"));
 const CompanyBranding = lazy(() => import("./pages/CompanyBranding"));
+const BrandingSettings = lazy(() => import("./pages/BrandingSettings"));
 const CompanyTaxes = lazy(() => import("./pages/CompanyTaxes"));
 const CompanyReminders = lazy(() => import("./pages/CompanyReminders"));
 const CompanyClientPortal = lazy(() => import("./pages/CompanyClientPortal"));

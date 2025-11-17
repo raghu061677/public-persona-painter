@@ -63,7 +63,7 @@ All colors MUST be HSL.
     --base-font-size: 16px;
     
     /* Super Premium Light Mode (Default) */
-    --background: 220 100% 99%; /* #F8FAFF Ultra Light Sky */
+    --background: 0 0% 100%; /* Pure White */
     --foreground: 0 0% 10%; /* #1a1a1a Deep Charcoal */
 
     --card: 0 0% 100%; /* Pure White */
@@ -104,9 +104,9 @@ All colors MUST be HSL.
 
     /* Custom design tokens - Ultra Cosmic V4 Light */
     --gradient-primary: linear-gradient(135deg, #0064E0, #00A5FF);
-    --gradient-hero: linear-gradient(145deg, #E9F4FF, #FFFFFF);
+    --gradient-hero: linear-gradient(145deg, #FFFFFF, #FFFFFF);
     --gradient-cta: linear-gradient(135deg, #0263D8, #00A5FF);
-    --gradient-subtle: linear-gradient(180deg, #F8FBFF, #EAF3FF);
+    --gradient-subtle: linear-gradient(180deg, #FFFFFF, #FAFAFA);
     
     --shadow-elegant: 0 2px 16px rgba(0, 0, 0, 0.06);
     --shadow-glow: 0 0 30px rgba(0, 100, 224, 0.25);

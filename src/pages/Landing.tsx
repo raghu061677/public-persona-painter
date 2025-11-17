@@ -55,10 +55,18 @@ const Landing = () => {
                 onClick={() => navigate("/marketplace")} 
                 className="text-foreground/70 hover:text-foreground font-medium transition-all duration-300 relative group"
               >
-                Marketplace
+                Explore Media
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F4C542] group-hover:w-full transition-all duration-300" />
               </button>
               <DarkModeToggle />
+              <Button
+                onClick={() => navigate("/auth")}
+                size="sm"
+                variant="outline"
+                className="font-medium rounded-xl px-6"
+              >
+                Sign In
+              </Button>
               <Button
                 onClick={() => navigate("/auth")}
                 size="sm"

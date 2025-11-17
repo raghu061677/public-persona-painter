@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { AnimatedSidebar } from "@/components/media-assets/control-center/AnimatedSidebar";
@@ -14,6 +14,7 @@ import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { GodModeHUD } from "@/components/media-assets/god-mode/GodModeHUD";
+import { debounce } from "@/lib/performance";
 
 export default function MediaAssetsControlCenter() {
   const navigate = useNavigate();
@@ -77,13 +78,15 @@ export default function MediaAssetsControlCenter() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [currentView, isPanelOpen]);
 
-  const fetchAssets = async () => {
+  const fetchAssets = useCallback(async () => {
     setLoading(true);
     
+    // Optimized query - select only needed fields for list view
     const { data: assetsData, error: assetsError } = await supabase
       .from('media_assets')
-      .select('*')
-      .order('id', { ascending: true });
+      .select('id, city, area, location, media_type, status, card_rate, dimensions, latitude, longitude, illumination, created_at, image_urls, images')
+      .order('id', { ascending: true })
+      .limit(1000);
 
     if (assetsError) {
       toast({
@@ -130,55 +133,56 @@ export default function MediaAssetsControlCenter() {
 
     setAssets(enrichedAssets);
     setLoading(false);
-  };
+  }, []);
 
-  const applyTheme = (theme: ThemeMode) => {
+  const applyTheme = useCallback((theme: ThemeMode) => {
     const root = document.documentElement;
     root.classList.remove("light", "dark", "classic", "modern");
     root.classList.add(theme);
     localStorage.setItem("media-assets-theme", theme);
-  };
+  }, []);
 
-  const handleThemeChange = (theme: ThemeMode) => {
+  const handleThemeChange = useCallback((theme: ThemeMode) => {
     setCurrentTheme(theme);
     applyTheme(theme);
-  };
+  }, [applyTheme]);
 
-  const filteredAssets = assets.filter((asset) => {
-    if (!searchQuery) return true;
+  // Memoized filtered assets for performance
+  const filteredAssets = useMemo(() => {
+    if (!searchQuery) return assets;
     const query = searchQuery.toLowerCase();
-    return (
+    return assets.filter((asset) => 
       asset.id?.toLowerCase().includes(query) ||
       asset.location?.toLowerCase().includes(query) ||
       asset.area?.toLowerCase().includes(query) ||
       asset.city?.toLowerCase().includes(query) ||
       asset.media_type?.toLowerCase().includes(query)
     );
-  });
+  }, [assets, searchQuery]);
 
-  // Calculate stats
-  const totalAssets = filteredAssets.length;
-  const availableAssets = filteredAssets.filter(a => a.status === 'Available').length;
-  const bookedAssets = filteredAssets.filter(a => a.status === 'Booked').length;
-  const uniqueCities = new Set(filteredAssets.map(a => a.city).filter(Boolean)).size;
-  const litAssets = filteredAssets.filter(a => a.illumination === 'Lit').length;
-  const totalValue = filteredAssets.reduce((sum, a) => sum + (Number(a.card_rate) || 0), 0);
-  
-  // Calculate new this month (mock data for now)
-  const newThisMonth = 0;
+  // Memoized statistics calculation
+  const stats = useMemo(() => ({
+    totalAssets: filteredAssets.length,
+    availableAssets: filteredAssets.filter(a => a.status === 'Available').length,
+    bookedAssets: filteredAssets.filter(a => a.status === 'Booked').length,
+    uniqueCities: new Set(filteredAssets.map(a => a.city).filter(Boolean)).size,
+    litAssets: filteredAssets.filter(a => a.illumination === 'Lit').length,
+    totalValue: filteredAssets.reduce((sum, a) => sum + (Number(a.card_rate) || 0), 0),
+    newThisMonth: 0,
+  }), [filteredAssets]);
 
-  const handleSelectAsset = (id: string) => {
+  const handleSelectAsset = useCallback((id: string) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
-  };
+  }, []);
 
-  const handleViewDetails = (asset: any) => {
+  const handleViewDetails = useCallback((asset: any) => {
     setSelectedAsset(asset);
     setIsPanelOpen(true);
-  };
+  }, []);
 
-  const handleAddToPlan = (asset: any) => {
+  const handleAddToPlan = useCallback((asset: any) => {
     setSelectedIds((prev) =>
       prev.includes(asset.id) ? prev : [...prev, asset.id]
     );
@@ -186,9 +190,12 @@ export default function MediaAssetsControlCenter() {
       title: "Asset added",
       description: `${asset.id} added to plan builder`,
     });
-  };
+  }, []);
 
-  const selectedAssetObjects = assets.filter((a) => selectedIds.includes(a.id));
+  const selectedAssetObjects = useMemo(
+    () => assets.filter((a) => selectedIds.includes(a.id)),
+    [assets, selectedIds]
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -216,13 +223,13 @@ export default function MediaAssetsControlCenter() {
             <div className="h-full overflow-auto pr-6 py-1 space-y-2">
               {/* Summary Cards */}
               <SummaryCards
-                totalAssets={totalAssets}
-                availableAssets={availableAssets}
-                bookedAssets={bookedAssets}
-                uniqueCities={uniqueCities}
-                litAssets={litAssets}
-                newThisMonth={newThisMonth}
-                totalValue={totalValue}
+                totalAssets={stats.totalAssets}
+                availableAssets={stats.availableAssets}
+                bookedAssets={stats.bookedAssets}
+                uniqueCities={stats.uniqueCities}
+                litAssets={stats.litAssets}
+                newThisMonth={stats.newThisMonth}
+                totalValue={stats.totalValue}
               />
 
               {/* Add New Button */}

@@ -29,6 +29,23 @@ export function ImportDialog({ onImportComplete }: ImportDialogProps) {
     setIsImporting(true);
 
     try {
+      // Get current user's company_id
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        throw new Error("User not authenticated");
+      }
+
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', userData.user.id)
+        .eq('status', 'active')
+        .single();
+
+      if (!companyUser) {
+        throw new Error("No active company association found");
+      }
+
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       const sheetName = workbook.SheetNames[0];
@@ -63,6 +80,7 @@ export function ImportDialog({ onImportComplete }: ImportDialogProps) {
 
           const asset = {
             id: assetId,
+            company_id: companyUser.company_id,
             media_type: row.media_type || row['Media Type'],
             location: row.location || row.Location,
             area: row.area || row.Area,

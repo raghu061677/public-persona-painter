@@ -62,6 +62,23 @@ export function BulkImportDialog({ open, onOpenChange, onSuccess }: BulkImportDi
       setProgress(0);
       setResults(null);
 
+      // Get current user's company_id
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        throw new Error("User not authenticated");
+      }
+
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', userData.user.id)
+        .eq('status', 'active')
+        .single();
+
+      if (!companyUser) {
+        throw new Error("No active company association found");
+      }
+
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -84,6 +101,7 @@ export function BulkImportDialog({ open, onOpenChange, onSuccess }: BulkImportDi
           // Insert asset
           const { error } = await supabase.from('media_assets').insert({
             id: row.id,
+            company_id: companyUser.company_id,
             city: row.city,
             area: row.area,
             location: row.location,

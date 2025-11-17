@@ -64,7 +64,8 @@ export function UnifiedPhotoGallery({
   const [slideshowIndex, setSlideshowIndex] = useState(0);
   const [deleting, setDeleting] = useState(false);
 
-  const getTagColor = (tag: string) => {
+  const getTagColor = (tag: string | undefined | null) => {
+    if (!tag) return 'bg-gray-100 text-gray-800 border-gray-300';
     switch (tag.toLowerCase()) {
       case 'newspaper':
       case 'newspaper photo':
@@ -80,7 +81,8 @@ export function UnifiedPhotoGallery({
     }
   };
 
-  const getTagIcon = (tag: string) => {
+  const getTagIcon = (tag: string | undefined | null) => {
+    if (!tag) return '📷';
     switch (tag.toLowerCase()) {
       case 'newspaper':
       case 'newspaper photo':

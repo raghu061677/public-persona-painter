@@ -1298,6 +1298,60 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_rules: {
+        Row: {
+          applies_to_company_type: string | null
+          commission_type: string
+          commission_value: number
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          effective_from: string
+          effective_until: string | null
+          id: string
+          is_active: boolean | null
+          max_booking_amount: number | null
+          metadata: Json | null
+          min_booking_amount: number | null
+          rule_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          applies_to_company_type?: string | null
+          commission_type?: string
+          commission_value: number
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          effective_from?: string
+          effective_until?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_booking_amount?: number | null
+          metadata?: Json | null
+          min_booking_amount?: number | null
+          rule_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          applies_to_company_type?: string | null
+          commission_type?: string
+          commission_value?: number
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          effective_from?: string
+          effective_until?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_booking_amount?: number | null
+          metadata?: Json | null
+          min_booking_amount?: number | null
+          rule_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           address_line1: string | null
@@ -3093,6 +3147,131 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_usage: {
+        Row: {
+          assets_count: number | null
+          calculated_at: string | null
+          campaigns_count: number | null
+          company_id: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          storage_used_mb: number | null
+          subscription_id: string
+          users_count: number | null
+        }
+        Insert: {
+          assets_count?: number | null
+          calculated_at?: string | null
+          campaigns_count?: number | null
+          company_id: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          storage_used_mb?: number | null
+          subscription_id: string
+          users_count?: number | null
+        }
+        Update: {
+          assets_count?: number | null
+          calculated_at?: string | null
+          campaigns_count?: number | null
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          storage_used_mb?: number | null
+          subscription_id?: string
+          users_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_usage_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_usage_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          amount: number
+          auto_renew: boolean | null
+          billing_cycle: string
+          company_id: string
+          created_at: string | null
+          currency: string
+          end_date: string
+          id: string
+          max_assets: number | null
+          max_campaigns: number | null
+          max_users: number | null
+          metadata: Json | null
+          razorpay_plan_id: string | null
+          razorpay_subscription_id: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          tier: Database["public"]["Enums"]["subscription_tier"]
+          updated_at: string | null
+        }
+        Insert: {
+          amount?: number
+          auto_renew?: boolean | null
+          billing_cycle?: string
+          company_id: string
+          created_at?: string | null
+          currency?: string
+          end_date: string
+          id?: string
+          max_assets?: number | null
+          max_campaigns?: number | null
+          max_users?: number | null
+          metadata?: Json | null
+          razorpay_plan_id?: string | null
+          razorpay_subscription_id?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          tier?: Database["public"]["Enums"]["subscription_tier"]
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          auto_renew?: boolean | null
+          billing_cycle?: string
+          company_id?: string
+          created_at?: string | null
+          currency?: string
+          end_date?: string
+          id?: string
+          max_assets?: number | null
+          max_campaigns?: number | null
+          max_users?: number | null
+          metadata?: Json | null
+          razorpay_plan_id?: string | null
+          razorpay_subscription_id?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          tier?: Database["public"]["Enums"]["subscription_tier"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       table_views: {
         Row: {
           configuration: Json
@@ -3219,6 +3398,90 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          booking_id: string | null
+          company_id: string
+          completed_at: string | null
+          created_at: string | null
+          currency: string
+          description: string | null
+          gst_amount: number | null
+          id: string
+          metadata: Json | null
+          payment_method: string | null
+          plan_id: string | null
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          status: Database["public"]["Enums"]["transaction_status"]
+          subscription_id: string | null
+          total_amount: number
+          transaction_date: string | null
+          type: Database["public"]["Enums"]["transaction_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          booking_id?: string | null
+          company_id: string
+          completed_at?: string | null
+          created_at?: string | null
+          currency?: string
+          description?: string | null
+          gst_amount?: number | null
+          id?: string
+          metadata?: Json | null
+          payment_method?: string | null
+          plan_id?: string | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          status?: Database["public"]["Enums"]["transaction_status"]
+          subscription_id?: string | null
+          total_amount: number
+          transaction_date?: string | null
+          type: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          booking_id?: string | null
+          company_id?: string
+          completed_at?: string | null
+          created_at?: string | null
+          currency?: string
+          description?: string | null
+          gst_amount?: number | null
+          id?: string
+          metadata?: Json | null
+          payment_method?: string | null
+          plan_id?: string | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          status?: Database["public"]["Enums"]["transaction_status"]
+          subscription_id?: string | null
+          total_amount?: number
+          transaction_date?: string | null
+          type?: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_activity_logs: {
         Row: {
@@ -3574,6 +3837,10 @@ export type Database = {
       }
     }
     Functions: {
+      calculate_subscription_usage: {
+        Args: { p_company_id: string }
+        Returns: Json
+      }
       create_plan_approval_workflow: {
         Args: { p_plan_id: string }
         Returns: undefined
@@ -3594,6 +3861,18 @@ export type Database = {
       generate_invoice_id: { Args: never; Returns: string }
       generate_plan_id: { Args: never; Returns: string }
       generate_share_token: { Args: never; Returns: string }
+      get_active_subscription: {
+        Args: { p_company_id: string }
+        Returns: {
+          end_date: string
+          id: string
+          max_assets: number
+          max_campaigns: number
+          max_users: number
+          status: Database["public"]["Enums"]["subscription_status"]
+          tier: Database["public"]["Enums"]["subscription_tier"]
+        }[]
+      }
       get_current_user_company_id: { Args: never; Returns: string }
       get_financial_year: { Args: never; Returns: string }
       get_next_code_number: {
@@ -3711,6 +3990,15 @@ export type Database = {
       payment_status: "Pending" | "Paid"
       plan_status: "Draft" | "Sent" | "Approved" | "Rejected" | "Converted"
       plan_type: "Quotation" | "Proposal" | "Estimate"
+      subscription_status: "active" | "expired" | "cancelled" | "trialing"
+      subscription_tier: "free" | "starter" | "pro" | "enterprise"
+      transaction_status: "pending" | "completed" | "failed" | "refunded"
+      transaction_type:
+        | "subscription"
+        | "portal_fee"
+        | "commission"
+        | "refund"
+        | "adjustment"
       watermark_position:
         | "bottom-right"
         | "bottom-left"
@@ -3905,6 +4193,16 @@ export const Constants = {
       payment_status: ["Pending", "Paid"],
       plan_status: ["Draft", "Sent", "Approved", "Rejected", "Converted"],
       plan_type: ["Quotation", "Proposal", "Estimate"],
+      subscription_status: ["active", "expired", "cancelled", "trialing"],
+      subscription_tier: ["free", "starter", "pro", "enterprise"],
+      transaction_status: ["pending", "completed", "failed", "refunded"],
+      transaction_type: [
+        "subscription",
+        "portal_fee",
+        "commission",
+        "refund",
+        "adjustment",
+      ],
       watermark_position: [
         "bottom-right",
         "bottom-left",

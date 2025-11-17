@@ -89,8 +89,14 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                   />
                   <SidebarItem
                     icon={Building2}
-                    label="Companies"
+                    label="All Companies"
                     href="/admin/company-management"
+                    collapsed={collapsed}
+                  />
+                  <SidebarItem
+                    icon={Shield}
+                    label="Approve Companies"
+                    href="/admin/approve-companies"
                     collapsed={collapsed}
                   />
                   <SidebarItem

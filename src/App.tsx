@@ -27,6 +27,8 @@ const LoadingFallback = () => (
 // Lazy load all pages for code splitting
 const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
+const RegisterCompany = lazy(() => import("./pages/RegisterCompany"));
+const ApproveCompanies = lazy(() => import("./pages/ApproveCompanies"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const MediaAssetsList = lazy(() => import("./pages/MediaAssetsControlCenter"));
 const MediaAssetNew = lazy(() => import("./pages/MediaAssetNew"));
@@ -178,6 +180,7 @@ const App = () => (
             {/* Public routes */}
             <Route path="/" element={<Landing />} />
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/register-company" element={<RegisterCompany />} />
                   <Route path="/onboarding" element={<ProtectedRoute><CompanyOnboarding /></ProtectedRoute>} />
             <Route path="/install" element={<Install />} />
             <Route path="/admin/plans/:id/share/:shareToken" element={<PlanShare />} />
@@ -191,6 +194,7 @@ const App = () => (
             <Route path="/admin/dashboard" element={<ProtectedRoute requireAuth><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/companies" element={<ProtectedRoute requireAuth><AppLayout><CompaniesManagement /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/company-management" element={<ProtectedRoute requireAuth><AppLayout><CompanyManagement /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/approve-companies" element={<ProtectedRoute requireAuth><AppLayout><ApproveCompanies /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/platform" element={<ProtectedRoute requireAuth><AppLayout><PlatformAdminDashboard /></AppLayout></ProtectedRoute>} />
             
             {/* Duplicate route removed - see line 268 for actual company settings routes */}

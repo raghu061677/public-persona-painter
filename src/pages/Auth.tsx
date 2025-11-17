@@ -292,32 +292,47 @@ const Auth = () => {
               {loading ? "Loading..." : isLogin ? "Login" : "Sign Up"}
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm">
-            {isLogin ? (
-              <>
-                Don't have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => setIsLogin(false)}
-                  className="text-primary hover:underline"
-                  disabled={loading}
-                >
-                  Sign up
-                </button>
-              </>
-            ) : (
-              <>
-                Already have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => setIsLogin(true)}
-                  className="text-primary hover:underline"
-                  disabled={loading}
-                >
-                  Login
-                </button>
-              </>
-            )}
+          <div className="mt-4 space-y-3">
+            <div className="text-center text-sm">
+              {isLogin ? (
+                <>
+                  Don't have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => setIsLogin(false)}
+                    className="text-primary hover:underline"
+                    disabled={loading}
+                  >
+                    Sign up
+                  </button>
+                </>
+              ) : (
+                <>
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => setIsLogin(true)}
+                    className="text-primary hover:underline"
+                    disabled={loading}
+                  >
+                    Login
+                  </button>
+                </>
+              )}
+            </div>
+            <div className="text-center text-sm border-t pt-3">
+              <span className="text-muted-foreground">
+                Register as Media Owner or Agency?{" "}
+              </span>
+              <button
+                type="button"
+                onClick={() => navigate('/register-company')}
+                className="text-primary hover:underline font-semibold"
+                disabled={loading}
+              >
+                Register Company
+              </button>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -164,9 +164,9 @@ if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <AuthProvider>
-          <CompanyProvider>
+      <AuthProvider>
+        <CompanyProvider>
+          <ThemeProvider>
             <TooltipProvider>
               <Toaster />
               <Sonner />
@@ -333,9 +333,9 @@ const App = () => (
             <AIAssistantChat />
             </BrowserRouter>
           </TooltipProvider>
-        </CompanyProvider>
-      </AuthProvider>
-    </ThemeProvider>
+        </ThemeProvider>
+      </CompanyProvider>
+    </AuthProvider>
   </QueryClientProvider>
   </ErrorBoundary>
 );

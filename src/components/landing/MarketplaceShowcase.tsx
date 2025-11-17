@@ -58,7 +58,7 @@ export const MarketplaceShowcase = () => {
             onClick={() => navigate("/marketplace")}
             className="text-lg"
           >
-            Explore Marketplace →
+            Explore Media →
           </Button>
         </div>
       </div>

@@ -28,7 +28,7 @@ import { PhotoApprovalDialog } from "@/components/gallery/PhotoApprovalDialog";
 import { PhotoSlideshow } from "@/components/media-assets/PhotoSlideshow";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 
 interface PhotoData {
@@ -50,6 +50,7 @@ interface PhotoData {
 export default function PhotoGallery() {
   const { roles, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const canApprove = roles?.some(r => ['admin', 'operations'].includes(r)) || false;
   
   const [photos, setPhotos] = useState<PhotoData[]>([]);
@@ -79,6 +80,14 @@ export default function PhotoGallery() {
   const [uniqueAssets, setUniqueAssets] = useState<string[]>([]);
   const [uniqueCampaigns, setUniqueCampaigns] = useState<string[]>([]);
   const [uniqueCategories, setUniqueCategories] = useState<string[]>([]);
+
+  // Initialize filter from URL params on mount
+  useEffect(() => {
+    const assetParam = searchParams.get('asset');
+    if (assetParam) {
+      setFilterAsset(assetParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetchPhotos();

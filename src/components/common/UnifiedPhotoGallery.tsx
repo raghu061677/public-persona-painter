@@ -296,15 +296,13 @@ export function UnifiedPhotoGallery({
                 
                 {/* Overlay with badges */}
                 <div className="absolute top-2 left-2 right-2 flex flex-wrap gap-1">
-                  <Badge key={`tag-${photo.id}`} className={`${getTagColor(photo.category)} border`}>
+                  <Badge className={`${getTagColor(photo.category)} border`}>
                     <span className="mr-1">{getTagIcon(photo.category)}</span>
                     {photo.category}
                   </Badge>
-                  <div key={`validation-${photo.id}`}>
-                    {getValidationBadge(photo)}
-                  </div>
+                  {getValidationBadge(photo)}
                   {photo.latitude && photo.longitude && (
-                    <TooltipProvider key={`gps-${photo.id}`}>
+                    <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger>
                           <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">

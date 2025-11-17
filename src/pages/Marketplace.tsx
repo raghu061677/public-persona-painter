@@ -26,13 +26,24 @@ interface MarketplaceAsset {
   area: string;
   location: string;
   media_type: string;
+  category: string;
   dimensions: string;
-  card_rate: number;
+  total_sqft: number | null;
+  direction: string | null;
+  illumination: string | null;
   status: string;
   image_urls: string[];
+  images: any;
+  latitude: number | null;
+  longitude: number | null;
+  google_street_view_url: string | null;
+  is_multi_face: boolean | null;
+  faces: any;
   company_id: string;
-  company_name?: string;
-  company_type?: string;
+  company_name: string;
+  company_city: string | null;
+  company_phone: string | null;
+  company_email: string | null;
 }
 
 export default function Marketplace() {
@@ -64,16 +75,10 @@ export default function Marketplace() {
   const fetchMarketplaceAssets = async () => {
     setLoading(true);
     try {
+      // Use the secure public view that excludes pricing and vendor details
       let query = supabase
-        .from('media_assets')
-        .select(`
-          *,
-          companies:company_id (
-            name,
-            type
-          )
-        `)
-        .eq('is_public', true);
+        .from('public_media_assets_safe')
+        .select('*');
 
       if (selectedCity !== "all") {
         query = query.eq('city', selectedCity);
@@ -85,17 +90,11 @@ export default function Marketplace() {
         query = query.eq('status', selectedStatus as any);
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await query;
 
       if (error) throw error;
 
-      const formattedAssets = data?.map((asset: any) => ({
-        ...asset,
-        company_name: asset.companies?.name,
-        company_type: asset.companies?.type,
-      })) || [];
-
-      setAssets(formattedAssets);
+      setAssets(data || []);
     } catch (error: any) {
       console.error('Error fetching marketplace assets:', error);
       toast({
@@ -291,9 +290,9 @@ export default function Marketplace() {
                   </div>
                   <p className="text-muted-foreground">{asset.location}</p>
                   <p className="font-semibold">Dimensions: {asset.dimensions}</p>
-                  <p className="text-lg font-bold text-primary">
-                    ₹{asset.card_rate.toLocaleString()}/month
-                  </p>
+                  <Badge variant="secondary" className="mt-2">
+                    Contact for Pricing
+                  </Badge>
                 </div>
 
                 <div className="flex gap-2 pt-2">
@@ -311,7 +310,7 @@ export default function Marketplace() {
                         setSelectedAsset(asset);
                         setBookingForm(prev => ({
                           ...prev,
-                          proposedRate: asset.card_rate.toString(),
+                          proposedRate: "",
                         }));
                         setBookingDialog(true);
                       }}
@@ -373,10 +372,8 @@ export default function Marketplace() {
                     placeholder="Enter proposed rate"
                     value={bookingForm.proposedRate}
                     onChange={(e) => setBookingForm(prev => ({ ...prev, proposedRate: e.target.value }))}
+                    required
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Card Rate: ₹{selectedAsset.card_rate.toLocaleString()}
-                  </p>
                 </div>
 
                 <div className="space-y-2">

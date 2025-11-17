@@ -104,6 +104,28 @@ export default function MediaAssetEdit() {
       });
       navigate('/admin/media-assets');
     } else {
+      // Fetch photos from media_photos table
+      const { data: photosData } = await supabase
+        .from('media_photos')
+        .select('*')
+        .eq('asset_id', id)
+        .order('uploaded_at', { ascending: false });
+
+      // Transform photos data to match expected format
+      const photos = photosData?.map(photo => {
+        const metadata = photo.metadata as Record<string, any> | null;
+        return {
+          id: photo.id,
+          photo_url: photo.photo_url,
+          category: photo.category,
+          uploaded_at: photo.uploaded_at,
+          latitude: metadata?.latitude,
+          longitude: metadata?.longitude,
+          validation_score: metadata?.validation_score,
+          validation_issues: metadata?.validation_issues,
+          validation_suggestions: metadata?.validation_suggestions,
+        };
+      }) || [];
 
       // Convert numeric values to strings for form inputs
       const formattedData = {
@@ -126,6 +148,9 @@ export default function MediaAssetEdit() {
         unique_service_number: data.unique_service_number || "",
         ero: data.ero || "",
         section_name: data.section_name || "",
+        images: {
+          photos: photos,
+        },
       };
       setFormData(formattedData);
     }

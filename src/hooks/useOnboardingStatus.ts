@@ -26,15 +26,18 @@ export function useOnboardingStatus() {
       }
 
       try {
-        // Check if user belongs to a company
+        // Check if user belongs to a company - use maybeSingle to handle no results gracefully
         const { data: companyUser, error: companyUserError } = await supabase
           .from('company_users')
           .select('company_id, companies(status)')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (companyUserError && companyUserError.code !== 'PGRST116') {
+        if (companyUserError) {
           console.error('Error checking company status:', companyUserError);
+          // Don't block the user if there's an error, they might have just signed up
+          setStatus({ hasCompany: false, companyApproved: false, tourCompleted: false, loading: false });
+          return;
         }
 
         const hasCompany = !!companyUser;
@@ -45,7 +48,7 @@ export function useOnboardingStatus() {
           .from('profiles')
           .select('tour_completed')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
         setStatus({
           hasCompany,
@@ -55,6 +58,7 @@ export function useOnboardingStatus() {
         });
       } catch (error) {
         console.error('Error checking onboarding status:', error);
+        // Don't block on error - user might have just signed up
         setStatus({ hasCompany: false, companyApproved: false, tourCompleted: false, loading: false });
       }
     };

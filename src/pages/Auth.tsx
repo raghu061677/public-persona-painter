@@ -145,7 +145,7 @@ const Auth = () => {
               .from('company_users')
               .select('company_id')
               .eq('user_id', data.user.id)
-              .single();
+              .maybeSingle();
 
             if (!existingCompany) {
               // Create a default company
@@ -160,18 +160,37 @@ const Auth = () => {
                 .select()
                 .single();
 
-              if (!companyError && newCompany) {
+              if (companyError) {
+                console.error('Error creating company:', companyError);
+                throw companyError;
+              }
+
+              if (newCompany) {
                 // Link user to company
-                await supabase.from('company_users').insert({
+                const { error: linkError } = await supabase.from('company_users').insert({
                   user_id: data.user.id,
                   company_id: newCompany.id,
                   role: 'admin',
                   is_primary: true,
                 });
+
+                if (linkError) {
+                  console.error('Error linking user to company:', linkError);
+                  throw linkError;
+                }
+
+                // Wait a bit to ensure the data is fully written before redirecting
+                await new Promise(resolve => setTimeout(resolve, 500));
               }
             }
           } catch (companySetupError) {
             console.error('Error setting up company:', companySetupError);
+            toast({
+              variant: "destructive",
+              title: "Setup Error",
+              description: "Account created but company setup failed. Please contact support.",
+            });
+            return;
           }
 
           toast({

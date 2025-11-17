@@ -140,6 +140,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "ai_assistant_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       alert_settings: {
@@ -349,6 +356,13 @@ export type Database = {
             referencedRelation: "media_assets"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       asset_maintenance: {
@@ -403,6 +417,13 @@ export type Database = {
             columns: ["asset_id"]
             isOneToOne: false
             referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_maintenance_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -555,6 +576,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "asset_power_bills_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "asset_power_bills_primary_bill_id_fkey"
             columns: ["primary_bill_id"]
             isOneToOne: false
@@ -677,8 +705,29 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "booking_requests_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "booking_requests_owner_company_id_fkey"
             columns: ["owner_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_requests_owner_company_id_fkey"
+            columns: ["owner_company_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "booking_requests_requester_company_id_fkey"
+            columns: ["requester_company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
@@ -687,8 +736,8 @@ export type Database = {
             foreignKeyName: "booking_requests_requester_company_id_fkey"
             columns: ["requester_company_id"]
             isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -759,6 +808,13 @@ export type Database = {
             columns: ["asset_id"]
             isOneToOne: false
             referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
             referencedColumns: ["id"]
           },
           {
@@ -942,6 +998,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "campaigns_plan_id_fkey"
@@ -1231,6 +1294,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "clients_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       code_counters: {
@@ -1380,6 +1450,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "company_users_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       dashboard_configurations: {
@@ -1421,6 +1498,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "dashboard_configurations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       default_role_settings: {
@@ -1461,6 +1545,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "default_role_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -1575,6 +1666,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "estimations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "estimations_plan_id_fkey"
             columns: ["plan_id"]
             isOneToOne: false
@@ -1662,6 +1760,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -1783,6 +1888,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "invoices_estimation_id_fkey"
             columns: ["estimation_id"]
             isOneToOne: false
@@ -1853,6 +1965,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -2005,6 +2124,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_assets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -2653,6 +2779,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "plan_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "plan_items_plan_id_fkey"
             columns: ["plan_id"]
             isOneToOne: false
@@ -2815,11 +2948,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "plans_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "plans_owner_company_id_fkey"
             columns: ["owner_company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plans_owner_company_id_fkey"
+            columns: ["owner_company_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -3412,6 +3559,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "watermark_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       whatsapp_logs: {
@@ -3490,6 +3644,34 @@ export type Database = {
           id?: string | null
           name?: string | null
           state?: string | null
+        }
+        Relationships: []
+      }
+      public_media_assets_safe: {
+        Row: {
+          area: string | null
+          category: Database["public"]["Enums"]["media_category"] | null
+          city: string | null
+          company_city: string | null
+          company_email: string | null
+          company_id: string | null
+          company_name: string | null
+          company_phone: string | null
+          dimensions: string | null
+          direction: string | null
+          faces: Json | null
+          google_street_view_url: string | null
+          id: string | null
+          illumination: string | null
+          image_urls: string[] | null
+          images: Json | null
+          is_multi_face: boolean | null
+          latitude: number | null
+          location: string | null
+          longitude: number | null
+          media_type: string | null
+          status: Database["public"]["Enums"]["media_asset_status"] | null
+          total_sqft: number | null
         }
         Relationships: []
       }

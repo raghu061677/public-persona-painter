@@ -252,30 +252,35 @@ const Dashboard = () => {
                 value={metrics.totalAssets}
                 icon={ClipboardList}
                 description="Total inventory"
+                borderColor="border-l-blue-500"
               />
               <StatCard
                 title="Active Campaigns"
                 value={metrics.activeCampaigns}
                 icon={GanttChartSquare}
                 description="Currently running"
+                borderColor="border-l-green-500"
               />
               <StatCard
                 title="New Leads"
                 value={metrics.leadsThisMonth}
                 icon={Users}
                 description="This month"
+                borderColor="border-l-purple-500"
               />
               <StatCard
                 title="Revenue"
                 value={`₹${(metrics.revenueThisMonth / 100000).toFixed(1)}L`}
                 icon={IndianRupee}
                 description="This month"
+                borderColor="border-l-orange-500"
               />
               <StatCard
                 title="Pending Tasks"
                 value={metrics.pendingTasks}
                 icon={FileText}
                 description="Require attention"
+                borderColor="border-l-red-500"
               />
             </div>
           )}
@@ -304,7 +309,7 @@ const Dashboard = () => {
 
             {/* Revenue Overview Chart */}
             <div className="lg:col-span-4">
-              <Card className="hover-scale transition-all duration-200">
+              <Card className="hover-scale transition-all duration-200 border-l-4 border-l-amber-500">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <IndianRupee className="h-5 w-5" />
@@ -352,7 +357,7 @@ const Dashboard = () => {
               </Card>
             </div>
             <div className="lg:col-span-12 xl:col-span-4">
-              <Card className="hover-scale transition-all duration-200">
+              <Card className="hover-scale transition-all duration-200 border-l-4 border-l-indigo-500">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <ClipboardList className="h-5 w-5" />

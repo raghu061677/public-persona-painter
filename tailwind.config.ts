@@ -3,7 +3,7 @@ import type { Config } from "tailwindcss";
 export default {
   darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
-  prefix: "",
+  prefix: ""
   theme: {
     container: {
       center: true,
@@ -151,5 +151,21 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    require("daisyui")
+  ],
+  daisyui: {
+    themes: [
+      "light",
+      "dark",
+      "luxury-gold",
+      "cosmic-blue",
+      "corporate",
+      "business-dark",
+      "billboard-black"
+    ],
+    base: false,
+    styled: false,
+  },
 } satisfies Config;

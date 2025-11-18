@@ -1,6 +1,17 @@
 import { create } from 'zustand';
 
-type Theme = 'classic' | 'modern' | 'dark' | 'light' | 'brand-blue' | 'brand-green';
+type Theme = 
+  | 'classic' 
+  | 'modern' 
+  | 'dark' 
+  | 'light' 
+  | 'brand-blue' 
+  | 'brand-green'
+  | 'luxury-gold'
+  | 'cosmic-blue'
+  | 'corporate'
+  | 'business-dark'
+  | 'billboard-black';
 type FontFamily = 'inter' | 'poppins' | 'roboto' | 'open-sans' | 'lato' | 'montserrat' | 'nunito' | 'work-sans';
 type FontSize = 'small' | 'medium' | 'large' | 'extra-large';
 
@@ -55,7 +66,7 @@ const applyFontSize = (size: FontSize) => {
 };
 
 export const useThemeStore = create<ThemeState>((set) => ({
-  theme: (localStorage.getItem('theme') as Theme) || 'modern',
+  theme: (localStorage.getItem('theme') as Theme) || 'corporate',
   fontFamily: (localStorage.getItem('fontFamily') as FontFamily) || 'inter',
   fontSize: (localStorage.getItem('fontSize') as FontSize) || 'medium',
   cardColors: JSON.parse(localStorage.getItem('cardColors') || JSON.stringify(defaultCardColors)),
@@ -64,11 +75,17 @@ export const useThemeStore = create<ThemeState>((set) => ({
     localStorage.setItem('theme', theme);
     set({ theme });
     // Remove all theme classes
-    document.documentElement.classList.remove('classic', 'modern', 'dark', 'light', 'brand-blue', 'brand-green');
+    document.documentElement.classList.remove(
+      'classic', 'modern', 'dark', 'light', 'brand-blue', 'brand-green',
+      'luxury-gold', 'cosmic-blue', 'corporate', 'business-dark', 'billboard-black'
+    );
+    // Set data-theme attribute for DaisyUI
+    document.documentElement.setAttribute('data-theme', theme);
     // Add new theme class
     document.documentElement.classList.add(theme);
     // Add dark class for tailwind dark: variants
-    if (theme === 'dark') {
+    const darkThemes = ['dark', 'business-dark', 'billboard-black', 'cosmic-blue'];
+    if (darkThemes.includes(theme)) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');

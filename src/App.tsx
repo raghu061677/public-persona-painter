@@ -61,6 +61,21 @@ const InvoicesList = lazy(() => import("./pages/InvoicesList"));
 const InvoiceDetail = lazy(() => import("./pages/InvoiceDetail"));
 const Invoices = lazy(() => import("./pages/Invoices"));
 const ExpensesList = lazy(() => import("./pages/ExpensesList"));
+const SalesOrders = lazy(() => import("./pages/SalesOrders"));
+const PurchaseOrders = lazy(() => import("./pages/PurchaseOrders"));
+const Payments = lazy(() => import("./pages/Payments"));
+const OperationsCreatives = lazy(() => import("./pages/OperationsCreatives"));
+const OperationsPrinting = lazy(() => import("./pages/OperationsPrinting"));
+const OperationsProofUploads = lazy(() => import("./pages/OperationsProofUploads"));
+const ReportClientBookings = lazy(() => import("./pages/ReportClientBookings"));
+const ReportCampaignBookings = lazy(() => import("./pages/ReportCampaignBookings"));
+const ReportAssetRevenue = lazy(() => import("./pages/ReportAssetRevenue"));
+const ReportFinancialSummary = lazy(() => import("./pages/ReportFinancialSummary"));
+const ReportProofExecution = lazy(() => import("./pages/ReportProofExecution"));
+const PlatformReportCompanyUsage = lazy(() => import("./pages/PlatformReportCompanyUsage"));
+const PlatformReportBilling = lazy(() => import("./pages/PlatformReportBilling"));
+const PlatformReportMediaInventory = lazy(() => import("./pages/PlatformReportMediaInventory"));
+const PlatformRoles = lazy(() => import("./pages/PlatformRoles"));
 const ReportsDashboard = lazy(() => import("./pages/ReportsDashboard"));
 const VacantMediaReport = lazy(() => import("./pages/VacantMediaReport"));
 const PhotoGallery = lazy(() => import("./pages/PhotoGallery"));
@@ -225,11 +240,26 @@ const App = () => (
             <Route path="/admin/campaigns/:id" element={<ProtectedRoute requiredModule="campaigns" requiredAction="view"><AppLayout><CampaignDetail /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/campaigns/:id/budget" element={<ProtectedRoute requiredModule="campaigns" requiredAction="view"><AppLayout><CampaignBudget /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/operations" element={<AppLayout><Operations /></AppLayout>} />
+            <Route path="/admin/operations/creatives" element={<AppLayout><OperationsCreatives /></AppLayout>} />
+            <Route path="/admin/operations/printing" element={<AppLayout><OperationsPrinting /></AppLayout>} />
+            <Route path="/admin/operations/proof-uploads" element={<AppLayout><OperationsProofUploads /></AppLayout>} />
             <Route path="/admin/workflow-test" element={<AppLayout><WorkflowTest /></AppLayout>} />
             <Route path="/admin/operations-analytics" element={<AppLayout><OperationsAnalytics /></AppLayout>} />
             <Route path="/admin/operations-calendar" element={<AppLayout><OperationsCalendar /></AppLayout>} />
             <Route path="/finance" element={<AppLayout><FinanceDashboard /></AppLayout>} />
             <Route path="/finance/estimations" element={<AppLayout><EstimationsList /></AppLayout>} />
+            <Route path="/admin/sales-orders" element={<AppLayout><SalesOrders /></AppLayout>} />
+            <Route path="/admin/purchase-orders" element={<AppLayout><PurchaseOrders /></AppLayout>} />
+            <Route path="/admin/payments" element={<AppLayout><Payments /></AppLayout>} />
+            <Route path="/admin/reports/clients" element={<AppLayout><ReportClientBookings /></AppLayout>} />
+            <Route path="/admin/reports/campaigns" element={<AppLayout><ReportCampaignBookings /></AppLayout>} />
+            <Route path="/admin/reports/revenue" element={<AppLayout><ReportAssetRevenue /></AppLayout>} />
+            <Route path="/admin/reports/financial" element={<AppLayout><ReportFinancialSummary /></AppLayout>} />
+            <Route path="/admin/reports/proof-execution" element={<AppLayout><ReportProofExecution /></AppLayout>} />
+            <Route path="/admin/platform-reports/company-usage" element={<AppLayout><PlatformReportCompanyUsage /></AppLayout>} />
+            <Route path="/admin/platform-reports/billing" element={<AppLayout><PlatformReportBilling /></AppLayout>} />
+            <Route path="/admin/platform-reports/media-inventory" element={<AppLayout><PlatformReportMediaInventory /></AppLayout>} />
+            <Route path="/admin/platform-roles" element={<AppLayout><PlatformRoles /></AppLayout>} />
             <Route path="/finance/proformas" element={<AppLayout><ProformasList /></AppLayout>} />
             <Route path="/finance/proformas/:id" element={<AppLayout><ProformaDetail /></AppLayout>} />
             <Route path="/finance/invoices" element={<AppLayout><InvoicesList /></AppLayout>} />

@@ -12,6 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCompany } from "@/contexts/CompanyContext";
+import { useRBAC } from "@/hooks/useRBAC";
 import { SidebarSection } from "@/components/sidebar/SidebarSection";
 import { SidebarItem } from "@/components/sidebar/SidebarItem";
 import { SidebarGroup } from "@/components/sidebar/SidebarGroup";
@@ -25,6 +26,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const { user, isAdmin } = useAuth();
   const { company, isPlatformAdmin, companyUser } = useCompany();
   const navigate = useNavigate();
+  const rbac = useRBAC();
 
   const isCompanyAdmin = companyUser?.role === 'admin' || isAdmin;
   const collapsed = !open;
@@ -231,125 +233,131 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                     href="/admin/campaigns"
                     collapsed={collapsed}
                   />
-                  {/* Operations Group */}
-                  <SidebarGroup icon={TrendingUp} label="Operations" collapsed={collapsed}>
-                    <SidebarItem
-                      icon={Image}
-                      label="Creative Received"
-                      href="/admin/operations/creatives"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={FileCheck}
-                      label="Printing Status"
-                      href="/admin/operations/printing"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={TrendingUp}
-                      label="Mounting Assignment"
-                      href="/admin/operations"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={Image}
-                      label="Proof Photo Uploads"
-                      href="/admin/operations/proof-uploads"
-                      collapsed={collapsed}
-                    />
-                  </SidebarGroup>
+                  {/* Operations Group - Operations & Admin */}
+                  {rbac.canViewModule('operations') && (
+                    <SidebarGroup icon={TrendingUp} label="Operations" collapsed={collapsed}>
+                      <SidebarItem
+                        icon={Image}
+                        label="Creative Received"
+                        href="/admin/operations/creatives"
+                        collapsed={collapsed}
+                      />
+                      <SidebarItem
+                        icon={FileCheck}
+                        label="Printing Status"
+                        href="/admin/operations/printing"
+                        collapsed={collapsed}
+                      />
+                      <SidebarItem
+                        icon={TrendingUp}
+                        label="Mounting Assignment"
+                        href="/admin/operations"
+                        collapsed={collapsed}
+                      />
+                      <SidebarItem
+                        icon={Image}
+                        label="Proof Photo Uploads"
+                        href="/admin/operations/proof-uploads"
+                        collapsed={collapsed}
+                      />
+                    </SidebarGroup>
+                  )}
 
-                  {/* Finance Group */}
-                  <SidebarGroup icon={DollarSign} label="Finance" collapsed={collapsed}>
-                    <SidebarItem
-                      icon={FileSpreadsheet}
-                      label="Quotations"
-                      href="/admin/estimations"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={FileText}
-                      label="Sales Orders"
-                      href="/admin/sales-orders"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={FileCheck}
-                      label="Purchase Orders"
-                      href="/admin/purchase-orders"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={FileCheck}
-                      label="Proforma Invoice"
-                      href="/admin/proformas"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={Receipt}
-                      label="Invoices"
-                      href="/admin/invoices"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={CreditCard}
-                      label="Payments"
-                      href="/admin/payments"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={DollarSign}
-                      label="Expenses"
-                      href="/admin/expenses"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={Zap}
-                      label="Power Bills"
-                      href="/admin/power-bills"
-                      collapsed={collapsed}
-                    />
-                  </SidebarGroup>
+                  {/* Finance Group - Finance & Admin only */}
+                  {rbac.canViewModule('finance') && (
+                    <SidebarGroup icon={DollarSign} label="Finance" collapsed={collapsed}>
+                      <SidebarItem
+                        icon={FileSpreadsheet}
+                        label="Quotations"
+                        href="/admin/estimations"
+                        collapsed={collapsed}
+                      />
+                      <SidebarItem
+                        icon={FileText}
+                        label="Sales Orders"
+                        href="/admin/sales-orders"
+                        collapsed={collapsed}
+                      />
+                      <SidebarItem
+                        icon={FileCheck}
+                        label="Purchase Orders"
+                        href="/admin/purchase-orders"
+                        collapsed={collapsed}
+                      />
+                      <SidebarItem
+                        icon={FileCheck}
+                        label="Proforma Invoice"
+                        href="/admin/proformas"
+                        collapsed={collapsed}
+                      />
+                      <SidebarItem
+                        icon={Receipt}
+                        label="Invoices"
+                        href="/admin/invoices"
+                        collapsed={collapsed}
+                      />
+                      <SidebarItem
+                        icon={CreditCard}
+                        label="Payments"
+                        href="/admin/payments"
+                        collapsed={collapsed}
+                      />
+                      <SidebarItem
+                        icon={DollarSign}
+                        label="Expenses"
+                        href="/admin/expenses"
+                        collapsed={collapsed}
+                      />
+                      <SidebarItem
+                        icon={Zap}
+                        label="Power Bills"
+                        href="/admin/power-bills"
+                        collapsed={collapsed}
+                      />
+                    </SidebarGroup>
+                  )}
 
-                  {/* Workspace Reports Group */}
-                  <SidebarGroup icon={BarChart3} label="Workspace Reports" collapsed={collapsed}>
-                    <SidebarItem
-                      icon={Map}
-                      label="Media Availability"
-                      href="/admin/reports/vacant-media"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={Users}
-                      label="Client-wise Bookings"
-                      href="/admin/reports/clients"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={Briefcase}
-                      label="Campaign-wise Bookings"
-                      href="/admin/reports/campaigns"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={TrendingUp}
-                      label="Asset-wise Revenue"
-                      href="/admin/reports/revenue"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={DollarSign}
-                      label="Financial Summary"
-                      href="/admin/reports/financial"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={Image}
-                      label="Proof-of-Execution"
-                      href="/admin/reports/proof-execution"
-                      collapsed={collapsed}
-                    />
-                  </SidebarGroup>
+                  {/* Workspace Reports Group - All can view reports */}
+                  {rbac.canViewModule('reports') && (
+                    <SidebarGroup icon={BarChart3} label="Workspace Reports" collapsed={collapsed}>
+                      <SidebarItem
+                        icon={Map}
+                        label="Media Availability"
+                        href="/admin/reports/vacant-media"
+                        collapsed={collapsed}
+                      />
+                      <SidebarItem
+                        icon={Users}
+                        label="Client-wise Bookings"
+                        href="/admin/reports/clients"
+                        collapsed={collapsed}
+                      />
+                      <SidebarItem
+                        icon={Briefcase}
+                        label="Campaign-wise Bookings"
+                        href="/admin/reports/campaigns"
+                        collapsed={collapsed}
+                      />
+                      <SidebarItem
+                        icon={TrendingUp}
+                        label="Asset-wise Revenue"
+                        href="/admin/reports/revenue"
+                        collapsed={collapsed}
+                      />
+                      <SidebarItem
+                        icon={DollarSign}
+                        label="Financial Summary"
+                        href="/admin/reports/financial"
+                        collapsed={collapsed}
+                      />
+                      <SidebarItem
+                        icon={Image}
+                        label="Proof-of-Execution"
+                        href="/admin/reports/proof-execution"
+                        collapsed={collapsed}
+                      />
+                    </SidebarGroup>
+                  )}
 
                 </SidebarSection>
                 <Separator className="my-4" />

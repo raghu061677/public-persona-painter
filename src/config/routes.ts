@@ -51,11 +51,14 @@ export const ROUTES = {
   
   // Finance
   FINANCE: '/admin/finance',
+  PURCHASE_ORDERS: '/admin/purchase-orders',
+  SALES_ORDERS: '/admin/sales-orders',
   ESTIMATIONS: '/admin/estimations',
   INVOICES: '/admin/invoices',
   INVOICES_DETAIL: (id: string) => `/admin/invoices/${id}`,
   PROFORMAS: '/admin/proformas',
   PROFORMAS_DETAIL: (id: string) => `/admin/proformas/${id}`,
+  PAYMENTS: '/admin/payments',
   EXPENSES: '/admin/expenses',
   
   // Power Bills
@@ -71,6 +74,10 @@ export const ROUTES = {
   // Reports
   REPORTS: '/admin/reports',
   REPORTS_VACANT: '/admin/reports/vacant-media',
+  REPORTS_REVENUE: '/admin/reports/revenue',
+  REPORTS_CAMPAIGNS: '/admin/reports/campaigns',
+  REPORTS_CLIENTS: '/admin/reports/clients',
+  REPORTS_FINANCIAL: '/admin/reports/financial',
   
   // Analytics
   ANALYTICS: '/admin/analytics',
@@ -148,9 +155,12 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.OPERATIONS_ANALYTICS]: 'Analytics',
   [ROUTES.OPERATIONS_SETTINGS]: 'Settings',
   [ROUTES.FINANCE]: 'Finance',
-  [ROUTES.ESTIMATIONS]: 'Estimations',
+  [ROUTES.PURCHASE_ORDERS]: 'Purchase Orders',
+  [ROUTES.SALES_ORDERS]: 'Sales Orders',
+  [ROUTES.ESTIMATIONS]: 'Quotations',
   [ROUTES.INVOICES]: 'Invoices',
   [ROUTES.PROFORMAS]: 'Proformas',
+  [ROUTES.PAYMENTS]: 'Payments',
   [ROUTES.EXPENSES]: 'Expenses',
   [ROUTES.POWER_BILLS]: 'Power Bills',
   [ROUTES.POWER_BILLS_ANALYTICS]: 'Analytics',
@@ -161,6 +171,10 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.POWER_BILLS_BULK_PAYMENT]: 'Bulk Payment',
   [ROUTES.REPORTS]: 'Reports',
   [ROUTES.REPORTS_VACANT]: 'Vacant Media',
+  [ROUTES.REPORTS_REVENUE]: 'Revenue Analytics',
+  [ROUTES.REPORTS_CAMPAIGNS]: 'Campaign Performance',
+  [ROUTES.REPORTS_CLIENTS]: 'Client Reports',
+  [ROUTES.REPORTS_FINANCIAL]: 'Financial Reports',
   [ROUTES.ANALYTICS]: 'Analytics',
   [ROUTES.ANALYTICS_DASHBOARD]: 'Analytics Dashboard',
   [ROUTES.TENANT_ANALYTICS]: 'Tenant Analytics',

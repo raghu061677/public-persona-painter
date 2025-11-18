@@ -27,10 +27,35 @@ export default function MediaAssetsList() {
   const fetchAssets = async () => {
     setLoading(true);
     
-    // Fetch media assets
+    // Get user's company ID for multi-tenant filtering
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const { data: companyUserData } = await supabase
+      .from('company_users')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (!companyUserData) {
+      toast({
+        title: "Error",
+        description: "No company association found",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+    
+    // Fetch media assets - CRITICAL: Filter by company_id for multi-tenant isolation
     const { data: assetsData, error: assetsError } = await supabase
       .from('media_assets')
       .select('*')
+      .eq('company_id', companyUserData.company_id)
       .order('id', { ascending: true });
 
     if (assetsError) {

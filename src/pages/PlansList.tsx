@@ -166,10 +166,35 @@ export default function PlansList() {
   const fetchPlans = async () => {
     setLoading(true);
     
-    // Fetch plans
+    // Get user's company ID for multi-tenant filtering
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const { data: companyUserData } = await supabase
+      .from('company_users')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (!companyUserData) {
+      toast({
+        title: "Error",
+        description: "No company association found",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+    
+    // CRITICAL: Filter by company_id for multi-tenant isolation
     const { data: plansData, error: plansError } = await supabase
       .from('plans')
       .select('*')
+      .eq('company_id', companyUserData.company_id)
       .order('created_at', { ascending: false });
 
     if (plansError) {

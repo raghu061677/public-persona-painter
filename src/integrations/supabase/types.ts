@@ -3919,6 +3919,15 @@ export type Database = {
       }
     }
     Functions: {
+      assign_user_to_company: {
+        Args: {
+          p_company_id: string
+          p_is_primary?: boolean
+          p_role: Database["public"]["Enums"]["app_role"]
+          p_user_id: string
+        }
+        Returns: Json
+      }
       calculate_subscription_usage: {
         Args: { p_company_id: string }
         Returns: Json
@@ -3976,6 +3985,16 @@ export type Database = {
         }[]
       }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
+      get_user_profile: {
+        Args: { p_user_id: string }
+        Returns: {
+          avatar_url: string
+          email: string
+          id: string
+          roles: Json
+          username: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -3984,6 +4003,16 @@ export type Database = {
         Returns: boolean
       }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
+      list_all_users: {
+        Args: never
+        Returns: {
+          companies: Json
+          created_at: string
+          email: string
+          id: string
+          username: string
+        }[]
+      }
       log_activity: {
         Args: {
           p_action: string
@@ -4020,6 +4049,10 @@ export type Database = {
           p_comments?: string
           p_status: Database["public"]["Enums"]["approval_status"]
         }
+        Returns: Json
+      }
+      remove_user_from_company: {
+        Args: { p_company_id: string; p_user_id: string }
         Returns: Json
       }
       seed_demo_companies: { Args: never; Returns: Json }

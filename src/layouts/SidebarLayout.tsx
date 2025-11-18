@@ -112,36 +112,80 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                     href="/admin/platform"
                     collapsed={collapsed}
                   />
-                  <SidebarItem
-                    icon={Building2}
-                    label="All Companies"
-                    href="/admin/company-management"
-                    collapsed={collapsed}
-                  />
-                  <SidebarItem
-                    icon={Shield}
-                    label="Approve Companies"
-                    href="/admin/approve-companies"
-                    collapsed={collapsed}
-                  />
-                  <SidebarItem
-                    icon={UserCog}
-                    label="Platform Users"
-                    href="/admin/users"
-                    collapsed={collapsed}
-                  />
+                  
+                  {/* Companies Management Group */}
+                  <SidebarGroup icon={Building2} label="Companies Management" collapsed={collapsed}>
+                    <SidebarItem
+                      icon={Building2}
+                      label="All Companies"
+                      href="/admin/company-management"
+                      collapsed={collapsed}
+                    />
+                    <SidebarItem
+                      icon={Shield}
+                      label="Approvals"
+                      href="/admin/approve-companies"
+                      collapsed={collapsed}
+                    />
+                  </SidebarGroup>
+
+                  {/* User Management Group */}
+                  <SidebarGroup icon={UserCog} label="User Management" collapsed={collapsed}>
+                    <SidebarItem
+                      icon={UserCog}
+                      label="Platform Users"
+                      href="/admin/users"
+                      collapsed={collapsed}
+                    />
+                    <SidebarItem
+                      icon={Shield}
+                      label="Roles & Permissions"
+                      href="/admin/platform-roles"
+                      collapsed={collapsed}
+                    />
+                  </SidebarGroup>
+
                   <SidebarItem
                     icon={DollarSign}
-                    label="Billing & Usage"
+                    label="Billing & Subscriptions"
                     href="/admin/tenant-analytics"
                     collapsed={collapsed}
                   />
-                  <SidebarItem
-                    icon={BarChart3}
-                    label="Platform Reports"
-                    href="/admin/analytics-dashboard"
-                    collapsed={collapsed}
-                  />
+
+                  {/* Platform Reports & Analytics Group */}
+                  <SidebarGroup icon={BarChart3} label="Platform Reports & Analytics" collapsed={collapsed}>
+                    <SidebarItem
+                      icon={BarChart3}
+                      label="Multi-Tenant Reports"
+                      href="/admin/analytics-dashboard"
+                      collapsed={collapsed}
+                    />
+                    <SidebarItem
+                      icon={Building2}
+                      label="Company Usage Analytics"
+                      href="/admin/platform-reports/company-usage"
+                      collapsed={collapsed}
+                    />
+                    <SidebarItem
+                      icon={DollarSign}
+                      label="Billing Reports"
+                      href="/admin/platform-reports/billing"
+                      collapsed={collapsed}
+                    />
+                    <SidebarItem
+                      icon={Map}
+                      label="Global Media Inventory"
+                      href="/admin/platform-reports/media-inventory"
+                      collapsed={collapsed}
+                    />
+                    <SidebarItem
+                      icon={Zap}
+                      label="TGSPDCL Billing Summary"
+                      href="/admin/platform-reports/power-billing"
+                      collapsed={collapsed}
+                    />
+                  </SidebarGroup>
+
                   <SidebarItem
                     icon={FileText}
                     label="Audit Logs"
@@ -193,19 +237,40 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                     href="/admin/campaigns"
                     collapsed={collapsed}
                   />
-                  <SidebarItem
-                    icon={TrendingUp}
-                    label="Operations"
-                    href="/admin/operations"
-                    collapsed={collapsed}
-                  />
+                  {/* Operations Group */}
+                  <SidebarGroup icon={TrendingUp} label="Operations" collapsed={collapsed}>
+                    <SidebarItem
+                      icon={Image}
+                      label="Creative Received"
+                      href="/admin/operations/creatives"
+                      collapsed={collapsed}
+                    />
+                    <SidebarItem
+                      icon={FileCheck}
+                      label="Printing Status"
+                      href="/admin/operations/printing"
+                      collapsed={collapsed}
+                    />
+                    <SidebarItem
+                      icon={TrendingUp}
+                      label="Mounting Assignment"
+                      href="/admin/operations"
+                      collapsed={collapsed}
+                    />
+                    <SidebarItem
+                      icon={Image}
+                      label="Proof Photo Uploads"
+                      href="/admin/operations/proof-uploads"
+                      collapsed={collapsed}
+                    />
+                  </SidebarGroup>
 
                   {/* Finance Group */}
                   <SidebarGroup icon={DollarSign} label="Finance" collapsed={collapsed}>
                     <SidebarItem
-                      icon={FileCheck}
-                      label="Purchase Orders"
-                      href="/admin/purchase-orders"
+                      icon={FileSpreadsheet}
+                      label="Quotations"
+                      href="/admin/estimations"
                       collapsed={collapsed}
                     />
                     <SidebarItem
@@ -215,14 +280,14 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                       collapsed={collapsed}
                     />
                     <SidebarItem
-                      icon={FileSpreadsheet}
-                      label="Quotations"
-                      href="/admin/estimations"
+                      icon={FileCheck}
+                      label="Purchase Orders"
+                      href="/admin/purchase-orders"
                       collapsed={collapsed}
                     />
                     <SidebarItem
                       icon={FileCheck}
-                      label="Proformas"
+                      label="Proforma Invoice"
                       href="/admin/proformas"
                       collapsed={collapsed}
                     />
@@ -252,36 +317,42 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                     />
                   </SidebarGroup>
 
-                  {/* Reports Group */}
-                  <SidebarGroup icon={BarChart3} label="Reports" collapsed={collapsed}>
+                  {/* Workspace Reports Group */}
+                  <SidebarGroup icon={BarChart3} label="Workspace Reports" collapsed={collapsed}>
                     <SidebarItem
                       icon={Map}
-                      label="Vacant Media"
+                      label="Media Availability"
                       href="/admin/reports/vacant-media"
                       collapsed={collapsed}
                     />
                     <SidebarItem
-                      icon={TrendingUp}
-                      label="Revenue Analytics"
-                      href="/admin/reports/revenue"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={Briefcase}
-                      label="Campaign Performance"
-                      href="/admin/reports/campaigns"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
                       icon={Users}
-                      label="Client Reports"
+                      label="Client-wise Bookings"
                       href="/admin/reports/clients"
                       collapsed={collapsed}
                     />
                     <SidebarItem
+                      icon={Briefcase}
+                      label="Campaign-wise Bookings"
+                      href="/admin/reports/campaigns"
+                      collapsed={collapsed}
+                    />
+                    <SidebarItem
+                      icon={TrendingUp}
+                      label="Asset-wise Revenue"
+                      href="/admin/reports/revenue"
+                      collapsed={collapsed}
+                    />
+                    <SidebarItem
                       icon={DollarSign}
-                      label="Financial Reports"
+                      label="Financial Summary"
                       href="/admin/reports/financial"
+                      collapsed={collapsed}
+                    />
+                    <SidebarItem
+                      icon={Image}
+                      label="Proof-of-Execution"
+                      href="/admin/reports/proof-execution"
                       collapsed={collapsed}
                     />
                   </SidebarGroup>
@@ -489,6 +560,12 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                 icon={Bell}
                 label="Notifications"
                 href="/settings/notifications"
+                collapsed={collapsed}
+              />
+              <SidebarItem
+                icon={Palette}
+                label="Theme Picker"
+                href="/settings/theme"
                 collapsed={collapsed}
               />
               

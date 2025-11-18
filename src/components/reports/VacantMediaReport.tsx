@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Download, Filter, MapPin } from "lucide-react";
+import { Download, Filter, MapPin, FileSpreadsheet, FileText, Presentation } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -22,6 +22,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { generateVacantMediaExcel } from "@/lib/reports/generateVacantMediaExcel";
+import { generateVacantMediaPPT } from "@/lib/reports/generateVacantMediaPPT";
+import { generateVacantMediaPDF } from "@/lib/reports/generateVacantMediaPDF";
+import { addDays, addWeeks, startOfDay } from "date-fns";
 
 interface VacantAsset {
   id: string;
@@ -33,14 +37,22 @@ interface VacantAsset {
   card_rate: number;
   total_sqft: number | null;
   status: string;
+  next_available_from?: string;
+  direction?: string;
+  illumination?: string;
+  images?: any;
+  latitude?: number;
+  longitude?: number;
 }
 
 export function VacantMediaReport() {
   const [assets, setAssets] = useState<VacantAsset[]>([]);
   const [filteredAssets, setFilteredAssets] = useState<VacantAsset[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [selectedCity, setSelectedCity] = useState<string>("all");
   const [selectedMediaType, setSelectedMediaType] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("all");
   const [cities, setCities] = useState<string[]>([]);
   const [mediaTypes, setMediaTypes] = useState<string[]>([]);
   const { toast } = useToast();
@@ -51,7 +63,7 @@ export function VacantMediaReport() {
 
   useEffect(() => {
     applyFilters();
-  }, [selectedCity, selectedMediaType, assets]);
+  }, [selectedCity, selectedMediaType, dateFilter, assets]);
 
   const loadVacantAssets = async () => {
     try {
@@ -95,34 +107,94 @@ export function VacantMediaReport() {
       filtered = filtered.filter((a) => a.media_type === selectedMediaType);
     }
 
+    // Date filters
+    const today = startOfDay(new Date());
+    if (dateFilter === "next-week") {
+      const nextWeek = addWeeks(today, 1);
+      filtered = filtered.filter((a) => {
+        const availableFrom = a.next_available_from ? new Date(a.next_available_from) : today;
+        return availableFrom <= nextWeek;
+      });
+    } else if (dateFilter === "next-15-days") {
+      const next15Days = addDays(today, 15);
+      filtered = filtered.filter((a) => {
+        const availableFrom = a.next_available_from ? new Date(a.next_available_from) : today;
+        return availableFrom <= next15Days;
+      });
+    }
+
     setFilteredAssets(filtered);
   };
 
-  const exportToCSV = () => {
-    const headers = ["Asset ID", "City", "Area", "Location", "Media Type", "Dimensions", "Sq.Ft", "Rate"];
-    const rows = filteredAssets.map((a) => [
-      a.id,
-      a.city,
-      a.area,
-      a.location,
-      a.media_type,
-      a.dimensions,
-      a.total_sqft || 0,
-      a.card_rate,
-    ]);
+  const getDateFilterLabel = () => {
+    switch (dateFilter) {
+      case "next-week":
+        return "Next Week";
+      case "next-15-days":
+        return "Next 15 Days";
+      default:
+        return "All Available";
+    }
+  };
 
-    const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `vacant-media-${new Date().toISOString().split("T")[0]}.csv`;
-    link.click();
+  const handleExportExcel = async () => {
+    setExporting(true);
+    try {
+      await generateVacantMediaExcel(filteredAssets, getDateFilterLabel());
+      toast({
+        title: "Success",
+        description: "Excel report exported successfully",
+      });
+    } catch (error) {
+      console.error("Export error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to export Excel",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
 
-    toast({
-      title: "Success",
-      description: "Report exported successfully",
-    });
+  const handleExportPPT = async () => {
+    setExporting(true);
+    try {
+      await generateVacantMediaPPT(filteredAssets, getDateFilterLabel());
+      toast({
+        title: "Success",
+        description: "PowerPoint presentation exported successfully",
+      });
+    } catch (error) {
+      console.error("Export error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to export PPT",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    setExporting(true);
+    try {
+      await generateVacantMediaPDF(filteredAssets, getDateFilterLabel());
+      toast({
+        title: "Success",
+        description: "PDF report exported successfully",
+      });
+    } catch (error) {
+      console.error("Export error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to export PDF",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
   };
 
   const totalValue = filteredAssets.reduce((sum, a) => sum + a.card_rate, 0);
@@ -164,13 +236,7 @@ export function VacantMediaReport() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Vacant Media Inventory</CardTitle>
-            <Button onClick={exportToCSV} size="sm">
-              <Download className="mr-2 h-4 w-4" />
-              Export CSV
-            </Button>
-          </div>
+          <CardTitle>Vacant Media Inventory</CardTitle>
           <div className="grid gap-4 md:grid-cols-2 mt-4">
             <div className="space-y-2">
               <Label>City</Label>

@@ -3835,6 +3835,14 @@ export type Database = {
           },
         ]
       }
+      user_roles_compat: {
+        Row: {
+          created_at: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       calculate_subscription_usage: {
@@ -3882,6 +3890,14 @@ export type Database = {
           p_period: string
         }
         Returns: number
+      }
+      get_user_all_roles: {
+        Args: { p_user_id: string }
+        Returns: {
+          company_id: string
+          company_name: string
+          role: Database["public"]["Enums"]["app_role"]
+        }[]
       }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
       has_role: {

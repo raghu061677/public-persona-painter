@@ -5,7 +5,7 @@ import {
   FileText, Receipt, Zap, UserCog, Palette, FileSpreadsheet,
   Bell, LogOut, User, Menu, Shield, DollarSign, Smartphone,
   Image, Settings, FileCheck, CreditCard, Globe, Mail, MessageSquare,
-  Lock, Database, Upload, Download, HardDrive, Sparkles, ShoppingBag
+  Lock, Database, Upload, Download, HardDrive, Sparkles, ShoppingBag, BarChart3
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -102,7 +102,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         {/* Main Content */}
         <ScrollArea className="flex-1">
           <div className="pb-4">
-            {/* PLATFORM ADMINISTRATION */}
+            {/* PLATFORM ADMINISTRATION - Global Admin Only */}
             {isPlatformAdmin && (
               <>
                 <SidebarSection label="Platform Administration" collapsed={collapsed}>
@@ -137,6 +137,12 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                     collapsed={collapsed}
                   />
                   <SidebarItem
+                    icon={BarChart3}
+                    label="Platform Reports"
+                    href="/admin/analytics-dashboard"
+                    collapsed={collapsed}
+                  />
+                  <SidebarItem
                     icon={FileText}
                     label="Audit Logs"
                     href="/admin/audit-logs"
@@ -153,13 +159,13 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               </>
             )}
 
-            {/* COMPANY WORKSPACE */}
+            {/* COMPANY WORKSPACE - Tenant Companies */}
             {company && (
               <>
                 <SidebarSection label="Company Workspace" collapsed={collapsed}>
                   <SidebarItem
                     icon={LayoutDashboard}
-                    label="Overview"
+                    label="Dashboard"
                     href="/admin/dashboard"
                     collapsed={collapsed}
                   />
@@ -167,6 +173,12 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                     icon={Map}
                     label="Media Assets"
                     href="/admin/media-assets"
+                    collapsed={collapsed}
+                  />
+                  <SidebarItem
+                    icon={Users}
+                    label="Clients"
+                    href="/admin/clients"
                     collapsed={collapsed}
                   />
                   <SidebarItem
@@ -187,18 +199,24 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                     href="/admin/operations"
                     collapsed={collapsed}
                   />
-                  <SidebarItem
-                    icon={Users}
-                    label="Clients"
-                    href="/admin/clients"
-                    collapsed={collapsed}
-                  />
 
                   {/* Finance Group */}
                   <SidebarGroup icon={DollarSign} label="Finance" collapsed={collapsed}>
                     <SidebarItem
+                      icon={FileCheck}
+                      label="Purchase Orders"
+                      href="/admin/purchase-orders"
+                      collapsed={collapsed}
+                    />
+                    <SidebarItem
+                      icon={FileText}
+                      label="Sales Orders"
+                      href="/admin/sales-orders"
+                      collapsed={collapsed}
+                    />
+                    <SidebarItem
                       icon={FileSpreadsheet}
-                      label="Estimates"
+                      label="Quotations"
                       href="/admin/estimations"
                       collapsed={collapsed}
                     />
@@ -209,13 +227,19 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                       collapsed={collapsed}
                     />
                     <SidebarItem
-                      icon={FileText}
+                      icon={Receipt}
                       label="Invoices"
                       href="/admin/invoices"
                       collapsed={collapsed}
                     />
                     <SidebarItem
-                      icon={Receipt}
+                      icon={CreditCard}
+                      label="Payments"
+                      href="/admin/payments"
+                      collapsed={collapsed}
+                    />
+                    <SidebarItem
+                      icon={DollarSign}
                       label="Expenses"
                       href="/admin/expenses"
                       collapsed={collapsed}
@@ -228,6 +252,55 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                     />
                   </SidebarGroup>
 
+                  {/* Reports Group */}
+                  <SidebarGroup icon={BarChart3} label="Reports" collapsed={collapsed}>
+                    <SidebarItem
+                      icon={Map}
+                      label="Vacant Media"
+                      href="/admin/reports/vacant-media"
+                      collapsed={collapsed}
+                    />
+                    <SidebarItem
+                      icon={TrendingUp}
+                      label="Revenue Analytics"
+                      href="/admin/reports/revenue"
+                      collapsed={collapsed}
+                    />
+                    <SidebarItem
+                      icon={Briefcase}
+                      label="Campaign Performance"
+                      href="/admin/reports/campaigns"
+                      collapsed={collapsed}
+                    />
+                    <SidebarItem
+                      icon={Users}
+                      label="Client Reports"
+                      href="/admin/reports/clients"
+                      collapsed={collapsed}
+                    />
+                    <SidebarItem
+                      icon={DollarSign}
+                      label="Financial Reports"
+                      href="/admin/reports/financial"
+                      collapsed={collapsed}
+                    />
+                  </SidebarGroup>
+
+                </SidebarSection>
+                <Separator className="my-4" />
+              </>
+            )}
+
+            {/* TOOLS & UTILITIES */}
+            {company && (
+              <>
+                <SidebarSection label="Tools" collapsed={collapsed}>
+                  <SidebarItem
+                    icon={Sparkles}
+                    label="AI Assistant"
+                    href="/admin/ai-assistant"
+                    collapsed={collapsed}
+                  />
                   <SidebarItem
                     icon={Smartphone}
                     label="Mobile Field App"
@@ -238,12 +311,6 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                     icon={Image}
                     label="Photo Library"
                     href="/admin/photo-library"
-                    collapsed={collapsed}
-                  />
-                  <SidebarItem
-                    icon={Sparkles}
-                    label="AI Assistant"
-                    href="/admin/ai-assistant"
                     collapsed={collapsed}
                   />
                   <SidebarItem

@@ -17,7 +17,7 @@ export function SidebarItem({ icon: Icon, label, href, collapsed }: SidebarItemP
         cn(
           "flex items-center transition-all duration-200 relative rounded-xl text-sm font-medium",
           collapsed ? "justify-center p-2.5 mx-1" : "gap-3 px-4 py-2.5 mx-2",
-          "hover:bg-accent/50",
+          "hover:bg-primary/10 hover:text-primary",
           isActive && [
             "bg-primary/10 text-primary font-semibold",
             !collapsed && "before:absolute before:left-0 before:top-1 before:bottom-1 before:w-1 before:bg-primary before:rounded-r-full"

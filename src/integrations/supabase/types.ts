@@ -101,6 +101,53 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_audit_logs: {
+        Row: {
+          action: string
+          company_id: string | null
+          created_at: string | null
+          details: Json | null
+          id: string
+          ip_address: string | null
+          resource_id: string | null
+          resource_type: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          company_id?: string | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          resource_id?: string | null
+          resource_type: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          company_id?: string | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_audit_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_assistant_logs: {
         Row: {
           company_id: string | null
@@ -1470,6 +1517,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      csrf_tokens: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          id: string
+          token: string
+          used: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          token: string
+          used?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          token?: string
+          used?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       dashboard_configurations: {
         Row: {
@@ -3849,6 +3923,7 @@ export type Database = {
         Args: { p_company_id: string }
         Returns: Json
       }
+      cleanup_security_tables: { Args: never; Returns: undefined }
       create_plan_approval_workflow: {
         Args: { p_plan_id: string }
         Returns: undefined
@@ -3864,6 +3939,7 @@ export type Database = {
       }
       delete_user_account: { Args: never; Returns: undefined }
       generate_campaign_id: { Args: never; Returns: string }
+      generate_csrf_token: { Args: never; Returns: string }
       generate_estimation_id: { Args: never; Returns: string }
       generate_expense_id: { Args: never; Returns: string }
       generate_invoice_id: { Args: never; Returns: string }
@@ -3918,6 +3994,17 @@ export type Database = {
         }
         Returns: string
       }
+      log_admin_operation: {
+        Args: {
+          p_action: string
+          p_details?: Json
+          p_ip_address?: string
+          p_resource_id?: string
+          p_resource_type: string
+          p_user_agent?: string
+        }
+        Returns: string
+      }
       log_user_activity: {
         Args: {
           p_activity_description?: string
@@ -3948,6 +4035,7 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
       }
+      validate_csrf_token: { Args: { p_token: string }; Returns: boolean }
     }
     Enums: {
       app_role:

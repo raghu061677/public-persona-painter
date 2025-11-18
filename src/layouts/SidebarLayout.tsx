@@ -178,12 +178,6 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                       href="/admin/platform-reports/media-inventory"
                       collapsed={collapsed}
                     />
-                    <SidebarItem
-                      icon={Zap}
-                      label="TGSPDCL Billing Summary"
-                      href="/admin/platform-reports/power-billing"
-                      collapsed={collapsed}
-                    />
                   </SidebarGroup>
 
                   <SidebarItem

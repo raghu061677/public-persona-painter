@@ -107,7 +107,7 @@ export default function PowerBillsWidget() {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="border-l-4 border-l-yellow-500">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Zap className="h-5 w-5" />
@@ -124,7 +124,7 @@ export default function PowerBillsWidget() {
   const hasAlerts = summary.upcomingCount > 0 || summary.overdueCount > 0;
 
   return (
-    <Card>
+    <Card className="border-l-4 border-l-yellow-500">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">

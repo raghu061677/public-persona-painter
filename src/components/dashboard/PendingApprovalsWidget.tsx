@@ -154,7 +154,7 @@ export function PendingApprovalsWidget() {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="border-l-4 border-l-orange-500">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-lg font-semibold">Pending Approvals</CardTitle>
           <Clock className="h-5 w-5 text-muted-foreground" />
@@ -170,7 +170,7 @@ export function PendingApprovalsWidget() {
 
   return (
     <>
-      <Card>
+      <Card className="border-l-4 border-l-orange-500">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-lg font-semibold">Pending Approvals</CardTitle>
           <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">

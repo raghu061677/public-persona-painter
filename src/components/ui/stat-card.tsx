@@ -12,6 +12,7 @@ interface StatCardProps {
   };
   description?: string;
   className?: string;
+  borderColor?: string;
 }
 
 export function StatCard({ 
@@ -20,10 +21,11 @@ export function StatCard({
   icon: Icon, 
   trend, 
   description,
-  className 
+  className,
+  borderColor 
 }: StatCardProps) {
   return (
-    <Card className={cn("hover-scale transition-all duration-200 hover:shadow-md animate-fade-in", className)}>
+    <Card className={cn("hover-scale transition-all duration-200 hover:shadow-md animate-fade-in border-l-4", borderColor, className)}>
       <CardContent className="pt-6">
         <div className="flex items-start justify-between">
           <div className="space-y-2 flex-1">

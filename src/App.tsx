@@ -242,6 +242,7 @@ const App = () => (
             <Route path="/admin/ai-assistant" element={<AppLayout><AIAssistant /></AppLayout>} />
             <Route path="/admin/assistant" element={<AppLayout><AIAssistant /></AppLayout>} />
             <Route path="/admin/tenant-analytics" element={<AppLayout><TenantAnalytics /></AppLayout>} />
+            <Route path="/admin/analytics-dashboard" element={<AppLayout><AnalyticsDashboard /></AppLayout>} />
             <Route path="/admin/proformas" element={<AppLayout><ProformasList /></AppLayout>} />
             <Route path="/admin/proformas/:id" element={<AppLayout><ProformaDetail /></AppLayout>} />
             <Route path="/admin/estimations" element={<AppLayout><EstimationsList /></AppLayout>} />

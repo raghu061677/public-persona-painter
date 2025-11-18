@@ -1,22 +1,8 @@
 project_id = "psryfvfdmjguhamvmqqd"
 
-[functions.create-user]
+# AI & Smart Features
+[functions.ask-ai]
 verify_jwt = true
-
-[functions.seed-demo-data]
-verify_jwt = true
-
-[functions.clear-demo-data]
-verify_jwt = true
-
-[functions.fetch-monthly-power-bills]
-verify_jwt = false
-
-[functions.capture-bill-receipt]
-verify_jwt = false
-
-[functions.send-power-bill-reminders]
-verify_jwt = false
 
 [functions.ai-assistant]
 verify_jwt = true
@@ -33,20 +19,135 @@ verify_jwt = true
 [functions.ai-proposal-generator]
 verify_jwt = true
 
+[functions.rate-suggester]
+verify_jwt = true
+
+[functions.business-ai-assistant]
+verify_jwt = true
+
+# User & Company Management
+[functions.create-user]
+verify_jwt = true
+
+[functions.update-user]
+verify_jwt = true
+
+[functions.assign-user-permissions]
+verify_jwt = true
+
+[functions.cleanup-duplicate-companies]
+verify_jwt = true
+
+[functions.export-company-data]
+verify_jwt = true
+
+[functions.delete-company]
+verify_jwt = true
+
+[functions.reset-admin-password]
+verify_jwt = true
+
+# Campaign & Operations
+[functions.auto-create-mounting-tasks]
+verify_jwt = true
+
+[functions.auto-generate-invoice]
+verify_jwt = true
+
+[functions.auto-record-expenses]
+verify_jwt = true
+
+[functions.validate-proof-photo]
+verify_jwt = true
+
+[functions.validate-mutation]
+verify_jwt = true
+
+[functions.validate-mutation-with-rate-limit]
+verify_jwt = true
+
+# Document Generation
+[functions.generate-invoice-pdf]
+verify_jwt = true
+
 [functions.generate-invoice-pdf-portal]
 verify_jwt = false
 
 [functions.generate-proof-ppt]
 verify_jwt = true
 
+[functions.generate-campaign-excel]
+verify_jwt = true
+
+# Power Bills Management
+[functions.fetch-tgspdcl-bill]
+verify_jwt = true
+
+[functions.fetch-tgspdcl-payment]
+verify_jwt = true
+
+[functions.fetch-monthly-power-bills]
+verify_jwt = false
+
+[functions.split-power-bill-expenses]
+verify_jwt = true
+
+[functions.capture-bill-receipt]
+verify_jwt = false
+
+[functions.send-power-bill-reminders]
+verify_jwt = false
+
+[functions.tgspdcl-monthly-job]
+verify_jwt = false
+
+# Notifications & Communications
 [functions.send-notification-email]
 verify_jwt = true
 
-[functions.rate-limiter]
+[functions.send-approval-notification]
+verify_jwt = true
+
+[functions.send-payment-reminders]
+verify_jwt = true
+
+[functions.send-plan-reminders]
+verify_jwt = true
+
+[functions.send-push-notification]
+verify_jwt = true
+
+[functions.send-user-invite]
+verify_jwt = true
+
+[functions.send-welcome-email]
+verify_jwt = true
+
+[functions.send-access-request-notification]
+verify_jwt = true
+
+[functions.get-vapid-public-key]
 verify_jwt = false
 
-[functions.delete-company]
+# Client Portal
+[functions.send-client-portal-invite]
+verify_jwt = true
+
+[functions.send-client-portal-magic-link]
 verify_jwt = false
 
-[functions.export-company-data]
+[functions.verify-client-portal-magic-link]
+verify_jwt = false
+
+[functions.generate-magic-link]
+verify_jwt = true
+
+[functions.verify-magic-link]
+verify_jwt = false
+
+# Demo & Testing
+[functions.seed-demo-data]
+verify_jwt = true
+
+[functions.clear-demo-data]
 verify_jwt = true

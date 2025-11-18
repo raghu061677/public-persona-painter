@@ -77,17 +77,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserRoles = async (userId: string) => {
     try {
+      // Fetch roles from company_users table (consolidated role system)
       const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId);
+        .from('company_users')
+        .select('role, company_id')
+        .eq('user_id', userId)
+        .eq('status', 'active');
 
       if (error) {
         console.error('Error fetching roles:', error);
         setRoles([]);
-      } else {
-        const userRoles = data?.map(r => r.role as AppRole) || [];
+      } else if (data && data.length > 0) {
+        // Get unique roles across all company associations
+        const userRoles = [...new Set(data.map(r => r.role as AppRole))];
         setRoles(userRoles);
+      } else {
+        setRoles([]);
       }
     } catch (error) {
       console.error('Error fetching roles:', error);

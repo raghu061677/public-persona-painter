@@ -34,7 +34,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarLayout>
           <div className="flex flex-col flex-1 h-full w-full min-w-0">
             <Topbar onSearchOpen={() => setCommandOpen(true)} />
-            <main className="flex-1 overflow-y-auto overflow-x-hidden bg-secondary/20 p-3 sm:p-4 md:p-6 lg:p-8 pb-20 md:pb-6">
+            <main className="flex-1 overflow-y-auto overflow-x-hidden bg-muted/30 p-3 sm:p-4 md:p-6 lg:p-8 pb-20 md:pb-6">
               <div className="w-full max-w-[1600px] mx-auto">
                 <BreadcrumbNav />
                 {children}

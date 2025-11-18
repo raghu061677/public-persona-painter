@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Building2, Mail, Phone, MapPin } from "lucide-react";
+import { Plus, Building2, Mail, Phone, MapPin, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { CreateCompanyDialog } from "@/components/platform/CreateCompanyDialog";
+import { EditCompanyDialog } from "@/components/platform/EditCompanyDialog";
 import {
   Table,
   TableBody,
@@ -21,16 +23,24 @@ interface Company {
   type: string;
   status: string;
   gstin: string | null;
-  city: string | null;
-  state: string | null;
+  pan: string | null;
   email: string | null;
   phone: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  state: string | null;
+  pincode: string | null;
+  website: string | null;
   created_at: string;
 }
 
 export default function ManageCompanies() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -95,7 +105,7 @@ export default function ManageCompanies() {
             View and manage all companies on the platform
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setCreateDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add Company
         </Button>
@@ -112,6 +122,7 @@ export default function ManageCompanies() {
               <TableHead>Location</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Created</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -124,12 +135,13 @@ export default function ManageCompanies() {
                   <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
                 </TableRow>
               ))
             ) : companies.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                  No companies found.
+                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  No companies found. Create your first company to get started.
                 </TableCell>
               </TableRow>
             ) : (
@@ -184,12 +196,40 @@ export default function ManageCompanies() {
                   <TableCell className="text-sm text-muted-foreground">
                     {new Date(company.created_at).toLocaleDateString()}
                   </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedCompany(company);
+                        setEditDialogOpen(true);
+                      }}
+                    >
+                      <Pencil className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </div>
+
+      <CreateCompanyDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onSuccess={loadCompanies}
+      />
+
+      {selectedCompany && (
+        <EditCompanyDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          company={selectedCompany}
+          onSuccess={loadCompanies}
+        />
+      )}
     </div>
   );
 }

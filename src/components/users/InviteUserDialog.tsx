@@ -12,9 +12,10 @@ interface InviteUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  companyId?: string;
 }
 
-export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDialogProps) {
+export function InviteUserDialog({ open, onOpenChange, onSuccess, companyId }: InviteUserDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -44,6 +45,7 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
           password: formData.password,
           username: formData.username,
           role: formData.role,
+          company_id: companyId,
         }
       });
 

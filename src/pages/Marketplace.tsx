@@ -124,11 +124,9 @@ export default function Marketplace() {
   const canRequestBooking = company?.type === 'agency' || isPlatformAdmin;
 
   const handleBookingRequest = async () => {
-    if (!selectedAsset || !company?.id) return;
-
-    if (!bookingForm.startDate || !bookingForm.endDate || !bookingForm.proposedRate) {
+    if (!selectedAsset || !bookingForm.startDate || !bookingForm.endDate) {
       toast({
-        title: "Error",
+        title: "Validation Error",
         description: "Please fill in all required fields",
         variant: "destructive",
       });
@@ -136,32 +134,73 @@ export default function Marketplace() {
     }
 
     try {
-      const { error } = await supabase.from('booking_requests' as any).insert({
-        asset_id: selectedAsset.id,
-        requester_company_id: company.id,
-        owner_company_id: selectedAsset.company_id,
-        requested_by: (await supabase.auth.getUser()).data.user?.id,
-        start_date: bookingForm.startDate,
-        end_date: bookingForm.endDate,
-        proposed_rate: parseFloat(bookingForm.proposedRate),
-        campaign_name: bookingForm.campaignName || null,
-        client_name: bookingForm.clientName || null,
-        notes: bookingForm.notes || null,
-      });
+      // If user is authenticated and part of a company, create booking request
+      if (company?.id) {
+        const { data, error } = await supabase
+          .from('booking_requests')
+          .insert({
+            asset_id: selectedAsset.id,
+            owner_company_id: selectedAsset.company_id,
+            requester_company_id: company.id,
+            requested_by: (await supabase.auth.getUser()).data.user?.id || '',
+            start_date: bookingForm.startDate,
+            end_date: bookingForm.endDate,
+            proposed_rate: parseFloat(bookingForm.proposedRate) || 0,
+            campaign_name: bookingForm.campaignName,
+            client_name: bookingForm.clientName,
+            notes: bookingForm.notes,
+            status: 'pending',
+          });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      await logActivity(
-        'create',
-        'booking_request',
-        selectedAsset.id,
-        `Booking request for ${selectedAsset.id}`,
-        { asset_id: selectedAsset.id, company_id: selectedAsset.company_id }
-      );
+        await logActivity(
+          'create',
+          'booking_request',
+          selectedAsset.id,
+          `Booking request for ${selectedAsset.id}`,
+          { asset_id: selectedAsset.id }
+        );
+      } else {
+        // For public users without login, create a lead in the Matrix company
+        const { data: matrixCompany } = await supabase
+          .from('companies')
+          .select('id')
+          .eq('name', 'Matrix Network Solutions')
+          .single();
+
+        if (!matrixCompany) {
+          throw new Error('Matrix Network Solutions company not found');
+        }
+
+        // Create a lead from the marketplace enquiry
+        const { error: leadError } = await supabase
+          .from('leads')
+          .insert({
+            company_id: matrixCompany.id,
+            name: bookingForm.clientName,
+            company: bookingForm.clientName,
+            requirement: `Marketplace Enquiry for Asset ${selectedAsset.id} - ${selectedAsset.media_type} in ${selectedAsset.area}\nCampaign: ${bookingForm.campaignName}\nDates: ${bookingForm.startDate} to ${bookingForm.endDate}\nProposed Rate: ${bookingForm.proposedRate}\nNotes: ${bookingForm.notes}`,
+            location: `${selectedAsset.area}, ${selectedAsset.city}`,
+            source: 'Go-Ads Website - Marketplace',
+            status: 'New',
+            metadata: {
+              asset_id: selectedAsset.id,
+              campaign_name: bookingForm.campaignName,
+              start_date: bookingForm.startDate,
+              end_date: bookingForm.endDate,
+              proposed_rate: bookingForm.proposedRate,
+            }
+          });
+
+        if (leadError) throw leadError;
+      }
 
       toast({
-        title: "Success",
-        description: "Booking request sent successfully",
+        title: "Enquiry Submitted",
+        description: company?.id 
+          ? "Your booking request has been sent to the media owner"
+          : "Thank you for your enquiry! Our team will contact you soon.",
       });
 
       setBookingDialog(false);
@@ -175,10 +214,10 @@ export default function Marketplace() {
         notes: "",
       });
     } catch (error: any) {
-      console.error('Error creating booking request:', error);
+      console.error('Error submitting enquiry:', error);
       toast({
         title: "Error",
-        description: "Failed to send booking request",
+        description: error.message,
         variant: "destructive",
       });
     }

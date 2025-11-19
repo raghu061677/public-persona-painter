@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { UserPlus, Shield, Activity, Mail, Phone, Calendar, MoreVertical } from "lucide-react";
 import {
   DropdownMenu,
@@ -66,14 +67,23 @@ export default function CompanyUsers() {
     try {
       setLoading(true);
       
+      // Type for company_users table
+      type CompanyUserRow = Database['public']['Tables']['company_users']['Row'];
+      
       // Get company users
-      const { data: companyUsers, error: companyUsersError } = await supabase
+      const { data, error: companyUsersError } = await supabase
         .from('company_users')
         .select('*')
         .eq('company_id', companyId);
 
       if (companyUsersError) throw companyUsersError;
-      if (!companyUsers) return;
+      
+      const companyUsersData = data as CompanyUserRow[] | null;
+      
+      if (!companyUsersData || companyUsersData.length === 0) {
+        setUsers([]);
+        return;
+      }
 
       // Get auth users and profiles
       const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers();
@@ -83,21 +93,20 @@ export default function CompanyUsers() {
         .from('profiles')
         .select('*');
 
-      // Merge data with explicit typing
-      const mergedUsers: CompanyUser[] = companyUsers.map((cu) => {
-        const cuData = cu as any;
-        const authUser = authUsers.find(au => au.id === cuData.user_id);
-        const profile = profiles?.find(p => p.id === cuData.user_id);
+      // Merge data
+      const mergedUsers: CompanyUser[] = companyUsersData.map((cu) => {
+        const authUser = authUsers.find(au => au.id === cu.user_id);
+        const profile = profiles?.find(p => p.id === cu.user_id);
 
         return {
-          id: cuData.id,
-          user_id: cuData.user_id,
+          id: cu.id,
+          user_id: cu.user_id,
           email: authUser?.email || 'Unknown',
           username: profile?.username || 'Unknown',
-          role: cuData.role,
-          status: cuData.status || 'active',
-          joined_at: cuData.joined_at,
-          is_primary: cuData.is_primary || false,
+          role: cu.role,
+          status: cu.status || 'active',
+          joined_at: cu.joined_at,
+          is_primary: cu.is_primary || false,
         };
       });
 

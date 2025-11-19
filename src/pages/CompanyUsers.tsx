@@ -85,8 +85,15 @@ export default function CompanyUsers() {
 
       if (companyUsersError) throw companyUsersError;
       
-      // Type assert the data
-      const companyUsersData = (data || []) as CompanyUserRow[];
+      // Use non-null assertion after null check
+      if (!data) {
+        setUsers([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Type assert to the proper row type
+      const companyUsersData = data as CompanyUserRow[];
       
       if (companyUsersData.length === 0) {
         setUsers([]);
@@ -98,20 +105,22 @@ export default function CompanyUsers() {
       const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers();
       if (authError) throw authError;
 
-      const { data: profiles } = await supabase
+      const { data: profilesData } = await supabase
         .from('profiles')
         .select('*');
+      
+      const profiles = profilesData || [];
 
       // Merge data
       const mergedUsers: CompanyUser[] = companyUsersData.map((cu) => {
         const authUser = authUsers.find(au => au.id === cu.user_id);
-        const profile = profiles?.find(p => p.id === cu.user_id);
+        const profile = profiles.find(p => (p as any).id === cu.user_id);
 
         return {
           id: cu.id,
           user_id: cu.user_id,
           email: authUser?.email || 'Unknown',
-          username: profile?.username || 'Unknown',
+          username: (profile as any)?.username || 'Unknown',
           role: cu.role,
           status: cu.status || 'active',
           joined_at: cu.joined_at,

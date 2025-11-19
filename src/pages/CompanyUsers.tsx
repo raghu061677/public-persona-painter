@@ -26,6 +26,17 @@ interface CompanyUser {
   is_primary: boolean;
 }
 
+type CompanyUserRow = {
+  id: string;
+  user_id: string;
+  company_id: string;
+  role: string;
+  status: string | null;
+  joined_at: string;
+  is_primary: boolean | null;
+  invited_by: string | null;
+};
+
 export default function CompanyUsers() {
   const { companyId } = useParams();
   const navigate = useNavigate();
@@ -66,7 +77,7 @@ export default function CompanyUsers() {
     try {
       setLoading(true);
       
-      // Get company users with explicit typing
+      // Get company users with type assertion
       const { data, error: companyUsersError } = await supabase
         .from('company_users')
         .select('*')
@@ -74,8 +85,12 @@ export default function CompanyUsers() {
 
       if (companyUsersError) throw companyUsersError;
       
-      if (!data || data.length === 0) {
+      // Type assert the data
+      const companyUsersData = (data || []) as CompanyUserRow[];
+      
+      if (companyUsersData.length === 0) {
         setUsers([]);
+        setLoading(false);
         return;
       }
 
@@ -87,8 +102,8 @@ export default function CompanyUsers() {
         .from('profiles')
         .select('*');
 
-      // Merge data - data is now properly typed by Supabase
-      const mergedUsers: CompanyUser[] = data.map((cu) => {
+      // Merge data
+      const mergedUsers: CompanyUser[] = companyUsersData.map((cu) => {
         const authUser = authUsers.find(au => au.id === cu.user_id);
         const profile = profiles?.find(p => p.id === cu.user_id);
 

@@ -155,7 +155,6 @@ const ClientInvoices = lazy(() => import("./pages/ClientInvoices"));
 const AccessDenied = lazy(() => import("./pages/AccessDenied"));
 const ManageUsers = lazy(() => import("./pages/platform/ManageUsers"));
 const ManageCompanies = lazy(() => import("./pages/platform/ManageCompanies"));
-const Users = lazy(() => import("./pages/Users"));
 
 // Optimized Query Client with caching
 const queryClient = new QueryClient({
@@ -218,7 +217,6 @@ const App = () => (
             <Route path="/admin/platform" element={<ProtectedRoute requireAuth><AppLayout><PlatformAdminDashboard /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/platform/users" element={<PlatformAdminGuard><AppLayout><ManageUsers /></AppLayout></PlatformAdminGuard>} />
             <Route path="/admin/platform/companies" element={<PlatformAdminGuard><AppLayout><ManageCompanies /></AppLayout></PlatformAdminGuard>} />
-            <Route path="/admin/users" element={<ProtectedRoute requireAuth><AppLayout><Users /></AppLayout></ProtectedRoute>} />
             
             {/* Duplicate route removed - see line 268 for actual company settings routes */}
             

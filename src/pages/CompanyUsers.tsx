@@ -37,6 +37,18 @@ type CompanyUserRow = {
   invited_by: string | null;
 };
 
+type AuthUser = {
+  id: string;
+  email?: string;
+  [key: string]: any;
+};
+
+type ProfileRow = {
+  id: string;
+  username?: string;
+  [key: string]: any;
+};
+
 export default function CompanyUsers() {
   const { companyId } = useParams();
   const navigate = useNavigate();
@@ -105,25 +117,24 @@ export default function CompanyUsers() {
       const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
       if (authError) throw authError;
       
-      const authUsers = authData.users || [];
+      const authUsers: AuthUser[] = (authData?.users as AuthUser[]) || [];
 
       const { data: profilesData } = await supabase
         .from('profiles')
         .select('*');
       
-      // Explicitly type the profiles array to avoid TypeScript inference issues
-      const profiles = (profilesData as any[] | null) || [];
+      const profiles: ProfileRow[] = (profilesData as ProfileRow[]) || [];
 
       // Merge data
       const mergedUsers: CompanyUser[] = companyUsersData.map((cu) => {
-        const authUser = authUsers.find((au: any) => au.id === cu.user_id);
-        const profile = profiles.find((p: any) => p.id === cu.user_id);
+        const authUser = authUsers.find((au) => au.id === cu.user_id);
+        const profile = profiles.find((p) => p.id === cu.user_id);
 
         return {
           id: cu.id,
           user_id: cu.user_id,
           email: authUser?.email || 'Unknown',
-          username: (profile as any)?.username || 'Unknown',
+          username: profile?.username || 'Unknown',
           role: cu.role,
           status: cu.status || 'active',
           joined_at: cu.joined_at,

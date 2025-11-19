@@ -23,40 +23,16 @@ export default function Users() {
     try {
       setLoading(true);
       
-      // Get all users from auth
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+      // Call the list-users edge function
+      const { data, error } = await supabase.functions.invoke('list-users');
       
-      if (authError) throw authError;
+      if (error) throw error;
 
-      // Get profiles and roles
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*');
-
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('*');
-
-      if (profilesError) throw profilesError;
-      if (rolesError) throw rolesError;
-
-      // Merge data
-      const mergedUsers = authUsers.users.map(user => {
-        const profile = profiles?.find(p => p.id === user.id);
-        const userRoles = roles?.filter(r => r.user_id === user.id).map(r => r.role) || [];
-        
-        return {
-          id: user.id,
-          email: user.email,
-          username: profile?.username || 'Unknown',
-          avatar_url: profile?.avatar_url,
-          roles: userRoles,
-          created_at: user.created_at,
-          last_sign_in: user.last_sign_in_at,
-        };
-      });
-
-      setUsers(mergedUsers);
+      if (data?.users) {
+        setUsers(data.users);
+      } else {
+        setUsers([]);
+      }
     } catch (error: any) {
       console.error('Error loading users:', error);
       toast({

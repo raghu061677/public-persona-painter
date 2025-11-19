@@ -12,6 +12,7 @@ import { Building2, UserPlus, Users, Pencil, Trash2, CheckCircle, Shield, Plus, 
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/ui/stat-card";
+import { EditCompanyDialog } from "@/components/platform/EditCompanyDialog";
 import {
   Table,
   TableBody,
@@ -94,6 +95,8 @@ export default function CompanyManagement() {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [companyToEdit, setCompanyToEdit] = useState<Company | null>(null);
 
   useEffect(() => {
     if (isPlatformAdmin) {
@@ -539,7 +542,18 @@ export default function CompanyManagement() {
             <TableBody>
               {companies.map((company) => (
                 <TableRow key={company.id} className="hover:bg-muted/50 transition-colors">
-                  <TableCell className="font-medium">{company.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <div 
+                      className="group flex items-center gap-1 cursor-pointer hover:text-primary hover:underline transition-all duration-200 w-fit"
+                      onClick={() => {
+                        setCompanyToEdit(company);
+                        setEditDialogOpen(true);
+                      }}
+                    >
+                      {company.name}
+                      <Pencil className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                    </div>
+                  </TableCell>
                   <TableCell>{company.legal_name}</TableCell>
                   <TableCell>
                     <Badge variant={company.type === 'platform_admin' ? 'default' : 'secondary'}>
@@ -765,6 +779,19 @@ export default function CompanyManagement() {
             </Table>
           </CardContent>
         </Card>
+      )}
+
+      {/* Edit Company Dialog */}
+      {companyToEdit && (
+        <EditCompanyDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          company={companyToEdit as any}
+          onSuccess={() => {
+            setEditDialogOpen(false);
+            loadCompanies();
+          }}
+        />
       )}
     </div>
   );

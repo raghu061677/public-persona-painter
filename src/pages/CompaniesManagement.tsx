@@ -159,7 +159,12 @@ export default function CompaniesManagement() {
                     <div className="flex items-center gap-3">
                       <Building2 className="h-8 w-8 text-primary" />
                       <div>
-                        <CardTitle>{company.name}</CardTitle>
+                        <CardTitle 
+                          className="cursor-pointer hover:text-primary transition-colors"
+                          onClick={() => handleEditCompany(company)}
+                        >
+                          {company.name}
+                        </CardTitle>
                         <CardDescription>
                           {company.legal_name || company.name}
                         </CardDescription>

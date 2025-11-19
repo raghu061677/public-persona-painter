@@ -102,19 +102,22 @@ export default function CompanyUsers() {
       }
 
       // Get auth users and profiles
-      const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers();
+      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
       if (authError) throw authError;
+      
+      const authUsers = authData.users || [];
 
       const { data: profilesData } = await supabase
         .from('profiles')
         .select('*');
       
-      const profiles = profilesData || [];
+      // Explicitly type the profiles array to avoid TypeScript inference issues
+      const profiles = (profilesData as any[] | null) || [];
 
       // Merge data
       const mergedUsers: CompanyUser[] = companyUsersData.map((cu) => {
-        const authUser = authUsers.find(au => au.id === cu.user_id);
-        const profile = profiles.find(p => (p as any).id === cu.user_id);
+        const authUser = authUsers.find((au: any) => au.id === cu.user_id);
+        const profile = profiles.find((p: any) => p.id === cu.user_id);
 
         return {
           id: cu.id,

@@ -36,7 +36,7 @@ interface CompanyStats {
   agencies: number;
 }
 
-export default function PlatformAdminDashboard() {
+export function PlatformAdminDashboard() {
   const { isPlatformAdmin } = useCompany();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -335,3 +335,5 @@ export default function PlatformAdminDashboard() {
     </PageContainer>
   );
 }
+
+export default PlatformAdminDashboard;

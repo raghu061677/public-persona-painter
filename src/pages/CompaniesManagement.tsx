@@ -206,14 +206,14 @@ export default function CompaniesManagement() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       size="sm"
-                      variant="outline"
                       onClick={() => handleEditCompany(company)}
+                      className="bg-primary hover:bg-primary/90"
                     >
                       <Pencil className="h-4 w-4 mr-2" />
-                      Edit
+                      Edit Company
                     </Button>
                     <Button
                       size="sm"

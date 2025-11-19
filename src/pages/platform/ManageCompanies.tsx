@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Building2, Mail, Phone, MapPin, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { CreateCompanyDialog } from "@/components/platform/CreateCompanyDialog";
+import { CreateCompanyWithUsersDialog } from "@/components/platform/CreateCompanyWithUsersDialog";
 import { EditCompanyDialog } from "@/components/platform/EditCompanyDialog";
 import {
   Table,
@@ -39,6 +40,7 @@ export default function ManageCompanies() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createWithUsersDialogOpen, setCreateWithUsersDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const { toast } = useToast();
@@ -105,10 +107,16 @@ export default function ManageCompanies() {
             View and manage all companies on the platform
           </p>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Company
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Quick Add Company
+          </Button>
+          <Button onClick={() => setCreateWithUsersDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Company + Users
+          </Button>
+        </div>
       </div>
 
       {/* Companies Table */}
@@ -219,6 +227,12 @@ export default function ManageCompanies() {
       <CreateCompanyDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
+        onSuccess={loadCompanies}
+      />
+
+      <CreateCompanyWithUsersDialog
+        open={createWithUsersDialogOpen}
+        onOpenChange={setCreateWithUsersDialogOpen}
         onSuccess={loadCompanies}
       />
 

@@ -38,60 +38,19 @@ export default function UserActivityDashboard() {
 
   const loadUserActivities = async () => {
     try {
-      // Get all users
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, username");
+      const { data, error } = await supabase.functions.invoke("get-user-activities");
 
-      if (profilesError) throw profilesError;
+      if (error) throw error;
 
-      if (!profiles || profiles.length === 0) {
+      if (data?.data) {
+        setActivities(data.data);
+      } else {
         setActivities([]);
-        setLoading(false);
-        return;
       }
-
-      // Get auth users for email and last sign in
-      const { data: authData, error: usersError } = await supabase.auth.admin.listUsers();
-      if (usersError) throw usersError;
-      
-      const users = authData?.users || [];
-
-      // Get activity logs count and recent actions for each user
-      const activitiesData: UserActivity[] = [];
-      
-      for (const profile of profiles || []) {
-        const authUser = users?.find(u => u.id === profile.id);
-        
-        // Get total actions count
-        const { count } = await supabase
-          .from("user_activity_logs")
-          .select("*", { count: 'exact', head: true })
-          .eq("user_id", profile.id);
-
-        // Get recent 5 actions
-        const { data: recentActions } = await supabase
-          .from("user_activity_logs")
-          .select("activity_type, activity_description, created_at")
-          .eq("user_id", profile.id)
-          .order("created_at", { ascending: false })
-          .limit(5);
-
-        activitiesData.push({
-          id: profile.id,
-          username: profile.username || 'Unknown',
-          email: authUser?.email || '',
-          last_login: authUser?.last_sign_in_at || null,
-          total_actions: count || 0,
-          recent_actions: recentActions || [],
-        });
-      }
-
-      setActivities(activitiesData);
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to load user activities",
         variant: "destructive",
       });
     } finally {
@@ -102,7 +61,7 @@ export default function UserActivityDashboard() {
   const loadDetailedLogs = async (userId: string) => {
     try {
       const { data, error } = await supabase
-        .from("user_activity_logs")
+        .from("activity_logs")
         .select("*")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })

@@ -36,37 +36,15 @@ export default function UserPermissionsView() {
     try {
       setLoading(true);
 
-      // Load all users with their auth data
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-      if (authError) throw authError;
+      // Call the list-users edge function
+      const { data: usersData, error: usersError } = await supabase.functions.invoke('list-users');
+      if (usersError) throw usersError;
 
-      // Load profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("*");
-      if (profilesError) throw profilesError;
-
-      // Load user roles
-      const { data: rolesData, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("*");
-      if (rolesError) throw rolesError;
-
-      // Merge data
-      const mergedUsers = authUsers.users.map(user => {
-        const profile = profiles?.find(p => p.id === user.id);
-        const userRoles = rolesData?.filter(r => r.user_id === user.id).map(r => r.role) || [];
-        
-        return {
-          id: user.id,
-          email: user.email,
-          username: profile?.username || user.email?.split('@')[0] || 'Unknown',
-          avatar_url: profile?.avatar_url,
-          roles: userRoles,
-        };
-      });
-
-      setUsers(mergedUsers);
+      if (usersData?.users) {
+        setUsers(usersData.users);
+      } else {
+        setUsers([]);
+      }
 
       // Load role permissions
       const { data: permsData, error: permsError } = await supabase

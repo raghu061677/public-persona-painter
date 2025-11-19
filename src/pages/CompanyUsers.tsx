@@ -6,8 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
-import { UserPlus, Shield, Activity, Mail, Phone, Calendar, MoreVertical } from "lucide-react";
+import { UserPlus, Shield, Mail, Calendar, MoreVertical } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,10 +66,7 @@ export default function CompanyUsers() {
     try {
       setLoading(true);
       
-      // Type for company_users table
-      type CompanyUserRow = Database['public']['Tables']['company_users']['Row'];
-      
-      // Get company users
+      // Get company users with explicit typing
       const { data, error: companyUsersError } = await supabase
         .from('company_users')
         .select('*')
@@ -78,9 +74,7 @@ export default function CompanyUsers() {
 
       if (companyUsersError) throw companyUsersError;
       
-      const companyUsersData = data as CompanyUserRow[] | null;
-      
-      if (!companyUsersData || companyUsersData.length === 0) {
+      if (!data || data.length === 0) {
         setUsers([]);
         return;
       }
@@ -93,8 +87,8 @@ export default function CompanyUsers() {
         .from('profiles')
         .select('*');
 
-      // Merge data
-      const mergedUsers: CompanyUser[] = companyUsersData.map((cu) => {
+      // Merge data - data is now properly typed by Supabase
+      const mergedUsers: CompanyUser[] = data.map((cu) => {
         const authUser = authUsers.find(au => au.id === cu.user_id);
         const profile = profiles?.find(p => p.id === cu.user_id);
 

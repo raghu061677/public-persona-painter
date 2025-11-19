@@ -53,6 +53,7 @@ serve(async (req) => {
     }
 
     // Create auth user
+    console.log('Creating auth user:', userEmail);
     const { data: authUser, error: authError } = await supabaseClient.auth.admin.createUser({
       email: userEmail,
       password: userPassword,
@@ -67,18 +68,31 @@ serve(async (req) => {
       throw new Error(`Failed to create user: ${authError.message}`);
     }
 
-    // Create profile
+    if (!authUser?.user) {
+      throw new Error('User creation failed - no user returned');
+    }
+
+    console.log('Auth user created:', authUser.user.id);
+
+    // Upsert profile (in case a trigger already created it)
     const { error: profileError } = await supabaseClient
       .from('profiles')
-      .insert({
+      .upsert({
         id: authUser.user.id,
         username: userName,
+      }, {
+        onConflict: 'id'
       });
 
     if (profileError) {
       console.error('Profile error:', profileError);
-      throw new Error(`Failed to create profile: ${profileError.message}`);
+      // Don't fail if profile already exists
+      if (profileError.code !== '23505') {
+        throw new Error(`Failed to create profile: ${profileError.message}`);
+      }
     }
+
+    console.log('Profile created/updated for user:', authUser.user.id);
 
     // Link user to company
     const { error: companyUserError } = await supabaseClient
@@ -95,6 +109,8 @@ serve(async (req) => {
       console.error('Company user error:', companyUserError);
       throw new Error(`Failed to link user to company: ${companyUserError.message}`);
     }
+
+    console.log('User linked to company successfully');
 
     return new Response(
       JSON.stringify({

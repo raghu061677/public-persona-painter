@@ -29,10 +29,19 @@ verify_jwt = true
 [functions.create-user]
 verify_jwt = true
 
+[functions.list-users]
+verify_jwt = true
+
+[functions.get-user-activities]
+verify_jwt = true
+
 [functions.update-user]
 verify_jwt = true
 
 [functions.assign-user-permissions]
+verify_jwt = true
+
+[functions.add-user-to-company]
 verify_jwt = true
 
 [functions.cleanup-duplicate-companies]

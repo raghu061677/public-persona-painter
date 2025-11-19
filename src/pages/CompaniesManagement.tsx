@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, Check, X, Eye } from "lucide-react";
+import { Building2, Check, X, Eye, Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PageContainer } from "@/components/ui/page-container";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/ui/stat-card";
+import { EditCompanyDialog } from "@/components/platform/EditCompanyDialog";
 
 interface Company {
   id: string;
@@ -30,6 +31,8 @@ export default function CompaniesManagement() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [companyToEdit, setCompanyToEdit] = useState<Company | null>(null);
 
   useEffect(() => {
     if (isPlatformAdmin) {
@@ -56,6 +59,11 @@ export default function CompaniesManagement() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleEditCompany = (company: Company) => {
+    setCompanyToEdit(company);
+    setEditDialogOpen(true);
   };
 
   const updateCompanyStatus = async (companyId: string, newStatus: 'active' | 'suspended' | 'cancelled') => {
@@ -202,6 +210,14 @@ export default function CompaniesManagement() {
                     <Button
                       size="sm"
                       variant="outline"
+                      onClick={() => handleEditCompany(company)}
+                    >
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() => setSelectedCompany(company)}
                     >
                       <Eye className="h-4 w-4 mr-2" />
@@ -272,6 +288,19 @@ export default function CompaniesManagement() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Company Dialog */}
+      {companyToEdit && (
+        <EditCompanyDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          company={companyToEdit as any}
+          onSuccess={() => {
+            setEditDialogOpen(false);
+            loadCompanies();
+          }}
+        />
+      )}
     </PageContainer>
   );
 }

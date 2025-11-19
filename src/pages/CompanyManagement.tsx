@@ -334,57 +334,26 @@ export default function CompanyManagement() {
     try {
       setSubmitting(true);
 
-      // Create user in auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: userEmail,
-        password: userPassword,
-        email_confirm: true,
-        user_metadata: {
-          username: userName,
+      // Call edge function to create user with proper permissions
+      const { data, error } = await supabase.functions.invoke('add-user-to-company', {
+        body: {
+          companyId: selectedCompany.id,
+          userName,
+          userEmail,
+          userPassword,
+          userRole,
         },
       });
 
-      if (authError) throw authError;
-
-      // Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
-          username: userName,
-        });
-
-      if (profileError) throw profileError;
-
-      // Add user to company
-      const { error: companyUserError } = await supabase
-        .from('company_users')
-        .insert({
-          company_id: selectedCompany.id,
-          user_id: authData.user.id,
-          role: userRole,
-          status: 'active',
-        });
-
-      if (companyUserError) throw companyUserError;
-
-      // Add user role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: authData.user.id,
-          role: userRole,
-        });
-
-      if (roleError) throw roleError;
+      if (error) throw error;
 
       // Optionally assign all module permissions
-      if (assignAllModules) {
+      if (assignAllModules && data?.user?.id) {
         const { data: permData, error: permError } = await supabase.functions.invoke(
           'assign-user-permissions',
           {
             body: {
-              userId: authData.user.id,
+              userId: data.user.id,
               role: userRole,
               modules: 'all'
             }
@@ -403,7 +372,7 @@ export default function CompanyManagement() {
 
       toast({
         title: "Success",
-        description: `User ${userName} added to ${selectedCompany.name} with full access`,
+        description: `User ${userName} added to ${selectedCompany.name} successfully`,
       });
 
       setAddUserToCompanyOpen(false);

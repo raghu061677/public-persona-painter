@@ -37,9 +37,15 @@ serve(async (req) => {
     }
 
     // Check if user is platform admin
-    const { data: isPlatformAdmin } = await supabaseClient.rpc('is_platform_admin', {
-      _user_id: user.id
-    });
+    const { data: companyUsers } = await supabaseClient
+      .from('company_users')
+      .select('company_id, companies!inner(type)')
+      .eq('user_id', user.id)
+      .eq('status', 'active');
+
+    const isPlatformAdmin = companyUsers?.some(
+      (cu: any) => cu.companies.type === 'platform_admin'
+    );
 
     if (!isPlatformAdmin) {
       return new Response(

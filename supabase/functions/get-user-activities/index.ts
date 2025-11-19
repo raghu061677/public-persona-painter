@@ -31,16 +31,23 @@ serve(async (req) => {
       throw new Error("Unauthorized");
     }
 
-    // Check if user is admin
-    const { data: userRoles } = await supabaseClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id);
+    console.log('get-user-activities: Authenticated user:', user.id);
 
-    const isAdmin = userRoles?.some(r => r.role === "admin");
+    // Check if user is admin in company_users table
+    const { data: companyUsers } = await supabaseClient
+      .from("company_users")
+      .select("role, companies(type)")
+      .eq("user_id", user.id)
+      .eq("status", "active");
+
+    const isAdmin = companyUsers?.some(cu => cu.role === "admin" || (cu.companies as any)?.type === 'platform_admin');
+    
     if (!isAdmin) {
+      console.error('Permission denied - not admin');
       throw new Error("Only admins can view user activities");
     }
+
+    console.log('get-user-activities: User has admin access');
 
     // Get all profiles
     const { data: profiles, error: profilesError } = await supabaseClient

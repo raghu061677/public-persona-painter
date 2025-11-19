@@ -36,39 +36,58 @@ serve(async (req) => {
       );
     }
 
-    // Check if user has admin role
-    const { data: userRoles, error: roleError } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id);
+    console.log('list-users: Authenticated user:', user.id);
 
-    if (roleError || !userRoles?.some(r => r.role === 'admin')) {
+    // Check if user has admin role in company_users table
+    const { data: companyUsers, error: roleError } = await supabaseClient
+      .from('company_users')
+      .select('role, companies(type)')
+      .eq('user_id', user.id)
+      .eq('status', 'active');
+
+    const isAdmin = companyUsers?.some(cu => cu.role === 'admin' || (cu.companies as any)?.type === 'platform_admin');
+
+    if (roleError || !isAdmin) {
+      console.error('Permission denied:', roleError);
       return new Response(
         JSON.stringify({ error: 'Forbidden - Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    console.log('list-users: User has admin access');
+
     // Fetch all users from auth.users using admin API
+    console.log('list-users: Fetching all users...');
     const { data: { users }, error: listError } = await supabaseClient.auth.admin.listUsers();
 
     if (listError) {
+      console.error('list-users: Error fetching users:', listError);
       throw listError;
     }
 
-    // Fetch profiles and roles for all users
+    console.log('list-users: Found', users?.length, 'auth users');
+
+    // Fetch profiles for all users
     const { data: profiles } = await supabaseClient
       .from('profiles')
       .select('id, username, avatar_url, created_at');
 
-    const { data: roles } = await supabaseClient
-      .from('user_roles')
-      .select('user_id, role');
+    console.log('list-users: Found', profiles?.length, 'profiles');
+
+    // Fetch company associations for all users
+    const { data: companyUserRoles } = await supabaseClient
+      .from('company_users')
+      .select('user_id, role, company_id')
+      .eq('status', 'active');
+
+    console.log('list-users: Found', companyUserRoles?.length, 'company user associations');
 
     // Combine the data
     const usersWithData = users.map(u => {
       const profile = profiles?.find(p => p.id === u.id);
-      const userRoles = roles?.filter(r => r.user_id === u.id).map(r => r.role) || [];
+      const userCompanyRoles = companyUserRoles?.filter(r => r.user_id === u.id) || [];
+      const userRoles = userCompanyRoles.map(r => r.role);
       
       return {
         id: u.id,
@@ -81,6 +100,8 @@ serve(async (req) => {
         last_sign_in_at: u.last_sign_in_at
       };
     });
+
+    console.log('list-users: Returning', usersWithData.length, 'users with data');
 
     return new Response(
       JSON.stringify({ users: usersWithData }),

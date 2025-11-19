@@ -156,20 +156,21 @@ export default function CompaniesManagement() {
               <Card key={company.id} className="hover-scale transition-all duration-200">
                 <CardHeader>
                   <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <Building2 className="h-8 w-8 text-primary" />
-                      <div>
-                        <CardTitle 
-                          className="cursor-pointer hover:text-primary transition-colors"
-                          onClick={() => handleEditCompany(company)}
-                        >
-                          {company.name}
-                        </CardTitle>
-                        <CardDescription>
-                          {company.legal_name || company.name}
-                        </CardDescription>
-                      </div>
+                  <div className="flex items-center gap-3">
+                    <Building2 className="h-8 w-8 text-primary" />
+                    <div>
+                      <CardTitle 
+                        className="cursor-pointer hover:text-primary hover:underline transition-all duration-200 flex items-center gap-2 group"
+                        onClick={() => handleEditCompany(company)}
+                      >
+                        {company.name}
+                        <Pencil className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </CardTitle>
+                      <CardDescription>
+                        {company.legal_name || company.name}
+                      </CardDescription>
                     </div>
+                  </div>
                     <Badge
                       variant={
                         company.status === 'active' ? 'default' :

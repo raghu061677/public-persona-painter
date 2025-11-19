@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -71,6 +72,7 @@ interface CompanyUserWithProfile {
 export default function CompanyManagement() {
   const { isPlatformAdmin } = useCompany();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [companyUsers, setCompanyUsers] = useState<CompanyUserWithProfile[]>([]);
@@ -571,10 +573,7 @@ export default function CompanyManagement() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
-                          setSelectedCompany(company);
-                          loadCompanyUsers(company.id);
-                        }}
+                        onClick={() => navigate(`/admin/users/companies/${company.id}`)}
                       >
                         <Users className="h-4 w-4 mr-2" />
                         Manage Users

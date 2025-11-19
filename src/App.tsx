@@ -83,6 +83,7 @@ const PhotoGallery = lazy(() => import("./pages/PhotoGallery"));
 const ImportData = lazy(() => import("./pages/ImportData"));
 const ExportData = lazy(() => import("./pages/ExportData"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
+const CompanyUsersManagement = lazy(() => import("./pages/CompanyUsersManagement"));
 const CodeManagement = lazy(() => import("./pages/CodeManagement"));
 const PowerBillsDashboard = lazy(() => import("./pages/PowerBillsDashboard"));
 const PowerBillsAnalytics = lazy(() => import("./pages/PowerBillsAnalytics"));
@@ -297,6 +298,7 @@ const App = () => (
             <Route path="/admin/audit-logs" element={<AppLayout><AuditLogs /></AppLayout>} />
             <Route path="/admin/vendors" element={<AppLayout><VendorsManagement /></AppLayout>} />
             <Route path="/admin/users" element={<ProtectedRoute requiredModule="users" requiredAction="view"><AppLayout><UserManagement /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/users/companies/:companyId" element={<PlatformAdminGuard><AppLayout><CompanyUsersManagement /></AppLayout></PlatformAdminGuard>} />
             <Route path="/admin/operations-settings" element={<AppLayout><OperationsSettings /></AppLayout>} />
             <Route path="/admin/organization-settings" element={<AppLayout><OrganizationSettings /></AppLayout>} />
             <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />

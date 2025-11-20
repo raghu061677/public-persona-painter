@@ -174,7 +174,6 @@ const queryClient = new QueryClient({
 if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
   requestIdleCallback(() => {
     import("./pages/Dashboard");
-    import("./pages/MediaAssetsList");
     import("./pages/PlansList");
     import("./pages/CampaignsList");
   }, { timeout: 3000 });

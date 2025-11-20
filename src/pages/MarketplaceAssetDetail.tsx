@@ -223,14 +223,14 @@ export default function MarketplaceAssetDetail() {
                   </Button>
                 </div>
                 
-                {/* Embedded Map */}
+                {/* Embedded Map with Marker */}
                 <div className="aspect-video rounded-lg overflow-hidden border">
                   <iframe
                     width="100%"
                     height="100%"
                     style={{ border: 0 }}
                     loading="lazy"
-                    src={`https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${asset.latitude},${asset.longitude}&zoom=18`}
+                    src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${asset.latitude},${asset.longitude}&zoom=18`}
                   />
                 </div>
               </CardContent>
@@ -291,6 +291,14 @@ export default function MarketplaceAssetDetail() {
                 <div>
                   <p className="text-sm text-muted-foreground">Total Area</p>
                   <p className="font-semibold">{asset.total_sqft} sq ft</p>
+                </div>
+              )}
+              {asset.latitude && asset.longitude && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Geo-Coordinates</p>
+                  <p className="font-semibold text-xs">
+                    {asset.latitude.toFixed(6)}, {asset.longitude.toFixed(6)}
+                  </p>
                 </div>
               )}
               {asset.illumination && (

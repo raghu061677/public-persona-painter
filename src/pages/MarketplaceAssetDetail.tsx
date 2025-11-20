@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -14,6 +14,8 @@ import {
   Layers,
   ExternalLink 
 } from "lucide-react";
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import {
   Carousel,
   CarouselContent,
@@ -48,12 +50,51 @@ export default function MarketplaceAssetDetail() {
   const [asset, setAsset] = useState<PublicAssetDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
 
   useEffect(() => {
     if (id) {
       fetchAssetDetail(id);
     }
   }, [id]);
+
+  useEffect(() => {
+    if (asset?.latitude && asset?.longitude && mapRef.current && !mapInstanceRef.current) {
+      // Initialize map
+      const map = L.map(mapRef.current).setView([asset.latitude, asset.longitude], 16);
+      
+      // Add tile layer
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+
+      // Add marker
+      const icon = L.icon({
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+      });
+
+      L.marker([asset.latitude, asset.longitude], { icon })
+        .addTo(map)
+        .bindPopup(`<b>${asset.id}</b><br>${asset.location}`)
+        .openPopup();
+
+      mapInstanceRef.current = map;
+    }
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, [asset]);
 
   const fetchAssetDetail = async (assetId: string) => {
     setLoading(true);
@@ -223,16 +264,12 @@ export default function MarketplaceAssetDetail() {
                   </Button>
                 </div>
                 
-                {/* Embedded Map with Marker */}
-                <div className="aspect-video rounded-lg overflow-hidden border">
-                  <iframe
-                    width="100%"
-                    height="100%"
-                    style={{ border: 0 }}
-                    loading="lazy"
-                    src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${asset.latitude},${asset.longitude}&zoom=18`}
-                  />
-                </div>
+                {/* Interactive Map with Marker */}
+                <div 
+                  ref={mapRef} 
+                  className="aspect-video rounded-lg overflow-hidden border"
+                  style={{ minHeight: '400px' }}
+                />
               </CardContent>
             </Card>
           )}

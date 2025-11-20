@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Select,
   SelectContent,
@@ -15,10 +16,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, MapPin, Building2, ArrowRight, Calendar } from "lucide-react";
+import { Search, MapPin, Building2, ArrowRight, Calendar, FileDown, Send, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCompany } from "@/contexts/CompanyContext";
 import { logActivity } from "@/utils/activityLogger";
+import { generateMarketplacePPT } from "@/lib/marketplace/generateMarketplacePPT";
+import { format } from "date-fns";
 
 interface MarketplaceAsset {
   id: string;
@@ -55,6 +58,24 @@ export default function Marketplace() {
   const [selectedCity, setSelectedCity] = useState<string>("all");
   const [selectedMediaType, setSelectedMediaType] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("Available");
+  
+  // Multi-select state
+  const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
+  const [isDownloading, setIsDownloading] = useState(false);
+  
+  // Quote request dialog state
+  const [quoteDialog, setQuoteDialog] = useState(false);
+  const [quoteForm, setQuoteForm] = useState({
+    name: "",
+    company: "",
+    email: "",
+    phone: "",
+    message: "",
+    campaignStartDate: "",
+    campaignEndDate: "",
+    budget: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Booking dialog state
   const [bookingDialog, setBookingDialog] = useState(false);
@@ -122,6 +143,186 @@ export default function Marketplace() {
   const mediaTypes = Array.from(new Set(assets.map(a => a.media_type))).sort();
 
   const canRequestBooking = company?.type === 'agency' || isPlatformAdmin;
+
+  // Handle asset selection toggle
+  const toggleAssetSelection = (assetId: string) => {
+    setSelectedAssets(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(assetId)) {
+        newSet.delete(assetId);
+      } else {
+        newSet.add(assetId);
+      }
+      return newSet;
+    });
+  };
+
+  // Handle select all
+  const handleSelectAll = () => {
+    if (selectedAssets.size === filteredAssets.length) {
+      setSelectedAssets(new Set());
+    } else {
+      setSelectedAssets(new Set(filteredAssets.map(a => a.id)));
+    }
+  };
+
+  // Handle download PPT
+  const handleDownloadPPT = async () => {
+    if (selectedAssets.size === 0) {
+      toast({
+        title: "No Assets Selected",
+        description: "Please select at least one asset to download the proposal",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDownloading(true);
+    try {
+      const selectedAssetData = assets.filter(a => selectedAssets.has(a.id));
+      
+      const pptBlob = await generateMarketplacePPT(selectedAssetData);
+      
+      // Create download link
+      const url = URL.createObjectURL(pptBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `GoAds_Media_Proposal_${format(new Date(), 'yyyy-MM-dd')}.pptx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Proposal Downloaded",
+        description: `Successfully downloaded proposal with ${selectedAssets.size} assets`,
+      });
+    } catch (error: any) {
+      console.error('Error generating PPT:', error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to generate proposal. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Handle quote request
+  const handleQuoteRequest = async () => {
+    if (selectedAssets.size === 0) {
+      toast({
+        title: "No Assets Selected",
+        description: "Please select at least one asset",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!quoteForm.name || !quoteForm.email) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in your name and email",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Get Matrix company ID for routing inquiries
+      const { data: matrixCompany } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('name', 'Matrix Network Solutions')
+        .single();
+
+      if (!matrixCompany) {
+        throw new Error('Matrix Network Solutions company not found');
+      }
+
+      // Create marketplace inquiry
+      const { data: inquiry, error: inquiryError } = await supabase
+        .from('marketplace_inquiries')
+        .insert({
+          company_id: matrixCompany.id,
+          name: quoteForm.name,
+          company_name: quoteForm.company || null,
+          email: quoteForm.email,
+          phone: quoteForm.phone || null,
+          message: quoteForm.message || null,
+          campaign_start_date: quoteForm.campaignStartDate || null,
+          campaign_end_date: quoteForm.campaignEndDate || null,
+          budget: quoteForm.budget ? parseFloat(quoteForm.budget) : null,
+          status: 'new',
+        })
+        .select()
+        .single();
+
+      if (inquiryError) throw inquiryError;
+
+      // Link selected assets to the inquiry
+      const inquiryAssets = Array.from(selectedAssets).map(assetId => ({
+        inquiry_id: inquiry.id,
+        asset_id: assetId,
+      }));
+
+      const { error: assetsError } = await supabase
+        .from('marketplace_inquiry_assets')
+        .insert(inquiryAssets);
+
+      if (assetsError) throw assetsError;
+
+      // Create notification for admins
+      const { data: adminUsers } = await supabase
+        .from('company_users')
+        .select('user_id')
+        .eq('company_id', matrixCompany.id)
+        .eq('role', 'admin');
+
+      if (adminUsers && adminUsers.length > 0) {
+        const notifications = adminUsers.map(admin => ({
+          user_id: admin.user_id,
+          title: 'New Marketplace Quote Request',
+          message: `${quoteForm.name} requested pricing for ${selectedAssets.size} assets`,
+          type: 'marketplace_inquiry',
+          entity_id: inquiry.id,
+          entity_type: 'marketplace_inquiry',
+        }));
+
+        await supabase.from('notifications').insert(notifications);
+      }
+
+      toast({
+        title: "Quote Request Submitted",
+        description: "Thank you! Our team will contact you soon with pricing details.",
+      });
+
+      // Reset form and close dialog
+      setQuoteDialog(false);
+      setSelectedAssets(new Set());
+      setQuoteForm({
+        name: "",
+        company: "",
+        email: "",
+        phone: "",
+        message: "",
+        campaignStartDate: "",
+        campaignEndDate: "",
+        budget: "",
+      });
+    } catch (error: any) {
+      console.error('Error submitting quote request:', error);
+      toast({
+        title: "Submission Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleBookingRequest = async () => {
     if (!selectedAsset || !bookingForm.startDate || !bookingForm.endDate) {
@@ -289,9 +490,59 @@ export default function Marketplace() {
           <p className="text-muted-foreground">No assets found matching your criteria</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <>
+          {/* Selection toolbar */}
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between p-4 bg-muted/50 rounded-lg border">
+            <div className="flex items-center gap-4">
+              <Checkbox
+                checked={selectedAssets.size === filteredAssets.length && filteredAssets.length > 0}
+                onCheckedChange={handleSelectAll}
+                id="select-all"
+              />
+              <Label htmlFor="select-all" className="cursor-pointer">
+                Select All ({selectedAssets.size} of {filteredAssets.length})
+              </Label>
+            </div>
+            
+            {selectedAssets.size > 0 && (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleDownloadPPT}
+                  disabled={isDownloading}
+                >
+                  {isDownloading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <FileDown className="mr-2 h-4 w-4" />
+                      Download Proposal
+                    </>
+                  )}
+                </Button>
+                <Button onClick={() => setQuoteDialog(true)}>
+                  <Send className="mr-2 h-4 w-4" />
+                  Request Quote
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredAssets.map((asset) => (
-            <Card key={asset.id} className="hover:shadow-lg transition-shadow">
+            <Card key={asset.id} className="hover:shadow-lg transition-shadow relative">
+              {/* Selection checkbox */}
+              <div className="absolute top-4 left-4 z-10">
+                <Checkbox
+                  checked={selectedAssets.has(asset.id)}
+                  onCheckedChange={() => toggleAssetSelection(asset.id)}
+                  className="bg-white border-2"
+                />
+              </div>
+              
               <CardHeader className="p-0">
                 {asset.images?.photos?.[0]?.url ? (
                   <img
@@ -363,6 +614,7 @@ export default function Marketplace() {
             </Card>
           ))}
         </div>
+        </>
       )}
 
       {/* Booking Request Dialog */}
@@ -454,6 +706,127 @@ export default function Marketplace() {
             </Button>
             <Button onClick={handleBookingRequest}>
               Send Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quote Request Dialog */}
+      <Dialog open={quoteDialog} onOpenChange={setQuoteDialog}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Request Quote for {selectedAssets.size} Assets</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="quote-name">Name *</Label>
+              <Input
+                id="quote-name"
+                placeholder="Your full name"
+                value={quoteForm.name}
+                onChange={(e) => setQuoteForm(prev => ({ ...prev, name: e.target.value }))}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="quote-company">Company</Label>
+              <Input
+                id="quote-company"
+                placeholder="Company name (optional)"
+                value={quoteForm.company}
+                onChange={(e) => setQuoteForm(prev => ({ ...prev, company: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="quote-email">Email *</Label>
+              <Input
+                id="quote-email"
+                type="email"
+                placeholder="your.email@example.com"
+                value={quoteForm.email}
+                onChange={(e) => setQuoteForm(prev => ({ ...prev, email: e.target.value }))}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="quote-phone">Phone</Label>
+              <Input
+                id="quote-phone"
+                type="tel"
+                placeholder="+91-XXXXXXXXXX"
+                value={quoteForm.phone}
+                onChange={(e) => setQuoteForm(prev => ({ ...prev, phone: e.target.value }))}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="quote-start">Campaign Start</Label>
+                <Input
+                  id="quote-start"
+                  type="date"
+                  value={quoteForm.campaignStartDate}
+                  onChange={(e) => setQuoteForm(prev => ({ ...prev, campaignStartDate: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="quote-end">Campaign End</Label>
+                <Input
+                  id="quote-end"
+                  type="date"
+                  value={quoteForm.campaignEndDate}
+                  onChange={(e) => setQuoteForm(prev => ({ ...prev, campaignEndDate: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="quote-budget">Budget (₹)</Label>
+              <Input
+                id="quote-budget"
+                type="number"
+                placeholder="Approximate budget"
+                value={quoteForm.budget}
+                onChange={(e) => setQuoteForm(prev => ({ ...prev, budget: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="quote-message">Additional Message</Label>
+              <Textarea
+                id="quote-message"
+                placeholder="Tell us more about your requirements..."
+                rows={3}
+                value={quoteForm.message}
+                onChange={(e) => setQuoteForm(prev => ({ ...prev, message: e.target.value }))}
+              />
+            </div>
+
+            <div className="text-sm text-muted-foreground">
+              <p>Selected Assets: {selectedAssets.size}</p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setQuoteDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleQuoteRequest} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Submit Request
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

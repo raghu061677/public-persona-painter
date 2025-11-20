@@ -2081,6 +2081,49 @@ export type Database = {
           },
         ]
       }
+      marketplace_inquiry_assets: {
+        Row: {
+          asset_id: string
+          created_at: string | null
+          id: string
+          inquiry_id: string
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string | null
+          id?: string
+          inquiry_id: string
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string | null
+          id?: string
+          inquiry_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_inquiry_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_inquiry_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_inquiry_assets_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_inquiries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_assets: {
         Row: {
           ad_tax: number | null

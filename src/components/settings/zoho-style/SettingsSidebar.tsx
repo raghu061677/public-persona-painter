@@ -54,7 +54,8 @@ const navigationGroups: NavGroup[] = [
   {
     title: "Users & Roles",
     items: [
-      { label: "Users", path: "/admin/users", icon: Users },
+      { label: "Company Users", path: "/admin/company-settings/users", icon: Users },
+      { label: "User Management", path: "/admin/users", icon: UserCog },
       { label: "Roles", path: "/admin/company-settings/roles", icon: Shield },
     ]
   },

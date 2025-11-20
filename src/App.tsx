@@ -141,7 +141,9 @@ const PlatformAdminDashboard = lazy(() => import("./pages/PlatformAdminDashboard
 const PlatformAdminSetup = lazy(() => import("./pages/PlatformAdminSetup"));
 const CompanyTesting = lazy(() => import("./pages/CompanyTesting"));
 const CompanyManagement = lazy(() => import("./pages/CompanyManagement"));
+const OnboardingTest = lazy(() => import("./pages/OnboardingTest"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
+const CompanyUsersSettings = lazy(() => import("./pages/CompanyUsersSettings"));
 const AIAssistant = lazy(() => import("./pages/AIAssistant"));
 const AnalyticsDashboard = lazy(() => import("./pages/AnalyticsDashboard"));
 const CustomDashboard = lazy(() => import("./pages/CustomDashboard"));
@@ -202,6 +204,8 @@ const App = () => (
                   <Route path="/register-company" element={<RegisterCompany />} />
                   <Route path="/onboarding" element={<ProtectedRoute><CompanyOnboarding /></ProtectedRoute>} />
             <Route path="/install" element={<Install />} />
+            <Route path="/explore" element={<Marketplace />} />
+            <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/admin/plans/:id/share/:shareToken" element={<PlanShare />} />
             <Route path="/mobile/*" element={<MobilePage />} />
             
@@ -221,6 +225,7 @@ const App = () => (
             {/* Duplicate route removed - see line 268 for actual company settings routes */}
             
             <Route path="/admin/company-testing" element={<ProtectedRoute requireAuth><AppLayout><CompanyTesting /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/onboarding" element={<ProtectedRoute requireAuth><AppLayout><OnboardingTest /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/booking-requests" element={<ProtectedRoute requireAuth><AppLayout><BookingRequests /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/clients" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><AppLayout><ClientsList /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/clients/new" element={<ProtectedRoute requiredModule="clients" requiredAction="create"><AppLayout><ClientNew /></AppLayout></ProtectedRoute>} />
@@ -309,6 +314,7 @@ const App = () => (
               <Route path="profile" element={<CompanyProfile />} />
               <Route path="branding" element={<CompanyBranding />} />
               <Route path="roles" element={<CompanyRoles />} />
+              <Route path="users" element={<CompanyUsersSettings />} />
               <Route path="taxes" element={<CompanyTaxes />} />
               <Route path="direct-taxes" element={<CompanyDirectTaxes />} />
               <Route path="einvoicing" element={<CompanyEInvoicing />} />

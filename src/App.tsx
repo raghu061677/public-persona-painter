@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
+import { TenantProvider } from "@/contexts/TenantContext";
 import { ClientPortalProvider } from "@/contexts/ClientPortalContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { RoleGuard, PlatformAdminGuard } from "@/components/auth/RoleGuard";
@@ -160,6 +161,7 @@ const ClientInvoices = lazy(() => import("./pages/ClientInvoices"));
 const AccessDenied = lazy(() => import("./pages/AccessDenied"));
 const ManageUsers = lazy(() => import("./pages/platform/ManageUsers"));
 const ManageCompanies = lazy(() => import("./pages/platform/ManageCompanies"));
+const SubscriptionManagement = lazy(() => import("./pages/SubscriptionManagement"));
 
 // Optimized Query Client with caching
 const queryClient = new QueryClient({
@@ -187,9 +189,10 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <CompanyProvider>
-          <ThemeProvider>
-            <TooltipProvider>
+        <TenantProvider>
+          <CompanyProvider>
+            <ThemeProvider>
+              <TooltipProvider>
               <Toaster />
               <Sonner />
               <BrowserRouter
@@ -231,6 +234,7 @@ const App = () => (
             <Route path="/admin/platform" element={<ProtectedRoute requireAuth><AppLayout><PlatformAdminDashboard /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/platform/users" element={<PlatformAdminGuard><AppLayout><ManageUsers /></AppLayout></PlatformAdminGuard>} />
             <Route path="/admin/platform/companies" element={<PlatformAdminGuard><AppLayout><ManageCompanies /></AppLayout></PlatformAdminGuard>} />
+            <Route path="/admin/subscriptions" element={<PlatformAdminGuard><AppLayout><SubscriptionManagement /></AppLayout></PlatformAdminGuard>} />
             
             {/* Duplicate route removed - see line 268 for actual company settings routes */}
             
@@ -380,7 +384,7 @@ const App = () => (
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
               </Routes>
-            </Suspense>
+              </Suspense>
             <InstallPrompt />
             <OfflineIndicator />
             <AIAssistantChat />
@@ -388,9 +392,10 @@ const App = () => (
           </TooltipProvider>
         </ThemeProvider>
       </CompanyProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-  </ErrorBoundary>
+    </TenantProvider>
+  </AuthProvider>
+</QueryClientProvider>
+</ErrorBoundary>
 );
 
 export default App;

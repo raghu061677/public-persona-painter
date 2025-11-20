@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCompany } from "@/contexts/CompanyContext";
 import {
   Dialog,
   DialogContent,
@@ -21,7 +22,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
 import { logAudit } from "@/utils/auditLog";
-import { UserPlus, AlertCircle } from "lucide-react";
+import { UserPlus, AlertCircle, Loader2 } from "lucide-react";
 
 interface AddUserDialogProps {
   open: boolean;
@@ -29,7 +30,13 @@ interface AddUserDialogProps {
   onSuccess: () => void;
 }
 
-const ROLES = ['admin', 'manager', 'sales', 'operations', 'installation', 'monitoring'];
+interface Company {
+  id: string;
+  name: string;
+  type: string;
+}
+
+const ROLES = ['admin', 'manager', 'sales', 'operations', 'installation', 'monitoring', 'finance'];
 
 export default function AddUserDialog({
   open,
@@ -37,11 +44,53 @@ export default function AddUserDialog({
   onSuccess,
 }: AddUserDialogProps) {
   const { user: currentUser, isAdmin } = useAuth();
+  const { company, isPlatformAdmin } = useCompany();
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [selectedRole, setSelectedRole] = useState<string>("sales");
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Load companies for platform admin
+  useEffect(() => {
+    if (isPlatformAdmin && open) {
+      loadCompanies();
+    } else if (company && open) {
+      // Set current company for non-platform admins
+      setSelectedCompanyId(company.id);
+    }
+  }, [isPlatformAdmin, company, open]);
+
+  const loadCompanies = async () => {
+    setLoadingCompanies(true);
+    try {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('id, name, type')
+        .eq('status', 'active')
+        .order('name');
+
+      if (error) throw error;
+      setCompanies(data || []);
+      
+      // Set first company as default if available
+      if (data && data.length > 0 && !selectedCompanyId) {
+        setSelectedCompanyId(data[0].id);
+      }
+    } catch (error: any) {
+      console.error('Error loading companies:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load companies",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingCompanies(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +104,7 @@ export default function AddUserDialog({
       return;
     }
 
-    if (!isAdmin) {
+    if (!isAdmin && !isPlatformAdmin) {
       toast({
         title: "Error",
         description: "Only administrators can create new users",
@@ -94,83 +143,67 @@ export default function AddUserDialog({
       return;
     }
 
+    if (!selectedCompanyId) {
+      toast({
+        title: "Error",
+        description: "Please select a company",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
-      console.log('Creating user with password...');
+      console.log('Creating user via edge function...');
       
-      // Create user directly via Supabase Admin API
-      const { data: { user: newUser }, error: createError } = await supabase.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true, // Auto-confirm email
-        user_metadata: {
+      // Get current session for authorization
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error("Authentication required");
+      }
+
+      // Use edge function to create user (works for all scenarios)
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: {
+          email,
+          password,
           username,
-          role: selectedRole
+          role: selectedRole,
+          company_id: selectedCompanyId,
         }
       });
 
-      if (createError) {
-        console.error('User creation error:', createError);
-        throw createError;
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Failed to create user');
       }
 
-      if (!newUser) {
-        throw new Error('User creation failed - no user data returned');
+      if (!data?.success) {
+        throw new Error(data?.error || 'Failed to create user');
       }
 
-      console.log('User created:', newUser.id);
+      console.log('User created successfully:', data.user_id);
 
-      // Insert profile for the new user
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: newUser.id,
-          username: username
-        });
-
-      if (profileError) {
-        console.error('Profile creation error:', profileError);
-        // Don't fail the whole operation if profile creation fails
-      }
-
-      // Insert role for the new user
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert([{
-          user_id: newUser.id,
-          role: selectedRole as any
-        }]);
-
-      if (roleError) {
-        console.error('Role assignment error:', roleError);
-        throw new Error(`Failed to assign role: ${roleError.message}`);
-      }
-
-      console.log('Role assigned successfully:', selectedRole);
-
-      // Log audit
+      // Log the action
       await logAudit({
-        action: 'invite_user',
+        action: 'create_user',
         resourceType: 'user_management',
-        resourceId: email,
+        resourceId: data.user_id,
         details: {
           email,
-          username,
           role: selectedRole,
-        },
-      });
-
-      // Log activity
-      await supabase.rpc('log_user_activity', {
-        p_user_id: currentUser.id,
-        p_activity_type: 'invite_user',
-        p_activity_description: `Invited ${email} with role ${selectedRole}`,
-        p_metadata: { invited_email: email, assigned_role: selectedRole },
+          company_id: selectedCompanyId,
+          created_by: currentUser.id
+        }
       });
 
       toast({
         title: "User created successfully",
-        description: `User ${email} has been created with ${selectedRole} role`,
+        description: `User ${email} has been added to the system`,
       });
 
       // Reset form
@@ -178,30 +211,15 @@ export default function AddUserDialog({
       setUsername("");
       setPassword("");
       setSelectedRole("sales");
+      setSelectedCompanyId(isPlatformAdmin ? "" : company?.id || "");
       
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
-      console.error("Error creating user:", error);
-      
-      let errorMessage = "Failed to create user";
-      
-      if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      // Handle specific error cases
-      if (error.message?.includes('User already registered')) {
-        errorMessage = "A user with this email already exists";
-      } else if (error.message?.includes('not allowed')) {
-        errorMessage = "You don't have permission to create users. Please contact your administrator.";
-      } else if (error.message?.includes('role')) {
-        errorMessage = "Failed to assign role. Please try again or contact support.";
-      }
-      
+      console.error('Error creating user:', error);
       toast({
-        title: "Error",
-        description: errorMessage,
+        title: "Failed to create user",
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {
@@ -211,18 +229,15 @@ export default function AddUserDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
-            Add New User
-          </DialogTitle>
+          <DialogTitle>Add New User</DialogTitle>
           <DialogDescription>
-            Create a new user account with credentials
+            Create a new user account with credentials and role assignment.
           </DialogDescription>
         </DialogHeader>
 
-        {!isAdmin && (
+        {!isAdmin && !isPlatformAdmin && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
@@ -241,7 +256,7 @@ export default function AddUserDialog({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              disabled={!isAdmin}
+              disabled={!isAdmin && !isPlatformAdmin}
             />
           </div>
 
@@ -254,7 +269,7 @@ export default function AddUserDialog({
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
-              disabled={!isAdmin}
+              disabled={!isAdmin && !isPlatformAdmin}
             />
           </div>
 
@@ -267,7 +282,7 @@ export default function AddUserDialog({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              disabled={!isAdmin}
+              disabled={!isAdmin && !isPlatformAdmin}
             />
             <p className="text-xs text-muted-foreground">
               Minimum 6 characters required
@@ -279,36 +294,46 @@ export default function AddUserDialog({
             <Select 
               value={selectedRole} 
               onValueChange={setSelectedRole}
-              disabled={!isAdmin}
+              disabled={!isAdmin && !isPlatformAdmin}
             >
-              <SelectTrigger>
+              <SelectTrigger id="role">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {ROLES.map(role => (
-                  <SelectItem key={role} value={role} className="capitalize">
-                    {role}
+                {ROLES.map((role) => (
+                  <SelectItem key={role} value={role}>
+                    {role.charAt(0).toUpperCase() + role.slice(1)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              {selectedRole === 'admin' && '👑 Full system access'}
-              {selectedRole === 'manager' && '📊 Manage teams and oversee operations'}
-              {selectedRole === 'sales' && '💼 Manage clients, leads, and plans'}
-              {selectedRole === 'operations' && '⚙️ Manage campaigns and mounting tasks'}
-              {selectedRole === 'installation' && '🔧 Handle media asset installation'}
-              {selectedRole === 'monitoring' && '📹 Monitor asset status and performance'}
-            </p>
           </div>
 
-          <Alert>
-            <AlertDescription className="text-xs">
-              The user will be created immediately with the provided credentials. You can send an invitation email later from the user list.
-            </AlertDescription>
-          </Alert>
+          {isPlatformAdmin && (
+            <div className="space-y-2">
+              <Label htmlFor="company">
+                Company <span className="text-destructive">*</span>
+              </Label>
+              <Select 
+                value={selectedCompanyId} 
+                onValueChange={setSelectedCompanyId}
+                disabled={loadingCompanies || (!isAdmin && !isPlatformAdmin)}
+              >
+                <SelectTrigger id="company">
+                  <SelectValue placeholder={loadingCompanies ? "Loading companies..." : "Select company"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map((comp) => (
+                    <SelectItem key={comp.id} value={comp.id}>
+                      {comp.name} ({comp.type})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-          <div className="flex justify-end gap-2 pt-4 border-t">
+          <div className="flex justify-end gap-3 pt-4">
             <Button
               type="button"
               variant="outline"
@@ -317,9 +342,18 @@ export default function AddUserDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting || !isAdmin}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              {submitting ? "Creating User..." : "Add User"}
+            <Button type="submit" disabled={submitting || (!isAdmin && !isPlatformAdmin)}>
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Create User
+                </>
+              )}
             </Button>
           </div>
         </form>

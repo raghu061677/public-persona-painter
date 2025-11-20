@@ -6,16 +6,30 @@ const corsHeaders = {
 }
 
 Deno.serve(async (req) => {
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    console.log('create-user function called');
+    console.log('create-user: Function called');
+    console.log('create-user: Method:', req.method);
+    
+    // Validate environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error('create-user: Missing environment variables');
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      supabaseUrl,
+      serviceRoleKey,
       {
         auth: {
           autoRefreshToken: false,
@@ -44,9 +58,29 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('Requesting user:', requestingUser.id);
+    console.log('create-user: Requesting user:', requestingUser.id);
 
-    const { email, password, username, role, company_id } = await req.json()
+    // Parse request body
+    let requestBody;
+    try {
+      requestBody = await req.json();
+      console.log('create-user: Request body parsed:', {
+        hasEmail: !!requestBody.email,
+        hasPassword: !!requestBody.password,
+        hasUsername: !!requestBody.username,
+        hasRole: !!requestBody.role,
+        hasCompanyId: !!requestBody.company_id,
+        companyId: requestBody.company_id
+      });
+    } catch (parseError: any) {
+      console.error('create-user: Failed to parse request body:', parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { email, password, username, role, company_id } = requestBody;
 
     if (!email || !password || !username || !role || !company_id) {
       return new Response(
@@ -167,11 +201,23 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
-  } catch (error) {
-    console.error('Error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+  } catch (error: any) {
+    console.error('create-user: Caught error:', error);
+    console.error('create-user: Error type:', typeof error);
+    console.error('create-user: Error details:', {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+      cause: error?.cause
+    });
+    
+    const errorMessage = error instanceof Error ? error.message : (error?.toString() || 'Unknown error');
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ 
+        error: errorMessage,
+        type: typeof error,
+        details: error?.toString()
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

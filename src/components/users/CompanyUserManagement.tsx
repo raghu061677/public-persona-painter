@@ -45,28 +45,29 @@ export function CompanyUserManagement() {
     if (!company?.id) return;
 
     try {
-      const { data, error } = await supabase
-        .from("company_users")
-        .select(`
-          *,
-          profiles:user_id (
-            username,
-            email:id(email)
-          )
-        `)
-        .eq("company_id", company.id)
-        .eq("status", "active");
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No active session');
+      }
+
+      const { data, error } = await supabase.functions.invoke('list-company-users', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: { company_id: company.id }
+      });
 
       if (error) throw error;
 
-      const formattedUsers = (data || []).map((user: any) => ({
+      const formattedUsers = (data?.users || []).map((user: any) => ({
         id: user.id,
-        user_id: user.user_id,
+        user_id: user.id,
         role: user.role,
         status: user.status,
         joined_at: user.joined_at,
-        email: user.profiles?.email || "",
-        username: user.profiles?.username || "",
+        email: user.email || "",
+        username: user.username || "",
       }));
 
       setUsers(formattedUsers);

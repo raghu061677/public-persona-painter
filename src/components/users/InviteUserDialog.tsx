@@ -65,7 +65,14 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess, companyId }: I
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Failed to create user');
+      }
+      
+      if (!data?.success) {
+        throw new Error(data?.error || 'Failed to create user');
+      }
 
       toast({
         title: "User created successfully",

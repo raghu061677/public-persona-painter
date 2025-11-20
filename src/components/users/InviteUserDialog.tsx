@@ -38,8 +38,24 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess, companyId }: I
     try {
       setLoading(true);
 
-      // Create user via edge function
+      // Get current session for authorization
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Error",
+          description: "Authentication required",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Create user via edge function with Authorization header
       const { data, error } = await supabase.functions.invoke('create-user', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        },
         body: {
           email: formData.email,
           password: formData.password,
@@ -52,17 +68,17 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess, companyId }: I
       if (error) throw error;
 
       toast({
-        title: "User invited",
-        description: `Invitation sent to ${formData.email}`,
+        title: "User created successfully",
+        description: `User ${formData.email} has been added to the system`,
       });
 
       onSuccess();
       onOpenChange(false);
       setFormData({ email: "", username: "", role: "user", password: "" });
     } catch (error: any) {
-      console.error('Error inviting user:', error);
+      console.error('Error creating user:', error);
       toast({
-        title: "Error inviting user",
+        title: "Error creating user",
         description: error.message,
         variant: "destructive",
       });
@@ -75,9 +91,9 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess, companyId }: I
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Invite New User</DialogTitle>
+          <DialogTitle>Add New User</DialogTitle>
           <DialogDescription>
-            Send an invitation to a new team member
+            Create a new user account for your team
           </DialogDescription>
         </DialogHeader>
 
@@ -140,7 +156,7 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess, companyId }: I
           </Button>
           <Button onClick={handleInvite} disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Send Invitation
+            Add User
           </Button>
         </div>
       </DialogContent>

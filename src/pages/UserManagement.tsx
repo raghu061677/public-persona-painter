@@ -514,7 +514,56 @@ export default function UserManagement() {
                         >
                           <Key className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" title="Delete user">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          title="Delete user"
+                          onClick={async () => {
+                            if (!confirm(`Are you sure you want to delete ${user.username}? This action cannot be undone.`)) {
+                              return;
+                            }
+                            
+                            try {
+                              const { data: { session } } = await supabase.auth.getSession();
+                              
+                              if (!session) {
+                                toast({
+                                  title: "Error",
+                                  description: "Authentication required",
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
+
+                              const { error } = await supabase.functions.invoke('delete-user', {
+                                headers: {
+                                  Authorization: `Bearer ${session.access_token}`
+                                },
+                                body: {
+                                  userId: user.id,
+                                  companyId: company?.id,
+                                }
+                              });
+
+                              if (error) throw error;
+
+                              toast({
+                                title: "User deleted",
+                                description: `${user.username} has been removed from the system`,
+                              });
+
+                              // Refresh the user list
+                              loadData();
+                            } catch (error: any) {
+                              console.error('Error deleting user:', error);
+                              toast({
+                                title: "Error",
+                                description: error.message || "Failed to delete user",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                        >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>

@@ -133,13 +133,36 @@ export function CreateCompanyWithUsersDialog({
         return;
       }
 
+      // Ensure first user is admin and primary
+      const usersToCreate = validUsers.map((u, index) => ({
+        ...u,
+        role: index === 0 ? 'admin' : u.role,
+        is_primary: index === 0 ? true : u.is_primary,
+      }));
+
+      // Get current session for authorization
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Error",
+          description: "Authentication required",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       // Call edge function to create company with users
       const { data: result, error } = await supabase.functions.invoke(
         "create-company-with-users",
         {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          },
           body: {
             companyData: data,
-            users: validUsers,
+            users: usersToCreate,
           },
         }
       );

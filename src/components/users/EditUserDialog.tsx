@@ -57,14 +57,30 @@ export default function EditUserDialog({
 
     setSubmitting(true);
     try {
+      // Get current session for authorization
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to update users",
+          variant: "destructive",
+        });
+        setSubmitting(false);
+        return;
+      }
+
       const oldValues = {
         username: user.username,
         role: user.roles?.[0],
         status: user.status,
       };
 
-      // Call edge function to update user
+      // Call edge function to update user with Authorization header
       const { error: updateError } = await supabase.functions.invoke('update-user', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        },
         body: {
           userId: user.id,
           username,

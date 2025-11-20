@@ -121,16 +121,15 @@ serve(async (req) => {
       );
     }
 
-    // Log the activity
-    await supabaseClient
-      .from('activity_logs')
-      .insert({
-        user_id: user.id,
-        action: 'delete_user',
-        resource_type: 'user',
-        resource_id: userId,
-        details: { deleted_by: user.id, company_id: companyId }
-      });
+    // Log the activity using RPC to get proper user name
+    await supabaseClient.rpc('log_activity', {
+      p_action: 'delete_user',
+      p_resource_type: 'user',
+      p_resource_id: userId,
+      p_resource_name: null,
+      p_details: { deleted_by: user.id, company_id: companyId },
+      p_user_id: user.id
+    });
 
     console.log(`Successfully deleted user ${userId}`);
 

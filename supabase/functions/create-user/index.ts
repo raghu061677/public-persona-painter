@@ -176,17 +176,15 @@ Deno.serve(async (req) => {
 
     console.log('User linked to company');
 
-    // Log activity
-    const { error: logError } = await supabaseClient
-      .from('activity_logs')
-      .insert({
-        user_id: requestingUser.id,
-        action: 'create_user',
-        resource_type: 'user_management',
-        resource_id: userId,
-        resource_name: username,
-        details: { email, role, company_id }
-      })
+    // Log activity using RPC to get proper user name
+    const { error: logError } = await supabaseClient.rpc('log_activity', {
+      p_action: 'create_user',
+      p_resource_type: 'user_management',
+      p_resource_id: userId,
+      p_resource_name: username,
+      p_details: { email, role, company_id },
+      p_user_id: requestingUser.id
+    })
 
     if (logError) {
       console.error('Log error:', logError)

@@ -1418,6 +1418,7 @@ export type Database = {
           phone: string | null
           pincode: string | null
           secondary_color: string | null
+          slug: string | null
           state: string | null
           status: Database["public"]["Enums"]["company_status"]
           theme_color: string | null
@@ -1443,6 +1444,7 @@ export type Database = {
           phone?: string | null
           pincode?: string | null
           secondary_color?: string | null
+          slug?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["company_status"]
           theme_color?: string | null
@@ -1468,6 +1470,7 @@ export type Database = {
           phone?: string | null
           pincode?: string | null
           secondary_color?: string | null
+          slug?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["company_status"]
           theme_color?: string | null
@@ -4352,6 +4355,7 @@ export type Database = {
       }
       delete_user_account: { Args: never; Returns: undefined }
       generate_campaign_id: { Args: never; Returns: string }
+      generate_company_slug: { Args: { company_name: string }; Returns: string }
       generate_csrf_token: { Args: never; Returns: string }
       generate_estimation_id: { Args: never; Returns: string }
       generate_expense_id: { Args: never; Returns: string }

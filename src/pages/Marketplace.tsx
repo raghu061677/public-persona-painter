@@ -293,9 +293,9 @@ export default function Marketplace() {
           {filteredAssets.map((asset) => (
             <Card key={asset.id} className="hover:shadow-lg transition-shadow">
               <CardHeader className="p-0">
-                {asset.image_urls?.[0] ? (
+                {asset.images?.photos?.[0]?.url ? (
                   <img
-                    src={asset.image_urls[0]}
+                    src={asset.images.photos[0].url}
                     alt={asset.location}
                     className="w-full h-48 object-cover rounded-t-lg"
                   />
@@ -338,7 +338,7 @@ export default function Marketplace() {
                   <Button
                     variant="outline"
                     className="flex-1"
-                    onClick={() => navigate(`/admin/media-assets/${asset.id}`)}
+                    onClick={() => navigate(`/marketplace/asset/${asset.id}`)}
                   >
                     View Details
                   </Button>

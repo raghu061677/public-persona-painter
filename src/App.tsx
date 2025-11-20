@@ -143,6 +143,7 @@ const CompanyTesting = lazy(() => import("./pages/CompanyTesting"));
 const CompanyManagement = lazy(() => import("./pages/CompanyManagement"));
 const OnboardingTest = lazy(() => import("./pages/OnboardingTest"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
+const MarketplaceAssetDetail = lazy(() => import("./pages/MarketplaceAssetDetail"));
 const CompanyUsersSettings = lazy(() => import("./pages/CompanyUsersSettings"));
 const AIAssistant = lazy(() => import("./pages/AIAssistant"));
 const AnalyticsDashboard = lazy(() => import("./pages/AnalyticsDashboard"));
@@ -206,6 +207,7 @@ const App = () => (
             <Route path="/install" element={<Install />} />
             <Route path="/explore" element={<Marketplace />} />
             <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/marketplace/asset/:id" element={<MarketplaceAssetDetail />} />
             <Route path="/admin/plans/:id/share/:shareToken" element={<PlanShare />} />
             <Route path="/mobile/*" element={<MobilePage />} />
             

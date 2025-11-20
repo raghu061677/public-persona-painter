@@ -14,6 +14,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import EditUserDialog from "./EditUserDialog";
 import PasswordResetDialog from "./PasswordResetDialog";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 interface User {
   id: string;
@@ -29,11 +31,43 @@ interface UsersListProps {
   users: User[];
   loading: boolean;
   onRefresh: () => void;
+  companyId: string;
 }
 
-export function UsersList({ users, loading, onRefresh }: UsersListProps) {
+export function UsersList({ users, loading, onRefresh, companyId }: UsersListProps) {
   const [editUser, setEditUser] = useState<User | null>(null);
   const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
+
+  const handleDeleteUser = async (userId: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast({ 
+        title: "Error", 
+        description: "Authentication required", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    const { error } = await supabase.functions.invoke("delete-user", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body: { userId, companyId },
+    });
+
+    if (error) {
+      toast({ 
+        title: "Error", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    } else {
+      toast({ 
+        title: "User deleted", 
+        description: "User has been successfully removed" 
+      });
+      onRefresh();
+    }
+  };
 
   const getRoleBadgeColor = (role: string) => {
     const colors: Record<string, string> = {
@@ -127,7 +161,10 @@ export function UsersList({ users, loading, onRefresh }: UsersListProps) {
                       <Mail className="mr-2 h-4 w-4" />
                       Resend Invite
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive">
+                    <DropdownMenuItem 
+                      className="text-destructive"
+                      onClick={() => handleDeleteUser(user.id)}
+                    >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Remove User
                     </DropdownMenuItem>

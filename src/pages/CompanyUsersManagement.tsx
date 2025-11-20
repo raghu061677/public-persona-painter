@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
+import { useBreadcrumb } from "@/contexts/BreadcrumbContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,7 @@ export default function CompanyUsersManagement() {
   const { companyId } = useParams<{ companyId: string }>();
   const navigate = useNavigate();
   const { isPlatformAdmin } = useCompany();
+  const { setBreadcrumbs } = useBreadcrumb();
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [company, setCompany] = useState<Company | null>(null);
@@ -75,6 +77,14 @@ export default function CompanyUsersManagement() {
 
       if (companyError) throw companyError;
       setCompany(companyData);
+
+      // Update breadcrumbs with company name
+      setBreadcrumbs([
+        { title: 'Home', href: '/dashboard' },
+        { title: 'Admin', href: '/admin' },
+        { title: 'Users', href: '/admin/users' },
+        { title: companyData.name, href: '' }
+      ]);
 
       // Fetch users for this company
       const session = await supabase.auth.getSession();

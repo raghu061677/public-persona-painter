@@ -8,6 +8,7 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
+import { BreadcrumbProvider } from "@/contexts/BreadcrumbContext";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false);
@@ -27,7 +28,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <OnboardingGate>
-      <div className="flex h-screen w-full overflow-hidden bg-background">
+      <BreadcrumbProvider>
+        <div className="flex h-screen w-full overflow-hidden bg-background">
         <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
           <NotificationCenter />
         </div>
@@ -58,7 +60,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         />
       </div>
       
-      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+        <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+      </BreadcrumbProvider>
     </OnboardingGate>
   );
 }

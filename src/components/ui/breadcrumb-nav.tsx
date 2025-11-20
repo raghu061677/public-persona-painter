@@ -1,6 +1,7 @@
 import { ChevronRight, Home } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useBreadcrumb } from "@/contexts/BreadcrumbContext";
 
 interface BreadcrumbItem {
   label: string;
@@ -9,6 +10,7 @@ interface BreadcrumbItem {
 
 export function BreadcrumbNav() {
   const location = useLocation();
+  const { breadcrumbs: customBreadcrumbs } = useBreadcrumb();
   
   const getBreadcrumbs = (): BreadcrumbItem[] => {
     const pathSegments = location.pathname.split('/').filter(Boolean);
@@ -69,7 +71,13 @@ export function BreadcrumbNav() {
     return breadcrumbs;
   };
   
-  const breadcrumbs = getBreadcrumbs();
+  // Use custom breadcrumbs if available, otherwise generate from URL
+  const breadcrumbs = customBreadcrumbs 
+    ? customBreadcrumbs.map((item, index, arr) => ({
+        label: item.title,
+        path: index === arr.length - 1 ? undefined : item.href
+      }))
+    : getBreadcrumbs();
   
   if (breadcrumbs.length <= 1) return null;
   

@@ -150,7 +150,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                   <SidebarItem
                     icon={DollarSign}
                     label="Billing & Subscriptions"
-                    href="/admin/tenant-analytics"
+                    href="/admin/platform-reports/billing"
                     collapsed={collapsed}
                   />
 

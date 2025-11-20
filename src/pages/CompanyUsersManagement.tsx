@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, UserPlus, Search, Mail, Pencil, Key } from "lucide-react";
 import { EditUserDialog } from "@/components/platform/EditUserDialog";
+import { InviteUserDialog } from "@/components/users/InviteUserDialog";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -44,6 +45,7 @@ export default function CompanyUsersManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [editUser, setEditUser] = useState<User | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!isPlatformAdmin) {
@@ -179,7 +181,7 @@ export default function CompanyUsersManagement() {
                   className="pl-10 w-64"
                 />
               </div>
-              <Button disabled>
+              <Button onClick={() => setInviteDialogOpen(true)}>
                 <UserPlus className="mr-2 h-4 w-4" />
                 Add User
               </Button>
@@ -277,6 +279,14 @@ export default function CompanyUsersManagement() {
           onSuccess={loadData}
         />
       )}
+
+      {/* Invite User Dialog */}
+      <InviteUserDialog
+        open={inviteDialogOpen}
+        onOpenChange={setInviteDialogOpen}
+        onSuccess={loadData}
+        companyId={companyId}
+      />
     </div>
   );
 }

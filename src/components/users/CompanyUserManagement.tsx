@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Users, UserPlus, Shield } from "lucide-react";
 import { InviteUserDialog } from "./InviteUserDialog";
-import EditUserDialog from "./EditUserDialog";
+import { EditCompanyUserDialog } from "./EditCompanyUserDialog";
 import { useToast } from "@/hooks/use-toast";
 
 interface CompanyUser {
@@ -182,15 +182,10 @@ export function CompanyUserManagement() {
       />
 
       {editUser && (
-        <EditUserDialog
+        <EditCompanyUserDialog
+          user={editUser}
           open={!!editUser}
           onOpenChange={(open) => !open && setEditUser(null)}
-          user={{
-            id: editUser.user_id,
-            email: editUser.email,
-            username: editUser.username,
-            roles: [editUser.role],
-          }}
           onSuccess={() => {
             loadUsers();
             setEditUser(null);

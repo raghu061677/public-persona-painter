@@ -145,6 +145,7 @@ const OnboardingTest = lazy(() => import("./pages/OnboardingTest"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
 const MarketplaceAssetDetail = lazy(() => import("./pages/MarketplaceAssetDetail"));
 const CompanyUsersSettings = lazy(() => import("./pages/CompanyUsersSettings"));
+const CompanyCodeSettings = lazy(() => import("./pages/CompanyCodeSettings"));
 const AIAssistant = lazy(() => import("./pages/AIAssistant"));
 const AnalyticsDashboard = lazy(() => import("./pages/AnalyticsDashboard"));
 const CustomDashboard = lazy(() => import("./pages/CustomDashboard"));
@@ -220,6 +221,7 @@ const App = () => (
             <Route path="/admin/companies" element={<ProtectedRoute requireAuth><AppLayout><CompaniesManagement /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/company-management" element={<ProtectedRoute requireAuth><AppLayout><CompanyManagement /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/approve-companies" element={<ProtectedRoute requireAuth><AppLayout><ApproveCompanies /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/company-code-settings" element={<ProtectedRoute requireAuth><AppLayout><CompanyCodeSettings /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/platform" element={<ProtectedRoute requireAuth><AppLayout><PlatformAdminDashboard /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/platform/users" element={<PlatformAdminGuard><AppLayout><ManageUsers /></AppLayout></PlatformAdminGuard>} />
             <Route path="/admin/platform/companies" element={<PlatformAdminGuard><AppLayout><ManageCompanies /></AppLayout></PlatformAdminGuard>} />

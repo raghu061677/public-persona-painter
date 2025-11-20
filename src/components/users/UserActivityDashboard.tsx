@@ -38,7 +38,25 @@ export default function UserActivityDashboard() {
 
   const loadUserActivities = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke("get-user-activities");
+      // Get current session
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to view activity data",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Invoke function with Authorization header
+      const { data, error } = await supabase.functions.invoke("get-user-activities", {
+        headers: {
+          Authorization: `Bearer ${sessionData.session.access_token}`
+        }
+      });
 
       if (error) throw error;
 

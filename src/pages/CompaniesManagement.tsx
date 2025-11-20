@@ -77,7 +77,7 @@ export default function CompaniesManagement() {
 
       toast({
         title: "Success",
-        description: `Company ${status === 'active' ? 'activated' : status}`,
+        description: `Company ${newStatus === 'active' ? 'activated' : newStatus}`,
       });
 
       loadCompanies();

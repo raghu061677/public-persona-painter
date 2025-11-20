@@ -2019,6 +2019,68 @@ export type Database = {
           },
         ]
       }
+      marketplace_inquiries: {
+        Row: {
+          asset_id: string | null
+          budget: number | null
+          campaign_end_date: string | null
+          campaign_start_date: string | null
+          company_id: string
+          company_name: string | null
+          created_at: string | null
+          email: string
+          id: string
+          lead_id: string | null
+          message: string | null
+          name: string
+          phone: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          asset_id?: string | null
+          budget?: number | null
+          campaign_end_date?: string | null
+          campaign_start_date?: string | null
+          company_id: string
+          company_name?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+          lead_id?: string | null
+          message?: string | null
+          name: string
+          phone?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          asset_id?: string | null
+          budget?: number | null
+          campaign_end_date?: string | null
+          campaign_start_date?: string | null
+          company_id?: string
+          company_name?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          lead_id?: string | null
+          message?: string | null
+          name?: string
+          phone?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_inquiries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_assets: {
         Row: {
           ad_tax: number | null
@@ -2269,6 +2331,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      onboarding_progress: {
+        Row: {
+          company_id: string
+          completed: boolean | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          module_name: string
+          notes: string | null
+          step_name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          module_name: string
+          notes?: string | null
+          step_name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          module_name?: string
+          notes?: string | null
+          step_name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_progress_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       operations_notifications: {
         Row: {

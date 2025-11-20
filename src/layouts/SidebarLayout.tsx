@@ -154,6 +154,13 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                     collapsed={collapsed}
                   />
 
+                  <SidebarItem
+                    icon={FileCheck}
+                    label="Onboarding & QA"
+                    href="/admin/onboarding"
+                    collapsed={collapsed}
+                  />
+
                   {/* Platform Reports & Analytics Group */}
                   <SidebarGroup icon={BarChart3} label="Platform Reports & Analytics" collapsed={collapsed}>
                     <SidebarItem

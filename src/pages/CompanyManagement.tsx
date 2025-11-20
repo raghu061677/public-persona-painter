@@ -59,41 +59,23 @@ interface Company {
   created_at: string;
 }
 
-interface CompanyUserWithProfile {
-  id: string;
-  company_id: string;
-  user_id: string;
-  role: string;
-  status: string;
-  email?: string;
-  username?: string;
-}
-
 export default function CompanyManagement() {
   const { isPlatformAdmin } = useCompany();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
-  const [companyUsers, setCompanyUsers] = useState<CompanyUserWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [addCompanyOpen, setAddCompanyOpen] = useState(false);
-  const [addUserToCompanyOpen, setAddUserToCompanyOpen] = useState(false);
   
-  // Form states
+  // Form states for new company
   const [companyName, setCompanyName] = useState("");
   const [legalName, setLegalName] = useState("");
   const [companyType, setCompanyType] = useState<"media_owner" | "agency">("media_owner");
   const [gstin, setGstin] = useState("");
   
-  const [userEmail, setUserEmail] = useState("");
-  const [userPassword, setUserPassword] = useState("");
-  const [userName, setUserName] = useState("");
-  const [userRole, setUserRole] = useState<"admin" | "sales" | "operations" | "finance">("sales");
   const [submitting, setSubmitting] = useState(false);
   const [deleteCompanyId, setDeleteCompanyId] = useState<string | null>(null);
   const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
-  const [assignAllModules, setAssignAllModules] = useState(true);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -124,51 +106,6 @@ export default function CompanyManagement() {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadCompanyUsers = async (companyId: string) => {
-    try {
-      const { data: companyUsersData, error } = await supabase
-        .from('company_users')
-        .select('*')
-        .eq('company_id', companyId);
-
-      if (error) throw error;
-
-      if (!companyUsersData || companyUsersData.length === 0) {
-        setCompanyUsers([]);
-        return;
-      }
-
-      // Get user profiles
-      const userIds = companyUsersData.map((cu: any) => cu.user_id);
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, username')
-        .in('id', userIds);
-
-      // Combine data
-      const usersWithProfiles: CompanyUserWithProfile[] = companyUsersData.map((cu: any) => {
-        const profile = profiles?.find((p: any) => p.id === cu.user_id);
-        return {
-          id: cu.id,
-          company_id: cu.company_id,
-          user_id: cu.user_id,
-          role: cu.role,
-          status: cu.status,
-          username: profile?.username,
-          email: `user-${cu.user_id.substring(0, 8)}`, // Placeholder - would need auth.admin in edge function
-        };
-      });
-
-      setCompanyUsers(usersWithProfiles);
-    } catch (error: any) {
-      toast({
-        title: "Error loading company users",
-        description: error.message,
-        variant: "destructive",
-      });
     }
   };
 
@@ -325,78 +262,6 @@ export default function CompanyManagement() {
     setExportDialogOpen(true);
   };
 
-  const handleAddUserToCompany = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCompany || !userEmail || !userPassword || !userName) {
-      toast({
-        title: "Validation Error",
-        description: "All fields are required",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-
-      // Call edge function to create user with proper permissions
-      const { data, error } = await supabase.functions.invoke('add-user-to-company', {
-        body: {
-          companyId: selectedCompany.id,
-          userName,
-          userEmail,
-          userPassword,
-          userRole,
-        },
-      });
-
-      if (error) throw error;
-
-      // Optionally assign all module permissions
-      if (assignAllModules && data?.user?.id) {
-        const { data: permData, error: permError } = await supabase.functions.invoke(
-          'assign-user-permissions',
-          {
-            body: {
-              userId: data.user.id,
-              role: userRole,
-              modules: 'all'
-            }
-          }
-        );
-
-        if (permError) {
-          console.error('Error assigning permissions:', permError);
-          toast({
-            title: "Warning",
-            description: "User created but permissions assignment failed. Please assign manually.",
-            variant: "default",
-          });
-        }
-      }
-
-      toast({
-        title: "Success",
-        description: `User ${userName} added to ${selectedCompany.name} successfully`,
-      });
-
-      setAddUserToCompanyOpen(false);
-      setUserEmail("");
-      setUserPassword("");
-      setUserName("");
-      setUserRole("sales");
-      loadCompanyUsers(selectedCompany.id);
-    } catch (error: any) {
-      toast({
-        title: "Error adding user",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   if (!isPlatformAdmin) {
     return (
       <div className="container mx-auto p-6 animate-fade-in">
@@ -408,11 +273,6 @@ export default function CompanyManagement() {
       </div>
     );
   }
-
-  const totalUsers = companies.reduce((sum, company) => {
-    const users = companyUsers[company.id] || [];
-    return sum + users.length;
-  }, 0);
 
   return (
     <div className="container mx-auto p-6 space-y-6 animate-fade-in">
@@ -498,18 +358,12 @@ export default function CompanyManagement() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3 mb-6">
+      <div className="grid gap-6 md:grid-cols-2 mb-6">
         <StatCard
           title="Total Companies"
           value={companies.length}
           icon={Building2}
           description="Registered companies"
-        />
-        <StatCard
-          title="Total Users"
-          value={totalUsers}
-          icon={Users}
-          description="Across all companies"
         />
         <StatCard
           title="Active Companies"
@@ -655,130 +509,7 @@ export default function CompanyManagement() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {selectedCompany && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>{selectedCompany.name} - Users</CardTitle>
-                <CardDescription>Manage users for this company</CardDescription>
-              </div>
-              <Dialog open={addUserToCompanyOpen} onOpenChange={setAddUserToCompanyOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Add User
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add User to {selectedCompany.name}</DialogTitle>
-                    <DialogDescription>
-                      Create a new user and assign them to this company
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleAddUserToCompany} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="userName">Full Name</Label>
-                      <Input
-                        id="userName"
-                        value={userName}
-                        onChange={(e) => setUserName(e.target.value)}
-                        placeholder="Enter full name"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="userEmail">Email</Label>
-                      <Input
-                        id="userEmail"
-                        type="email"
-                        value={userEmail}
-                        onChange={(e) => setUserEmail(e.target.value)}
-                        placeholder="Enter email"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="userPassword">Password</Label>
-                      <Input
-                        id="userPassword"
-                        type="password"
-                        value={userPassword}
-                        onChange={(e) => setUserPassword(e.target.value)}
-                        placeholder="Enter password"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="userRole">Role</Label>
-                      <Select value={userRole} onValueChange={(value: any) => setUserRole(value)}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="sales">Sales</SelectItem>
-                          <SelectItem value="operations">Operations</SelectItem>
-                          <SelectItem value="finance">Finance</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="assignAllModules"
-                        checked={assignAllModules}
-                        onChange={(e) => setAssignAllModules(e.target.checked)}
-                        className="h-4 w-4"
-                      />
-                      <Label htmlFor="assignAllModules" className="text-sm font-normal">
-                        Assign all module permissions based on role
-                      </Label>
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <Button type="button" variant="outline" onClick={() => setAddUserToCompanyOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button type="submit" disabled={submitting}>
-                        {submitting ? "Adding..." : "Add User"}
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {companyUsers.map((companyUser) => (
-                  <TableRow key={companyUser.id}>
-                    <TableCell>{companyUser.username || 'Unknown'}</TableCell>
-                    <TableCell>{companyUser.email || 'Unknown'}</TableCell>
-                    <TableCell>
-                      <Badge>{companyUser.role}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={companyUser.status === 'active' ? 'default' : 'secondary'}>
-                        {companyUser.status}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+      {/* User management has been moved to dedicated page: /admin/users/companies/:id */}
 
       {/* Edit Company Dialog */}
       {companyToEdit && (

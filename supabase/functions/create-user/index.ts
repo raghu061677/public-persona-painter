@@ -72,7 +72,15 @@ Deno.serve(async (req) => {
       (cu: any) => cu.company_id === company_id && cu.role === 'admin'
     );
 
-    if (!isPlatformAdmin && !isCompanyAdmin) {
+    // Additional permission check in user_roles table
+    const { data: userRoles } = await supabaseClient
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', requestingUser.id);
+
+    const hasPlatformRole = userRoles?.some((r: any) => r.role === 'platform_admin');
+
+    if (!isPlatformAdmin && !isCompanyAdmin && !hasPlatformRole) {
       console.error('Insufficient permissions');
       return new Response(
         JSON.stringify({ error: 'Insufficient permissions to create users for this company' }),

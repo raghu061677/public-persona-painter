@@ -34,24 +34,44 @@ serve(async (req) => {
       );
     }
 
-    // Verify user is platform admin
-    const { data: adminCheck } = await supabaseClient
-      .rpc('is_platform_admin', { _user_id: user.id });
-
-    if (!adminCheck) {
-      return new Response(
-        JSON.stringify({ error: "Only platform admins can delete users" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     // Parse request body
     const { userId, companyId } = await req.json();
 
-    if (!userId) {
+    if (!userId || !companyId) {
       return new Response(
-        JSON.stringify({ error: "userId is required" }),
+        JSON.stringify({ error: "userId and companyId are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if requesting user has permission (admin in that company or platform admin)
+    const { data: requestingUserCompanies } = await supabaseClient
+      .from('company_users')
+      .select('role, company_id, companies(type)')
+      .eq('user_id', user.id)
+      .eq('status', 'active');
+
+    const isPlatformAdmin = requestingUserCompanies?.some(
+      (cu: any) => cu.companies?.type === 'platform_admin'
+    );
+
+    const isCompanyAdmin = requestingUserCompanies?.some(
+      (cu: any) => cu.company_id === companyId && cu.role === 'admin'
+    );
+
+    // Additional permission check in user_roles table
+    const { data: userRoles } = await supabaseClient
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id);
+
+    const hasPlatformRole = userRoles?.some((r: any) => r.role === 'platform_admin');
+
+    if (!isPlatformAdmin && !isCompanyAdmin && !hasPlatformRole) {
+      console.error('Insufficient permissions');
+      return new Response(
+        JSON.stringify({ error: 'Insufficient permissions to delete users from this company' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

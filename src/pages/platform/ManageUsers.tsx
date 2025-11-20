@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, UserPlus, Building2, Mail, Shield } from "lucide-react";
+import { Plus, UserPlus, Building2, Mail, Shield, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -23,6 +23,16 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CreateUserForm } from "@/components/platform/CreateUserForm";
 import { AssignCompanyDialog } from "@/components/platform/AssignCompanyDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface UserProfile {
   id: string;
@@ -44,6 +54,8 @@ export default function ManageUsers() {
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingUser, setDeletingUser] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -100,6 +112,58 @@ export default function ManageUsers() {
         return 'outline';
       default:
         return 'outline';
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+
+    try {
+      setDeletingUser(true);
+      
+      // Get the session token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No active session');
+      }
+
+      // Get the primary company for this user
+      const primaryCompany = selectedUser.companies.find(c => c.status === 'active');
+      if (!primaryCompany) {
+        throw new Error('No active company found for user');
+      }
+
+      // Call the delete-user edge function
+      const { error } = await supabase.functions.invoke('delete-user', {
+        body: {
+          userId: selectedUser.id,
+          companyId: primaryCompany.company_id,
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+      });
+
+      setDeleteDialogOpen(false);
+      setSelectedUser(null);
+      loadUsers();
+
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete user",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingUser(false);
     }
   };
 
@@ -204,17 +268,29 @@ export default function ManageUsers() {
                     {new Date(user.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedUser(user);
-                        setAssignDialogOpen(true);
-                      }}
-                    >
-                      <UserPlus className="h-3 w-3 mr-1" />
-                      Assign Company
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setAssignDialogOpen(true);
+                        }}
+                      >
+                        <UserPlus className="h-3 w-3 mr-1" />
+                        Assign Company
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -232,6 +308,29 @@ export default function ManageUsers() {
           onSuccess={handleCompanyAssigned}
         />
       )}
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedUser?.username || selectedUser?.email}? 
+              This action cannot be undone and will remove all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingUser}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              disabled={deletingUser}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {deletingUser ? "Deleting..." : "Delete User"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

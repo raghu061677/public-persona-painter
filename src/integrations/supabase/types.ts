@@ -1477,6 +1477,186 @@ export type Database = {
         }
         Relationships: []
       }
+      company_code_settings: {
+        Row: {
+          asset_code_prefix: string | null
+          campaign_code_prefix: string | null
+          client_code_prefix: string | null
+          company_id: string
+          created_at: string | null
+          estimation_code_prefix: string | null
+          expense_code_prefix: string | null
+          id: string
+          invoice_code_prefix: string | null
+          plan_code_prefix: string | null
+          updated_at: string | null
+          use_custom_asset_codes: boolean | null
+          use_custom_campaign_codes: boolean | null
+          use_custom_client_codes: boolean | null
+          use_custom_estimation_codes: boolean | null
+          use_custom_expense_codes: boolean | null
+          use_custom_invoice_codes: boolean | null
+          use_custom_plan_codes: boolean | null
+        }
+        Insert: {
+          asset_code_prefix?: string | null
+          campaign_code_prefix?: string | null
+          client_code_prefix?: string | null
+          company_id: string
+          created_at?: string | null
+          estimation_code_prefix?: string | null
+          expense_code_prefix?: string | null
+          id?: string
+          invoice_code_prefix?: string | null
+          plan_code_prefix?: string | null
+          updated_at?: string | null
+          use_custom_asset_codes?: boolean | null
+          use_custom_campaign_codes?: boolean | null
+          use_custom_client_codes?: boolean | null
+          use_custom_estimation_codes?: boolean | null
+          use_custom_expense_codes?: boolean | null
+          use_custom_invoice_codes?: boolean | null
+          use_custom_plan_codes?: boolean | null
+        }
+        Update: {
+          asset_code_prefix?: string | null
+          campaign_code_prefix?: string | null
+          client_code_prefix?: string | null
+          company_id?: string
+          created_at?: string | null
+          estimation_code_prefix?: string | null
+          expense_code_prefix?: string | null
+          id?: string
+          invoice_code_prefix?: string | null
+          plan_code_prefix?: string | null
+          updated_at?: string | null
+          use_custom_asset_codes?: boolean | null
+          use_custom_campaign_codes?: boolean | null
+          use_custom_client_codes?: boolean | null
+          use_custom_estimation_codes?: boolean | null
+          use_custom_expense_codes?: boolean | null
+          use_custom_invoice_codes?: boolean | null
+          use_custom_plan_codes?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_code_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_counters: {
+        Row: {
+          company_id: string
+          counter_type: string
+          created_at: string | null
+          current_value: number
+          id: string
+          period: string
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          counter_type: string
+          created_at?: string | null
+          current_value?: number
+          id?: string
+          period: string
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          counter_type?: string
+          created_at?: string | null
+          current_value?: number
+          id?: string
+          period?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_counters_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_subscriptions: {
+        Row: {
+          amount: number
+          asset_limit: number | null
+          auto_renew: boolean | null
+          billing_cycle: string
+          campaign_limit: number | null
+          company_id: string
+          created_at: string | null
+          created_by: string | null
+          currency: string
+          end_date: string | null
+          id: string
+          metadata: Json | null
+          modules: Json
+          start_date: string
+          status: string
+          tier: string
+          updated_at: string | null
+          user_limit: number
+        }
+        Insert: {
+          amount?: number
+          asset_limit?: number | null
+          auto_renew?: boolean | null
+          billing_cycle?: string
+          campaign_limit?: number | null
+          company_id: string
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string
+          end_date?: string | null
+          id?: string
+          metadata?: Json | null
+          modules?: Json
+          start_date?: string
+          status?: string
+          tier?: string
+          updated_at?: string | null
+          user_limit?: number
+        }
+        Update: {
+          amount?: number
+          asset_limit?: number | null
+          auto_renew?: boolean | null
+          billing_cycle?: string
+          campaign_limit?: number | null
+          company_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string
+          end_date?: string | null
+          id?: string
+          metadata?: Json | null
+          modules?: Json
+          start_date?: string
+          status?: string
+          tier?: string
+          updated_at?: string | null
+          user_limit?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_subscriptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_users: {
         Row: {
           company_id: string
@@ -4152,6 +4332,10 @@ export type Database = {
         Args: { p_company_id: string }
         Returns: Json
       }
+      check_subscription_user_limit: {
+        Args: { p_company_id: string }
+        Returns: boolean
+      }
       cleanup_security_tables: { Args: never; Returns: undefined }
       create_plan_approval_workflow: {
         Args: { p_plan_id: string }
@@ -4185,6 +4369,14 @@ export type Database = {
           status: Database["public"]["Enums"]["subscription_status"]
           tier: Database["public"]["Enums"]["subscription_tier"]
         }[]
+      }
+      get_company_active_modules: {
+        Args: { p_company_id: string }
+        Returns: Json
+      }
+      get_company_counter: {
+        Args: { p_company_id: string; p_counter_type: string; p_period: string }
+        Returns: number
       }
       get_current_user_company_id: { Args: never; Returns: string }
       get_financial_year: { Args: never; Returns: string }

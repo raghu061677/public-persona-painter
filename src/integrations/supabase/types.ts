@@ -4081,16 +4081,28 @@ export type Database = {
           username: string
         }[]
       }
-      log_activity: {
-        Args: {
-          p_action: string
-          p_details?: Json
-          p_resource_id?: string
-          p_resource_name?: string
-          p_resource_type: string
-        }
-        Returns: string
-      }
+      log_activity:
+        | {
+            Args: {
+              p_action: string
+              p_details?: Json
+              p_resource_id?: string
+              p_resource_name?: string
+              p_resource_type: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_action: string
+              p_details?: Json
+              p_resource_id?: string
+              p_resource_name?: string
+              p_resource_type: string
+              p_user_id?: string
+            }
+            Returns: string
+          }
       log_admin_operation: {
         Args: {
           p_action: string
@@ -4099,6 +4111,15 @@ export type Database = {
           p_resource_id?: string
           p_resource_type: string
           p_user_agent?: string
+        }
+        Returns: string
+      }
+      log_audit: {
+        Args: {
+          p_action: string
+          p_details?: Json
+          p_resource_id?: string
+          p_resource_type: string
         }
         Returns: string
       }

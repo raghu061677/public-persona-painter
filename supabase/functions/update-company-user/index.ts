@@ -36,24 +36,6 @@ serve(async (req) => {
       );
     }
 
-    // Check if user is platform admin
-    const { data: companyUsers, error: roleError } = await supabaseClient
-      .from('company_users')
-      .select('role, companies(type)')
-      .eq('user_id', user.id)
-      .eq('status', 'active');
-
-    const isPlatformAdmin = companyUsers?.some(cu => 
-      cu.role === 'admin' && (cu.companies as any)?.type === 'platform_admin'
-    );
-
-    if (roleError || !isPlatformAdmin) {
-      return new Response(
-        JSON.stringify({ error: 'Forbidden - Platform admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Parse request body
     const { user_id, company_id, name, email, phone, role, status } = await req.json();
 
@@ -61,6 +43,28 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: 'user_id and company_id are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if user has permission to edit this company's users
+    const { data: companyUsers, error: roleError } = await supabaseClient
+      .from('company_users')
+      .select('role, company_id, companies(type)')
+      .eq('user_id', user.id)
+      .eq('status', 'active');
+
+    const isPlatformAdmin = companyUsers?.some(cu => 
+      cu.role === 'admin' && (cu.companies as any)?.type === 'platform_admin'
+    );
+
+    const isCompanyAdmin = companyUsers?.some(cu => 
+      cu.role === 'admin' && cu.company_id === company_id
+    );
+
+    if (roleError || (!isPlatformAdmin && !isCompanyAdmin)) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden - Admin access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

@@ -53,23 +53,18 @@ export default function BrandingSettings() {
     }
   };
 
-  const uploadLogo = async (): Promise<string | null> => {
-    if (!logoFile || !company) return null;
+  const convertLogoToBase64 = async (): Promise<string | null> => {
+    if (!logoFile) return null;
 
     try {
-      const fileExt = logoFile.name.split('.').pop();
-      const fileName = `${company.id}/logo-${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await storage
-        .from('logos')
-        .upload(fileName, logoFile, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data } = storage.from('logos').getPublicUrl(fileName);
-      return data.publicUrl;
+      const reader = new FileReader();
+      return await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(logoFile);
+      });
     } catch (error) {
-      console.error('Logo upload error:', error);
+      console.error('Logo conversion error:', error);
       return null;
     }
   };
@@ -95,12 +90,12 @@ export default function BrandingSettings() {
 
     setIsLoading(true);
     try {
-      // Upload new logo if changed
+      // Convert new logo to base64 if changed
       let logoUrl = company.logo_url;
       if (logoFile) {
-        const uploadedUrl = await uploadLogo();
-        if (uploadedUrl) {
-          logoUrl = uploadedUrl;
+        const base64Logo = await convertLogoToBase64();
+        if (base64Logo) {
+          logoUrl = base64Logo;
         }
       }
 

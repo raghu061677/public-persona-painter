@@ -4443,6 +4443,7 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
         }[]
       }
+      get_user_auth_data: { Args: { p_user_id: string }; Returns: Json }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
       get_user_profile: {
         Args: { p_user_id: string }

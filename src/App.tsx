@@ -14,6 +14,7 @@ import { RoleGuard, PlatformAdminGuard } from "@/components/auth/RoleGuard";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import AppLayout from "@/layouts/AppLayout";
 import { ClientPortalLayout } from "@/layouts/ClientPortalLayout";
+import { PublicLayout } from "@/layouts/PublicLayout";
 import { SettingsLayout } from "@/layouts/SettingsLayout";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { OfflineIndicator } from "@/components/pwa/OfflineIndicator";
@@ -214,9 +215,9 @@ const App = () => (
                   <Route path="/register-company" element={<RegisterCompany />} />
                   <Route path="/onboarding" element={<ProtectedRoute><CompanyOnboarding /></ProtectedRoute>} />
             <Route path="/install" element={<Install />} />
-            <Route path="/explore" element={<Marketplace />} />
-            <Route path="/marketplace" element={<Marketplace />} />
-            <Route path="/marketplace/asset/:id" element={<MarketplaceAssetDetail />} />
+            <Route path="/explore" element={<PublicLayout><Marketplace /></PublicLayout>} />
+            <Route path="/marketplace" element={<PublicLayout><Marketplace /></PublicLayout>} />
+            <Route path="/marketplace/asset/:id" element={<PublicLayout><MarketplaceAssetDetail /></PublicLayout>} />
             <Route path="/admin/plans/:id/share/:shareToken" element={<PlanShare />} />
             <Route path="/mobile/*" element={<MobilePage />} />
             
@@ -261,7 +262,7 @@ const App = () => (
             <Route path="/admin/media-assets/edit/:id" element={<ProtectedRoute requiredModule="media_assets" requiredAction="update"><AppLayout><MediaAssetEdit /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets/:id" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><AppLayout><MediaAssetDetail /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets-map" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><AppLayout><MediaAssetsMap /></AppLayout></ProtectedRoute>} />
-            <Route path="/marketplace" element={<ProtectedRoute requireAuth><AppLayout><Marketplace /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/marketplace" element={<ProtectedRoute requireAuth><AppLayout><Marketplace /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/plans" element={<ProtectedRoute requiredModule="plans" requiredAction="view"><AppLayout><PlansList /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/plans/new" element={<ProtectedRoute requiredModule="plans" requiredAction="create"><AppLayout><PlanNew /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/plans/edit/:id" element={<ProtectedRoute requiredModule="plans" requiredAction="update"><AppLayout><PlanEdit /></AppLayout></ProtectedRoute>} />

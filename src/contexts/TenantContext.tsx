@@ -28,7 +28,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       const potentialSlug = pathParts[0];
       
       // Skip if it's a known non-tenant route
-      const nonTenantRoutes = ['auth', 'register', 'portal', 'admin'];
+      const nonTenantRoutes = ['auth', 'register', 'portal', 'admin', 'settings', 'dashboard', 'marketplace'];
       if (!potentialSlug || nonTenantRoutes.includes(potentialSlug)) {
         // Fallback to subdomain detection
         await detectTenantFromSubdomain();

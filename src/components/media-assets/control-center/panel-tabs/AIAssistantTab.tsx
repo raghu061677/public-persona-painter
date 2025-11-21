@@ -1,12 +1,41 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles, FileText, Target, MapPin, TrendingUp } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface AIAssistantTabProps {
   selectedAssets: any[];
 }
 
 export function AIAssistantTab({ selectedAssets }: AIAssistantTabProps) {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState<string | null>(null);
+
+  const handleRunAnalysis = (prompt: string, title: string) => {
+    if (selectedAssets.length === 0) {
+      toast.error("Please select at least one asset");
+      return;
+    }
+    
+    setLoading(title);
+    
+    // Prepare asset context
+    const assetContext = selectedAssets.map(a => 
+      `${a.id} - ${a.location}, ${a.area}, ${a.city} (${a.media_type}, ${a.dimension})`
+    ).join("\n");
+    
+    const fullPrompt = `${prompt}\n\nSelected Assets:\n${assetContext}`;
+    
+    // Navigate to AI Assistant with the prompt
+    navigate('/admin/assistant', { 
+      state: { initialPrompt: fullPrompt }
+    });
+    
+    setLoading(null);
+  };
+
   const aiSuggestions = [
     {
       icon: FileText,
@@ -68,9 +97,10 @@ export function AIAssistantTab({ selectedAssets }: AIAssistantTabProps) {
                       size="sm"
                       variant="outline"
                       className="text-xs h-7"
-                      disabled={selectedAssets.length === 0}
+                      disabled={selectedAssets.length === 0 || loading === suggestion.title}
+                      onClick={() => handleRunAnalysis(suggestion.prompt, suggestion.title)}
                     >
-                      Run Analysis
+                      {loading === suggestion.title ? "Loading..." : "Run Analysis"}
                     </Button>
                   </div>
                 </div>

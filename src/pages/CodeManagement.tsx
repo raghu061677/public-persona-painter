@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCompany } from "@/contexts/CompanyContext";
 import { ROUTES } from "@/lib/routes";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -32,8 +33,8 @@ import { formatDate } from "@/utils/plans";
 
 interface CodeCounter {
   id: string;
+  company_id: string;
   counter_type: string;
-  counter_key: string;
   current_value: number;
   period: string;
   created_at: string;
@@ -53,6 +54,7 @@ interface EntityStats {
 
 export default function CodeManagement() {
   const { isAdmin } = useAuth();
+  const { company } = useCompany();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [counters, setCounters] = useState<CodeCounter[]>([]);
@@ -63,16 +65,21 @@ export default function CodeManagement() {
       navigate(ROUTES.DASHBOARD);
       return;
     }
-    fetchData();
-  }, [isAdmin, navigate]);
+    if (company?.id) {
+      fetchData();
+    }
+  }, [isAdmin, company?.id, navigate]);
 
   const fetchData = async () => {
+    if (!company?.id) return;
+    
     setLoading(true);
     try {
-      // Fetch counters
+      // Fetch company counters
       const { data: countersData, error: countersError } = await supabase
-        .from('code_counters')
+        .from('company_counters')
         .select('*')
+        .eq('company_id', company.id)
         .order('updated_at', { ascending: false });
 
       if (countersError) throw countersError;
@@ -92,13 +99,16 @@ export default function CodeManagement() {
   };
 
   const fetchEntityStats = async (countersData: CodeCounter[]) => {
+    if (!company?.id) return;
+    
     const stats: EntityStats[] = [];
     const currentPeriod = getCurrentPeriod();
 
     // Asset stats
     const { count: assetCount } = await supabase
       .from('media_assets')
-      .select('*', { count: 'exact', head: true });
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', company.id);
     
     const assetCounters = countersData.filter(c => c.counter_type === 'ASSET');
     const assetMax = Math.max(0, ...assetCounters.map(c => c.current_value));
@@ -117,7 +127,8 @@ export default function CodeManagement() {
     // Plan stats
     const { count: planCount } = await supabase
       .from('plans')
-      .select('*', { count: 'exact', head: true });
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', company.id);
     
     const planCounter = countersData.find(c => 
       c.counter_type === 'PLAN' && c.period === currentPeriod
@@ -137,7 +148,8 @@ export default function CodeManagement() {
     // Campaign stats
     const { count: campaignCount } = await supabase
       .from('campaigns')
-      .select('*', { count: 'exact', head: true });
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', company.id);
     
     const campaignCounter = countersData.find(c => 
       c.counter_type === 'CAMPAIGN' && c.period === currentPeriod
@@ -157,7 +169,8 @@ export default function CodeManagement() {
     // Client stats
     const { count: clientCount } = await supabase
       .from('clients')
-      .select('*', { count: 'exact', head: true });
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', company.id);
     
     const clientCounters = countersData.filter(c => c.counter_type === 'CLIENT');
     const clientMax = Math.max(0, ...clientCounters.map(c => c.current_value));
@@ -176,7 +189,8 @@ export default function CodeManagement() {
     // Invoice stats
     const { count: invoiceCount } = await supabase
       .from('invoices')
-      .select('*', { count: 'exact', head: true });
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', company.id);
     
     const invoiceCounter = countersData.find(c => 
       c.counter_type === 'INVOICE' && c.period === currentPeriod
@@ -196,7 +210,8 @@ export default function CodeManagement() {
     // Estimation stats
     const { count: estimationCount } = await supabase
       .from('estimations')
-      .select('*', { count: 'exact', head: true });
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', company.id);
     
     const estimationCounter = countersData.find(c => 
       c.counter_type === 'ESTIMATION' && c.period === currentPeriod
@@ -216,7 +231,8 @@ export default function CodeManagement() {
     // Expense stats
     const { count: expenseCount } = await supabase
       .from('expenses')
-      .select('*', { count: 'exact', head: true });
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', company.id);
     
     const expenseCounter = countersData.find(c => 
       c.counter_type === 'EXPENSE' && c.period === currentPeriod
@@ -367,7 +383,6 @@ function CounterTable({ counters }: { counters: CodeCounter[] }) {
         <TableHeader>
           <TableRow>
             <TableHead>Type</TableHead>
-            <TableHead>Counter Key</TableHead>
             <TableHead>Period</TableHead>
             <TableHead className="text-right">Current Value</TableHead>
             <TableHead>Created</TableHead>
@@ -380,7 +395,6 @@ function CounterTable({ counters }: { counters: CodeCounter[] }) {
               <TableCell>
                 <Badge variant="outline">{counter.counter_type}</Badge>
               </TableCell>
-              <TableCell className="font-mono text-sm">{counter.counter_key}</TableCell>
               <TableCell>
                 <Badge variant="secondary">
                   {counter.period === 'permanent' ? 'All Time' : counter.period}

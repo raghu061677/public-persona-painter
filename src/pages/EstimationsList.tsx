@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +20,7 @@ import { toast } from "@/hooks/use-toast";
 
 export default function EstimationsList() {
   const navigate = useNavigate();
+  const { company } = useCompany();
   const [estimations, setEstimations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,8 +28,10 @@ export default function EstimationsList() {
 
   useEffect(() => {
     checkAdminStatus();
-    fetchEstimations();
-  }, []);
+    if (company?.id) {
+      fetchEstimations();
+    }
+  }, [company]);
 
   const checkAdminStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -42,10 +46,13 @@ export default function EstimationsList() {
   };
 
   const fetchEstimations = async () => {
+    if (!company?.id) return;
+    
     setLoading(true);
     const { data, error } = await supabase
       .from('estimations')
       .select('*')
+      .eq('company_id', company.id)
       .order('created_at', { ascending: false });
 
     if (error) {

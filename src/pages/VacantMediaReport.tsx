@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +18,7 @@ import { getStatusColor } from "@/utils/mediaAssets";
 import { toast } from "@/hooks/use-toast";
 
 export default function VacantMediaReport() {
+  const { company } = useCompany();
   const [assets, setAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -27,14 +29,19 @@ export default function VacantMediaReport() {
   });
 
   useEffect(() => {
-    fetchVacantAssets();
-  }, []);
+    if (company?.id) {
+      fetchVacantAssets();
+    }
+  }, [company]);
 
   const fetchVacantAssets = async () => {
+    if (!company?.id) return;
+    
     setLoading(true);
     const { data, error } = await supabase
       .from('media_assets')
       .select('*')
+      .eq('company_id', company.id)
       .eq('status', 'Available')
       .order('city', { ascending: true });
 

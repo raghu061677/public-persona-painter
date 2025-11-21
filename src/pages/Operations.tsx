@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,13 +33,16 @@ interface CampaignAsset {
 
 export default function Operations() {
   const navigate = useNavigate();
+  const { company } = useCompany();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   useEffect(() => {
-    fetchCampaigns();
+    if (company?.id) {
+      fetchCampaigns();
+    }
 
     // Set up real-time subscription for campaign updates
     const channel = supabase
@@ -92,11 +96,14 @@ export default function Operations() {
   }, []);
 
   const fetchCampaigns = async () => {
+    if (!company?.id) return;
+    
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from("campaigns")
         .select("*")
+        .eq("company_id", company.id)
         .in("status", ["InProgress", "Planned"])
         .order("start_date", { ascending: false });
 

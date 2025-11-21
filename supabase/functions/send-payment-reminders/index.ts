@@ -12,15 +12,36 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch overdue invoices
+    // Fetch overdue invoices - only for specific company or all if platform admin
     const today = new Date().toISOString().split('T')[0];
     
-    const { data: overdueInvoices, error: invoicesError } = await supabaseClient
+    // Get user context from auth header
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    const { data: { user } } = await supabaseClient.auth.getUser(token);
+    
+    let invoicesQuery = supabaseClient
       .from('invoices')
-      .select('*, clients(email, name)')
+      .select('*, clients(email, name), companies!inner(id)')
       .in('status', ['Sent', 'Overdue'])
       .lt('due_date', today)
       .gt('balance_due', 0);
+    
+    // If not a scheduled job (has user context), filter by user's company
+    if (user) {
+      const { data: companyUser } = await supabaseClient
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single();
+      
+      if (companyUser?.company_id) {
+        invoicesQuery = invoicesQuery.eq('company_id', companyUser.company_id);
+      }
+    }
+    
+    const { data: overdueInvoices, error: invoicesError } = await invoicesQuery;
 
     if (invoicesError) {
       console.error('Error fetching invoices:', invoicesError);

@@ -37,22 +37,39 @@ interface GroupedPhotos {
 
 export async function generateProofOfDisplayPPT(campaignId: string): Promise<void> {
   try {
-    // Fetch campaign data
+    // Get current user and their company
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Authentication required");
+
+    // Fetch campaign data with company verification
     const { data: campaign, error: campaignError } = await supabase
       .from("campaigns")
-      .select("*")
+      .select("*, company_id")
       .eq("id", campaignId)
       .single();
 
     if (campaignError) throw campaignError;
     if (!campaign) throw new Error("Campaign not found");
 
-    // Fetch all photos for this campaign
+    // Verify user has access to this campaign's company
+    const { data: userCompany } = await supabase
+      .from("company_users")
+      .select("company_id")
+      .eq("user_id", user.id)
+      .eq("company_id", campaign.company_id)
+      .single();
+
+    if (!userCompany) {
+      throw new Error("You don't have access to this campaign");
+    }
+
+    // Fetch all photos for this campaign with company filter
     // @ts-ignore - Complex Supabase type inference issue
     const photoQuery = await supabase
       .from("media_photos")
       .select("*")
       .eq("campaign_id", campaignId)
+      .eq("company_id", campaign.company_id)
       .eq("photo_type", "operations_proof")
       .order("asset_id", { ascending: true })
       .order("uploaded_at", { ascending: true });
@@ -68,10 +85,11 @@ export async function generateProofOfDisplayPPT(campaignId: string): Promise<voi
     // Get unique asset IDs
     const assetIds = [...new Set(photos.map(p => p.asset_id))];
 
-    // Fetch asset details
+    // Fetch asset details with company filter
     const { data: assets, error: assetsError } = await supabase
       .from("media_assets")
       .select("*")
+      .eq("company_id", campaign.company_id)
       .in("id", assetIds);
 
     if (assetsError) throw assetsError;

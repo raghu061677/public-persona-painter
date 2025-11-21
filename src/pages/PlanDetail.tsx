@@ -42,6 +42,7 @@ import { getPlanStatusColor, formatDate } from "@/utils/plans";
 import { generateCampaignCode } from "@/lib/codeGenerator";
 import { calcProRata, calcDiscount, calcProfit } from "@/utils/pricing";
 import { toast } from "@/hooks/use-toast";
+import { useCompany } from "@/contexts/CompanyContext";
 import { exportPlanToPPT, exportPlanToExcel, exportPlanToPDF } from "@/utils/planExports";
 import { ExportPlanExcelButton } from "@/components/plans/ExportPlanExcelButton";
 import { WorkOrderPDFButton } from "@/components/plans/WorkOrderPDFButton";
@@ -60,6 +61,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 export default function PlanDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { company } = useCompany();
   const [plan, setPlan] = useState<any>(null);
   const [planItems, setPlanItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -640,6 +642,11 @@ export default function PlanDetail() {
         throw new Error("You must be logged in to convert a plan to campaign");
       }
 
+      // Validation 1.5: Check company context
+      if (!company?.id) {
+        throw new Error("Company context is required");
+      }
+
       // Validation 2: Check if plan is approved
       if (plan.status !== 'Approved') {
         toast({
@@ -678,11 +685,12 @@ export default function PlanDetail() {
       const startDate = campaignData.start_date ? new Date(campaignData.start_date) : new Date(plan.start_date);
       const campaignId = await generateCampaignCode(startDate);
 
-      // Create campaign
+      // Create campaign with company_id
       const { data: campaign, error: campaignError } = await supabase
         .from('campaigns')
         .insert({
           id: campaignId,
+          company_id: company.id,
           plan_id: plan.id,
           client_id: plan.client_id,
           client_name: plan.client_name,

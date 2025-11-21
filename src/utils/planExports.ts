@@ -140,13 +140,31 @@ export async function exportPlanToPPT(
   uploadToCloud: boolean = false
 ) {
   try {
+    // Verify user has access to this plan
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Authentication required");
+
+    if (plan.company_id) {
+      const { data: userCompany } = await supabase
+        .from("company_users")
+        .select("company_id")
+        .eq("user_id", user.id)
+        .eq("company_id", plan.company_id)
+        .single();
+
+      if (!userCompany) {
+        throw new Error("You don't have access to this plan");
+      }
+    }
+
     const pptx = new pptxgen();
     
-    // Fetch client details
+    // Fetch client details with company filter
     const { data: clientData } = await supabase
       .from('clients')
       .select('*')
       .eq('id', plan.client_id)
+      .eq('company_id', plan.company_id)
       .single();
     
     // Fetch asset details

@@ -69,8 +69,8 @@ export function PlatformAdminSidebar({ collapsed }: PlatformAdminSidebarProps) {
         />
         <SidebarItem 
           icon={BarChart3} 
-          label="Reports & Analytics" 
-          href="/admin/reports" 
+          label="Platform Reports" 
+          href="/admin/platform-reports" 
           collapsed={collapsed}
         />
         <SidebarItem 

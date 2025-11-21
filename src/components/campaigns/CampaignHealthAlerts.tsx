@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ interface BudgetBreakdown {
 }
 
 export function CampaignHealthAlerts({ campaignId }: CampaignHealthAlertsProps) {
+  const { company } = useCompany();
   const [alerts, setAlerts] = useState<HealthAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [budgetBreakdowns, setBudgetBreakdowns] = useState<Map<string, BudgetBreakdown[]>>(new Map());
@@ -52,7 +54,7 @@ export function CampaignHealthAlerts({ campaignId }: CampaignHealthAlertsProps) 
     // Refresh every 5 minutes
     const interval = setInterval(checkCampaignHealth, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [campaignId]);
+  }, [campaignId, company]);
 
   const loadAlertSettings = async () => {
     try {
@@ -82,10 +84,33 @@ export function CampaignHealthAlerts({ campaignId }: CampaignHealthAlertsProps) 
     const breakdowns = new Map<string, BudgetBreakdown[]>();
 
     try {
-      // Fetch campaigns to check
+      // Get user's company ID for multi-tenant filtering
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      const { data: companyUserData } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (!companyUserData) {
+        setLoading(false);
+        return;
+      }
+
+      // Use selected company from localStorage if available (for platform admins)
+      const selectedCompanyId = localStorage.getItem('selected_company_id') || companyUserData.company_id;
+
+      // Fetch campaigns to check - FILTER BY COMPANY_ID
       let query = supabase
         .from("campaigns")
-        .select("*");
+        .select("*")
+        .eq("company_id", selectedCompanyId);
 
       if (campaignId) {
         query = query.eq("id", campaignId);

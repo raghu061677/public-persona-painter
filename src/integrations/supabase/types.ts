@@ -4321,7 +4321,6 @@ export type Database = {
       public_media_assets_safe: {
         Row: {
           area: string | null
-          card_rate: number | null
           category: Database["public"]["Enums"]["media_category"] | null
           city: string | null
           company_city: string | null

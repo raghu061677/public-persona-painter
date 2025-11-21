@@ -63,6 +63,15 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
 
+      // Verify user session is valid before calling RPC
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        console.error('No valid session:', sessionError);
+        setIsLoading(false);
+        return;
+      }
+
       // Use optimized RPC function to fetch all data in one call
       const { data: authData, error: authError } = await supabase.rpc('get_user_auth_data', { 
         p_user_id: user.id 
@@ -70,6 +79,13 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
       if (authError) {
         console.error('Error fetching auth data:', authError);
+        setIsLoading(false);
+        return;
+      }
+
+      // Handle empty response
+      if (!authData) {
+        console.error('No auth data returned from RPC');
         setIsLoading(false);
         return;
       }

@@ -36,11 +36,20 @@ export function useAuthData() {
     queryFn: async () => {
       if (!user?.id) throw new Error('No user ID');
 
+      // Verify session is valid before calling RPC
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        throw new Error('No valid session');
+      }
+
       const { data, error } = await supabase.rpc('get_user_auth_data', {
         p_user_id: user.id,
       }) as { data: any; error: any };
 
       if (error) throw error;
+      if (!data) throw new Error('No data returned from RPC');
+      
       return data as AuthData;
     },
     enabled: !!user?.id,

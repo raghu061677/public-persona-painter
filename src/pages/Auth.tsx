@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { getRoleDashboard } from "@/utils/roleBasedRedirect";
 import { motion } from "framer-motion";
+import { PublicLayout } from "@/layouts/PublicLayout";
 
 const authSchema = z.object({
   email: z.string().trim().email({ message: "Invalid email address" }).max(255),
@@ -212,131 +213,133 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-4">
-          <motion.div 
-            className="flex justify-center"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-          >
-            <img 
-              src="/logo.png" 
-              alt="Go-Ads 360° Logo" 
-              className="h-16 w-auto object-contain"
-            />
-          </motion.div>
-          <CardTitle className="text-2xl font-bold text-center">
-            {isLogin ? "Welcome back" : "Create an account"}
-          </CardTitle>
-          <CardDescription className="text-center">
-            {isLogin
-              ? "Enter your credentials to access your account"
-              : "Enter your information to get started"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="your@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={loading}
+    <PublicLayout>
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-4">
+            <motion.div 
+              className="flex justify-center"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            >
+              <img 
+                src="/logo.png" 
+                alt="Go-Ads 360° Logo" 
+                className="h-16 w-auto object-contain"
               />
-            </div>
-            {!isLogin && (
+            </motion.div>
+            <CardTitle className="text-2xl font-bold text-center">
+              {isLogin ? "Welcome back" : "Create an account"}
+            </CardTitle>
+            <CardDescription className="text-center">
+              {isLogin
+                ? "Enter your credentials to access your account"
+                : "Enter your information to get started"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="username"
-                  type="text"
-                  placeholder="johndoe"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  id="email"
+                  type="email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
                 />
               </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-              />
-            </div>
-            <Button 
-              type="submit" 
-              className="w-full font-bold" 
-              disabled={loading}
-              style={{
-                background: isLogin 
-                  ? "linear-gradient(135deg, #2C3E50, #34495E)" 
-                  : "linear-gradient(135deg, #0061FF, #00A3FF)",
-                boxShadow: isLogin
-                  ? "0 4px 12px rgba(44, 62, 80, 0.3)"
-                  : "0 4px 12px rgba(0, 97, 255, 0.25)"
-              }}
-            >
-              {loading ? "Loading..." : isLogin ? "Login" : "Sign Up"}
-            </Button>
-          </form>
-          <div className="mt-4 space-y-3">
-            <div className="text-center text-sm">
-              {isLogin ? (
-                <>
-                  Don't have an account?{" "}
-                  <button
-                    type="button"
-                    onClick={() => setIsLogin(false)}
-                    className="text-primary hover:underline"
+              {!isLogin && (
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    placeholder="johndoe"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
                     disabled={loading}
-                  >
-                    Sign up
-                  </button>
-                </>
-              ) : (
-                <>
-                  Already have an account?{" "}
-                  <button
-                    type="button"
-                    onClick={() => setIsLogin(true)}
-                    className="text-primary hover:underline"
-                    disabled={loading}
-                  >
-                    Login
-                  </button>
-                </>
+                  />
+                </div>
               )}
-            </div>
-            <div className="text-center text-sm border-t pt-3">
-              <span className="text-muted-foreground">
-                Register as Media Owner or Agency?{" "}
-              </span>
-              <button
-                type="button"
-                onClick={() => navigate('/register-company')}
-                className="text-primary hover:underline font-semibold"
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                />
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full font-bold" 
                 disabled={loading}
+                style={{
+                  background: isLogin 
+                    ? "linear-gradient(135deg, #2C3E50, #34495E)" 
+                    : "linear-gradient(135deg, #0061FF, #00A3FF)",
+                  boxShadow: isLogin
+                    ? "0 4px 12px rgba(44, 62, 80, 0.3)"
+                    : "0 4px 12px rgba(0, 97, 255, 0.25)"
+                }}
               >
-                Register Company
-              </button>
+                {loading ? "Loading..." : isLogin ? "Login" : "Sign Up"}
+              </Button>
+            </form>
+            <div className="mt-4 space-y-3">
+              <div className="text-center text-sm">
+                {isLogin ? (
+                  <>
+                    Don't have an account?{" "}
+                    <button
+                      type="button"
+                      onClick={() => setIsLogin(false)}
+                      className="text-primary hover:underline"
+                      disabled={loading}
+                    >
+                      Sign up
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    Already have an account?{" "}
+                    <button
+                      type="button"
+                      onClick={() => setIsLogin(true)}
+                      className="text-primary hover:underline"
+                      disabled={loading}
+                    >
+                      Login
+                    </button>
+                  </>
+                )}
+              </div>
+              <div className="text-center text-sm border-t pt-3">
+                <span className="text-muted-foreground">
+                  Register as Media Owner or Agency?{" "}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/register-company')}
+                  className="text-primary hover:underline font-semibold"
+                  disabled={loading}
+                >
+                  Register Company
+                </button>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+      </div>
+    </PublicLayout>
   );
 };
 

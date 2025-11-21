@@ -30,6 +30,8 @@ interface CompanyContextType {
   isPlatformAdmin: boolean;
   isLoading: boolean;
   refreshCompany: () => Promise<void>;
+  allCompanies: Company[];
+  switchCompany: (companyId: string) => Promise<void>;
 }
 
 const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
@@ -41,12 +43,14 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   const [companyUser, setCompanyUser] = useState<CompanyUser | null>(null);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [allCompanies, setAllCompanies] = useState<Company[]>([]);
 
   const loadCompanyData = async () => {
     if (!user) {
       setCompany(null);
       setCompanyUser(null);
       setIsPlatformAdmin(false);
+      setAllCompanies([]);
       setIsLoading(false);
       return;
     }
@@ -61,23 +65,31 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
       let targetCompanyId: string | null = null;
 
-      // If we have a tenant ID from subdomain, use that company
-      if (currentTenantId) {
-        targetCompanyId = currentTenantId;
-      } else {
-        // No subdomain - check if user is platform admin
-        if (isTenantPlatformAdmin) {
-          // Get the platform admin company
-          const { data: platformCompany } = await supabase
-            .from('companies' as any)
-            .select('id')
-            .eq('type', 'platform_admin')
-            .eq('status', 'active')
-            .maybeSingle();
+      // Check if platform admin to fetch all companies
+      if (isTenantPlatformAdmin) {
+        const { data: companies, error: companiesError } = await supabase
+          .from('companies' as any)
+          .select('*')
+          .eq('status', 'active')
+          .order('name');
+        
+        if (!companiesError && companies) {
+          setAllCompanies(companies as any as Company[]);
           
-          if (platformCompany && 'id' in platformCompany) {
-            targetCompanyId = (platformCompany as any).id;
+          // Check for stored company preference
+          const storedCompanyId = localStorage.getItem('selected_company_id');
+          if (storedCompanyId && companies.some((c: any) => c.id === storedCompanyId)) {
+            targetCompanyId = storedCompanyId;
+          } else if (companies.length > 0) {
+            // Default to platform admin company if available
+            const platformCompany = companies.find((c: any) => c.type === 'platform_admin');
+            targetCompanyId = platformCompany ? (platformCompany as any).id : (companies[0] as any).id;
           }
+        }
+      } else {
+        // If we have a tenant ID from subdomain, use that company
+        if (currentTenantId) {
+          targetCompanyId = currentTenantId;
         } else {
           // Get user's primary company
           const { data: primaryCompanyUser } = await supabase
@@ -105,6 +117,20 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
               targetCompanyId = (firstCompanyUser as any).company_id;
             }
           }
+        }
+
+        // For non-platform admins, fetch only their companies
+        const { data: userCompanies } = await supabase
+          .from('company_users' as any)
+          .select('company_id, companies(*)')
+          .eq('user_id', user.id)
+          .eq('status', 'active');
+        
+        if (userCompanies) {
+          const companies = userCompanies
+            .map((uc: any) => uc.companies)
+            .filter((c: any) => c && c.status === 'active');
+          setAllCompanies(companies);
         }
       }
 
@@ -135,12 +161,45 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         console.error('Error fetching company:', companyError);
       } else {
         setCompany(companyData as any);
-        setIsPlatformAdmin((companyData as any).type === 'platform_admin');
+        setIsPlatformAdmin(isTenantPlatformAdmin);
       }
     } catch (error) {
       console.error('Error in loadCompanyData:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const switchCompany = async (companyId: string) => {
+    if (!user) return;
+    
+    try {
+      // Store preference
+      localStorage.setItem('selected_company_id', companyId);
+      
+      // Get company user association
+      const { data: companyUserData } = await supabase
+        .from('company_users' as any)
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('company_id', companyId)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      setCompanyUser(companyUserData as any);
+
+      // Get company details
+      const { data: companyData, error } = await supabase
+        .from('companies' as any)
+        .select('*')
+        .eq('id', companyId)
+        .single();
+
+      if (!error && companyData) {
+        setCompany(companyData as any);
+      }
+    } catch (error) {
+      console.error('Error switching company:', error);
     }
   };
 
@@ -159,7 +218,9 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         companyUser,
         isPlatformAdmin,
         isLoading,
-        refreshCompany
+        refreshCompany,
+        allCompanies,
+        switchCompany
       }}
     >
       {children}

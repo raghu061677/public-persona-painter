@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { TrendingUp, TrendingDown, DollarSign, Users, MapPin, Activity } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
+import { useCompany } from "@/contexts/CompanyContext";
 
 interface DashboardMetrics {
   totalRevenue: number;
@@ -18,6 +19,7 @@ interface DashboardMetrics {
 }
 
 export function AdvancedDashboard() {
+  const { company } = useCompany();
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     totalRevenue: 0,
     revenueGrowth: 0,
@@ -35,24 +37,16 @@ export function AdvancedDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (company?.id) {
+      fetchDashboardData();
+    }
+  }, [company]);
 
   const fetchDashboardData = async () => {
+    if (!company?.id) return;
+    
     try {
       setLoading(true);
-
-      // Get user's company
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: companyUser } = await supabase
-        .from("company_users")
-        .select("company_id")
-        .eq("user_id", user.id)
-        .single();
-
-      const companyId = companyUser?.company_id;
 
       // Fetch all data in parallel
       const [
@@ -64,19 +58,19 @@ export function AdvancedDashboard() {
         supabase
           .from("invoices")
           .select("total_amount, invoice_date, status, client_name")
-          .eq("company_id", companyId),
+          .eq("company_id", company.id),
         supabase
           .from("campaigns")
           .select("id, status, grand_total, created_at")
-          .eq("company_id", companyId),
+          .eq("company_id", company.id),
         supabase
           .from("clients")
           .select("id, name, created_at")
-          .eq("company_id", companyId),
+          .eq("company_id", company.id),
         supabase
           .from("media_assets")
           .select("id, status, city, card_rate")
-          .eq("company_id", companyId),
+          .eq("company_id", company.id),
       ]);
 
       // Calculate metrics

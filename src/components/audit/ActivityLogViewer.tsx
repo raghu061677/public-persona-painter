@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { Activity, Search, Filter } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useCompany } from '@/contexts/CompanyContext';
 
 interface ActivityLog {
   id: string;
@@ -21,6 +22,7 @@ interface ActivityLog {
 }
 
 export function ActivityLogViewer() {
+  const { company, isPlatformAdmin } = useCompany();
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,16 +30,27 @@ export function ActivityLogViewer() {
   const [filterAction, setFilterAction] = useState<string>('all');
 
   useEffect(() => {
-    loadLogs();
-  }, []);
+    if (company?.id) {
+      loadLogs();
+    }
+  }, [company]);
 
   const loadLogs = async () => {
+    if (!company?.id) return;
+    
     try {
       let query = supabase
         .from('activity_logs')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
+
+      // Filter by company unless platform admin viewing all
+      if (!isPlatformAdmin) {
+        // For non-admin users, we need to filter logs related to their company's data
+        // This is a simplified approach - in production you'd want more sophisticated filtering
+        query = query.or(`details->>company_id.eq.${company.id},user_id.in.(select user_id from company_users where company_id='${company.id}')`);
+      }
 
       const { data, error } = await query;
       if (error) throw error;

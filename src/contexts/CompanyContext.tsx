@@ -63,10 +63,15 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
 
+      // Always check if user is platform admin by calling the database function
+      const { data: isAdmin } = await supabase.rpc('is_platform_admin', { _user_id: user.id });
+      const userIsPlatformAdmin = isAdmin || false;
+      setIsPlatformAdmin(userIsPlatformAdmin);
+
       let targetCompanyId: string | null = null;
 
       // Check if platform admin to fetch all companies
-      if (isTenantPlatformAdmin) {
+      if (userIsPlatformAdmin) {
         const { data: companies, error: companiesError } = await supabase
           .from('companies' as any)
           .select('*')
@@ -161,7 +166,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         console.error('Error fetching company:', companyError);
       } else {
         setCompany(companyData as any);
-        setIsPlatformAdmin(isTenantPlatformAdmin);
+        // isPlatformAdmin is already set above, no need to set it again here
       }
     } catch (error) {
       console.error('Error in loadCompanyData:', error);
@@ -176,6 +181,10 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     try {
       // Store preference
       localStorage.setItem('selected_company_id', companyId);
+      
+      // Check if user is platform admin (this should persist across company switches)
+      const { data: isAdmin } = await supabase.rpc('is_platform_admin', { _user_id: user.id });
+      setIsPlatformAdmin(isAdmin || false);
       
       // Get company user association
       const { data: companyUserData } = await supabase

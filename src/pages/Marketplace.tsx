@@ -543,9 +543,9 @@ export default function Marketplace() {
               </div>
               
               <CardHeader className="p-0">
-                {asset.images?.photos?.[0]?.url ? (
+                {asset.image_urls && asset.image_urls.length > 0 && asset.image_urls[0] ? (
                   <img
-                    src={asset.images.photos[0].url}
+                    src={asset.image_urls[0]}
                     alt={asset.location}
                     className="w-full h-36 object-cover rounded-t-lg"
                   />

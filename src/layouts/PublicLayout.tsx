@@ -1,129 +1,91 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Home, Building2, Mail, Phone, MapPin } from "lucide-react";
+import { Menu } from "lucide-react";
+import { AnnouncementBanner } from "@/components/landing/AnnouncementBanner";
+import { PremiumFooter } from "@/components/landing/cosmic/PremiumFooter";
+import { DarkModeToggle } from "@/components/landing/god-mode/DarkModeToggle";
+import { useNavigate } from "react-router-dom";
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">Go-Ads 360°</span>
-          </div>
-          
-          <nav className="hidden md:flex items-center gap-6">
-            <Link to="/" className="text-sm font-medium transition-colors hover:text-primary">
-              Home
-            </Link>
-            <Link to="/marketplace" className="text-sm font-medium transition-colors hover:text-primary">
-              Marketplace
-            </Link>
-            <Link to="/auth" className="text-sm font-medium transition-colors hover:text-primary">
-              Login
-            </Link>
-          </nav>
+  const navigate = useNavigate();
 
-          <div className="flex items-center gap-4">
-            <Button asChild variant="default" size="sm" className="hidden md:inline-flex">
-              <Link to="/register-company">Get Started</Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/auth">Login</Link>
-            </Button>
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* Announcement Banner */}
+      <AnnouncementBanner />
+
+      {/* Header - matches Landing page */}
+      <nav 
+        className="sticky top-0 z-50 transition-all duration-350 border-b border-border/10 bg-white/85 dark:bg-gray-900/90 backdrop-blur-md"
+        style={{
+          boxShadow: "0 2px 12px rgba(0, 0, 0, 0.04)",
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <img 
+                src="/logo.png" 
+                alt="Go-Ads 360° Logo" 
+                className="h-10 w-auto object-contain md:h-12 cursor-pointer"
+                onClick={() => navigate("/")}
+              />
+            </div>
+            
+            <div className="hidden md:flex items-center space-x-8">
+              <button 
+                onClick={() => navigate("/")} 
+                className="text-foreground/70 hover:text-foreground font-medium transition-all duration-300 relative group"
+              >
+                Home
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F4C542] group-hover:w-full transition-all duration-300" />
+              </button>
+              <button 
+                onClick={() => navigate("/marketplace")} 
+                className="text-foreground/70 hover:text-foreground font-medium transition-all duration-300 relative group"
+              >
+                Explore Media
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F4C542] group-hover:w-full transition-all duration-300" />
+              </button>
+              <DarkModeToggle />
+              <Button
+                onClick={() => navigate("/auth")}
+                size="sm"
+                variant="outline"
+                className="font-medium rounded-xl px-6"
+              >
+                Sign In
+              </Button>
+              <Button
+                onClick={() => navigate("/auth")}
+                size="sm"
+                className="font-bold rounded-xl px-6"
+                style={{
+                  background: "linear-gradient(135deg, #0061FF, #00A3FF)",
+                  boxShadow: "0 4px 12px rgba(0, 97, 255, 0.25)",
+                }}
+              >
+                Get Started
+              </Button>
+            </div>
+
+            <div className="md:hidden flex items-center gap-2">
+              <DarkModeToggle />
+              <button className="p-2">
+                <Menu className="h-6 w-6" />
+              </button>
+            </div>
           </div>
         </div>
-      </header>
+      </nav>
 
       {/* Main Content */}
       <main className="flex-1">
         {children}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t bg-muted/50">
-        <div className="container py-12">
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-            {/* Company Info */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-primary" />
-                <span className="font-bold">Go-Ads 360°</span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Complete OOH media management platform for media owners and advertising agencies.
-              </p>
-            </div>
-
-            {/* Quick Links */}
-            <div className="space-y-4">
-              <h3 className="font-semibold">Quick Links</h3>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <Link to="/" className="text-muted-foreground hover:text-primary transition-colors">
-                    Home
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/marketplace" className="text-muted-foreground hover:text-primary transition-colors">
-                    Marketplace
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/auth" className="text-muted-foreground hover:text-primary transition-colors">
-                    Login
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/register-company" className="text-muted-foreground hover:text-primary transition-colors">
-                    Register
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            {/* Features */}
-            <div className="space-y-4">
-              <h3 className="font-semibold">Features</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>Media Asset Management</li>
-                <li>Campaign Planning</li>
-                <li>Operations Tracking</li>
-                <li>Financial Management</li>
-                <li>Analytics & Reports</li>
-              </ul>
-            </div>
-
-            {/* Contact */}
-            <div className="space-y-4">
-              <h3 className="font-semibold">Contact Us</h3>
-              <ul className="space-y-3 text-sm">
-                <li className="flex items-center gap-2 text-muted-foreground">
-                  <Mail className="h-4 w-4" />
-                  <a href="mailto:info@goads360.com" className="hover:text-primary transition-colors">
-                    info@goads360.com
-                  </a>
-                </li>
-                <li className="flex items-center gap-2 text-muted-foreground">
-                  <Phone className="h-4 w-4" />
-                  <a href="tel:+911234567890" className="hover:text-primary transition-colors">
-                    +91 123 456 7890
-                  </a>
-                </li>
-                <li className="flex items-start gap-2 text-muted-foreground">
-                  <MapPin className="h-4 w-4 mt-0.5" />
-                  <span>Hyderabad, India</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
-            <p>© {new Date().getFullYear()} Go-Ads 360°. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      {/* Footer - matches Landing page */}
+      <PremiumFooter />
     </div>
   );
 }

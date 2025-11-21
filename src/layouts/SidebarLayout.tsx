@@ -18,7 +18,7 @@ import { SidebarItem } from "@/components/sidebar/SidebarItem";
 import { SidebarGroup } from "@/components/sidebar/SidebarGroup";
 import { SidebarFooter } from "@/components/sidebar/SidebarFooter";
 import { CompanySwitcher } from "@/components/sidebar/CompanySwitcher";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
@@ -56,7 +56,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         {/* Header */}
         <div className="flex items-center justify-between h-14 px-4 border-b border-border/40">
           {!collapsed && (
-            <div className="flex items-center gap-3">
+            <Link to="/admin/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer">
               {company?.logo_url ? (
                 <img 
                   src={company.logo_url} 
@@ -71,10 +71,10 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                   </span>
                 </>
               )}
-            </div>
+            </Link>
           )}
           {collapsed && (
-            <div className="mx-auto">
+            <Link to="/admin/dashboard" className="mx-auto hover:opacity-80 transition-opacity cursor-pointer">
               {company?.logo_url ? (
                 <img 
                   src={company.logo_url} 
@@ -84,7 +84,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               ) : (
                 <Shield className="h-5 w-5 text-primary" />
               )}
-            </div>
+            </Link>
           )}
           <Button
             variant="ghost"

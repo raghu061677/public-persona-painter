@@ -4,22 +4,28 @@ import HighchartsReact from "highcharts-react-official";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { useCompany } from "@/contexts/CompanyContext";
 
 export function RevenueChart() {
+  const { company } = useCompany();
   const [chartData, setChartData] = useState<{ month: string; revenue: number; expenses: number }[]>([]);
 
   const fetchData = async () => {
+    if (!company?.id) return;
+    
     const sixMonthsAgo = subMonths(new Date(), 6);
 
     const [invoicesResult, expensesResult] = await Promise.all([
       supabase
         .from("invoices")
         .select("invoice_date, total_amount")
+        .eq("company_id", company.id)
         .gte("invoice_date", format(sixMonthsAgo, "yyyy-MM-dd"))
         .eq("status", "Paid"),
       supabase
         .from("expenses")
         .select("created_at, total_amount")
+        .eq("company_id", company.id)
         .gte("created_at", sixMonthsAgo.toISOString()),
     ]);
 
@@ -58,8 +64,10 @@ export function RevenueChart() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (company?.id) {
+      fetchData();
+    }
+  }, [company]);
 
   const options: Highcharts.Options = {
     chart: {

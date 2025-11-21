@@ -4,19 +4,24 @@ import HighchartsReact from "highcharts-react-official";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useCompany } from "@/contexts/CompanyContext";
 
 interface AssetHeatMapProps {
   className?: string;
 }
 
 export function AssetHeatMap({ className }: AssetHeatMapProps) {
+  const { company } = useCompany();
   const [metric, setMetric] = useState<"total" | "available" | "booked">("total");
   const [areaData, setAreaData] = useState<{ [key: string]: number }>({});
 
   const fetchData = async () => {
+    if (!company?.id) return;
+    
     const { data: assets } = await supabase
       .from("media_assets")
-      .select("area, status");
+      .select("area, status")
+      .eq("company_id", company.id);
 
     if (assets) {
       const grouped: { [key: string]: { total: number; available: number; booked: number } } = {};
@@ -41,8 +46,10 @@ export function AssetHeatMap({ className }: AssetHeatMapProps) {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [metric]);
+    if (company?.id) {
+      fetchData();
+    }
+  }, [metric, company]);
 
   const chartData = Object.entries(areaData).map(([area, value]) => ({
     name: area,

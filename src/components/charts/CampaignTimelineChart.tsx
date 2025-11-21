@@ -3,14 +3,19 @@ import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useCompany } from "@/contexts/CompanyContext";
 
 export function CampaignTimelineChart() {
+  const { company } = useCompany();
   const [campaigns, setCampaigns] = useState<any[]>([]);
 
   const fetchData = async () => {
+    if (!company?.id) return;
+    
     const { data } = await supabase
       .from("campaigns")
       .select("id, campaign_name, start_date, end_date, status")
+      .eq("company_id", company.id)
       .order("start_date", { ascending: false })
       .limit(10);
 
@@ -20,8 +25,10 @@ export function CampaignTimelineChart() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (company?.id) {
+      fetchData();
+    }
+  }, [company]);
 
   const options: Highcharts.Options = {
     chart: {

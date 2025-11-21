@@ -191,21 +191,21 @@ if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TenantProvider>
-          <CompanyProvider>
-            <ThemeProvider>
-              <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter
-                future={{
-                  v7_startTransition: true,
-                  v7_relativeSplatPath: true,
-                }}
-              >
-              <Suspense fallback={<LoadingFallback />}>
-                <Routes>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
+        <AuthProvider>
+          <TenantProvider>
+            <CompanyProvider>
+              <ThemeProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
+                  <Suspense fallback={<LoadingFallback />}>
+                    <Routes>
             {/* Public routes */}
             <Route path="/" element={<Landing />} />
                   <Route path="/auth" element={<Auth />} />
@@ -391,19 +391,19 @@ const App = () => (
             
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
-              </Routes>
-              </Suspense>
-            <InstallPrompt />
-            <OfflineIndicator />
-            <AIAssistantChat />
-            </BrowserRouter>
-          </TooltipProvider>
-        </ThemeProvider>
-      </CompanyProvider>
-    </TenantProvider>
-  </AuthProvider>
-</QueryClientProvider>
-</ErrorBoundary>
+                  </Routes>
+                </Suspense>
+                <InstallPrompt />
+                <OfflineIndicator />
+                <AIAssistantChat />
+                </TooltipProvider>
+              </ThemeProvider>
+            </CompanyProvider>
+          </TenantProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

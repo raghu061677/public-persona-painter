@@ -7,7 +7,8 @@ import {
   Wrench, 
   DollarSign, 
   BarChart3, 
-  Settings 
+  Settings,
+  Sparkles
 } from "lucide-react";
 import { SidebarSection } from "@/components/sidebar/SidebarSection";
 import { SidebarItem } from "@/components/sidebar/SidebarItem";
@@ -117,6 +118,16 @@ export function CompanyWorkspaceSidebar({ collapsed, activeModules }: CompanyWor
           />
         </SidebarSection>
       )}
+
+      {/* AI Tools */}
+      <SidebarSection label="AI Tools" collapsed={collapsed}>
+        <SidebarItem 
+          icon={Sparkles} 
+          label="AI Assistant" 
+          href="/admin/assistant" 
+          collapsed={collapsed}
+        />
+      </SidebarSection>
 
       {/* Settings */}
       <SidebarSection label="Configuration" collapsed={collapsed}>

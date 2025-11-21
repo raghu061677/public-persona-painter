@@ -530,15 +530,15 @@ export default function Marketplace() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredAssets.map((asset) => (
-            <Card key={asset.id} className="hover:shadow-lg transition-shadow relative">
+            <Card key={asset.id} className="hover:shadow-lg transition-shadow relative group">
               {/* Selection checkbox */}
-              <div className="absolute top-4 left-4 z-10">
+              <div className="absolute top-3 left-3 z-10">
                 <Checkbox
                   checked={selectedAssets.has(asset.id)}
                   onCheckedChange={() => toggleAssetSelection(asset.id)}
-                  className="bg-white border-2"
+                  className="bg-white border-2 shadow-sm"
                 />
               </div>
               
@@ -547,54 +547,56 @@ export default function Marketplace() {
                   <img
                     src={asset.images.photos[0].url}
                     alt={asset.location}
-                    className="w-full h-48 object-cover rounded-t-lg"
+                    className="w-full h-36 object-cover rounded-t-lg"
                   />
                 ) : (
-                  <div className="w-full h-48 bg-muted flex items-center justify-center rounded-t-lg">
-                    <Building2 className="h-12 w-12 text-muted-foreground" />
+                  <div className="w-full h-36 bg-muted flex items-center justify-center rounded-t-lg">
+                    <Building2 className="h-10 w-10 text-muted-foreground" />
                   </div>
                 )}
               </CardHeader>
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold text-lg">{asset.id}</h3>
-                    <p className="text-sm text-muted-foreground">{asset.media_type}</p>
+              <CardContent className="p-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-bold text-base leading-tight truncate">{asset.id}</h3>
+                    <p className="text-xs text-muted-foreground font-medium truncate">{asset.media_type}</p>
                   </div>
-                  <Badge variant={asset.status === 'Available' ? 'default' : 'secondary'}>
+                  <Badge variant={asset.status === 'Available' ? 'default' : 'secondary'} className="text-xs flex-shrink-0">
                     {asset.status}
                   </Badge>
                 </div>
 
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span>{asset.area}, {asset.city}</span>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                    <span className="font-medium truncate">{asset.area}, {asset.city}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <Building2 className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                    <span className="text-muted-foreground truncate">
                       {asset.company_name || 'Unknown Owner'}
                     </span>
                   </div>
-                  <p className="text-muted-foreground">{asset.location}</p>
-                  <p className="font-semibold">Dimensions: {asset.dimensions}</p>
-                  <Badge variant="secondary" className="mt-2">
+                  <p className="text-muted-foreground line-clamp-1">{asset.location}</p>
+                  <p className="font-semibold text-xs">Dimensions: {asset.dimensions}</p>
+                  <Badge variant="secondary" className="text-xs">
                     Contact for Pricing
                   </Badge>
                 </div>
 
-                <div className="flex gap-2 pt-2">
+                <div className="flex gap-2 pt-1">
                   <Button
                     variant="outline"
-                    className="flex-1"
+                    size="sm"
+                    className="flex-1 text-xs h-8"
                     onClick={() => navigate(`/marketplace/asset/${asset.id}`)}
                   >
                     View Details
                   </Button>
                   {canRequestBooking && asset.status === 'Available' && asset.company_id !== company?.id && (
                     <Button
-                      className="flex-1"
+                      size="sm"
+                      className="flex-1 text-xs h-8"
                       onClick={() => {
                         setSelectedAsset(asset);
                         setBookingForm(prev => ({
@@ -604,8 +606,8 @@ export default function Marketplace() {
                         setBookingDialog(true);
                       }}
                     >
-                      Request Booking
-                      <ArrowRight className="ml-2 h-4 w-4" />
+                      Request
+                      <ArrowRight className="ml-1 h-3 w-3" />
                     </Button>
                   )}
                 </div>

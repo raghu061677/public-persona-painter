@@ -81,8 +81,11 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       // Check if we're on a subdomain (not localhost, not admin, not www)
       const parts = hostname.split('.');
       
-      // For local development, check localStorage for manual tenant selection
-      if (hostname === 'localhost' || hostname.startsWith('127.0.0.1')) {
+      // For local development or Lovable preview/staging, check localStorage for manual tenant selection
+      const isLocalDev = hostname === 'localhost' || hostname.startsWith('127.0.0.1');
+      const isLovablePreview = hostname.includes('lovable.app') || hostname.includes('lovableproject.com');
+      
+      if (isLocalDev || isLovablePreview) {
         const storedTenantId = localStorage.getItem('selected_tenant_id');
         const storedTenantSlug = localStorage.getItem('selected_tenant_slug');
         const storedTenantName = localStorage.getItem('selected_tenant_name');

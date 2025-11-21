@@ -35,7 +35,7 @@ interface PublicAssetDetail {
   direction: string | null;
   illumination: string | null;
   status: string;
-  images: any;
+  image_urls: string[];
   latitude: number | null;
   longitude: number | null;
   google_street_view_url: string | null;
@@ -119,19 +119,8 @@ export default function MarketplaceAssetDetail() {
 
       setAsset(data);
 
-      // Extract image URLs from images object
-      const urls: string[] = [];
-      if (data.images && typeof data.images === 'object' && 'photos' in data.images) {
-        const photos = (data.images as any).photos;
-        if (Array.isArray(photos)) {
-          photos.forEach((photo: any) => {
-            if (photo && typeof photo === 'object' && photo.url) {
-              urls.push(photo.url);
-            }
-          });
-        }
-      }
-      setImageUrls(urls);
+      // Use image_urls directly from the view
+      setImageUrls(data.image_urls || []);
     } catch (error: any) {
       console.error('Error fetching asset detail:', error);
       toast({

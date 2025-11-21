@@ -142,6 +142,7 @@ const CompanyDeveloper = lazy(() => import("./pages/CompanyDeveloper"));
 const CompanyWorkflows = lazy(() => import("./pages/CompanyWorkflows"));
 const PlatformAdminDashboard = lazy(() => import("./pages/PlatformAdminDashboard"));
 const PlatformAdminSetup = lazy(() => import("./pages/PlatformAdminSetup"));
+const DashboardRouter = lazy(() => import("./components/dashboard/DashboardRouter").then(m => ({ default: m.DashboardRouter })));
 const CompanyTesting = lazy(() => import("./pages/CompanyTesting"));
 const CompanyManagement = lazy(() => import("./pages/CompanyManagement"));
 const OnboardingTest = lazy(() => import("./pages/OnboardingTest"));
@@ -228,8 +229,8 @@ const App = () => (
             <Route path="/campaigns" element={<Navigate to="/admin/campaigns" replace />} />
             
             {/* Protected routes with layout */}
-            <Route path="/dashboard" element={<ProtectedRoute requireAuth><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
-            <Route path="/admin/dashboard" element={<ProtectedRoute requireAuth><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute requireAuth><AppLayout><DashboardRouter /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/dashboard" element={<ProtectedRoute requireAuth><AppLayout><DashboardRouter /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/companies" element={<ProtectedRoute requireAuth><AppLayout><CompaniesManagement /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/company-management" element={<ProtectedRoute requireAuth><AppLayout><CompanyManagement /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/approve-companies" element={<ProtectedRoute requireAuth><AppLayout><ApproveCompanies /></AppLayout></ProtectedRoute>} />

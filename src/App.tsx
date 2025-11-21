@@ -142,6 +142,7 @@ const CompanyDeveloper = lazy(() => import("./pages/CompanyDeveloper"));
 const CompanyWorkflows = lazy(() => import("./pages/CompanyWorkflows"));
 const PlatformAdminDashboard = lazy(() => import("./pages/PlatformAdminDashboard"));
 const PlatformAdminSetup = lazy(() => import("./pages/PlatformAdminSetup"));
+const PlatformReports = lazy(() => import("./pages/PlatformReports"));
 const DashboardRouter = lazy(() => import("./components/dashboard/DashboardRouter").then(m => ({ default: m.DashboardRouter })));
 const CompanyTesting = lazy(() => import("./pages/CompanyTesting"));
 const CompanyManagement = lazy(() => import("./pages/CompanyManagement"));
@@ -240,6 +241,7 @@ const App = () => (
             <Route path="/admin/platform/companies" element={<PlatformAdminGuard><AppLayout><ManageCompanies /></AppLayout></PlatformAdminGuard>} />
             <Route path="/admin/subscriptions" element={<PlatformAdminGuard><AppLayout><SubscriptionManagement /></AppLayout></PlatformAdminGuard>} />
             <Route path="/admin/code-management" element={<PlatformAdminGuard><AppLayout><CodeManagement /></AppLayout></PlatformAdminGuard>} />
+            <Route path="/admin/platform-reports" element={<PlatformAdminGuard><AppLayout><PlatformReports /></AppLayout></PlatformAdminGuard>} />
             <Route path="/admin/migrate-data" element={<PlatformAdminGuard><AppLayout><MigrateToMatrix /></AppLayout></PlatformAdminGuard>} />
             
             {/* Duplicate route removed - see line 268 for actual company settings routes */}

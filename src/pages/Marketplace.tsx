@@ -231,22 +231,21 @@ export default function Marketplace() {
 
     setIsSubmitting(true);
     try {
-      // Get Matrix company ID for routing inquiries
-      const { data: matrixCompany } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('name', 'Matrix Network Solutions')
-        .single();
-
-      if (!matrixCompany) {
-        throw new Error('Matrix Network Solutions company not found');
+      // Get the owner company ID from the first selected asset
+      const firstAssetId = Array.from(selectedAssets)[0];
+      const firstAsset = assets.find(a => a.id === firstAssetId);
+      
+      if (!firstAsset || !firstAsset.company_id) {
+        throw new Error('Unable to determine asset owner company');
       }
+
+      const ownerCompanyId = firstAsset.company_id;
 
       // Create marketplace inquiry
       const { data: inquiry, error: inquiryError } = await supabase
         .from('marketplace_inquiries')
         .insert({
-          company_id: matrixCompany.id,
+          company_id: ownerCompanyId,
           name: quoteForm.name,
           company_name: quoteForm.company || null,
           email: quoteForm.email,
@@ -274,11 +273,11 @@ export default function Marketplace() {
 
       if (assetsError) throw assetsError;
 
-      // Create notification for admins
+      // Create notification for admins of the owner company
       const { data: adminUsers } = await supabase
         .from('company_users')
         .select('user_id')
-        .eq('company_id', matrixCompany.id)
+        .eq('company_id', ownerCompanyId)
         .eq('role', 'admin');
 
       if (adminUsers && adminUsers.length > 0) {
@@ -363,22 +362,18 @@ export default function Marketplace() {
           { asset_id: selectedAsset.id }
         );
       } else {
-        // For public users without login, create a lead in the Matrix company
-        const { data: matrixCompany } = await supabase
-          .from('companies')
-          .select('id')
-          .eq('name', 'Matrix Network Solutions')
-          .single();
-
-        if (!matrixCompany) {
-          throw new Error('Matrix Network Solutions company not found');
+        // For public users without login, create a lead in the asset owner's company
+        const ownerCompanyId = selectedAsset.company_id;
+        
+        if (!ownerCompanyId) {
+          throw new Error('Unable to determine asset owner company');
         }
 
         // Create a lead from the marketplace enquiry
         const { error: leadError } = await supabase
           .from('leads')
           .insert({
-            company_id: matrixCompany.id,
+            company_id: ownerCompanyId,
             name: bookingForm.clientName,
             company: bookingForm.clientName,
             requirement: `Marketplace Enquiry for Asset ${selectedAsset.id} - ${selectedAsset.media_type} in ${selectedAsset.area}\nCampaign: ${bookingForm.campaignName}\nDates: ${bookingForm.startDate} to ${bookingForm.endDate}\nProposed Rate: ${bookingForm.proposedRate}\nNotes: ${bookingForm.notes}`,

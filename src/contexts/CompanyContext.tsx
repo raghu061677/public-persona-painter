@@ -206,6 +206,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
       if (!error && companyData) {
         setCompany(companyData as any);
+        // Force a page reload to refresh all data with new company context
+        window.location.reload();
       }
     } catch (error) {
       console.error('Error switching company:', error);

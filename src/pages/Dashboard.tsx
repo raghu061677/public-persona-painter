@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,6 +52,7 @@ const COLORS = [
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { company } = useCompany();
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string>('sales');
   const [startTour, setStartTour] = useState(false);
@@ -102,7 +104,7 @@ const Dashboard = () => {
     checkAuth();
     loadUserRole();
     fetchStats();
-  }, [user]);
+  }, [user, company]);
 
   const loadUserRole = async () => {
     if (!user) return;
@@ -127,15 +129,35 @@ const Dashboard = () => {
 
   const fetchStats = async () => {
     try {
-      // Fetch media assets count
+      // Get current user's selected company
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data: companyUserData } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', session.user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      const selectedCompanyId = localStorage.getItem('selected_company_id') || companyUserData?.company_id;
+      
+      if (!selectedCompanyId) {
+        setLoading(false);
+        return;
+      }
+
+      // Fetch media assets count for this company
       const { count: assetsCount } = await supabase
         .from("media_assets")
-        .select("*", { count: "exact", head: true });
+        .select("*", { count: "exact", head: true })
+        .eq("company_id", selectedCompanyId);
 
-      // Fetch active campaigns count
+      // Fetch active campaigns count for this company
       const { count: campaignsCount } = await supabase
         .from("campaigns")
         .select("*", { count: "exact", head: true })
+        .eq("company_id", selectedCompanyId)
         .in("status", ["InProgress", "Planned"]);
 
       // Fetch leads count for this month
@@ -148,10 +170,11 @@ const Dashboard = () => {
         .select("*", { count: "exact", head: true })
         .gte("created_at", startOfMonth.toISOString());
 
-      // Fetch invoices data
+      // Fetch invoices data for this company
       const { data: invoicesData } = await supabase
         .from("invoices")
-        .select("status, total_amount, gst_amount");
+        .select("status, total_amount, gst_amount")
+        .eq("company_id", selectedCompanyId);
 
       let totalRevenue = 0;
       let gstCollected = 0;

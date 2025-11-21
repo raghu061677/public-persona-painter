@@ -87,20 +87,14 @@ export function LogoUploadSection({ currentLogoUrl, onLogoUpdate }: LogoUploadSe
     setUploading(true);
     try {
       const croppedBlob = await getCroppedImg(imgRef.current, completedCrop);
-      const fileName = `logo-${Date.now()}.png`;
-
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('logos')
-        .upload(fileName, croppedBlob, {
-          contentType: 'image/png',
-          upsert: false,
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage
-        .from('logos')
-        .getPublicUrl(uploadData.path);
+      
+      // Convert blob to base64
+      const reader = new FileReader();
+      const logoUrl = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(croppedBlob);
+      });
 
       // Update organization settings
       const { data: settings, error: settingsError } = await supabase
@@ -114,19 +108,19 @@ export function LogoUploadSection({ currentLogoUrl, onLogoUpdate }: LogoUploadSe
       if (settings) {
         const { error: updateError } = await supabase
           .from('organization_settings')
-          .update({ logo_url: urlData.publicUrl })
+          .update({ logo_url: logoUrl })
           .eq('id', settings.id);
 
         if (updateError) throw updateError;
       } else {
         const { error: insertError } = await supabase
           .from('organization_settings')
-          .insert({ logo_url: urlData.publicUrl });
+          .insert({ logo_url: logoUrl });
 
         if (insertError) throw insertError;
       }
 
-      onLogoUpdate(urlData.publicUrl);
+      onLogoUpdate(logoUrl);
       setImgSrc('');
       setCrop(undefined);
       setCompletedCrop(undefined);

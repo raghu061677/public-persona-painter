@@ -36,6 +36,15 @@ interface CompanyStats {
   agencies: number;
 }
 
+interface SystemStats {
+  totalAssets: number;
+  totalCampaigns: number;
+  activeCampaigns: number;
+  totalRevenue: number;
+  activeSubscriptions: number;
+  totalUsers: number;
+}
+
 export function PlatformAdminDashboard() {
   const { isPlatformAdmin } = useCompany();
   const navigate = useNavigate();
@@ -48,6 +57,14 @@ export function PlatformAdminDashboard() {
     suspendedCompanies: 0,
     mediaOwners: 0,
     agencies: 0,
+  });
+  const [systemStats, setSystemStats] = useState<SystemStats>({
+    totalAssets: 0,
+    totalCampaigns: 0,
+    activeCampaigns: 0,
+    totalRevenue: 0,
+    activeSubscriptions: 0,
+    totalUsers: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
@@ -62,6 +79,7 @@ export function PlatformAdminDashboard() {
 
   const loadData = async () => {
     try {
+      // Load companies
       const { data, error } = await supabase
         .from('companies' as any)
         .select('*')
@@ -72,7 +90,7 @@ export function PlatformAdminDashboard() {
       const companiesData = (data as any) || [];
       setCompanies(companiesData);
 
-      // Calculate stats
+      // Calculate company stats
       setStats({
         totalCompanies: companiesData.length,
         activeCompanies: companiesData.filter((c: Company) => c.status === 'active').length,
@@ -80,6 +98,29 @@ export function PlatformAdminDashboard() {
         suspendedCompanies: companiesData.filter((c: Company) => c.status === 'suspended').length,
         mediaOwners: companiesData.filter((c: Company) => c.type === 'media_owner').length,
         agencies: companiesData.filter((c: Company) => c.type === 'agency').length,
+      });
+
+      // Load system-wide stats
+      const [assetsResult, campaignsResult, invoicesResult, subscriptionsResult, usersResult] = await Promise.all([
+        supabase.from('media_assets' as any).select('*', { count: 'exact', head: true }),
+        supabase.from('campaigns' as any).select('*', { count: 'exact', head: true }),
+        supabase.from('campaigns' as any).select('*', { count: 'exact', head: true }).in('status', ['InProgress', 'Planned']),
+        supabase.from('invoices' as any).select('total_amount'),
+        supabase.from('subscriptions' as any).select('*', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('company_users' as any).select('*', { count: 'exact', head: true })
+      ]);
+
+      // Calculate total revenue
+      const totalRevenue = invoicesResult.data?.reduce((sum: number, inv: any) => 
+        sum + (Number(inv.total_amount) || 0), 0) || 0;
+
+      setSystemStats({
+        totalAssets: assetsResult.count || 0,
+        totalCampaigns: campaignsResult.count || 0,
+        activeCampaigns: invoicesResult.count || 0,
+        totalRevenue: totalRevenue,
+        activeSubscriptions: subscriptionsResult.count || 0,
+        totalUsers: usersResult.count || 0,
       });
     } catch (error: any) {
       console.error('Error loading data:', error);
@@ -153,7 +194,7 @@ export function PlatformAdminDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Companies</CardTitle>
@@ -189,6 +230,76 @@ export function PlatformAdminDashboard() {
               <div className="text-2xl font-bold">{stats.pendingCompanies}</div>
               <p className="text-xs text-muted-foreground">
                 Awaiting review
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{systemStats.totalUsers}</div>
+              <p className="text-xs text-muted-foreground">
+                Across all companies
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* System-Wide Stats */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Assets</CardTitle>
+              <TrendingUp className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{systemStats.totalAssets}</div>
+              <p className="text-xs text-muted-foreground">
+                Across all media owners
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Campaigns</CardTitle>
+              <TrendingUp className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{systemStats.activeCampaigns}</div>
+              <p className="text-xs text-muted-foreground">
+                {systemStats.totalCampaigns} total campaigns
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+              <DollarSign className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                ₹{(systemStats.totalRevenue / 100000).toFixed(1)}L
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Platform-wide revenue
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Subscriptions</CardTitle>
+              <CheckCircle className="h-4 w-4 text-purple-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{systemStats.activeSubscriptions}</div>
+              <p className="text-xs text-muted-foreground">
+                Paid subscriptions
               </p>
             </CardContent>
           </Card>

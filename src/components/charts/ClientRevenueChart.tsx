@@ -3,14 +3,19 @@ import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useCompany } from "@/contexts/CompanyContext";
 
 export function ClientRevenueChart() {
+  const { company } = useCompany();
   const [chartData, setChartData] = useState<{ name: string; value: number }[]>([]);
 
   const fetchData = async () => {
+    if (!company?.id) return;
+    
     const { data: invoices } = await supabase
       .from("invoices")
       .select("client_name, total_amount")
+      .eq("company_id", company.id)
       .eq("status", "Paid");
 
     if (invoices) {
@@ -34,8 +39,10 @@ export function ClientRevenueChart() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (company?.id) {
+      fetchData();
+    }
+  }, [company]);
 
   const options: Highcharts.Options = {
     chart: {

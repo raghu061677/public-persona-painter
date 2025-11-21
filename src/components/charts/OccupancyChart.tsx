@@ -3,14 +3,19 @@ import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useCompany } from "@/contexts/CompanyContext";
 
 export function OccupancyChart() {
+  const { company } = useCompany();
   const [chartData, setChartData] = useState<{ city: string; occupancy: number }[]>([]);
 
   const fetchData = async () => {
+    if (!company?.id) return;
+    
     const { data: assets } = await supabase
       .from("media_assets")
-      .select("city, status");
+      .select("city, status")
+      .eq("company_id", company.id);
 
     if (assets) {
       const cityStats: { [key: string]: { total: number; booked: number } } = {};
@@ -36,8 +41,10 @@ export function OccupancyChart() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (company?.id) {
+      fetchData();
+    }
+  }, [company]);
 
   const options: Highcharts.Options = {
     chart: {

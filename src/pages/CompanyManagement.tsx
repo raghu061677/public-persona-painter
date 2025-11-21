@@ -9,11 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Building2, UserPlus, Users, Pencil, Trash2, CheckCircle, Shield, Plus, Download } from "lucide-react";
+import { Building2, UserPlus, Users, Pencil, Trash2, CheckCircle, Shield, Plus, Download, Database } from "lucide-react";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/ui/stat-card";
 import { EditCompanyDialog } from "@/components/platform/EditCompanyDialog";
+import { DataMigrationDialog } from "@/components/admin/DataMigrationDialog";
 import {
   Table,
   TableBody,
@@ -81,6 +82,7 @@ export default function CompanyManagement() {
   const [isExporting, setIsExporting] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [companyToEdit, setCompanyToEdit] = useState<Company | null>(null);
+  const [showMigrationDialog, setShowMigrationDialog] = useState(false);
 
   useEffect(() => {
     if (isPlatformAdmin) {
@@ -284,6 +286,10 @@ export default function CompanyManagement() {
           <p className="text-muted-foreground mt-2">Manage companies and users in the system</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowMigrationDialog(true)} className="hover-scale">
+            <Database className="mr-2 h-4 w-4" />
+            Migrate Data
+          </Button>
           <Button variant="outline" onClick={() => setCleanupDialogOpen(true)} className="hover-scale">
             <Trash2 className="mr-2 h-4 w-4" />
             Cleanup Duplicates
@@ -523,6 +529,13 @@ export default function CompanyManagement() {
           }}
         />
       )}
+
+      {/* Data Migration Dialog */}
+      <DataMigrationDialog
+        open={showMigrationDialog}
+        onOpenChange={setShowMigrationDialog}
+        companies={companies}
+      />
     </div>
   );
 }

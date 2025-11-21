@@ -126,34 +126,13 @@ export default function ProfileSettings() {
     try {
       setUploading(true);
 
-      // Delete old avatar if exists
-      if (profile.avatar_url) {
-        const oldPath = profile.avatar_url.split("/").pop();
-        if (oldPath) {
-          await supabase.storage
-            .from("avatars")
-            .remove([`${user.id}/${oldPath}`]);
-        }
-      }
-
-      // Upload new avatar
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(filePath);
+      // Convert to base64
+      const reader = new FileReader();
+      const publicUrl = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
 
       // Update profile with new avatar URL
       const { error: updateError } = await supabase

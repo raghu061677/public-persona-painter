@@ -60,35 +60,23 @@ export function BrandingSettings() {
       let heroUrl = orgSettings.hero_image_url;
 
       if (logoFile) {
-        const fileExt = logoFile.name.split(".").pop();
-        const fileName = `logo-${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from("logos")
-          .upload(fileName, logoFile, { upsert: true });
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from("logos")
-          .getPublicUrl(fileName);
-
-        logoUrl = publicUrl;
+        // Convert logo to base64
+        const reader = new FileReader();
+        logoUrl = await new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(logoFile);
+        });
       }
 
       if (heroFile) {
-        const fileExt = heroFile.name.split(".").pop();
-        const fileName = `hero-${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from("hero-images")
-          .upload(fileName, heroFile, { upsert: true });
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from("hero-images")
-          .getPublicUrl(fileName);
-
-        heroUrl = publicUrl;
+        // Convert hero image to base64
+        const reader = new FileReader();
+        heroUrl = await new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(heroFile);
+        });
       }
 
       const { error } = await supabase

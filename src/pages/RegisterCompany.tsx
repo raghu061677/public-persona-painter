@@ -61,19 +61,17 @@ export default function RegisterCompany() {
     if (!logoFile) return null;
 
     try {
-      const fileExt = logoFile.name.split('.').pop();
-      const fileName = `${companyId}/logo.${fileExt}`;
-
-      const { error: uploadError } = await storage
-        .from('logos')
-        .upload(fileName, logoFile, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data } = storage.from('logos').getPublicUrl(fileName);
-      return data.publicUrl;
+      // Convert to base64
+      const reader = new FileReader();
+      const base64Logo = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(logoFile);
+      });
+      
+      return base64Logo;
     } catch (error) {
-      console.error('Logo upload error:', error);
+      console.error('Error converting logo:', error);
       return null;
     }
   };

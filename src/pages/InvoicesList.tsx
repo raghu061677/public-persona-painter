@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,7 @@ import { useLayoutSettings } from "@/hooks/use-layout-settings";
 
 export default function InvoicesList() {
   const navigate = useNavigate();
+  const { company } = useCompany();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -32,8 +34,10 @@ export default function InvoicesList() {
 
   useEffect(() => {
     checkAdminStatus();
-    fetchInvoices();
-  }, []);
+    if (company?.id) {
+      fetchInvoices();
+    }
+  }, [company]);
 
   const checkAdminStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -48,10 +52,13 @@ export default function InvoicesList() {
   };
 
   const fetchInvoices = async () => {
+    if (!company?.id) return;
+    
     setLoading(true);
     const { data, error } = await supabase
       .from('invoices')
       .select('*')
+      .eq('company_id', company.id)
       .order('created_at', { ascending: false });
 
     if (error) {

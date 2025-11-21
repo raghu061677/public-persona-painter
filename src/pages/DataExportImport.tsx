@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useCompany } from '@/contexts/CompanyContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,7 @@ const modules = [
 ];
 
 export default function DataExportImport() {
+  const { company } = useCompany();
   const { toast } = useToast();
   const [selectedModule, setSelectedModule] = useState<string>('');
   const [exportFormat, setExportFormat] = useState<'csv' | 'excel' | 'json'>('excel');
@@ -75,8 +77,10 @@ export default function DataExportImport() {
   };
 
   const fetchModuleData = async (tableName: string) => {
+    if (!company?.id) return [];
+    
     try {
-      let query = supabase.from(tableName as any).select('*');
+      let query = supabase.from(tableName as any).select('*').eq('company_id', company.id);
 
       if (dateRange.from) {
         query = query.gte('created_at', dateRange.from.toISOString());

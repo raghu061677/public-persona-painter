@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +16,7 @@ interface OccupancyData {
 }
 
 export function OccupancyReport() {
+  const { company } = useCompany();
   const [data, setData] = useState<OccupancyData>({
     totalAssets: 0,
     availableAssets: 0,
@@ -27,12 +29,19 @@ export function OccupancyReport() {
   const { toast } = useToast();
 
   useEffect(() => {
-    loadOccupancyData();
-  }, []);
+    if (company?.id) {
+      loadOccupancyData();
+    }
+  }, [company]);
 
   const loadOccupancyData = async () => {
+    if (!company?.id) return;
+    
     try {
-      const { data: assets, error } = await supabase.from("media_assets").select("*");
+      const { data: assets, error } = await supabase
+        .from("media_assets")
+        .select("*")
+        .eq("company_id", company.id);
 
       if (error) throw error;
 

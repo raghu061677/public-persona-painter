@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Users, Target, DollarSign } from "lucide-react";
 
@@ -13,6 +14,7 @@ interface AnalyticsData {
 }
 
 export function LeadAnalytics() {
+  const { company } = useCompany();
   const [analytics, setAnalytics] = useState<AnalyticsData>({
     totalLeads: 0,
     qualifiedLeads: 0,
@@ -24,12 +26,19 @@ export function LeadAnalytics() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadAnalytics();
-  }, []);
+    if (company?.id) {
+      loadAnalytics();
+    }
+  }, [company]);
 
   const loadAnalytics = async () => {
+    if (!company?.id) return;
+    
     try {
-      const { data: leads, error } = await supabase.from("leads").select("*");
+      const { data: leads, error } = await supabase
+        .from("leads")
+        .select("*")
+        .eq("company_id", company.id);
 
       if (error) throw error;
 

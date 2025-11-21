@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,7 @@ import { PowerBillExpenseDialog } from "@/components/expenses/PowerBillExpenseDi
 import { PageCustomization, PageCustomizationOption } from "@/components/ui/page-customization";
 
 export default function ExpensesList() {
+  const { company } = useCompany();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [powerBills, setPowerBills] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,9 +52,11 @@ export default function ExpensesList() {
 
   useEffect(() => {
     checkAdminStatus();
-    fetchExpenses();
-    fetchPowerBills();
-  }, []);
+    if (company?.id) {
+      fetchExpenses();
+      fetchPowerBills();
+    }
+  }, [company]);
 
   const checkAdminStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -67,10 +71,13 @@ export default function ExpensesList() {
   };
 
   const fetchExpenses = async () => {
+    if (!company?.id) return;
+    
     setLoading(true);
     const { data, error } = await supabase
       .from('expenses')
       .select('*')
+      .eq('company_id', company.id)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -86,10 +93,13 @@ export default function ExpensesList() {
   };
 
   const fetchPowerBills = async () => {
+    if (!company?.id) return;
+    
     setLoading(true);
     const { data, error } = await supabase
       .from('asset_power_bills')
-      .select('*, media_assets(id, location, city, area)')
+      .select('*, media_assets!inner(id, location, city, area, company_id)')
+      .eq('media_assets.company_id', company.id)
       .order('bill_month', { ascending: false });
 
     if (error) {

@@ -102,34 +102,23 @@ export default function CompanyProfile() {
 
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${company.id}-logo-${Date.now()}.${fileExt}`;
-      const filePath = `company-logos/${fileName}`;
-
-      // Upload to storage
-      const { error: uploadError } = await supabase.storage
-        .from('company-assets')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('company-assets')
-        .getPublicUrl(filePath);
+      // Convert to base64
+      const reader = new FileReader();
+      const logoUrl = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
 
       // Update company record
       const { error: updateError } = await supabase
         .from('companies' as any)
-        .update({ logo_url: publicUrl })
+        .update({ logo_url: logoUrl })
         .eq('id', company.id);
 
       if (updateError) throw updateError;
 
-      setFormData({ ...formData, logo_url: publicUrl });
+      setFormData({ ...formData, logo_url: logoUrl });
       toast.success('Logo uploaded successfully');
       refreshCompany();
     } catch (error: any) {

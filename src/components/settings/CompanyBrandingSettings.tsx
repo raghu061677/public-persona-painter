@@ -45,23 +45,14 @@ export function CompanyBrandingSettings() {
     try {
       let logoUrl = company.logo_url;
 
-      // Upload logo if changed
+      // Convert logo to base64 if changed
       if (logoFile) {
-        const fileExt = logoFile.name.split('.').pop();
-        const fileName = `${company.id}-logo-${Date.now()}.${fileExt}`;
-        const filePath = `${company.id}/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('logos')
-          .upload(filePath, logoFile, { upsert: true });
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('logos')
-          .getPublicUrl(filePath);
-
-        logoUrl = publicUrl;
+        const reader = new FileReader();
+        logoUrl = await new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(logoFile);
+        });
       }
 
       // Update company branding

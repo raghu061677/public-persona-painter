@@ -235,8 +235,12 @@ export default function Marketplace() {
       const firstAssetId = Array.from(selectedAssets)[0];
       const firstAsset = assets.find(a => a.id === firstAssetId);
       
-      if (!firstAsset || !firstAsset.company_id) {
-        throw new Error('Unable to determine asset owner company');
+      if (!firstAsset) {
+        throw new Error('Asset not found');
+      }
+
+      if (!firstAsset.company_id) {
+        throw new Error('Asset owner information not available');
       }
 
       const ownerCompanyId = firstAsset.company_id;

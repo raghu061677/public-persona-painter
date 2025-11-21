@@ -176,23 +176,29 @@ export default function MarketplaceAssetDetail() {
   }
 
   return (
-    <div className="flex-1 space-y-6 p-4 sm:p-8 pt-6">
+    <div className="flex-1 space-y-8 p-4 sm:p-8 pt-8 bg-gradient-to-b from-background to-muted/20">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => navigate('/marketplace')}
+          className="hover:bg-primary/10"
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
-          <h2 className="text-3xl font-bold tracking-tight">{asset.id}</h2>
-          <p className="text-muted-foreground">
+          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            {asset.id}
+          </h1>
+          <p className="text-lg text-muted-foreground mt-2 font-medium">
             {asset.media_type} • {asset.company_name}
           </p>
         </div>
-        <Badge variant={asset.status === 'Available' ? 'default' : 'secondary'} className="text-base px-4 py-2">
+        <Badge 
+          variant={asset.status === 'Available' ? 'default' : 'secondary'} 
+          className="text-base px-6 py-2 font-semibold"
+        >
           {asset.status}
         </Badge>
       </div>
@@ -201,14 +207,14 @@ export default function MarketplaceAssetDetail() {
         {/* Left Column - Images */}
         <div className="lg:col-span-2 space-y-6">
           {/* Image Carousel */}
-          <Card>
+          <Card className="border-2 shadow-lg">
             <CardContent className="p-6">
               {imageUrls.length > 0 ? (
                 <Carousel className="w-full">
                   <CarouselContent>
                     {imageUrls.map((url, index) => (
                       <CarouselItem key={index}>
-                        <div className="relative aspect-video bg-muted rounded-lg overflow-hidden">
+                        <div className="relative aspect-video bg-muted rounded-xl overflow-hidden shadow-md">
                           <img
                             src={url}
                             alt={`${asset.id} - Image ${index + 1}`}
@@ -220,14 +226,14 @@ export default function MarketplaceAssetDetail() {
                   </CarouselContent>
                   {imageUrls.length > 1 && (
                     <>
-                      <CarouselPrevious />
-                      <CarouselNext />
+                      <CarouselPrevious className="left-4" />
+                      <CarouselNext className="right-4" />
                     </>
                   )}
                 </Carousel>
               ) : (
-                <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                  <p className="text-muted-foreground">No images available</p>
+                <div className="aspect-video bg-muted rounded-xl flex items-center justify-center shadow-inner">
+                  <p className="text-muted-foreground text-lg">No images available</p>
                 </div>
               )}
             </CardContent>
@@ -235,10 +241,10 @@ export default function MarketplaceAssetDetail() {
 
           {/* Map & Street View */}
           {asset.latitude && asset.longitude && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
+            <Card className="border-2 shadow-lg">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <MapPin className="h-6 w-6 text-primary" />
                   Location Views
                 </CardTitle>
               </CardHeader>
@@ -246,28 +252,28 @@ export default function MarketplaceAssetDetail() {
                 <div className="grid grid-cols-2 gap-4">
                   <Button
                     variant="outline"
-                    className="h-auto py-4 flex flex-col gap-2"
+                    className="h-auto py-6 flex flex-col gap-2 hover:bg-primary/5 hover:border-primary transition-all"
                     onClick={openGoogleMaps}
                   >
-                    <MapPin className="h-8 w-8" />
-                    <span className="text-sm">Open in Google Maps</span>
-                    <ExternalLink className="h-4 w-4" />
+                    <MapPin className="h-8 w-8 text-primary" />
+                    <span className="text-sm font-semibold">Open in Google Maps</span>
+                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
                   </Button>
                   <Button
                     variant="outline"
-                    className="h-auto py-4 flex flex-col gap-2"
+                    className="h-auto py-6 flex flex-col gap-2 hover:bg-primary/5 hover:border-primary transition-all"
                     onClick={openStreetView}
                   >
-                    <Navigation className="h-8 w-8" />
-                    <span className="text-sm">Street View</span>
-                    <ExternalLink className="h-4 w-4" />
+                    <Navigation className="h-8 w-8 text-primary" />
+                    <span className="text-sm font-semibold">Street View</span>
+                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
                   </Button>
                 </div>
                 
                 {/* Interactive Map with Marker */}
                 <div 
                   ref={mapRef} 
-                  className="aspect-video rounded-lg overflow-hidden border"
+                  className="aspect-video rounded-xl overflow-hidden border-2 shadow-md"
                   style={{ minHeight: '400px' }}
                 />
               </CardContent>
@@ -278,83 +284,85 @@ export default function MarketplaceAssetDetail() {
         {/* Right Column - Details */}
         <div className="space-y-6">
           {/* Location Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
+          <Card className="border-2 shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="pb-3 bg-primary/5">
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <MapPin className="h-6 w-6 text-primary" />
                 Location
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4 pt-4">
               <div>
-                <p className="text-sm text-muted-foreground">City</p>
-                <p className="font-semibold">{asset.city}</p>
+                <p className="text-sm text-muted-foreground font-medium">City</p>
+                <p className="font-bold text-lg">{asset.city}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Area</p>
-                <p className="font-semibold">{asset.area}</p>
+                <p className="text-sm text-muted-foreground font-medium">Area</p>
+                <p className="font-bold text-lg">{asset.area}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Location</p>
-                <p className="font-semibold">{asset.location}</p>
+                <p className="text-sm text-muted-foreground font-medium">Location</p>
+                <p className="font-bold text-lg">{asset.location}</p>
               </div>
               {asset.direction && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Direction</p>
-                  <p className="font-semibold">{asset.direction}</p>
+                  <p className="text-sm text-muted-foreground font-medium">Direction</p>
+                  <p className="font-bold text-lg">{asset.direction}</p>
                 </div>
               )}
             </CardContent>
           </Card>
 
           {/* Specifications */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Maximize2 className="h-5 w-5" />
+          <Card className="border-2 shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="pb-3 bg-primary/5">
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <Maximize2 className="h-6 w-6 text-primary" />
                 Specifications
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4 pt-4">
               <div>
-                <p className="text-sm text-muted-foreground">Media Type</p>
-                <p className="font-semibold">{asset.media_type}</p>
+                <p className="text-sm text-muted-foreground font-medium">Media Type</p>
+                <Badge variant="secondary" className="mt-1 text-base font-semibold">
+                  {asset.media_type}
+                </Badge>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Dimensions</p>
-                <p className="font-semibold">{asset.dimensions}</p>
+                <p className="text-sm text-muted-foreground font-medium">Dimensions</p>
+                <p className="font-bold text-lg">{asset.dimensions}</p>
               </div>
               {asset.total_sqft && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Area</p>
-                  <p className="font-semibold">{asset.total_sqft} sq ft</p>
+                  <p className="text-sm text-muted-foreground font-medium">Total Area</p>
+                  <p className="font-bold text-lg text-primary">{asset.total_sqft} sq ft</p>
                 </div>
               )}
               {asset.latitude && asset.longitude && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Geo-Coordinates</p>
-                  <p className="font-semibold text-xs">
+                  <p className="text-sm text-muted-foreground font-medium">Geo-Coordinates</p>
+                  <p className="font-mono text-sm font-semibold bg-muted px-2 py-1 rounded">
                     {asset.latitude.toFixed(6)}, {asset.longitude.toFixed(6)}
                   </p>
                 </div>
               )}
               {asset.illumination && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Illumination</p>
-                  <div className="flex items-center gap-2">
-                    <Sun className="h-4 w-4" />
-                    <p className="font-semibold">{asset.illumination}</p>
+                  <p className="text-sm text-muted-foreground font-medium">Illumination</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Sun className="h-5 w-5 text-yellow-500" />
+                    <p className="font-bold text-lg">{asset.illumination}</p>
                   </div>
                 </div>
               )}
               {asset.is_multi_face && asset.faces && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">Faces</p>
+                  <p className="text-sm text-muted-foreground font-medium mb-2">Faces</p>
                   <div className="space-y-2">
                     {Array.isArray(asset.faces) && asset.faces.map((face: any, idx: number) => (
-                      <div key={idx} className="flex items-center gap-2 text-sm">
-                        <Layers className="h-4 w-4" />
-                        <span>
+                      <div key={idx} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                        <Layers className="h-5 w-5 text-primary" />
+                        <span className="font-semibold">
                           Face {idx + 1}: {face.width}x{face.height} ft
                           {face.sqft && ` (${face.sqft} sq ft)`}
                         </span>
@@ -367,20 +375,23 @@ export default function MarketplaceAssetDetail() {
           </Card>
 
           {/* Contact CTA */}
-          <Card className="bg-primary/5 border-primary/20">
+          <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-background border-2 border-primary/30 shadow-lg">
             <CardContent className="pt-6">
               <div className="text-center space-y-4">
                 <div>
-                  <h3 className="font-semibold text-lg mb-2">Interested in this asset?</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <h3 className="font-bold text-xl mb-2 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                    Interested in this asset?
+                  </h3>
+                  <p className="text-muted-foreground font-medium">
                     Contact us for pricing and availability
                   </p>
                 </div>
                 <Button 
-                  className="w-full"
+                  className="w-full py-6 text-base font-semibold shadow-md hover:shadow-lg transition-all"
                   onClick={() => navigate('/marketplace')}
                 >
                   Back to Marketplace
+                  <ArrowLeft className="ml-2 h-5 w-5" />
                 </Button>
               </div>
             </CardContent>

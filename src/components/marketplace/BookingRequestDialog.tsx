@@ -65,10 +65,10 @@ export function BookingRequestDialog({ open, onOpenChange, asset }: BookingReque
       return;
     }
 
-    if (!userCompany) {
+    if (!userCompany?.company_id) {
       toast({
-        title: "Error",
-        description: "Could not identify your company",
+        title: "Authentication Required",
+        description: "Please log in to submit a booking request",
         variant: "destructive",
       });
       return;

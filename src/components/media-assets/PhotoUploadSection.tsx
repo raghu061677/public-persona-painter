@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { uploadAssetProof } from "@/lib/photos";
+import { useCompany } from "@/contexts/CompanyContext";
 
 interface PhotoUploadSectionProps {
   assetId: string;
@@ -19,6 +20,7 @@ interface UploadingFile {
 }
 
 export function PhotoUploadSection({ assetId, onUploadComplete }: PhotoUploadSectionProps) {
+  const { company } = useCompany();
   const [uploading, setUploading] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
@@ -35,6 +37,15 @@ export function PhotoUploadSection({ assetId, onUploadComplete }: PhotoUploadSec
 
   const processFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    
+    if (!company?.id) {
+      toast({
+        title: "Error",
+        description: "Company context not available",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const validFiles = Array.from(files).filter(file => {
       const isValid = file.type.startsWith('image/');
@@ -81,7 +92,7 @@ export function PhotoUploadSection({ assetId, onUploadComplete }: PhotoUploadSec
           idx === i ? { ...item, progress: 30, tag: 'Analyzing...' } : item
         ));
 
-        const result = await uploadAssetProof(assetId, file, (progress) => {
+        const result = await uploadAssetProof(company.id, assetId, file, (progress) => {
           setUploadingFiles(prev => prev.map((item, idx) => 
             idx === i ? { ...item, progress: 30 + (progress.progress * 0.7) } : item
           ));

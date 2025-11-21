@@ -13,6 +13,7 @@ export interface PhotoValidationResult {
 }
 
 export interface PhotoMetadata {
+  company_id: string;
   asset_id: string;
   campaign_id?: string;
   client_id?: string;

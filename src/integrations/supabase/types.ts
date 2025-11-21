@@ -2468,6 +2468,7 @@ export type Database = {
           campaign_id: string | null
           category: string
           client_id: string | null
+          company_id: string
           created_at: string | null
           id: string
           metadata: Json | null
@@ -2485,6 +2486,7 @@ export type Database = {
           campaign_id?: string | null
           category: string
           client_id?: string | null
+          company_id: string
           created_at?: string | null
           id?: string
           metadata?: Json | null
@@ -2502,6 +2504,7 @@ export type Database = {
           campaign_id?: string | null
           category?: string
           client_id?: string | null
+          company_id?: string
           created_at?: string | null
           id?: string
           metadata?: Json | null
@@ -2511,7 +2514,15 @@ export type Database = {
           uploaded_at?: string | null
           uploaded_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "media_photos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notification_settings: {
         Row: {

@@ -295,6 +295,7 @@ const App = () => (
             <Route path="/finance/expenses" element={<AppLayout><ExpensesList /></AppLayout>} />
             <Route path="/reports" element={<AppLayout><ReportsDashboard /></AppLayout>} />
             <Route path="/reports/vacant-media" element={<AppLayout><VacantMediaReport /></AppLayout>} />
+            <Route path="/admin/reports/vacant-media" element={<AppLayout><VacantMediaReport /></AppLayout>} />
             <Route path="/admin/ai-assistant" element={<AppLayout><AIAssistant /></AppLayout>} />
             <Route path="/admin/assistant" element={<AppLayout><AIAssistant /></AppLayout>} />
             <Route path="/admin/tenant-analytics" element={<AppLayout><TenantAnalytics /></AppLayout>} />

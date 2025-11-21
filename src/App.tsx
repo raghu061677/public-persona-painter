@@ -100,6 +100,8 @@ const ApprovalAnalytics = lazy(() => import("./pages/ApprovalAnalytics"));
 const VendorsManagement = lazy(() => import("./pages/VendorsManagement"));
 const Settings = lazy(() => import("./pages/Settings"));
 const ProfileSettings = lazy(() => import("./pages/ProfileSettings"));
+const ThemeSettings = lazy(() => import("./pages/ThemeSettings"));
+const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
 const ClientPortalAuth = lazy(() => import("./pages/ClientPortalAuth"));
 const MagicLinkAuth = lazy(() => import("./pages/portal/MagicLinkAuth"));
 const OrganizationSettings = lazy(() => import("./pages/OrganizationSettings"));
@@ -321,6 +323,8 @@ const App = () => (
             <Route path="/admin/organization-settings" element={<AppLayout><OrganizationSettings /></AppLayout>} />
             <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
             <Route path="/settings/profile" element={<ProtectedRoute requireAuth><AppLayout><ProfileSettings /></AppLayout></ProtectedRoute>} />
+            <Route path="/settings/theme" element={<ProtectedRoute requireAuth><AppLayout><ThemeSettings /></AppLayout></ProtectedRoute>} />
+            <Route path="/settings/notifications" element={<ProtectedRoute requireAuth><AppLayout><NotificationSettings /></AppLayout></ProtectedRoute>} />
             
             {/* Company Settings with SettingsLayout */}
             <Route path="/admin/company-settings" element={<ProtectedRoute requireAuth><SettingsLayout /></ProtectedRoute>}>

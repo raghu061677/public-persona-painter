@@ -29,45 +29,27 @@ export function DataMigrationDialog({ open, onOpenChange, companies }: DataMigra
 
     setIsLoading(true);
     try {
-      // Update media_assets without company_id
-      const { data: assets, error: assetsError } = await supabase
-        .from('media_assets')
-        .update({ company_id: selectedCompanyId })
-        .is('company_id', null)
-        .select('id');
+      const { data, error } = await supabase.functions.invoke('migrate-company-data', {
+        body: { targetCompanyId: selectedCompanyId },
+      });
 
-      if (assetsError) throw assetsError;
+      if (error) throw error;
 
-      // Update clients without company_id
-      const { data: clients, error: clientsError } = await supabase
-        .from('clients')
-        .update({ company_id: selectedCompanyId })
-        .is('company_id', null)
-        .select('id');
+      if (!data.success) {
+        throw new Error(data.error || 'Migration failed');
+      }
 
-      if (clientsError) throw clientsError;
-
-      // Update leads without company_id
-      const { data: leads, error: leadsError } = await supabase
-        .from('leads')
-        .update({ company_id: selectedCompanyId })
-        .is('company_id', null)
-        .select('id');
-
-      if (leadsError) throw leadsError;
-
-      // Update campaigns without company_id
-      const { data: campaigns, error: campaignsError } = await supabase
-        .from('campaigns')
-        .update({ company_id: selectedCompanyId })
-        .is('company_id', null)
-        .select('id');
-
-      if (campaignsError) throw campaignsError;
+      const { results } = data;
+      const totalMigrated = 
+        (results.assets || 0) + 
+        (results.clients || 0) + 
+        (results.leads || 0) + 
+        (results.campaigns || 0) +
+        (results.plans || 0);
 
       toast({
         title: "Migration successful",
-        description: `Migrated ${assets?.length || 0} assets, ${clients?.length || 0} clients, ${leads?.length || 0} leads, and ${campaigns?.length || 0} campaigns`,
+        description: `Migrated ${totalMigrated} records: ${results.assets || 0} assets, ${results.clients || 0} clients, ${results.leads || 0} leads, ${results.campaigns || 0} campaigns, ${results.plans || 0} plans`,
       });
 
       onOpenChange(false);

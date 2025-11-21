@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { generateCampaignCode } from "@/lib/codeGenerator";
+import { useCompany } from "@/contexts/CompanyContext";
 
 interface ConvertToCampaignDialogProps {
   open: boolean;
@@ -35,6 +36,7 @@ export function ConvertToCampaignDialog({
   planItems,
 }: ConvertToCampaignDialogProps) {
   const navigate = useNavigate();
+  const { company } = useCompany();
   const [loading, setLoading] = useState(false);
   const [campaignName, setCampaignName] = useState(plan?.plan_name || "");
   const [startDate, setStartDate] = useState<Date>(
@@ -65,14 +67,24 @@ export function ConvertToCampaignDialog({
     setLoading(true);
 
     try {
+      // Validate company context
+      if (!company?.id) {
+        throw new Error("Company context is required");
+      }
+
       // Generate campaign ID
       const campaignId = await generateCampaignCode(startDate);
 
-      // Create campaign
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Authentication required");
+
+      // Create campaign with company_id
       const { data: campaign, error: campaignError } = await supabase
         .from("campaigns")
         .insert({
           id: campaignId,
+          company_id: company.id,
           campaign_name: campaignName,
           client_id: plan.client_id,
           client_name: plan.client_name,
@@ -86,7 +98,7 @@ export function ConvertToCampaignDialog({
           grand_total: plan.grand_total || 0,
           total_assets: planItems.length,
           notes,
-          created_by: (await supabase.auth.getUser()).data.user?.id || "",
+          created_by: user.id,
         })
         .select()
         .single();

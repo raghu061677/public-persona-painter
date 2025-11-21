@@ -48,15 +48,31 @@ interface PlanItemData {
 
 export async function generatePlanExcel(planId: string): Promise<void> {
   try {
-    // Fetch plan data
+    // Get current user and verify access
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Authentication required");
+
+    // Fetch plan data with company verification
     const { data: plan, error: planError } = await supabase
       .from("plans")
-      .select("*")
+      .select("*, company_id")
       .eq("id", planId)
       .single();
 
     if (planError) throw planError;
     if (!plan) throw new Error("Plan not found");
+
+    // Verify user has access to this plan's company
+    const { data: userCompany } = await supabase
+      .from("company_users")
+      .select("company_id")
+      .eq("user_id", user.id)
+      .eq("company_id", plan.company_id)
+      .single();
+
+    if (!userCompany) {
+      throw new Error("You don't have access to this plan");
+    }
 
     // Fetch client data
     const { data: client, error: clientError } = await supabase

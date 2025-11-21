@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useLocation } from 'react-router-dom';
 
 interface Message {
   id: string;
@@ -29,6 +30,7 @@ const QUICK_QUERIES = [
 
 export default function AIAssistant() {
   const { company } = useCompany();
+  const location = useLocation();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -40,6 +42,7 @@ export default function AIAssistant() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const initialPromptSent = useRef(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -48,6 +51,15 @@ export default function AIAssistant() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Handle initial prompt from navigation state
+  useEffect(() => {
+    const state = location.state as { initialPrompt?: string } | null;
+    if (state?.initialPrompt && !initialPromptSent.current && company) {
+      initialPromptSent.current = true;
+      handleSendMessage(state.initialPrompt);
+    }
+  }, [location.state, company]);
 
   const handleSendMessage = async (queryText?: string) => {
     const query = queryText || input;

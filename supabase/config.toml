@@ -25,11 +25,23 @@ verify_jwt = true
 [functions.business-ai-assistant]
 verify_jwt = true
 
+[functions.business-assistant]
+verify_jwt = true
+
 # User & Company Management
 [functions.create-user]
 verify_jwt = true
 
+[functions.create-company-user]
+verify_jwt = true
+
+[functions.create-company-with-users]
+verify_jwt = true
+
 [functions.list-users]
+verify_jwt = true
+
+[functions.list-company-users]
 verify_jwt = true
 
 [functions.get-user-activities]
@@ -38,10 +50,22 @@ verify_jwt = true
 [functions.update-user]
 verify_jwt = true
 
+[functions.update-company-user]
+verify_jwt = true
+
+[functions.delete-user]
+verify_jwt = true
+
+[functions.reset-user-password]
+verify_jwt = true
+
 [functions.assign-user-permissions]
 verify_jwt = true
 
 [functions.add-user-to-company]
+verify_jwt = true
+
+[functions.setup-matrix-company]
 verify_jwt = true
 
 [functions.cleanup-duplicate-companies]
@@ -112,6 +136,9 @@ verify_jwt = false
 
 # Notifications & Communications
 [functions.send-notification-email]
+verify_jwt = true
+
+[functions.send-email]
 verify_jwt = true
 
 [functions.send-approval-notification]

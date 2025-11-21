@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,6 +54,7 @@ import { useLayoutSettings } from "@/hooks/use-layout-settings";
 
 export default function PlansList() {
   const navigate = useNavigate();
+  const { company } = useCompany();
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -149,7 +151,7 @@ export default function PlansList() {
       document.removeEventListener('keydown', handleKeyDown);
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [company]);
 
   const checkAdminStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -190,11 +192,14 @@ export default function PlansList() {
       return;
     }
     
+    // Use selected company from localStorage if available (for platform admins)
+    const selectedCompanyId = localStorage.getItem('selected_company_id') || companyUserData.company_id;
+    
     // CRITICAL: Filter by company_id for multi-tenant isolation
     const { data: plansData, error: plansError } = await supabase
       .from('plans')
       .select('*')
-      .eq('company_id', companyUserData.company_id)
+      .eq('company_id', selectedCompanyId)
       .order('created_at', { ascending: false });
 
     if (plansError) {

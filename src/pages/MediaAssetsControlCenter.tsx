@@ -81,10 +81,43 @@ export default function MediaAssetsControlCenter() {
   const fetchAssets = useCallback(async () => {
     setLoading(true);
     
-    // Optimized query - select only needed fields for list view
-    const { data: assetsData, error: assetsError } = await supabase
+    // Get current user's company
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast({
+        title: "Error",
+        description: "Not authenticated",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    // Get user's company from company_users
+    const { data: companyUserData } = await supabase
+      .from('company_users')
+      .select('company_id, companies(type)')
+      .eq('user_id', session.user.id)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    let query = supabase
       .from('media_assets')
-      .select('id, city, area, location, media_type, status, card_rate, dimensions, latitude, longitude, illumination, created_at, image_urls, images')
+      .select('id, city, area, location, media_type, status, card_rate, dimensions, latitude, longitude, illumination, created_at, image_urls, images, company_id');
+
+    // Filter by company_id unless platform admin viewing all
+    if (companyUserData?.company_id) {
+      // Check if user is platform admin
+      const { data: isPlatformAdmin } = await supabase.rpc('is_platform_admin', { _user_id: session.user.id });
+      
+      // Only filter by company if not platform admin OR if explicitly set
+      const selectedCompanyId = localStorage.getItem('selected_company_id');
+      if (!isPlatformAdmin || selectedCompanyId) {
+        query = query.eq('company_id', selectedCompanyId || companyUserData.company_id);
+      }
+    }
+
+    const { data: assetsData, error: assetsError } = await query
       .order('id', { ascending: true })
       .limit(1000);
 

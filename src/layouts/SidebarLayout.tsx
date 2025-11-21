@@ -104,8 +104,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         {/* Main Content */}
         <ScrollArea className="flex-1">
           <div className="pb-4">
-            {/* PLATFORM ADMINISTRATION - Global Admin Only */}
-            {isPlatformAdmin && (
+            {/* PLATFORM ADMINISTRATION - Only show when active company is platform_admin */}
+            {isPlatformAdmin && company?.type === 'platform_admin' && (
               <>
                 <SidebarSection label="Platform Administration" collapsed={collapsed}>
                   <SidebarItem
@@ -207,7 +207,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             )}
 
             {/* COMPANY WORKSPACE - Tenant Companies */}
-            {company && (
+            {company && company.type !== 'platform_admin' && (
               <>
                 <SidebarSection label="Company Workspace" collapsed={collapsed}>
                   <SidebarItem
@@ -372,7 +372,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             )}
 
             {/* TOOLS & UTILITIES */}
-            {company && (
+            {company && company.type !== 'platform_admin' && (
               <>
                 <SidebarSection label="Tools" collapsed={collapsed}>
                   <SidebarItem
@@ -411,7 +411,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             )}
 
             {/* COMPANY SETTINGS */}
-            {company && (isCompanyAdmin || isPlatformAdmin) && (
+            {company && company.type !== 'platform_admin' && (isCompanyAdmin || isPlatformAdmin) && (
               <>
                 <SidebarSection label="Company Settings" collapsed={collapsed}>
                   {/* Organization Settings */}

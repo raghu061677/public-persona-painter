@@ -39,6 +39,7 @@ import { Plus, Sparkles, MoreVertical, Pencil, Trash2, Download, ArrowUpDown, Ch
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCompany } from "@/contexts/CompanyContext";
 import { EditClientDialog } from "@/components/clients/EditClientDialog";
 import { DeleteClientDialog } from "@/components/clients/DeleteClientDialog";
 import { z } from "zod";
@@ -111,6 +112,7 @@ const addClientSchema = z.object({
 
 export default function ClientsList() {
   const { isAdmin } = useAuth();
+  const { company } = useCompany();
   const navigate = useNavigate();
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -191,7 +193,7 @@ export default function ClientsList() {
 
   useEffect(() => {
     fetchClients();
-  }, []);
+  }, [company]);
 
   const fetchClients = async () => {
     setLoading(true);
@@ -220,11 +222,14 @@ export default function ClientsList() {
       return;
     }
 
+    // Use selected company from localStorage if available (for platform admins)
+    const selectedCompanyId = localStorage.getItem('selected_company_id') || companyUserData.company_id;
+
     // CRITICAL: Filter by company_id for multi-tenant isolation
     const { data, error } = await supabase
       .from('clients')
       .select('*')
-      .eq('company_id', companyUserData.company_id)
+      .eq('company_id', selectedCompanyId)
       .order('name');
 
     if (error) {

@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, MapPin, Building2, ArrowRight, Calendar, FileDown, Send, Loader2 } from "lucide-react";
+import { Search, MapPin, Building2, ArrowRight, Calendar, FileDown, Send, Loader2, Home } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCompany } from "@/contexts/CompanyContext";
 import { logActivity } from "@/utils/activityLogger";
@@ -422,11 +422,22 @@ export default function Marketplace() {
   return (
     <div className="flex-1 space-y-6 p-4 sm:p-8 pt-6">
       <div className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Marketplace</h2>
-          <p className="text-muted-foreground">
-            Browse and book public OOH media assets from multiple media owners
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Marketplace</h2>
+            <p className="text-muted-foreground">
+              Browse and book public OOH media assets from multiple media owners
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => navigate('/admin/dashboard')}
+            className="gap-2 self-start sm:self-auto"
+          >
+            <Home className="h-4 w-4" />
+            <span className="hidden sm:inline">Back to Dashboard</span>
+            <span className="sm:hidden">Dashboard</span>
+          </Button>
         </div>
 
         {/* Filters */}

@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { addWatermarkBatch, createPreviewUrl, revokePreviewUrls } from "@/lib/imageWatermark";
 import { PhotoEditorDialog } from "./PhotoEditorDialog";
 import { logActivity } from "@/utils/activityLogger";
+import { useCompany } from "@/contexts/CompanyContext";
 
 interface PhotoUploadSectionProps {
   campaignId: string;
@@ -34,6 +35,7 @@ interface PreviewFile {
 }
 
 export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: PhotoUploadSectionProps) {
+  const { company } = useCompany();
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -122,6 +124,15 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
   };
 
   const handleConfirmUpload = async () => {
+    if (!company?.id) {
+      toast({
+        title: "Error",
+        description: "Company context not available",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const files = previewFiles.map(p => p.file);
     setShowPreview(false);
     setIsProcessing(true);
@@ -158,6 +169,7 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
       setIsProcessing(false);
 
       const results = await uploadOperationsProofBatch(
+        company.id,
         campaignId,
         assetId,
         watermarkedFiles,

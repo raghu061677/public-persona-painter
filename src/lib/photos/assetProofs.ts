@@ -8,11 +8,13 @@ import type { PhotoUploadResult, UploadProgress } from './types';
 
 /**
  * Upload a proof photo for a media asset
+ * @param companyId - The company ID for multi-tenant isolation
  * @param assetId - The media asset ID
  * @param file - The image file to upload
  * @param onProgress - Optional progress callback
  */
 export async function uploadAssetProof(
+  companyId: string,
   assetId: string,
   file: File,
   onProgress?: (progress: UploadProgress) => void
@@ -27,6 +29,7 @@ export async function uploadAssetProof(
     },
     file,
     {
+      company_id: companyId,
       asset_id: assetId,
       photo_type: 'asset_proof'
     },
@@ -36,11 +39,13 @@ export async function uploadAssetProof(
 
 /**
  * Upload multiple proof photos for a media asset
+ * @param companyId - The company ID for multi-tenant isolation
  * @param assetId - The media asset ID
  * @param files - Array of image files to upload
  * @param onProgress - Optional progress callback with file index
  */
 export async function uploadAssetProofBatch(
+  companyId: string,
   assetId: string,
   files: File[],
   onProgress?: (fileIndex: number, progress: UploadProgress) => void
@@ -55,6 +60,7 @@ export async function uploadAssetProofBatch(
     },
     files,
     {
+      company_id: companyId,
       asset_id: assetId,
       photo_type: 'asset_proof'
     },

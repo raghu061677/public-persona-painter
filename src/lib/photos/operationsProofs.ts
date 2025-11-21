@@ -8,12 +8,14 @@ import type { PhotoUploadResult, UploadProgress } from './types';
 
 /**
  * Upload a proof photo for campaign operations
+ * @param companyId - The company ID for multi-tenant isolation
  * @param campaignId - The campaign ID
  * @param assetId - The asset ID within the campaign
  * @param file - The image file to upload
  * @param onProgress - Optional progress callback
  */
 export async function uploadOperationsProof(
+  companyId: string,
   campaignId: string,
   assetId: string,
   file: File,
@@ -29,6 +31,7 @@ export async function uploadOperationsProof(
     },
     file,
     {
+      company_id: companyId,
       asset_id: assetId,
       campaign_id: campaignId,
       photo_type: 'operations_proof'
@@ -39,12 +42,14 @@ export async function uploadOperationsProof(
 
 /**
  * Upload multiple proof photos for campaign operations
+ * @param companyId - The company ID for multi-tenant isolation
  * @param campaignId - The campaign ID
  * @param assetId - The asset ID within the campaign
  * @param files - Array of image files to upload
  * @param onProgress - Optional progress callback with file index
  */
 export async function uploadOperationsProofBatch(
+  companyId: string,
   campaignId: string,
   assetId: string,
   files: File[],
@@ -60,6 +65,7 @@ export async function uploadOperationsProofBatch(
     },
     files,
     {
+      company_id: companyId,
       asset_id: assetId,
       campaign_id: campaignId,
       photo_type: 'operations_proof'

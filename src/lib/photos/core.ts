@@ -107,7 +107,7 @@ export async function uploadPhoto(
       }
     }
 
-    // Stage 3: Generate unique filename and upload
+    // Stage 3: Generate unique filename and upload with company isolation
     if (onProgress) {
       onProgress({ stage: 'uploading', progress: 40, message: 'Uploading to storage...' });
     }
@@ -116,7 +116,8 @@ export async function uploadPhoto(
     const sanitizedTag = tag.toLowerCase().replace(/\s+/g, '_');
     const extension = file.name.split('.').pop() || 'jpg';
     const fileName = `${sanitizedTag}_${timestamp}.${extension}`;
-    const filePath = `${config.basePath}/${fileName}`;
+    // Include company_id in storage path for proper multi-tenant isolation
+    const filePath = `${metadata.company_id}/${config.basePath}/${fileName}`;
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(config.bucket)
@@ -173,6 +174,7 @@ export async function uploadPhoto(
     const { data: photoRecord, error: dbError } = await supabase
       .from('media_photos')
       .insert({
+        company_id: metadata.company_id,
         asset_id: metadata.asset_id,
         campaign_id: metadata.campaign_id,
         client_id: metadata.client_id,

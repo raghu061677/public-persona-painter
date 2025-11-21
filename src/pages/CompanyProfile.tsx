@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useCompany } from "@/contexts/CompanyContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -21,13 +21,15 @@ import {
   TwoColumnRow,
   SettingsContentWrapper,
 } from "@/components/settings/zoho-style";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Upload, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function CompanyProfile() {
   const { company, refreshCompany } = useCompany();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     name: "",
     legal_name: "",
@@ -84,6 +86,83 @@ export default function CompanyProfile() {
     loadCompanyDetails();
   }, [company]);
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !company) return;
+
+    // Validate file type and size
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('File size must be less than 2MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${company.id}-logo-${Date.now()}.${fileExt}`;
+      const filePath = `company-logos/${fileName}`;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from('company-assets')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('company-assets')
+        .getPublicUrl(filePath);
+
+      // Update company record
+      const { error: updateError } = await supabase
+        .from('companies' as any)
+        .update({ logo_url: publicUrl })
+        .eq('id', company.id);
+
+      if (updateError) throw updateError;
+
+      setFormData({ ...formData, logo_url: publicUrl });
+      toast.success('Logo uploaded successfully');
+      refreshCompany();
+    } catch (error: any) {
+      console.error('Error uploading logo:', error);
+      toast.error(error.message || 'Failed to upload logo');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    if (!company || !formData.logo_url) return;
+
+    try {
+      const { error } = await supabase
+        .from('companies' as any)
+        .update({ logo_url: null })
+        .eq('id', company.id);
+
+      if (error) throw error;
+
+      setFormData({ ...formData, logo_url: '' });
+      toast.success('Logo removed successfully');
+      refreshCompany();
+    } catch (error: any) {
+      console.error('Error removing logo:', error);
+      toast.error(error.message || 'Failed to remove logo');
+    }
+  };
+
   const handleSave = async () => {
     if (!company) return;
 
@@ -129,31 +208,60 @@ export default function CompanyProfile() {
       {/* Profile Section */}
       <SettingsCard title="Organization Details">
         <div className="space-y-6">
-          <InputRow label="Organization Logo" description="Upload your company logo">
+          <InputRow label="Organization Logo" description="Upload your company logo (max 2MB, PNG/JPG)">
             <div className="flex items-center gap-4">
               {formData.logo_url && (
-                <img
-                  src={formData.logo_url}
-                  alt="Logo"
-                  className="h-16 w-16 rounded-lg object-cover border border-border"
-                />
+                <div className="relative">
+                  <img
+                    src={formData.logo_url}
+                    alt="Logo"
+                    className="h-16 w-16 rounded-lg object-cover border border-border"
+                  />
+                  <Button
+                    size="icon"
+                    variant="destructive"
+                    className="absolute -top-2 -right-2 h-5 w-5"
+                    onClick={handleRemoveLogo}
+                    type="button"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
               )}
               <div className="flex-1">
-                <Input
-                  placeholder="Logo URL"
-                  value={formData.logo_url}
-                  onChange={(e) =>
-                    setFormData({ ...formData, logo_url: e.target.value })
-                  }
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                  id="logo-upload"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Recommended: 200x200px, PNG or JPG
-                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  type="button"
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Logo
+                    </>
+                  )}
+                </Button>
+                {!formData.logo_url && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Recommended: Square image, 200x200px or larger
+                  </p>
+                )}
               </div>
-              <Button variant="outline" size="sm">
-                <Upload className="h-4 w-4 mr-2" />
-                Upload
-              </Button>
             </div>
           </InputRow>
 

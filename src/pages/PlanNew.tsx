@@ -304,6 +304,18 @@ export default function PlanNew() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Get user's company_id
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single();
+
+      if (!companyUser?.company_id) {
+        throw new Error("No active company association found");
+      }
+
       const durationDays = calculateDurationDays(new Date(formData.start_date), new Date(formData.end_date));
       const totals = calculateTotals();
       const { netTotal, gstAmount, grandTotal } = totals;
@@ -327,6 +339,7 @@ export default function PlanNew() {
           grand_total: grandTotal,
           notes: formData.notes,
           created_by: user.id,
+          company_id: companyUser.company_id,
         } as any)
         .select()
         .single();

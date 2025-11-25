@@ -53,39 +53,68 @@ async function fetchAssetDetails(assetIds: string[]): Promise<Map<string, AssetD
 }
 
 /**
- * Get first image URL from asset
+ * Get all image URLs from asset
  */
-function getAssetImageUrl(asset: AssetDetails): string | null {
+function getAssetImageUrls(asset: AssetDetails): string[] {
+  const urls: string[] = [];
+  
+  // Try images object first (newer format)
   if (asset.images && typeof asset.images === 'object') {
     const imageKeys = Object.keys(asset.images);
-    if (imageKeys.length > 0) {
-      const firstImage = asset.images[imageKeys[0]];
-      if (firstImage && typeof firstImage === 'object' && firstImage.url) {
-        return firstImage.url;
+    imageKeys.forEach(key => {
+      const img = asset.images[key];
+      if (img && typeof img === 'object' && img.url) {
+        urls.push(img.url);
       }
-    }
+    });
   }
-  if (asset.image_urls && asset.image_urls.length > 0) {
-    return asset.image_urls[0];
+  
+  // Fallback to image_urls array
+  if (urls.length === 0 && asset.image_urls && Array.isArray(asset.image_urls)) {
+    urls.push(...asset.image_urls.filter(url => url && typeof url === 'string'));
   }
-  return null;
+  
+  console.log(`Asset ${asset.id} has ${urls.length} images:`, urls);
+  return urls;
 }
 
 /**
- * Convert image URL to base64
+ * Convert image URL to base64 - handles both public URLs and Supabase storage paths
  */
 async function imageToBase64(url: string): Promise<string | null> {
   try {
-    const response = await fetch(url);
+    let fetchUrl = url;
+    
+    // If it's a Supabase storage path (starts with media-assets/ or similar), get a signed URL
+    if (!url.startsWith('http') && !url.startsWith('data:')) {
+      const { data: signedUrlData } = await supabase.storage
+        .from('media-assets')
+        .createSignedUrl(url, 3600);
+      
+      if (signedUrlData?.signedUrl) {
+        fetchUrl = signedUrlData.signedUrl;
+      }
+    }
+    
+    // Fetch with mode 'cors' to handle cross-origin requests
+    const response = await fetch(fetchUrl, { mode: 'cors' });
+    if (!response.ok) {
+      console.error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+      return null;
+    }
+    
     const blob = await response.blob();
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
+      reader.onerror = (error) => {
+        console.error('FileReader error:', error);
+        reject(error);
+      };
       reader.readAsDataURL(blob);
     });
   } catch (error) {
-    console.error('Failed to convert image to base64:', error);
+    console.error('Failed to convert image to base64:', error, 'URL:', url);
     return null;
   }
 }
@@ -268,20 +297,9 @@ export async function exportPlanToPPT(
       const assetDetail = assetDetailsMap.get(item.asset_id);
       if (!assetDetail) continue;
 
-      // Collect all images
-      const allImages: string[] = [];
-      if (assetDetail.images && typeof assetDetail.images === 'object') {
-        const imageKeys = Object.keys(assetDetail.images);
-        imageKeys.forEach(key => {
-          const img = assetDetail.images[key];
-          if (img && typeof img === 'object' && img.url) {
-            allImages.push(img.url);
-          }
-        });
-      }
-      if (assetDetail.image_urls && assetDetail.image_urls.length > 0) {
-        allImages.push(...assetDetail.image_urls);
-      }
+      // Get all images for this asset
+      const allImages = getAssetImageUrls(assetDetail);
+      console.log(`Processing asset ${item.asset_id}, found ${allImages.length} images`);
 
       // SLIDE 1: Full-size images
       const imageSlide = pptx.addSlide();

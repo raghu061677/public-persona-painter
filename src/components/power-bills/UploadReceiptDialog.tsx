@@ -77,14 +77,14 @@ export function UploadReceiptDialog({
       const fileName = `power-bills/${assetId}/${billId}-${Date.now()}.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
-        .from('campaign-photos')
+        .from('power-receipts')
         .upload(fileName, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
-        .from('campaign-photos')
+        .from('power-receipts')
         .getPublicUrl(fileName);
 
       // Update bill record

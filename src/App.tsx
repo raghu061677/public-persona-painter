@@ -226,6 +226,8 @@ const App = () => (
             
             {/* Redirect common paths to their correct /admin prefixed routes */}
             <Route path="/media-assets" element={<Navigate to="/admin/media-assets" replace />} />
+            <Route path="/media-assets/new" element={<Navigate to="/admin/media-assets/new" replace />} />
+            <Route path="/media-assets/:id" element={<Navigate to="/admin/media-assets/:id" replace />} />
             <Route path="/clients" element={<Navigate to="/admin/clients" replace />} />
             <Route path="/plans" element={<Navigate to="/admin/plans" replace />} />
             <Route path="/campaigns" element={<Navigate to="/admin/campaigns" replace />} />

@@ -117,7 +117,6 @@ export default function PlanEdit() {
     const { data } = await supabase
       .from('media_assets')
       .select('*')
-      .eq('status', 'Available')
       .order('city', { ascending: true });
     setAvailableAssets(data || []);
   };
@@ -167,6 +166,41 @@ export default function PlanEdit() {
       }));
     }
     setSelectedAssets(newSelected);
+  };
+
+  const handleMultiSelect = (assetIds: string[], assets: any[]) => {
+    const newSelected = new Set(selectedAssets);
+    const newPricing = { ...assetPricing };
+    const days = calculateDurationDays(new Date(formData.start_date), new Date(formData.end_date));
+
+    assets.forEach(asset => {
+      newSelected.add(asset.id);
+      const cardRate = asset.card_rate || 0;
+      const baseRate = asset.base_rent || 0;
+      
+      const proRata = calcProRata(cardRate, days);
+      const discount = calcDiscount(cardRate, cardRate);
+      const profit = calcProfit(baseRate, cardRate);
+      
+      newPricing[asset.id] = {
+        negotiated_price: cardRate,
+        pro_rata: proRata,
+        discount_value: discount.value,
+        discount_percent: discount.percent,
+        profit_value: profit.value,
+        profit_percent: profit.percent,
+        printing_charges: asset.printing_charges || 0,
+        mounting_charges: asset.mounting_charges || 0,
+      };
+    });
+
+    setSelectedAssets(newSelected);
+    setAssetPricing(newPricing);
+
+    toast({
+      title: "Success",
+      description: `Added ${assets.length} asset${assets.length > 1 ? 's' : ''} to plan`,
+    });
   };
 
   const removeAsset = (assetId: string) => {
@@ -590,6 +624,7 @@ export default function PlanEdit() {
                 assets={availableAssets}
                 selectedIds={selectedAssets}
                 onSelect={toggleAssetSelection}
+                onMultiSelect={handleMultiSelect}
               />
             </CardContent>
           </Card>

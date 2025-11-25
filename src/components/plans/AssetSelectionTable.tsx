@@ -26,6 +26,7 @@ interface AssetSelectionTableProps {
   assets: any[];
   selectedIds: Set<string>;
   onSelect: (assetId: string, asset: any) => void;
+  onMultiSelect?: (assetIds: string[], assets: any[]) => void;
 }
 
 const ALL_COLUMNS = [
@@ -63,10 +64,12 @@ const COLUMN_LABELS: Record<string, string> = {
   mounting_charges: 'Mounting',
 };
 
-export function AssetSelectionTable({ assets, selectedIds, onSelect }: AssetSelectionTableProps) {
+export function AssetSelectionTable({ assets, selectedIds, onSelect, onMultiSelect }: AssetSelectionTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [cityFilter, setCityFilter] = useState("all");
   const [mediaTypeFilter, setMediaTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("available");
+  const [checkedAssets, setCheckedAssets] = useState<Set<string>>(new Set());
   
   const {
     isReady,
@@ -96,9 +99,39 @@ export function AssetSelectionTable({ assets, selectedIds, onSelect }: AssetSele
     
     const matchesCity = cityFilter === "all" || asset.city === cityFilter;
     const matchesType = mediaTypeFilter === "all" || asset.media_type === mediaTypeFilter;
+    const matchesStatus = statusFilter === "all" || 
+      (statusFilter === "available" && asset.status === "Available") ||
+      (statusFilter === "booked" && asset.status === "Booked");
     
-    return matchesSearch && matchesCity && matchesType;
+    return matchesSearch && matchesCity && matchesType && matchesStatus;
   });
+
+  const handleCheckAsset = (assetId: string) => {
+    const newChecked = new Set(checkedAssets);
+    if (newChecked.has(assetId)) {
+      newChecked.delete(assetId);
+    } else {
+      newChecked.add(assetId);
+    }
+    setCheckedAssets(newChecked);
+  };
+
+  const handleSelectAll = () => {
+    if (checkedAssets.size === filteredAssets.length) {
+      setCheckedAssets(new Set());
+    } else {
+      setCheckedAssets(new Set(filteredAssets.map(a => a.id)));
+    }
+  };
+
+  const handleAddSelected = () => {
+    if (checkedAssets.size === 0) return;
+    const assetsToAdd = filteredAssets.filter(a => checkedAssets.has(a.id) && !selectedIds.has(a.id));
+    if (onMultiSelect) {
+      onMultiSelect(assetsToAdd.map(a => a.id), assetsToAdd);
+    }
+    setCheckedAssets(new Set());
+  };
 
   if (!isReady) {
     return <div>Loading...</div>;
@@ -136,6 +169,16 @@ export function AssetSelectionTable({ assets, selectedIds, onSelect }: AssetSele
             {mediaTypes.map(type => (
               <SelectItem key={type} value={type}>{type}</SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Assets</SelectItem>
+            <SelectItem value="available">Available</SelectItem>
+            <SelectItem value="booked">Booked</SelectItem>
           </SelectContent>
         </Select>
         
@@ -178,10 +221,33 @@ export function AssetSelectionTable({ assets, selectedIds, onSelect }: AssetSele
         </Popover>
       </div>
 
+      {checkedAssets.size > 0 && (
+        <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+            {checkedAssets.size} asset{checkedAssets.size > 1 ? 's' : ''} selected
+          </span>
+          <Button
+            size="sm"
+            onClick={handleAddSelected}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Selected to Plan
+          </Button>
+        </div>
+      )}
+
       <div className="border rounded-lg max-h-96 overflow-y-auto">
         <Table>
           <TableHeader className="sticky top-0 bg-background">
             <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                  checked={filteredAssets.length > 0 && checkedAssets.size === filteredAssets.length}
+                  onCheckedChange={handleSelectAll}
+                  aria-label="Select all"
+                />
+              </TableHead>
               {visibleKeys.map((key) => (
                 <TableHead key={key} className={key === 'asset_id' ? '' : key.includes('rate') || key.includes('charges') || key.includes('rent') ? 'text-right' : ''}>
                   {COLUMN_LABELS[key]}
@@ -193,13 +259,21 @@ export function AssetSelectionTable({ assets, selectedIds, onSelect }: AssetSele
           <TableBody>
             {filteredAssets.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={visibleKeys.length + 1} className="text-center py-8 text-muted-foreground">
-                  No available assets found
+                <TableCell colSpan={visibleKeys.length + 2} className="text-center py-8 text-muted-foreground">
+                  No assets found
                 </TableCell>
               </TableRow>
             ) : (
               filteredAssets.map((asset) => (
-                <TableRow key={asset.id}>
+                <TableRow key={asset.id} className={selectedIds.has(asset.id) ? 'bg-muted/50' : ''}>
+                  <TableCell>
+                    <Checkbox
+                      checked={checkedAssets.has(asset.id)}
+                      onCheckedChange={() => handleCheckAsset(asset.id)}
+                      disabled={selectedIds.has(asset.id)}
+                      aria-label={`Select ${asset.id}`}
+                    />
+                  </TableCell>
                   {visibleKeys.map((key) => {
                     if (key === 'asset_id') {
                       return <TableCell key={key} className="font-medium">{asset.id}</TableCell>;

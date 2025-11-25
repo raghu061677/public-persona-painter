@@ -197,64 +197,28 @@ export async function exportPlanToPPT(
     const assetIds = planItems.map(item => item.asset_id);
     const assetDetailsMap = await fetchAssetDetails(assetIds);
 
-    // Title slide with logo
+    // Title slide with dark background
     const titleSlide = pptx.addSlide();
-    titleSlide.background = { color: companyData?.theme_color?.replace('#', '') || "1e40af" };
+    titleSlide.background = { color: "1a1a2e" };
     
-    // Add company logo if available
-    if (companyData?.logo_url) {
-      try {
-        const logoBase64 = await imageToBase64(companyData.logo_url);
-        if (logoBase64) {
-          titleSlide.addImage({
-            data: logoBase64,
-            x: 0.5,
-            y: 0.5,
-            w: 2,
-            h: 1,
-            sizing: { type: "contain", w: 2, h: 1 }
-          });
-        }
-      } catch (err) {
-        console.warn("Failed to add logo:", err);
-      }
-    }
-    
-    titleSlide.addText(companyData?.name || orgSettings?.organization_name || "Go-Ads 360°", {
+    titleSlide.addText("MEDIA ASSET PROPOSAL", {
       x: 0.5,
-      y: 1.8,
+      y: 2.5,
       w: 9,
-      h: 0.8,
-      fontSize: 40,
+      h: 1.2,
+      fontSize: 48,
       bold: true,
       color: "FFFFFF",
       align: "center"
     });
-    titleSlide.addText("Media Plan Presentation", {
+    
+    titleSlide.addText(`${planItems.length} Premium OOH Media Assets`, {
       x: 0.5,
-      y: 2.8,
+      y: 3.8,
       w: 9,
-      h: 0.5,
+      h: 0.6,
       fontSize: 24,
       color: "FFFFFF",
-      align: "center"
-    });
-    titleSlide.addText(plan.plan_name, {
-      x: 0.5,
-      y: 3.5,
-      w: 9,
-      h: 0.5,
-      fontSize: 18,
-      color: "FFFFFF",
-      align: "center"
-    });
-    titleSlide.addText(`Client: ${plan.client_name}`, {
-      x: 0.5,
-      y: 4.1,
-      w: 9,
-      h: 0.4,
-      fontSize: 16,
-      color: "E0E0E0",
       align: "center"
     });
 
@@ -299,25 +263,12 @@ export async function exportPlanToPPT(
       margin: 0.1
     });
 
-    // Asset slides
+    // Asset slides - 2 slides per asset (like reference)
     for (const item of planItems) {
       const assetDetail = assetDetailsMap.get(item.asset_id);
       if (!assetDetail) continue;
 
-      const slide = pptx.addSlide();
-      
-      // Header
-      slide.addText(item.asset_id, {
-        x: 0.5,
-        y: 0.3,
-        w: 9,
-        h: 0.5,
-        fontSize: 24,
-        bold: true,
-        color: "1e40af"
-      });
-
-      // Try to add multiple images
+      // Collect all images
       const allImages: string[] = [];
       if (assetDetail.images && typeof assetDetail.images === 'object') {
         const imageKeys = Object.keys(assetDetail.images);
@@ -332,19 +283,33 @@ export async function exportPlanToPPT(
         allImages.push(...assetDetail.image_urls);
       }
 
-      // Display up to 2 images side by side using base64
+      // SLIDE 1: Full-size images
+      const imageSlide = pptx.addSlide();
+      
+      // Header with asset ID
+      imageSlide.addText(`${item.asset_id} – ${assetDetail.area} – ${assetDetail.location}`, {
+        x: 0.3,
+        y: 0.3,
+        w: 9.4,
+        h: 0.4,
+        fontSize: 14,
+        bold: true,
+        color: "1F2937"
+      });
+
+      // Display 2 large images side by side
       const imagesToShow = allImages.slice(0, 2);
       if (imagesToShow.length > 0) {
         try {
           const img1Base64 = await imageToBase64(imagesToShow[0]);
           if (img1Base64) {
-            slide.addImage({
+            imageSlide.addImage({
               data: img1Base64,
-              x: 0.5,
-              y: 1,
-              w: imagesToShow.length === 1 ? 4.5 : 2.1,
-              h: 2.8,
-              sizing: { type: "contain", w: imagesToShow.length === 1 ? 4.5 : 2.1, h: 2.8 }
+              x: 0.3,
+              y: 0.9,
+              w: imagesToShow.length === 1 ? 9.4 : 4.6,
+              h: 5.5,
+              sizing: { type: "cover", w: imagesToShow.length === 1 ? 9.4 : 4.6, h: 5.5 }
             });
           }
         } catch (err) {
@@ -356,13 +321,13 @@ export async function exportPlanToPPT(
         try {
           const img2Base64 = await imageToBase64(imagesToShow[1]);
           if (img2Base64) {
-            slide.addImage({
+            imageSlide.addImage({
               data: img2Base64,
-              x: 2.8,
-              y: 1,
-              w: 2.1,
-              h: 2.8,
-              sizing: { type: "contain", w: 2.1, h: 2.8 }
+              x: 5.1,
+              y: 0.9,
+              w: 4.6,
+              h: 5.5,
+              sizing: { type: "cover", w: 4.6, h: 5.5 }
             });
           }
         } catch (err) {
@@ -370,30 +335,125 @@ export async function exportPlanToPPT(
         }
       }
 
-      // Asset properties
-      const properties = [
-        [{ text: "Location", options: { bold: true } }, { text: assetDetail.location }],
-        [{ text: "Area", options: { bold: true } }, { text: assetDetail.area }],
-        [{ text: "City", options: { bold: true } }, { text: assetDetail.city }],
-        [{ text: "Media Type", options: { bold: true } }, { text: assetDetail.media_type }],
-        [{ text: "Dimensions", options: { bold: true } }, { text: assetDetail.dimensions }],
-        [{ text: "Total SQFT", options: { bold: true } }, { text: assetDetail.total_sqft?.toString() || "N/A" }],
-        [{ text: "Direction", options: { bold: true } }, { text: assetDetail.direction || "N/A" }],
-        [{ text: "Illumination", options: { bold: true } }, { text: assetDetail.illumination || "N/A" }],
-        [{ text: "Monthly Rate", options: { bold: true } }, { text: `₹${item.sales_price.toLocaleString('en-IN')}` }],
+      // Footer branding
+      imageSlide.addText(`${companyData?.name || "Go-Ads 360°"}   ${companyData?.website || "www.goads.in"}`, {
+        x: 0.3,
+        y: 6.8,
+        w: 6,
+        h: 0.3,
+        fontSize: 10,
+        color: "374151"
+      });
+
+      const now = new Date();
+      imageSlide.addText(now.toLocaleString('en-IN', { 
+        day: '2-digit', 
+        month: 'short', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true 
+      }), {
+        x: 7,
+        y: 6.8,
+        w: 2.7,
+        h: 0.3,
+        fontSize: 10,
+        color: "374151",
+        align: "right"
+      });
+
+      // SLIDE 2: Asset specifications with one image
+      const detailSlide = pptx.addSlide();
+      
+      // Header
+      detailSlide.addText(`Asset Specifications – ${item.asset_id}`, {
+        x: 0.3,
+        y: 0.3,
+        w: 9.4,
+        h: 0.5,
+        fontSize: 18,
+        bold: true,
+        color: "1F2937"
+      });
+
+      // Large image on the right
+      if (imagesToShow.length > 0) {
+        try {
+          const imgBase64 = await imageToBase64(imagesToShow[0]);
+          if (imgBase64) {
+            detailSlide.addImage({
+              data: imgBase64,
+              x: 5.2,
+              y: 1,
+              w: 4.5,
+              h: 5.4,
+              sizing: { type: "cover", w: 4.5, h: 5.4 }
+            });
+          }
+        } catch (err) {
+          console.warn("Failed to add detail image:", err);
+        }
+      }
+
+      // Specifications on the left
+      const specs = [
+        { label: "City:", value: assetDetail.city },
+        { label: "Area:", value: assetDetail.area },
+        { label: "Location:", value: assetDetail.location },
+        { label: "Direction:", value: assetDetail.direction || "N/A" },
+        { label: "Dimensions:", value: assetDetail.dimensions },
+        { label: "Total Sqft:", value: assetDetail.total_sqft?.toString() || "N/A" },
+        { label: "Illumination:", value: assetDetail.illumination || "N/A" },
       ];
 
-      slide.addTable(properties, {
-        x: 5.2,
-        y: 1,
-        w: 4.3,
-        rowH: 0.33,
+      let yPos = 1.2;
+      specs.forEach(spec => {
+        detailSlide.addText(spec.label, {
+          x: 0.5,
+          y: yPos,
+          w: 1.8,
+          h: 0.35,
+          fontSize: 12,
+          bold: true,
+          color: "1F2937"
+        });
+        detailSlide.addText(spec.value, {
+          x: 2.4,
+          y: yPos,
+          w: 2.5,
+          h: 0.35,
+          fontSize: 12,
+          color: "374151"
+        });
+        yPos += 0.45;
+      });
+
+      // Footer branding
+      detailSlide.addText(`${companyData?.name || "Go-Ads 360°"}   ${companyData?.website || "www.goads.in"}`, {
+        x: 0.3,
+        y: 6.8,
+        w: 6,
+        h: 0.3,
         fontSize: 10,
-        border: { pt: 1, color: "E5E7EB" },
-        fill: { color: "F9FAFB" },
+        color: "374151"
+      });
+
+      detailSlide.addText(now.toLocaleString('en-IN', { 
+        day: '2-digit', 
+        month: 'short', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true 
+      }), {
+        x: 7,
+        y: 6.8,
+        w: 2.7,
+        h: 0.3,
+        fontSize: 10,
         color: "374151",
-        valign: "middle",
-        align: "left"
+        align: "right"
       });
     }
 

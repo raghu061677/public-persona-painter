@@ -210,9 +210,11 @@ export default function PlansList() {
       const userCompanyId = companyUserData.company_id;
       console.log('User company_id:', userCompanyId);
       console.log('Company type:', (companyUserData as any).companies?.type);
+      console.log('User email:', user.email);
       
       // Platform admins can see all plans, others see only their company's plans
       const isPlatformAdmin = (companyUserData as any).companies?.type === 'platform_admin';
+      console.log('Is platform admin:', isPlatformAdmin);
       
       // CRITICAL: For platform admins, don't filter by company_id to see all plans
       const query = supabase
@@ -239,6 +241,16 @@ export default function PlansList() {
       }
 
       console.log('Fetched plans:', plansData?.length || 0);
+      console.log('Plans data:', plansData);
+      
+      // Show user-friendly message if no plans found
+      if (!plansData || plansData.length === 0) {
+        console.warn('No plans found for:', {
+          isPlatformAdmin,
+          userCompanyId,
+          userEmail: user.email
+        });
+      }
 
       // Fetch plan items with asset SQFT data for each plan
       const plansWithSqft = await Promise.all(

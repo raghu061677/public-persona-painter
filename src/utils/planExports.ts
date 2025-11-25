@@ -157,6 +157,13 @@ export async function exportPlanToPPT(
       }
     }
 
+    // Fetch company details
+    const { data: companyData } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', plan.company_id)
+      .single();
+
     const pptx = new pptxgen();
     
     // Fetch client details with company filter
@@ -173,8 +180,8 @@ export async function exportPlanToPPT(
 
     // Title slide
     const titleSlide = pptx.addSlide();
-    titleSlide.background = { color: "1e40af" };
-    titleSlide.addText(orgSettings?.organization_name || "Go-Ads 360°", {
+    titleSlide.background = { color: companyData?.theme_color?.replace('#', '') || "1e40af" };
+    titleSlide.addText(companyData?.name || orgSettings?.organization_name || "Go-Ads 360°", {
       x: 0.5,
       y: 1.5,
       w: 9,
@@ -216,37 +223,40 @@ export async function exportPlanToPPT(
     const summarySlide = pptx.addSlide();
     summarySlide.addText("Campaign Summary", {
       x: 0.5,
-      y: 0.5,
+      y: 0.4,
       w: 9,
-      h: 0.6,
-      fontSize: 32,
+      h: 0.5,
+      fontSize: 28,
       bold: true,
-      color: "1e40af"
+      color: companyData?.theme_color?.replace('#', '') || "1e40af"
     });
 
     const summaryData = [
-      [{ text: "Plan ID" }, { text: plan.id }],
-      [{ text: "Client" }, { text: plan.client_name }],
-      [{ text: "GSTIN" }, { text: clientData?.gst_number || "N/A" }],
-      [{ text: "Address" }, { text: clientData?.billing_address_line1 || clientData?.address || "N/A" }],
-      [{ text: "City, State" }, { text: `${clientData?.billing_city || clientData?.city || ""}, ${clientData?.billing_state || clientData?.state || ""}` }],
-      [{ text: "Duration" }, { text: `${plan.duration_days} days` }],
-      [{ text: "Start Date" }, { text: new Date(plan.start_date).toLocaleDateString() }],
-      [{ text: "End Date" }, { text: new Date(plan.end_date).toLocaleDateString() }],
-      [{ text: "Total Assets" }, { text: `${planItems.length} sites` }],
-      [{ text: "Total Amount" }, { text: `₹${plan.grand_total.toLocaleString()}` }],
+      [{ text: "Plan ID", options: { bold: true } }, { text: plan.id }],
+      [{ text: "Company", options: { bold: true } }, { text: companyData?.name || "N/A" }],
+      [{ text: "GSTIN", options: { bold: true } }, { text: companyData?.gstin || "N/A" }],
+      [{ text: "Client", options: { bold: true } }, { text: plan.client_name }],
+      [{ text: "Client GSTIN", options: { bold: true } }, { text: clientData?.gst_number || "N/A" }],
+      [{ text: "Address", options: { bold: true } }, { text: clientData?.billing_address_line1 || clientData?.address || "N/A" }],
+      [{ text: "City, State", options: { bold: true } }, { text: `${clientData?.billing_city || clientData?.city || ""}, ${clientData?.billing_state || clientData?.state || ""}` }],
+      [{ text: "Duration", options: { bold: true } }, { text: `${plan.duration_days} days` }],
+      [{ text: "Start Date", options: { bold: true } }, { text: new Date(plan.start_date).toLocaleDateString() }],
+      [{ text: "End Date", options: { bold: true } }, { text: new Date(plan.end_date).toLocaleDateString() }],
+      [{ text: "Total Assets", options: { bold: true } }, { text: `${planItems.length} sites` }],
+      [{ text: "Total Amount", options: { bold: true } }, { text: `Rs. ${plan.grand_total.toLocaleString('en-IN')}` }],
     ];
 
     summarySlide.addTable(summaryData, {
-      x: 1.5,
-      y: 1.5,
-      w: 7,
-      rowH: 0.4,
-      fontSize: 14,
+      x: 1.0,
+      y: 1.1,
+      w: 8,
+      rowH: 0.35,
+      fontSize: 11,
       border: { pt: 1, color: "CCCCCC" },
       fill: { color: "F8FAFC" },
       color: "1F2937",
-      valign: "middle"
+      valign: "middle",
+      align: "left"
     });
 
     // Asset slides
@@ -267,34 +277,64 @@ export async function exportPlanToPPT(
         color: "1e40af"
       });
 
-      // Try to add image
-      const imageUrl = getAssetImageUrl(assetDetail);
-      if (imageUrl) {
+      // Try to add multiple images
+      const allImages: string[] = [];
+      if (assetDetail.images && typeof assetDetail.images === 'object') {
+        const imageKeys = Object.keys(assetDetail.images);
+        imageKeys.forEach(key => {
+          const img = assetDetail.images[key];
+          if (img && typeof img === 'object' && img.url) {
+            allImages.push(img.url);
+          }
+        });
+      }
+      if (assetDetail.image_urls && assetDetail.image_urls.length > 0) {
+        allImages.push(...assetDetail.image_urls);
+      }
+
+      // Display up to 2 images side by side
+      const imagesToShow = allImages.slice(0, 2);
+      if (imagesToShow.length > 0) {
         try {
           slide.addImage({
-            path: imageUrl,
+            path: imagesToShow[0],
             x: 0.5,
             y: 1,
-            w: 4.5,
+            w: imagesToShow.length === 1 ? 4.5 : 2.1,
             h: 3,
-            sizing: { type: "contain", w: 4.5, h: 3 }
+            sizing: { type: "contain", w: imagesToShow.length === 1 ? 4.5 : 2.1, h: 3 }
           });
         } catch (err) {
-          console.warn("Failed to add image:", err);
+          console.warn("Failed to add first image:", err);
+        }
+      }
+
+      if (imagesToShow.length > 1) {
+        try {
+          slide.addImage({
+            path: imagesToShow[1],
+            x: 2.8,
+            y: 1,
+            w: 2.1,
+            h: 3,
+            sizing: { type: "contain", w: 2.1, h: 3 }
+          });
+        } catch (err) {
+          console.warn("Failed to add second image:", err);
         }
       }
 
       // Asset properties
       const properties = [
-        [{ text: "Location" }, { text: assetDetail.location }],
-        [{ text: "Area" }, { text: assetDetail.area }],
-        [{ text: "City" }, { text: assetDetail.city }],
-        [{ text: "Media Type" }, { text: assetDetail.media_type }],
-        [{ text: "Dimensions" }, { text: assetDetail.dimensions }],
-        [{ text: "Total SQFT" }, { text: assetDetail.total_sqft?.toString() || "N/A" }],
-        [{ text: "Direction" }, { text: assetDetail.direction || "N/A" }],
-        [{ text: "Illumination" }, { text: assetDetail.illumination || "N/A" }],
-        [{ text: "Monthly Rate" }, { text: `₹${item.sales_price.toLocaleString()}` }],
+        [{ text: "Location", options: { bold: true } }, { text: assetDetail.location }],
+        [{ text: "Area", options: { bold: true } }, { text: assetDetail.area }],
+        [{ text: "City", options: { bold: true } }, { text: assetDetail.city }],
+        [{ text: "Media Type", options: { bold: true } }, { text: assetDetail.media_type }],
+        [{ text: "Dimensions", options: { bold: true } }, { text: assetDetail.dimensions }],
+        [{ text: "Total SQFT", options: { bold: true } }, { text: assetDetail.total_sqft?.toString() || "N/A" }],
+        [{ text: "Direction", options: { bold: true } }, { text: assetDetail.direction || "N/A" }],
+        [{ text: "Illumination", options: { bold: true } }, { text: assetDetail.illumination || "N/A" }],
+        [{ text: "Monthly Rate", options: { bold: true } }, { text: `Rs. ${item.sales_price.toLocaleString('en-IN')}` }],
       ];
 
       slide.addTable(properties, {
@@ -302,11 +342,12 @@ export async function exportPlanToPPT(
         y: 1,
         w: 4.3,
         rowH: 0.33,
-        fontSize: 11,
+        fontSize: 10,
         border: { pt: 1, color: "E5E7EB" },
         fill: { color: "F9FAFB" },
         color: "374151",
-        valign: "middle"
+        valign: "middle",
+        align: "left"
       });
     }
 
@@ -392,6 +433,13 @@ export async function exportPlanToExcel(
   uploadToCloud: boolean = false
 ) {
   try {
+    // Fetch company details
+    const { data: companyData } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', plan.company_id)
+      .single();
+
     // Fetch client details
     const { data: clientData } = await supabase
       .from('clients')
@@ -403,11 +451,16 @@ export async function exportPlanToExcel(
 
     // Plan Summary sheet
     const summaryData = [
+      ["Company Details"],
+      ["Company Name", companyData?.name || "N/A"],
+      ["Company GSTIN", companyData?.gstin || "N/A"],
+      ["Address", `${companyData?.address_line1 || ""}, ${companyData?.city || ""}, ${companyData?.state || ""}`],
+      [],
       ["Plan Details"],
       ["Plan ID", plan.id],
       ["Plan Name", plan.plan_name],
       ["Client", plan.client_name],
-      ["GSTIN", clientData?.gst_number || "N/A"],
+      ["Client GSTIN", clientData?.gst_number || "N/A"],
       ["Billing Address", clientData?.billing_address_line1 || clientData?.address || "N/A"],
       ["City", clientData?.billing_city || clientData?.city || "N/A"],
       ["State", clientData?.billing_state || clientData?.state || "N/A"],
@@ -421,10 +474,10 @@ export async function exportPlanToExcel(
       [],
       ["Financial Summary"],
       ["Total Assets", planItems.length],
-      ["Subtotal", plan.total_amount],
+      ["Subtotal", `Rs. ${plan.total_amount.toLocaleString('en-IN')}`],
       ["GST (%)", plan.gst_percent],
-      ["GST Amount", plan.gst_amount],
-      ["Grand Total", plan.grand_total],
+      ["GST Amount", `Rs. ${plan.gst_amount.toLocaleString('en-IN')}`],
+      ["Grand Total", `Rs. ${plan.grand_total.toLocaleString('en-IN')}`],
     ];
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
@@ -484,6 +537,13 @@ export async function exportPlanToPDF(
   uploadToCloud: boolean = false
 ) {
   try {
+    // Fetch company details
+    const { data: companyData } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', plan.company_id)
+      .single();
+
     // Fetch client details
     const { data: clientData } = await supabase
       .from('clients')
@@ -495,26 +555,64 @@ export async function exportPlanToPDF(
     const pageWidth = doc.internal.pageSize.getWidth();
     let yPos = 20;
 
-    // Header
+    // Header - Company Logo
+    if (companyData?.logo_url) {
+      try {
+        doc.addImage(companyData.logo_url, 'PNG', 14, yPos, 40, 20);
+      } catch (e) {
+        console.log('Logo loading skipped');
+      }
+    }
+
+    // Company info (Left)
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text(companyData?.name || orgSettings?.organization_name || "Go-Ads 360°", 14, yPos + 25);
+    
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    yPos += 30;
+    if (companyData?.address_line1) {
+      doc.text(companyData.address_line1, 14, yPos);
+      yPos += 4;
+    }
+    if (companyData?.address_line2) {
+      doc.text(companyData.address_line2, 14, yPos);
+      yPos += 4;
+    }
+    if (companyData?.city || companyData?.state) {
+      doc.text(`${companyData?.city || ""}, ${companyData?.state || ""} ${companyData?.pincode || ""}`, 14, yPos);
+      yPos += 4;
+    }
+    if (companyData?.gstin || orgSettings?.gstin) {
+      doc.text(`GSTIN: ${companyData?.gstin || orgSettings?.gstin}`, 14, yPos);
+      yPos += 4;
+    }
+    if (companyData?.phone) {
+      doc.text(`Phone: ${companyData.phone}`, 14, yPos);
+      yPos += 4;
+    }
+    if (companyData?.email) {
+      doc.text(`Email: ${companyData.email}`, 14, yPos);
+      yPos += 4;
+    }
+
+    // Document Title (Right)
+    const rightX = pageWidth - 14;
+    const titleYPos = 20;
     doc.setFontSize(20);
     doc.setFont("helvetica", "bold");
+    doc.setTextColor(30, 64, 175);
     const docTitle = docType === "work_order" ? "WORK ORDER" :
                      docType === "estimate" ? "ESTIMATE" :
                      docType === "proforma_invoice" ? "PROFORMA INVOICE" :
                      "QUOTATION";
-    doc.text(docTitle, pageWidth / 2, yPos, { align: "center" });
-    yPos += 10;
-
-    // Company info
+    doc.text(docTitle, rightX, titleYPos, { align: "right" });
+    
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(orgSettings?.organization_name || "Go-Ads 360°", 14, yPos);
-    yPos += 5;
-    if (orgSettings?.gstin) {
-      doc.text(`GSTIN: ${orgSettings.gstin}`, 14, yPos);
-      yPos += 5;
-    }
-    yPos += 10;
+    doc.setTextColor(0, 0, 0);
+    yPos = Math.max(yPos, titleYPos + 10);
 
     // Client details
     doc.setFontSize(12);
@@ -542,11 +640,11 @@ export async function exportPlanToPDF(
     }
     yPos += 5;
 
-    // Plan details
-    doc.text(`Display Name: ${plan.plan_name}`, 120, yPos - 17);
-    doc.text(`WO No: ${plan.id}`, 120, yPos - 10);
-    doc.text(`WO Date: ${new Date().toLocaleDateString()}`, 120, yPos - 3);
-    yPos += 5;
+    // Plan details (Right)
+    doc.text(`Plan Name: ${plan.plan_name}`, rightX, yPos - 5, { align: "right" });
+    doc.text(`${docTitle} No: ${plan.id}`, rightX, yPos + 2, { align: "right" });
+    doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, rightX, yPos + 9, { align: "right" });
+    yPos += 15;
 
     // Summary of charges
     doc.setFontSize(14);
@@ -577,39 +675,52 @@ export async function exportPlanToPDF(
 
     yPos = (doc as any).lastAutoTable.finalY + 10;
 
-    // Financial summary
-    const summaryX = 120;
+    // Financial summary (in box)
+    const summaryX = pageWidth - 75;
+    doc.setDrawColor(229, 231, 235);
+    doc.setLineWidth(0.5);
+    doc.rect(summaryX - 5, yPos - 5, 65, 50);
+
     doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    
     doc.text(`Display Cost:`, summaryX, yPos);
-    doc.text(`₹${plan.total_amount.toLocaleString()}`, 180, yPos, { align: "right" });
-    yPos += 7;
+    doc.text(`Rs. ${plan.total_amount.toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
+    yPos += 6;
 
     const printingTotal = planItems.reduce((sum, item) => sum + (item.printing_charges || 0), 0);
     const mountingTotal = planItems.reduce((sum, item) => sum + (item.mounting_charges || 0), 0);
 
     if (printingTotal > 0) {
       doc.text(`Printing Cost:`, summaryX, yPos);
-      doc.text(`₹${printingTotal.toLocaleString()}`, 180, yPos, { align: "right" });
-      yPos += 7;
+      doc.text(`Rs. ${printingTotal.toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
+      yPos += 6;
     }
 
     if (mountingTotal > 0) {
       doc.text(`Installation Cost:`, summaryX, yPos);
-      doc.text(`₹${mountingTotal.toLocaleString()}`, 180, yPos, { align: "right" });
-      yPos += 7;
+      doc.text(`Rs. ${mountingTotal.toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
+      yPos += 6;
     }
 
-    doc.text(`Total Without Tax:`, summaryX, yPos);
-    doc.text(`₹${(plan.total_amount + printingTotal + mountingTotal).toLocaleString()}`, 180, yPos, { align: "right" });
-    yPos += 7;
+    doc.setFont("helvetica", "bold");
+    doc.text(`Subtotal:`, summaryX, yPos);
+    doc.text(`Rs. ${(plan.total_amount + printingTotal + mountingTotal).toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
+    yPos += 6;
 
-    doc.text(`GST (${plan.gst_percent}%):`, summaryX, yPos);
-    doc.text(`₹${plan.gst_amount.toLocaleString()}`, 180, yPos, { align: "right" });
-    yPos += 10;
+    doc.setFont("helvetica", "normal");
+    doc.text(`CGST @ ${plan.gst_percent/2}%:`, summaryX, yPos);
+    doc.text(`Rs. ${(plan.gst_amount/2).toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
+    yPos += 6;
+
+    doc.text(`SGST @ ${plan.gst_percent/2}%:`, summaryX, yPos);
+    doc.text(`Rs. ${(plan.gst_amount/2).toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
+    yPos += 8;
 
     doc.setFont("helvetica", "bold");
-    doc.text(`Total in INR:`, summaryX, yPos);
-    doc.text(`₹${plan.grand_total.toLocaleString()}`, 180, yPos, { align: "right" });
+    doc.setFontSize(12);
+    doc.text(`Grand Total:`, summaryX, yPos);
+    doc.text(`Rs. ${plan.grand_total.toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
     yPos += 15;
 
     // Terms and conditions

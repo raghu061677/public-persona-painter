@@ -29,7 +29,14 @@ export async function generateInvoicePDF(invoiceId: string): Promise<Blob> {
 
   if (clientError || !client) throw new Error('Client not found');
 
-  // Fetch organization settings
+  // Fetch company details (use invoice's company_id)
+  const { data: companyData } = await supabase
+    .from('companies')
+    .select('*')
+    .eq('id', invoice.company_id)
+    .single();
+
+  // Fetch organization settings as fallback
   const { data: orgSettings } = await supabase
     .from('organization_settings')
     .select('*')
@@ -39,7 +46,7 @@ export async function generateInvoicePDF(invoiceId: string): Promise<Blob> {
     invoice,
     client,
     items: Array.isArray(invoice.items) ? invoice.items : [],
-    orgSettings,
+    orgSettings: companyData || orgSettings,
   };
 
   return createInvoicePDF(data);
@@ -63,19 +70,19 @@ function createInvoicePDF(data: InvoiceData): Blob {
   // Company Details (Left Side)
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('Matrix Network Solutions', 15, yPos + 30);
+  doc.text(data.orgSettings?.name || 'Matrix Network Solutions', 15, yPos + 30);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   const companyDetails = [
-    'H.No: 7-1-19/5/201, Jyothi Bhopal Apartments,',
-    'Near Begumpet Metro Station, Opp Country Club,',
-    'Begumpet, Hyderabad – 500016',
-    'GSTIN: 36AATFM4107H2Z3  |  PAN: AATFM4107H',
-    'Phone: +91-4042625757',
-    'Email: raghu@matrix-networksolutions.com',
-    'Website: www.matrixnetworksolutions.com',
-  ];
+    data.orgSettings?.address_line1 || 'H.No: 7-1-19/5/201, Jyothi Bhopal Apartments,',
+    data.orgSettings?.address_line2 || 'Near Begumpet Metro Station, Opp Country Club,',
+    `${data.orgSettings?.city || 'Hyderabad'}, ${data.orgSettings?.state || ''} - ${data.orgSettings?.pincode || '500016'}`,
+    `GSTIN: ${data.orgSettings?.gstin || '36AATFM4107H2Z3'}  |  PAN: ${data.orgSettings?.pan || 'AATFM4107H'}`,
+    `Phone: ${data.orgSettings?.phone || '+91-4042625757'}`,
+    `Email: ${data.orgSettings?.email || 'raghu@matrix-networksolutions.com'}`,
+    data.orgSettings?.website ? `Website: ${data.orgSettings.website}` : '',
+  ].filter(Boolean);
 
   yPos += 35;
   companyDetails.forEach((line) => {
@@ -295,7 +302,7 @@ function createInvoicePDF(data: InvoiceData): Blob {
   // ========== SIGNATURE BLOCK ==========
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text('For Matrix Network Solutions', 15, yPos);
+  doc.text(`For ${data.orgSettings?.name || 'Matrix Network Solutions'}`, 15, yPos);
   yPos += 15;
   doc.text('_______________________', 15, yPos);
   yPos += 6;

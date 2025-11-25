@@ -168,88 +168,125 @@ export default function PlansList() {
   const fetchPlans = async () => {
     setLoading(true);
     
-    // Get user's company ID for multi-tenant filtering
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+    try {
+      // Get user's company ID for multi-tenant filtering
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('No authenticated user found');
+        setLoading(false);
+        return;
+      }
 
-    const { data: companyUserData } = await supabase
-      .from('company_users')
-      .select('company_id')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .maybeSingle();
+      // First try to get company_id directly from company_users
+      const { data: companyUserData, error: companyError } = await supabase
+        .from('company_users')
+        .select('company_id, companies(type)')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle();
 
-    if (!companyUserData) {
-      toast({
-        title: "Error",
-        description: "No company association found",
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
-    }
-    
-    // Use selected company from localStorage if available (for platform admins)
-    const selectedCompanyId = localStorage.getItem('selected_company_id') || companyUserData.company_id;
-    
-    // CRITICAL: Filter by company_id for multi-tenant isolation
-    const { data: plansData, error: plansError } = await supabase
-      .from('plans')
-      .select('*')
-      .eq('company_id', selectedCompanyId)
-      .order('created_at', { ascending: false });
+      if (companyError) {
+        console.error('Error fetching company data:', companyError);
+        toast({
+          title: "Error",
+          description: "Failed to fetch company data",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
 
-    if (plansError) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch plans",
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
-    }
+      if (!companyUserData) {
+        console.error('No active company association found for user:', user.id);
+        toast({
+          title: "Error",
+          description: "No company association found",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+      
+      const userCompanyId = companyUserData.company_id;
+      console.log('User company_id:', userCompanyId);
+      console.log('Company type:', (companyUserData as any).companies?.type);
+      
+      // Platform admins can see all plans, others see only their company's plans
+      const isPlatformAdmin = (companyUserData as any).companies?.type === 'platform_admin';
+      
+      // CRITICAL: For platform admins, don't filter by company_id to see all plans
+      const query = supabase
+        .from('plans')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      // Only filter by company_id if not a platform admin
+      if (!isPlatformAdmin) {
+        query.eq('company_id', userCompanyId);
+      }
+      
+      const { data: plansData, error: plansError } = await query;
 
-    // Fetch plan items with asset SQFT data for each plan
-    const plansWithSqft = await Promise.all(
-      (plansData || []).map(async (plan) => {
-        const { data: items } = await supabase
-          .from('plan_items')
-          .select(`
-            asset_id,
-            dimensions,
-            media_assets!inner(total_sqft, media_type, location)
-          `)
-          .eq('plan_id', plan.id);
+      if (plansError) {
+        console.error('Error fetching plans:', plansError);
+        toast({
+          title: "Error",
+          description: "Failed to fetch plans",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
 
-        // Calculate total SQFT and create breakdown data
-        const sqftBreakdown = items?.map(item => {
-          const asset = (item as any).media_assets;
-          const sqft = asset?.total_sqft || 0;
+      console.log('Fetched plans:', plansData?.length || 0);
+
+      // Fetch plan items with asset SQFT data for each plan
+      const plansWithSqft = await Promise.all(
+        (plansData || []).map(async (plan) => {
+          const { data: items } = await supabase
+            .from('plan_items')
+            .select(`
+              asset_id,
+              dimensions,
+              media_assets!inner(total_sqft, media_type, location)
+            `)
+            .eq('plan_id', plan.id);
+
+          // Calculate total SQFT and create breakdown data
+          const sqftBreakdown = items?.map(item => {
+            const asset = (item as any).media_assets;
+            const sqft = asset?.total_sqft || 0;
+            return {
+              asset_id: item.asset_id,
+              dimensions: item.dimensions,
+              media_type: asset?.media_type || 'Unknown',
+              location: asset?.location || 'Unknown',
+              sqft: Number(sqft)
+            };
+          }) || [];
+
+          const totalSqft = sqftBreakdown.reduce((sum, item) => sum + item.sqft, 0);
+
           return {
-            asset_id: item.asset_id,
-            dimensions: item.dimensions,
-            media_type: asset?.media_type || 'Unknown',
-            location: asset?.location || 'Unknown',
-            sqft: Number(sqft)
+            ...plan,
+            total_sqft: totalSqft,
+            sqft_breakdown: sqftBreakdown
           };
-        }) || [];
+        })
+      );
 
-        const totalSqft = sqftBreakdown.reduce((sum, item) => sum + item.sqft, 0);
-
-        return {
-          ...plan,
-          total_sqft: totalSqft,
-          sqft_breakdown: sqftBreakdown
-        };
-      })
-    );
-
-    setPlans(plansWithSqft);
-    setGlobalSearchFiltered(plansWithSqft);
-    setLoading(false);
+      setPlans(plansWithSqft);
+      setGlobalSearchFiltered(plansWithSqft);
+      setLoading(false);
+    } catch (error: any) {
+      console.error('Error in fetchPlans:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to fetch plans",
+        variant: "destructive",
+      });
+      setLoading(false);
+    }
   };
 
   const filteredPlans = globalSearchFiltered.filter(plan => {

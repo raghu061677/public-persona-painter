@@ -58,15 +58,16 @@ async function fetchAssetDetails(assetIds: string[]): Promise<Map<string, AssetD
 function getAssetImageUrls(asset: AssetDetails): string[] {
   const urls: string[] = [];
   
-  // Try images object first (newer format)
+  // Try images.photos array (current storage format)
   if (asset.images && typeof asset.images === 'object') {
-    const imageKeys = Object.keys(asset.images);
-    imageKeys.forEach(key => {
-      const img = asset.images[key];
-      if (img && typeof img === 'object' && img.url) {
-        urls.push(img.url);
-      }
-    });
+    const imagesObj = asset.images as any;
+    if (imagesObj.photos && Array.isArray(imagesObj.photos)) {
+      imagesObj.photos.forEach((photo: any) => {
+        if (photo && photo.url && typeof photo.url === 'string') {
+          urls.push(photo.url);
+        }
+      });
+    }
   }
   
   // Fallback to image_urls array

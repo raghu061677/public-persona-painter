@@ -135,13 +135,13 @@ export function ConvertToCampaignDialog({
           const filePath = `${fileName}`;
 
           const { error: uploadError } = await supabase.storage
-            .from("campaign-photos")
+            .from("campaign-creatives")
             .upload(filePath, file);
 
           if (uploadError) throw uploadError;
 
           const { data: { publicUrl } } = supabase.storage
-            .from("campaign-photos")
+            .from("campaign-creatives")
             .getPublicUrl(filePath);
 
           // Save creative reference

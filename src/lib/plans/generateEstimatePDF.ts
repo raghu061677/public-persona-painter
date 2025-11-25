@@ -20,6 +20,13 @@ export async function generateEstimatePDF(planId: string): Promise<Blob> {
 
   if (planError || !plan) throw new Error('Plan not found');
 
+  // Fetch company details
+  const { data: companyData } = await supabase
+    .from('companies')
+    .select('*')
+    .eq('id', plan.company_id)
+    .single();
+
   // Fetch client details
   const { data: client, error: clientError } = await supabase
     .from('clients')
@@ -37,17 +44,11 @@ export async function generateEstimatePDF(planId: string): Promise<Blob> {
 
   if (itemsError) throw new Error('Failed to fetch plan items');
 
-  // Fetch organization settings
-  const { data: orgSettings } = await supabase
-    .from('organization_settings')
-    .select('*')
-    .single();
-
   const data: EstimateData = {
     plan,
     client,
     assets: planItems || [],
-    orgSettings,
+    orgSettings: companyData,
   };
 
   return createEstimatePDF(data);
@@ -69,20 +70,20 @@ function createEstimatePDF(data: EstimateData): Blob {
   }
 
   // Company Details (Left Side)
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('Matrix Network Solutions', 15, yPos + 30);
+  doc.text(data.orgSettings?.name || 'Matrix Network Solutions', 15, yPos + 30);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   const companyDetails = [
-    'H.No: 7-1-19/5/201, Jyothi Bhopal Apartments,',
-    'Near Begumpet Metro Station, Opp Country Club,',
-    'Begumpet, Hyderabad – 500016',
-    'GSTIN: 36AATFM4107H2Z3  |  PAN: AATFM4107H',
-    'Phone: +91-4042625757',
-    'Email: raghu@matrix-networksolutions.com',
-    'Website: www.matrixnetworksolutions.com',
+    data.orgSettings?.address_line1 || 'H.No: 7-1-19/5/201, Jyothi Bhopal Apartments,',
+    data.orgSettings?.address_line2 || 'Near Begumpet Metro Station, Opp Country Club,',
+    `${data.orgSettings?.city || 'Begumpet'}, ${data.orgSettings?.state || 'Hyderabad'} - ${data.orgSettings?.pincode || '500016'}`,
+    `GSTIN: ${data.orgSettings?.gstin || '36AATFM4107H2Z3'}  |  PAN: ${data.orgSettings?.pan || 'AATFM4107H'}`,
+    `Phone: ${data.orgSettings?.phone || '+91-4042625757'}`,
+    `Email: ${data.orgSettings?.email || 'raghu@matrix-networksolutions.com'}`,
+    `Website: ${data.orgSettings?.website || 'www.matrixnetworksolutions.com'}`,
   ];
 
   yPos += 35;
@@ -183,12 +184,12 @@ function createEstimatePDF(data: EstimateData): Blob {
       `${asset?.dimensions || 'N/A'}`,
       asset?.total_sqft?.toString() || 'N/A',
       asset?.illumination || 'Non-Lit',
-      formatINR(asset?.card_rate || 0),
-      formatINR(item.negotiated_rate || item.rate || 0),
-      formatINR(item.discount_amount || 0),
-      formatINR(item.printing_charge || 0),
-      formatINR(item.mounting_charge || 0),
-      formatINR(lineTotal),
+      `Rs. ${(asset?.card_rate || 0).toLocaleString('en-IN')}`,
+      `Rs. ${(item.negotiated_rate || item.rate || 0).toLocaleString('en-IN')}`,
+      `Rs. ${(item.discount_amount || 0).toLocaleString('en-IN')}`,
+      `Rs. ${(item.printing_charge || 0).toLocaleString('en-IN')}`,
+      `Rs. ${(item.mounting_charge || 0).toLocaleString('en-IN')}`,
+      `Rs. ${lineTotal.toLocaleString('en-IN')}`,
     ];
   });
 
@@ -272,39 +273,39 @@ function createEstimatePDF(data: EstimateData): Blob {
   const grandTotal = data.plan.grand_total || (taxableAmount + cgst + sgst);
 
   doc.text('Subtotal:', summaryX, yPos);
-  doc.text(formatINR(subtotal), pageWidth - 20, yPos, { align: 'right' });
+  doc.text(`Rs. ${subtotal.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
 
   yPos += 6;
   doc.text('Printing Charges:', summaryX, yPos);
-  doc.text(formatINR(totalPrinting), pageWidth - 20, yPos, { align: 'right' });
+  doc.text(`Rs. ${totalPrinting.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
 
   yPos += 6;
   doc.text('Mounting Charges:', summaryX, yPos);
-  doc.text(formatINR(totalMounting), pageWidth - 20, yPos, { align: 'right' });
+  doc.text(`Rs. ${totalMounting.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
 
   yPos += 6;
   doc.text('Discount:', summaryX, yPos);
-  doc.text(`-${formatINR(totalDiscount)}`, pageWidth - 20, yPos, { align: 'right' });
+  doc.text(`-Rs. ${totalDiscount.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
 
   yPos += 6;
   doc.setFont('helvetica', 'bold');
   doc.text('Taxable Amount:', summaryX, yPos);
-  doc.text(formatINR(taxableAmount), pageWidth - 20, yPos, { align: 'right' });
+  doc.text(`Rs. ${taxableAmount.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
 
   yPos += 6;
   doc.setFont('helvetica', 'normal');
   doc.text('CGST @ 9%:', summaryX, yPos);
-  doc.text(formatINR(cgst), pageWidth - 20, yPos, { align: 'right' });
+  doc.text(`Rs. ${cgst.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
 
   yPos += 6;
   doc.text('SGST @ 9%:', summaryX, yPos);
-  doc.text(formatINR(sgst), pageWidth - 20, yPos, { align: 'right' });
+  doc.text(`Rs. ${sgst.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
 
   yPos += 8;
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('Grand Total:', summaryX, yPos);
-  doc.text(formatINR(grandTotal), pageWidth - 20, yPos, { align: 'right' });
+  doc.text(`Rs. ${grandTotal.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
 
   yPos += 15;
 
@@ -364,7 +365,7 @@ function createEstimatePDF(data: EstimateData): Blob {
   // ========== SIGNATURE BLOCK ==========
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text('For Matrix Network Solutions', 15, yPos);
+  doc.text(`For ${data.orgSettings?.name || 'Matrix Network Solutions'}`, 15, yPos);
   yPos += 15;
   doc.text('_______________________', 15, yPos);
   yPos += 6;

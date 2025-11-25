@@ -72,6 +72,25 @@ function getAssetImageUrl(asset: AssetDetails): string | null {
 }
 
 /**
+ * Convert image URL to base64
+ */
+async function imageToBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('Failed to convert image to base64:', error);
+    return null;
+  }
+}
+
+/**
  * Get terms and conditions
  */
 async function getTermsAndConditions(): Promise<string[]> {
@@ -178,22 +197,42 @@ export async function exportPlanToPPT(
     const assetIds = planItems.map(item => item.asset_id);
     const assetDetailsMap = await fetchAssetDetails(assetIds);
 
-    // Title slide
+    // Title slide with logo
     const titleSlide = pptx.addSlide();
     titleSlide.background = { color: companyData?.theme_color?.replace('#', '') || "1e40af" };
+    
+    // Add company logo if available
+    if (companyData?.logo_url) {
+      try {
+        const logoBase64 = await imageToBase64(companyData.logo_url);
+        if (logoBase64) {
+          titleSlide.addImage({
+            data: logoBase64,
+            x: 0.5,
+            y: 0.5,
+            w: 2,
+            h: 1,
+            sizing: { type: "contain", w: 2, h: 1 }
+          });
+        }
+      } catch (err) {
+        console.warn("Failed to add logo:", err);
+      }
+    }
+    
     titleSlide.addText(companyData?.name || orgSettings?.organization_name || "Go-Ads 360°", {
       x: 0.5,
-      y: 1.5,
+      y: 1.8,
       w: 9,
-      h: 1,
-      fontSize: 44,
+      h: 0.8,
+      fontSize: 40,
       bold: true,
       color: "FFFFFF",
       align: "center"
     });
     titleSlide.addText("Media Plan Presentation", {
       x: 0.5,
-      y: 2.7,
+      y: 2.8,
       w: 9,
       h: 0.5,
       fontSize: 24,
@@ -205,16 +244,16 @@ export async function exportPlanToPPT(
       y: 3.5,
       w: 9,
       h: 0.5,
-      fontSize: 20,
+      fontSize: 18,
       color: "FFFFFF",
       align: "center"
     });
     titleSlide.addText(`Client: ${plan.client_name}`, {
       x: 0.5,
-      y: 4.2,
+      y: 4.1,
       w: 9,
       h: 0.4,
-      fontSize: 18,
+      fontSize: 16,
       color: "E0E0E0",
       align: "center"
     });
@@ -247,16 +286,17 @@ export async function exportPlanToPPT(
     ];
 
     summarySlide.addTable(summaryData, {
-      x: 1.0,
+      x: 0.8,
       y: 1.1,
-      w: 8,
-      rowH: 0.35,
-      fontSize: 11,
+      w: 8.4,
+      rowH: 0.32,
+      fontSize: 10,
       border: { pt: 1, color: "CCCCCC" },
       fill: { color: "F8FAFC" },
       color: "1F2937",
       valign: "middle",
-      align: "left"
+      align: "left",
+      margin: 0.1
     });
 
     // Asset slides
@@ -292,18 +332,21 @@ export async function exportPlanToPPT(
         allImages.push(...assetDetail.image_urls);
       }
 
-      // Display up to 2 images side by side
+      // Display up to 2 images side by side using base64
       const imagesToShow = allImages.slice(0, 2);
       if (imagesToShow.length > 0) {
         try {
-          slide.addImage({
-            path: imagesToShow[0],
-            x: 0.5,
-            y: 1,
-            w: imagesToShow.length === 1 ? 4.5 : 2.1,
-            h: 3,
-            sizing: { type: "contain", w: imagesToShow.length === 1 ? 4.5 : 2.1, h: 3 }
-          });
+          const img1Base64 = await imageToBase64(imagesToShow[0]);
+          if (img1Base64) {
+            slide.addImage({
+              data: img1Base64,
+              x: 0.5,
+              y: 1,
+              w: imagesToShow.length === 1 ? 4.5 : 2.1,
+              h: 2.8,
+              sizing: { type: "contain", w: imagesToShow.length === 1 ? 4.5 : 2.1, h: 2.8 }
+            });
+          }
         } catch (err) {
           console.warn("Failed to add first image:", err);
         }
@@ -311,14 +354,17 @@ export async function exportPlanToPPT(
 
       if (imagesToShow.length > 1) {
         try {
-          slide.addImage({
-            path: imagesToShow[1],
-            x: 2.8,
-            y: 1,
-            w: 2.1,
-            h: 3,
-            sizing: { type: "contain", w: 2.1, h: 3 }
-          });
+          const img2Base64 = await imageToBase64(imagesToShow[1]);
+          if (img2Base64) {
+            slide.addImage({
+              data: img2Base64,
+              x: 2.8,
+              y: 1,
+              w: 2.1,
+              h: 2.8,
+              sizing: { type: "contain", w: 2.1, h: 2.8 }
+            });
+          }
         } catch (err) {
           console.warn("Failed to add second image:", err);
         }

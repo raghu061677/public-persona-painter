@@ -185,12 +185,12 @@ function createPDF(data: WorkOrderData): Blob {
       asset?.dimensions || '',
       asset?.total_sqft || '',
       asset?.illumination || 'Non-Lit',
-      `Rs. ${(item.card_rate || 0).toLocaleString('en-IN')}`,
-      `Rs. ${(item.negotiated_rate || 0).toLocaleString('en-IN')}`,
-      `Rs. ${(item.discount || 0).toLocaleString('en-IN')}`,
-      `Rs. ${(item.printing_charges || 0).toLocaleString('en-IN')}`,
-      `Rs. ${(item.mounting_charges || 0).toLocaleString('en-IN')}`,
-      `Rs. ${lineTotal.toLocaleString('en-IN')}`,
+      `₹${(item.card_rate || 0).toLocaleString('en-IN')}`,
+      `₹${(item.negotiated_rate || 0).toLocaleString('en-IN')}`,
+      `₹${(item.discount || 0).toLocaleString('en-IN')}`,
+      `₹${(item.printing_charges || 0).toLocaleString('en-IN')}`,
+      `₹${(item.mounting_charges || 0).toLocaleString('en-IN')}`,
+      `₹${lineTotal.toLocaleString('en-IN')}`,
     ];
   });
 
@@ -251,13 +251,13 @@ function createPDF(data: WorkOrderData): Blob {
 
   doc.setFontSize(9);
   const summaryItems = [
-    ['Subtotal:', `Rs. ${(data.plan.sub_total || 0).toLocaleString('en-IN')}`],
-    ['Total Printing:', `Rs. ${(data.plan.total_printing || 0).toLocaleString('en-IN')}`],
-    ['Total Mounting:', `Rs. ${(data.plan.total_mounting || 0).toLocaleString('en-IN')}`],
-    ['Discount:', `Rs. ${(data.plan.total_discount || 0).toLocaleString('en-IN')}`],
-    ['Taxable Amount:', `Rs. ${(data.plan.taxable_amount || 0).toLocaleString('en-IN')}`],
-    ['CGST @ 9%:', `Rs. ${(data.plan.cgst_amount || 0).toLocaleString('en-IN')}`],
-    ['SGST @ 9%:', `Rs. ${(data.plan.sgst_amount || 0).toLocaleString('en-IN')}`],
+    ['Subtotal:', `₹${(data.plan.sub_total || 0).toLocaleString('en-IN')}`],
+    ['Total Printing:', `₹${(data.plan.total_printing || 0).toLocaleString('en-IN')}`],
+    ['Total Mounting:', `₹${(data.plan.total_mounting || 0).toLocaleString('en-IN')}`],
+    ['Discount:', `₹${(data.plan.total_discount || 0).toLocaleString('en-IN')}`],
+    ['Taxable Amount:', `₹${(data.plan.taxable_amount || 0).toLocaleString('en-IN')}`],
+    ['CGST @ 9%:', `₹${(data.plan.cgst_amount || 0).toLocaleString('en-IN')}`],
+    ['SGST @ 9%:', `₹${(data.plan.sgst_amount || 0).toLocaleString('en-IN')}`],
   ];
 
   summaryItems.forEach(([label, value], index) => {
@@ -270,7 +270,7 @@ function createPDF(data: WorkOrderData): Blob {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.text('Grand Total:', summaryX + 3, summaryY);
-  doc.text(`Rs. ${(data.plan.grand_total || 0).toLocaleString('en-IN')}`, summaryX + 57, summaryY, { align: 'right' });
+  doc.text(`₹${(data.plan.grand_total || 0).toLocaleString('en-IN')}`, summaryX + 57, summaryY, { align: 'right' });
 
   // Terms & Conditions
   const termsY = finalY + 60;

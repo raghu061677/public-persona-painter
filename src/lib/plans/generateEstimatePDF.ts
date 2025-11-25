@@ -184,12 +184,12 @@ function createEstimatePDF(data: EstimateData): Blob {
       `${asset?.dimensions || 'N/A'}`,
       asset?.total_sqft?.toString() || 'N/A',
       asset?.illumination || 'Non-Lit',
-      `Rs. ${(asset?.card_rate || 0).toLocaleString('en-IN')}`,
-      `Rs. ${(item.negotiated_rate || item.rate || 0).toLocaleString('en-IN')}`,
-      `Rs. ${(item.discount_amount || 0).toLocaleString('en-IN')}`,
-      `Rs. ${(item.printing_charge || 0).toLocaleString('en-IN')}`,
-      `Rs. ${(item.mounting_charge || 0).toLocaleString('en-IN')}`,
-      `Rs. ${lineTotal.toLocaleString('en-IN')}`,
+      `₹${(asset?.card_rate || 0).toLocaleString('en-IN')}`,
+      `₹${(item.negotiated_rate || item.rate || 0).toLocaleString('en-IN')}`,
+      `₹${(item.discount_amount || 0).toLocaleString('en-IN')}`,
+      `₹${(item.printing_charge || 0).toLocaleString('en-IN')}`,
+      `₹${(item.mounting_charge || 0).toLocaleString('en-IN')}`,
+      `₹${lineTotal.toLocaleString('en-IN')}`,
     ];
   });
 
@@ -273,39 +273,39 @@ function createEstimatePDF(data: EstimateData): Blob {
   const grandTotal = data.plan.grand_total || (taxableAmount + cgst + sgst);
 
   doc.text('Subtotal:', summaryX, yPos);
-  doc.text(`Rs. ${subtotal.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
+  doc.text(`₹${subtotal.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
 
   yPos += 6;
   doc.text('Printing Charges:', summaryX, yPos);
-  doc.text(`Rs. ${totalPrinting.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
+  doc.text(`₹${totalPrinting.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
 
   yPos += 6;
   doc.text('Mounting Charges:', summaryX, yPos);
-  doc.text(`Rs. ${totalMounting.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
+  doc.text(`₹${totalMounting.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
 
   yPos += 6;
   doc.text('Discount:', summaryX, yPos);
-  doc.text(`-Rs. ${totalDiscount.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
+  doc.text(`-₹${totalDiscount.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
 
   yPos += 6;
   doc.setFont('helvetica', 'bold');
   doc.text('Taxable Amount:', summaryX, yPos);
-  doc.text(`Rs. ${taxableAmount.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
+  doc.text(`₹${taxableAmount.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
 
   yPos += 6;
   doc.setFont('helvetica', 'normal');
   doc.text('CGST @ 9%:', summaryX, yPos);
-  doc.text(`Rs. ${cgst.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
+  doc.text(`₹${cgst.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
 
   yPos += 6;
   doc.text('SGST @ 9%:', summaryX, yPos);
-  doc.text(`Rs. ${sgst.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
+  doc.text(`₹${sgst.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
 
   yPos += 8;
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('Grand Total:', summaryX, yPos);
-  doc.text(`Rs. ${grandTotal.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
+  doc.text(`₹${grandTotal.toLocaleString('en-IN')}`, pageWidth - 20, yPos, { align: 'right' });
 
   yPos += 15;
 

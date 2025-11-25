@@ -282,7 +282,7 @@ export async function exportPlanToPPT(
       [{ text: "Start Date", options: { bold: true } }, { text: new Date(plan.start_date).toLocaleDateString() }],
       [{ text: "End Date", options: { bold: true } }, { text: new Date(plan.end_date).toLocaleDateString() }],
       [{ text: "Total Assets", options: { bold: true } }, { text: `${planItems.length} sites` }],
-      [{ text: "Total Amount", options: { bold: true } }, { text: `Rs. ${plan.grand_total.toLocaleString('en-IN')}` }],
+      [{ text: "Total Amount", options: { bold: true } }, { text: `₹${plan.grand_total.toLocaleString('en-IN')}` }],
     ];
 
     summarySlide.addTable(summaryData, {
@@ -380,7 +380,7 @@ export async function exportPlanToPPT(
         [{ text: "Total SQFT", options: { bold: true } }, { text: assetDetail.total_sqft?.toString() || "N/A" }],
         [{ text: "Direction", options: { bold: true } }, { text: assetDetail.direction || "N/A" }],
         [{ text: "Illumination", options: { bold: true } }, { text: assetDetail.illumination || "N/A" }],
-        [{ text: "Monthly Rate", options: { bold: true } }, { text: `Rs. ${item.sales_price.toLocaleString('en-IN')}` }],
+        [{ text: "Monthly Rate", options: { bold: true } }, { text: `₹${item.sales_price.toLocaleString('en-IN')}` }],
       ];
 
       slide.addTable(properties, {
@@ -518,12 +518,12 @@ export async function exportPlanToExcel(
       ["End Date", new Date(plan.end_date).toLocaleDateString()],
       ["Duration", `${plan.duration_days} days`],
       [],
-      ["Financial Summary"],
-      ["Total Assets", planItems.length],
-      ["Subtotal", `Rs. ${plan.total_amount.toLocaleString('en-IN')}`],
-      ["GST (%)", plan.gst_percent],
-      ["GST Amount", `Rs. ${plan.gst_amount.toLocaleString('en-IN')}`],
-      ["Grand Total", `Rs. ${plan.grand_total.toLocaleString('en-IN')}`],
+    ["Financial Summary"],
+    ["Total Assets", planItems.length],
+    ["Subtotal", `₹${plan.total_amount.toLocaleString('en-IN')}`],
+    ["GST (%)", plan.gst_percent],
+    ["GST Amount", `₹${plan.gst_amount.toLocaleString('en-IN')}`],
+    ["Grand Total", `₹${plan.grand_total.toLocaleString('en-IN')}`],
     ];
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
@@ -731,7 +731,7 @@ export async function exportPlanToPDF(
     doc.setFont("helvetica", "normal");
     
     doc.text(`Display Cost:`, summaryX, yPos);
-    doc.text(`Rs. ${plan.total_amount.toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
+    doc.text(`₹${plan.total_amount.toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
     yPos += 6;
 
     const printingTotal = planItems.reduce((sum, item) => sum + (item.printing_charges || 0), 0);
@@ -739,34 +739,34 @@ export async function exportPlanToPDF(
 
     if (printingTotal > 0) {
       doc.text(`Printing Cost:`, summaryX, yPos);
-      doc.text(`Rs. ${printingTotal.toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
+      doc.text(`₹${printingTotal.toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
       yPos += 6;
     }
 
     if (mountingTotal > 0) {
       doc.text(`Installation Cost:`, summaryX, yPos);
-      doc.text(`Rs. ${mountingTotal.toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
+      doc.text(`₹${mountingTotal.toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
       yPos += 6;
     }
 
     doc.setFont("helvetica", "bold");
     doc.text(`Subtotal:`, summaryX, yPos);
-    doc.text(`Rs. ${(plan.total_amount + printingTotal + mountingTotal).toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
+    doc.text(`₹${(plan.total_amount + printingTotal + mountingTotal).toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
     yPos += 6;
 
     doc.setFont("helvetica", "normal");
     doc.text(`CGST @ ${plan.gst_percent/2}%:`, summaryX, yPos);
-    doc.text(`Rs. ${(plan.gst_amount/2).toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
+    doc.text(`₹${(plan.gst_amount/2).toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
     yPos += 6;
 
     doc.text(`SGST @ ${plan.gst_percent/2}%:`, summaryX, yPos);
-    doc.text(`Rs. ${(plan.gst_amount/2).toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
+    doc.text(`₹${(plan.gst_amount/2).toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
     yPos += 8;
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
     doc.text(`Grand Total:`, summaryX, yPos);
-    doc.text(`Rs. ${plan.grand_total.toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
+    doc.text(`₹${plan.grand_total.toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
     yPos += 15;
 
     // Terms and conditions

@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import pptxgen from "pptxgenjs";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
+import { compressImage } from "@/lib/imageCompression";
 
 // @ts-ignore
 import autoTable from "jspdf-autotable";
@@ -80,7 +81,7 @@ function getAssetImageUrls(asset: AssetDetails): string[] {
 }
 
 /**
- * Convert image URL to base64 - handles both public URLs and Supabase storage paths
+ * Convert image URL to base64 with compression - handles both public URLs and Supabase storage paths
  */
 async function imageToBase64(url: string): Promise<string | null> {
   try {
@@ -105,6 +106,19 @@ async function imageToBase64(url: string): Promise<string | null> {
     }
     
     const blob = await response.blob();
+    
+    // Convert blob to File and compress for PPT (optimize for smaller file size)
+    const fileName = url.split('/').pop() || 'image.jpg';
+    const file = new File([blob], fileName, { type: blob.type });
+    
+    // Compress image - target 800px max dimension and 0.5MB max size for PPT
+    const compressedFile = await compressImage(file, {
+      maxSizeMB: 0.5,
+      maxWidthOrHeight: 1280,
+      quality: 0.75,
+      preserveExif: false
+    });
+    
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
@@ -112,7 +126,7 @@ async function imageToBase64(url: string): Promise<string | null> {
         console.error('FileReader error:', error);
         reject(error);
       };
-      reader.readAsDataURL(blob);
+      reader.readAsDataURL(compressedFile);
     });
   } catch (error) {
     console.error('Failed to convert image to base64:', error, 'URL:', url);
@@ -227,41 +241,75 @@ export async function exportPlanToPPT(
     const assetIds = planItems.map(item => item.asset_id);
     const assetDetailsMap = await fetchAssetDetails(assetIds);
 
-    // Title slide with dark background
+    // Professional title slide with gradient and branding
     const titleSlide = pptx.addSlide();
-    titleSlide.background = { color: "1a1a2e" };
+    titleSlide.background = { color: "0F172A" };
+    
+    // Accent bar
+    titleSlide.addShape(pptx.ShapeType.rect, {
+      x: 0,
+      y: 2.2,
+      w: 10,
+      h: 0.08,
+      fill: { color: companyData?.theme_color?.replace('#', '') || "0EA5E9" }
+    });
     
     titleSlide.addText("MEDIA ASSET PROPOSAL", {
       x: 0.5,
       y: 2.5,
       w: 9,
-      h: 1.2,
-      fontSize: 48,
+      h: 1,
+      fontSize: 44,
       bold: true,
       color: "FFFFFF",
-      align: "center"
+      align: "center",
+      fontFace: "Arial"
     });
     
     titleSlide.addText(`${planItems.length} Premium OOH Media Assets`, {
       x: 0.5,
-      y: 3.8,
-      w: 9,
-      h: 0.6,
-      fontSize: 24,
-      color: "FFFFFF",
-      align: "center"
-    });
-
-    // Summary slide
-    const summarySlide = pptx.addSlide();
-    summarySlide.addText("Campaign Summary", {
-      x: 0.5,
-      y: 0.4,
+      y: 3.6,
       w: 9,
       h: 0.5,
-      fontSize: 28,
+      fontSize: 20,
+      color: "CBD5E1",
+      align: "center",
+      fontFace: "Arial"
+    });
+    
+    titleSlide.addText(`${companyData?.name || "Go-Ads 360°"}`, {
+      x: 0.5,
+      y: 6.2,
+      w: 9,
+      h: 0.4,
+      fontSize: 16,
+      color: "94A3B8",
+      align: "center",
+      fontFace: "Arial"
+    });
+
+    // Professional summary slide with border
+    const summarySlide = pptx.addSlide();
+    summarySlide.background = { color: "FFFFFF" };
+    
+    // Header with accent
+    summarySlide.addShape(pptx.ShapeType.rect, {
+      x: 0.4,
+      y: 0.35,
+      w: 0.1,
+      h: 0.5,
+      fill: { color: companyData?.theme_color?.replace('#', '') || "0EA5E9" }
+    });
+    
+    summarySlide.addText("Campaign Summary", {
+      x: 0.65,
+      y: 0.4,
+      w: 8.5,
+      h: 0.5,
+      fontSize: 26,
       bold: true,
-      color: companyData?.theme_color?.replace('#', '') || "1e40af"
+      color: "1E293B",
+      fontFace: "Arial"
     });
 
     const summaryData = [
@@ -280,17 +328,18 @@ export async function exportPlanToPPT(
     ];
 
     summarySlide.addTable(summaryData, {
-      x: 0.8,
-      y: 1.1,
-      w: 8.4,
-      rowH: 0.32,
-      fontSize: 10,
-      border: { pt: 1, color: "CCCCCC" },
+      x: 0.65,
+      y: 1.15,
+      w: 8.7,
+      rowH: 0.35,
+      fontSize: 11,
+      border: { pt: 0.5, color: "E2E8F0" },
       fill: { color: "F8FAFC" },
-      color: "1F2937",
+      color: "334155",
       valign: "middle",
       align: "left",
-      margin: 0.1
+      margin: [0.05, 0.15, 0.05, 0.15],
+      fontFace: "Arial"
     });
 
     // Asset slides - 2 slides per asset (like reference)
@@ -302,21 +351,41 @@ export async function exportPlanToPPT(
       const allImages = getAssetImageUrls(assetDetail);
       console.log(`Processing asset ${item.asset_id}, found ${allImages.length} images`);
 
-      // SLIDE 1: Full-size images
+      // SLIDE 1: Professional full-size images with border
       const imageSlide = pptx.addSlide();
+      imageSlide.background = { color: "F8FAFC" };
       
-      // Header with asset ID
-      imageSlide.addText(`${item.asset_id} – ${assetDetail.area} – ${assetDetail.location}`, {
+      // Elegant header with accent line
+      imageSlide.addShape(pptx.ShapeType.rect, {
         x: 0.3,
-        y: 0.3,
-        w: 9.4,
-        h: 0.4,
-        fontSize: 14,
+        y: 0.28,
+        w: 0.08,
+        h: 0.45,
+        fill: { color: companyData?.theme_color?.replace('#', '') || "0EA5E9" }
+      });
+      
+      imageSlide.addText(`${item.asset_id}`, {
+        x: 0.5,
+        y: 0.32,
+        w: 4,
+        h: 0.35,
+        fontSize: 16,
         bold: true,
-        color: "1F2937"
+        color: "1E293B",
+        fontFace: "Arial"
+      });
+      
+      imageSlide.addText(`${assetDetail.area} · ${assetDetail.location}`, {
+        x: 0.5,
+        y: 0.58,
+        w: 9,
+        h: 0.25,
+        fontSize: 11,
+        color: "64748B",
+        fontFace: "Arial"
       });
 
-      // Display 2 large images side by side
+      // Display 2 high-quality images with subtle shadow
       const imagesToShow = allImages.slice(0, 2);
       if (imagesToShow.length > 0) {
         try {
@@ -324,11 +393,11 @@ export async function exportPlanToPPT(
           if (img1Base64) {
             imageSlide.addImage({
               data: img1Base64,
-              x: 0.3,
-              y: 0.9,
-              w: imagesToShow.length === 1 ? 9.4 : 4.6,
-              h: 5.5,
-              sizing: { type: "cover", w: imagesToShow.length === 1 ? 9.4 : 4.6, h: 5.5 }
+              x: 0.35,
+              y: 1,
+              w: imagesToShow.length === 1 ? 9.3 : 4.55,
+              h: 5.3,
+              sizing: { type: "cover", w: imagesToShow.length === 1 ? 9.3 : 4.55, h: 5.3 }
             });
           }
         } catch (err) {
@@ -343,10 +412,10 @@ export async function exportPlanToPPT(
             imageSlide.addImage({
               data: img2Base64,
               x: 5.1,
-              y: 0.9,
-              w: 4.6,
-              h: 5.5,
-              sizing: { type: "cover", w: 4.6, h: 5.5 }
+              y: 1,
+              w: 4.55,
+              h: 5.3,
+              sizing: { type: "cover", w: 4.55, h: 5.3 }
             });
           }
         } catch (err) {
@@ -354,15 +423,37 @@ export async function exportPlanToPPT(
         }
       }
 
-      // Footer branding
-      imageSlide.addText(`${companyData?.name || "Go-Ads 360°"}   ${companyData?.website || "www.goads.in"}`, {
-        x: 0.3,
-        y: 6.8,
-        w: 6,
-        h: 0.3,
-        fontSize: 10,
-        color: "374151"
+      // Professional footer with separator
+      imageSlide.addShape(pptx.ShapeType.rect, {
+        x: 0.35,
+        y: 6.55,
+        w: 9.3,
+        h: 0.01,
+        fill: { color: "CBD5E1" }
       });
+      
+      imageSlide.addText(`${companyData?.name || "Go-Ads 360°"}`, {
+        x: 0.4,
+        y: 6.7,
+        w: 4,
+        h: 0.25,
+        fontSize: 9,
+        color: "475569",
+        fontFace: "Arial",
+        bold: true
+      });
+      
+      if (companyData?.website) {
+        imageSlide.addText(companyData.website, {
+          x: 4.5,
+          y: 6.7,
+          w: 2.5,
+          h: 0.25,
+          fontSize: 9,
+          color: "64748B",
+          fontFace: "Arial"
+        });
+      }
 
       const now = new Date();
       imageSlide.addText(now.toLocaleString('en-IN', { 
@@ -373,41 +464,63 @@ export async function exportPlanToPPT(
         minute: '2-digit',
         hour12: true 
       }), {
-        x: 7,
-        y: 6.8,
-        w: 2.7,
-        h: 0.3,
-        fontSize: 10,
-        color: "374151",
-        align: "right"
+        x: 7.5,
+        y: 6.7,
+        w: 2.15,
+        h: 0.25,
+        fontSize: 9,
+        color: "64748B",
+        align: "right",
+        fontFace: "Arial"
       });
 
-      // SLIDE 2: Asset specifications with one image
+      // SLIDE 2: Professional asset specifications
       const detailSlide = pptx.addSlide();
+      detailSlide.background = { color: "FFFFFF" };
       
-      // Header
-      detailSlide.addText(`Asset Specifications – ${item.asset_id}`, {
+      // Elegant header with accent
+      detailSlide.addShape(pptx.ShapeType.rect, {
         x: 0.3,
-        y: 0.3,
-        w: 9.4,
+        y: 0.28,
+        w: 0.08,
         h: 0.5,
-        fontSize: 18,
+        fill: { color: companyData?.theme_color?.replace('#', '') || "0EA5E9" }
+      });
+      
+      detailSlide.addText("Asset Specifications", {
+        x: 0.5,
+        y: 0.32,
+        w: 4,
+        h: 0.4,
+        fontSize: 20,
         bold: true,
-        color: "1F2937"
+        color: "1E293B",
+        fontFace: "Arial"
+      });
+      
+      detailSlide.addText(item.asset_id, {
+        x: 0.5,
+        y: 0.65,
+        w: 4,
+        h: 0.3,
+        fontSize: 13,
+        color: companyData?.theme_color?.replace('#', '') || "0EA5E9",
+        fontFace: "Arial",
+        bold: true
       });
 
-      // Large image on the right
+      // High-quality image on the right with border
       if (imagesToShow.length > 0) {
         try {
           const imgBase64 = await imageToBase64(imagesToShow[0]);
           if (imgBase64) {
             detailSlide.addImage({
               data: imgBase64,
-              x: 5.2,
-              y: 1,
-              w: 4.5,
-              h: 5.4,
-              sizing: { type: "cover", w: 4.5, h: 5.4 }
+              x: 5.25,
+              y: 1.05,
+              w: 4.4,
+              h: 5.25,
+              sizing: { type: "cover", w: 4.4, h: 5.25 }
             });
           }
         } catch (err) {
@@ -415,48 +528,84 @@ export async function exportPlanToPPT(
         }
       }
 
-      // Specifications on the left
+      // Professional specifications table on the left
       const specs = [
-        { label: "City:", value: assetDetail.city },
-        { label: "Area:", value: assetDetail.area },
-        { label: "Location:", value: assetDetail.location },
-        { label: "Direction:", value: assetDetail.direction || "N/A" },
-        { label: "Dimensions:", value: assetDetail.dimensions },
-        { label: "Total Sqft:", value: assetDetail.total_sqft?.toString() || "N/A" },
-        { label: "Illumination:", value: assetDetail.illumination || "N/A" },
+        { label: "City", value: assetDetail.city },
+        { label: "Area", value: assetDetail.area },
+        { label: "Location", value: assetDetail.location },
+        { label: "Direction", value: assetDetail.direction || "N/A" },
+        { label: "Dimensions", value: assetDetail.dimensions },
+        { label: "Total Sqft", value: assetDetail.total_sqft?.toString() || "N/A" },
+        { label: "Illumination", value: assetDetail.illumination || "N/A" },
       ];
 
-      let yPos = 1.2;
+      let yPos = 1.15;
       specs.forEach(spec => {
         detailSlide.addText(spec.label, {
-          x: 0.5,
+          x: 0.55,
           y: yPos,
-          w: 1.8,
-          h: 0.35,
-          fontSize: 12,
+          w: 1.6,
+          h: 0.4,
+          fontSize: 11,
           bold: true,
-          color: "1F2937"
+          color: "334155",
+          fontFace: "Arial"
         });
         detailSlide.addText(spec.value, {
-          x: 2.4,
+          x: 2.25,
           y: yPos,
-          w: 2.5,
-          h: 0.35,
-          fontSize: 12,
-          color: "374151"
+          w: 2.7,
+          h: 0.4,
+          fontSize: 11,
+          color: "475569",
+          fontFace: "Arial"
         });
-        yPos += 0.45;
+        
+        // Subtle separator line
+        if (yPos < 4.5) {
+          detailSlide.addShape(pptx.ShapeType.rect, {
+            x: 0.55,
+            y: yPos + 0.38,
+            w: 4.4,
+            h: 0.005,
+            fill: { color: "E2E8F0" }
+          });
+        }
+        
+        yPos += 0.5;
       });
 
-      // Footer branding
-      detailSlide.addText(`${companyData?.name || "Go-Ads 360°"}   ${companyData?.website || "www.goads.in"}`, {
-        x: 0.3,
-        y: 6.8,
-        w: 6,
-        h: 0.3,
-        fontSize: 10,
-        color: "374151"
+      // Professional footer with separator
+      detailSlide.addShape(pptx.ShapeType.rect, {
+        x: 0.35,
+        y: 6.55,
+        w: 9.3,
+        h: 0.01,
+        fill: { color: "CBD5E1" }
       });
+      
+      detailSlide.addText(`${companyData?.name || "Go-Ads 360°"}`, {
+        x: 0.4,
+        y: 6.7,
+        w: 4,
+        h: 0.25,
+        fontSize: 9,
+        color: "475569",
+        fontFace: "Arial",
+        bold: true
+      });
+      
+      if (companyData?.website) {
+        detailSlide.addText(companyData.website, {
+          x: 4.5,
+          y: 6.7,
+          w: 2.5,
+          h: 0.25,
+          fontSize: 9,
+          color: "64748B",
+          fontFace: "Arial"
+        });
+      }
 
       detailSlide.addText(now.toLocaleString('en-IN', { 
         day: '2-digit', 
@@ -466,13 +615,14 @@ export async function exportPlanToPPT(
         minute: '2-digit',
         hour12: true 
       }), {
-        x: 7,
-        y: 6.8,
-        w: 2.7,
-        h: 0.3,
-        fontSize: 10,
-        color: "374151",
-        align: "right"
+        x: 7.5,
+        y: 6.7,
+        w: 2.15,
+        h: 0.25,
+        fontSize: 9,
+        color: "64748B",
+        align: "right",
+        fontFace: "Arial"
       });
     }
 

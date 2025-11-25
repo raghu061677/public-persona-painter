@@ -231,6 +231,7 @@ const App = () => (
             <Route path="/clients" element={<Navigate to="/admin/clients" replace />} />
             <Route path="/plans" element={<Navigate to="/admin/plans" replace />} />
             <Route path="/campaigns" element={<Navigate to="/admin/campaigns" replace />} />
+            <Route path="/admin/settings" element={<Navigate to="/admin/company-settings" replace />} />
             
             {/* Protected routes with layout */}
             <Route path="/dashboard" element={<ProtectedRoute requireAuth><AppLayout><DashboardRouter /></AppLayout></ProtectedRoute>} />

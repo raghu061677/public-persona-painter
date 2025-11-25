@@ -147,13 +147,13 @@ export function PowerBillExpenseDialog({
       const filePath = `power-bill-receipts/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('campaign-photos')
+        .from('power-receipts')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('campaign-photos')
+        .from('power-receipts')
         .getPublicUrl(filePath);
 
       return publicUrl;

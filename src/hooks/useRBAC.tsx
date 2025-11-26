@@ -9,7 +9,7 @@ import { useCompany } from '@/contexts/CompanyContext';
  */
 
 export type PlatformRole = 'platform_admin';
-export type CompanyRole = 'company_admin' | 'sales' | 'operations' | 'accounts';
+export type CompanyRole = 'company_admin' | 'sales' | 'operations' | 'accounts' | 'installation' | 'monitor';
 export type ModuleName = 
   | 'media_assets' 
   | 'clients' 
@@ -45,7 +45,7 @@ interface RBACPermissions {
  * Map database roles to new role structure
  * admin -> company_admin (within company) OR platform_admin (if platform company)
  * finance -> accounts
- * Keep: sales, operations
+ * Keep: sales, operations, installation, monitor
  */
 const mapDatabaseRole = (dbRole: string, isPlatform: boolean): CompanyRole | PlatformRole | null => {
   if (dbRole === 'admin') {
@@ -54,6 +54,8 @@ const mapDatabaseRole = (dbRole: string, isPlatform: boolean): CompanyRole | Pla
   if (dbRole === 'finance') return 'accounts';
   if (dbRole === 'sales') return 'sales';
   if (dbRole === 'operations') return 'operations';
+  if (dbRole === 'installation') return 'installation';
+  if (dbRole === 'monitor') return 'monitor';
   return null;
 };
 
@@ -81,6 +83,14 @@ const MODULE_ACCESS_RULES: Record<CompanyRole | PlatformRole, {
   accounts: {
     modules: ['finance', 'reports', 'campaigns'],
     readOnly: ['clients', 'media_assets'], // Can view for billing context
+  },
+  installation: {
+    modules: ['operations'], // Can upload installation/mounting photos
+    readOnly: ['campaigns', 'media_assets'], // Can view assigned campaigns and assets
+  },
+  monitor: {
+    modules: ['operations'], // Can upload monitoring photos
+    readOnly: ['campaigns', 'media_assets'], // Can view ongoing campaigns and assets
   },
 };
 

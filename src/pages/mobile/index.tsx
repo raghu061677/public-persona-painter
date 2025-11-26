@@ -19,7 +19,8 @@ import {
   MapPin,
   Receipt,
   Briefcase,
-  Search
+  Search,
+  LayoutDashboard
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -74,9 +75,9 @@ function MobileNavigation() {
   const location = useLocation();
   
   const tabs = [
-    { id: 'field-app', label: 'Field App', icon: Briefcase, path: '/mobile/field-app' },
+    { id: 'field-app', label: 'Dashboard', icon: LayoutDashboard, path: '/mobile/field-app' },
     { id: 'upload', label: 'Upload', icon: Camera, path: '/mobile/upload' },
-    { id: 'power-bills', label: 'Power Bills', icon: Receipt, path: '/mobile/power-bills' },
+    { id: 'power-bills', label: 'Bills', icon: Receipt, path: '/mobile/power-bills' },
   ];
 
   const isActive = (path: string) => location.pathname === path || 
@@ -108,13 +109,14 @@ function MobileNavigation() {
   );
 }
 
-// Field App Component
+// Field App Component - Enhanced Dashboard
 function MobileFieldApp() {
   const navigate = useNavigate();
-  const [activeView, setActiveView] = useState('tasks');
+  const [activeView, setActiveView] = useState('dashboard');
   
   const [tasks, setTasks] = useState<CampaignAsset[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [vacantMedia, setVacantMedia] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -170,31 +172,42 @@ function MobileFieldApp() {
 
       if (tasksError) throw tasksError;
 
-      // Fetch campaigns
-      if (tasksData && tasksData.length > 0) {
-        const campaignIds = [...new Set(tasksData.map(t => t.campaign_id))];
-        const { data: campaignsData, error: campaignsError } = await db
-          .from('campaigns')
-          .select('*')
-          .in('id', campaignIds);
+      // Fetch campaigns (both ongoing and all campaigns)
+      const { data: campaignsData, error: campaignsError } = await db
+        .from('campaigns')
+        .select('*')
+        .order('start_date', { ascending: false });
 
-        if (campaignsError) throw campaignsError;
-        setCampaigns(campaignsData || []);
-      }
+      if (campaignsError) throw campaignsError;
+      setCampaigns(campaignsData || []);
+
+      // Fetch vacant media
+      const { data: vacantMediaData, error: vacantError } = await db
+        .from('media_assets')
+        .select('*')
+        .eq('status', 'Available')
+        .order('city', { ascending: true })
+        .limit(20);
+
+      if (vacantError) throw vacantError;
+      setVacantMedia(vacantMediaData || []);
 
       // Cache for offline
       localStorage.setItem("cached_tasks", JSON.stringify(tasksData));
-      localStorage.setItem("cached_campaigns", JSON.stringify(campaigns));
+      localStorage.setItem("cached_campaigns", JSON.stringify(campaignsData));
+      localStorage.setItem("cached_vacant_media", JSON.stringify(vacantMediaData));
 
       setTasks(tasksData || []);
     } catch (error: any) {
       // Try to load from cache
       const cachedTasks = localStorage.getItem("cached_tasks");
       const cachedCampaigns = localStorage.getItem("cached_campaigns");
+      const cachedVacantMedia = localStorage.getItem("cached_vacant_media");
       
       if (cachedTasks) {
         setTasks(JSON.parse(cachedTasks));
         if (cachedCampaigns) setCampaigns(JSON.parse(cachedCampaigns));
+        if (cachedVacantMedia) setVacantMedia(JSON.parse(cachedVacantMedia));
         toast({
           title: "Using Cached Data",
           description: "Couldn't fetch latest data",
@@ -241,20 +254,23 @@ function MobileFieldApp() {
   const completedTasks = tasks.filter(t => 
     t.status === 'PhotoUploaded' || t.status === 'Verified'
   );
+  const ongoingCampaigns = campaigns.filter(c => 
+    c.status === 'Active' || c.status === 'InProgress'
+  );
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <div className="sticky top-0 z-10 bg-background border-b">
+      <div className="sticky top-0 z-10 bg-background border-b shadow-sm">
         <div className="flex items-center justify-between p-4">
           <div>
-            <h1 className="text-2xl font-bold">Field Operations</h1>
+            <h1 className="text-xl font-bold">Field Operations</h1>
             <div className="flex items-center gap-2 mt-1">
               {isOnline ? (
-                <Badge variant="outline" className="text-green-600">
+                <Badge variant="outline" className="text-green-600 text-xs">
                   <Zap className="h-3 w-3 mr-1" /> Online
                 </Badge>
               ) : (
-                <Badge variant="outline" className="text-red-600">
+                <Badge variant="outline" className="text-red-600 text-xs">
                   <AlertCircle className="h-3 w-3 mr-1" /> Offline
                 </Badge>
               )}
@@ -266,44 +282,61 @@ function MobileFieldApp() {
             onClick={fetchData}
             disabled={refreshing}
           >
-            <RefreshCw className={cn("h-5 w-5", refreshing && "animate-spin")} />
+            <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
           </Button>
         </div>
 
         {/* View Toggle */}
-        <div className="flex gap-2 px-4 pb-3">
+        <div className="flex gap-1.5 px-3 pb-3 overflow-x-auto">
+          <Button
+            variant={activeView === 'dashboard' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveView('dashboard')}
+            className="flex-shrink-0 text-xs h-8"
+          >
+            Dashboard
+          </Button>
           <Button
             variant={activeView === 'tasks' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setActiveView('tasks')}
-            className="flex-1"
+            className="flex-shrink-0 text-xs h-8"
           >
-            <List className="h-4 w-4 mr-2" />
-            My Tasks ({pendingTasks.length})
+            <List className="h-3 w-3 mr-1" />
+            Tasks ({pendingTasks.length})
           </Button>
           <Button
             variant={activeView === 'completed' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setActiveView('completed')}
-            className="flex-1"
+            className="flex-shrink-0 text-xs h-8"
           >
-            <CheckCircle className="h-4 w-4 mr-2" />
-            Completed ({completedTasks.length})
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Done ({completedTasks.length})
           </Button>
           <Button
             variant={activeView === 'campaigns' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setActiveView('campaigns')}
-            className="flex-1"
+            className="flex-shrink-0 text-xs h-8"
           >
-            <Briefcase className="h-4 w-4 mr-2" />
+            <Briefcase className="h-3 w-3 mr-1" />
             Campaigns
+          </Button>
+          <Button
+            variant={activeView === 'vacant' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveView('vacant')}
+            className="flex-shrink-0 text-xs h-8"
+          >
+            <Search className="h-3 w-3 mr-1" />
+            Vacant
           </Button>
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-4">
+      <div className="p-3 space-y-3">
         {loading ? (
           <div className="text-center py-8">
             <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
@@ -311,13 +344,94 @@ function MobileFieldApp() {
           </div>
         ) : (
           <>
+            {activeView === 'dashboard' && (
+              <>
+                {/* KPI Cards */}
+                <div className="grid grid-cols-2 gap-3">
+                  <Card className="border-l-4 border-l-blue-500">
+                    <CardContent className="p-4">
+                      <div className="text-xs text-muted-foreground mb-1">Pending Tasks</div>
+                      <div className="text-2xl font-bold">{pendingTasks.length}</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-l-4 border-l-green-500">
+                    <CardContent className="p-4">
+                      <div className="text-xs text-muted-foreground mb-1">Completed</div>
+                      <div className="text-2xl font-bold">{completedTasks.length}</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-l-4 border-l-purple-500">
+                    <CardContent className="p-4">
+                      <div className="text-xs text-muted-foreground mb-1">Active Campaigns</div>
+                      <div className="text-2xl font-bold">{ongoingCampaigns.length}</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-l-4 border-l-orange-500">
+                    <CardContent className="p-4">
+                      <div className="text-xs text-muted-foreground mb-1">Vacant Media</div>
+                      <div className="text-2xl font-bold">{vacantMedia.length}</div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Ongoing Campaigns */}
+                <div className="space-y-2">
+                  <h2 className="text-sm font-semibold flex items-center gap-2">
+                    <Briefcase className="h-4 w-4" />
+                    Active Campaigns
+                  </h2>
+                  {ongoingCampaigns.length === 0 ? (
+                    <Card>
+                      <CardContent className="py-6 text-center text-sm text-muted-foreground">
+                        No active campaigns
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    ongoingCampaigns.slice(0, 3).map(campaign => (
+                      <CampaignCard key={campaign.id} campaign={campaign} compact />
+                    ))
+                  )}
+                </div>
+
+                {/* Priority Tasks */}
+                <div className="space-y-2">
+                  <h2 className="text-sm font-semibold flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Priority Tasks
+                  </h2>
+                  {pendingTasks.length === 0 ? (
+                    <Card>
+                      <CardContent className="py-6 text-center text-sm text-muted-foreground">
+                        <CheckCircle className="h-8 w-8 mx-auto text-green-500 mb-2" />
+                        All tasks completed!
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    pendingTasks.slice(0, 3).map(task => (
+                      <TaskCard key={task.id} task={task} campaigns={campaigns} navigate={navigate} compact />
+                    ))
+                  )}
+                  {pendingTasks.length > 3 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setActiveView('tasks')}
+                    >
+                      View all {pendingTasks.length} tasks
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
+
             {activeView === 'tasks' && (
               <>
                 {pendingTasks.length === 0 ? (
                   <Card>
                     <CardContent className="py-8 text-center">
                       <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-2" />
-                      <p className="text-muted-foreground">No pending tasks</p>
+                      <p className="text-sm text-muted-foreground">No pending tasks</p>
                     </CardContent>
                   </Card>
                 ) : (
@@ -334,7 +448,7 @@ function MobileFieldApp() {
                   <Card>
                     <CardContent className="py-8 text-center">
                       <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                      <p className="text-muted-foreground">No completed tasks</p>
+                      <p className="text-sm text-muted-foreground">No completed tasks</p>
                     </CardContent>
                   </Card>
                 ) : (
@@ -351,7 +465,7 @@ function MobileFieldApp() {
                   <Card>
                     <CardContent className="py-8 text-center">
                       <Briefcase className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                      <p className="text-muted-foreground">No active campaigns</p>
+                      <p className="text-sm text-muted-foreground">No campaigns</p>
                     </CardContent>
                   </Card>
                 ) : (
@@ -359,6 +473,26 @@ function MobileFieldApp() {
                     <CampaignCard key={campaign.id} campaign={campaign} />
                   ))
                 )}
+              </>
+            )}
+
+            {activeView === 'vacant' && (
+              <>
+                <div className="space-y-2">
+                  <h2 className="text-sm font-semibold">Available Media Assets</h2>
+                  {vacantMedia.length === 0 ? (
+                    <Card>
+                      <CardContent className="py-8 text-center">
+                        <Search className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground">No vacant media</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    vacantMedia.map(asset => (
+                      <VacantMediaCard key={asset.id} asset={asset} />
+                    ))
+                  )}
+                </div>
               </>
             )}
           </>
@@ -369,10 +503,11 @@ function MobileFieldApp() {
 }
 
 // Task Card Component
-function TaskCard({ task, campaigns, navigate }: { 
+function TaskCard({ task, campaigns, navigate, compact }: { 
   task: CampaignAsset; 
   campaigns: Campaign[]; 
   navigate: any;
+  compact?: boolean;
 }) {
   const campaign = campaigns.find(c => c.id === task.campaign_id);
 
@@ -386,6 +521,37 @@ function TaskCard({ task, campaigns, navigate }: {
       default: return 'bg-gray-500';
     }
   };
+
+  if (compact) {
+    return (
+      <Card className="hover:shadow-md transition-shadow">
+        <CardContent className="p-3">
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{task.location}</p>
+              <p className="text-xs text-muted-foreground">{task.area}, {task.city}</p>
+            </div>
+            <Badge className={cn("ml-2 text-xs", getStatusColor(task.status))}>
+              {task.status}
+            </Badge>
+          </div>
+          {campaign && (
+            <p className="text-xs text-muted-foreground truncate">{campaign.campaign_name}</p>
+          )}
+          {task.status !== 'Verified' && (
+            <Button
+              size="sm"
+              className="w-full mt-2 h-8 text-xs"
+              onClick={() => navigate(`/mobile/upload/${task.campaign_id}/${task.asset_id}`)}
+            >
+              <Camera className="h-3 w-3 mr-1" />
+              Upload
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -405,19 +571,19 @@ function TaskCard({ task, campaigns, navigate }: {
       <CardContent className="space-y-3">
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div>
-            <p className="text-muted-foreground">Type</p>
-            <p className="font-medium">{task.media_type}</p>
+            <p className="text-muted-foreground text-xs">Type</p>
+            <p className="font-medium text-sm">{task.media_type}</p>
           </div>
           <div>
-            <p className="text-muted-foreground">Asset ID</p>
-            <p className="font-medium">{task.asset_id}</p>
+            <p className="text-muted-foreground text-xs">Asset ID</p>
+            <p className="font-medium text-sm truncate">{task.asset_id}</p>
           </div>
         </div>
 
         {campaign && (
           <div className="text-sm">
-            <p className="text-muted-foreground">Campaign</p>
-            <p className="font-medium">{campaign.campaign_name}</p>
+            <p className="text-muted-foreground text-xs">Campaign</p>
+            <p className="font-medium text-sm">{campaign.campaign_name}</p>
             <p className="text-xs text-muted-foreground">{campaign.client_name}</p>
           </div>
         )}
@@ -451,27 +617,98 @@ function TaskCard({ task, campaigns, navigate }: {
 }
 
 // Campaign Card Component
-function CampaignCard({ campaign }: { campaign: Campaign }) {
+function CampaignCard({ campaign, compact }: { campaign: Campaign; compact?: boolean }) {
+  const isEnding = new Date(campaign.end_date) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  
+  if (compact) {
+    return (
+      <Card className={cn("transition-shadow", isEnding && "border-l-4 border-l-orange-500")}>
+        <CardContent className="p-3">
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{campaign.campaign_name}</p>
+              <p className="text-xs text-muted-foreground truncate">{campaign.client_name}</p>
+            </div>
+            <Badge variant="outline" className="ml-2 text-xs">{campaign.status}</Badge>
+          </div>
+          <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+            <span>Ends: {format(new Date(campaign.end_date), 'MMM dd')}</span>
+            {isEnding && (
+              <Badge variant="destructive" className="text-xs">Ending Soon</Badge>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card>
-      <CardHeader>
+    <Card className={cn("transition-shadow", isEnding && "border-l-4 border-l-orange-500")}>
+      <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-base">{campaign.campaign_name}</CardTitle>
-            <CardDescription>{campaign.client_name}</CardDescription>
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-base truncate">{campaign.campaign_name}</CardTitle>
+            <CardDescription className="truncate">{campaign.client_name}</CardDescription>
           </div>
           <Badge variant="outline">{campaign.status}</Badge>
         </div>
       </CardHeader>
-      <CardContent className="grid grid-cols-2 gap-2 text-sm">
-        <div>
-          <p className="text-muted-foreground">Start Date</p>
-          <p className="font-medium">{format(new Date(campaign.start_date), 'PP')}</p>
+      <CardContent className="space-y-2">
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <p className="text-muted-foreground text-xs">Start Date</p>
+            <p className="font-medium text-sm">{format(new Date(campaign.start_date), 'PP')}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">End Date</p>
+            <p className="font-medium text-sm">{format(new Date(campaign.end_date), 'PP')}</p>
+          </div>
         </div>
-        <div>
-          <p className="text-muted-foreground">End Date</p>
-          <p className="font-medium">{format(new Date(campaign.end_date), 'PP')}</p>
+        {isEnding && (
+          <Badge variant="destructive" className="w-full justify-center">
+            <AlertCircle className="h-3 w-3 mr-1" />
+            Campaign Ending Soon
+          </Badge>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Vacant Media Card Component
+function VacantMediaCard({ asset }: { asset: any }) {
+  return (
+    <Card className="hover:shadow-md transition-shadow">
+      <CardContent className="p-3">
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{asset.location || asset.area}</p>
+            <p className="text-xs text-muted-foreground">{asset.area}, {asset.city}</p>
+          </div>
+          <Badge variant="outline" className="ml-2 text-xs bg-green-50">
+            Available
+          </Badge>
         </div>
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          <div>
+            <p className="text-muted-foreground">Type</p>
+            <p className="font-medium truncate">{asset.media_type}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Size</p>
+            <p className="font-medium">{asset.dimension || 'N/A'}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">ID</p>
+            <p className="font-medium truncate">{asset.id}</p>
+          </div>
+        </div>
+        {asset.latitude && asset.longitude && (
+          <div className="text-xs text-muted-foreground flex items-center gap-1 mt-2">
+            <MapPin className="h-3 w-3" />
+            {asset.latitude.toFixed(4)}, {asset.longitude.toFixed(4)}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

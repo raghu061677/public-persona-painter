@@ -53,9 +53,10 @@ export function useAuthData() {
       return data as AuthData;
     },
     enabled: !!user?.id,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes - increased for better performance
+    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache longer
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false, // Don't refetch on reconnect
     retry: 1,
   });
 }

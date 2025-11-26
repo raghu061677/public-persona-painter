@@ -25,72 +25,6 @@ const DEFAULT_PLACEHOLDER = 'https://via.placeholder.com/800x600/f3f4f6/6b7280?t
 const GOADS_WATERMARK_TEXT = 'Go-Ads 360° | www.goads.in';
 const GOADS_COLOR = '1E3A8A'; // Deep blue
 
-/**
- * Add Go-Ads watermark to image URL by creating a canvas overlay
- */
-async function addWatermarkToImage(imageUrl: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      if (!ctx) {
-        resolve(imageUrl); // Return original if canvas fails
-        return;
-      }
-      
-      canvas.width = img.width;
-      canvas.height = img.height;
-      
-      // Draw original image
-      ctx.drawImage(img, 0, 0);
-      
-      // Calculate watermark dimensions
-      const padding = Math.min(img.width, img.height) * 0.03;
-      const watermarkHeight = Math.min(img.height * 0.08, 80);
-      const watermarkY = img.height - watermarkHeight - padding;
-      
-      // Draw semi-transparent background
-      const bgHeight = watermarkHeight + padding;
-      ctx.fillStyle = 'rgba(30, 58, 138, 0.7)';
-      ctx.fillRect(0, img.height - bgHeight, img.width, bgHeight);
-      
-      // Add Go-Ads watermark text
-      const fontSize = Math.max(watermarkHeight * 0.4, 16);
-      ctx.font = `bold ${fontSize}px Arial`;
-      ctx.fillStyle = 'white';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(GOADS_WATERMARK_TEXT, padding * 2, watermarkY + watermarkHeight / 2);
-      
-      // Add timestamp
-      const timestamp = new Date().toLocaleString('en-IN', {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-      });
-      
-      ctx.font = `${fontSize * 0.7}px Arial`;
-      ctx.textAlign = 'right';
-      ctx.fillText(timestamp, img.width - padding * 2, watermarkY + watermarkHeight / 2);
-      
-      // Convert to data URL
-      resolve(canvas.toDataURL('image/jpeg', 0.95));
-    };
-    
-    img.onerror = () => {
-      resolve(imageUrl); // Return original if loading fails
-    };
-    
-    img.src = imageUrl;
-  });
-}
-
 export async function generateMarketplacePPT(
   assets: MarketplaceAsset[],
   visitorInfo?: {
@@ -194,24 +128,8 @@ export async function generateMarketplacePPT(
     }
     
     // Ensure we have at least placeholder images
-    const photo1Url = photoUrls[0] || DEFAULT_PLACEHOLDER;
-    const photo2Url = photoUrls[1] || photoUrls[0] || DEFAULT_PLACEHOLDER;
-
-    // Add watermarks to images
-    let photo1 = photo1Url;
-    let photo2 = photo2Url;
-    
-    try {
-      if (photo1Url !== DEFAULT_PLACEHOLDER) {
-        photo1 = await addWatermarkToImage(photo1Url);
-      }
-      if (photo2Url !== DEFAULT_PLACEHOLDER) {
-        photo2 = await addWatermarkToImage(photo2Url);
-      }
-    } catch (error) {
-      console.error('Error watermarking images:', error);
-      // Use originals if watermarking fails
-    }
+    const photo1 = photoUrls[0] || DEFAULT_PLACEHOLDER;
+    const photo2 = photoUrls[1] || photoUrls[0] || DEFAULT_PLACEHOLDER;
 
     // ===== SLIDE 1: TWO-IMAGE PRESENTATION SLIDE =====
     const slide1 = prs.addSlide();
@@ -239,33 +157,63 @@ export async function generateMarketplacePPT(
       fontFace: 'Arial',
     });
 
-    // Image 1 - adjusted positioning
-    try {
-      slide1.addImage({
-        data: photo1,
-        x: 0.5,
-        y: 1.5,
-        w: 4.5,
-        h: 3.8,
-        sizing: { type: 'contain', w: 4.5, h: 3.8 },
-      });
-    } catch (error) {
-      console.error('Failed to add image 1:', error);
-    }
+    // Image 1 with watermark overlay
+    slide1.addImage({
+      path: photo1,
+      x: 0.5,
+      y: 1.5,
+      w: 4.5,
+      h: 3.8,
+      sizing: { type: 'contain', w: 4.5, h: 3.8 },
+    });
 
-    // Image 2 - adjusted positioning
-    try {
-      slide1.addImage({
-        data: photo2,
-        x: 5.2,
-        y: 1.5,
-        w: 4.5,
-        h: 3.8,
-        sizing: { type: 'contain', w: 4.5, h: 3.8 },
-      });
-    } catch (error) {
-      console.error('Failed to add image 2:', error);
-    }
+    // Watermark overlay for image 1
+    slide1.addShape(prs.ShapeType.rect, {
+      x: 0.5,
+      y: 5.1,
+      w: 4.5,
+      h: 0.2,
+      fill: { color: GOADS_COLOR, transparency: 30 },
+    });
+    slide1.addText(GOADS_WATERMARK_TEXT, {
+      x: 0.6,
+      y: 5.12,
+      w: 4.3,
+      h: 0.16,
+      fontSize: 8,
+      color: 'FFFFFF',
+      align: 'center',
+      fontFace: 'Arial',
+    });
+
+    // Image 2 with watermark overlay
+    slide1.addImage({
+      path: photo2,
+      x: 5.2,
+      y: 1.5,
+      w: 4.5,
+      h: 3.8,
+      sizing: { type: 'contain', w: 4.5, h: 3.8 },
+    });
+
+    // Watermark overlay for image 2
+    slide1.addShape(prs.ShapeType.rect, {
+      x: 5.2,
+      y: 5.1,
+      w: 4.5,
+      h: 0.2,
+      fill: { color: GOADS_COLOR, transparency: 30 },
+    });
+    slide1.addText(GOADS_WATERMARK_TEXT, {
+      x: 5.3,
+      y: 5.12,
+      w: 4.3,
+      h: 0.16,
+      fontSize: 8,
+      color: 'FFFFFF',
+      align: 'center',
+      fontFace: 'Arial',
+    });
 
     // Footer with Go-Ads watermark
     slide1.addShape(prs.ShapeType.rect, {
@@ -313,19 +261,34 @@ export async function generateMarketplacePPT(
       fontFace: 'Arial',
     });
 
-    // Thumbnail with watermark
-    try {
-      slide2.addImage({
-        data: photo1,
-        x: 0.5,
-        y: 1.8,
-        w: 2.5,
-        h: 2.5,
-        sizing: { type: 'cover', w: 2.5, h: 2.5 },
-      });
-    } catch (error) {
-      console.error('Failed to add thumbnail:', error);
-    }
+    // Thumbnail with watermark overlay
+    slide2.addImage({
+      path: photo1,
+      x: 0.5,
+      y: 1.8,
+      w: 2.5,
+      h: 2.5,
+      sizing: { type: 'cover', w: 2.5, h: 2.5 },
+    });
+
+    // Watermark overlay for thumbnail
+    slide2.addShape(prs.ShapeType.rect, {
+      x: 0.5,
+      y: 4.1,
+      w: 2.5,
+      h: 0.2,
+      fill: { color: GOADS_COLOR, transparency: 30 },
+    });
+    slide2.addText(GOADS_WATERMARK_TEXT, {
+      x: 0.6,
+      y: 4.12,
+      w: 2.3,
+      h: 0.16,
+      fontSize: 7,
+      color: 'FFFFFF',
+      align: 'center',
+      fontFace: 'Arial',
+    });
 
     // Parse dimensions
     let width = '';

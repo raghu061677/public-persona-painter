@@ -4475,6 +4475,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_field_operations_user: { Args: { _user_id: string }; Returns: boolean }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       list_all_users: {
         Args: never
@@ -4574,6 +4575,7 @@ export type Database = {
         | "manager"
         | "installation"
         | "monitoring"
+        | "monitor"
       approval_level: "L1" | "L2" | "L3"
       approval_status: "pending" | "approved" | "rejected"
       asset_installation_status:
@@ -4771,6 +4773,7 @@ export const Constants = {
         "manager",
         "installation",
         "monitoring",
+        "monitor",
       ],
       approval_level: ["L1", "L2", "L3"],
       approval_status: ["pending", "approved", "rejected"],

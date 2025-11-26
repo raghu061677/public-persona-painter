@@ -37,7 +37,7 @@ interface Company {
 }
 
 // Valid app_role enum values from database
-const ROLES = ['admin', 'sales', 'operations', 'finance', 'user'] as const;
+const ROLES = ['admin', 'sales', 'operations', 'finance', 'installation', 'monitor', 'user'] as const;
 
 export default function AddUserDialog({
   open,

@@ -40,7 +40,10 @@ export default function CompanyClientPortal() {
           .eq('company_id', company.id)
           .maybeSingle();
 
-        if (error) throw error;
+        if (error) {
+          console.error("Database error loading settings:", error);
+          throw new Error(error.message || "Failed to query settings");
+        }
 
         if (data) {
           const portal = (data as any).client_portal_settings || {};
@@ -58,10 +61,15 @@ export default function CompanyClientPortal() {
           });
         }
       } catch (error: any) {
-        console.error("Error loading client portal settings:", error);
+        const errorMessage = error?.message || error?.toString() || "Unknown error occurred";
+        console.error("Error loading client portal settings:", {
+          error,
+          message: errorMessage,
+          companyId: company.id
+        });
         toast({
           title: "Failed to load settings",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive",
         });
       } finally {
@@ -92,7 +100,10 @@ export default function CompanyClientPortal() {
           } as any)
           .eq('company_id', company.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Database error updating settings:", error);
+          throw new Error(error.message || "Failed to update settings");
+        }
       } else {
         const { error } = await supabase
           .from('organization_settings' as any)
@@ -101,7 +112,10 @@ export default function CompanyClientPortal() {
             client_portal_settings: formData,
           } as any);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Database error inserting settings:", error);
+          throw new Error(error.message || "Failed to create settings");
+        }
       }
 
       toast({
@@ -109,10 +123,15 @@ export default function CompanyClientPortal() {
         description: "Your client portal configuration has been saved successfully",
       });
     } catch (error: any) {
-      console.error("Error updating client portal:", error);
+      const errorMessage = error?.message || error?.toString() || "Unknown error occurred";
+      console.error("Error updating client portal:", {
+        error,
+        message: errorMessage,
+        companyId: company.id
+      });
       toast({
         title: "Failed to update settings",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

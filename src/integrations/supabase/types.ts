@@ -2805,6 +2805,8 @@ export type Database = {
           address: string | null
           auto_generate_ppt_on_completion: boolean | null
           city: string | null
+          client_portal_settings: Json | null
+          company_id: string | null
           created_at: string | null
           email: string | null
           gps_tolerance_meters: number | null
@@ -2842,6 +2844,8 @@ export type Database = {
           address?: string | null
           auto_generate_ppt_on_completion?: boolean | null
           city?: string | null
+          client_portal_settings?: Json | null
+          company_id?: string | null
           created_at?: string | null
           email?: string | null
           gps_tolerance_meters?: number | null
@@ -2879,6 +2883,8 @@ export type Database = {
           address?: string | null
           auto_generate_ppt_on_completion?: boolean | null
           city?: string | null
+          client_portal_settings?: Json | null
+          company_id?: string | null
           created_at?: string | null
           email?: string | null
           gps_tolerance_meters?: number | null
@@ -2912,7 +2918,15 @@ export type Database = {
           watermark_position?: string | null
           watermark_text?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "organization_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payment_reminders: {
         Row: {

@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Loader2, Save, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-type AppRole = 'admin' | 'sales' | 'operations' | 'finance' | 'user';
+type AppRole = 'admin' | 'sales' | 'operations' | 'finance' | 'installation' | 'monitor' | 'user';
 
 interface RolePermission {
   id: string;
@@ -38,6 +38,8 @@ const ROLES: { id: AppRole; label: string; color: string }[] = [
   { id: 'sales', label: 'Sales', color: 'bg-blue-100 text-blue-800' },
   { id: 'operations', label: 'Operations', color: 'bg-green-100 text-green-800' },
   { id: 'finance', label: 'Finance', color: 'bg-yellow-100 text-yellow-800' },
+  { id: 'installation', label: 'Installation', color: 'bg-purple-100 text-purple-800' },
+  { id: 'monitor', label: 'Monitor', color: 'bg-cyan-100 text-cyan-800' },
   { id: 'user', label: 'User', color: 'bg-gray-100 text-gray-800' },
 ];
 

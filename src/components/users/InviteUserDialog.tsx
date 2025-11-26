@@ -21,7 +21,7 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess, companyId }: I
   const [formData, setFormData] = useState({
     email: "",
     username: "",
-    role: "user" as "admin" | "sales" | "operations" | "finance" | "user",
+    role: "user" as "admin" | "sales" | "operations" | "finance" | "installation" | "monitor" | "user",
     password: "",
   });
 
@@ -151,6 +151,8 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess, companyId }: I
                 <SelectItem value="sales">Sales</SelectItem>
                 <SelectItem value="operations">Operations</SelectItem>
                 <SelectItem value="finance">Finance</SelectItem>
+                <SelectItem value="installation">Installation</SelectItem>
+                <SelectItem value="monitor">Monitor</SelectItem>
                 <SelectItem value="user">User</SelectItem>
               </SelectContent>
             </Select>

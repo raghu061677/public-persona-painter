@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,11 +34,11 @@ interface UsersListProps {
   companyId: string;
 }
 
-export function UsersList({ users, loading, onRefresh, companyId }: UsersListProps) {
+export const UsersList = memo(function UsersList({ users, loading, onRefresh, companyId }: UsersListProps) {
   const [editUser, setEditUser] = useState<User | null>(null);
   const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
 
-  const handleDeleteUser = async (userId: string) => {
+  const handleDeleteUser = useCallback(async (userId: string) => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       toast({ 
@@ -67,18 +67,20 @@ export function UsersList({ users, loading, onRefresh, companyId }: UsersListPro
       });
       onRefresh();
     }
-  };
+  }, [companyId, onRefresh]);
 
-  const getRoleBadgeColor = (role: string) => {
+  const getRoleBadgeColor = useCallback((role: string) => {
     const colors: Record<string, string> = {
       admin: "bg-red-500/10 text-red-500 hover:bg-red-500/20",
       sales: "bg-blue-500/10 text-blue-500 hover:bg-blue-500/20",
       operations: "bg-green-500/10 text-green-500 hover:bg-green-500/20",
       finance: "bg-purple-500/10 text-purple-500 hover:bg-purple-500/20",
+      installation: "bg-purple-500/10 text-purple-500 hover:bg-purple-500/20",
+      monitor: "bg-cyan-500/10 text-cyan-500 hover:bg-cyan-500/20",
       user: "bg-gray-500/10 text-gray-500 hover:bg-gray-500/20",
     };
     return colors[role] || colors.user;
-  };
+  }, []);
 
   if (loading) {
     return (
@@ -196,4 +198,4 @@ export function UsersList({ users, loading, onRefresh, companyId }: UsersListPro
       )}
     </>
   );
-}
+});

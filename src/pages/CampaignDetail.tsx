@@ -184,145 +184,151 @@ export default function CampaignDetail() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-4 sm:px-6 py-6 max-w-7xl">
         <Button
           variant="ghost"
           onClick={() => navigate('/admin/campaigns')}
-          className="mb-6"
+          className="mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Campaigns
         </Button>
 
-        {/* Header */}
-        <div className="flex items-start justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">{campaign.campaign_name}</h1>
-            <div className="flex items-center gap-3">
-              <Badge className={getCampaignStatusColor(campaign.status)}>
-                {campaign.status}
-              </Badge>
-              <span className="text-muted-foreground">{campaign.id}</span>
-            </div>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <GenerateProofPPTButton 
-              campaignId={campaign.id}
-              campaignName={campaign.campaign_name}
-            />
-            <GenerateInvoiceDialog 
-              campaign={campaign} 
-              campaignAssets={campaignAssets}
-              displayCost={displayCost}
-              printingTotal={printingTotal}
-              mountingTotal={mountingTotal}
-              discount={discount}
-            />
-            <CampaignPDFReport campaign={campaign} campaignAssets={campaignAssets} />
-            <CampaignComparisonDialog currentCampaignId={campaign.id} />
-            <ExportProofDialog
-              campaignId={campaign.id}
-              campaignName={campaign.campaign_name}
-              assets={campaignAssets}
-            />
-            <Button variant="outline" size="sm" onClick={refreshData}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Refresh
-            </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate(`/admin/campaigns/${id}/budget`)}
-          >
-            <TrendingUp className="mr-2 h-4 w-4" />
-            Budget Tracker
-          </Button>
-          {isAdmin && (
-              <>
+        {/* Header Card with Border */}
+        <Card className="mb-6 border-2">
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between flex-col lg:flex-row gap-4">
+              <div className="flex-1">
+                <h1 className="text-2xl lg:text-3xl font-bold mb-3">{campaign.campaign_name}</h1>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <Badge className={getCampaignStatusColor(campaign.status)}>
+                    {campaign.status}
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">{campaign.id}</span>
+                </div>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <GenerateProofPPTButton 
+                  campaignId={campaign.id}
+                  campaignName={campaign.campaign_name}
+                />
+                <GenerateInvoiceDialog 
+                  campaign={campaign} 
+                  campaignAssets={campaignAssets}
+                  displayCost={displayCost}
+                  printingTotal={printingTotal}
+                  mountingTotal={mountingTotal}
+                  discount={discount}
+                />
+                <CampaignPDFReport campaign={campaign} campaignAssets={campaignAssets} />
+                <CampaignComparisonDialog currentCampaignId={campaign.id} />
+                <ExportProofDialog
+                  campaignId={campaign.id}
+                  campaignName={campaign.campaign_name}
+                  assets={campaignAssets}
+                />
+                <Button variant="outline" size="sm" onClick={refreshData}>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Refresh
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate(`/admin/campaigns/edit/${campaign.id}`)}
+                  onClick={() => navigate(`/admin/campaigns/${id}/budget`)}
                 >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  Budget Tracker
                 </Button>
-                <Button variant="destructive" size="sm" onClick={handleDelete}>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Real-time Performance Chart */}
-        <CampaignPerformanceChart campaignId={campaign.id} />
-
-        {/* Progress */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Campaign Progress</span>
-              <span className="text-sm text-muted-foreground">
-                {verifiedAssets} / {campaign.total_assets} assets verified
-              </span>
+                {isAdmin && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/admin/campaigns/edit/${campaign.id}`)}
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={handleDelete}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
-            <Progress value={progress} className="h-2" />
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Real-time Performance Chart */}
+        <div className="mb-6">
+          <CampaignPerformanceChart campaignId={campaign.id} />
+        </div>
+
+        {/* Progress */}
+        <Card className="mb-6 border">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold">Campaign Progress</span>
+              <span className="text-xs text-muted-foreground">
+                {verifiedAssets} / {campaign.total_assets} assets verified
+              </span>
+            </div>
+            <Progress value={progress} className="h-3" />
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
           {/* Client Info - Blue */}
-          <Card className="border-l-4 border-l-blue-500 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-blue-600 dark:text-blue-400">Campaign Details</CardTitle>
+          <Card className="border-l-4 border-l-blue-500 shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base text-blue-600 dark:text-blue-400">Campaign Details</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-3">
               <div className="space-y-2">
                 <div>
-                  <p className="text-sm text-muted-foreground">Display Name</p>
-                  <p className="font-medium">{campaign.campaign_name}</p>
+                  <p className="text-xs text-muted-foreground">Display Name</p>
+                  <p className="text-sm font-medium">{campaign.campaign_name}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Client Name</p>
-                  <p className="font-medium">{campaign.client_name}</p>
+                  <p className="text-xs text-muted-foreground">Client Name</p>
+                  <p className="text-sm font-medium">{campaign.client_name}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Client ID</p>
-                  <p className="font-medium">{campaign.client_id}</p>
+                  <p className="text-xs text-muted-foreground">Client ID</p>
+                  <p className="text-sm font-medium">{campaign.client_id}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Campaign Period - Green */}
-          <Card className="border-l-4 border-l-green-500 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-green-600 dark:text-green-400">Campaign Period</CardTitle>
+          <Card className="border-l-4 border-l-green-500 shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base text-green-600 dark:text-green-400">Campaign Period</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-3">
               <div className="space-y-2">
                 <div>
-                  <p className="text-sm text-muted-foreground">Start Date</p>
-                  <p className="font-medium">{formatDate(campaign.start_date)}</p>
+                  <p className="text-xs text-muted-foreground">Start Date</p>
+                  <p className="text-sm font-medium">{formatDate(campaign.start_date)}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">End Date</p>
-                  <p className="font-medium">{formatDate(campaign.end_date)}</p>
+                  <p className="text-xs text-muted-foreground">End Date</p>
+                  <p className="text-sm font-medium">{formatDate(campaign.end_date)}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Duration</p>
-                  <p className="font-medium">{durationDays} days ({durationMonths} {durationMonths === 1 ? 'month' : 'months'})</p>
+                  <p className="text-xs text-muted-foreground">Duration</p>
+                  <p className="text-sm font-medium">{durationDays} days ({durationMonths} {durationMonths === 1 ? 'month' : 'months'})</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Financial Summary - Orange */}
-          <Card className="border-l-4 border-l-orange-500 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-orange-600 dark:text-orange-400">Financial Summary</CardTitle>
+          <Card className="border-l-4 border-l-orange-500 shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base text-orange-600 dark:text-orange-400">Financial Summary</CardTitle>
             </CardHeader>
             <CardContent>
               <TooltipProvider>
@@ -469,24 +475,29 @@ export default function CampaignDetail() {
           <CampaignHealthAlerts campaignId={campaign.id} />
         </div>
 
-        {/* Timeline and Performance */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <CampaignTimelineCard campaign={campaign} campaignAssets={campaignAssets} />
-          <CampaignPerformanceMetrics campaign={campaign} campaignAssets={campaignAssets} />
+        {/* Timeline and Performance - Enhanced with borders */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          <div className="border rounded-lg p-1 bg-card/50">
+            <CampaignTimelineCard campaign={campaign} campaignAssets={campaignAssets} />
+          </div>
+          <div className="border rounded-lg p-1 bg-card/50">
+            <CampaignPerformanceMetrics campaign={campaign} campaignAssets={campaignAssets} />
+          </div>
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="assets" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="assets">Assets ({campaignAssets.length})</TabsTrigger>
-            <TabsTrigger value="creatives">Creatives</TabsTrigger>
-            <TabsTrigger value="operations">Operations</TabsTrigger>
-            <TabsTrigger value="proof">Proof Gallery</TabsTrigger>
-          </TabsList>
+        {/* Tabs - Enhanced with border */}
+        <Card className="border-2">
+          <Tabs defaultValue="assets" className="p-4">
+            <TabsList className="grid grid-cols-4 w-full max-w-2xl">
+              <TabsTrigger value="assets">Assets ({campaignAssets.length})</TabsTrigger>
+              <TabsTrigger value="creatives">Creatives</TabsTrigger>
+              <TabsTrigger value="operations">Operations</TabsTrigger>
+              <TabsTrigger value="proof">Proof Gallery</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="assets">
-            <Card>
-              <CardContent className="pt-6">
+            <TabsContent value="assets" className="mt-4">
+              <Card className="border">
+                <CardContent className="pt-6">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -528,30 +539,35 @@ export default function CampaignDetail() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="creatives">
-            <CreativeUploadSection campaignId={campaign.id} onUploadComplete={refreshData} />
-          </TabsContent>
+            <TabsContent value="creatives" className="mt-4">
+              <Card className="border">
+                <CardContent className="pt-6">
+                  <CreativeUploadSection campaignId={campaign.id} onUploadComplete={refreshData} />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          <TabsContent value="operations">
-            <Card>
-              <CardContent className="pt-6">
-                <OperationsBoard
-                  campaignId={campaign.id}
-                  assets={campaignAssets}
-                  onUpdate={refreshData}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
+            <TabsContent value="operations" className="mt-4">
+              <Card className="border">
+                <CardContent className="pt-6">
+                  <OperationsBoard
+                    campaignId={campaign.id}
+                    assets={campaignAssets}
+                    onUpdate={refreshData}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          <TabsContent value="proof">
-            <Card>
-              <CardContent className="pt-6">
-                <ProofGallery assets={campaignAssets} onUpdate={refreshData} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="proof" className="mt-4">
+              <Card className="border">
+                <CardContent className="pt-6">
+                  <ProofGallery assets={campaignAssets} onUpdate={refreshData} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </Card>
 
         {campaign.notes && (
           <Card className="mt-6">

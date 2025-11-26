@@ -15,6 +15,7 @@ interface MarketplaceAsset {
   longitude: number | null;
   is_multi_face: boolean | null;
   faces: any;
+  image_urls?: string[];
   images?: {
     photos?: Array<{ url: string; tag: string }>;
   };
@@ -180,9 +181,21 @@ export async function generateMarketplacePPT(
 
   // ===== ASSET SLIDES =====
   for (const asset of assets) {
-    const photos = asset.images?.photos || [];
-    const photo1Url = photos[0]?.url || DEFAULT_PLACEHOLDER;
-    const photo2Url = photos[1]?.url || photos[0]?.url || DEFAULT_PLACEHOLDER;
+    // Handle different photo storage formats
+    let photoUrls: string[] = [];
+    
+    // Check for image_urls array (preferred format)
+    if (Array.isArray(asset.image_urls) && asset.image_urls.length > 0) {
+      photoUrls = asset.image_urls.filter(url => url && url.trim() !== '');
+    }
+    // Fallback to images.photos format
+    else if (asset.images?.photos && Array.isArray(asset.images.photos)) {
+      photoUrls = asset.images.photos.map((p: any) => p.url).filter(Boolean);
+    }
+    
+    // Ensure we have at least placeholder images
+    const photo1Url = photoUrls[0] || DEFAULT_PLACEHOLDER;
+    const photo2Url = photoUrls[1] || photoUrls[0] || DEFAULT_PLACEHOLDER;
 
     // Add watermarks to images
     let photo1 = photo1Url;
@@ -213,42 +226,42 @@ export async function generateMarketplacePPT(
       line: { color: GOADS_COLOR, width: 8 },
     });
 
-    // Header
+    // Header - smaller font for better fit
     slide1.addText(`${asset.id} – ${asset.area} – ${asset.location}`, {
       x: 0.5,
       y: 0.5,
       w: 9,
       h: 0.6,
-      fontSize: 30,
+      fontSize: 24,
       bold: true,
       color: GOADS_COLOR,
       align: 'center',
       fontFace: 'Arial',
     });
 
-    // Image 1
+    // Image 1 - adjusted positioning
     try {
       slide1.addImage({
         data: photo1,
         x: 0.5,
-        y: 1.8,
+        y: 1.5,
         w: 4.5,
-        h: 3.5,
-        sizing: { type: 'contain', w: 4.5, h: 3.5 },
+        h: 3.8,
+        sizing: { type: 'contain', w: 4.5, h: 3.8 },
       });
     } catch (error) {
       console.error('Failed to add image 1:', error);
     }
 
-    // Image 2
+    // Image 2 - adjusted positioning
     try {
       slide1.addImage({
         data: photo2,
         x: 5.2,
-        y: 1.8,
+        y: 1.5,
         w: 4.5,
-        h: 3.5,
-        sizing: { type: 'contain', w: 4.5, h: 3.5 },
+        h: 3.8,
+        sizing: { type: 'contain', w: 4.5, h: 3.8 },
       });
     } catch (error) {
       console.error('Failed to add image 2:', error);
@@ -268,7 +281,7 @@ export async function generateMarketplacePPT(
       y: 6.9,
       w: 9,
       h: 0.3,
-      fontSize: 12,
+      fontSize: 10,
       color: 'FFFFFF',
       align: 'center',
       fontFace: 'Arial',
@@ -287,13 +300,13 @@ export async function generateMarketplacePPT(
       line: { color: GOADS_COLOR, width: 8 },
     });
 
-    // Header
+    // Header - smaller font
     slide2.addText(`Asset Specifications – ${asset.id}`, {
       x: 0.5,
       y: 0.5,
       w: 9,
       h: 0.6,
-      fontSize: 28,
+      fontSize: 22,
       bold: true,
       color: GOADS_COLOR,
       align: 'left',
@@ -358,31 +371,33 @@ export async function generateMarketplacePPT(
     const valueX = 3.5 + labelWidth;
 
     detailsData.forEach((detail) => {
-      // Label
+      // Label - smaller font, better alignment
       slide2.addText(detail.label, {
         x: 3.5,
         y: detailY,
         w: labelWidth,
         h: 0.35,
-        fontSize: 14,
+        fontSize: 11,
         bold: true,
         color: '4B5563',
         fontFace: 'Arial',
+        valign: 'top',
       });
 
-      // Value
+      // Value - smaller font
       slide2.addText(detail.value, {
         x: valueX,
         y: detailY,
         w: 9.5 - valueX,
         h: 0.35,
-        fontSize: 14,
+        fontSize: 11,
         color: '1F2937',
         fontFace: 'Arial',
+        valign: 'top',
         breakLine: true,
       });
 
-      detailY += 0.45;
+      detailY += 0.4;
     });
 
     // Footer with Go-Ads watermark
@@ -399,7 +414,7 @@ export async function generateMarketplacePPT(
       y: 6.9,
       w: 9,
       h: 0.3,
-      fontSize: 12,
+      fontSize: 10,
       color: 'FFFFFF',
       align: 'center',
       fontFace: 'Arial',

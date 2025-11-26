@@ -53,31 +53,81 @@ serve(async (req) => {
 
     console.log('list-users: User has admin access');
 
-    // Fetch all users from auth.users using admin API
-    console.log('list-users: Fetching all users...');
-    const { data: { users }, error: listError } = await supabaseClient.auth.admin.listUsers();
+    // Get the requesting user's company ID
+    const { data: userCompanyAssoc, error: companyError } = await supabaseClient
+      .from('company_users')
+      .select('company_id, role')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .single();
 
-    if (listError) {
-      console.error('list-users: Error fetching users:', listError);
-      throw listError;
+    const isPlatformAdmin = companyUsers?.some(cu => (cu.companies as any)?.type === 'platform_admin');
+    
+    let companyUserRoles;
+    
+    if (isPlatformAdmin) {
+      // Platform admins can see all users
+      console.log('list-users: Platform admin - fetching all users');
+      const { data: allCompanyUsers } = await supabaseClient
+        .from('company_users')
+        .select('user_id, role, company_id')
+        .eq('status', 'active');
+      companyUserRoles = allCompanyUsers;
+    } else {
+      // Company admins can only see users from their company
+      const userCompanyId = userCompanyAssoc?.company_id;
+      
+      if (!userCompanyId) {
+        return new Response(
+          JSON.stringify({ error: 'Company not found' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log('list-users: Company admin - fetching users for company:', userCompanyId);
+      const { data: companySpecificUsers } = await supabaseClient
+        .from('company_users')
+        .select('user_id, role, company_id')
+        .eq('company_id', userCompanyId)
+        .eq('status', 'active');
+      companyUserRoles = companySpecificUsers;
     }
 
-    console.log('list-users: Found', users?.length, 'auth users');
+    console.log('list-users: Found', companyUserRoles?.length, 'company user associations');
 
-    // Fetch profiles for all users
+    // Get unique user IDs
+    const userIds = [...new Set(companyUserRoles?.map(r => r.user_id) || [])];
+
+    if (userIds.length === 0) {
+      return new Response(
+        JSON.stringify({ users: [] }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Fetch auth users only for the filtered user IDs
+    console.log('list-users: Fetching auth details for', userIds.length, 'users');
+    const authUsersPromises = userIds.map(async (id) => {
+      try {
+        const { data, error } = await supabaseClient.auth.admin.getUserById(id);
+        if (error || !data.user) return null;
+        return data.user;
+      } catch {
+        return null;
+      }
+    });
+    const authUsersResults = await Promise.all(authUsersPromises);
+    const users = authUsersResults.filter((u): u is NonNullable<typeof u> => u !== null);
+
+    console.log('list-users: Found', users.length, 'auth users');
+
+    // Fetch profiles for filtered users
     const { data: profiles } = await supabaseClient
       .from('profiles')
-      .select('id, username, avatar_url, created_at');
+      .select('id, username, avatar_url, created_at')
+      .in('id', userIds);
 
     console.log('list-users: Found', profiles?.length, 'profiles');
-
-    // Fetch company associations for all users
-    const { data: companyUserRoles } = await supabaseClient
-      .from('company_users')
-      .select('user_id, role, company_id')
-      .eq('status', 'active');
-
-    console.log('list-users: Found', companyUserRoles?.length, 'company user associations');
 
     // Combine the data
     const usersWithData = users.map(u => {

@@ -150,16 +150,19 @@ Deno.serve(async (req) => {
       // Don't fail the entire operation if profile creation fails
     }
 
-    // Link user to company
+    // Link user to company - use upsert to handle case where trigger already created record
     const { error: companyUserError } = await supabaseClient
       .from('company_users')
-      .insert({
+      .upsert({
         company_id: company_id,
         user_id: userId,
         role: role,
         is_primary: false,
         status: 'active',
         invited_by: requestingUser.id
+      }, {
+        onConflict: 'company_id,user_id',
+        ignoreDuplicates: false
       })
 
     if (companyUserError) {

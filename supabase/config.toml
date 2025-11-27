@@ -118,6 +118,9 @@ verify_jwt = true
 [functions.generate-campaign-excel]
 verify_jwt = true
 
+[functions.import-finance-data]
+verify_jwt = true
+
 # Power Bills Management
 [functions.fetch-tgspdcl-bill]
 verify_jwt = true

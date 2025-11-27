@@ -53,6 +53,14 @@ export function QRCodeSection({
       const url = await generateAssetQRCode(options);
       setCurrentQRUrl(url);
       onQRGenerated?.(url);
+      
+      // Log activity
+      const { logActivity } = await import('@/utils/activityLogger');
+      await logActivity('create', 'media_asset', assetId, assetId, {
+        action: 'qr_code_generated',
+        qr_url: url
+      });
+      
       toast({
         title: 'Success',
         description: 'QR Code generated successfully',
@@ -117,12 +125,17 @@ export function QRCodeSection({
       <CardContent className="space-y-4">
         {/* QR Code Preview */}
         {currentQRUrl && (
-          <div className="flex justify-center p-4 bg-muted rounded-lg">
-            <img
-              src={currentQRUrl}
-              alt="Asset QR Code"
-              className="w-48 h-48 object-contain"
-            />
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex justify-center p-6 bg-white rounded-lg border-2 border-primary/20 shadow-sm">
+              <img
+                src={currentQRUrl}
+                alt="Asset QR Code"
+                className="w-48 h-48 object-contain"
+              />
+            </div>
+            <p className="text-xs text-center text-muted-foreground">
+              Scan to access location
+            </p>
           </div>
         )}
 

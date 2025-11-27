@@ -246,12 +246,25 @@ export function AssetDetails({ asset, isAdmin = false, onQRGenerated }: AssetDet
 
         {/* Right Column - Image Preview (1/3 width) */}
         <div className="lg:col-span-1 space-y-6">
-          {/* Latest Photos Section - Top Priority */}
-      <LatestPhotosSection assetId={currentAsset.id} asset={currentAsset} />
+          {/* QR Code Section - Priority */}
+          <div className="relative z-10">
+            <QRCodeSection
+              assetId={currentAsset.id}
+              latitude={currentAsset.latitude}
+              longitude={currentAsset.longitude}
+              googleStreetViewUrl={currentAsset.google_street_view_url}
+              locationUrl={currentAsset.location_url}
+              qrCodeUrl={currentAsset.qr_code_url}
+              onQRGenerated={onQRGenerated}
+            />
+          </div>
+
+          {/* Latest Photos Section */}
+          <LatestPhotosSection assetId={currentAsset.id} asset={currentAsset} />
 
           {/* Images Preview Card */}
           {allImages.length > 0 && (
-            <Card className="border-l-4 border-l-primary sticky top-6">
+            <Card className="border-l-4 border-l-primary relative">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between text-lg">
                   <span>Images</span>
@@ -331,7 +344,7 @@ export function AssetDetails({ asset, isAdmin = false, onQRGenerated }: AssetDet
           )}
 
           {/* Status & Visibility Section */}
-          <Card>
+          <Card className="relative z-5">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">Status & Visibility</CardTitle>
@@ -436,19 +449,10 @@ export function AssetDetails({ asset, isAdmin = false, onQRGenerated }: AssetDet
             </CardContent>
           </Card>
 
-          {/* QR Code Section */}
-          <QRCodeSection
-            assetId={currentAsset.id}
-            latitude={currentAsset.latitude}
-            longitude={currentAsset.longitude}
-            googleStreetViewUrl={currentAsset.google_street_view_url}
-            locationUrl={currentAsset.location_url}
-            qrCodeUrl={currentAsset.qr_code_url}
-            onQRGenerated={onQRGenerated}
-          />
-
           {/* Booking Calendar */}
-          <AssetBookingCalendar assetId={currentAsset.id} />
+          <div className="relative z-0">
+            <AssetBookingCalendar assetId={currentAsset.id} />
+          </div>
         </div>
       </div>
 

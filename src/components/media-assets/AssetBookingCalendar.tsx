@@ -95,14 +95,14 @@ export function AssetBookingCalendar({ assetId }: AssetBookingCalendarProps) {
   const selectedBooking = selectedDate ? getBookingForDate(selectedDate) : null;
 
   return (
-    <Card>
+    <Card className="relative">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <CalendarIcon className="h-5 w-5" />
           Booking Calendar
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 relative z-0">
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <p className="text-sm text-muted-foreground">Loading calendar...</p>
@@ -120,18 +120,20 @@ export function AssetBookingCalendar({ assetId }: AssetBookingCalendarProps) {
               </div>
             </div>
 
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={setSelectedDate}
-              className={cn("rounded-md border pointer-events-auto")}
-              modifiers={{
-                booked: (date) => isDateBooked(date),
-              }}
-              modifiersClassNames={{
-                booked: "bg-primary/20 text-primary font-bold border-primary hover:bg-primary/30",
-              }}
-            />
+            <div className="relative">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                className={cn("rounded-md border pointer-events-auto")}
+                modifiers={{
+                  booked: (date) => isDateBooked(date),
+                }}
+                modifiersClassNames={{
+                  booked: "bg-primary/20 text-primary font-bold border-primary hover:bg-primary/30",
+                }}
+              />
+            </div>
 
             {selectedBooking && (
               <div className="p-3 rounded-lg bg-muted space-y-2">

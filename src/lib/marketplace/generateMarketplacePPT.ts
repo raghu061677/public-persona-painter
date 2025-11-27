@@ -19,6 +19,9 @@ interface MarketplaceAsset {
   images?: {
     photos?: Array<{ url: string; tag: string }>;
   };
+  qr_code_url?: string | null;
+  google_street_view_url?: string | null;
+  location_url?: string | null;
 }
 
 const DEFAULT_PLACEHOLDER = 'https://via.placeholder.com/800x600/f3f4f6/6b7280?text=No+Image+Available';
@@ -315,6 +318,16 @@ export async function generateMarketplacePPT(
       }
     }
 
+    // Generate location URL for QR
+    let locationUrl = '';
+    if (asset.google_street_view_url) {
+      locationUrl = asset.google_street_view_url;
+    } else if (asset.location_url) {
+      locationUrl = asset.location_url;
+    } else if (asset.latitude && asset.longitude) {
+      locationUrl = `https://www.google.com/maps?q=${asset.latitude},${asset.longitude}`;
+    }
+
     // Specifications
     const detailsData = [
       { label: 'City:', value: asset.city },
@@ -340,7 +353,7 @@ export async function generateMarketplacePPT(
         y: detailY,
         w: labelWidth,
         h: 0.35,
-        fontSize: 11,
+        fontSize: 10,
         bold: true,
         color: '4B5563',
         fontFace: 'Arial',
@@ -353,15 +366,56 @@ export async function generateMarketplacePPT(
         y: detailY,
         w: 9.5 - valueX,
         h: 0.35,
-        fontSize: 11,
+        fontSize: 10,
         color: '1F2937',
         fontFace: 'Arial',
         valign: 'top',
         breakLine: true,
       });
 
-      detailY += 0.4;
+      detailY += 0.38;
     });
+
+    // Add QR Code section if asset has QR or location
+    if (asset.qr_code_url || locationUrl) {
+      // QR Code title
+      slide2.addText('Scan for Location:', {
+        x: 0.5,
+        y: 4.7,
+        w: 2.5,
+        h: 0.3,
+        fontSize: 10,
+        bold: true,
+        color: GOADS_COLOR,
+        align: 'center',
+        fontFace: 'Arial',
+      });
+
+      // Add QR code image if available
+      if (asset.qr_code_url) {
+        slide2.addImage({
+          path: asset.qr_code_url,
+          x: 0.8,
+          y: 5.1,
+          w: 1.9,
+          h: 1.9,
+          sizing: { type: 'contain', w: 1.9, h: 1.9 },
+        });
+      } else if (locationUrl) {
+        // Add text-based location link if no QR
+        slide2.addText('Location Link:', {
+          x: 0.5,
+          y: 5.2,
+          w: 2.5,
+          h: 0.8,
+          fontSize: 8,
+          color: '6B7280',
+          align: 'center',
+          fontFace: 'Arial',
+          breakLine: true,
+        });
+      }
+    }
 
     // Footer with Go-Ads watermark
     slide2.addShape(prs.ShapeType.rect, {
@@ -377,7 +431,7 @@ export async function generateMarketplacePPT(
       y: 6.9,
       w: 9,
       h: 0.3,
-      fontSize: 10,
+      fontSize: 9,
       color: 'FFFFFF',
       align: 'center',
       fontFace: 'Arial',

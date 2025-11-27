@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Eye, Edit, Trash2, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { QRCodeButton } from "./QRCodeButton";
 
 interface Asset {
   id: string;
@@ -52,7 +53,8 @@ export function ImageCell({ row }: any) {
 
 export function ActionCell({ 
   row, 
-  onDelete 
+  onDelete,
+  onQRGenerated 
 }: any) {
   const navigate = useNavigate();
   const asset = row.original;
@@ -101,6 +103,18 @@ export function ActionCell({
           <MapPin className="h-4 w-4" />
         </Button>
       )}
+      
+      <QRCodeButton
+        assetId={assetId}
+        latitude={asset.latitude}
+        longitude={asset.longitude}
+        googleStreetViewUrl={asset.google_street_view_url}
+        locationUrl={asset.location_url}
+        qrCodeUrl={asset.qr_code_url}
+        onQRGenerated={onQRGenerated}
+        size="icon"
+        variant="ghost"
+      />
       
       <Button
         variant="ghost"

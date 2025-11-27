@@ -20,7 +20,9 @@ import {
   Receipt,
   Briefcase,
   Search,
-  LayoutDashboard
+  LayoutDashboard,
+  QrCode,
+  ExternalLink
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -43,6 +45,9 @@ interface CampaignAsset {
   completed_at: string | null;
   latitude: number | null;
   longitude: number | null;
+  qr_code_url?: string | null;
+  google_street_view_url?: string | null;
+  location_url?: string | null;
 }
 
 interface Campaign {
@@ -596,9 +601,47 @@ function TaskCard({ task, campaigns, navigate, compact }: {
         )}
 
         {(task.latitude && task.longitude) && (
-          <div className="text-xs text-muted-foreground flex items-center gap-1">
-            <MapPin className="h-3 w-3" />
-            {task.latitude.toFixed(6)}, {task.longitude.toFixed(6)}
+          <div className="space-y-2">
+            <div className="text-xs text-muted-foreground flex items-center gap-1">
+              <MapPin className="h-3 w-3" />
+              {task.latitude.toFixed(6)}, {task.longitude.toFixed(6)}
+            </div>
+            
+            {/* QR Code and Location Buttons */}
+            <div className="grid grid-cols-2 gap-2">
+              {task.qr_code_url && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = task.qr_code_url!;
+                    link.download = `qr-${task.asset_id}.png`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                >
+                  <QrCode className="h-3 w-3 mr-1" />
+                  QR Code
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => {
+                  const url = task.google_street_view_url || 
+                              task.location_url || 
+                              `https://www.google.com/maps?q=${task.latitude},${task.longitude}`;
+                  window.open(url, '_blank');
+                }}
+              >
+                <ExternalLink className="h-3 w-3 mr-1" />
+                Open Map
+              </Button>
+            </div>
           </div>
         )}
 

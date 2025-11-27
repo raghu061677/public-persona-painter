@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { QrCode, ExternalLink } from "lucide-react";
 
 interface ProofAsset {
   id: string;
@@ -27,6 +28,11 @@ interface ProofAsset {
   photos: any;
   mounter_name: string | null;
   completed_at: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  qr_code_url?: string | null;
+  google_street_view_url?: string | null;
+  location_url?: string | null;
   campaigns: {
     campaign_name: string;
     client_name: string;
@@ -52,6 +58,11 @@ export default function OperationsProofUploads() {
           campaigns (
             campaign_name,
             client_name
+          ),
+          media_assets!campaign_assets_asset_id_fkey (
+            qr_code_url,
+            google_street_view_url,
+            location_url
           )
         `)
         .not("photos", "is", null)
@@ -182,15 +193,44 @@ export default function OperationsProofUploads() {
                     </TableCell>
                     <TableCell>{getStatusBadge(asset.status)}</TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          (window.location.href = `/admin/campaigns/${asset.campaign_id}`)
-                        }
-                      >
-                        View Details
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        {asset.qr_code_url && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => window.open(asset.qr_code_url!, '_blank')}
+                            title="View QR Code"
+                          >
+                            <QrCode className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {(asset.latitude || asset.google_street_view_url || asset.location_url) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              const url = asset.google_street_view_url || 
+                                          asset.location_url || 
+                                          `https://www.google.com/maps?q=${asset.latitude},${asset.longitude}`;
+                              window.open(url, '_blank');
+                            }}
+                            title="Open in Maps"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            (window.location.href = `/admin/campaigns/${asset.campaign_id}`)
+                          }
+                        >
+                          View Details
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

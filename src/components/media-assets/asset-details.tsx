@@ -14,6 +14,7 @@ import { AssetMaintenanceTab } from "./asset-maintenance-tab";
 import { AssetBookingHistoryTab } from "./asset-booking-history-tab";
 import { LatestPhotosSection } from "./LatestPhotosSection";
 import { AssetBookingCalendar } from "./AssetBookingCalendar";
+import { QRCodeSection } from "./QRCodeSection";
 import {
   Select,
   SelectContent,
@@ -32,9 +33,10 @@ import {
 interface AssetDetailsProps {
   asset: any;
   isAdmin?: boolean;
+  onQRGenerated?: (url: string) => void;
 }
 
-export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
+export function AssetDetails({ asset, isAdmin = false, onQRGenerated }: AssetDetailsProps) {
   const navigate = useNavigate();
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -433,6 +435,17 @@ export function AssetDetails({ asset, isAdmin = false }: AssetDetailsProps) {
               </div>
             </CardContent>
           </Card>
+
+          {/* QR Code Section */}
+          <QRCodeSection
+            assetId={currentAsset.id}
+            latitude={currentAsset.latitude}
+            longitude={currentAsset.longitude}
+            googleStreetViewUrl={currentAsset.google_street_view_url}
+            locationUrl={currentAsset.location_url}
+            qrCodeUrl={currentAsset.qr_code_url}
+            onQRGenerated={onQRGenerated}
+          />
 
           {/* Booking Calendar */}
           <AssetBookingCalendar assetId={currentAsset.id} />

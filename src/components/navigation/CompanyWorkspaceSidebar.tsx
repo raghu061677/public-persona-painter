@@ -100,6 +100,12 @@ export function CompanyWorkspaceSidebar({ collapsed, activeModules }: CompanyWor
           />
           <SidebarItem 
             icon={DollarSign} 
+            label="Import Invoices" 
+            href="/admin/invoices-import" 
+            collapsed={collapsed}
+          />
+          <SidebarItem 
+            icon={DollarSign} 
             label="Expenses" 
             href="/admin/expenses" 
             collapsed={collapsed}

@@ -113,6 +113,7 @@ const OperationsAnalytics = lazy(() => import("./pages/OperationsAnalytics"));
 const PlanComparison = lazy(() => import("./pages/PlanComparison"));
 const ProformasList = lazy(() => import("./pages/ProformasList"));
 const ProformaDetail = lazy(() => import("./pages/ProformaDetail"));
+const ImportInvoices = lazy(() => import("./pages/ImportInvoices"));
 const Install = lazy(() => import("./pages/Install"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ComponentShowcase = lazy(() => import("./pages/ComponentShowcase"));
@@ -302,6 +303,7 @@ const App = () => (
             <Route path="/finance/invoices/:id" element={<AppLayout><InvoiceDetail /></AppLayout>} />
             <Route path="/admin/invoices" element={<AppLayout><Invoices /></AppLayout>} />
             <Route path="/admin/invoices/:id" element={<AppLayout><InvoiceDetail /></AppLayout>} />
+            <Route path="/admin/invoices-import" element={<AppLayout><ImportInvoices /></AppLayout>} />
             <Route path="/finance/expenses" element={<AppLayout><ExpensesList /></AppLayout>} />
             <Route path="/reports" element={<AppLayout><ReportsDashboard /></AppLayout>} />
             <Route path="/reports/vacant-media" element={<AppLayout><VacantMediaReport /></AppLayout>} />

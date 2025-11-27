@@ -377,6 +377,25 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
         cell: ImageCell,
         enableSorting: false,
       },
+      {
+        id: "qr_code",
+        header: "QR Code",
+        cell: ({ row }) => {
+          const qrUrl = (row.original as any).qr_code_url;
+          return qrUrl ? (
+            <div className="flex justify-center">
+              <img
+                src={qrUrl}
+                alt="QR Code"
+                className="w-12 h-12 object-contain border border-border rounded"
+              />
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">-</span>
+          );
+        },
+        enableSorting: false,
+      },
       { 
         accessorKey: "media_id", 
         header: "Municipal ID",

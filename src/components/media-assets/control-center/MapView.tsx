@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import { Icon, LatLngBoundsExpression } from "leaflet";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,10 +11,18 @@ interface MapViewProps {
   onAssetClick: (asset: any) => void;
 }
 
+// Fix default marker icon
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+});
+
 // Custom marker icons based on status
-const getMarkerIcon = (status: string) => {
+const createMarkerIcon = (status: string) => {
   const color = status === "Available" ? "green" : status === "Booked" ? "red" : "blue";
-  return new Icon({
+  return L.icon({
     iconUrl: `https://cdn.rawgit.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`,
     shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
     iconSize: [25, 41],
@@ -31,9 +39,8 @@ function MapBoundsUpdater({ assets }: { assets: any[] }) {
   useEffect(() => {
     if (assets.length > 0) {
       const bounds = assets.map((a) => [a.latitude, a.longitude] as [number, number]);
-      map.fitBounds(bounds as LatLngBoundsExpression, { padding: [50, 50] });
+      map.fitBounds(bounds, { padding: [50, 50] });
     } else {
-      // Default to Hyderabad if no assets
       map.setView([17.385, 78.4867], 12);
     }
   }, [assets, map]);
@@ -88,7 +95,7 @@ export function MapView({ assets, onAssetClick }: MapViewProps) {
           <Marker
             key={asset.id}
             position={[asset.latitude, asset.longitude]}
-            icon={getMarkerIcon(asset.status)}
+            icon={createMarkerIcon(asset.status)}
           >
             <Popup>
               <div className="min-w-[250px] p-2">

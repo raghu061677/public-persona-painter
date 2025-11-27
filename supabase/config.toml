@@ -102,6 +102,9 @@ verify_jwt = true
 [functions.generate-all-asset-qr]
 verify_jwt = true
 
+[functions.generate-asset-qr]
+verify_jwt = false
+
 # Document Generation
 [functions.generate-invoice-pdf]
 verify_jwt = true

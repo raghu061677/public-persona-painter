@@ -5,6 +5,7 @@ import { toast } from "@/hooks/use-toast";
 import { AssetDetails } from "@/components/media-assets/asset-details";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/navigation/PageHeader";
+import { MediaAssetQrSection } from "@/components/media-assets/MediaAssetQrSection";
 import { ROUTES } from "@/config/routes";
 
 export default function MediaAssetDetail() {
@@ -126,6 +127,20 @@ export default function MediaAssetDetail() {
         showBackButton
         backPath={ROUTES.MEDIA_ASSETS}
       />
+      
+      <MediaAssetQrSection
+        assetId={asset.id}
+        qrCodeUrl={asset.qr_code_url}
+        locationUrl={
+          asset.google_street_view_url ||
+          asset.location_url ||
+          (asset.latitude && asset.longitude
+            ? `https://www.google.com/maps?q=${asset.latitude},${asset.longitude}`
+            : undefined)
+        }
+        onQrGenerated={handleQRGenerated}
+      />
+
       <AssetDetails asset={asset} isAdmin={isAdmin} onQRGenerated={handleQRGenerated} />
     </div>
   );

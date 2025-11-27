@@ -8,6 +8,7 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { formatDate } from "@/utils/plans";
+import { addQrToPdfPage } from "@/lib/reports/addQrToPdf";
 
 interface CampaignPDFReportProps {
   campaign: any;
@@ -128,6 +129,13 @@ export function CampaignPDFReport({ campaign, campaignAssets }: CampaignPDFRepor
       doc.setFont("helvetica", "bold");
       doc.text("Assets Summary", 20, yPos);
       yPos += 10;
+
+      // Add QR codes to top-right corner for each asset with QR available
+      for (const asset of campaignAssets) {
+        if (asset.qr_code_url) {
+          await addQrToPdfPage(doc, asset.qr_code_url, 160, 15, 30);
+        }
+      }
 
       const assetsData = campaignAssets.map(asset => [
         asset.asset_id,

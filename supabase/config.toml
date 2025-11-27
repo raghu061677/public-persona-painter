@@ -99,6 +99,9 @@ verify_jwt = true
 [functions.validate-mutation-with-rate-limit]
 verify_jwt = true
 
+[functions.generate-all-asset-qr]
+verify_jwt = true
+
 # Document Generation
 [functions.generate-invoice-pdf]
 verify_jwt = true

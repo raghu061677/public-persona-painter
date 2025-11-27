@@ -11,6 +11,7 @@ import { CommandPalette } from "@/components/media-assets/control-center/Command
 import { MediaAssetsTable } from "@/components/media-assets/media-assets-table";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { BulkQRGenerationButton } from "@/components/media-assets/BulkQRGenerationButton";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { GodModeHUD } from "@/components/media-assets/god-mode/GodModeHUD";
@@ -265,8 +266,9 @@ export default function MediaAssetsControlCenter() {
                 totalValue={stats.totalValue}
               />
 
-              {/* Add New Button */}
-              <div>
+              {/* Action Buttons */}
+              <div className="flex gap-2 flex-wrap">
+                <BulkQRGenerationButton />
                 <Button onClick={() => navigate("/media-assets/new")} className="gap-2">
                   <Plus className="h-4 w-4" />
                   Add New Asset

@@ -1,5 +1,4 @@
-import { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Badge } from "@/components/ui/badge";
@@ -32,23 +31,10 @@ const createMarkerIcon = (status: string) => {
   });
 };
 
-// Component to fit map bounds to all markers
-function MapBoundsUpdater({ assets }: { assets: any[] }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (assets.length > 0) {
-      const bounds = assets.map((a) => [a.latitude, a.longitude] as [number, number]);
-      map.fitBounds(bounds, { padding: [50, 50] });
-    } else {
-      map.setView([17.385, 78.4867], 12);
-    }
-  }, [assets, map]);
-
-  return null;
-}
-
 export function MapView({ assets, onAssetClick }: MapViewProps) {
+  const mapRef = useRef<L.Map | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+
   // Filter assets with valid coordinates
   const validAssets = assets.filter(
     (asset) =>
@@ -59,6 +45,81 @@ export function MapView({ assets, onAssetClick }: MapViewProps) {
       asset.latitude !== 0 &&
       asset.longitude !== 0
   );
+
+  useEffect(() => {
+    if (!mapContainerRef.current || validAssets.length === 0) return;
+
+    // Initialize map
+    if (!mapRef.current) {
+      mapRef.current = L.map(mapContainerRef.current).setView(
+        [validAssets[0].latitude, validAssets[0].longitude],
+        12
+      );
+
+      // Add tile layer
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      }).addTo(mapRef.current);
+    }
+
+    // Clear existing markers
+    mapRef.current.eachLayer((layer) => {
+      if (layer instanceof L.Marker) {
+        mapRef.current?.removeLayer(layer);
+      }
+    });
+
+    // Add markers for each asset
+    const bounds: L.LatLngBoundsExpression = [];
+    validAssets.forEach((asset) => {
+      const marker = L.marker([asset.latitude, asset.longitude], {
+        icon: createMarkerIcon(asset.status),
+      });
+
+      // Create popup content
+      const popupContent = `
+        <div class="min-w-[250px] p-2">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-sm">${asset.id}</h3>
+            <span class="px-2 py-1 text-xs rounded ${
+              asset.status === "Available"
+                ? "bg-green-100 text-green-800"
+                : asset.status === "Booked"
+                ? "bg-red-100 text-red-800"
+                : "bg-gray-100 text-gray-800"
+            }">${asset.status}</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><span class="font-semibold">Area:</span> ${asset.area}</p>
+            <p><span class="font-semibold">Location:</span> ${asset.location}</p>
+            <p><span class="font-semibold">City:</span> ${asset.city}</p>
+            <p><span class="font-semibold">Type:</span> ${asset.media_type}</p>
+            <p><span class="font-semibold">Size:</span> ${asset.dimensions}</p>
+            ${asset.direction ? `<p><span class="font-semibold">Direction:</span> ${asset.direction}</p>` : ""}
+            ${asset.illumination ? `<p><span class="font-semibold">Lighting:</span> ${asset.illumination}</p>` : ""}
+          </div>
+        </div>
+      `;
+
+      marker.bindPopup(popupContent);
+      marker.on("click", () => onAssetClick(asset));
+      marker.addTo(mapRef.current!);
+
+      bounds.push([asset.latitude, asset.longitude]);
+    });
+
+    // Fit bounds to show all markers
+    if (bounds.length > 0) {
+      mapRef.current.fitBounds(bounds as L.LatLngBoundsExpression, { padding: [50, 50] });
+    }
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, [validAssets, onAssetClick]);
 
   if (validAssets.length === 0) {
     return (
@@ -74,85 +135,9 @@ export function MapView({ assets, onAssetClick }: MapViewProps) {
     );
   }
 
-  // Use first asset's coordinates as default center
-  const defaultCenter: [number, number] = [validAssets[0].latitude, validAssets[0].longitude];
-
   return (
     <div className="h-full rounded-lg overflow-hidden border">
-      <MapContainer
-        center={defaultCenter}
-        zoom={12}
-        className="h-full w-full"
-        scrollWheelZoom={true}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <MapBoundsUpdater assets={validAssets} />
-
-        {validAssets.map((asset) => (
-          <Marker
-            key={asset.id}
-            position={[asset.latitude, asset.longitude]}
-            icon={createMarkerIcon(asset.status)}
-          >
-            <Popup>
-              <div className="min-w-[250px] p-2">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-bold text-sm">{asset.id}</h3>
-                  <Badge
-                    variant={
-                      asset.status === "Available"
-                        ? "default"
-                        : asset.status === "Booked"
-                        ? "destructive"
-                        : "secondary"
-                    }
-                  >
-                    {asset.status}
-                  </Badge>
-                </div>
-                <div className="space-y-1 text-xs">
-                  <p>
-                    <span className="font-semibold">Area:</span> {asset.area}
-                  </p>
-                  <p>
-                    <span className="font-semibold">Location:</span> {asset.location}
-                  </p>
-                  <p>
-                    <span className="font-semibold">City:</span> {asset.city}
-                  </p>
-                  <p>
-                    <span className="font-semibold">Type:</span> {asset.media_type}
-                  </p>
-                  <p>
-                    <span className="font-semibold">Size:</span> {asset.dimensions}
-                  </p>
-                  {asset.direction && (
-                    <p>
-                      <span className="font-semibold">Direction:</span> {asset.direction}
-                    </p>
-                  )}
-                  {asset.illumination && (
-                    <p>
-                      <span className="font-semibold">Lighting:</span> {asset.illumination}
-                    </p>
-                  )}
-                </div>
-                <Button
-                  size="sm"
-                  className="w-full mt-3"
-                  onClick={() => onAssetClick(asset)}
-                >
-                  <Eye className="h-3 w-3 mr-1" />
-                  View Details
-                </Button>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
+      <div ref={mapContainerRef} className="h-full w-full" />
     </div>
   );
 }

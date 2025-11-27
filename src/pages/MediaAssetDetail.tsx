@@ -109,6 +109,10 @@ export default function MediaAssetDetail() {
     );
   }
 
+  const handleQRGenerated = (qrUrl: string) => {
+    setAsset((prev: any) => prev ? { ...prev, qr_code_url: qrUrl } : null);
+  };
+
   return (
     <div className="flex-1 space-y-4 p-4 sm:p-8 pt-6">
       <PageHeader
@@ -122,7 +126,7 @@ export default function MediaAssetDetail() {
         showBackButton
         backPath={ROUTES.MEDIA_ASSETS}
       />
-      <AssetDetails asset={asset} isAdmin={isAdmin} />
+      <AssetDetails asset={asset} isAdmin={isAdmin} onQRGenerated={handleQRGenerated} />
     </div>
   );
 }

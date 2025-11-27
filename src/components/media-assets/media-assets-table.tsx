@@ -456,7 +456,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
       {
         id: "actions",
         header: () => <div className="text-right">Actions</div>,
-        cell: ({ row }) => <ActionCell row={row} onDelete={openDeleteDialog} />,
+        cell: ({ row }) => <ActionCell row={row} onDelete={openDeleteDialog} onQRGenerated={onRefresh} />,
       },
     ],
     [navigate]

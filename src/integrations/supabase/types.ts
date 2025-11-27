@@ -2345,6 +2345,7 @@ export type Database = {
           municipal_authority: string | null
           ownership: Database["public"]["Enums"]["ownership_type"] | null
           printing_charges: number | null
+          qr_code_url: string | null
           search_tokens: string[] | null
           section_name: string | null
           service_number: string | null
@@ -2392,6 +2393,7 @@ export type Database = {
           municipal_authority?: string | null
           ownership?: Database["public"]["Enums"]["ownership_type"] | null
           printing_charges?: number | null
+          qr_code_url?: string | null
           search_tokens?: string[] | null
           section_name?: string | null
           service_number?: string | null
@@ -2439,6 +2441,7 @@ export type Database = {
           municipal_authority?: string | null
           ownership?: Database["public"]["Enums"]["ownership_type"] | null
           printing_charges?: number | null
+          qr_code_url?: string | null
           search_tokens?: string[] | null
           section_name?: string | null
           service_number?: string | null

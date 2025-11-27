@@ -2337,6 +2337,7 @@ export type Database = {
           is_public: boolean | null
           latitude: number | null
           location: string
+          location_url: string | null
           longitude: number | null
           maintenance: number | null
           media_id: string | null
@@ -2385,6 +2386,7 @@ export type Database = {
           is_public?: boolean | null
           latitude?: number | null
           location: string
+          location_url?: string | null
           longitude?: number | null
           maintenance?: number | null
           media_id?: string | null
@@ -2433,6 +2435,7 @@ export type Database = {
           is_public?: boolean | null
           latitude?: number | null
           location?: string
+          location_url?: string | null
           longitude?: number | null
           maintenance?: number | null
           media_id?: string | null

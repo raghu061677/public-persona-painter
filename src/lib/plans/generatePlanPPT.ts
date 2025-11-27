@@ -14,6 +14,7 @@ interface PlanAsset {
   latitude?: number;
   longitude?: number;
   google_street_view_url?: string;
+  qr_code_url?: string;
   images?: {
     photos?: Array<{ url: string; tag: string }>;
   };
@@ -233,6 +234,29 @@ export async function generatePlanPPT(
       align: 'left',
       fontFace: 'Arial',
     });
+
+    // Add QR Code if available (top-right corner)
+    if (asset.qr_code_url) {
+      try {
+        const qrResponse = await fetch(asset.qr_code_url);
+        const qrBlob = await qrResponse.blob();
+        const qrBase64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(qrBlob);
+        });
+        
+        slide2.addImage({
+          data: qrBase64,
+          x: 9.2,
+          y: 0.4,
+          w: 1.2,
+          h: 1.2,
+        });
+      } catch (error) {
+        console.error('Failed to add QR code:', error);
+      }
+    }
 
     // Small thumbnail
     try {

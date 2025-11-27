@@ -80,9 +80,9 @@ export async function generateAndUploadQRCode(
   const blob = await response.blob();
 
   // Upload to Supabase storage
-  const filePath = `${options.assetId}/qr.png`;
+  const filePath = `${options.assetId}.png`;
   const { data, error } = await supabase.storage
-    .from('media-qr-codes')
+    .from('asset-qrcodes')
     .upload(filePath, blob, {
       contentType: 'image/png',
       upsert: true,
@@ -95,7 +95,7 @@ export async function generateAndUploadQRCode(
 
   // Get public URL
   const { data: urlData } = supabase.storage
-    .from('media-qr-codes')
+    .from('asset-qrcodes')
     .getPublicUrl(filePath);
 
   return urlData.publicUrl;
@@ -143,10 +143,10 @@ export async function generateAssetQRCode(
  * Delete QR code from storage
  */
 export async function deleteAssetQRCode(assetId: string): Promise<void> {
-  const filePath = `${assetId}/qr.png`;
+  const filePath = `${assetId}.png`;
   
   const { error } = await supabase.storage
-    .from('media-qr-codes')
+    .from('asset-qrcodes')
     .remove([filePath]);
 
   if (error) {

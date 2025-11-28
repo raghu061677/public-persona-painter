@@ -128,6 +128,8 @@ export default function MediaAssetDetail() {
         backPath={ROUTES.MEDIA_ASSETS}
       />
       
+      <AssetDetails asset={asset} isAdmin={isAdmin} onQRGenerated={handleQRGenerated} />
+      
       <MediaAssetQrSection
         assetId={asset.id}
         qrCodeUrl={asset.qr_code_url}
@@ -140,8 +142,6 @@ export default function MediaAssetDetail() {
         }
         onQrGenerated={handleQRGenerated}
       />
-
-      <AssetDetails asset={asset} isAdmin={isAdmin} onQRGenerated={handleQRGenerated} />
     </div>
   );
 }

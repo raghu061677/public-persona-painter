@@ -50,13 +50,16 @@ export const MediaAssetQrSection = ({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${assetId}-qr.png`;
+      // Detect file extension from URL or blob type
+      const extension = displayQr.endsWith('.svg') || blob.type.includes('svg') ? 'svg' : 'png';
+      a.download = `${assetId}-qr.${extension}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast({ title: "Downloaded!", description: "QR code saved" });
     } catch (err) {
+      console.error('QR download error:', err);
       toast({ 
         title: "Download Failed", 
         description: "Could not download QR code",

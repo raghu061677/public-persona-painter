@@ -408,7 +408,7 @@ export default function ClientDetail() {
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalPlans}</div>
             <p className="text-xs text-muted-foreground">
-              {plans.filter(p => p.status === "Approved").length} approved
+              {plans.filter(p => p.status?.toLowerCase() === "approved").length} approved
             </p>
           </CardContent>
         </Card>

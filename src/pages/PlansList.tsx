@@ -703,7 +703,7 @@ export default function PlansList() {
 
                 {selectedPlans.size > 0 && Array.from(selectedPlans).every(id => {
                   const plan = filteredPlans.find(p => p.id === id);
-                  return plan?.status === 'Approved';
+                  return plan?.status?.toLowerCase() === 'approved';
                 }) && isAdmin && (
                   <Button
                     onClick={() => setShowBulkConversionDialog(true)}
@@ -944,7 +944,7 @@ export default function PlansList() {
                       {visibleColumns.includes("qos") && (
                         <TableCell className="px-4 py-3 text-right">
                           <span className="text-green-600 font-medium">
-                            {plan.status === 'Approved' ? '45%' : plan.status === 'Draft' ? '-' : '30%'}
+                            {plan.status?.toLowerCase() === 'approved' ? '45%' : plan.status?.toLowerCase() === 'draft' ? '-' : '30%'}
                           </span>
                         </TableCell>
                       )}
@@ -998,7 +998,7 @@ export default function PlansList() {
                               </Tooltip>
                             )}
                             
-                            {plan.status === 'Approved' && isAdmin && (
+                            {plan.status?.toLowerCase() === 'approved' && isAdmin && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
@@ -1024,7 +1024,7 @@ export default function PlansList() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-56">
-                                {plan.status === 'Approved' && isAdmin && (
+                                {plan.status?.toLowerCase() === 'approved' && isAdmin && (
                                   <>
                                     <DropdownMenuItem 
                                       onClick={() => navigate(`/admin/plans/${plan.id}`)}

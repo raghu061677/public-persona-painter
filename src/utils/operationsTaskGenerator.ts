@@ -21,6 +21,7 @@ export interface CampaignAsset {
 }
 
 export interface OperationsTask {
+  id?: string;
   campaign_id: string;
   asset_id: string;
   job_type: 'printing' | 'dispatch' | 'mounting' | 'photo_upload' | 'unmounting';
@@ -28,10 +29,14 @@ export interface OperationsTask {
   end_date?: string;
   deadline_date?: string;
   status: string;
+  assigned_to?: string;
   location: string;
   area: string;
   city: string;
   media_type: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 /**
@@ -136,19 +141,8 @@ export const generateOperationsTasks = async (
 export const saveOperationsTasks = async (tasks: OperationsTask[]): Promise<boolean> => {
   try {
     const { error } = await supabase
-      .from('campaign_assets')
-      .upsert(tasks.map((task, index) => ({
-        id: `${task.campaign_id}-${task.asset_id}-${task.job_type}`,
-        campaign_id: task.campaign_id,
-        asset_id: task.asset_id,
-        location: task.location,
-        area: task.area,
-        city: task.city,
-        media_type: task.media_type,
-        status: task.status,
-        assigned_at: task.start_date || null,
-        // Add custom fields for task tracking
-      })));
+      .from('operations_tasks')
+      .insert(tasks);
 
     if (error) {
       console.error('Error saving operations tasks:', error);
@@ -180,7 +174,7 @@ export const regenerateOperationsTasks = async (
   try {
     // Delete existing tasks for this campaign
     await supabase
-      .from('campaign_assets')
+      .from('operations_tasks')
       .delete()
       .eq('campaign_id', campaignId);
 
@@ -209,10 +203,10 @@ export const regenerateOperationsTasks = async (
 export const getOperationsTasks = async (campaignId: string): Promise<OperationsTask[]> => {
   try {
     const { data, error } = await supabase
-      .from('campaign_assets')
+      .from('operations_tasks')
       .select('*')
       .eq('campaign_id', campaignId)
-      .order('assigned_at', { ascending: true });
+      .order('start_date', { ascending: true });
 
     if (error) {
       console.error('Error fetching operations tasks:', error);

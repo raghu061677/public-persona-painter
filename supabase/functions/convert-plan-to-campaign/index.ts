@@ -1,8 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 import { corsHeaders } from '../_shared/cors.ts'
 
-// Version 6.0 - Explicitly set valid enum status
-console.log('Convert Plan to Campaign function v6.0 started - Using Planned status')
+// Version 7.0 - Force status to 'active' always
+console.log('Convert Plan to Campaign function v7.0 started - Using active status')
 
 interface ConvertPlanRequest {
   plan_id: string
@@ -154,10 +154,9 @@ Deno.serve(async (req) => {
     const finalStartDate = start_date || plan.start_date
     const finalEndDate = end_date || plan.end_date
 
-    // 6. Create campaign record with explicit valid enum status
-    // campaign_status enum values: 'Planned', 'Assigned', 'InProgress', 'PhotoUploaded', 'Verified', 'Completed'
-    const normalizedStatus = 'Planned' as const
-    console.log('[v6.0] Using status:', normalizedStatus)
+    // 6. Create campaign record - force status to 'active' always
+    const normalizedStatus = 'active' as const
+    console.log('[v7.0] Using status:', normalizedStatus)
     const campaignInsertData = {
       id: campaignCode,
       company_id: companyId,
@@ -177,7 +176,7 @@ Deno.serve(async (req) => {
       created_by: user.id,
     }
     
-    console.log('[v6.0] Campaign insert data:', JSON.stringify(campaignInsertData, null, 2))
+    console.log('[v7.0] Campaign insert data:', JSON.stringify(campaignInsertData, null, 2))
     
     const { data: campaign, error: campaignError } = await supabase
       .from('campaigns')

@@ -29,7 +29,7 @@ export default function CampaignEdit() {
   const [clientName, setClientName] = useState("");
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
-  const [status, setStatus] = useState<"Planned" | "Assigned" | "InProgress" | "PhotoUploaded" | "Verified" | "Completed">("Planned");
+  const [status, setStatus] = useState<"Planned" | "Assigned" | "InProgress" | "PhotoUploaded" | "Verified" | "Completed" | "active">("Planned");
   const [notes, setNotes] = useState("");
   const [gstPercent, setGstPercent] = useState(18);
   
@@ -402,6 +402,7 @@ export default function CampaignEdit() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="Planned">Planned</SelectItem>
                     <SelectItem value="Assigned">Assigned</SelectItem>
                     <SelectItem value="InProgress">In Progress</SelectItem>

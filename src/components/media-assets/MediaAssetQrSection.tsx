@@ -91,116 +91,115 @@ export const MediaAssetQrSection = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Left Column: Controls */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Link2 className="w-4 h-4" />
-                Location URL
-              </label>
-              <div className="flex gap-2">
-                <Input
-                  readOnly
-                  value={locationUrl || "No location URL configured"}
-                  className="text-xs font-mono"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleCopyLocation}
-                  disabled={!locationUrl}
-                  title="Copy location URL"
-                >
-                  <Share2 className="w-4 h-4" />
-                </Button>
-              </div>
+        {/* QR Display - Top Section */}
+        <div className="flex flex-col items-center justify-center bg-muted/30 rounded-lg p-6 min-h-[240px]">
+          {displayQr ? (
+            <div className="space-y-3 flex flex-col items-center">
+              <img
+                src={displayQr}
+                alt={`${assetId} QR code`}
+                className="border-2 border-border rounded-lg p-3 bg-white shadow-sm max-w-[200px] max-h-[200px]"
+              />
+              <span className="text-xs text-center text-muted-foreground max-w-[200px]">
+                📱 Scan this QR code at the site to open location details
+              </span>
             </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button 
-                onClick={handleGenerate} 
-                disabled={loading}
-                size="sm"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : displayQr ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Regenerate
-                  </>
-                ) : (
-                  <>
-                    <QrCode className="w-4 h-4 mr-2" />
-                    Generate QR
-                  </>
-                )}
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDownloadQr}
-                disabled={!displayQr}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Download
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleShareWhatsApp}
-                disabled={!displayQr && !locationUrl}
-              >
-                <Share2 className="w-4 h-4 mr-2" />
-                WhatsApp
-              </Button>
-            </div>
-
-            {error && (
-              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-                <p className="text-xs text-destructive">⚠️ {error}</p>
-              </div>
-            )}
-
-            <div className="p-3 bg-muted rounded-md">
-              <p className="text-xs text-muted-foreground">
-                💡 <strong>Tip:</strong> QR codes link to the asset's location (Google Maps or Street View). 
-                Field teams can scan on-site for instant access.
+          ) : (
+            <div className="text-center space-y-2">
+              <QrCode className="w-16 h-16 mx-auto text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">
+                No QR code generated yet
+              </p>
+              <p className="text-xs text-muted-foreground/60 max-w-[200px]">
+                Click "Generate QR" to create a scannable code for this asset
               </p>
             </div>
-          </div>
+          )}
+        </div>
 
-          {/* Right Column: QR Display */}
-          <div className="flex flex-col items-center justify-center bg-muted/30 rounded-lg p-6 min-h-[240px]">
-            {displayQr ? (
-              <div className="space-y-3 flex flex-col items-center">
-                <img
-                  src={displayQr}
-                  alt={`${assetId} QR code`}
-                  className="border-2 border-border rounded-lg p-3 bg-white shadow-sm max-w-[200px] max-h-[200px]"
-                />
-                <span className="text-xs text-center text-muted-foreground max-w-[200px]">
-                  📱 Scan this QR code at the site to open location details
-                </span>
-              </div>
-            ) : (
-              <div className="text-center space-y-2">
-                <QrCode className="w-16 h-16 mx-auto text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">
-                  No QR code generated yet
-                </p>
-                <p className="text-xs text-muted-foreground/60 max-w-[200px]">
-                  Click "Generate QR" to create a scannable code for this asset
-                </p>
-              </div>
-            )}
+        {/* Location URL Section */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center gap-2">
+            <Link2 className="w-4 h-4" />
+            Location URL
+          </label>
+          <div className="flex gap-2">
+            <Input
+              readOnly
+              value={locationUrl || "No location URL configured"}
+              className="text-xs font-mono"
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleCopyLocation}
+              disabled={!locationUrl}
+              title="Copy location URL"
+            >
+              <Share2 className="w-4 h-4" />
+            </Button>
           </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-wrap gap-2">
+          <Button 
+            onClick={handleGenerate} 
+            disabled={loading}
+            size="sm"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : displayQr ? (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Regenerate
+              </>
+            ) : (
+              <>
+                <QrCode className="w-4 h-4 mr-2" />
+                Generate QR
+              </>
+            )}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadQr}
+            disabled={!displayQr}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Download
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleShareWhatsApp}
+            disabled={!displayQr && !locationUrl}
+          >
+            <Share2 className="w-4 h-4 mr-2" />
+            WhatsApp
+          </Button>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+            <p className="text-xs text-destructive">⚠️ {error}</p>
+          </div>
+        )}
+
+        {/* Info Tip */}
+        <div className="p-3 bg-muted rounded-md">
+          <p className="text-xs text-muted-foreground">
+            💡 <strong>Tip:</strong> QR codes link to the asset's location (Google Maps or Street View). 
+            Field teams can scan on-site for instant access.
+          </p>
         </div>
       </CardContent>
     </Card>

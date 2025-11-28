@@ -1004,28 +1004,26 @@ export default function PlanDetail() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-popover border shadow-md z-50">
                 {/* Unified Export */}
-                <DropdownMenuItem asChild>
-                  <div className="w-full p-0">
-                    <UnifiedExportButton 
-                      planId={id!} 
-                      planName={plan?.plan_name} 
-                      variant="ghost" 
-                      size="sm"
-                      className="w-full justify-start font-normal"
-                    />
-                  </div>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <UnifiedExportButton 
+                    planId={id!} 
+                    planName={plan?.plan_name} 
+                    variant="ghost" 
+                    size="sm"
+                    className="w-full justify-start font-normal h-auto p-0"
+                  />
                 </DropdownMenuItem>
 
                 <DropdownMenuSeparator />
                 
-                {/* Cloud Upload */}
+                {/* Download Actions */}
                 <DropdownMenuItem onClick={() => handleExportPPT(true)} disabled={exportingPPT}>
                   <Save className="mr-2 h-4 w-4" />
-                  {exportingPPT ? "Uploading..." : "Upload PPT to Cloud"}
+                  {exportingPPT ? "Uploading..." : "Download PPT"}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExportExcel(true)} disabled={exportingExcel}>
                   <Save className="mr-2 h-4 w-4" />
-                  {exportingExcel ? "Uploading..." : "Upload Excel to Cloud"}
+                  {exportingExcel ? "Uploading..." : "Download Excel"}
                 </DropdownMenuItem>
                 
                 <DropdownMenuSeparator />

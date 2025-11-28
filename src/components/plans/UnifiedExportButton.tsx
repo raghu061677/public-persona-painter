@@ -26,6 +26,8 @@ export function UnifiedExportButton({
   const [showOptionsDialog, setShowOptionsDialog] = useState(false);
 
   const handleExport = async (options: ExportOptions) => {
+    setShowOptionsDialog(false);
+    
     try {
       setIsExporting(true);
 
@@ -45,7 +47,8 @@ export function UnifiedExportButton({
           media_assets!inner(
             total_sqft,
             dimensions,
-            illumination
+            illumination,
+            qr_code_url
           )
         `)
         .eq('plan_id', planId)
@@ -59,6 +62,7 @@ export function UnifiedExportButton({
         total_sqft: item.media_assets?.total_sqft,
         dimensions: item.media_assets?.dimensions,
         illumination: item.media_assets?.illumination,
+        qr_code_url: item.media_assets?.qr_code_url,
       }));
 
       let blob: Blob;
@@ -103,7 +107,10 @@ export function UnifiedExportButton({
       <Button
         variant={variant}
         size={size}
-        onClick={() => setShowOptionsDialog(true)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setShowOptionsDialog(true);
+        }}
         disabled={isExporting}
         className={className}
       >

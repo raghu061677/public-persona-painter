@@ -246,7 +246,7 @@ export function EditClientDialog({
 
             {/* Name */}
             <div className="col-span-2">
-              <Label>Name *</Label>
+              <Label className="text-sm">Name *</Label>
               <Input
                 value={formData.name}
                 onChange={(e) => updateField('name', e.target.value)}

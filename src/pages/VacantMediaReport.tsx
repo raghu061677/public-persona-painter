@@ -127,57 +127,68 @@ export default function VacantMediaReport() {
 
         {/* Table */}
         <div className="bg-card rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Asset ID</TableHead>
-                <TableHead>Media Type</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>City</TableHead>
-                <TableHead>Dimensions</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Card Rate</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    Loading...
-                  </TableCell>
-                </TableRow>
-              ) : filteredAssets.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    No vacant assets found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredAssets.map((asset) => (
-                  <TableRow key={asset.id}>
-                    <TableCell className="font-medium">{asset.id}</TableCell>
-                    <TableCell>{asset.media_type}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        {asset.location}
-                      </div>
-                    </TableCell>
-                    <TableCell>{asset.city}</TableCell>
-                    <TableCell>{asset.dimensions}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(asset.status)}>
-                        {asset.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(asset.card_rate)}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <div className="w-full overflow-x-auto">
+            <div className="inline-block min-w-full align-middle">
+              <div className="overflow-hidden border-t">
+                <Table className="min-w-max w-full table-auto whitespace-nowrap">
+                  <TableHeader className="bg-muted sticky top-0 z-20">
+                    <TableRow>
+                      <TableHead className="sticky left-0 z-30 bg-muted px-4 py-3 text-left font-semibold border-r">Asset ID</TableHead>
+                      <TableHead className="px-4 py-3 text-left font-semibold">Media Type</TableHead>
+                      <TableHead className="px-4 py-3 text-left font-semibold">Location</TableHead>
+                      <TableHead className="px-4 py-3 text-left font-semibold">City</TableHead>
+                      <TableHead className="px-4 py-3 text-left font-semibold">Dimensions</TableHead>
+                      <TableHead className="px-4 py-3 text-left font-semibold">Status</TableHead>
+                      <TableHead className="px-4 py-3 text-right font-semibold">Card Rate</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8">
+                          Loading...
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredAssets.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8">
+                          No vacant assets found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredAssets.map((asset, index) => (
+                        <TableRow 
+                          key={asset.id}
+                          className={`transition-all duration-150 hover:bg-muted/80 ${
+                            index % 2 === 0 ? 'bg-background' : 'bg-muted/30'
+                          }`}
+                        >
+                          <TableCell className="sticky left-0 z-10 bg-inherit px-4 py-3 font-medium border-r">{asset.id}</TableCell>
+                          <TableCell className="px-4 py-3">{asset.media_type}</TableCell>
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-muted-foreground" />
+                              {asset.location}
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">{asset.city}</TableCell>
+                          <TableCell className="px-4 py-3">{asset.dimensions}</TableCell>
+                          <TableCell className="px-4 py-3">
+                            <Badge className={getStatusColor(asset.status)}>
+                              {asset.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-right font-medium">
+                            {formatCurrency(asset.card_rate)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -734,7 +734,13 @@ export default function PlanDetail() {
       
       // Call Edge Function to handle conversion with asset booking and overlap validation
       const { data, error } = await supabase.functions.invoke('convert-plan-to-campaign', {
-        body: { plan_id: plan.id }
+        body: { 
+          plan_id: plan.id,
+          campaign_name: campaignData.campaign_name || plan.plan_name,
+          start_date: campaignData.start_date || plan.start_date,
+          end_date: campaignData.end_date || plan.end_date,
+          notes: campaignData.notes || plan.notes || ""
+        }
       });
 
       if (error) {
@@ -863,6 +869,18 @@ export default function PlanDetail() {
           
           {/* Action Buttons */}
           <div className="flex gap-2 flex-wrap items-start">
+            {/* Edit Plan Button - Standalone */}
+            {isAdmin && (plan.status === 'pending' || plan.status === 'approved' || plan.status === 'Draft') && (
+              <Button
+                onClick={() => navigate(`/admin/plans/edit/${id}`)}
+                size="sm"
+                variant="outline"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Plan
+              </Button>
+            )}
+
             {/* Submit for Approval - Draft or pending Status */}
             {(plan.status === 'Draft' || plan.status === 'pending') && (
               <Button
@@ -988,44 +1006,19 @@ export default function PlanDetail() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-popover z-50">
-                {/* Edit Plan - Top Priority */}
-                {isAdmin && (plan.status === 'pending' || plan.status === 'approved') && (
-                  <>
-                    <DropdownMenuItem onClick={() => navigate(`/admin/plans/edit/${id}`)}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit Plan
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-                
                 {/* Export Documents - Nested Submenu */}
                 <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
+                  <DropdownMenuSubTrigger className="cursor-pointer">
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
                     Export Documents
                   </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="w-52 bg-popover z-[60]">
-                    <DropdownMenuItem asChild>
-                      <div className="w-full p-0">
-                        <ExportPlanExcelButton planId={id!} variant="ghost" size="sm" className="w-full justify-start p-2 h-auto font-normal" />
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <div className="w-full p-0">
-                        <WorkOrderPDFButton planId={id!} planName={plan?.plan_name} />
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <div className="w-full p-0">
-                        <EstimatePDFButton planId={id!} planName={plan?.plan_name} />
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <div className="w-full p-0">
-                        <SalesOrderPDFButton planId={id!} planName={plan?.plan_name} />
-                      </div>
-                    </DropdownMenuItem>
+                  <DropdownMenuSubContent className="w-48 bg-popover border shadow-lg">
+                    <div className="py-1">
+                      <ExportPlanExcelButton planId={id!} variant="ghost" size="sm" className="w-full justify-start px-2 py-1.5 h-auto font-normal hover:bg-accent" />
+                      <WorkOrderPDFButton planId={id!} planName={plan?.plan_name} />
+                      <EstimatePDFButton planId={id!} planName={plan?.plan_name} />
+                      <SalesOrderPDFButton planId={id!} planName={plan?.plan_name} />
+                    </div>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
 

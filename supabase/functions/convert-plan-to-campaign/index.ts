@@ -5,6 +5,10 @@ console.log('Convert Plan to Campaign function started')
 
 interface ConvertPlanRequest {
   plan_id: string
+  campaign_name?: string
+  start_date?: string
+  end_date?: string
+  notes?: string
 }
 
 Deno.serve(async (req) => {
@@ -48,13 +52,14 @@ Deno.serve(async (req) => {
     const companyId = companyUser.company_id
 
     // Parse request body
-    const { plan_id }: ConvertPlanRequest = await req.json()
+    const { plan_id, campaign_name, start_date, end_date, notes }: ConvertPlanRequest = await req.json()
 
     if (!plan_id) {
       throw new Error('plan_id is required')
     }
 
     console.log(`Converting plan ${plan_id} to campaign...`)
+    console.log('Campaign data:', { campaign_name, start_date, end_date, notes })
 
     // 1. Load and validate the plan
     const { data: plan, error: planError } = await supabase
@@ -144,11 +149,11 @@ Deno.serve(async (req) => {
 
     const campaignCode = `CMP-${year}-${String(nextNum).padStart(4, '0')}`
 
-    // 5. Calculate date range from items
-    const startDates = planItems.map(item => new Date(plan.start_date))
-    const endDates = planItems.map(item => new Date(plan.end_date))
-    const campaignStart = new Date(Math.min(...startDates.map(d => d.getTime())))
-    const campaignEnd = new Date(Math.max(...endDates.map(d => d.getTime())))
+    // 5. Calculate date range from items (use provided dates or fall back to plan dates)
+    const finalStartDate = start_date || plan.start_date
+    const finalEndDate = end_date || plan.end_date
+    const campaignStart = new Date(finalStartDate)
+    const campaignEnd = new Date(finalEndDate)
 
     // 6. Create campaign
     const { data: campaign, error: campaignError } = await supabase
@@ -158,7 +163,7 @@ Deno.serve(async (req) => {
         company_id: companyId,
         client_id: plan.client_id,
         plan_id: plan.id,
-        campaign_name: plan.plan_name || `Campaign for ${plan.client_name}`,
+        campaign_name: campaign_name || plan.plan_name || `Campaign for ${plan.client_name}`,
         client_name: plan.client_name,
         start_date: campaignStart.toISOString().split('T')[0],
         end_date: campaignEnd.toISOString().split('T')[0],
@@ -168,7 +173,7 @@ Deno.serve(async (req) => {
         gst_percent: plan.gst_percent || 18,
         gst_amount: plan.gst_amount || 0,
         grand_total: plan.grand_total || 0,
-        notes: plan.notes,
+        notes: notes || plan.notes,
         created_by: user.id,
       })
       .select()
@@ -180,13 +185,13 @@ Deno.serve(async (req) => {
 
     console.log(`Created campaign: ${campaignCode}`)
 
-    // 7. Create campaign_items
+    // 7. Create campaign_items (use final dates)
     const campaignItems = planItems.map((item: any) => ({
       campaign_id: campaignCode,
       plan_item_id: item.id,
       asset_id: item.asset_id,
-      start_date: plan.start_date,
-      end_date: plan.end_date,
+      start_date: finalStartDate,
+      end_date: finalEndDate,
       card_rate: item.card_rate || 0,
       negotiated_rate: item.negotiated_rate || item.card_rate || 0,
       printing_charge: item.printing_charges || 0,
@@ -228,14 +233,14 @@ Deno.serve(async (req) => {
       // Don't fail the entire conversion, just log
     }
 
-    // 9. Update media_assets to mark as booked
+    // 9. Update media_assets to mark as booked (use final dates)
     for (const item of planItems) {
       const { error: assetUpdateError } = await supabase
         .from('media_assets')
         .update({
           status: 'Booked',
-          booked_from: plan.start_date,
-          booked_to: plan.end_date,
+          booked_from: finalStartDate,
+          booked_to: finalEndDate,
           current_campaign_id: campaignCode,
         })
         .eq('id', item.asset_id)

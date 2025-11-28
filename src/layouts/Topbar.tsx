@@ -64,7 +64,7 @@ export default function Topbar({ onSearchOpen }: { onSearchOpen: () => void }) {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between bg-card/95 backdrop-blur-md border-b border-border h-14 md:h-16 px-3 md:px-4 lg:px-6 shadow-sm w-full shrink-0">
+    <header className="sticky top-0 z-[100] flex items-center justify-between bg-card/98 backdrop-blur-lg border-b border-border h-14 md:h-16 px-3 md:px-4 lg:px-6 shadow-md w-full shrink-0">
       {/* Left: Brand */}
       <div className="flex items-center gap-2 min-w-0 shrink-0">
         <Link to="/admin/dashboard" className="font-semibold text-foreground text-sm md:text-base truncate hover:opacity-80 transition-opacity cursor-pointer">

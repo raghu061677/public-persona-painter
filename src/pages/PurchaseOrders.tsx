@@ -105,46 +105,57 @@ export default function PurchaseOrders() {
               </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order ID</TableHead>
-                  <TableHead>Vendor</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>GST</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {expenses.map((expense) => (
-                  <TableRow key={expense.id}>
-                    <TableCell className="font-medium">{expense.id}</TableCell>
-                    <TableCell>{expense.vendor_name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{expense.category}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-sm">
-                        <Calendar className="h-3 w-3 text-muted-foreground" />
-                        {new Date(expense.created_at).toLocaleDateString()}
-                      </div>
-                    </TableCell>
-                    <TableCell>₹{expense.amount.toLocaleString()}</TableCell>
-                    <TableCell>₹{expense.gst_amount.toLocaleString()}</TableCell>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-1">
-                        <DollarSign className="h-3 w-3 text-muted-foreground" />
-                        ₹{expense.total_amount.toLocaleString()}
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(expense.payment_status)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="w-full overflow-x-auto">
+              <div className="inline-block min-w-full align-middle">
+                <div className="overflow-hidden border border-border/50 rounded-lg">
+                  <Table className="min-w-max w-full table-auto whitespace-nowrap">
+                    <TableHeader className="bg-muted sticky top-0 z-20">
+                      <TableRow>
+                        <TableHead className="sticky left-0 z-30 bg-muted px-4 py-3 text-left font-semibold border-r">Order ID</TableHead>
+                        <TableHead className="px-4 py-3 text-left font-semibold">Vendor</TableHead>
+                        <TableHead className="px-4 py-3 text-left font-semibold">Category</TableHead>
+                        <TableHead className="px-4 py-3 text-left font-semibold">Date</TableHead>
+                        <TableHead className="px-4 py-3 text-right font-semibold">Amount</TableHead>
+                        <TableHead className="px-4 py-3 text-right font-semibold">GST</TableHead>
+                        <TableHead className="px-4 py-3 text-right font-semibold">Total</TableHead>
+                        <TableHead className="px-4 py-3 text-left font-semibold">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {expenses.map((expense, index) => (
+                        <TableRow 
+                          key={expense.id}
+                          className={`transition-all duration-150 hover:bg-muted/80 ${
+                            index % 2 === 0 ? 'bg-background' : 'bg-muted/30'
+                          }`}
+                        >
+                          <TableCell className="sticky left-0 z-10 bg-inherit px-4 py-3 font-medium border-r">{expense.id}</TableCell>
+                          <TableCell className="px-4 py-3">{expense.vendor_name}</TableCell>
+                          <TableCell className="px-4 py-3">
+                            <Badge variant="outline">{expense.category}</Badge>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center gap-1 text-sm">
+                              <Calendar className="h-3 w-3 text-muted-foreground" />
+                              {new Date(expense.created_at).toLocaleDateString()}
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-right">₹{expense.amount.toLocaleString()}</TableCell>
+                          <TableCell className="px-4 py-3 text-right">₹{expense.gst_amount.toLocaleString()}</TableCell>
+                          <TableCell className="px-4 py-3 text-right font-medium">
+                            <div className="flex items-center gap-1 justify-end">
+                              <DollarSign className="h-3 w-3 text-muted-foreground" />
+                              ₹{expense.total_amount.toLocaleString()}
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">{getStatusBadge(expense.payment_status)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

@@ -29,22 +29,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <OnboardingGate>
       <BreadcrumbProvider>
-        <div className="flex h-screen w-full overflow-hidden bg-background">
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
-          <NotificationCenter />
-        </div>
-        <SidebarLayout>
-          <div className="flex flex-col flex-1 h-full w-full min-w-0">
-            <Topbar onSearchOpen={() => setCommandOpen(true)} />
-            <main className="flex-1 overflow-y-auto overflow-x-hidden bg-muted/30 p-3 sm:p-4 md:p-6 lg:p-8 pb-20 md:pb-6">
-              <div className="w-full max-w-[1600px] mx-auto">
-                <BreadcrumbNav />
-                {children}
-              </div>
-            </main>
+        <div className="min-h-screen w-full bg-background">
+          <div className="fixed top-4 right-4 z-[60] flex items-center gap-2">
+            <NotificationCenter />
           </div>
-        </SidebarLayout>
-      </div>
+          <SidebarLayout>
+            <div className="flex flex-col min-h-screen w-full">
+              {/* Sticky Topbar - Frozen while scrolling */}
+              <div className="sticky top-0 z-[100] w-full">
+                <Topbar onSearchOpen={() => setCommandOpen(true)} />
+              </div>
+              
+              {/* Scrollable Main Content */}
+              <main className="flex-1 bg-muted/30 p-3 sm:p-4 md:p-6 lg:p-8 pb-20 md:pb-6">
+                <div className="w-full max-w-[1600px] mx-auto">
+                  <BreadcrumbNav />
+                  {children}
+                </div>
+              </main>
+            </div>
+          </SidebarLayout>
+        </div>
       
       {/* Mobile FAB - Quick Create */}
       <div className="md:hidden fixed bottom-6 right-6 z-50 animate-fade-in" style={{ animationDelay: '0.3s' }}>

@@ -277,38 +277,49 @@ export function VacantMediaReport() {
           {loading ? (
             <div className="text-center py-8">Loading...</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Asset ID</TableHead>
-                  <TableHead>City</TableHead>
-                  <TableHead>Area</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Size</TableHead>
-                  <TableHead className="text-right">Sq.Ft</TableHead>
-                  <TableHead className="text-right">Rate</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAssets.map((asset) => (
-                  <TableRow key={asset.id}>
-                    <TableCell className="font-mono text-sm">{asset.id}</TableCell>
-                    <TableCell>{asset.city}</TableCell>
-                    <TableCell>{asset.area}</TableCell>
-                    <TableCell className="max-w-[200px] truncate">{asset.location}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{asset.media_type}</Badge>
-                    </TableCell>
-                    <TableCell>{asset.dimensions}</TableCell>
-                    <TableCell className="text-right">{asset.total_sqft || "-"}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      ₹{asset.card_rate.toLocaleString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="w-full overflow-x-auto">
+              <div className="inline-block min-w-full align-middle">
+                <div className="overflow-hidden border border-border/50 rounded-lg">
+                  <Table className="min-w-max w-full table-auto whitespace-nowrap">
+                    <TableHeader className="bg-muted sticky top-0 z-20">
+                      <TableRow>
+                        <TableHead className="sticky left-0 z-30 bg-muted px-4 py-3 text-left font-semibold border-r">Asset ID</TableHead>
+                        <TableHead className="px-4 py-3 text-left font-semibold">City</TableHead>
+                        <TableHead className="px-4 py-3 text-left font-semibold">Area</TableHead>
+                        <TableHead className="px-4 py-3 text-left font-semibold">Location</TableHead>
+                        <TableHead className="px-4 py-3 text-left font-semibold">Type</TableHead>
+                        <TableHead className="px-4 py-3 text-left font-semibold">Size</TableHead>
+                        <TableHead className="px-4 py-3 text-right font-semibold">Sq.Ft</TableHead>
+                        <TableHead className="px-4 py-3 text-right font-semibold">Rate</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredAssets.map((asset, index) => (
+                        <TableRow 
+                          key={asset.id}
+                          className={`transition-all duration-150 hover:bg-muted/80 ${
+                            index % 2 === 0 ? 'bg-background' : 'bg-muted/30'
+                          }`}
+                        >
+                          <TableCell className="sticky left-0 z-10 bg-inherit px-4 py-3 font-mono text-sm border-r">{asset.id}</TableCell>
+                          <TableCell className="px-4 py-3">{asset.city}</TableCell>
+                          <TableCell className="px-4 py-3">{asset.area}</TableCell>
+                          <TableCell className="px-4 py-3 max-w-[200px] truncate">{asset.location}</TableCell>
+                          <TableCell className="px-4 py-3">
+                            <Badge variant="outline">{asset.media_type}</Badge>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">{asset.dimensions}</TableCell>
+                          <TableCell className="px-4 py-3 text-right">{asset.total_sqft || "-"}</TableCell>
+                          <TableCell className="px-4 py-3 text-right font-medium">
+                            ₹{asset.card_rate.toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

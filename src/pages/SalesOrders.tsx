@@ -105,44 +105,55 @@ export default function SalesOrders() {
               </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order ID</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Subtotal</TableHead>
-                  <TableHead>GST</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {estimations.map((est) => (
-                  <TableRow key={est.id}>
-                    <TableCell className="font-medium">{est.id}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <User className="h-3 w-3 text-muted-foreground" />
-                        {est.client_name}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-sm">
-                        <Calendar className="h-3 w-3 text-muted-foreground" />
-                        {new Date(est.estimation_date).toLocaleDateString()}
-                      </div>
-                    </TableCell>
-                    <TableCell>₹{est.sub_total.toLocaleString()}</TableCell>
-                    <TableCell>₹{est.gst_amount.toLocaleString()}</TableCell>
-                    <TableCell className="font-medium">
-                      ₹{est.total_amount.toLocaleString()}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(est.status)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="w-full overflow-x-auto">
+              <div className="inline-block min-w-full align-middle">
+                <div className="overflow-hidden border border-border/50 rounded-lg">
+                  <Table className="min-w-max w-full table-auto whitespace-nowrap">
+                    <TableHeader className="bg-muted sticky top-0 z-20">
+                      <TableRow>
+                        <TableHead className="sticky left-0 z-30 bg-muted px-4 py-3 text-left font-semibold border-r">Order ID</TableHead>
+                        <TableHead className="px-4 py-3 text-left font-semibold">Client</TableHead>
+                        <TableHead className="px-4 py-3 text-left font-semibold">Date</TableHead>
+                        <TableHead className="px-4 py-3 text-right font-semibold">Subtotal</TableHead>
+                        <TableHead className="px-4 py-3 text-right font-semibold">GST</TableHead>
+                        <TableHead className="px-4 py-3 text-right font-semibold">Total</TableHead>
+                        <TableHead className="px-4 py-3 text-left font-semibold">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {estimations.map((est, index) => (
+                        <TableRow 
+                          key={est.id}
+                          className={`transition-all duration-150 hover:bg-muted/80 ${
+                            index % 2 === 0 ? 'bg-background' : 'bg-muted/30'
+                          }`}
+                        >
+                          <TableCell className="sticky left-0 z-10 bg-inherit px-4 py-3 font-medium border-r">{est.id}</TableCell>
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center gap-1">
+                              <User className="h-3 w-3 text-muted-foreground" />
+                              {est.client_name}
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center gap-1 text-sm">
+                              <Calendar className="h-3 w-3 text-muted-foreground" />
+                              {new Date(est.estimation_date).toLocaleDateString()}
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-right">₹{est.sub_total.toLocaleString()}</TableCell>
+                          <TableCell className="px-4 py-3 text-right">₹{est.gst_amount.toLocaleString()}</TableCell>
+                          <TableCell className="px-4 py-3 text-right font-medium">
+                            ₹{est.total_amount.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="px-4 py-3">{getStatusBadge(est.status)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

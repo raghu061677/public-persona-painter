@@ -258,20 +258,23 @@ export default function InvoicesList() {
 
         {/* Invoices Table */}
         <div className="bg-card rounded-lg border shadow-sm overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Invoice ID</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">Balance</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <div className="w-full overflow-x-auto">
+            <div className="inline-block min-w-full align-middle">
+              <div className="overflow-hidden border-t">
+                <Table className="min-w-max w-full table-auto whitespace-nowrap">
+                  <TableHeader className="bg-muted sticky top-0 z-20">
+                    <TableRow>
+                      <TableHead className="sticky left-0 z-30 bg-muted px-4 py-3 text-left font-semibold border-r">Invoice ID</TableHead>
+                      <TableHead className="px-4 py-3 text-left font-semibold">Client</TableHead>
+                      <TableHead className="px-4 py-3 text-left font-semibold">Date</TableHead>
+                      <TableHead className="px-4 py-3 text-left font-semibold">Due Date</TableHead>
+                      <TableHead className="px-4 py-3 text-left font-semibold">Status</TableHead>
+                      <TableHead className="px-4 py-3 text-right font-semibold">Total</TableHead>
+                      <TableHead className="px-4 py-3 text-right font-semibold">Balance</TableHead>
+                      <TableHead className="px-4 py-3 text-right font-semibold">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8">
@@ -285,13 +288,18 @@ export default function InvoicesList() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredInvoices.map((invoice) => {
+                filteredInvoices.map((invoice, index) => {
                   const daysOverdue = getDaysOverdue(invoice.due_date);
                   const isOverdue = daysOverdue > 0 && invoice.balance_due > 0;
 
                   return (
-                    <TableRow key={invoice.id}>
-                      <TableCell className="font-medium">
+                    <TableRow 
+                      key={invoice.id}
+                      className={`transition-all duration-150 hover:bg-muted/80 ${
+                        index % 2 === 0 ? 'bg-background' : 'bg-muted/30'
+                      }`}
+                    >
+                      <TableCell className="sticky left-0 z-10 bg-inherit px-4 py-3 font-medium border-r">
                         <div className="flex items-center gap-2">
                           {invoice.id}
                           {isOverdue && (
@@ -299,21 +307,21 @@ export default function InvoicesList() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>{invoice.client_name}</TableCell>
-                      <TableCell>{formatDate(invoice.invoice_date)}</TableCell>
-                      <TableCell>{formatDate(invoice.due_date)}</TableCell>
-                      <TableCell>
+                      <TableCell className="px-4 py-3">{invoice.client_name}</TableCell>
+                      <TableCell className="px-4 py-3">{formatDate(invoice.invoice_date)}</TableCell>
+                      <TableCell className="px-4 py-3">{formatDate(invoice.due_date)}</TableCell>
+                      <TableCell className="px-4 py-3">
                         <Badge className={getInvoiceStatusColor(invoice.status)}>
                           {invoice.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="px-4 py-3 text-right">
                         {formatINR(invoice.total_amount)}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="px-4 py-3 text-right">
                         {formatINR(invoice.balance_due)}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button
                             variant="ghost"
@@ -340,6 +348,9 @@ export default function InvoicesList() {
             </TableBody>
           </Table>
         </div>
+      </div>
+    </div>
+  </div>
       </div>
     </div>
   );

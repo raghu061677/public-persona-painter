@@ -734,79 +734,82 @@ export default function ClientsList() {
         </Card>
 
         <div className="bg-card rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow className={getRowClassName()}>
-                {visibleColumns.includes("select") && isAdmin && (
-                  <TableHead className={`w-12 ${getCellClassName()}`}>
-                    <Checkbox
-                      checked={selectedClients.size === paginatedClients.length && paginatedClients.length > 0}
-                      onCheckedChange={toggleAllClients}
-                    />
-                  </TableHead>
-                )}
-                {visibleColumns.includes("id") && (
-                  <TableHead 
-                    className={`cursor-pointer hover:bg-muted/50 ${getCellClassName()}`}
-                    onClick={() => handleSort('id')}
-                  >
-                    <div className="flex items-center gap-2">
-                      ID
-                      {sortField === 'id' && <ArrowUpDown className="h-4 w-4" />}
-                    </div>
-                  </TableHead>
-                )}
-                {visibleColumns.includes("name") && (
-                  <TableHead 
-                    className={`cursor-pointer hover:bg-muted/50 ${getCellClassName()}`}
-                    onClick={() => handleSort('name')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Name
-                      {sortField === 'name' && <ArrowUpDown className="h-4 w-4" />}
-                    </div>
-                  </TableHead>
-                )}
-                {visibleColumns.includes("company") && (
-                  <TableHead 
-                    className={`cursor-pointer hover:bg-muted/50 ${getCellClassName()}`}
-                    onClick={() => handleSort('company')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Company
-                      {sortField === 'company' && <ArrowUpDown className="h-4 w-4" />}
-                    </div>
-                  </TableHead>
-                )}
-                {visibleColumns.includes("email") && (
-                  <TableHead className={getCellClassName()}>Email</TableHead>
-                )}
-                {visibleColumns.includes("phone") && (
-                  <TableHead className={getCellClassName()}>Phone</TableHead>
-                )}
-                {visibleColumns.includes("city") && (
-                  <TableHead 
-                    className={`cursor-pointer hover:bg-muted/50 ${getCellClassName()}`}
-                    onClick={() => handleSort('city')}
-                  >
-                    <div className="flex items-center gap-2">
-                      City
-                      {sortField === 'city' && <ArrowUpDown className="h-4 w-4" />}
-                    </div>
-                  </TableHead>
-                )}
-                {visibleColumns.includes("state") && (
-                  <TableHead className={getCellClassName()}>State</TableHead>
-                )}
-                {visibleColumns.includes("gst") && (
-                  <TableHead className={getCellClassName()}>GST</TableHead>
-                )}
-                {visibleColumns.includes("actions") && isAdmin && (
-                  <TableHead className={`text-right ${getCellClassName()}`}>Actions</TableHead>
-                )}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <div className="w-full overflow-x-auto">
+            <div className="inline-block min-w-full align-middle">
+              <div className="overflow-hidden border-t">
+                <Table className="min-w-max w-full table-auto whitespace-nowrap">
+                  <TableHeader className="bg-muted sticky top-0 z-20">
+                    <TableRow className={getRowClassName()}>
+                      {visibleColumns.includes("select") && isAdmin && (
+                        <TableHead className={`sticky left-0 z-30 bg-muted w-12 px-4 py-3 text-left font-semibold border-r ${getCellClassName()}`}>
+                          <Checkbox
+                            checked={selectedClients.size === paginatedClients.length && paginatedClients.length > 0}
+                            onCheckedChange={toggleAllClients}
+                          />
+                        </TableHead>
+                      )}
+                      {visibleColumns.includes("id") && (
+                        <TableHead 
+                          className={`cursor-pointer hover:bg-muted/50 px-4 py-3 text-left font-semibold ${getCellClassName()}`}
+                          onClick={() => handleSort('id')}
+                        >
+                          <div className="flex items-center gap-2">
+                            ID
+                            {sortField === 'id' && <ArrowUpDown className="h-4 w-4" />}
+                          </div>
+                        </TableHead>
+                      )}
+                      {visibleColumns.includes("name") && (
+                        <TableHead 
+                          className={`cursor-pointer hover:bg-muted/50 px-4 py-3 text-left font-semibold ${getCellClassName()}`}
+                          onClick={() => handleSort('name')}
+                        >
+                          <div className="flex items-center gap-2">
+                            Name
+                            {sortField === 'name' && <ArrowUpDown className="h-4 w-4" />}
+                          </div>
+                        </TableHead>
+                      )}
+                      {visibleColumns.includes("company") && (
+                        <TableHead 
+                          className={`cursor-pointer hover:bg-muted/50 px-4 py-3 text-left font-semibold ${getCellClassName()}`}
+                          onClick={() => handleSort('company')}
+                        >
+                          <div className="flex items-center gap-2">
+                            Company
+                            {sortField === 'company' && <ArrowUpDown className="h-4 w-4" />}
+                          </div>
+                        </TableHead>
+                      )}
+                      {visibleColumns.includes("email") && (
+                        <TableHead className={`px-4 py-3 text-left font-semibold ${getCellClassName()}`}>Email</TableHead>
+                      )}
+                      {visibleColumns.includes("phone") && (
+                        <TableHead className={`px-4 py-3 text-left font-semibold ${getCellClassName()}`}>Phone</TableHead>
+                      )}
+                      {visibleColumns.includes("city") && (
+                        <TableHead 
+                          className={`cursor-pointer hover:bg-muted/50 px-4 py-3 text-left font-semibold ${getCellClassName()}`}
+                          onClick={() => handleSort('city')}
+                        >
+                          <div className="flex items-center gap-2">
+                            City
+                            {sortField === 'city' && <ArrowUpDown className="h-4 w-4" />}
+                          </div>
+                        </TableHead>
+                      )}
+                      {visibleColumns.includes("state") && (
+                        <TableHead className={`px-4 py-3 text-left font-semibold ${getCellClassName()}`}>State</TableHead>
+                      )}
+                      {visibleColumns.includes("gst") && (
+                        <TableHead className={`px-4 py-3 text-left font-semibold ${getCellClassName()}`}>GST</TableHead>
+                      )}
+                      {visibleColumns.includes("actions") && isAdmin && (
+                        <TableHead className={`text-right px-4 py-3 font-semibold ${getCellClassName()}`}>Actions</TableHead>
+                      )}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
               {loading || !settingsReady || !columnPrefsReady ? (
                 <TableRow>
                   <TableCell colSpan={visibleColumns.length} className="text-center py-8">
@@ -820,10 +823,15 @@ export default function ClientsList() {
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedClients.map((client) => (
-                  <TableRow key={client.id} className={getRowClassName()}>
+                paginatedClients.map((client, index) => (
+                  <TableRow 
+                    key={client.id} 
+                    className={`transition-all duration-150 hover:bg-muted/80 ${
+                      index % 2 === 0 ? 'bg-background' : 'bg-muted/30'
+                    } ${getRowClassName()}`}
+                  >
                     {visibleColumns.includes("select") && isAdmin && (
-                      <TableCell className={getCellClassName()} onClick={(e) => e.stopPropagation()}>
+                      <TableCell className={`sticky left-0 z-10 bg-inherit px-4 py-3 border-r ${getCellClassName()}`} onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selectedClients.has(client.id)}
                           onCheckedChange={() => toggleClientSelection(client.id)}
@@ -831,11 +839,11 @@ export default function ClientsList() {
                       </TableCell>
                     )}
                     {visibleColumns.includes("id") && (
-                      <TableCell className={`font-medium ${getCellClassName()}`}>{client.id}</TableCell>
+                      <TableCell className={`font-medium px-4 py-3 ${getCellClassName()}`}>{client.id}</TableCell>
                     )}
                     {visibleColumns.includes("name") && (
                       <TableCell 
-                        className={`hover:underline cursor-pointer text-primary font-medium ${getCellClassName()}`}
+                        className={`hover:underline cursor-pointer text-primary font-medium px-4 py-3 ${getCellClassName()}`}
                         onClick={() => navigate(`/admin/clients/${client.id}`)}
                       >
                         {client.name}
@@ -843,29 +851,29 @@ export default function ClientsList() {
                     )}
                     {visibleColumns.includes("company") && (
                       <TableCell 
-                        className={`hover:underline cursor-pointer text-primary ${getCellClassName()}`}
+                        className={`hover:underline cursor-pointer text-primary px-4 py-3 ${getCellClassName()}`}
                         onClick={() => navigate(`/admin/clients/${client.id}`)}
                       >
                         {client.company || '-'}
                       </TableCell>
                     )}
                     {visibleColumns.includes("email") && (
-                      <TableCell className={getCellClassName()}>{client.email || '-'}</TableCell>
+                      <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{client.email || '-'}</TableCell>
                     )}
                     {visibleColumns.includes("phone") && (
-                      <TableCell className={getCellClassName()}>{client.phone || '-'}</TableCell>
+                      <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{client.phone || '-'}</TableCell>
                     )}
                     {visibleColumns.includes("city") && (
-                      <TableCell className={getCellClassName()}>{client.city || '-'}</TableCell>
+                      <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{client.city || '-'}</TableCell>
                     )}
                     {visibleColumns.includes("state") && (
-                      <TableCell className={getCellClassName()}>{client.state || '-'}</TableCell>
+                      <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{client.state || '-'}</TableCell>
                     )}
                     {visibleColumns.includes("gst") && (
-                      <TableCell className={getCellClassName()}>{client.gst_number || '-'}</TableCell>
+                      <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{client.gst_number || '-'}</TableCell>
                     )}
                     {visibleColumns.includes("actions") && isAdmin && (
-                      <TableCell className={`text-right ${getCellClassName()}`}>
+                      <TableCell className={`text-right px-4 py-3 ${getCellClassName()}`}>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon">
@@ -902,6 +910,9 @@ export default function ClientsList() {
             </TableBody>
           </Table>
         </div>
+      </div>
+    </div>
+  </div>
 
         {/* Pagination */}
         {totalPages > 1 && (

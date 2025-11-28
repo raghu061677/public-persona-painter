@@ -81,25 +81,32 @@ export default function UnpaidBillsTable({ bills }: { bills: UnpaidBill[] }) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="overflow-auto max-h-[400px]">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Asset ID</TableHead>
-                <TableHead>Consumer</TableHead>
-                <TableHead>Bill Month</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedBills.map((bill) => {
+        <div className="w-full overflow-x-auto">
+          <div className="inline-block min-w-full align-middle">
+            <div className="overflow-hidden border border-border/50 rounded-lg max-h-[400px] overflow-y-auto">
+              <Table className="min-w-max w-full table-auto whitespace-nowrap">
+                <TableHeader className="bg-muted sticky top-0 z-20">
+                  <TableRow>
+                    <TableHead className="sticky left-0 z-30 bg-muted px-4 py-3 text-left font-semibold border-r">Asset ID</TableHead>
+                    <TableHead className="px-4 py-3 text-left font-semibold">Consumer</TableHead>
+                    <TableHead className="px-4 py-3 text-left font-semibold">Bill Month</TableHead>
+                    <TableHead className="px-4 py-3 text-left font-semibold">Due Date</TableHead>
+                    <TableHead className="px-4 py-3 text-right font-semibold">Amount</TableHead>
+                    <TableHead className="px-4 py-3 text-left font-semibold">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+              {sortedBills.map((bill, index) => {
                 const isOverdue = bill.due_date ? getOverdueDays(bill.due_date) > 0 : false;
                 
                 return (
-                  <TableRow key={bill.id} className={isOverdue ? "bg-destructive/5" : ""}>
-                    <TableCell className="font-medium">
+                  <TableRow 
+                    key={bill.id} 
+                    className={`transition-all duration-150 hover:bg-muted/80 ${
+                      index % 2 === 0 ? 'bg-background' : 'bg-muted/30'
+                    } ${isOverdue ? "bg-destructive/10" : ""}`}
+                  >
+                    <TableCell className="sticky left-0 z-10 bg-inherit px-4 py-3 font-medium border-r">
                       <div className="flex items-center gap-2">
                         <MapPin className="h-3 w-3 text-muted-foreground" />
                         {bill.asset_id}
@@ -111,7 +118,7 @@ export default function UnpaidBillsTable({ bills }: { bills: UnpaidBill[] }) {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="px-4 py-3">
                       <div className="text-sm">
                         <div className="font-medium">{bill.consumer_name || 'N/A'}</div>
                         <div className="text-xs text-muted-foreground">
@@ -119,7 +126,7 @@ export default function UnpaidBillsTable({ bills }: { bills: UnpaidBill[] }) {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="px-4 py-3">
                       {bill.bill_month ? (
                         <div className="flex items-center gap-1 text-sm">
                           <Calendar className="h-3 w-3 text-muted-foreground" />
@@ -127,7 +134,7 @@ export default function UnpaidBillsTable({ bills }: { bills: UnpaidBill[] }) {
                         </div>
                       ) : 'N/A'}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="px-4 py-3">
                       {bill.due_date ? (
                         <div className="flex items-center">
                           {format(new Date(bill.due_date), 'dd MMM yyyy')}
@@ -135,10 +142,10 @@ export default function UnpaidBillsTable({ bills }: { bills: UnpaidBill[] }) {
                         </div>
                       ) : 'N/A'}
                     </TableCell>
-                    <TableCell className="text-right font-semibold">
+                    <TableCell className="px-4 py-3 text-right font-semibold">
                       {formatCurrency(bill.total_due || 0)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="px-4 py-3">
                       <Badge variant={isOverdue ? "destructive" : "outline"}>
                         {bill.payment_status || 'Pending'}
                       </Badge>
@@ -146,8 +153,10 @@ export default function UnpaidBillsTable({ bills }: { bills: UnpaidBill[] }) {
                   </TableRow>
                 );
               })}
-            </TableBody>
-          </Table>
+                </TableBody>
+              </Table>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -14,7 +14,7 @@ import { AssetMaintenanceTab } from "./asset-maintenance-tab";
 import { AssetBookingHistoryTab } from "./asset-booking-history-tab";
 import { LatestPhotosSection } from "./LatestPhotosSection";
 import { AssetBookingCalendar } from "./AssetBookingCalendar";
-import { QRCodeSection } from "./QRCodeSection";
+
 import {
   Select,
   SelectContent,
@@ -246,18 +246,6 @@ export function AssetDetails({ asset, isAdmin = false, onQRGenerated }: AssetDet
 
         {/* Right Column - Image Preview (1/3 width) */}
         <div className="lg:col-span-1 space-y-6">
-          {/* QR Code Section - Priority */}
-          <div className="relative z-10">
-            <QRCodeSection
-              assetId={currentAsset.id}
-              latitude={currentAsset.latitude}
-              longitude={currentAsset.longitude}
-              googleStreetViewUrl={currentAsset.google_street_view_url}
-              locationUrl={currentAsset.location_url}
-              qrCodeUrl={currentAsset.qr_code_url}
-              onQRGenerated={onQRGenerated}
-            />
-          </div>
 
           {/* Latest Photos Section */}
           <LatestPhotosSection assetId={currentAsset.id} asset={currentAsset} />

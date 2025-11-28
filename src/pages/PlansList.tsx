@@ -686,10 +686,9 @@ export default function PlansList() {
                     <SelectValue placeholder="Update Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Draft">Draft</SelectItem>
-                    <SelectItem value="Sent">Sent</SelectItem>
-                    <SelectItem value="Approved">Approved</SelectItem>
-                    <SelectItem value="Rejected">Rejected</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
                   </SelectContent>
                 </Select>
 

@@ -58,77 +58,20 @@ export function CreateCampaignFromPlanDialog({
     setConverting(true);
 
     try {
-      // Fetch plan items
-      const { data: planItems, error: itemsError } = await supabase
-        .from("plan_items")
-        .select("*")
-        .eq("plan_id", plan.id);
+      // Call the Edge Function to handle conversion with asset booking
+      const { data, error } = await supabase.functions.invoke('convert-plan-to-campaign', {
+        body: { plan_id: plan.id }
+      });
 
-      if (itemsError) throw itemsError;
+      if (error) throw error;
 
-      // Generate campaign ID
-      const campaignId = await generateCampaignCode();
-
-      // Create campaign
-      const { error: campaignError } = await supabase
-        .from("campaigns")
-        .insert({
-          id: campaignId,
-          plan_id: plan.id,
-          campaign_name: plan.plan_name,
-          client_id: plan.client_id,
-          client_name: plan.client_name,
-          start_date: plan.start_date,
-          end_date: plan.end_date,
-          status: "Planned",
-          total_assets: planItems?.length || 0,
-          total_amount: plan.total_amount,
-          gst_percent: plan.gst_percent,
-          gst_amount: plan.gst_amount,
-          grand_total: plan.grand_total,
-          notes: plan.notes,
-          created_by: (await supabase.auth.getUser()).data.user?.id,
-        });
-
-      if (campaignError) throw campaignError;
-
-      // Create campaign assets
-      if (planItems && planItems.length > 0) {
-        const campaignAssets = planItems.map((item: any) => ({
-          campaign_id: campaignId,
-          asset_id: item.asset_id,
-          city: item.city,
-          area: item.area,
-          location: item.location,
-          media_type: item.media_type,
-          card_rate: item.card_rate,
-          printing_charges: item.printing_charges || 0,
-          mounting_charges: item.mounting_charges || 0,
-          status: "Pending" as const,
-        }));
-
-        const { error: assetsError } = await supabase
-          .from("campaign_assets")
-          .insert(campaignAssets);
-
-        if (assetsError) throw assetsError;
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to convert plan');
       }
-
-      // Update plan status to Converted with tracking fields
-      const { error: updateError } = await supabase
-        .from("plans")
-        .update({ 
-          status: "converted",
-          converted_to_campaign_id: campaignId,
-          converted_at: new Date().toISOString()
-        })
-        .eq("id", plan.id);
-
-      if (updateError) throw updateError;
 
       toast({
         title: "Success",
-        description: `Campaign ${campaignId} created successfully`,
+        description: `Campaign ${data.campaign_code} created successfully`,
       });
 
       onOpenChange(false);

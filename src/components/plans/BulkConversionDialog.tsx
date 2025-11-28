@@ -45,7 +45,7 @@ export function BulkConversionDialog({
     // Fetch plan details
     const { data: plans } = await supabase
       .from('plans')
-      .select('id, plan_name, client_id, client_name, start_date, end_date, total_amount, gst_percent, gst_amount, grand_total')
+      .select('id, plan_name, status')
       .in('id', selectedPlanIds);
 
     if (!plans) {
@@ -66,7 +66,7 @@ export function BulkConversionDialog({
     }));
     setStatuses(initialStatuses);
 
-    // Convert each plan
+    // Convert each plan using Edge Function
     for (let i = 0; i < plans.length; i++) {
       const plan = plans[i];
       
@@ -76,107 +76,20 @@ export function BulkConversionDialog({
       ));
 
       try {
-        // Fetch plan items
-        const { data: planItems } = await supabase
-          .from('plan_items')
-          .select('*')
-          .eq('plan_id', plan.id);
+        // Call Edge Function
+        const { data, error } = await supabase.functions.invoke('convert-plan-to-campaign', {
+          body: { plan_id: plan.id }
+        });
 
-        if (!planItems || planItems.length === 0) {
-          throw new Error('No plan items found');
+        if (error) throw error;
+
+        if (!data.success) {
+          throw new Error(data.error || 'Conversion failed');
         }
-
-        // Generate campaign ID
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = now.toLocaleString('en-US', { month: 'long' });
-        
-        const { data: existingCampaigns } = await supabase
-          .from('campaigns')
-          .select('id')
-          .ilike('id', `CMP-${year}-${month}-%`)
-          .order('id', { ascending: false })
-          .limit(1);
-
-        let nextNumber = 1;
-        if (existingCampaigns && existingCampaigns.length > 0) {
-          const lastId = existingCampaigns[0].id;
-          const match = lastId.match(/-(\d+)$/);
-          if (match) {
-            nextNumber = parseInt(match[1]) + 1;
-          }
-        }
-
-        const campaignId = `CMP-${year}-${month}-${String(nextNumber).padStart(3, '0')}`;
-
-        // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Not authenticated');
-
-        // Create campaign
-        const { error: campaignError } = await supabase
-          .from('campaigns')
-          .insert({
-            id: campaignId,
-            campaign_name: plan.plan_name,
-            client_id: plan.client_id,
-            client_name: plan.client_name,
-            plan_id: plan.id,
-            start_date: plan.start_date,
-            end_date: plan.end_date,
-            status: 'Planned',
-            total_assets: planItems.length,
-            total_amount: plan.total_amount,
-            gst_percent: plan.gst_percent,
-            gst_amount: plan.gst_amount,
-            grand_total: plan.grand_total,
-            created_by: user.id,
-          });
-
-        if (campaignError) throw campaignError;
-
-        // Create campaign assets
-        const campaignAssets = planItems.map(item => ({
-          campaign_id: campaignId,
-          asset_id: item.asset_id,
-          location: item.location,
-          city: item.city,
-          area: item.area,
-          media_type: item.media_type,
-          card_rate: item.card_rate,
-          printing_charges: item.printing_charges || 0,
-          mounting_charges: item.mounting_charges || 0,
-          status: 'Pending' as const,
-        }));
-
-        const { error: assetsError } = await supabase
-          .from('campaign_assets')
-          .insert(campaignAssets);
-
-        if (assetsError) throw assetsError;
-
-        // Update plan status to Converted with tracking fields
-        const { error: planUpdateError } = await supabase
-          .from('plans')
-          .update({ 
-            status: 'converted',
-            converted_to_campaign_id: campaignId,
-            converted_at: new Date().toISOString()
-          })
-          .eq('id', plan.id);
-
-        if (planUpdateError) throw planUpdateError;
-
-        // Update media assets to Booked
-        const assetIds = planItems.map(item => item.asset_id);
-        await supabase
-          .from('media_assets')
-          .update({ status: 'Booked' })
-          .in('id', assetIds);
 
         // Success
         setStatuses(prev => prev.map(s => 
-          s.planId === plan.id ? { ...s, status: 'success', campaignId } : s
+          s.planId === plan.id ? { ...s, status: 'success', campaignId: data.campaign_code } : s
         ));
 
       } catch (error: any) {

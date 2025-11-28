@@ -81,6 +81,9 @@ verify_jwt = true
 verify_jwt = true
 
 # Campaign & Operations
+[functions.convert-plan-to-campaign]
+verify_jwt = true
+
 [functions.auto-create-mounting-tasks]
 verify_jwt = true
 

@@ -318,11 +318,11 @@ export default function PlanEdit() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const durationDays = calculateDurationDays(new Date(formData.start_date), new Date(formData.end_date));
+      const durationDays = formData.duration_days;
       const totals = calculateTotals();
       const { netTotal, gstAmount, grandTotal } = totals;
 
-      // Update plan
+      // Update plan with duration mode and months
       const { error: planError } = await supabase
         .from('plans')
         .update({
@@ -330,9 +330,11 @@ export default function PlanEdit() {
           client_name: formData.client_name,
           plan_name: formData.plan_name,
           plan_type: formData.plan_type,
-          start_date: formData.start_date.toISOString().split('T')[0],
-          end_date: formData.end_date.toISOString().split('T')[0],
+          start_date: formatForSupabase(toDateOnly(formData.start_date)),
+          end_date: formatForSupabase(toDateOnly(formData.end_date)),
           duration_days: durationDays,
+          duration_mode: formData.duration_mode,
+          months_count: formData.months_count,
           total_amount: netTotal,
           gst_percent: parseFloat(formData.gst_percent),
           gst_amount: gstAmount,

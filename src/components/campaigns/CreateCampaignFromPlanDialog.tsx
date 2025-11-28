@@ -39,7 +39,7 @@ export function CreateCampaignFromPlanDialog({
     const { data, error } = await supabase
       .from("plans")
       .select("*")
-      .eq("status", "Approved")
+      .eq("status", "approved")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -114,10 +114,14 @@ export function CreateCampaignFromPlanDialog({
         if (assetsError) throw assetsError;
       }
 
-      // Update plan status to Converted
+      // Update plan status to Converted with tracking fields
       const { error: updateError } = await supabase
         .from("plans")
-        .update({ status: "Converted" })
+        .update({ 
+          status: "converted",
+          converted_to_campaign_id: campaignId,
+          converted_at: new Date().toISOString()
+        })
         .eq("id", plan.id);
 
       if (updateError) throw updateError;

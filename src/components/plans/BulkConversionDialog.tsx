@@ -155,10 +155,14 @@ export function BulkConversionDialog({
 
         if (assetsError) throw assetsError;
 
-        // Update plan status to Converted
+        // Update plan status to Converted with tracking fields
         const { error: planUpdateError } = await supabase
           .from('plans')
-          .update({ status: 'Converted' })
+          .update({ 
+            status: 'converted',
+            converted_to_campaign_id: campaignId,
+            converted_at: new Date().toISOString()
+          })
           .eq('id', plan.id);
 
         if (planUpdateError) throw planUpdateError;

@@ -662,8 +662,18 @@ export default function PlanDetail() {
         throw new Error("Company context is required");
       }
 
-      // Validation 2: Check if plan is approved
-      if (plan.status !== 'Approved') {
+      // Validation 2: Check if plan is approved or rejected
+      if (plan.status === 'rejected' || plan.status === 'Rejected') {
+        toast({
+          title: "Cannot Convert Plan",
+          description: "Cannot convert a rejected plan to campaign",
+          variant: "destructive",
+        });
+        setShowConvertDialog(false);
+        return;
+      }
+
+      if (plan.status !== 'Approved' && plan.status !== 'approved') {
         toast({
           title: "Cannot Convert Plan",
           description: `Plan must be approved before conversion. Current status: ${plan.status}`,
@@ -752,10 +762,14 @@ export default function PlanDetail() {
         throw new Error(`Failed to create campaign assets: ${assetsError.message}`);
       }
 
-      // Update plan status
+      // Update plan status with tracking fields
       const { error: planUpdateError } = await supabase
         .from('plans')
-        .update({ status: 'Converted' })
+        .update({ 
+          status: 'converted',
+          converted_to_campaign_id: campaignId,
+          converted_at: new Date().toISOString()
+        })
         .eq('id', id);
 
       if (planUpdateError) {
@@ -812,6 +826,72 @@ export default function PlanDetail() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Plans
         </Button>
+
+        {/* Status Banner */}
+        {(plan.status === 'converted' || plan.status === 'Converted') && (
+          <Card className="mb-6 border-green-500 bg-green-50 dark:bg-green-950/20">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="font-semibold text-green-900 dark:text-green-100">
+                      This Plan has been converted to Campaign {existingCampaignId || plan.converted_to_campaign_id}
+                    </p>
+                    <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                      Converted on {plan.converted_at ? new Date(plan.converted_at).toLocaleDateString('en-IN') : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+                {(existingCampaignId || plan.converted_to_campaign_id) && (
+                  <Button
+                    onClick={() => navigate(`/admin/campaigns/${existingCampaignId || plan.converted_to_campaign_id}`)}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    View Campaign
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {(plan.status === 'rejected' || plan.status === 'Rejected') && (
+          <Card className="mb-6 border-red-500 bg-red-50 dark:bg-red-950/20">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <Ban className="h-5 w-5 text-red-600" />
+                <div>
+                  <p className="font-semibold text-red-900 dark:text-red-100">
+                    This Plan has been Rejected
+                  </p>
+                  <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                    Editing is disabled for rejected plans
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {(plan.status === 'approved' || plan.status === 'Approved') && !existingCampaignId && (
+          <Card className="mb-6 border-blue-500 bg-blue-50 dark:bg-blue-950/20">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <Sparkles className="h-5 w-5 text-blue-600" />
+                <div>
+                  <p className="font-semibold text-blue-900 dark:text-blue-100">
+                    Plan Approved - Ready for Campaign Conversion
+                  </p>
+                  <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                    This plan is approved and ready to be converted into a campaign
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Header */}
         <div className="flex items-start justify-between mb-8">
@@ -1011,7 +1091,7 @@ export default function PlanDetail() {
                   <Save className="mr-2 h-4 w-4" />
                   Upload Excel to Cloud
                 </DropdownMenuItem>
-                {isAdmin && (
+                {isAdmin && (plan.status === 'pending' || plan.status === 'Draft' || plan.status === 'approved' || plan.status === 'Approved') && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => navigate(`/admin/plans/edit/${id}`)}>
@@ -1250,7 +1330,7 @@ export default function PlanDetail() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Selected Assets ({planItems.length})</CardTitle>
             <div className="flex gap-2">
-              {selectedItems.size > 0 && (
+              {selectedItems.size > 0 && (plan.status === 'pending' || plan.status === 'Draft' || plan.status === 'approved' || plan.status === 'Approved') && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -1260,7 +1340,7 @@ export default function PlanDetail() {
                   Bulk P&M
                 </Button>
               )}
-              {isAdmin && (
+              {isAdmin && (plan.status === 'pending' || plan.status === 'Draft' || plan.status === 'approved' || plan.status === 'Approved') && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -1310,7 +1390,7 @@ export default function PlanDetail() {
                           onCheckedChange={() => toggleItemSelection(item.asset_id)}
                         />
                       </TableCell>
-                      {isAdmin && (
+                      {isAdmin && (plan.status === 'pending' || plan.status === 'Draft' || plan.status === 'approved' || plan.status === 'Approved') && (
                         <TableCell>
                           <Button
                             variant="ghost"

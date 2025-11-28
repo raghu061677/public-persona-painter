@@ -60,7 +60,7 @@ export default function PlansList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
-  const [showConverted, setShowConverted] = useState(false);
+  const [statusTab, setStatusTab] = useState<"pending" | "approved" | "converted" | "rejected" | "all">("pending");
   const [selectedPlans, setSelectedPlans] = useState<Set<string>>(new Set());
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
   const [showTemplatesDialog, setShowTemplatesDialog] = useState(false);
@@ -303,8 +303,11 @@ export default function PlansList() {
   };
 
   const filteredPlans = globalSearchFiltered.filter(plan => {
-    // Hide converted plans by default unless showConverted is true
-    if (!showConverted && plan.status === 'Converted') return false;
+    // Status tab filter
+    if (statusTab !== "all") {
+      const planStatus = plan.status?.toLowerCase() || "pending";
+      if (planStatus !== statusTab) return false;
+    }
     
     // Search filter
     if (searchTerm) {
@@ -317,7 +320,7 @@ export default function PlansList() {
       if (!matchesSearch) return false;
     }
     
-    // Status filter
+    // Additional status filter (from dropdown)
     if (filterStatus && plan.status !== filterStatus) return false;
     
     return true;
@@ -537,25 +540,6 @@ export default function PlansList() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <PageCustomization options={customizationOptions} />
-            {isAdmin && (
-              <Button
-                onClick={() => setFilterStatus(filterStatus === 'Approved' ? '' : 'Approved')}
-                variant={filterStatus === 'Approved' ? "default" : "outline"}
-                size="sm"
-              >
-                <Rocket className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Ready ({plans.filter(p => p.status === 'Approved').length})</span>
-                <span className="sm:hidden">Ready</span>
-              </Button>
-            )}
-            <Button
-              variant={showConverted ? "secondary" : "outline"}
-              onClick={() => setShowConverted(!showConverted)}
-              size="sm"
-            >
-              <Eye className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">{showConverted ? "Hide" : "Show"} Converted</span>
-            </Button>
             <Button
               onClick={() => setShowTemplatesDialog(true)}
               variant="outline"
@@ -575,6 +559,58 @@ export default function PlansList() {
           </div>
         </div>
 
+        {/* Status Filter Tabs */}
+        <Card>
+          <CardContent className="p-2">
+            <div className="flex items-center gap-1 overflow-x-auto pb-1">
+              <Button
+                variant={statusTab === "pending" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setStatusTab("pending")}
+                className="whitespace-nowrap"
+              >
+                <Activity className="mr-1.5 h-4 w-4" />
+                Pending ({plans.filter(p => (p.status?.toLowerCase() || "pending") === "pending").length})
+              </Button>
+              <Button
+                variant={statusTab === "approved" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setStatusTab("approved")}
+                className="whitespace-nowrap"
+              >
+                <Rocket className="mr-1.5 h-4 w-4" />
+                Approved ({plans.filter(p => (p.status?.toLowerCase() || "") === "approved").length})
+              </Button>
+              <Button
+                variant={statusTab === "converted" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setStatusTab("converted")}
+                className="whitespace-nowrap"
+              >
+                <TrendingUp className="mr-1.5 h-4 w-4" />
+                Converted ({plans.filter(p => (p.status?.toLowerCase() || "") === "converted").length})
+              </Button>
+              <Button
+                variant={statusTab === "rejected" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setStatusTab("rejected")}
+                className="whitespace-nowrap"
+              >
+                <Ban className="mr-1.5 h-4 w-4" />
+                Rejected ({plans.filter(p => (p.status?.toLowerCase() || "") === "rejected").length})
+              </Button>
+              <Button
+                variant={statusTab === "all" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setStatusTab("all")}
+                className="whitespace-nowrap"
+              >
+                <ClipboardList className="mr-1.5 h-4 w-4" />
+                All Plans ({plans.length})
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Filters Bar */}
         <Card className="mb-4">

@@ -3306,6 +3306,8 @@ export type Database = {
           client_id: string
           client_name: string
           company_id: string
+          converted_at: string | null
+          converted_to_campaign_id: string | null
           created_at: string | null
           created_by: string
           duration_days: number
@@ -3330,6 +3332,8 @@ export type Database = {
           client_id: string
           client_name: string
           company_id: string
+          converted_at?: string | null
+          converted_to_campaign_id?: string | null
           created_at?: string | null
           created_by: string
           duration_days: number
@@ -3354,6 +3358,8 @@ export type Database = {
           client_id?: string
           client_name?: string
           company_id?: string
+          converted_at?: string | null
+          converted_to_campaign_id?: string | null
           created_at?: string | null
           created_by?: string
           duration_days?: number
@@ -3375,6 +3381,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_converted_campaign"
+            columns: ["converted_to_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "plans_company_id_fkey"
             columns: ["company_id"]
@@ -4627,7 +4640,16 @@ export type Database = {
       media_category: "OOH" | "DOOH" | "Transit"
       ownership_type: "own" | "rented"
       payment_status: "Pending" | "Paid"
-      plan_status: "Draft" | "Sent" | "Approved" | "Rejected" | "Converted"
+      plan_status:
+        | "Draft"
+        | "Sent"
+        | "Approved"
+        | "Rejected"
+        | "Converted"
+        | "pending"
+        | "approved"
+        | "converted"
+        | "rejected"
       plan_type: "Quotation" | "Proposal" | "Estimate"
       subscription_status: "active" | "expired" | "cancelled" | "trialing"
       subscription_tier: "free" | "starter" | "pro" | "enterprise"
@@ -4831,7 +4853,17 @@ export const Constants = {
       media_category: ["OOH", "DOOH", "Transit"],
       ownership_type: ["own", "rented"],
       payment_status: ["Pending", "Paid"],
-      plan_status: ["Draft", "Sent", "Approved", "Rejected", "Converted"],
+      plan_status: [
+        "Draft",
+        "Sent",
+        "Approved",
+        "Rejected",
+        "Converted",
+        "pending",
+        "approved",
+        "converted",
+        "rejected",
+      ],
       plan_type: ["Quotation", "Proposal", "Estimate"],
       subscription_status: ["active", "expired", "cancelled", "trialing"],
       subscription_tier: ["free", "starter", "pro", "enterprise"],

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { ClientDocuments } from "@/components/clients/ClientDocuments";
 import { SendPortalInviteDialog } from "@/components/clients/SendPortalInviteDialog";
+import { EditClientDialog } from "@/components/clients/EditClientDialog";
 
 interface Client {
   id: string;
@@ -103,6 +104,7 @@ interface AuditLog {
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [client, setClient] = useState<Client | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -110,6 +112,7 @@ export default function ClientDetail() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   
   const [stats, setStats] = useState({
     totalRevenue: 0,
@@ -127,6 +130,13 @@ export default function ClientDetail() {
       fetchClientDetails();
     }
   }, [id]);
+
+  useEffect(() => {
+    // Check if edit=true query parameter is present
+    if (searchParams.get('edit') === 'true') {
+      setShowEditDialog(true);
+    }
+  }, [searchParams]);
 
   const fetchClientDetails = async () => {
     try {
@@ -327,7 +337,10 @@ export default function ClientDetail() {
           </Button>
           <Button
             variant="outline"
-            onClick={() => navigate(`/admin/clients/edit/${client.id}`)}
+            onClick={() => {
+              setSearchParams({ edit: 'true' });
+              setShowEditDialog(true);
+            }}
           >
             <Edit className="mr-2 h-4 w-4" />
             Edit Client
@@ -430,7 +443,14 @@ export default function ClientDetail() {
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   Profile Information
-                  <Button variant="outline" size="sm" onClick={() => navigate("/admin/clients")}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setSearchParams({ edit: 'true' });
+                      setShowEditDialog(true);
+                    }}
+                  >
                     <Edit className="h-4 w-4" />
                   </Button>
                 </CardTitle>
@@ -900,6 +920,26 @@ export default function ClientDetail() {
         clientId={client.id}
         clientName={client.name}
         defaultEmail={client.email || undefined}
+      />
+
+      {/* Edit Client Dialog */}
+      <EditClientDialog
+        client={client}
+        open={showEditDialog}
+        onOpenChange={(open) => {
+          setShowEditDialog(open);
+          if (!open) {
+            // Remove edit query parameter when dialog is closed
+            searchParams.delete('edit');
+            setSearchParams(searchParams);
+          }
+        }}
+        onClientUpdated={() => {
+          fetchClientDetails();
+          setShowEditDialog(false);
+          searchParams.delete('edit');
+          setSearchParams(searchParams);
+        }}
       />
     </div>
   );

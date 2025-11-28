@@ -1,7 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 import { corsHeaders } from '../_shared/cors.ts'
 
-console.log('Convert Plan to Campaign function started')
+// Version 2.0 - Fixed campaign status enum to use 'Planned' instead of 'Active'
+console.log('Convert Plan to Campaign function v2.0 started')
 
 interface ConvertPlanRequest {
   plan_id: string

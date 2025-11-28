@@ -150,23 +150,21 @@ Deno.serve(async (req) => {
 
     const campaignCode = `CMP-${year}-${String(nextNum).padStart(4, '0')}`
 
-    // 5. Calculate date range from items (use provided dates or fall back to plan dates)
+    // 5. Calculate date range (use provided dates or fall back to plan dates)
     const finalStartDate = start_date || plan.start_date
     const finalEndDate = end_date || plan.end_date
-    const campaignStart = new Date(finalStartDate)
-    const campaignEnd = new Date(finalEndDate)
 
-    // 6. Create campaign with correct status enum value
-    const campaignData = {
+    // 6. Create campaign record - MUST use 'Planned' status (valid enum values: Planned, Assigned, InProgress, PhotoUploaded, Verified, Completed)
+    const campaignInsertData = {
       id: campaignCode,
       company_id: companyId,
       client_id: plan.client_id,
       plan_id: plan.id,
       campaign_name: campaign_name || plan.plan_name || `Campaign for ${plan.client_name}`,
       client_name: plan.client_name,
-      start_date: campaignStart.toISOString().split('T')[0],
-      end_date: campaignEnd.toISOString().split('T')[0],
-      status: 'Planned', // Valid enum: Planned, Assigned, InProgress, PhotoUploaded, Verified, Completed
+      start_date: finalStartDate,
+      end_date: finalEndDate,
+      status: 'Planned' as const,
       total_assets: planItems.length,
       total_amount: plan.total_amount || 0,
       gst_percent: plan.gst_percent || 18,
@@ -176,11 +174,12 @@ Deno.serve(async (req) => {
       created_by: user.id,
     }
     
-    console.log('Creating campaign with data:', JSON.stringify(campaignData, null, 2))
+    console.log('[v2.0] Inserting campaign with status:', campaignInsertData.status)
+    console.log('[v2.0] Full campaign data:', JSON.stringify(campaignInsertData, null, 2))
     
     const { data: campaign, error: campaignError } = await supabase
       .from('campaigns')
-      .insert(campaignData)
+      .insert(campaignInsertData)
       .select()
       .single()
 

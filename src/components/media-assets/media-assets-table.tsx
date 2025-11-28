@@ -866,11 +866,11 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
           <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
             {/* Scrollable table area */}
             <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(100vh - 380px)' }}>
-              <Table style={{ width: table.getCenterTotalSize() }}>
-                <TableHeader className="sticky top-0 z-20 bg-background shadow-sm">
+              <Table style={{ width: table.getCenterTotalSize() }} className="min-w-max w-full table-auto whitespace-nowrap">
+                <TableHeader className="sticky top-0 z-20 bg-muted">
                     {table.getHeaderGroups().map((headerGroup) => (
                       <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => (
+                        {headerGroup.headers.map((header, headerIndex) => (
                           <TableHead
                             key={header.id}
                             colSpan={header.colSpan}
@@ -881,8 +881,8 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                             }}
                             className={cn(
                               getCellClassName(),
-                              "group relative",
-                              isFrozen(header.column.id) && "bg-muted/30"
+                              "group relative px-4 py-3 text-left font-semibold",
+                              (isFrozen(header.column.id) || headerIndex === 0 || header.column.id === 'select') && "sticky left-0 z-30 bg-muted border-r"
                             )}
                           >
                             {header.isPlaceholder ? null : (
@@ -921,11 +921,12 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                           data-state={row.getIsSelected() && "selected"}
                           className={cn(
                             getRowClassName(),
-                            "cursor-pointer hover:bg-muted/50 transition-colors"
+                            "cursor-pointer hover:bg-muted/80 transition-all duration-150",
+                            row.index % 2 === 0 ? 'bg-background' : 'bg-muted/30'
                           )}
                           onClick={() => navigate(`/admin/media-assets/${row.original.id}`)}
                         >
-                          {row.getVisibleCells().map((cell) => (
+                          {row.getVisibleCells().map((cell, cellIndex) => (
                             <TableCell
                               key={cell.id}
                               style={{
@@ -935,7 +936,8 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
                               }}
                               className={cn(
                                 getCellClassName(),
-                                isFrozen(cell.column.id) && "bg-muted/30"
+                                "px-4 py-3",
+                                (isFrozen(cell.column.id) || cellIndex === 0 || cell.column.id === 'select') && "sticky left-0 z-10 bg-inherit border-r"
                               )}
                             >
                               {flexRender(cell.column.columnDef.cell, cell.getContext())}

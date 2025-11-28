@@ -1,7 +1,10 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import QRCode from 'qrcode';
 import { supabase } from '@/integrations/supabase/client';
+import { getSignedUrl } from '@/utils/storage';
 import type { ExportOptions } from '@/components/plans/ExportOptionsDialog';
+import { addWatermarkToImage, loadImageAsDataUrl } from './photoWatermark';
 
 interface ExportData {
   plan: any;
@@ -597,67 +600,215 @@ async function generateWithPhotosPDF(
   doc.text('Campaign Execution Photos', pageWidth / 2, yPos, { align: 'center' });
   yPos += 15;
 
-  // Fetch campaign assets with photos
+  // Fetch campaign assets with photos and metadata
   const { data: campaignAssets } = await supabase
     .from('campaign_assets')
-    .select('asset_id, location, photos')
+    .select('asset_id, area, location, city, media_type, latitude, longitude, photos, mounter_name, completed_at')
     .eq('campaign_id', plan.id);
 
+  // Fetch plan items to get asset details
+  const { data: planItemsData } = await supabase
+    .from('plan_items')
+    .select(`
+      asset_id,
+      media_assets!inner(
+        dimensions,
+        illumination
+      )
+    `)
+    .eq('plan_id', plan.id);
+
+  const assetDetailsMap = new Map();
+  planItemsData?.forEach((item: any) => {
+    assetDetailsMap.set(item.asset_id, item.media_assets);
+  });
+
   if (campaignAssets && campaignAssets.length > 0) {
+    // Add title page for photo section
+    doc.addPage();
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CAMPAIGN EXECUTION PHOTOS', pageWidth / 2, 30, { align: 'center' });
+    
     for (const asset of campaignAssets) {
-      if (yPos > pageHeight - 80) {
-        doc.addPage();
-        yPos = 20;
-      }
-
-      doc.setFontSize(10);
+      doc.addPage();
+      yPos = 20;
+      
+      const assetDetails = assetDetailsMap.get(asset.asset_id);
+      
+      // ======= ASSET HEADER SECTION =======
+      doc.setFillColor(245, 245, 245);
+      doc.rect(15, yPos, pageWidth - 30, 20, 'F');
+      
+      doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text(`Asset: ${asset.asset_id} - ${asset.location}`, 15, yPos);
-      yPos += 8;
-
+      doc.setTextColor(0, 0, 0);
+      doc.text(`${asset.asset_id} – ${asset.location}`, pageWidth / 2, yPos + 8, { align: 'center' });
+      
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      const subtitle = `${asset.area}, ${assetDetails?.dimensions || 'N/A'}, ${assetDetails?.illumination || 'N/A'}`;
+      doc.text(subtitle, pageWidth / 2, yPos + 14, { align: 'center' });
+      
+      // ======= QR CODE SECTION =======
+      try {
+        let qrCodeUrl = '';
+        if (asset.latitude && asset.longitude) {
+          qrCodeUrl = `https://www.google.com/maps/?q=${asset.latitude},${asset.longitude}`;
+        } else {
+          qrCodeUrl = `https://go-ads.app/site/${asset.asset_id}`;
+        }
+        
+        const qrCodeDataUrl = await QRCode.toDataURL(qrCodeUrl, {
+          width: 120,
+          margin: 1,
+          color: { dark: '#000000', light: '#FFFFFF' },
+        });
+        
+        doc.addImage(qrCodeDataUrl, 'PNG', pageWidth - 35, yPos + 2, 18, 18);
+        doc.setFontSize(6);
+        doc.setFont('helvetica', 'italic');
+        doc.text('Scan for Location', pageWidth - 26, yPos + 21, { align: 'center' });
+      } catch (error) {
+        console.error('QR code generation error:', error);
+      }
+      
+      yPos += 30;
+      
+      // ======= PHOTO GRID SECTION (2x2) =======
       const photos = asset.photos as any;
       if (photos) {
         const photoTypes = ['newspaper', 'geotag', 'traffic1', 'traffic2'];
-        const photoLabels = ['Newspaper', 'Geo-tag', 'Traffic Shot 1', 'Traffic Shot 2'];
+        const photoLabels = ['Newspaper Photo', 'Geo-tag Photo', 'Traffic Shot 1', 'Traffic Shot 2'];
         
-        // Display in 2x2 grid
         const gridSize = 80;
         const spacing = 10;
-        let xPos = 15;
-        let rowCount = 0;
-
+        const startX = 15;
+        let xPos = startX;
+        let gridYPos = yPos;
+        
         for (let i = 0; i < photoTypes.length; i++) {
           const photoUrl = photos[photoTypes[i]];
+          const col = i % 2;
+          const row = Math.floor(i / 2);
+          
+          xPos = startX + col * (gridSize + spacing);
+          gridYPos = yPos + row * (gridSize + 12);
+          
           if (photoUrl) {
             try {
-              // Add photo placeholder (actual image loading would require CORS-friendly URLs)
-              doc.setDrawColor(200, 200, 200);
-              doc.rect(xPos, yPos, gridSize, gridSize);
-              doc.setFontSize(8);
-              doc.text(photoLabels[i], xPos + gridSize / 2, yPos + gridSize + 4, { align: 'center' });
-              
-              rowCount++;
-              if (rowCount % 2 === 0) {
-                xPos = 15;
-                yPos += gridSize + 10;
-              } else {
-                xPos += gridSize + spacing;
+              // Get signed URL if it's a storage path
+              let imageUrl = photoUrl;
+              if (photoUrl.startsWith('campaign-proofs/')) {
+                const signedUrl = await getSignedUrl('campaign-proofs', photoUrl, 3600);
+                if (signedUrl) imageUrl = signedUrl;
               }
+              
+              // Add watermark and load image
+              const watermarkedImage = await addWatermarkToImage(imageUrl);
+              
+              // Add image to PDF
+              doc.addImage(watermarkedImage, 'JPEG', xPos, gridYPos, gridSize, gridSize);
+              
+              // Add border
+              doc.setDrawColor(220, 220, 220);
+              doc.setLineWidth(0.5);
+              doc.rect(xPos, gridYPos, gridSize, gridSize);
             } catch (error) {
-              console.error('Error adding photo:', error);
+              console.error('Error loading photo:', error);
+              // Draw placeholder on error
+              doc.setFillColor(245, 245, 245);
+              doc.rect(xPos, gridYPos, gridSize, gridSize, 'F');
+              doc.setDrawColor(200, 200, 200);
+              doc.rect(xPos, gridYPos, gridSize, gridSize);
             }
+          } else {
+            // Empty placeholder
+            doc.setFillColor(250, 250, 250);
+            doc.rect(xPos, gridYPos, gridSize, gridSize, 'F');
+            doc.setDrawColor(220, 220, 220);
+            doc.setLineWidth(0.3);
+            doc.rect(xPos, gridYPos, gridSize, gridSize);
           }
+          
+          // Photo label
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(80, 80, 80);
+          doc.text(photoLabels[i], xPos + gridSize / 2, gridYPos + gridSize + 5, { align: 'center' });
         }
-
-        if (rowCount % 2 !== 0) {
-          yPos += gridSize + 10;
-        }
-        yPos += 10;
+        
+        yPos += 2 * (gridSize + 12) + 10;
       }
+      
+      // ======= PHOTO METADATA SECTION =======
+      doc.setFillColor(250, 250, 250);
+      doc.rect(15, yPos, pageWidth - 30, 30, 'F');
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.5);
+      doc.rect(15, yPos, pageWidth - 30, 30);
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text('PHOTO METADATA', 20, yPos + 7);
+      
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(60, 60, 60);
+      
+      const metaY = yPos + 14;
+      const leftCol = 20;
+      const rightCol = 110;
+      
+      // GPS Location
+      doc.setFont('helvetica', 'bold');
+      doc.text('GPS Location:', leftCol, metaY);
+      doc.setFont('helvetica', 'normal');
+      const gpsText = asset.latitude && asset.longitude 
+        ? `${asset.latitude.toFixed(6)}, ${asset.longitude.toFixed(6)}`
+        : 'Not available';
+      doc.text(gpsText, leftCol + 25, metaY);
+      
+      // Timestamp
+      doc.setFont('helvetica', 'bold');
+      doc.text('Timestamp:', rightCol, metaY);
+      doc.setFont('helvetica', 'normal');
+      const timestamp = asset.completed_at 
+        ? new Date(asset.completed_at).toLocaleString('en-IN', { 
+            day: '2-digit', 
+            month: 'short', 
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true 
+          })
+        : 'N/A';
+      doc.text(timestamp, rightCol + 20, metaY);
+      
+      // Uploaded By
+      doc.setFont('helvetica', 'bold');
+      doc.text('Uploaded By:', leftCol, metaY + 7);
+      doc.setFont('helvetica', 'normal');
+      doc.text(asset.mounter_name || 'Operations Team', leftCol + 25, metaY + 7);
+      
+      // Device (placeholder)
+      doc.setFont('helvetica', 'bold');
+      doc.text('Device:', rightCol, metaY + 7);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Mobile Camera', rightCol + 20, metaY + 7);
+      
+      // Footer
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(120, 120, 120);
+      doc.text('Work Order – Photo Proof', pageWidth - 20, pageHeight - 10, { align: 'right' });
+      doc.text(`Page ${doc.getNumberOfPages()} of ${doc.getNumberOfPages()}`, 20, pageHeight - 10);
     }
   } else {
+    doc.addPage();
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text('No campaign execution photos available yet.', 15, yPos);
+    doc.text('No campaign execution photos available yet.', pageWidth / 2, 40, { align: 'center' });
   }
 }

@@ -374,26 +374,29 @@ export default function CampaignsList() {
         />
 
         <div className="bg-card rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow className={getRowClassName()}>
-                <TableHead className={getCellClassName()}>
-                  <Checkbox
-                    checked={selectedCampaigns.size === filteredCampaigns.length && filteredCampaigns.length > 0}
-                    onCheckedChange={toggleAllCampaigns}
-                  />
-                </TableHead>
-                <TableHead className={getCellClassName()}>Campaign ID</TableHead>
-                <TableHead className={getCellClassName()}>Client</TableHead>
-                <TableHead className={getCellClassName()}>Campaign</TableHead>
-                <TableHead className={getCellClassName()}>Period</TableHead>
-                <TableHead className={getCellClassName()}>Status</TableHead>
-                <TableHead className={getCellClassName()}>Assets</TableHead>
-                <TableHead className={`text-right ${getCellClassName()}`}>Total</TableHead>
-                <TableHead className={`text-right ${getCellClassName()}`}>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <div className="w-full overflow-x-auto">
+            <div className="inline-block min-w-full align-middle">
+              <div className="overflow-hidden border-t">
+                <Table className="min-w-max w-full table-auto whitespace-nowrap">
+                  <TableHeader className="bg-muted sticky top-0 z-20">
+                    <TableRow className={getRowClassName()}>
+                      <TableHead className={`sticky left-0 z-30 bg-muted px-4 py-3 text-left font-semibold border-r ${getCellClassName()}`}>
+                        <Checkbox
+                          checked={selectedCampaigns.size === filteredCampaigns.length && filteredCampaigns.length > 0}
+                          onCheckedChange={toggleAllCampaigns}
+                        />
+                      </TableHead>
+                      <TableHead className={`px-4 py-3 text-left font-semibold ${getCellClassName()}`}>Campaign ID</TableHead>
+                      <TableHead className={`px-4 py-3 text-left font-semibold ${getCellClassName()}`}>Client</TableHead>
+                      <TableHead className={`px-4 py-3 text-left font-semibold ${getCellClassName()}`}>Campaign</TableHead>
+                      <TableHead className={`px-4 py-3 text-left font-semibold ${getCellClassName()}`}>Period</TableHead>
+                      <TableHead className={`px-4 py-3 text-left font-semibold ${getCellClassName()}`}>Status</TableHead>
+                      <TableHead className={`px-4 py-3 text-left font-semibold ${getCellClassName()}`}>Assets</TableHead>
+                      <TableHead className={`px-4 py-3 text-right font-semibold ${getCellClassName()}`}>Total</TableHead>
+                      <TableHead className={`px-4 py-3 text-right font-semibold ${getCellClassName()}`}>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
               {loading || !settingsReady ? (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-8">
@@ -416,30 +419,35 @@ export default function CampaignsList() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredCampaigns.map((campaign) => (
-                  <TableRow key={campaign.id} className={getRowClassName()}>
-                    <TableCell className={getCellClassName()}>
+                filteredCampaigns.map((campaign, index) => (
+                  <TableRow 
+                    key={campaign.id} 
+                    className={`transition-all duration-150 hover:bg-muted/80 ${
+                      index % 2 === 0 ? 'bg-background' : 'bg-muted/30'
+                    } ${getRowClassName()}`}
+                  >
+                    <TableCell className={`sticky left-0 z-10 bg-inherit px-4 py-3 border-r ${getCellClassName()}`}>
                       <Checkbox
                         checked={selectedCampaigns.has(campaign.id)}
                         onCheckedChange={() => toggleCampaignSelection(campaign.id)}
                       />
                     </TableCell>
-                    <TableCell className={`font-medium ${getCellClassName()}`}>{campaign.id}</TableCell>
-                    <TableCell className={getCellClassName()}>{campaign.client_name}</TableCell>
-                    <TableCell className={getCellClassName()}>{campaign.campaign_name}</TableCell>
-                    <TableCell className={getCellClassName()}>
+                    <TableCell className={`font-medium px-4 py-3 ${getCellClassName()}`}>{campaign.id}</TableCell>
+                    <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{campaign.client_name}</TableCell>
+                    <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{campaign.campaign_name}</TableCell>
+                    <TableCell className={`px-4 py-3 ${getCellClassName()}`}>
                       {formatDateUtil(campaign.start_date, settings.dateFormat)} - {formatDateUtil(campaign.end_date, settings.dateFormat)}
                     </TableCell>
-                    <TableCell className={getCellClassName()}>
+                    <TableCell className={`px-4 py-3 ${getCellClassName()}`}>
                       <Badge variant="outline" className={getCampaignStatusConfig(campaign.status).className}>
                         {getCampaignStatusConfig(campaign.status).label}
                       </Badge>
                     </TableCell>
-                    <TableCell className={getCellClassName()}>{campaign.total_assets || 0}</TableCell>
-                    <TableCell className={`text-right ${getCellClassName()}`}>
+                    <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{campaign.total_assets || 0}</TableCell>
+                    <TableCell className={`px-4 py-3 text-right ${getCellClassName()}`}>
                       {formatCurrencyUtil(campaign.grand_total, settings.currencyFormat, settings.currencySymbol, settings.compactNumbers)}
                     </TableCell>
-                    <TableCell className={`text-right ${getCellClassName()}`}>
+                    <TableCell className={`px-4 py-3 text-right ${getCellClassName()}`}>
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="ghost"
@@ -474,6 +482,9 @@ export default function CampaignsList() {
             </TableBody>
           </Table>
         </div>
+      </div>
+    </div>
+  </div>
 
         {/* Create Campaign Dialog */}
         <CreateCampaignFromPlanDialog

@@ -4653,6 +4653,10 @@ export type Database = {
         }
         Returns: string
       }
+      manually_unbook_asset: {
+        Args: { p_asset_id: string; p_campaign_id: string }
+        Returns: Json
+      }
       process_plan_approval: {
         Args: {
           p_approval_id: string

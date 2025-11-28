@@ -46,7 +46,7 @@ interface ContactPerson {
 
 export default function ClientNew() {
   const navigate = useNavigate();
-  const { company } = useCompany();
+  const { company, isLoading: companyLoading } = useCompany();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
   
@@ -146,6 +146,13 @@ export default function ClientNew() {
       setLoading(true);
       setErrors({});
 
+      // Check if company data is available
+      if (!company?.id) {
+        toast.error("Company information not available. Please refresh the page.");
+        setLoading(false);
+        return;
+      }
+
       // Validate basic fields
       const validation = clientSchema.safeParse(formData);
       if (!validation.success) {
@@ -198,6 +205,22 @@ export default function ClientNew() {
       setLoading(false);
     }
   };
+
+  if (companyLoading) {
+    return (
+      <div className="p-8">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (!company?.id) {
+    return (
+      <div className="p-8">
+        <p className="text-destructive">Company information not available. Please refresh the page.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-6">

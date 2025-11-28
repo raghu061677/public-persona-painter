@@ -11,11 +11,19 @@ interface OperationsTask {
   id: string;
   campaign_id: string;
   asset_id: string;
-  task_type: string;
+  job_type: string;
   status: string;
-  scheduled_date: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  deadline_date: string | null;
+  assigned_to: string | null;
+  location: string;
+  area: string;
+  city: string;
+  media_type: string;
   notes: string | null;
   created_at: string;
+  updated_at: string;
   campaigns?: {
     campaign_name: string;
     client_name: string;
@@ -199,11 +207,12 @@ export function OperationsTasksList() {
                       Client: {task.campaigns?.client_name || 'N/A'}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Asset ID: {task.asset_id} • Type: {task.task_type}
+                      Asset ID: {task.asset_id} • Type: {task.job_type}
                     </p>
-                    {task.scheduled_date && (
+                    {(task.start_date || task.deadline_date) && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        Scheduled: {formatDate(task.scheduled_date)}
+                        {task.start_date && `Start: ${formatDate(task.start_date)}`}
+                        {task.deadline_date && `Deadline: ${formatDate(task.deadline_date)}`}
                       </p>
                     )}
                   </div>

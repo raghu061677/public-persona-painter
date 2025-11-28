@@ -2854,47 +2854,62 @@ export type Database = {
       }
       operations_tasks: {
         Row: {
+          area: string
           asset_id: string
           assigned_to: string | null
           campaign_id: string
-          completed_at: string | null
+          city: string
           created_at: string | null
+          deadline_date: string | null
+          end_date: string | null
           id: string
+          job_type: string
+          location: string
+          media_type: string
           notes: string | null
-          scheduled_date: string | null
+          start_date: string | null
           status: string
-          task_type: string
           updated_at: string | null
         }
         Insert: {
+          area: string
           asset_id: string
           assigned_to?: string | null
           campaign_id: string
-          completed_at?: string | null
+          city: string
           created_at?: string | null
+          deadline_date?: string | null
+          end_date?: string | null
           id?: string
+          job_type: string
+          location: string
+          media_type: string
           notes?: string | null
-          scheduled_date?: string | null
+          start_date?: string | null
           status?: string
-          task_type?: string
           updated_at?: string | null
         }
         Update: {
+          area?: string
           asset_id?: string
           assigned_to?: string | null
           campaign_id?: string
-          completed_at?: string | null
+          city?: string
           created_at?: string | null
+          deadline_date?: string | null
+          end_date?: string | null
           id?: string
+          job_type?: string
+          location?: string
+          media_type?: string
           notes?: string | null
-          scheduled_date?: string | null
+          start_date?: string | null
           status?: string
-          task_type?: string
           updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "operations_tasks_campaign_id_fkey"
+            foreignKeyName: "fk_operations_tasks_campaign"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"

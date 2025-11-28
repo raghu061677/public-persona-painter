@@ -26,6 +26,15 @@ import {
   calculateProRata,
   formatDate 
 } from "@/utils/plans";
+import {
+  DurationMode,
+  calculateDurationFactor,
+  calculateMonthsFromDays,
+  toDateOnly,
+  formatForSupabase,
+  BILLING_CYCLE_DAYS,
+} from "@/utils/billingEngine";
+import { LineItemDurationControl } from "@/components/plans/LineItemDurationControl";
 import { ArrowLeft, Calendar as CalendarIcon, FileText, CalendarDays, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AssetSelectionTable } from "@/components/plans/AssetSelectionTable";
@@ -50,6 +59,9 @@ export default function PlanEdit() {
     plan_type: "Quotation" as "Quotation" | "Proposal" | "Estimate",
     start_date: new Date(),
     end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    duration_days: 30,
+    duration_mode: 'MONTH' as DurationMode,
+    months_count: 1,
     gst_percent: "18",
     notes: "",
   });
@@ -68,6 +80,9 @@ export default function PlanEdit() {
       .single();
 
     if (plan) {
+      const days = calculateDurationDays(new Date(plan.start_date), new Date(plan.end_date));
+      const months = plan.months_count || calculateMonthsFromDays(days);
+      
       setFormData({
         id: plan.id,
         client_id: plan.client_id,
@@ -76,6 +91,9 @@ export default function PlanEdit() {
         plan_type: plan.plan_type,
         start_date: new Date(plan.start_date),
         end_date: new Date(plan.end_date),
+        duration_days: days,
+        duration_mode: (plan.duration_mode as DurationMode) || 'MONTH',
+        months_count: months,
         gst_percent: plan.gst_percent.toString(),
         notes: plan.notes || "",
       });

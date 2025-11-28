@@ -1,26 +1,27 @@
 // Utility functions for plans and quotations
+// Import the new billing engine for core calculations
+import {
+  calculateDurationDays as calcDays,
+  BILLING_CYCLE_DAYS,
+} from './billingEngine';
 
 /**
  * Calculate duration in days between two dates (inclusive)
  * Example: 10 Nov to 19 Nov = 10 days (not 9)
+ * @deprecated Use calculateDurationDays from billingEngine instead
  */
 export function calculateDurationDays(startDate: Date, endDate: Date): number {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  start.setHours(0, 0, 0, 0);
-  end.setHours(0, 0, 0, 0);
-  const diffTime = end.getTime() - start.getTime();
-  const days = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 for inclusive
-  return Math.max(days, 1); // Minimum 1 day
+  return calcDays(startDate, endDate);
 }
 
 /**
  * Calculate pro-rata rate based on monthly rate and number of days
- * Formula: (monthly_rate / 30) × number_of_days
+ * Formula: (monthly_rate / BILLING_CYCLE_DAYS) × number_of_days
+ * @deprecated Use calculateLineItemTotals from billingEngine instead
  */
 export function calculateProRata(monthlyRate: number, days: number): number {
   if (!monthlyRate || !days || days < 0) return 0;
-  const dailyRate = monthlyRate / 30;
+  const dailyRate = monthlyRate / BILLING_CYCLE_DAYS;
   return Math.round(dailyRate * days * 100) / 100; // Round to 2 decimals
 }
 

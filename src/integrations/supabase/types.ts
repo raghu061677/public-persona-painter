@@ -3422,12 +3422,14 @@ export type Database = {
           created_at: string | null
           created_by: string
           duration_days: number
+          duration_mode: string | null
           end_date: string
           export_links: Json | null
           grand_total: number
           gst_amount: number
           gst_percent: number
           id: string
+          months_count: number | null
           notes: string | null
           owner_company_id: string | null
           plan_name: string
@@ -3448,12 +3450,14 @@ export type Database = {
           created_at?: string | null
           created_by: string
           duration_days: number
+          duration_mode?: string | null
           end_date: string
           export_links?: Json | null
           grand_total?: number
           gst_amount?: number
           gst_percent?: number
           id: string
+          months_count?: number | null
           notes?: string | null
           owner_company_id?: string | null
           plan_name: string
@@ -3474,12 +3478,14 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           duration_days?: number
+          duration_mode?: string | null
           end_date?: string
           export_links?: Json | null
           grand_total?: number
           gst_amount?: number
           gst_percent?: number
           id?: string
+          months_count?: number | null
           notes?: string | null
           owner_company_id?: string | null
           plan_name?: string

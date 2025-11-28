@@ -25,6 +25,17 @@ import {
   calculateProRata,
   formatDate 
 } from "@/utils/plans";
+import {
+  DurationMode,
+  calculateDurationFactor,
+  calculateMonthsFromDays,
+  syncDurationFromStartDate,
+  syncDurationFromEndDate,
+  toDateOnly,
+  formatForSupabase,
+  BILLING_CYCLE_DAYS,
+} from "@/utils/billingEngine";
+import { LineItemDurationControl } from "@/components/plans/LineItemDurationControl";
 import { generatePlanCode } from "@/lib/codeGenerator";
 import { ArrowLeft, Calendar as CalendarIcon, Info, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -50,6 +61,9 @@ export default function PlanNew() {
     plan_type: "Quotation",
     start_date: new Date(),
     end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+    duration_days: 30,
+    duration_mode: 'MONTH' as DurationMode,
+    months_count: 1,
     gst_percent: "18",
     notes: "",
   });
@@ -60,6 +74,19 @@ export default function PlanNew() {
     generateNewPlanId();
     loadTemplateFromSession();
   }, []);
+
+  // Calculate duration days whenever dates change
+  useEffect(() => {
+    const days = calculateDurationDays(formData.start_date, formData.end_date);
+    const months = calculateMonthsFromDays(days);
+    if (days !== formData.duration_days) {
+      setFormData(prev => ({ 
+        ...prev, 
+        duration_days: days,
+        months_count: months,
+      }));
+    }
+  }, [formData.start_date, formData.end_date]);
 
   const generateNewPlanId = async () => {
     try {
@@ -316,11 +343,11 @@ export default function PlanNew() {
         throw new Error("No active company association found");
       }
 
-      const durationDays = calculateDurationDays(new Date(formData.start_date), new Date(formData.end_date));
+      const durationDays = formData.duration_days;
       const totals = calculateTotals();
       const { netTotal, gstAmount, grandTotal } = totals;
 
-      // Create plan
+      // Create plan with duration mode and months
       const { data: plan, error: planError } = await supabase
         .from('plans')
         .insert({
@@ -329,9 +356,11 @@ export default function PlanNew() {
           client_name: formData.client_name,
           plan_name: formData.plan_name,
           plan_type: formData.plan_type,
-          start_date: formData.start_date.toISOString().split('T')[0],
-          end_date: formData.end_date.toISOString().split('T')[0],
+          start_date: formatForSupabase(toDateOnly(formData.start_date)),
+          end_date: formatForSupabase(toDateOnly(formData.end_date)),
           duration_days: durationDays,
+          duration_mode: formData.duration_mode,
+          months_count: formData.months_count,
           status: 'Draft',
           total_amount: netTotal,
           gst_percent: parseFloat(formData.gst_percent),
@@ -410,11 +439,17 @@ export default function PlanNew() {
     }
   };
 
-  const durationDays = calculateDurationDays(new Date(formData.start_date), new Date(formData.end_date));
   const totals = calculateTotals();
   const selectedAssetsArray = Array.from(selectedAssets)
     .map(id => availableAssets.find(a => a.id === id))
     .filter(Boolean);
+
+  // Calculate duration factor for display purposes
+  const durationFactor = calculateDurationFactor(
+    formData.duration_days,
+    formData.duration_mode,
+    formData.months_count
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -503,57 +538,24 @@ export default function PlanNew() {
             <Card className="rounded-2xl shadow-md hover:shadow-xl transition-all duration-200 border-l-4 border-l-blue-500">
               <CardHeader className="pb-4">
                 <CardTitle className="text-lg font-semibold text-slate-700 dark:text-slate-200">
-                  Campaign Period
+                  Campaign Period & Billing
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Start Date *</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start h-10 hover:bg-muted/50">
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formatDate(formData.start_date)}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={formData.start_date}
-                        onSelect={(date) => date && setFormData(prev => ({ ...prev, start_date: date }))}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">End Date *</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start h-10 hover:bg-muted/50">
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formatDate(formData.end_date)}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={formData.end_date}
-                        onSelect={(date) => date && setFormData(prev => ({ ...prev, end_date: date }))}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Duration (Days)</Label>
-                  <Input
-                    type="number"
-                    value={durationDays}
-                    disabled
-                    className="h-10 bg-muted/30 font-semibold text-lg"
-                  />
-                  <p className="text-xs text-muted-foreground">Auto-calculated (inclusive)</p>
-                </div>
-                <div className="space-y-2">
+                <LineItemDurationControl
+                  startDate={formData.start_date}
+                  endDate={formData.end_date}
+                  durationDays={formData.duration_days}
+                  durationMode={formData.duration_mode}
+                  monthsCount={formData.months_count}
+                  onDurationChange={(update) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      ...update,
+                    }));
+                  }}
+                />
+                <div className="space-y-2 pt-4 border-t">
                   <Label className="text-sm font-medium">GST %</Label>
                   <Select value={formData.gst_percent} onValueChange={(v) => setFormData(prev => ({ ...prev, gst_percent: v }))}>
                     <SelectTrigger className="h-10">
@@ -575,7 +577,7 @@ export default function PlanNew() {
             <div className="lg:col-span-1">
               <PlanSummaryCard
                 selectedCount={selectedAssets.size}
-                duration={durationDays}
+                duration={formData.duration_days}
                 displayCost={totals.displayCost}
                 printingCost={totals.printingCost}
                 mountingCost={totals.mountingCost}
@@ -606,7 +608,7 @@ export default function PlanNew() {
                 assetPricing={assetPricing}
                 onRemove={removeAsset}
                 onPricingUpdate={updateAssetPricing}
-                durationDays={durationDays}
+                durationDays={formData.duration_days}
               />
             </CardContent>
           </Card>

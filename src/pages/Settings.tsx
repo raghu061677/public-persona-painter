@@ -47,6 +47,7 @@ export default function Settings() {
   const [companyId, setCompanyId] = useState<string>("");
 
   const isAdmin = roles.includes("admin");
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const canViewUserManagement = canView('user_management');
   const canViewCompanySettings = canView('company_settings');
   const canViewRolePermissions = canView('role_permissions');
@@ -63,17 +64,21 @@ export default function Settings() {
         return;
       }
 
-      // Load company ID
+      // Load company ID and check if platform admin
       const { data: companyData } = await supabase
         .from("company_users")
-        .select("company_id")
+        .select("company_id, companies(type)")
         .eq("user_id", user.id)
         .eq("status", "active")
         .single();
       
       if (companyData) {
         setCompanyId(companyData.company_id);
+        // Check if user is in platform_admin company
+        const companyType = (companyData as any).companies?.type;
+        setIsPlatformAdmin(companyType === 'platform_admin');
       }
+
 
       // Load profile
       const { data: profileData } = await supabase
@@ -391,28 +396,32 @@ export default function Settings() {
             </CardContent>
           </Card>
 
+          {/* User Management - Only for Platform Admins */}
+          {isPlatformAdmin && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  <CardTitle>User Management</CardTitle>
+                </div>
+                <CardDescription>
+                  Manage team members, roles, and permissions across all companies
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Platform admin access: Manage users, assign roles, and control access across all organizations
+                </p>
+                <Button onClick={() => navigate('/admin/users')} variant="outline">
+                  <User className="mr-2 h-4 w-4" />
+                  Manage Users
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {isAdmin && (
             <>
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    <CardTitle>User Management</CardTitle>
-                  </div>
-                  <CardDescription>
-                    Manage team members, roles, and permissions
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Add users, assign roles, and control access to different modules (Sales, Planning, Finance, etc.)
-                  </p>
-                  <Button onClick={() => navigate('/admin/users')} variant="outline">
-                    <User className="mr-2 h-4 w-4" />
-                    Manage Users
-                  </Button>
-                </CardContent>
-              </Card>
               
               <Card>
                 <CardHeader>

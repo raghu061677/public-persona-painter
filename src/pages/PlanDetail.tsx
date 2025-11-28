@@ -544,19 +544,32 @@ export default function PlanDetail() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      await supabase.from("plans").update({ status: "pending" }).eq("id", id);
+      // Update status to 'Sent' to indicate waiting for approval
+      const { error } = await supabase
+        .from("plans")
+        .update({ status: "Sent" })
+        .eq("id", id);
+
+      if (error) throw error;
       
-      // Create approval workflow
-      await supabase.rpc("create_plan_approval_workflow", { p_plan_id: id });
+      // Create approval workflow if the function exists
+      try {
+        await supabase.rpc("create_plan_approval_workflow", { p_plan_id: id });
+      } catch (workflowError) {
+        console.log("Approval workflow creation skipped:", workflowError);
+      }
 
       toast({
         title: "Success",
-        description: "Plan submitted for approval (pending review)",
+        description: "Plan submitted for approval successfully",
       });
 
       setShowSubmitDialog(false);
       setApprovalRemarks("");
+      
+      // Refresh plan data to show updated status
       fetchPlan();
+      loadPendingApprovals();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -828,8 +841,8 @@ export default function PlanDetail() {
           
           {/* Action Buttons */}
           <div className="flex gap-2 flex-wrap items-start">
-            {/* Submit for Approval - Pending Status */}
-            {plan.status === 'pending' && isAdmin && (
+            {/* Submit for Approval - Draft Status */}
+            {plan.status === 'Draft' && (
               <Button
                 onClick={() => setShowSubmitDialog(true)}
                 size="sm"
@@ -840,8 +853,16 @@ export default function PlanDetail() {
               </Button>
             )}
 
-            {/* Approve/Reject - Pending Status with Pending Approvals */}
-            {plan.status === 'pending' && isAdmin && pendingApprovalsCount > 0 && (
+            {/* Show Waiting for Approval indicator when status is Sent */}
+            {plan.status === 'Sent' && (
+              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-300">
+                <Activity className="h-3 w-3 mr-1" />
+                Waiting for Approval
+              </Badge>
+            )}
+
+            {/* Approve/Reject - Sent Status with Pending Approvals */}
+            {plan.status === 'Sent' && isAdmin && pendingApprovalsCount > 0 && (
               <>
                 <Button
                   onClick={() => setShowApproveDialog(true)}

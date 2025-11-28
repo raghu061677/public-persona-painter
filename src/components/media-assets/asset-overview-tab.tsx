@@ -2,6 +2,7 @@ import { MapPin, Ruler, IndianRupee, Receipt, Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { SectionCard } from "@/components/ui/section-card";
+import { StreetViewPreview } from "./StreetViewPreview";
 
 interface AssetOverviewTabProps {
   asset: any;
@@ -9,7 +10,20 @@ interface AssetOverviewTabProps {
 
 export function AssetOverviewTab({ asset }: AssetOverviewTabProps) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="space-y-6">
+      {/* Street View Preview - Full Width */}
+      {asset.latitude && asset.longitude && (
+        <div className="w-full">
+          <StreetViewPreview
+            latitude={asset.latitude}
+            longitude={asset.longitude}
+            streetViewUrl={asset.google_street_view_url}
+            showPreview={true}
+          />
+        </div>
+      )}
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Location Card */}
       <SectionCard 
         title="Location" 
@@ -52,19 +66,6 @@ export function AssetOverviewTab({ asset }: AssetOverviewTabProps) {
               <p className="font-medium">
                 {asset.latitude}, {asset.longitude}
               </p>
-            </div>
-          )}
-          {asset.google_street_view_url && (
-            <div>
-              <p className="text-sm text-muted-foreground">Street View</p>
-              <a 
-                href={asset.google_street_view_url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
-                View on Google Maps
-              </a>
             </div>
           )}
         </div>
@@ -217,6 +218,7 @@ export function AssetOverviewTab({ asset }: AssetOverviewTabProps) {
             )}
           </div>
       </SectionCard>
+      </div>
     </div>
   );
 }

@@ -169,6 +169,7 @@ const ManageUsers = lazy(() => import("./pages/platform/ManageUsers"));
 const ManageCompanies = lazy(() => import("./pages/platform/ManageCompanies"));
 const SubscriptionManagement = lazy(() => import("./pages/SubscriptionManagement"));
 const MigrateToMatrix = lazy(() => import("./pages/MigrateToMatrix"));
+const FixStreetViewLinks = lazy(() => import("./pages/admin/FixStreetViewLinks"));
 
 // Optimized Query Client with caching
 const queryClient = new QueryClient({
@@ -248,6 +249,7 @@ const App = () => (
             <Route path="/admin/code-management" element={<PlatformAdminGuard><AppLayout><CodeManagement /></AppLayout></PlatformAdminGuard>} />
             <Route path="/admin/platform-reports" element={<PlatformAdminGuard><AppLayout><PlatformReports /></AppLayout></PlatformAdminGuard>} />
             <Route path="/admin/migrate-data" element={<PlatformAdminGuard><AppLayout><MigrateToMatrix /></AppLayout></PlatformAdminGuard>} />
+            <Route path="/admin/fix-streetview-links" element={<ProtectedRoute requireAuth><AppLayout><FixStreetViewLinks /></AppLayout></ProtectedRoute>} />
             
             {/* Duplicate route removed - see line 268 for actual company settings routes */}
             

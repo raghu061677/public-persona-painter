@@ -36,6 +36,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { getPlanStatusColor, formatDate } from "@/utils/plans";
@@ -966,65 +969,60 @@ export default function PlanDetail() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-popover z-50">
-                {isAdmin && (
+                {/* Edit Plan - Top Priority */}
+                {isAdmin && (plan.status === 'pending' || plan.status === 'approved') && (
                   <>
-                    <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleBlock} className="text-orange-600">
-                      <Ban className="mr-2 h-4 w-4" />
-                      Block
+                    <DropdownMenuItem onClick={() => navigate(`/admin/plans/edit/${id}`)}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit Plan
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </>
                 )}
-                <DropdownMenuItem onClick={handleCopyId}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={generateShareLink}>
-                  <Share2 className="mr-2 h-4 w-4" />
-                  Share
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate(`/admin/audit-logs?entity_type=plan&entity_id=${id}`)}>
-                  <Activity className="mr-2 h-4 w-4" />
-                  Activity
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={generateShareLink}>
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Public Link
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
+                
+                {/* Export Documents - Nested Submenu */}
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Export Documents
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-52 bg-popover z-[60]">
+                    <DropdownMenuItem asChild>
+                      <div className="w-full p-0">
+                        <ExportPlanExcelButton planId={id!} variant="ghost" size="sm" className="w-full justify-start p-2 h-auto font-normal" />
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <div className="w-full p-0">
+                        <WorkOrderPDFButton planId={id!} planName={plan?.plan_name} />
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <div className="w-full p-0">
+                        <EstimatePDFButton planId={id!} planName={plan?.plan_name} />
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <div className="w-full p-0">
+                        <SalesOrderPDFButton planId={id!} planName={plan?.plan_name} />
+                      </div>
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+
                 <DropdownMenuItem onClick={() => handleExportPPT(false)} disabled={exportingPPT}>
                   <Download className="mr-2 h-4 w-4" />
                   {exportingPPT ? "Exporting..." : "Download PPT"}
-                 </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <div className="w-full">
-                      <ExportPlanExcelButton planId={id!} variant="ghost" size="sm" className="w-full justify-start p-0 h-auto font-normal" />
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <div className="w-full p-0">
-                      <WorkOrderPDFButton planId={id!} planName={plan?.plan_name} />
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <div className="w-full p-0">
-                      <EstimatePDFButton planId={id!} planName={plan?.plan_name} />
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <div className="w-full p-0">
-                      <SalesOrderPDFButton planId={id!} planName={plan?.plan_name} />
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowTermsDialog(true)}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    Download PDF
-                  </DropdownMenuItem>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem onClick={() => setShowTermsDialog(true)}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Download PDF
+                </DropdownMenuItem>
+
                 <DropdownMenuSeparator />
+                
+                {/* Cloud Upload */}
                 <DropdownMenuItem onClick={() => handleExportPPT(true)} disabled={exportingPPT}>
                   <Save className="mr-2 h-4 w-4" />
                   Upload PPT to Cloud
@@ -1033,12 +1031,34 @@ export default function PlanDetail() {
                   <Save className="mr-2 h-4 w-4" />
                   Upload Excel to Cloud
                 </DropdownMenuItem>
-                {isAdmin && (plan.status === 'pending' || plan.status === 'approved') && (
+                
+                <DropdownMenuSeparator />
+                
+                {/* Sharing & Activity */}
+                <DropdownMenuItem onClick={handleCopyId}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy ID
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={generateShareLink}>
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Share Link
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate(`/admin/audit-logs?entity_type=plan&entity_id=${id}`)}>
+                  <Activity className="mr-2 h-4 w-4" />
+                  Activity Log
+                </DropdownMenuItem>
+                
+                {/* Admin Actions */}
+                {isAdmin && (
                   <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => navigate(`/admin/plans/edit/${id}`)}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit Plan
+                    <DropdownMenuItem onClick={handleBlock} className="text-orange-600">
+                      <Ban className="mr-2 h-4 w-4" />
+                      Block Plan
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Plan
                     </DropdownMenuItem>
                   </>
                 )}

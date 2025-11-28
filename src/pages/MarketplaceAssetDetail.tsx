@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { StreetViewPreview } from "@/components/media-assets/StreetViewPreview";
 import {
   Carousel,
   CarouselContent,
@@ -228,7 +229,7 @@ export default function MarketplaceAssetDetail() {
             </CardContent>
           </Card>
 
-          {/* Map & Street View */}
+          {/* Street View & Map */}
           {asset.latitude && asset.longitude && (
             <Card className="border-2 shadow-lg">
               <CardHeader className="pb-4">
@@ -238,26 +239,24 @@ export default function MarketplaceAssetDetail() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <Button
-                    variant="outline"
-                    className="h-auto py-6 flex flex-col gap-2 hover:bg-primary/5 hover:border-primary transition-all"
-                    onClick={openGoogleMaps}
-                  >
-                    <MapPin className="h-8 w-8 text-primary" />
-                    <span className="text-sm font-semibold">Open in Google Maps</span>
-                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="h-auto py-6 flex flex-col gap-2 hover:bg-primary/5 hover:border-primary transition-all"
-                    onClick={openStreetView}
-                  >
-                    <Navigation className="h-8 w-8 text-primary" />
-                    <span className="text-sm font-semibold">Street View</span>
-                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                </div>
+                {/* Street View Preview Component */}
+                <StreetViewPreview
+                  latitude={asset.latitude}
+                  longitude={asset.longitude}
+                  streetViewUrl={asset.google_street_view_url}
+                  showPreview={true}
+                />
+                
+                {/* Google Maps Button */}
+                <Button
+                  variant="outline"
+                  className="w-full h-auto py-4 flex items-center justify-center gap-3 hover:bg-primary/5 hover:border-primary transition-all"
+                  onClick={openGoogleMaps}
+                >
+                  <MapPin className="h-6 w-6 text-primary" />
+                  <span className="text-base font-semibold">Open in Google Maps</span>
+                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                </Button>
                 
                 {/* Interactive Map with Marker */}
                 <div 

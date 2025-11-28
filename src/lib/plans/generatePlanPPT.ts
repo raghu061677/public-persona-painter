@@ -1,5 +1,6 @@
 import pptxgen from 'pptxgenjs';
 import { format } from 'date-fns';
+import { validateAndFixStreetViewUrl } from '../streetview';
 
 interface PlanAsset {
   asset_id: string;
@@ -319,8 +320,14 @@ export async function generatePlanPPT(
       detailY += 0.45;
     });
 
-    // Street View Link
-    if (asset.google_street_view_url) {
+    // Street View Link - Auto-fix if needed
+    const streetViewUrl = validateAndFixStreetViewUrl(
+      asset.google_street_view_url,
+      asset.latitude,
+      asset.longitude
+    );
+    
+    if (streetViewUrl) {
       slide2.addText('View on Google Street View', {
         x: 3.2,
         y: detailY + 0.2,
@@ -329,7 +336,7 @@ export async function generatePlanPPT(
         fontSize: 14,
         color: '2563EB',
         underline: { color: '2563EB' },
-        hyperlink: { url: asset.google_street_view_url },
+        hyperlink: { url: streetViewUrl },
         fontFace: 'Arial',
       });
     }

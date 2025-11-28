@@ -115,6 +115,7 @@ export const ROUTES = {
   MARKETPLACE: '/admin/marketplace',
   BOOKING_REQUESTS: '/admin/booking-requests',
   VENDORS: '/admin/vendors',
+  FIX_STREETVIEW_LINKS: '/admin/fix-streetview-links',
   
   // Mobile
   MOBILE: '/mobile',
@@ -205,6 +206,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.MARKETPLACE]: 'Marketplace',
   [ROUTES.BOOKING_REQUESTS]: 'Booking Requests',
   [ROUTES.VENDORS]: 'Vendors',
+  [ROUTES.FIX_STREETVIEW_LINKS]: 'Fix Street View Links',
   [ROUTES.MOBILE]: 'Mobile',
   [ROUTES.CLIENT_PORTAL_DASHBOARD]: 'Dashboard',
   [ROUTES.CLIENT_PORTAL_CAMPAIGNS]: 'Campaigns',

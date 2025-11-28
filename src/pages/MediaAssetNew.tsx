@@ -14,6 +14,7 @@ import { VendorDetailsForm } from "@/components/media-assets/vendor-details-form
 import { toast } from "@/hooks/use-toast";
 import { parseDimensions, buildSearchTokens } from "@/utils/mediaAssets";
 import { generateMediaAssetCode } from "@/lib/codeGenerator";
+import { buildStreetViewUrl } from "@/lib/streetview";
 import { ArrowLeft, Sparkles, Image as ImageIcon, Calendar as CalendarIcon, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 
@@ -134,7 +135,7 @@ export default function MediaAssetNew() {
     const lat = parseFloat(formData.latitude);
     const lng = parseFloat(formData.longitude);
     if (!isNaN(lat) && !isNaN(lng) && lat && lng) {
-      const url = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}&heading=-45&pitch=0&fov=80`;
+      const url = buildStreetViewUrl(lat, lng);
       if (formData.google_street_view_url !== url) {
         setFormData(prev => ({ ...prev, google_street_view_url: url }));
       }

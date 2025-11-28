@@ -1,8 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 import { corsHeaders } from '../_shared/cors.ts'
 
-// Version 3.0 - Use database default status instead of explicit value
-console.log('Convert Plan to Campaign function v3.0 started - Using DB default')
+// Version 4.0 - Explicitly set valid enum status
+console.log('Convert Plan to Campaign function v4.0 started - Using valid Planned status')
 
 interface ConvertPlanRequest {
   plan_id: string
@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
     const finalStartDate = start_date || plan.start_date
     const finalEndDate = end_date || plan.end_date
 
-    // 6. Create campaign record - Let database use default 'Planned' status
+    // 6. Create campaign record - Explicitly set valid 'Planned' status
     const campaignInsertData = {
       id: campaignCode,
       company_id: companyId,
@@ -164,7 +164,7 @@ Deno.serve(async (req) => {
       client_name: plan.client_name,
       start_date: finalStartDate,
       end_date: finalEndDate,
-      // Omit status to use database default ('Planned'::campaign_status)
+      status: 'Planned', // Valid enum value: Planned, Assigned, InProgress, PhotoUploaded, Verified, Completed
       total_assets: planItems.length,
       total_amount: plan.total_amount || 0,
       gst_percent: plan.gst_percent || 18,
@@ -174,8 +174,8 @@ Deno.serve(async (req) => {
       created_by: user.id,
     }
     
-    console.log('[v3.0] Using database default status')
-    console.log('[v3.0] Campaign insert data:', JSON.stringify(campaignInsertData, null, 2))
+    console.log('[v4.0] Explicitly setting status: Planned')
+    console.log('[v4.0] Campaign insert data:', JSON.stringify(campaignInsertData, null, 2))
     
     const { data: campaign, error: campaignError } = await supabase
       .from('campaigns')

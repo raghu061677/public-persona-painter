@@ -55,6 +55,7 @@ import { ExportOptionsDialog, ExportOptions } from "@/components/plans/ExportOpt
 import { ExportSettingsDialog, ExportSettings } from "@/components/plans/ExportSettingsDialog";
 import { TermsConditionsDialog, TermsData } from "@/components/plans/TermsConditionsDialog";
 import { BulkPrintingMountingDialog } from "@/components/plans/BulkPrintingMountingDialog";
+import { PrintingInstallationDialog } from "@/components/plans/PrintingInstallationDialog";
 import { AddAssetsDialog } from "@/components/plans/AddAssetsDialog";
 import { SaveAsTemplateDialog } from "@/components/plans/SaveAsTemplateDialog";
 import { ApprovalWorkflowDialog } from "@/components/plans/ApprovalWorkflowDialog";
@@ -80,6 +81,7 @@ export default function PlanDetail() {
   const [showExportSettingsDialog, setShowExportSettingsDialog] = useState(false);
   const [showTermsDialog, setShowTermsDialog] = useState(false);
   const [showBulkPrintingDialog, setShowBulkPrintingDialog] = useState(false);
+  const [showPrintingInstallationDialog, setShowPrintingInstallationDialog] = useState(false);
   const [showAddAssetsDialog, setShowAddAssetsDialog] = useState(false);
   const [showSaveAsTemplateDialog, setShowSaveAsTemplateDialog] = useState(false);
   const [showAIProposalDialog, setShowAIProposalDialog] = useState(false);
@@ -194,10 +196,27 @@ export default function PlanDetail() {
   const fetchPlanItems = async () => {
     const { data } = await supabase
       .from('plan_items')
-      .select('*')
+      .select(`
+        *,
+        media_assets!inner(
+          total_sqft,
+          dimensions,
+          illumination
+        )
+      `)
       .eq('plan_id', id)
       .order('created_at');
-    setPlanItems(data || []);
+    
+    // Flatten the data structure
+    const items = (data || []).map(item => ({
+      ...item,
+      total_sqft: item.media_assets?.total_sqft,
+      dimensions: item.media_assets?.dimensions,
+      illumination: item.media_assets?.illumination,
+      plan_item_id: item.id // Store plan_items.id for updates
+    }));
+    
+    setPlanItems(items);
   };
 
   const generateShareLink = async () => {
@@ -1222,9 +1241,31 @@ export default function PlanDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              {/* Display Cost */}
               <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">Subtotal</span>
-                <span className="font-bold text-lg">{formatCurrency(plan.total_amount)}</span>
+                <span className="text-xs text-muted-foreground">Display Cost</span>
+                <span className="font-semibold">{formatCurrency(planItems.reduce((sum, item) => {
+                  const proRata = calcProRata(item.sales_price, plan.duration_days);
+                  return sum + proRata;
+                }, 0))}</span>
+              </div>
+              
+              {/* Printing Cost */}
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-muted-foreground">Printing Cost</span>
+                <span className="font-semibold text-blue-600">{formatCurrency(planItems.reduce((sum, item) => sum + (item.printing_cost || item.printing_charges || 0), 0))}</span>
+              </div>
+              
+              {/* Installation/Mounting Cost */}
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-muted-foreground">Installation Cost</span>
+                <span className="font-semibold text-green-600">{formatCurrency(planItems.reduce((sum, item) => sum + (item.installation_cost || item.mounting_charges || 0), 0))}</span>
+              </div>
+              
+              {/* Total Before Tax */}
+              <div className="flex justify-between items-center pt-2 border-t">
+                <span className="text-xs font-medium">Total Without Tax</span>
+                <span className="font-bold">{formatCurrency(plan.grand_total - plan.gst_amount)}</span>
               </div>
               
               {/* Discount - Blue */}
@@ -1242,12 +1283,6 @@ export default function PlanDetail() {
                 }
                 return null;
               })()}
-              
-              {/* Net Total - After Discount */}
-              <div className="flex justify-between items-center pt-2 border-t">
-                <span className="text-xs font-medium">Net Total</span>
-                <span className="font-semibold">{formatCurrency(plan.grand_total - plan.gst_amount)}</span>
-              </div>
               
               {/* Profit - Green */}
               {(() => {
@@ -1267,7 +1302,7 @@ export default function PlanDetail() {
               })()}
               
               {/* GST - Red */}
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center pt-2 border-t">
                 <span className="text-xs font-medium text-red-600 dark:text-red-400">
                   GST ({plan.gst_percent}%)
                 </span>
@@ -1293,14 +1328,25 @@ export default function PlanDetail() {
             <CardTitle>Selected Assets ({planItems.length})</CardTitle>
             <div className="flex gap-2">
               {selectedItems.size > 0 && (plan.status === 'pending' || plan.status === 'approved') && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowBulkPrintingDialog(true)}
-                >
-                  <Wand2 className="mr-2 h-4 w-4" />
-                  Bulk P&M
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPrintingInstallationDialog(true)}
+                    className="bg-primary/5 hover:bg-primary/10"
+                  >
+                    <Wand2 className="mr-2 h-4 w-4" />
+                    Printing & Installation
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowBulkPrintingDialog(true)}
+                  >
+                    <Wand2 className="mr-2 h-4 w-4" />
+                    Bulk P&M (Legacy)
+                  </Button>
+                </>
               )}
               {isAdmin && (plan.status === 'pending' || plan.status === 'approved') && (
                 <Button
@@ -1334,7 +1380,7 @@ export default function PlanDetail() {
                   <TableHead className="text-right">Discount</TableHead>
                   <TableHead className="text-right">Profit</TableHead>
                   <TableHead className="text-right">Printing</TableHead>
-                  <TableHead className="text-right">Mounting</TableHead>
+                  <TableHead className="text-right">Installation</TableHead>
                   <TableHead className="text-right">Total + GST</TableHead>
                 </TableRow>
               </TableHeader>
@@ -1375,8 +1421,8 @@ export default function PlanDetail() {
                       <TableCell className="text-right text-green-600 font-medium">
                         {formatCurrency(profit.value)} ({profit.percent.toFixed(2)}%)
                       </TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.printing_charges)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.mounting_charges)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.printing_cost || item.printing_charges || 0)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.installation_cost || item.mounting_charges || 0)}</TableCell>
                       <TableCell className="text-right font-semibold text-lg">
                         {formatCurrency(item.total_with_gst)}
                       </TableCell>
@@ -1454,6 +1500,18 @@ export default function PlanDetail() {
           open={showBulkPrintingDialog}
           onOpenChange={setShowBulkPrintingDialog}
           selectedAssetIds={selectedItems}
+          planId={id!}
+          onSuccess={() => {
+            fetchPlanItems();
+            fetchPlan();
+            setSelectedItems(new Set());
+          }}
+        />
+
+        <PrintingInstallationDialog
+          open={showPrintingInstallationDialog}
+          onOpenChange={setShowPrintingInstallationDialog}
+          selectedItems={planItems.filter(item => selectedItems.has(item.asset_id))}
           planId={id!}
           onSuccess={() => {
             fetchPlanItems();

@@ -155,27 +155,31 @@ Deno.serve(async (req) => {
     const campaignStart = new Date(finalStartDate)
     const campaignEnd = new Date(finalEndDate)
 
-    // 6. Create campaign
+    // 6. Create campaign with correct status enum value
+    const campaignData = {
+      id: campaignCode,
+      company_id: companyId,
+      client_id: plan.client_id,
+      plan_id: plan.id,
+      campaign_name: campaign_name || plan.plan_name || `Campaign for ${plan.client_name}`,
+      client_name: plan.client_name,
+      start_date: campaignStart.toISOString().split('T')[0],
+      end_date: campaignEnd.toISOString().split('T')[0],
+      status: 'Planned', // Valid enum: Planned, Assigned, InProgress, PhotoUploaded, Verified, Completed
+      total_assets: planItems.length,
+      total_amount: plan.total_amount || 0,
+      gst_percent: plan.gst_percent || 18,
+      gst_amount: plan.gst_amount || 0,
+      grand_total: plan.grand_total || 0,
+      notes: notes || plan.notes,
+      created_by: user.id,
+    }
+    
+    console.log('Creating campaign with data:', JSON.stringify(campaignData, null, 2))
+    
     const { data: campaign, error: campaignError } = await supabase
       .from('campaigns')
-      .insert({
-        id: campaignCode,
-        company_id: companyId,
-        client_id: plan.client_id,
-        plan_id: plan.id,
-        campaign_name: campaign_name || plan.plan_name || `Campaign for ${plan.client_name}`,
-        client_name: plan.client_name,
-        start_date: campaignStart.toISOString().split('T')[0],
-        end_date: campaignEnd.toISOString().split('T')[0],
-        status: 'Planned',
-        total_assets: planItems.length,
-        total_amount: plan.total_amount || 0,
-        gst_percent: plan.gst_percent || 18,
-        gst_amount: plan.gst_amount || 0,
-        grand_total: plan.grand_total || 0,
-        notes: notes || plan.notes,
-        created_by: user.id,
-      })
+      .insert(campaignData)
       .select()
       .single()
 

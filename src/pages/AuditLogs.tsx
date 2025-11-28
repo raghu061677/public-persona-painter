@@ -36,6 +36,20 @@ export default function AuditLogs() {
   const [filterAction, setFilterAction] = useState<string>("all");
   const [filterResourceType, setFilterResourceType] = useState<string>("all");
 
+  // Get URL parameters for filtering
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const resourceType = urlParams.get('resource_type');
+    const resourceId = urlParams.get('resource_id');
+    
+    if (resourceType) {
+      setFilterResourceType(resourceType);
+    }
+    if (resourceId) {
+      setSearchTerm(resourceId);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isAdmin) {
       navigate(ROUTES.DASHBOARD);

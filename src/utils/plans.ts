@@ -101,6 +101,8 @@ export function getPlanStatusColor(status: string): string {
   switch (status) {
     case 'Draft':
       return 'bg-slate-500/10 text-slate-700 border-slate-500/20';
+    case 'Pending':
+      return 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20';
     case 'Sent':
       return 'bg-blue-500/10 text-blue-700 border-blue-500/20';
     case 'Approved':

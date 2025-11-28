@@ -837,7 +837,7 @@ export default function PlanDetail() {
           </Card>
         )}
 
-        {(plan.status === 'approved' || plan.status === 'Approved') && !existingCampaignId && (
+        {(plan.status === 'Approved') && !existingCampaignId && (
           <Card className="mb-6 border-blue-500 bg-blue-50 dark:bg-blue-950/20">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
@@ -870,7 +870,7 @@ export default function PlanDetail() {
           {/* Action Buttons */}
           <div className="flex gap-2 flex-wrap items-start">
             {/* Edit Plan Button - Standalone */}
-            {isAdmin && (plan.status === 'pending' || plan.status === 'approved' || plan.status === 'Draft' || plan.status === 'Sent') && (
+            {isAdmin && (plan.status === 'Pending' || plan.status === 'Approved' || plan.status === 'Draft' || plan.status === 'Sent') && (
               <Button
                 onClick={() => navigate(`/admin/plans/edit/${id}`)}
                 size="sm"
@@ -881,8 +881,8 @@ export default function PlanDetail() {
               </Button>
             )}
 
-            {/* Submit for Approval - Draft or pending Status */}
-            {(plan.status === 'Draft' || plan.status === 'pending') && (
+            {/* Submit for Approval - Draft or Pending Status */}
+            {(plan.status === 'Draft' || plan.status === 'Pending') && (
               <Button
                 onClick={() => setShowSubmitDialog(true)}
                 size="sm"
@@ -1005,46 +1005,44 @@ export default function PlanDetail() {
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-popover z-50">
+              <DropdownMenuContent align="end" className="w-56 bg-popover border shadow-md z-50">
                 {/* Export Documents - Nested Submenu */}
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger className="cursor-pointer">
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
                     Export Documents
                   </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="w-56 bg-popover border shadow-lg z-[100]">
-                    <DropdownMenuItem className="cursor-pointer" asChild>
+                  <DropdownMenuSubContent 
+                    className="w-56 bg-popover border shadow-lg z-[200]"
+                    sideOffset={8}
+                  >
+                    <DropdownMenuItem asChild>
                       <div className="w-full">
-                        <ExportPlanExcelButton planId={id!} variant="ghost" size="sm" className="w-full justify-start px-2 h-auto font-normal" />
+                        <ExportPlanExcelButton planId={id!} variant="ghost" size="sm" className="w-full justify-start h-auto font-normal" />
                       </div>
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer" asChild>
+                    <DropdownMenuItem asChild>
                       <div className="w-full">
                         <WorkOrderPDFButton planId={id!} planName={plan?.plan_name} />
                       </div>
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer" asChild>
+                    <DropdownMenuItem asChild>
                       <div className="w-full">
                         <EstimatePDFButton planId={id!} planName={plan?.plan_name} />
                       </div>
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer" asChild>
+                    <DropdownMenuItem asChild>
                       <div className="w-full">
                         <SalesOrderPDFButton planId={id!} planName={plan?.plan_name} />
                       </div>
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleExportPPT(false)} disabled={exportingPPT}>
+                      <Download className="mr-2 h-4 w-4" />
+                      {exportingPPT ? "Exporting..." : "Download PPT"}
+                    </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
-
-                <DropdownMenuItem onClick={() => handleExportPPT(false)} disabled={exportingPPT}>
-                  <Download className="mr-2 h-4 w-4" />
-                  {exportingPPT ? "Exporting..." : "Download PPT"}
-                </DropdownMenuItem>
-                
-                <DropdownMenuItem onClick={() => setShowTermsDialog(true)}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Download PDF
-                </DropdownMenuItem>
 
                 <DropdownMenuSeparator />
                 
@@ -1061,17 +1059,13 @@ export default function PlanDetail() {
                 <DropdownMenuSeparator />
                 
                 {/* Sharing & Activity */}
-                <DropdownMenuItem onClick={handleCopyId}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy ID
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={generateShareLink}>
                   <Share2 className="mr-2 h-4 w-4" />
                   Share Link
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate(`/admin/audit-logs?entity_type=plan&entity_id=${id}`)}>
+                <DropdownMenuItem onClick={() => navigate(`/admin/audit-logs?resource_type=plan&resource_id=${id}`)}>
                   <Activity className="mr-2 h-4 w-4" />
-                  Activity Log
+                  View Plan Activity
                 </DropdownMenuItem>
                 
                 {/* Admin Actions */}
@@ -1235,7 +1229,19 @@ export default function PlanDetail() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Duration</p>
-                <p className="font-semibold">{plan.duration_days} days</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold">{plan.duration_days} days</p>
+                  {isAdmin && (plan.status === 'Pending' || plan.status === 'Draft' || plan.status === 'Sent') && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate(`/admin/plans/edit/${id}`)}
+                      className="h-6 px-2"
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1334,7 +1340,7 @@ export default function PlanDetail() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Selected Assets ({planItems.length})</CardTitle>
             <div className="flex gap-2">
-              {selectedItems.size > 0 && (plan.status === 'pending' || plan.status === 'approved') && (
+              {selectedItems.size > 0 && (plan.status === 'Pending' || plan.status === 'Approved') && (
                 <>
                   <Button
                     variant="outline"
@@ -1355,7 +1361,7 @@ export default function PlanDetail() {
                   </Button>
                 </>
               )}
-              {isAdmin && (plan.status === 'pending' || plan.status === 'approved') && (
+              {isAdmin && (plan.status === 'Pending' || plan.status === 'Approved') && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -1405,7 +1411,7 @@ export default function PlanDetail() {
                           onCheckedChange={() => toggleItemSelection(item.asset_id)}
                         />
                       </TableCell>
-              {isAdmin && (plan.status === 'pending' || plan.status === 'approved') && (
+              {isAdmin && (plan.status === 'Pending' || plan.status === 'Approved') && (
                         <TableCell>
                           <Button
                             variant="ghost"
@@ -1453,7 +1459,7 @@ export default function PlanDetail() {
         )}
 
         {/* Approval History Timeline */}
-        {(plan.status === 'pending' || plan.status === 'approved' || plan.status === 'rejected' || plan.status === 'converted') && (
+        {(plan.status === 'Pending' || plan.status === 'Approved' || plan.status === 'Rejected' || plan.status === 'Converted') && (
           <Card className="mt-6">
             <CardHeader>
               <CardTitle>Approval History</CardTitle>

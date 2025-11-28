@@ -192,19 +192,15 @@ export default function PlanNew() {
       setAssetPricing(newPricing);
     } else {
       newSelected.add(assetId);
-      // Calculate pro-rata: (monthly_rate / 30) × number_of_days
-      const monthlyRate = asset.card_rate || 0;
-      const days = calculateDurationDays(new Date(formData.start_date), new Date(formData.end_date));
-      const prorataRate = calculateProRata(monthlyRate, days);
+      // Store MONTHLY rate as negotiated price (defaults to card rate)
+      const monthlyCardRate = asset.card_rate || 0;
       
       setAssetPricing(prev => ({
         ...prev,
         [assetId]: {
-          sales_price: prorataRate,
+          negotiated_price: monthlyCardRate,  // Store monthly rate
           printing_charges: asset.printing_charges || 0,
           mounting_charges: asset.mounting_charges || 0,
-          discount_type: 'Percent',
-          discount_value: 0,
         }
       }));
     }
@@ -214,19 +210,15 @@ export default function PlanNew() {
   const handleMultiSelect = (assetIds: string[], assets: any[]) => {
     const newSelected = new Set(selectedAssets);
     const newPricing = { ...assetPricing };
-    const days = calculateDurationDays(new Date(formData.start_date), new Date(formData.end_date));
 
     assets.forEach(asset => {
       newSelected.add(asset.id);
-      const monthlyRate = asset.card_rate || 0;
-      const prorataRate = calculateProRata(monthlyRate, days);
+      const monthlyCardRate = asset.card_rate || 0;
       
       newPricing[asset.id] = {
-        sales_price: prorataRate,
+        negotiated_price: monthlyCardRate,  // Store monthly rate
         printing_charges: asset.printing_charges || 0,
         mounting_charges: asset.mounting_charges || 0,
-        discount_type: 'Percent',
-        discount_value: 0,
       };
     });
 
@@ -266,31 +258,37 @@ export default function PlanNew() {
     let totalProfit = 0;
     let totalBaseRent = 0;
 
+    const days = formData.duration_days;
+
     selectedAssets.forEach(assetId => {
       const pricing = assetPricing[assetId];
       const asset = availableAssets.find(a => a.id === assetId);
       
       if (pricing && asset) {
-        const salesPrice = pricing.sales_price || 0;
-        const discountType = pricing.discount_type || 'Percent';
-        const discountValue = pricing.discount_value || 0;
+        // All rates are monthly - apply pro-rata factor
+        const negotiatedMonthly = pricing.negotiated_price || asset.card_rate || 0;
+        const cardRateMonthly = asset.card_rate || 0;
+        const baseRateMonthly = asset.base_rent || 0;
         const printing = pricing.printing_charges || 0;
         const mounting = pricing.mounting_charges || 0;
-        const baseRate = asset.base_rent || 0;
         
-        const discountAmount = discountType === 'Percent'
-          ? (salesPrice * discountValue) / 100
-          : discountValue;
+        // Calculate pro-rated amounts
+        const negotiatedProRata = calculateProRata(negotiatedMonthly, days);
+        const cardRateProRata = calculateProRata(cardRateMonthly, days);
+        const baseRateProRata = calculateProRata(baseRateMonthly, days);
         
-        const netPrice = salesPrice - discountAmount;
-        const profitAmount = netPrice - baseRate;
+        // Calculate discount (card rate - negotiated, both pro-rated)
+        const discountAmount = cardRateProRata - negotiatedProRata;
         
-        displayCost += netPrice;
+        // Calculate profit (negotiated - base rate, both pro-rated)
+        const profitAmount = negotiatedProRata - baseRateProRata;
+        
+        displayCost += negotiatedProRata;
         printingCost += printing;
         mountingCost += mounting;
         totalDiscount += discountAmount;
         totalProfit += profitAmount;
-        totalBaseRent += baseRate;
+        totalBaseRent += baseRateProRata;
       }
     });
 

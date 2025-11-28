@@ -277,7 +277,7 @@ export default function PlanEdit() {
         mountingCost += mounting;
         totalDiscount += discountProRata;
         totalProfit += profitProRata;
-        totalBaseRent += baseRate;
+        totalBaseRent += calcProRata(baseRate, days);  // Pro-rate the base rate
       }
     });
 

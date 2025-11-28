@@ -1,8 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 import { corsHeaders } from '../_shared/cors.ts'
 
-// Version 4.0 - Explicitly set valid enum status
-console.log('Convert Plan to Campaign function v4.0 started - Using valid Planned status')
+// Version 5.0 - Query and use actual database enum values
+console.log('Convert Plan to Campaign function v5.0 started - Checking actual DB enum')
 
 interface ConvertPlanRequest {
   plan_id: string
@@ -154,7 +154,24 @@ Deno.serve(async (req) => {
     const finalStartDate = start_date || plan.start_date
     const finalEndDate = end_date || plan.end_date
 
-    // 6. Create campaign record - Explicitly set valid 'Planned' status
+    // 6. First, query what enum values are actually valid in the database
+    const { data: enumData, error: enumError } = await supabase
+      .rpc('get_enum_values', { enum_name: 'campaign_status' })
+      .single()
+    
+    console.log('[v5.0] Database enum query result:', enumData, enumError)
+    
+    // 6b. Query actual column default from information_schema
+    const { data: columnInfo } = await supabase
+      .from('information_schema.columns')
+      .select('column_default')
+      .eq('table_name', 'campaigns')
+      .eq('column_name', 'status')
+      .single()
+    
+    console.log('[v5.0] Campaign status column default:', columnInfo)
+    
+    // 6c. Create campaign record - Use explicit enum cast to force correct type
     const campaignInsertData = {
       id: campaignCode,
       company_id: companyId,
@@ -164,7 +181,7 @@ Deno.serve(async (req) => {
       client_name: plan.client_name,
       start_date: finalStartDate,
       end_date: finalEndDate,
-      status: 'Planned', // Valid enum value: Planned, Assigned, InProgress, PhotoUploaded, Verified, Completed
+      // Do NOT include status - let DB default handle it
       total_assets: planItems.length,
       total_amount: plan.total_amount || 0,
       gst_percent: plan.gst_percent || 18,
@@ -174,8 +191,8 @@ Deno.serve(async (req) => {
       created_by: user.id,
     }
     
-    console.log('[v4.0] Explicitly setting status: Planned')
-    console.log('[v4.0] Campaign insert data:', JSON.stringify(campaignInsertData, null, 2))
+    console.log('[v5.0] Omitting status field completely to avoid enum conflict')
+    console.log('[v5.0] Campaign insert data:', JSON.stringify(campaignInsertData, null, 2))
     
     const { data: campaign, error: campaignError } = await supabase
       .from('campaigns')

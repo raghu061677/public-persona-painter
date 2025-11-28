@@ -304,6 +304,7 @@ const App = () => (
             <Route path="/admin/invoices" element={<AppLayout><Invoices /></AppLayout>} />
             <Route path="/admin/invoices/:id" element={<AppLayout><InvoiceDetail /></AppLayout>} />
             <Route path="/admin/invoices-import" element={<AppLayout><ImportInvoices /></AppLayout>} />
+            <Route path="/admin/expenses" element={<AppLayout><ExpensesList /></AppLayout>} />
             <Route path="/finance/expenses" element={<AppLayout><ExpensesList /></AppLayout>} />
             <Route path="/reports" element={<AppLayout><ReportsDashboard /></AppLayout>} />
             <Route path="/reports/vacant-media" element={<AppLayout><VacantMediaReport /></AppLayout>} />

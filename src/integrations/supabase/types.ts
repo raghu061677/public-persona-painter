@@ -905,6 +905,86 @@ export type Database = {
           },
         ]
       }
+      campaign_items: {
+        Row: {
+          asset_id: string
+          campaign_id: string
+          card_rate: number
+          created_at: string | null
+          end_date: string
+          final_price: number
+          id: string
+          mounting_charge: number
+          negotiated_rate: number
+          plan_item_id: string | null
+          printing_charge: number
+          quantity: number
+          start_date: string
+          updated_at: string | null
+        }
+        Insert: {
+          asset_id: string
+          campaign_id: string
+          card_rate?: number
+          created_at?: string | null
+          end_date: string
+          final_price?: number
+          id?: string
+          mounting_charge?: number
+          negotiated_rate?: number
+          plan_item_id?: string | null
+          printing_charge?: number
+          quantity?: number
+          start_date: string
+          updated_at?: string | null
+        }
+        Update: {
+          asset_id?: string
+          campaign_id?: string
+          card_rate?: number
+          created_at?: string | null
+          end_date?: string
+          final_price?: number
+          id?: string
+          mounting_charge?: number
+          negotiated_rate?: number
+          plan_item_id?: string | null
+          printing_charge?: number
+          quantity?: number
+          start_date?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_items_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_items_plan_item_id_fkey"
+            columns: ["plan_item_id"]
+            isOneToOne: false
+            referencedRelation: "plan_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_templates: {
         Row: {
           asset_preferences: Json | null
@@ -2313,6 +2393,8 @@ export type Database = {
           area: string
           base_margin: number | null
           base_rent: number | null
+          booked_from: string | null
+          booked_to: string | null
           card_rate: number
           category: Database["public"]["Enums"]["media_category"]
           city: string
@@ -2321,6 +2403,7 @@ export type Database = {
           consumer_name: string | null
           created_at: string | null
           created_by: string | null
+          current_campaign_id: string | null
           dimensions: string
           direction: string | null
           district: string | null
@@ -2362,6 +2445,8 @@ export type Database = {
           area: string
           base_margin?: number | null
           base_rent?: number | null
+          booked_from?: string | null
+          booked_to?: string | null
           card_rate: number
           category?: Database["public"]["Enums"]["media_category"]
           city: string
@@ -2370,6 +2455,7 @@ export type Database = {
           consumer_name?: string | null
           created_at?: string | null
           created_by?: string | null
+          current_campaign_id?: string | null
           dimensions: string
           direction?: string | null
           district?: string | null
@@ -2411,6 +2497,8 @@ export type Database = {
           area?: string
           base_margin?: number | null
           base_rent?: number | null
+          booked_from?: string | null
+          booked_to?: string | null
           card_rate?: number
           category?: Database["public"]["Enums"]["media_category"]
           city?: string
@@ -2419,6 +2507,7 @@ export type Database = {
           consumer_name?: string | null
           created_at?: string | null
           created_by?: string | null
+          current_campaign_id?: string | null
           dimensions?: string
           direction?: string | null
           district?: string | null
@@ -2461,6 +2550,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_assets_current_campaign_id_fkey"
+            columns: ["current_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
         ]

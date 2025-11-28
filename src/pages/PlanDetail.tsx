@@ -544,14 +544,14 @@ export default function PlanDetail() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      await supabase.from("plans").update({ status: "Sent" }).eq("id", id);
+      await supabase.from("plans").update({ status: "pending" }).eq("id", id);
       
       // Create approval workflow
       await supabase.rpc("create_plan_approval_workflow", { p_plan_id: id });
 
       toast({
         title: "Success",
-        description: "Plan submitted for approval",
+        description: "Plan submitted for approval (pending review)",
       });
 
       setShowSubmitDialog(false);
@@ -657,11 +657,6 @@ export default function PlanDetail() {
         throw new Error("You must be logged in to convert a plan to campaign");
       }
 
-      // Validation 1.5: Check company context
-      if (!company?.id) {
-        throw new Error("Company context is required");
-      }
-
       // Validation 2: Check if plan is approved or rejected
       if (plan.status === 'rejected' || plan.status === 'Rejected') {
         toast({
@@ -684,20 +679,14 @@ export default function PlanDetail() {
       }
 
       // Validation 3: Check for duplicate conversion
-      const { data: existingCampaign } = await supabase
-        .from('campaigns')
-        .select('id')
-        .eq('plan_id', plan.id)
-        .maybeSingle();
-
-      if (existingCampaign) {
+      if (plan.converted_to_campaign_id || existingCampaignId) {
         toast({
           title: "Plan Already Converted",
           description: "This plan has already been converted to a campaign",
           variant: "destructive",
         });
         setShowConvertDialog(false);
-        navigate(`/admin/campaigns/${existingCampaign.id}`);
+        navigate(`/admin/campaigns/${plan.converted_to_campaign_id || existingCampaignId}`);
         return;
       }
 
@@ -706,96 +695,28 @@ export default function PlanDetail() {
         throw new Error("Plan must have at least one asset to convert to campaign");
       }
 
-      // Generate campaign ID based on start date
-      const startDate = campaignData.start_date ? new Date(campaignData.start_date) : new Date(plan.start_date);
-      const campaignId = await generateCampaignCode(startDate);
+      console.log('Calling Edge Function to convert plan...');
+      
+      // Call Edge Function to handle conversion with asset booking and overlap validation
+      const { data, error } = await supabase.functions.invoke('convert-plan-to-campaign', {
+        body: { plan_id: plan.id }
+      });
 
-      // Create campaign with company_id
-      const { data: campaign, error: campaignError } = await supabase
-        .from('campaigns')
-        .insert({
-          id: campaignId,
-          company_id: company.id,
-          plan_id: plan.id,
-          client_id: plan.client_id,
-          client_name: plan.client_name,
-          campaign_name: campaignData.campaign_name || plan.plan_name,
-          start_date: campaignData.start_date || plan.start_date,
-          end_date: campaignData.end_date || plan.end_date,
-          status: 'Planned',
-          total_assets: planItems.length,
-          total_amount: plan.total_amount,
-          gst_percent: plan.gst_percent,
-          gst_amount: plan.gst_amount,
-          grand_total: plan.grand_total,
-          notes: campaignData.notes || plan.notes,
-          created_by: user.id,
-        } as any)
-        .select()
-        .single();
-
-      if (campaignError) {
-        throw new Error(`Failed to create campaign: ${campaignError.message}`);
+      if (error) {
+        throw new Error(error.message || 'Edge Function invocation failed');
       }
 
-      // Create campaign assets from plan items
-      const campaignAssets = planItems.map(item => ({
-        campaign_id: campaignId,
-        asset_id: item.asset_id,
-        location: item.location,
-        city: item.city,
-        area: item.area,
-        media_type: item.media_type,
-        card_rate: item.card_rate,
-        mounting_charges: item.mounting_charges,
-        printing_charges: item.printing_charges,
-        status: 'Pending',
-      }));
-
-      const { error: assetsError } = await supabase
-        .from('campaign_assets')
-        .insert(campaignAssets as any);
-
-      if (assetsError) {
-        // Rollback: Delete the campaign if assets fail
-        await supabase.from('campaigns').delete().eq('id', campaignId);
-        throw new Error(`Failed to create campaign assets: ${assetsError.message}`);
-      }
-
-      // Update plan status with tracking fields
-      const { error: planUpdateError } = await supabase
-        .from('plans')
-        .update({ 
-          status: 'converted',
-          converted_to_campaign_id: campaignId,
-          converted_at: new Date().toISOString()
-        })
-        .eq('id', id);
-
-      if (planUpdateError) {
-        console.error("Failed to update plan status:", planUpdateError);
-        // Don't throw - campaign is created, just log the error
-      }
-
-      // Update media assets status to Booked
-      const assetIds = planItems.map(item => item.asset_id);
-      const { error: assetsUpdateError } = await supabase
-        .from('media_assets')
-        .update({ status: 'Booked' })
-        .in('id', assetIds);
-
-      if (assetsUpdateError) {
-        console.error("Failed to update media assets status:", assetsUpdateError);
-        // Don't throw - campaign is created, just log the error
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to convert plan');
       }
 
       toast({
         title: "Campaign Created Successfully",
-        description: `Campaign ${campaignId} has been created with ${planItems.length} assets`,
+        description: `Campaign ${data.campaign_code} has been created with ${planItems.length} assets. All assets have been marked as booked.`,
       });
 
       setShowConvertDialog(false);
-      navigate(`/admin/campaigns/${campaignId}`);
+      navigate(`/admin/campaigns/${data.campaign_id}`);
     } catch (error: any) {
       console.error("Campaign conversion error:", error);
       toast({
@@ -907,8 +828,8 @@ export default function PlanDetail() {
           
           {/* Action Buttons */}
           <div className="flex gap-2 flex-wrap items-start">
-            {/* Submit for Approval - Draft Status */}
-            {plan.status === 'Draft' && isAdmin && (
+            {/* Submit for Approval - Pending Status */}
+            {plan.status === 'pending' && isAdmin && (
               <Button
                 onClick={() => setShowSubmitDialog(true)}
                 size="sm"
@@ -919,8 +840,8 @@ export default function PlanDetail() {
               </Button>
             )}
 
-            {/* Approve/Reject - Sent Status */}
-            {plan.status === 'Sent' && isAdmin && pendingApprovalsCount > 0 && (
+            {/* Approve/Reject - Pending Status with Pending Approvals */}
+            {plan.status === 'pending' && isAdmin && pendingApprovalsCount > 0 && (
               <>
                 <Button
                   onClick={() => setShowApproveDialog(true)}
@@ -1091,7 +1012,7 @@ export default function PlanDetail() {
                   <Save className="mr-2 h-4 w-4" />
                   Upload Excel to Cloud
                 </DropdownMenuItem>
-                {isAdmin && (plan.status === 'pending' || plan.status === 'Draft' || plan.status === 'approved' || plan.status === 'Approved') && (
+                {isAdmin && (plan.status === 'pending' || plan.status === 'approved') && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => navigate(`/admin/plans/edit/${id}`)}>
@@ -1330,7 +1251,7 @@ export default function PlanDetail() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Selected Assets ({planItems.length})</CardTitle>
             <div className="flex gap-2">
-              {selectedItems.size > 0 && (plan.status === 'pending' || plan.status === 'Draft' || plan.status === 'approved' || plan.status === 'Approved') && (
+              {selectedItems.size > 0 && (plan.status === 'pending' || plan.status === 'approved') && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -1340,7 +1261,7 @@ export default function PlanDetail() {
                   Bulk P&M
                 </Button>
               )}
-              {isAdmin && (plan.status === 'pending' || plan.status === 'Draft' || plan.status === 'approved' || plan.status === 'Approved') && (
+              {isAdmin && (plan.status === 'pending' || plan.status === 'approved') && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -1390,7 +1311,7 @@ export default function PlanDetail() {
                           onCheckedChange={() => toggleItemSelection(item.asset_id)}
                         />
                       </TableCell>
-                      {isAdmin && (plan.status === 'pending' || plan.status === 'Draft' || plan.status === 'approved' || plan.status === 'Approved') && (
+              {isAdmin && (plan.status === 'pending' || plan.status === 'approved') && (
                         <TableCell>
                           <Button
                             variant="ghost"
@@ -1438,7 +1359,7 @@ export default function PlanDetail() {
         )}
 
         {/* Approval History Timeline */}
-        {(plan.status === 'Sent' || plan.status === 'Approved' || plan.status === 'Rejected' || plan.status === 'Converted') && (
+        {(plan.status === 'pending' || plan.status === 'approved' || plan.status === 'rejected' || plan.status === 'converted') && (
           <Card className="mt-6">
             <CardHeader>
               <CardTitle>Approval History</CardTitle>

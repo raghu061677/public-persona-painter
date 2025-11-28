@@ -18,36 +18,31 @@ const animatedClassName = "transition-all duration-300 ease-in-out";
  * Plan Status Colors
  */
 export function getPlanStatusConfig(status: string): StatusConfig {
-  switch (status) {
-    case 'Draft':
+  const normalizedStatus = status?.toLowerCase() || 'pending';
+  
+  switch (normalizedStatus) {
+    case 'pending':
       return {
-        label: '🟡 Draft',
+        label: '🟡 Pending',
         variant: 'outline',
         className: `bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-950/20 dark:text-yellow-400 ${animatedClassName}`,
         icon: '🟡'
       };
-    case 'Sent':
-      return {
-        label: '🟠 Submitted',
-        variant: 'outline',
-        className: `bg-orange-50 text-orange-700 border-orange-300 dark:bg-orange-950/20 dark:text-orange-400 ${animatedClassName}`,
-        icon: '🟠'
-      };
-    case 'Approved':
+    case 'approved':
       return {
         label: '🟢 Approved',
         variant: 'outline',
         className: `bg-green-50 text-green-700 border-green-300 dark:bg-green-950/20 dark:text-green-400 ${animatedClassName}`,
         icon: '🟢'
       };
-    case 'Rejected':
+    case 'rejected':
       return {
         label: '🔴 Rejected',
         variant: 'outline',
         className: `bg-red-50 text-red-700 border-red-300 dark:bg-red-950/20 dark:text-red-400 ${animatedClassName}`,
         icon: '🔴'
       };
-    case 'Converted':
+    case 'converted':
       return {
         label: '🚀 Converted',
         variant: 'outline',

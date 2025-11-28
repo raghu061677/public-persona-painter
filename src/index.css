@@ -62,142 +62,95 @@ All colors MUST be HSL.
     --font-family: Inter, sans-serif;
     --base-font-size: 16px;
     
-    /* Super Premium Light Mode (Default) */
-    --background: 0 0% 100%; /* Pure White */
-    --foreground: 0 0% 10%; /* #1a1a1a Deep Charcoal */
-
-    --card: 0 0% 100%; /* Pure White */
-    --card-foreground: 0 0% 10%;
-
+    /* Corporate Light Mode (Default) */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 215 56% 18%;
-
-    --primary: 219 100% 50%; /* #0061FF Brand Blue */
-    --primary-foreground: 0 0% 100%;
-    --primary-glow: 210 100% 65%; /* #00A3FF Light Blue */
-    --primary-hover: 210 100% 55%; /* #0089FF Hover Blue */
-
-    --secondary: 44 96% 62%; /* #F4C542 Luxury Gold */
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 217 33% 97%; /* #EAF3FF Soft Grey */
-    --muted-foreground: 215 17% 42%; /* #5C708A Text Soft */
-
-    --accent: 44 96% 62%; /* #F4C542 Luxury Gold */
-    --accent-foreground: 0 0% 10%;
-
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 213 100% 44%;
-
-    --radius: 1rem;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+    
+    /* Sidebar variables */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 222.2 84% 4.9%;
+    --sidebar-primary: 221.2 83.2% 53.3%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 210 40% 96.1%;
+    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 221.2 83.2% 53.3%;
 
     /* Chart colors */
-    --chart-1: 213 100% 44%;
-    --chart-2: 45 100% 50%;
-    --chart-3: 206 100% 64%;
-    --chart-4: 215 56% 18%;
-    --chart-5: 215 17% 42%;
-
-    /* Custom design tokens - Ultra Cosmic V4 Light */
-    --gradient-primary: linear-gradient(135deg, #0064E0, #00A5FF);
-    --gradient-hero: linear-gradient(145deg, #FFFFFF, #FAFAFA);
-    --gradient-cta: linear-gradient(135deg, #0263D8, #00A5FF);
-    --gradient-subtle: linear-gradient(180deg, #FFFFFF, #F9F9F9);
-    
-    --shadow-elegant: 0 1px 3px rgba(0, 0, 0, 0.08);
-    --shadow-glow: 0 0 20px rgba(0, 100, 224, 0.15);
-    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08);
-    --shadow-navbar: 0 1px 3px rgba(0, 0, 0, 0.08);
-    
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-spring: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-
-    --sidebar-background: 0 0% 99%;
-    --sidebar-foreground: 220 9% 26%;
-    --sidebar-primary: 219 100% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 96%;
-    --sidebar-accent-foreground: 220 9% 26%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 219 100% 50%;
+    --chart-1: 221.2 83.2% 53.3%;
+    --chart-2: 142 76% 36%;
+    --chart-3: 271 91% 65%;
+    --chart-4: 41 97% 52%;
+    --chart-5: 340 82% 52%;
   }
 
   .dark {
-    /* Ultra Cosmic V4 - Dark Mode */
-    --background: 217 71% 5%; /* #040A18 Cosmic Dark */
-    --foreground: 0 0% 100%; /* #FFFFFF Pure White */
-
-    --card: 215 43% 8%; /* rgba(255,255,255,0.04) with backdrop blur */
-    --card-foreground: 214 18% 87%; /* #DCE3F0 Soft White */
-
-    --popover: 217 71% 5%;
-    --popover-foreground: 0 0% 100%;
-
-    --primary: 213 100% 44%; /* #0064E0 Brand Blue */
-    --primary-foreground: 0 0% 100%;
-    --primary-glow: 206 100% 64%; /* #39A7FF Neon Blue */
-    --primary-hover: 213 100% 53%; /* #00A5FF Light Blue */
-
-    --secondary: 45 100% 50%; /* #FFB400 Gold */
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 215 31% 10%; /* #071426 Dark Section */
-    --muted-foreground: 214 18% 87%;
-
-    --accent: 45 100% 50%; /* #FFB400 Gold */
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 217 35% 12%;
-    --input: 217 35% 12%;
-    --ring: 206 100% 64%;
-
-    --radius: 1rem;
-
-    --chart-1: 213 100% 44%;
-    --chart-2: 45 100% 50%;
-    --chart-3: 206 100% 64%;
-    --chart-4: 0 0% 100%;
-    --chart-5: 214 18% 87%;
-
-    /* Custom design tokens - Ultra Cosmic V4 Dark */
-    --gradient-primary: linear-gradient(135deg, #0064E0, #00A5FF);
-    --gradient-hero: radial-gradient(circle at top, #09203F, #040A18);
-    --gradient-cta: linear-gradient(135deg, #0064E0, #00A5FF);
-    --gradient-subtle: linear-gradient(180deg, #071426, #040A18);
+    /* Business Dark Mode */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 7%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 7%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 142 76% 36%;
+    --primary-foreground: 356 29% 98%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 142 76% 36%;
     
-    --shadow-elegant: 0 10px 40px rgba(0, 100, 224, 0.2);
-    --shadow-glow: 0 0 40px rgba(57, 167, 255, 0.4);
-    --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.3);
-    --shadow-navbar: 0 2px 12px rgba(0, 0, 0, 0.5);
-
-    --sidebar-background: 217 71% 5%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 0 0% 98%;
+    /* Sidebar variables */
+    --sidebar-background: 222.2 84% 4.9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 210 40% 98%;
     --sidebar-primary-foreground: 240 5.9% 10%;
-    --sidebar-accent: 215 31% 10%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 217 35% 12%;
-    --sidebar-ring: 206 100% 64%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 142 76% 36%;
   }
 
-  /* Brand Blue Theme */
-  .brand-blue {
-    --background: 210 100% 98%;
-    --foreground: 217 91% 20%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
-    --accent: 217 91% 60%;
-    --muted: 210 40% 96%;
-    --sidebar-background: 217 91% 95%;
-    --sidebar-accent: 217 91% 90%;
+  /* Smooth transitions for theme changes */
+  * {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
   }
+  
+  /* Premium card styling */
+  .card-premium {
+    @apply rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1;
+  }
+  
+  /* Sidebar background */
+  .sidebar {
+    background-color: hsl(var(--sidebar-background));
+    color: hsl(var(--sidebar-foreground));
+  }
+}
 
   /* Brand Green Theme */
   .brand-green {
@@ -317,7 +270,22 @@ All colors MUST be HSL.
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
-}
+  
+  /* Smooth transitions for theme changes */
+  * {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  }
+  
+  /* Premium card styling */
+  .card-premium {
+    @apply rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1;
+  }
+  
+  /* Sidebar background */
+  .sidebar {
+    background-color: hsl(var(--sidebar-background));
+    color: hsl(var(--sidebar-foreground));
+  }
 
 /* ========================================
    GO-ADS PREMIUM THEMES

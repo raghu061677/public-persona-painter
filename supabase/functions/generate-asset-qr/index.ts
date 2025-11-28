@@ -55,16 +55,17 @@ serve(async (req) => {
       targetUrl = `https://go-ads-ldbl1.web.app/asset/${asset_id}`;
     }
 
-    // 3. Generate QR code as PNG buffer
-    const qrBuffer = await QRCode.toBuffer(targetUrl, {
+    // 3. Generate QR code as data URL
+    const qrDataUrl = await QRCode.toDataURL(targetUrl, {
       errorCorrectionLevel: 'M',
-      type: 'png',
+      type: 'image/png',
       margin: 2,
       width: 512,
     });
 
-    // 4. Convert buffer to Uint8Array for upload
-    const qrData = new Uint8Array(qrBuffer);
+    // 4. Convert data URL to Uint8Array for upload
+    const base64Data = qrDataUrl.split(',')[1];
+    const qrData = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
 
     // 5. Upload to storage
     const filePath = `${asset_id}.png`;

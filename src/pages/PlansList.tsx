@@ -60,6 +60,7 @@ export default function PlansList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showConverted, setShowConverted] = useState(false);
   const [selectedPlans, setSelectedPlans] = useState<Set<string>>(new Set());
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
   const [showTemplatesDialog, setShowTemplatesDialog] = useState(false);
@@ -302,6 +303,9 @@ export default function PlansList() {
   };
 
   const filteredPlans = globalSearchFiltered.filter(plan => {
+    // Hide converted plans by default unless showConverted is true
+    if (!showConverted && plan.status === 'Converted') return false;
+    
     // Search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -544,6 +548,14 @@ export default function PlansList() {
                 <span className="sm:hidden">Ready</span>
               </Button>
             )}
+            <Button
+              variant={showConverted ? "secondary" : "outline"}
+              onClick={() => setShowConverted(!showConverted)}
+              size="sm"
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">{showConverted ? "Hide" : "Show"} Converted</span>
+            </Button>
             <Button
               onClick={() => setShowTemplatesDialog(true)}
               variant="outline"

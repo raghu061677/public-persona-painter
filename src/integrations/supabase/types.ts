@@ -4756,6 +4756,7 @@ export type Database = {
         | "PhotoUploaded"
         | "Verified"
         | "Completed"
+        | "active"
       company_status: "pending" | "active" | "suspended" | "cancelled"
       company_type: "media_owner" | "agency" | "platform_admin"
       document_type:
@@ -4966,6 +4967,7 @@ export const Constants = {
         "PhotoUploaded",
         "Verified",
         "Completed",
+        "active",
       ],
       company_status: ["pending", "active", "suspended", "cancelled"],
       company_type: ["media_owner", "agency", "platform_admin"],

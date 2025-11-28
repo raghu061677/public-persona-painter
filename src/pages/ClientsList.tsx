@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { generateClientCode } from "@/lib/codeGenerator";
-import { migrateClientIds } from "@/utils/migrateClientIds";
 import { PageContainer } from "@/components/ui/page-container";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -118,7 +117,6 @@ export default function ClientsList() {
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [migrating, setMigrating] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<any>(null);
@@ -551,26 +549,6 @@ export default function ClientsList() {
     }
   };
 
-  const handleMigrateClientIds = async () => {
-    setMigrating(true);
-    try {
-      const result = await migrateClientIds();
-      toast({
-        title: "Migration Complete",
-        description: `Successfully migrated ${result.success} clients, skipped ${result.skipped}, errors ${result.errors}`,
-      });
-      fetchClients();
-    } catch (error: any) {
-      toast({
-        title: "Migration Failed",
-        description: error.message || "Failed to migrate client IDs",
-        variant: "destructive",
-      });
-    } finally {
-      setMigrating(false);
-    }
-  };
-
   const exportToExcel = () => {
     const exportData = filteredAndSortedClients.map(client => ({
       'Client ID': client.id,
@@ -630,25 +608,14 @@ export default function ClientsList() {
             </p>
           </div>
           {isAdmin && (
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleMigrateClientIds}
-                variant="outline"
-                disabled={migrating}
-                size="lg"
-              >
-                <Sparkles className="mr-2 h-5 w-5" />
-                {migrating ? "Migrating..." : "Migrate Client IDs"}
-              </Button>
-              <Button 
-                onClick={() => navigate('/admin/clients/new')}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-                size="lg"
-              >
-                <Plus className="mr-2 h-5 w-5" />
-                Add Client
-              </Button>
-            </div>
+            <Button 
+              onClick={() => navigate('/admin/clients/new')}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              size="lg"
+            >
+              <Plus className="mr-2 h-5 w-5" />
+              Add Client
+            </Button>
           )}
         </div>
 

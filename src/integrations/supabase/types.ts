@@ -3263,11 +3263,17 @@ export type Database = {
           discount_value: number | null
           gst_amount: number
           id: string
+          installation_cost: number | null
+          installation_mode: string | null
+          installation_rate: number | null
           location: string
           media_type: string
           mounting_charges: number | null
           plan_id: string
           printing_charges: number | null
+          printing_cost: number | null
+          printing_mode: string | null
+          printing_rate: number | null
           sales_price: number
           subtotal: number
           total_with_gst: number
@@ -3285,11 +3291,17 @@ export type Database = {
           discount_value?: number | null
           gst_amount: number
           id?: string
+          installation_cost?: number | null
+          installation_mode?: string | null
+          installation_rate?: number | null
           location: string
           media_type: string
           mounting_charges?: number | null
           plan_id: string
           printing_charges?: number | null
+          printing_cost?: number | null
+          printing_mode?: string | null
+          printing_rate?: number | null
           sales_price: number
           subtotal: number
           total_with_gst: number
@@ -3307,11 +3319,17 @@ export type Database = {
           discount_value?: number | null
           gst_amount?: number
           id?: string
+          installation_cost?: number | null
+          installation_mode?: string | null
+          installation_rate?: number | null
           location?: string
           media_type?: string
           mounting_charges?: number | null
           plan_id?: string
           printing_charges?: number | null
+          printing_cost?: number | null
+          printing_mode?: string | null
+          printing_rate?: number | null
           sales_price?: number
           subtotal?: number
           total_with_gst?: number

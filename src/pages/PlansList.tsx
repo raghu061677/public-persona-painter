@@ -741,7 +741,8 @@ export default function PlansList() {
         {/* Table Card */}
         <Card>
           <CardContent className="p-0">
-            <Table>
+            <div className="overflow-x-auto w-full">
+              <Table className="min-w-max whitespace-nowrap">
               <TableHeader>
                 <TableRow className={`bg-muted/50 ${getRowClassName()}`}>
                   {visibleColumns.includes("select") && (
@@ -1070,7 +1071,8 @@ export default function PlansList() {
                   ))
                 )}
               </TableBody>
-            </Table>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>

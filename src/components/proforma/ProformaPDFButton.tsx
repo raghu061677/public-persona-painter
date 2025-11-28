@@ -52,14 +52,21 @@ export const ProformaPDFButton = ({
       }
 
       // Generate PDF
-      const pdf = generateProformaPDF({
+      const pdfBlob = generateProformaPDF({
         ...(proformaData as unknown as ProformaInvoice),
         items: itemsData as unknown as ProformaInvoiceItem[]
       });
 
       // Download PDF
       const fileName = `Proforma_${(proformaData as any).proforma_number.replace(/\//g, '-')}.pdf`;
-      pdf.save(fileName);
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
 
       toast({
         title: "Success",

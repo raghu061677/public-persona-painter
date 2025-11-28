@@ -870,7 +870,7 @@ export default function PlanDetail() {
           {/* Action Buttons */}
           <div className="flex gap-2 flex-wrap items-start">
             {/* Edit Plan Button - Standalone */}
-            {isAdmin && (plan.status === 'pending' || plan.status === 'approved' || plan.status === 'Draft') && (
+            {isAdmin && (plan.status === 'pending' || plan.status === 'approved' || plan.status === 'Draft' || plan.status === 'Sent') && (
               <Button
                 onClick={() => navigate(`/admin/plans/edit/${id}`)}
                 size="sm"
@@ -1012,13 +1012,27 @@ export default function PlanDetail() {
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
                     Export Documents
                   </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="w-48 bg-popover border shadow-lg">
-                    <div className="py-1">
-                      <ExportPlanExcelButton planId={id!} variant="ghost" size="sm" className="w-full justify-start px-2 py-1.5 h-auto font-normal hover:bg-accent" />
-                      <WorkOrderPDFButton planId={id!} planName={plan?.plan_name} />
-                      <EstimatePDFButton planId={id!} planName={plan?.plan_name} />
-                      <SalesOrderPDFButton planId={id!} planName={plan?.plan_name} />
-                    </div>
+                  <DropdownMenuSubContent className="w-56 bg-popover border shadow-lg z-[100]">
+                    <DropdownMenuItem className="cursor-pointer" asChild>
+                      <div className="w-full">
+                        <ExportPlanExcelButton planId={id!} variant="ghost" size="sm" className="w-full justify-start px-2 h-auto font-normal" />
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer" asChild>
+                      <div className="w-full">
+                        <WorkOrderPDFButton planId={id!} planName={plan?.plan_name} />
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer" asChild>
+                      <div className="w-full">
+                        <EstimatePDFButton planId={id!} planName={plan?.plan_name} />
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer" asChild>
+                      <div className="w-full">
+                        <SalesOrderPDFButton planId={id!} planName={plan?.plan_name} />
+                      </div>
+                    </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
 

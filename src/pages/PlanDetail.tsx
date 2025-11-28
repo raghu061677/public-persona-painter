@@ -83,6 +83,7 @@ export default function PlanDetail() {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [exportingPPT, setExportingPPT] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
+  const [existingCampaignId, setExistingCampaignId] = useState<string | null>(null);
   const [campaignData, setCampaignData] = useState({
     campaign_name: "",
     start_date: "",
@@ -108,7 +109,21 @@ export default function PlanDetail() {
     fetchPlan();
     fetchPlanItems();
     loadPendingApprovals();
+    checkExistingCampaign();
   }, [id]);
+
+  const checkExistingCampaign = async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from('campaigns')
+      .select('id')
+      .eq('plan_id', id)
+      .maybeSingle();
+    
+    if (data) {
+      setExistingCampaignId(data.id);
+    }
+  };
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -847,7 +862,7 @@ export default function PlanDetail() {
             )}
 
             {/* Convert to Campaign - Approved Status */}
-            {plan.status === 'Approved' && isAdmin && (
+            {plan.status === 'Approved' && isAdmin && !existingCampaignId && (
               <Button 
                 size="lg" 
                 className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 animate-pulse-glow"
@@ -910,10 +925,15 @@ export default function PlanDetail() {
             )}
 
             {/* Already Converted Badge */}
-            {plan.status === 'Converted' && (
-              <Badge variant="outline" className="text-green-600 border-green-600">
-                Already Converted to Campaign
-              </Badge>
+            {(plan.status === 'Converted' || existingCampaignId) && (
+              <Button
+                variant="outline"
+                className="text-green-600 border-green-600 hover:text-green-700 hover:border-green-700"
+                onClick={() => existingCampaignId && navigate(`/admin/campaigns/${existingCampaignId}`)}
+              >
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                View Campaign
+              </Button>
             )}
             
             {/* Actions Dropdown - Always Visible */}

@@ -44,6 +44,7 @@ const TenantAnalytics = lazy(() => import("./pages/TenantAnalytics"));
 const ClientsImport = lazy(() => import("./pages/ClientsImport"));
 const ClientsList = lazy(() => import("./pages/ClientsList"));
 const ClientNew = lazy(() => import("./pages/ClientNew"));
+const ClientEdit = lazy(() => import("./pages/ClientEdit"));
 const ClientAnalytics = lazy(() => import("./pages/ClientAnalytics"));
 const ClientDetail = lazy(() => import("./pages/ClientDetail"));
 const PlansList = lazy(() => import("./pages/PlansList"));
@@ -258,6 +259,7 @@ const App = () => (
             <Route path="/admin/booking-requests" element={<ProtectedRoute requireAuth><AppLayout><BookingRequests /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/clients" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><AppLayout><ClientsList /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/clients/new" element={<ProtectedRoute requiredModule="clients" requiredAction="create"><AppLayout><ClientNew /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/clients/edit/:id" element={<ProtectedRoute requiredModule="clients" requiredAction="update"><AppLayout><ClientEdit /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/clients/:id" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><AppLayout><ClientDetail /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/clients/:id/analytics" element={<AppLayout><ClientAnalytics /></AppLayout>} />
             <Route path="/admin/media-assets" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><AppLayout><MediaAssetsList /></AppLayout></ProtectedRoute>} />

@@ -28,7 +28,9 @@ interface ExportOptionsDialogProps {
 
 export interface ExportOptions {
   optionType: "quotation" | "estimate" | "proforma_invoice" | "work_order";
-  format: "full_detail" | "summary";
+  format: "full_detail" | "compact" | "summary_only" | "with_photos";
+  exportType: "pdf" | "excel";
+  includePhotos: boolean;
   companyName: string;
   gstin: string;
   termsAndConditions: string[];
@@ -55,6 +57,8 @@ export function ExportOptionsDialog({
   const [options, setOptions] = useState<ExportOptions>({
     optionType: "quotation",
     format: "full_detail",
+    exportType: "pdf",
+    includePhotos: false,
     companyName: clientName,
     gstin: clientGST,
     termsAndConditions: [...defaultTerms],
@@ -96,7 +100,7 @@ export function ExportOptionsDialog({
         </DialogHeader>
 
         <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <Label className="text-destructive">* Option Type</Label>
               <Select
@@ -130,7 +134,27 @@ export function ExportOptionsDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="full_detail">Full Detail</SelectItem>
-                  <SelectItem value="summary">Summary</SelectItem>
+                  <SelectItem value="compact">Compact</SelectItem>
+                  <SelectItem value="summary_only">Summary Only</SelectItem>
+                  <SelectItem value="with_photos">With Photos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-destructive">* Export Type</Label>
+              <Select
+                value={options.exportType}
+                onValueChange={(value: any) =>
+                  setOptions(prev => ({ ...prev, exportType: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pdf">PDF</SelectItem>
+                  <SelectItem value="excel">Excel</SelectItem>
                 </SelectContent>
               </Select>
             </div>

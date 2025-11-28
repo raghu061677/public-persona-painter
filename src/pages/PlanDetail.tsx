@@ -47,10 +47,7 @@ import { calcProRata, calcDiscount, calcProfit } from "@/utils/pricing";
 import { toast } from "@/hooks/use-toast";
 import { useCompany } from "@/contexts/CompanyContext";
 import { exportPlanToPPT, exportPlanToExcel, exportPlanToPDF } from "@/utils/planExports";
-import { ExportPlanExcelButton } from "@/components/plans/ExportPlanExcelButton";
-import { WorkOrderPDFButton } from "@/components/plans/WorkOrderPDFButton";
-import { EstimatePDFButton } from "@/components/plans/EstimatePDFButton";
-import { SalesOrderPDFButton } from "@/components/plans/SalesOrderPDFButton";
+import { UnifiedExportButton } from "@/components/plans/UnifiedExportButton";
 import { ExportOptionsDialog, ExportOptions } from "@/components/plans/ExportOptionsDialog";
 import { ExportSettingsDialog, ExportSettings } from "@/components/plans/ExportSettingsDialog";
 import { TermsConditionsDialog, TermsData } from "@/components/plans/TermsConditionsDialog";
@@ -1006,54 +1003,29 @@ export default function PlanDetail() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-popover border shadow-md z-50">
-                {/* Export Documents - Nested Submenu */}
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="cursor-pointer">
-                    <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Export Documents
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent 
-                    className="w-56 bg-popover border shadow-lg z-[200]"
-                    sideOffset={8}
-                  >
-                    <DropdownMenuItem asChild>
-                      <div className="w-full">
-                        <ExportPlanExcelButton planId={id!} variant="ghost" size="sm" className="w-full justify-start h-auto font-normal" />
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <div className="w-full">
-                        <WorkOrderPDFButton planId={id!} planName={plan?.plan_name} />
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <div className="w-full">
-                        <EstimatePDFButton planId={id!} planName={plan?.plan_name} />
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <div className="w-full">
-                        <SalesOrderPDFButton planId={id!} planName={plan?.plan_name} />
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => handleExportPPT(false)} disabled={exportingPPT}>
-                      <Download className="mr-2 h-4 w-4" />
-                      {exportingPPT ? "Exporting..." : "Download PPT"}
-                    </DropdownMenuItem>
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
+                {/* Unified Export */}
+                <DropdownMenuItem asChild>
+                  <div className="w-full p-0">
+                    <UnifiedExportButton 
+                      planId={id!} 
+                      planName={plan?.plan_name} 
+                      variant="ghost" 
+                      size="sm"
+                      className="w-full justify-start font-normal"
+                    />
+                  </div>
+                </DropdownMenuItem>
 
                 <DropdownMenuSeparator />
                 
                 {/* Cloud Upload */}
                 <DropdownMenuItem onClick={() => handleExportPPT(true)} disabled={exportingPPT}>
                   <Save className="mr-2 h-4 w-4" />
-                  Upload PPT to Cloud
+                  {exportingPPT ? "Uploading..." : "Upload PPT to Cloud"}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExportExcel(true)} disabled={exportingExcel}>
                   <Save className="mr-2 h-4 w-4" />
-                  Upload Excel to Cloud
+                  {exportingExcel ? "Uploading..." : "Upload Excel to Cloud"}
                 </DropdownMenuItem>
                 
                 <DropdownMenuSeparator />

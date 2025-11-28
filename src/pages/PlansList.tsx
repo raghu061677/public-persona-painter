@@ -741,12 +741,14 @@ export default function PlansList() {
         {/* Table Card */}
         <Card>
           <CardContent className="p-0">
-            <div className="overflow-x-auto w-full">
-              <Table className="min-w-max whitespace-nowrap">
-              <TableHeader>
-                <TableRow className={`bg-muted/50 ${getRowClassName()}`}>
+            <div className="w-full overflow-x-auto">
+              <div className="inline-block min-w-full align-middle">
+                <div className="overflow-hidden border-t">
+                  <Table className="min-w-max w-full table-auto whitespace-nowrap">
+              <TableHeader className="bg-muted sticky top-0 z-20">
+                <TableRow>
                   {visibleColumns.includes("select") && (
-                    <TableHead className={getCellClassName()}>
+                    <TableHead className="sticky left-0 z-30 bg-muted px-4 py-3 text-left font-semibold border-r">
                       <Checkbox
                         checked={selectedPlans.size === filteredPlans.length && filteredPlans.length > 0}
                         onCheckedChange={toggleAllPlans}
@@ -754,40 +756,40 @@ export default function PlansList() {
                     </TableHead>
                   )}
                   {visibleColumns.includes("id") && (
-                    <TableHead className={`font-semibold ${getCellClassName()}`}>Plan ID</TableHead>
+                    <TableHead className="px-4 py-3 text-left font-semibold">Plan ID</TableHead>
                   )}
                   {visibleColumns.includes("employee") && (
-                    <TableHead className={`font-semibold ${getCellClassName()}`}>Employee</TableHead>
+                    <TableHead className="px-4 py-3 text-left font-semibold">Employee</TableHead>
                   )}
                   {visibleColumns.includes("client") && (
-                    <TableHead className={`font-semibold ${getCellClassName()}`}>Customer Name</TableHead>
+                    <TableHead className="px-4 py-3 text-left font-semibold">Customer Name</TableHead>
                   )}
                   {visibleColumns.includes("display") && (
-                    <TableHead className={`font-semibold ${getCellClassName()}`}>Display</TableHead>
+                    <TableHead className="px-4 py-3 text-left font-semibold">Display</TableHead>
                   )}
                   {visibleColumns.includes("from") && (
-                    <TableHead className={`font-semibold ${getCellClassName()}`}>From</TableHead>
+                    <TableHead className="px-4 py-3 text-left font-semibold">From</TableHead>
                   )}
                   {visibleColumns.includes("to") && (
-                    <TableHead className={`font-semibold ${getCellClassName()}`}>To</TableHead>
+                    <TableHead className="px-4 py-3 text-left font-semibold">To</TableHead>
                   )}
                   {visibleColumns.includes("days") && (
-                    <TableHead className={`font-semibold ${getCellClassName()}`}>Days</TableHead>
+                    <TableHead className="px-4 py-3 text-left font-semibold">Days</TableHead>
                   )}
                   {visibleColumns.includes("sqft") && (
-                    <TableHead className={`font-semibold ${getCellClassName()}`}>SQFT</TableHead>
+                    <TableHead className="px-4 py-3 text-right font-semibold">SQFT</TableHead>
                   )}
                   {visibleColumns.includes("amount") && (
-                    <TableHead className={`text-right font-semibold ${getCellClassName()}`}>Amount</TableHead>
+                    <TableHead className="px-4 py-3 text-right font-semibold">Amount</TableHead>
                   )}
                   {visibleColumns.includes("qos") && (
-                    <TableHead className={`text-right font-semibold ${getCellClassName()}`}>QoS</TableHead>
+                    <TableHead className="px-4 py-3 text-right font-semibold">QoS</TableHead>
                   )}
                   {visibleColumns.includes("status") && (
-                    <TableHead className={`font-semibold ${getCellClassName()}`}>Status</TableHead>
+                    <TableHead className="px-4 py-3 text-left font-semibold">Status</TableHead>
                   )}
                   {visibleColumns.includes("actions") && (
-                    <TableHead className={`text-right font-semibold ${getCellClassName()}`}>Actions</TableHead>
+                    <TableHead className="px-4 py-3 text-right font-semibold">Actions</TableHead>
                   )}
                 </TableRow>
               </TableHeader>
@@ -814,14 +816,16 @@ export default function PlansList() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredPlans.map((plan) => (
+                  filteredPlans.map((plan, index) => (
                     <TableRow 
                       key={plan.id} 
-                      className={`hover:bg-muted/50 cursor-pointer transition-colors ${getRowClassName()}`}
+                      className={`cursor-pointer transition-all duration-150 hover:bg-muted/80 ${
+                        index % 2 === 0 ? 'bg-background' : 'bg-muted/30'
+                      }`}
                       onClick={() => navigate(`/admin/plans/${plan.id}`)}
                     >
                       {visibleColumns.includes("select") && (
-                        <TableCell className={getCellClassName()} onClick={(e) => e.stopPropagation()}>
+                        <TableCell className="sticky left-0 z-10 px-4 py-3 border-r bg-inherit" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={selectedPlans.has(plan.id)}
                             onCheckedChange={() => togglePlanSelection(plan.id)}
@@ -829,10 +833,10 @@ export default function PlansList() {
                         </TableCell>
                       )}
                       {visibleColumns.includes("id") && (
-                        <TableCell className={`font-medium text-primary ${getCellClassName()}`}>{plan.id}</TableCell>
+                        <TableCell className="px-4 py-3 font-medium text-primary">{plan.id}</TableCell>
                       )}
                       {visibleColumns.includes("employee") && (
-                        <TableCell className={`${getCellClassName()}`}>
+                        <TableCell className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
                               {plan.client_name?.charAt(0) || 'U'}
@@ -842,30 +846,30 @@ export default function PlansList() {
                         </TableCell>
                       )}
                       {visibleColumns.includes("client") && (
-                        <TableCell className={`font-medium ${getCellClassName()}`}>{plan.client_name}</TableCell>
+                        <TableCell className="px-4 py-3 font-medium">{plan.client_name}</TableCell>
                       )}
                       {visibleColumns.includes("display") && (
-                        <TableCell className={getCellClassName()}>
+                        <TableCell className="px-4 py-3">
                           <span className="text-blue-600 cursor-pointer hover:underline">
                             {plan.plan_name || '-'}
                           </span>
                         </TableCell>
                       )}
                       {visibleColumns.includes("from") && (
-                        <TableCell className={`text-muted-foreground ${getCellClassName()}`}>
+                        <TableCell className="px-4 py-3 text-muted-foreground">
                           {plan.start_date ? new Date(plan.start_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }).replace(/ /g, '') : '-'}
                         </TableCell>
                       )}
                       {visibleColumns.includes("to") && (
-                        <TableCell className={`text-muted-foreground ${getCellClassName()}`}>
+                        <TableCell className="px-4 py-3 text-muted-foreground">
                           {plan.end_date ? new Date(plan.end_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }).replace(/ /g, '') : '-'}
                         </TableCell>
                       )}
                       {visibleColumns.includes("days") && (
-                        <TableCell className={`${getCellClassName()}`}>{plan.duration_days}</TableCell>
+                        <TableCell className="px-4 py-3">{plan.duration_days}</TableCell>
                       )}
                       {visibleColumns.includes("sqft") && (
-                        <TableCell className={`text-right ${getCellClassName()}`}>
+                        <TableCell className="px-4 py-3 text-right">
                         <TooltipProvider>
                           <Tooltip delayDuration={200}>
                             <TooltipTrigger asChild>
@@ -933,19 +937,19 @@ export default function PlansList() {
                         </TableCell>
                       )}
                       {visibleColumns.includes("amount") && (
-                        <TableCell className={`text-right font-medium ${getCellClassName()}`}>
+                        <TableCell className="px-4 py-3 text-right font-medium">
                           {formatCurrencyUtil(plan.grand_total, settings.currencyFormat, settings.currencySymbol, settings.compactNumbers)}
                         </TableCell>
                       )}
                       {visibleColumns.includes("qos") && (
-                        <TableCell className={`text-right ${getCellClassName()}`}>
+                        <TableCell className="px-4 py-3 text-right">
                           <span className="text-green-600 font-medium">
                             {plan.status === 'Approved' ? '45%' : plan.status === 'Draft' ? '-' : '30%'}
                           </span>
                         </TableCell>
                       )}
                       {visibleColumns.includes("status") && (
-                        <TableCell className={getCellClassName()}>
+                        <TableCell className="px-4 py-3">
           <Badge 
             variant={getPlanStatusConfig(plan.status).variant}
             className={getPlanStatusConfig(plan.status).className}
@@ -955,7 +959,7 @@ export default function PlansList() {
                         </TableCell>
                       )}
                       {visibleColumns.includes("actions") && (
-                        <TableCell className={`text-right ${getCellClassName()}`}>
+                        <TableCell className="px-4 py-3 text-right">
                         <TooltipProvider>
                           <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                             <Tooltip>
@@ -1071,7 +1075,9 @@ export default function PlansList() {
                   ))
                 )}
               </TableBody>
-              </Table>
+                  </Table>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

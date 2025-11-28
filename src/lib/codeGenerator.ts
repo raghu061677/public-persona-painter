@@ -118,14 +118,14 @@ export async function generateCampaignCode(startDate?: Date): Promise<string> {
 
 /**
  * Generate Client Code
- * Format: CLT-STATECODE-####
- * Example: CLT-TG-0004
+ * Format: STATECODE-####
+ * Example: TG-0004
  */
 export async function generateClientCode(stateCode: string): Promise<string> {
   const stateKey = stateCode.toUpperCase();
   const sequence = await getNextSequence('CLIENT', stateKey, 'permanent');
   
-  return `CLT-${stateKey}-${padNumber(sequence)}`;
+  return `${stateKey}-${padNumber(sequence)}`;
 }
 
 /**

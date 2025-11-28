@@ -4593,6 +4593,7 @@ export type Database = {
         Returns: number
       }
       get_current_user_company_id: { Args: never; Returns: string }
+      get_enum_values: { Args: { enum_name: string }; Returns: Json }
       get_financial_year: { Args: never; Returns: string }
       get_next_code_number: {
         Args: {

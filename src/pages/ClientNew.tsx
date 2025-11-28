@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { generateClientCode } from "@/lib/codeGenerator";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,6 +46,7 @@ interface ContactPerson {
 
 export default function ClientNew() {
   const navigate = useNavigate();
+  const { company } = useCompany();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
   
@@ -165,6 +167,7 @@ export default function ClientNew() {
           id: formData.id,
           name: formData.name,
           company: formData.company || null,
+          company_id: company.id,
           email: formData.email || null,
           phone: formData.phone || null,
           gst_number: formData.gst_number || null,

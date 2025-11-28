@@ -134,7 +134,7 @@ export default function PlanDetail() {
       if (e.ctrlKey && e.key === 'k') {
         e.preventDefault();
         const handleSecondKey = (e2: KeyboardEvent) => {
-          if (e2.key === 'c' && plan?.status === 'Approved' && isAdmin) {
+          if (e2.key === 'c' && plan?.status?.toLowerCase() === 'approved' && isAdmin) {
             // Pre-populate campaign data from plan
             setCampaignData({
               campaign_name: plan.plan_name,
@@ -787,7 +787,7 @@ export default function PlanDetail() {
         </Button>
 
         {/* Status Banner */}
-        {(plan.status === 'converted' || plan.status === 'Converted') && (
+        {['converted'].includes(plan.status?.toLowerCase()) && (
           <Card className="mb-6 border-green-500 bg-green-50 dark:bg-green-950/20">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -816,7 +816,7 @@ export default function PlanDetail() {
           </Card>
         )}
 
-        {(plan.status === 'rejected' || plan.status === 'Rejected') && (
+        {['rejected'].includes(plan.status?.toLowerCase()) && (
           <Card className="mb-6 border-red-500 bg-red-50 dark:bg-red-950/20">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
@@ -834,7 +834,7 @@ export default function PlanDetail() {
           </Card>
         )}
 
-        {(plan.status === 'Approved') && !existingCampaignId && (
+        {(plan.status?.toLowerCase() === 'approved') && !existingCampaignId && (
           <Card className="mb-6 border-blue-500 bg-blue-50 dark:bg-blue-950/20">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
@@ -867,7 +867,7 @@ export default function PlanDetail() {
           {/* Action Buttons */}
           <div className="flex gap-2 flex-wrap items-start">
             {/* Edit Plan Button - Standalone */}
-            {isAdmin && (plan.status === 'Pending' || plan.status === 'Approved' || plan.status === 'Draft' || plan.status === 'Sent') && (
+            {isAdmin && (['pending', 'approved', 'draft', 'sent'].includes(plan.status?.toLowerCase())) && (
               <Button
                 onClick={() => navigate(`/admin/plans/edit/${id}`)}
                 size="sm"
@@ -879,7 +879,7 @@ export default function PlanDetail() {
             )}
 
             {/* Submit for Approval - Draft or Pending Status */}
-            {(plan.status === 'Draft' || plan.status === 'Pending') && (
+            {['draft', 'pending'].includes(plan.status?.toLowerCase()) && (
               <Button
                 onClick={() => setShowSubmitDialog(true)}
                 size="sm"
@@ -891,7 +891,7 @@ export default function PlanDetail() {
             )}
 
             {/* Show Waiting for Approval indicator when status is Sent */}
-            {plan.status === 'Sent' && (
+            {plan.status?.toLowerCase() === 'sent' && (
               <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-300">
                 <Activity className="h-3 w-3 mr-1" />
                 Waiting for Approval
@@ -899,7 +899,7 @@ export default function PlanDetail() {
             )}
 
             {/* Approve/Reject - Sent Status with Pending Approvals */}
-            {plan.status === 'Sent' && isAdmin && pendingApprovalsCount > 0 && (
+            {plan.status?.toLowerCase() === 'sent' && isAdmin && pendingApprovalsCount > 0 && (
               <>
                 <Button
                   onClick={() => setShowApproveDialog(true)}
@@ -921,7 +921,7 @@ export default function PlanDetail() {
             )}
 
             {/* Convert to Campaign - Approved Status */}
-            {plan.status === 'Approved' && isAdmin && !existingCampaignId && (
+            {plan.status?.toLowerCase() === 'approved' && isAdmin && !existingCampaignId && (
               <Button 
                 size="lg" 
                 className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 animate-pulse-glow"
@@ -942,7 +942,7 @@ export default function PlanDetail() {
             )}
 
             {/* Tooltip when button is not visible */}
-            {plan.status === 'Approved' && !isAdmin && (
+            {plan.status?.toLowerCase() === 'approved' && !isAdmin && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -962,7 +962,7 @@ export default function PlanDetail() {
               </TooltipProvider>
             )}
 
-            {plan.status !== 'Approved' && plan.status !== 'Converted' && (
+            {!['approved', 'converted'].includes(plan.status?.toLowerCase()) && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -984,7 +984,7 @@ export default function PlanDetail() {
             )}
 
             {/* Already Converted Badge */}
-            {(plan.status === 'Converted' || existingCampaignId) && (
+            {(plan.status?.toLowerCase() === 'converted' || existingCampaignId) && (
               <Button
                 variant="outline"
                 className="text-green-600 border-green-600 hover:text-green-700 hover:border-green-700"
@@ -1201,7 +1201,7 @@ export default function PlanDetail() {
                 <p className="text-xs text-muted-foreground">Duration</p>
                 <div className="flex items-center gap-2">
                   <p className="font-semibold">{plan.duration_days} days</p>
-                  {isAdmin && (plan.status === 'Pending' || plan.status === 'Draft' || plan.status === 'Sent') && (
+                  {isAdmin && ['pending', 'draft', 'sent'].includes(plan.status?.toLowerCase()) && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1310,7 +1310,7 @@ export default function PlanDetail() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Selected Assets ({planItems.length})</CardTitle>
             <div className="flex gap-2">
-              {selectedItems.size > 0 && (plan.status === 'Pending' || plan.status === 'Approved') && (
+              {selectedItems.size > 0 && ['pending', 'approved'].includes(plan.status?.toLowerCase()) && (
                 <>
                   <Button
                     variant="outline"
@@ -1331,7 +1331,7 @@ export default function PlanDetail() {
                   </Button>
                 </>
               )}
-              {isAdmin && (plan.status === 'Pending' || plan.status === 'Approved') && (
+              {isAdmin && ['pending', 'approved'].includes(plan.status?.toLowerCase()) && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -1381,7 +1381,7 @@ export default function PlanDetail() {
                           onCheckedChange={() => toggleItemSelection(item.asset_id)}
                         />
                       </TableCell>
-              {isAdmin && (plan.status === 'Pending' || plan.status === 'Approved') && (
+              {isAdmin && ['pending', 'approved'].includes(plan.status?.toLowerCase()) && (
                         <TableCell>
                           <Button
                             variant="ghost"
@@ -1429,7 +1429,7 @@ export default function PlanDetail() {
         )}
 
         {/* Approval History Timeline */}
-        {(plan.status === 'Pending' || plan.status === 'Approved' || plan.status === 'Rejected' || plan.status === 'Converted') && (
+        {(['pending', 'approved', 'rejected', 'converted'].includes(plan.status?.toLowerCase())) && (
           <Card className="mt-6">
             <CardHeader>
               <CardTitle>Approval History</CardTitle>

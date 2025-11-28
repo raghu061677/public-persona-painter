@@ -841,8 +841,8 @@ export default function PlanDetail() {
           
           {/* Action Buttons */}
           <div className="flex gap-2 flex-wrap items-start">
-            {/* Submit for Approval - Draft Status */}
-            {plan.status === 'Draft' && (
+            {/* Submit for Approval - Draft or pending Status */}
+            {(plan.status === 'Draft' || plan.status === 'pending') && (
               <Button
                 onClick={() => setShowSubmitDialog(true)}
                 size="sm"

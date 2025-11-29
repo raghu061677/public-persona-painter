@@ -245,6 +245,18 @@ export default function MediaAssetNew() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Get user's company_id
+      const { data: companyUser, error: companyError } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single();
+
+      if (companyError || !companyUser) {
+        throw new Error("No active company association found");
+      }
+
       // Upload images
       const images = await uploadImages(formData.id);
 
@@ -293,6 +305,7 @@ export default function MediaAssetNew() {
         vendor_details: formData.ownership === 'rented' ? formData.vendor_details : null,
         images: images,
         search_tokens,
+        company_id: companyUser.company_id,
         created_by: user.id,
       } as any);
 

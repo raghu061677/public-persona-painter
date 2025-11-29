@@ -62,13 +62,30 @@ export function formatForSupabase(date: Date): string {
 
 /**
  * Calculate inclusive duration in days between two dates
- * Example: April 1 to April 30 = 30 days (not 29)
+ * Special rule: If booking covers a complete calendar month (1st to last day),
+ * bill it as 30 days regardless of actual month length (28/29/30/31 days)
+ * Example: July 1 to July 31 = 30 days (not 31)
+ * Example: Dec 1 to Dec 31 = 30 days (not 31)
+ * Example: Feb 1 to Feb 28/29 = 30 days (full month)
  */
 export function calculateDurationDays(startDate: Date, endDate: Date): number {
   const start = new Date(startDate);
   const end = new Date(endDate);
   start.setHours(0, 0, 0, 0);
   end.setHours(0, 0, 0, 0);
+  
+  // Check if this is a complete calendar month
+  const isFirstDay = start.getDate() === 1;
+  const lastDayOfMonth = new Date(end.getFullYear(), end.getMonth() + 1, 0).getDate();
+  const isLastDay = end.getDate() === lastDayOfMonth;
+  const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
+  
+  // If it's a complete calendar month (1st to last day), bill as 30 days
+  if (isFirstDay && isLastDay && sameMonth) {
+    return BILLING_CYCLE_DAYS; // 30 days
+  }
+  
+  // Otherwise calculate actual inclusive days
   const diffTime = end.getTime() - start.getTime();
   const days = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 for inclusive
   return Math.max(days, 1);

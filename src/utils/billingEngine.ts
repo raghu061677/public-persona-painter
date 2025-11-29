@@ -99,9 +99,10 @@ export function calculateDurationFactor(
 
 /**
  * Calculate months from days
+ * Rounds to nearest whole month: 1-44 days = 1 month, 45-74 days = 2 months, etc.
  */
 export function calculateMonthsFromDays(durationDays: number): number {
-  return Math.round((durationDays / BILLING_CYCLE_DAYS) * 100) / 100;
+  return Math.round(durationDays / BILLING_CYCLE_DAYS);
 }
 
 /**

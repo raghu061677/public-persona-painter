@@ -1,6 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { corsHeaders } from '../_shared/cors.ts';
 
+// Version 2.0 - Fixed to use correct expense categories and company_id
+console.log('Auto-record expenses function v2.0 started');
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -21,10 +24,24 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch campaign assets
+    console.log('[v2.0] Recording expenses for campaign:', campaign_id);
+
+    // Fetch campaign with assets
     const { data: campaign, error: campaignError } = await supabaseClient
       .from('campaigns')
-      .select('*, campaign_assets(*)')
+      .select(`
+        company_id,
+        campaign_name,
+        campaign_assets(
+          asset_id,
+          location,
+          city,
+          area,
+          printing_charges,
+          mounting_charges,
+          mounter_name
+        )
+      `)
       .eq('id', campaign_id)
       .single();
 
@@ -37,8 +54,9 @@ Deno.serve(async (req) => {
 
     const expenses = [];
 
-    // Create printing expenses (if any)
+    // Create expenses for printing and mounting charges
     for (const asset of campaign.campaign_assets) {
+      // Printing expense
       if (asset.printing_charges && asset.printing_charges > 0) {
         const { data: expenseId } = await supabaseClient.rpc('generate_expense_id');
         
@@ -46,26 +64,29 @@ Deno.serve(async (req) => {
           id: expenseId,
           campaign_id: campaign_id,
           company_id: campaign.company_id,
-          category: 'Printing',
+          category: 'Printing', // PascalCase category
           vendor_name: 'Printing Vendor',
           amount: asset.printing_charges,
           gst_percent: 18,
           gst_amount: asset.printing_charges * 0.18,
           total_amount: asset.printing_charges * 1.18,
           payment_status: 'Pending',
-          notes: `Printing for ${asset.location} - ${campaign.campaign_name}`
+          expense_date: new Date().toISOString().split('T')[0],
+          notes: `Printing for ${asset.city} - ${asset.area} - ${asset.location || 'N/A'}`
         };
 
-        const { error } = await supabaseClient
+        const { error: printError } = await supabaseClient
           .from('expenses')
           .insert(printingExpense);
 
-        if (!error) {
+        if (!printError) {
           expenses.push(printingExpense);
+        } else {
+          console.error('[v2.0] Printing expense error:', printError);
         }
       }
 
-      // Create mounting expenses (if any)
+      // Mounting expense
       if (asset.mounting_charges && asset.mounting_charges > 0) {
         const { data: expenseId } = await supabaseClient.rpc('generate_expense_id');
         
@@ -73,27 +94,30 @@ Deno.serve(async (req) => {
           id: expenseId,
           campaign_id: campaign_id,
           company_id: campaign.company_id,
-          category: 'Mounting',
+          category: 'Mounting', // PascalCase category
           vendor_name: asset.mounter_name || 'Mounting Vendor',
           amount: asset.mounting_charges,
           gst_percent: 18,
           gst_amount: asset.mounting_charges * 0.18,
           total_amount: asset.mounting_charges * 1.18,
           payment_status: 'Pending',
-          notes: `Mounting for ${asset.location} - ${campaign.campaign_name}`
+          expense_date: new Date().toISOString().split('T')[0],
+          notes: `Mounting for ${asset.city} - ${asset.area} - ${asset.location || 'N/A'}`
         };
 
-        const { error } = await supabaseClient
+        const { error: mountError } = await supabaseClient
           .from('expenses')
           .insert(mountingExpense);
 
-        if (!error) {
+        if (!mountError) {
           expenses.push(mountingExpense);
+        } else {
+          console.error('[v2.0] Mounting expense error:', mountError);
         }
       }
     }
 
-    console.log(`Created ${expenses.length} expense records for campaign ${campaign_id}`);
+    console.log(`[v2.0] Created ${expenses.length} expense records for campaign ${campaign_id}`);
 
     return new Response(
       JSON.stringify({ 
@@ -105,7 +129,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('[v2.0] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: errorMessage }),

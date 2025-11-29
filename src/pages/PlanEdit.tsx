@@ -351,7 +351,7 @@ export default function PlanEdit() {
         .delete()
         .eq('plan_id', id);
 
-      // Create new plan items
+      // Create new plan items with FULL media asset snapshot
       const items = Array.from(selectedAssets).map(assetId => {
         const asset = availableAssets.find(a => a.id === assetId);
         const pricing = assetPricing[assetId];
@@ -377,11 +377,20 @@ export default function PlanEdit() {
         return {
           plan_id: id,
           asset_id: assetId,
-          location: asset.location,
+          // Complete media asset snapshot for exports and campaign conversion
+          media_type: asset.media_type,
+          state: asset.state,
+          district: asset.district,
           city: asset.city,
           area: asset.area,
-          media_type: asset.media_type,
+          location: asset.location,
+          direction: asset.direction,
           dimensions: asset.dimensions,
+          total_sqft: asset.total_sqft,
+          illumination_type: asset.illumination_type || asset.illumination,
+          latitude: asset.latitude,
+          longitude: asset.longitude,
+          // Pricing fields
           card_rate: cardRate,
           base_rent: baseRate,
           sales_price: negotiatedPrice,

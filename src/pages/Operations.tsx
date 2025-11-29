@@ -53,7 +53,7 @@ export default function Operations() {
           event: "*",
           schema: "public",
           table: "campaigns",
-          filter: `status=in.(InProgress,Planned)`,
+          filter: `status=in.(InProgress,Planned)`, // PascalCase statuses
         },
         (payload) => {
           console.log("Campaign change detected:", payload);

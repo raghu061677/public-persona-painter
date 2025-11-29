@@ -373,7 +373,7 @@ export default function PlanNew() {
 
       if (planError) throw planError;
 
-      // Create plan items
+      // Create plan items with FULL media asset snapshot
       const items = Array.from(selectedAssets).map(assetId => {
         const asset = availableAssets.find(a => a.id === assetId);
         const pricing = assetPricing[assetId];
@@ -396,11 +396,20 @@ export default function PlanNew() {
         return {
           plan_id: formData.id,
           asset_id: assetId,
-          location: asset.location,
+          // Complete media asset snapshot for exports and campaign conversion
+          media_type: asset.media_type,
+          state: asset.state,
+          district: asset.district,
           city: asset.city,
           area: asset.area,
-          media_type: asset.media_type,
+          location: asset.location,
+          direction: asset.direction,
           dimensions: asset.dimensions,
+          total_sqft: asset.total_sqft,
+          illumination_type: asset.illumination_type || asset.illumination,
+          latitude: asset.latitude,
+          longitude: asset.longitude,
+          // Pricing fields
           card_rate: asset.card_rate,
           base_rent: asset.base_rent,
           sales_price: salesPrice,

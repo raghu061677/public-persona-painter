@@ -352,15 +352,24 @@ export default function PlanDetail() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Create plan items for new assets
+      // Create plan items for new assets with FULL media asset snapshot
       const newPlanItems = assets.map(asset => ({
         plan_id: id,
         asset_id: asset.id,
-        location: asset.location,
+        // Complete media asset snapshot
+        media_type: asset.media_type,
+        state: asset.state,
+        district: asset.district,
         city: asset.city,
         area: asset.area,
-        media_type: asset.media_type,
+        location: asset.location,
+        direction: asset.direction,
         dimensions: asset.dimensions,
+        total_sqft: asset.total_sqft,
+        illumination_type: asset.illumination_type || asset.illumination,
+        latitude: asset.latitude,
+        longitude: asset.longitude,
+        // Pricing
         card_rate: asset.card_rate,
         base_rent: asset.base_rent,
         sales_price: asset.card_rate,

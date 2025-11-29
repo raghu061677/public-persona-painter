@@ -27,7 +27,7 @@ export function useCampaignWorkflows(campaignId: string | undefined) {
           const newStatus = payload.new.status;
           const oldStatus = payload.old?.status;
 
-          // Auto-generate invoice when campaign completes
+          // Auto-generate invoice when campaign completes (PascalCase)
           if (newStatus === 'Completed' && oldStatus !== 'Completed') {
             try {
               const { data, error } = await supabase.functions.invoke('auto-generate-invoice', {
@@ -50,7 +50,7 @@ export function useCampaignWorkflows(campaignId: string | undefined) {
             }
           }
 
-          // Create mounting tasks when campaign starts
+          // Create mounting tasks when campaign starts (PascalCase)
           if (newStatus === 'InProgress' && oldStatus === 'Planned') {
             try {
               const { data, error } = await supabase.functions.invoke('auto-create-mounting-tasks', {
@@ -86,8 +86,8 @@ export function useCampaignWorkflows(campaignId: string | undefined) {
           const newStatus = payload.new.status;
           const oldStatus = payload.old?.status;
 
-          // Auto-record expenses when asset is installed
-          if (newStatus === 'Installed' && oldStatus !== 'Installed') {
+          // Auto-record expenses when asset is mounted (PascalCase)
+          if (newStatus === 'Mounted' && oldStatus !== 'Mounted') {
             try {
               const { data, error } = await supabase.functions.invoke('auto-record-expenses', {
                 body: { campaign_id: campaignId }

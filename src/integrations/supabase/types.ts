@@ -2091,6 +2091,42 @@ export type Database = {
           },
         ]
       }
+      export_field_settings: {
+        Row: {
+          created_at: string | null
+          export_type: string
+          field_key: string
+          id: string
+          is_visible: boolean | null
+          label: string
+          module: string
+          order_index: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          export_type: string
+          field_key: string
+          id?: string
+          is_visible?: boolean | null
+          label: string
+          module: string
+          order_index?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          export_type?: string
+          field_key?: string
+          id?: string
+          is_visible?: boolean | null
+          label?: string
+          module?: string
+          order_index?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       import_logs: {
         Row: {
           created_at: string | null
@@ -2859,6 +2895,7 @@ export type Database = {
           assigned_to: string | null
           campaign_id: string
           city: string
+          company_id: string | null
           created_at: string | null
           deadline_date: string | null
           end_date: string | null
@@ -2877,6 +2914,7 @@ export type Database = {
           assigned_to?: string | null
           campaign_id: string
           city: string
+          company_id?: string | null
           created_at?: string | null
           deadline_date?: string | null
           end_date?: string | null
@@ -2895,6 +2933,7 @@ export type Database = {
           assigned_to?: string | null
           campaign_id?: string
           city?: string
+          company_id?: string | null
           created_at?: string | null
           deadline_date?: string | null
           end_date?: string | null
@@ -2913,6 +2952,13 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operations_tasks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -3258,15 +3304,20 @@ export type Database = {
           city: string
           created_at: string | null
           dimensions: string
+          direction: string | null
           discount_amount: number | null
           discount_type: string | null
           discount_value: number | null
+          district: string | null
           gst_amount: number
           id: string
+          illumination_type: string | null
           installation_cost: number | null
           installation_mode: string | null
           installation_rate: number | null
+          latitude: number | null
           location: string
+          longitude: number | null
           media_type: string
           mounting_charges: number | null
           plan_id: string
@@ -3275,7 +3326,9 @@ export type Database = {
           printing_mode: string | null
           printing_rate: number | null
           sales_price: number
+          state: string | null
           subtotal: number
+          total_sqft: number | null
           total_with_gst: number
         }
         Insert: {
@@ -3286,15 +3339,20 @@ export type Database = {
           city: string
           created_at?: string | null
           dimensions: string
+          direction?: string | null
           discount_amount?: number | null
           discount_type?: string | null
           discount_value?: number | null
+          district?: string | null
           gst_amount: number
           id?: string
+          illumination_type?: string | null
           installation_cost?: number | null
           installation_mode?: string | null
           installation_rate?: number | null
+          latitude?: number | null
           location: string
+          longitude?: number | null
           media_type: string
           mounting_charges?: number | null
           plan_id: string
@@ -3303,7 +3361,9 @@ export type Database = {
           printing_mode?: string | null
           printing_rate?: number | null
           sales_price: number
+          state?: string | null
           subtotal: number
+          total_sqft?: number | null
           total_with_gst: number
         }
         Update: {
@@ -3314,15 +3374,20 @@ export type Database = {
           city?: string
           created_at?: string | null
           dimensions?: string
+          direction?: string | null
           discount_amount?: number | null
           discount_type?: string | null
           discount_value?: number | null
+          district?: string | null
           gst_amount?: number
           id?: string
+          illumination_type?: string | null
           installation_cost?: number | null
           installation_mode?: string | null
           installation_rate?: number | null
+          latitude?: number | null
           location?: string
+          longitude?: number | null
           media_type?: string
           mounting_charges?: number | null
           plan_id?: string
@@ -3331,7 +3396,9 @@ export type Database = {
           printing_mode?: string | null
           printing_rate?: number | null
           sales_price?: number
+          state?: string | null
           subtotal?: number
+          total_sqft?: number | null
           total_with_gst?: number
         }
         Relationships: [

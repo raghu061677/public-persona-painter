@@ -269,16 +269,6 @@ export function SelectedAssetsTable({
                 const handleNegotiatedChange = (value: string) => {
                   const numValue = parseFormattedNumber(value);
                   
-                  // Only warn if below base rate (below cost)
-                  if (numValue < baseRate) {
-                    toast({
-                      title: "Warning",
-                      description: "Price is below base rate (below cost). This will result in a loss.",
-                      variant: "destructive",
-                    });
-                    // Don't return - allow the user to save it if they want
-                  }
-                  
                   // Update negotiated price and recalculate all dependent values
                   onPricingUpdate(asset.id, 'negotiated_price', numValue);
                   
@@ -292,6 +282,19 @@ export function SelectedAssetsTable({
                   onPricingUpdate(asset.id, 'discount_percent', newDiscount.percent);
                   onPricingUpdate(asset.id, 'profit_value', newProfit.value);
                   onPricingUpdate(asset.id, 'profit_percent', newProfit.percent);
+                };
+
+                const handleNegotiatedBlur = (value: string) => {
+                  const numValue = parseFormattedNumber(value);
+                  
+                  // Only warn if below base rate (below cost) when user finishes typing
+                  if (numValue > 0 && numValue < baseRate) {
+                    toast({
+                      title: "Warning",
+                      description: "Price is below base rate (below cost). This will result in a loss.",
+                      variant: "destructive",
+                    });
+                  }
                 };
 
                 return (
@@ -353,6 +356,7 @@ export function SelectedAssetsTable({
                                   type="text"
                                   value={formatNumberWithCommas(negotiatedPrice)}
                                   onChange={(e) => handleNegotiatedChange(e.target.value)}
+                                  onBlur={(e) => handleNegotiatedBlur(e.target.value)}
                                   className="h-10 w-40 text-base"
                                   placeholder={formatNumberWithCommas(cardRate)}
                                 />

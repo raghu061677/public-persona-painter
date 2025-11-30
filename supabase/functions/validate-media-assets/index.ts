@@ -49,24 +49,43 @@ serve(async (req) => {
       const errors: string[] = [];
       const gallery = photoMap[asset.id] || [];
 
-      if (!asset.primary_photo_url) errors.push("Missing primary_photo_url");
-      if (gallery.length === 0) errors.push("No photos in media_photos");
-
-      if (!asset.dimensions) errors.push("Missing dimensions");
-      else if (!/^\d+[xX]\d+(-\d+[xX]\d+)*$/.test(asset.dimensions)) {
-        errors.push("Invalid dimensions format");
+      // Check for photos - warning only if no photos exist
+      if (gallery.length === 0) {
+        errors.push("No photos uploaded yet");
       }
 
-      if (!asset.latitude || !asset.longitude)
-        errors.push("Missing GPS coordinates");
+      // Validate dimensions format
+      if (!asset.dimensions) {
+        errors.push("Missing dimensions");
+      } else if (!/^\d+[xX]\d+(-\d+[xX]\d+)*$/.test(asset.dimensions)) {
+        errors.push("Invalid dimensions format (use format: WxH or W1xH1-W2xH2)");
+      }
 
-      if (!asset.illumination_type) errors.push("Missing illumination_type");
+      // GPS coordinates are recommended but not critical
+      if (!asset.latitude || !asset.longitude) {
+        errors.push("Missing GPS coordinates (recommended for mapping)");
+      }
 
-      if (asset.is_multi_face && (!asset.faces || asset.faces.length < 2))
-        errors.push("is_multi_face = true but faces[] invalid");
+      // Illumination type is important for power billing
+      if (!asset.illumination_type) {
+        errors.push("Missing illumination_type");
+      }
 
-      if (asset.municipal_authority && !asset.municipal_id)
-        errors.push("Municipal authority present but municipal_id missing");
+      // Validate multi-face setup
+      if (asset.is_multi_face && (!asset.faces || asset.faces.length < 2)) {
+        errors.push("Multi-face asset must have at least 2 faces defined");
+      }
+
+      // Municipal reference validation
+      if (asset.municipal_authority && !asset.municipal_id) {
+        errors.push("Municipal authority specified but municipal_id is missing");
+      }
+
+      // Basic required fields
+      if (!asset.location) errors.push("Missing location");
+      if (!asset.area) errors.push("Missing area");
+      if (!asset.city) errors.push("Missing city");
+      if (!asset.card_rate || asset.card_rate <= 0) errors.push("Invalid card_rate");
 
       return errors;
     }

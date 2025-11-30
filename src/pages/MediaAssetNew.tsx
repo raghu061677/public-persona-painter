@@ -32,7 +32,14 @@ const MEDIA_TYPE_CODES = [
   { label: "Cantilever", value: "CNT", fullName: "Cantilever" },
 ];
 
-type ImageField = 'geoTaggedPhoto' | 'newspaperPhoto' | 'trafficPhoto1' | 'trafficPhoto2';
+type ImageField = 'site_photo' | 'geo_tagged' | 'newspaper' | 'traffic_view';
+
+const PHOTO_TYPES = [
+  { field: 'site_photo' as ImageField, label: 'Site Photo' },
+  { field: 'geo_tagged' as ImageField, label: 'Geo Tagged Photo' },
+  { field: 'newspaper' as ImageField, label: 'Newspaper Photo' },
+  { field: 'traffic_view' as ImageField, label: 'Traffic View Photo' },
+];
 
 export default function MediaAssetNew() {
   const navigate = useNavigate();
@@ -42,16 +49,16 @@ export default function MediaAssetNew() {
   const [mediaTypeCode, setMediaTypeCode] = useState("");
   const [municipalAuthorities, setMunicipalAuthorities] = useState<{ label: string; value: string }[]>([]);
   const [imageFiles, setImageFiles] = useState<Record<ImageField, File | null>>({
-    geoTaggedPhoto: null,
-    newspaperPhoto: null,
-    trafficPhoto1: null,
-    trafficPhoto2: null,
+    site_photo: null,
+    geo_tagged: null,
+    newspaper: null,
+    traffic_view: null,
   });
   const [imagePreviews, setImagePreviews] = useState<Record<ImageField, string>>({
-    geoTaggedPhoto: '',
-    newspaperPhoto: '',
-    trafficPhoto1: '',
-    trafficPhoto2: '',
+    site_photo: '',
+    geo_tagged: '',
+    newspaper: '',
+    traffic_view: '',
   });
   
   const [formData, setFormData] = useState({
@@ -167,7 +174,6 @@ export default function MediaAssetNew() {
 
     setGenerating(true);
     try {
-      // Get the full city name from the selected code
       const cityLabel = CITY_CODES.find(c => c.value === cityCode)?.label || "";
       const mediaTypeLabel = MEDIA_TYPE_CODES.find(m => m.value === mediaTypeCode)?.fullName || "";
       
@@ -175,9 +181,7 @@ export default function MediaAssetNew() {
         throw new Error("Invalid city or media type selection");
       }
 
-      // Use the new centralized code generator
       const generatedId = await generateMediaAssetCode(cityLabel, mediaTypeLabel);
-      
       updateField('id', generatedId);
       
       toast({
@@ -203,38 +207,55 @@ export default function MediaAssetNew() {
     setImagePreviews(prev => ({ ...prev, [field]: localUrl }));
   };
 
-  const uploadImages = async (assetId: string) => {
-    const imageData: any = {};
+  const uploadImages = async (assetId: string, companyId: string) => {
+    const uploadedPhotos: Array<{
+      photo_url: string;
+      photo_type: string;
+      file_name: string;
+      file_size: number;
+      mime_type: string;
+    }> = [];
     
     for (const key of Object.keys(imageFiles) as ImageField[]) {
       const file = imageFiles[key];
       if (file) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${assetId}/${key}_${Date.now()}.${fileExt}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('hero-images')
-          .upload(fileName, file, {
-            cacheControl: '3600',
-            upsert: false
+        try {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${assetId}/${key}_${Date.now()}.${fileExt}`;
+          
+          // Upload to storage
+          const { error: uploadError, data } = await supabase.storage
+            .from('hero-images')
+            .upload(fileName, file, {
+              cacheControl: '3600',
+              upsert: false
+            });
+
+          if (uploadError) {
+            console.error('Storage upload error:', uploadError);
+            throw uploadError;
+          }
+
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('hero-images')
+            .getPublicUrl(fileName);
+
+          uploadedPhotos.push({
+            photo_url: publicUrl,
+            photo_type: key,
+            file_name: file.name,
+            file_size: file.size,
+            mime_type: file.type,
           });
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('hero-images')
-          .getPublicUrl(fileName);
-
-        imageData[key] = {
-          url: publicUrl,
-          name: file.name,
-          size: file.size,
-          type: file.type,
-        };
+        } catch (error) {
+          console.error(`Error uploading ${key}:`, error);
+          // Continue with other photos even if one fails
+        }
       }
     }
     
-    return imageData;
+    return uploadedPhotos;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -242,6 +263,21 @@ export default function MediaAssetNew() {
     setLoading(true);
 
     try {
+      // Validation
+      if (!formData.id) {
+        throw new Error("Please generate an Asset ID first");
+      }
+      if (!formData.location || !formData.area) {
+        throw new Error("Location and Area are required");
+      }
+      if (!formData.card_rate) {
+        throw new Error("Card Rate is required");
+      }
+      if (!formData.dimensions) {
+        throw new Error("Dimensions are required");
+      }
+
+      // Get authenticated user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -266,7 +302,7 @@ export default function MediaAssetNew() {
         formData.location,
       ]);
 
-      // First create the media asset
+      // Create the media asset
       const { error: assetError } = await supabase.from('media_assets').insert({
         id: formData.id,
         media_type: formData.media_type,
@@ -304,38 +340,59 @@ export default function MediaAssetNew() {
         search_tokens,
         company_id: companyUser.company_id,
         created_by: user.id,
+        // Power details
+        consumer_name: formData.consumer_name || null,
+        service_number: formData.service_number || null,
+        unique_service_number: formData.unique_service_number || null,
+        ero: formData.ero || null,
+        section_name: formData.section_name || null,
+        // Date fields  
+        site_photo_date: formData.site_photo_date || null,
+        site_end_date: formData.site_end_date || null,
+        available_from: formData.available_from || null,
       } as any);
 
-      if (assetError) throw assetError;
-
-      // Then upload and create photo records
-      const images = await uploadImages(formData.id);
-      
-      // Insert photos into media_photos table
-      const photoEntries = [];
-      for (const [key, value] of Object.entries(images)) {
-        if (value && typeof value === 'object' && 'url' in value) {
-          const photoData = value as { url: string; name: string; size: number; type: string };
-          photoEntries.push({
-            asset_id: formData.id,
-            photo_type: key,
-            photo_url: photoData.url,
-            file_name: photoData.name,
-            file_size: photoData.size,
-            mime_type: photoData.type,
-          });
-        }
+      if (assetError) {
+        console.error('Asset insert error:', assetError);
+        throw assetError;
       }
 
-      if (photoEntries.length > 0) {
-        const { error: photoError } = await supabase
-          .from('media_photos')
-          .insert(photoEntries);
+      // Upload and insert photos
+      try {
+        const uploadedPhotos = await uploadImages(formData.id, companyUser.company_id);
         
-        if (photoError) {
-          console.error('Photo insert error:', photoError);
-          // Don't throw - asset was created successfully
+        if (uploadedPhotos.length > 0) {
+          const photoInserts = uploadedPhotos.map(photo => ({
+            asset_id: formData.id,
+            company_id: companyUser.company_id,
+            category: 'asset_photo', // Required field
+            photo_url: photo.photo_url,
+            metadata: {
+              photo_type: photo.photo_type,
+              file_name: photo.file_name,
+              file_size: photo.file_size,
+              mime_type: photo.mime_type,
+            },
+            uploaded_by: user.id,
+          }));
+
+          const { error: photoError } = await supabase
+            .from('media_photos')
+            .insert(photoInserts);
+          
+          if (photoError) {
+            console.error('Photo insert error:', photoError);
+            // Don't throw - asset was created successfully
+            toast({
+              title: "Partial Success",
+              description: "Asset created but some photos failed to save",
+              variant: "default",
+            });
+          }
         }
+      } catch (photoUploadError) {
+        console.error('Photo upload error:', photoUploadError);
+        // Don't throw - asset was created
       }
 
       toast({
@@ -344,9 +401,10 @@ export default function MediaAssetNew() {
       });
       navigate(`/admin/media-assets/${formData.id}`);
     } catch (error: any) {
+      console.error('Submit error:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to create asset",
         variant: "destructive",
       });
     } finally {
@@ -373,7 +431,7 @@ export default function MediaAssetNew() {
           accept="image/*"
         />
         <div
-          className="relative aspect-video w-full border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary"
+          className="relative aspect-video w-full border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors"
           onClick={() => fileRef.current?.click()}
         >
           {imgUrl ? (
@@ -798,13 +856,13 @@ export default function MediaAssetNew() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Proof & Site Images</CardTitle>
+              <CardTitle>Asset Photos</CardTitle>
+              <CardDescription>Upload photos for this asset</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <ImageUploader field="geoTaggedPhoto" label="Geo Tagged Photo" />
-              <ImageUploader field="newspaperPhoto" label="Newspaper Photo" />
-              <ImageUploader field="trafficPhoto1" label="Traffic Photo 1" />
-              <ImageUploader field="trafficPhoto2" label="Traffic Photo 2" />
+              {PHOTO_TYPES.map(({ field, label }) => (
+                <ImageUploader key={field} field={field} label={label} />
+              ))}
             </CardContent>
           </Card>
         </div>

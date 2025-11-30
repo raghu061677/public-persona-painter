@@ -1030,7 +1030,7 @@ export default function MediaAssetEdit() {
             {/* RIGHT COLUMN */}
             <div className="lg:col-span-1 space-y-6">
               {/* Image Preview Card */}
-              {formData?.images?.photos && formData.images.photos.length > 0 && (
+              {formData?.photos && formData.photos.length > 0 && (
                 <Card className="overflow-hidden border-primary/20 shadow-lg sticky top-4">
                   <CardHeader className="bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 border-b">
                     <div className="flex items-center justify-between">
@@ -1041,13 +1041,13 @@ export default function MediaAssetEdit() {
                         <CardTitle className="text-xl">Asset Images</CardTitle>
                       </div>
                       <span className="text-sm text-muted-foreground">
-                        {formData.images.photos.length} photo{formData.images.photos.length !== 1 ? 's' : ''}
+                        {formData.photos.length} photo{formData.photos.length !== 1 ? 's' : ''}
                       </span>
                     </div>
                   </CardHeader>
                   <CardContent className="pt-6">
                     <UnifiedPhotoGallery 
-                      photos={formData.images.photos}
+                      photos={formData.photos}
                       onPhotoDeleted={fetchAsset}
                       canDelete={isAdmin}
                       bucket="media-assets"

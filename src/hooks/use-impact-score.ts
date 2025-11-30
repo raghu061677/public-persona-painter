@@ -34,9 +34,9 @@ export function useImpactScore(asset: any): ImpactScore {
       };
     }
 
-    // 1. Quality Score (0-30 points) - based on image quality mock
+    // 1. Quality Score (0-30 points) - based on image availability
     let qualityScore = 0;
-    if (asset.image_urls && asset.image_urls.length > 0) {
+    if (asset.primary_photo_url) {
       qualityScore = 20 + Math.random() * 10; // Mock: 20-30 points
     } else {
       qualityScore = 10; // No images = low quality
@@ -52,7 +52,7 @@ export function useImpactScore(asset: any): ImpactScore {
     const trafficWeight = trafficWeightMap[trafficData.trafficBand] || 8;
 
     // 3. Illumination Bonus (0-15 points)
-    const illuminationBonus = asset.illumination === 'Lit' ? 15 : 5;
+    const illuminationBonus = asset.illumination_type && asset.illumination_type !== 'Non-lit' ? 15 : 5;
 
     // 4. Corridor Priority (0-15 points)
     let corridorPriority = 0;

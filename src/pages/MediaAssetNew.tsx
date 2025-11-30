@@ -70,14 +70,14 @@ export default function MediaAssetNew() {
     direction: "",
     google_street_view_url: "",
     dimensions: "",
-    illumination: "",
+    illumination_type: "",
     is_multi_face: false,
     card_rate: "",
-    base_rent: "",
+    base_rate: "",
     base_margin: "",
     gst_percent: "18",
-    printing_charges: "",
-    mounting_charges: "",
+    printing_rate_default: "",
+    mounting_rate_default: "",
     concession_fee: "",
     ad_tax: "",
     electricity: "",
@@ -286,15 +286,15 @@ export default function MediaAssetNew() {
         google_street_view_url: formData.google_street_view_url || null,
         dimensions: formData.dimensions,
         total_sqft: parsed.totalSqft,
-        illumination: formData.illumination || null,
+        illumination_type: formData.illumination_type || null,
         is_multi_face: parsed.isMultiFace,
         faces: parsed.faces,
         card_rate: parseFloat(formData.card_rate),
-        base_rent: formData.base_rent ? parseFloat(formData.base_rent) : null,
+        base_rate: formData.base_rate ? parseFloat(formData.base_rate) : null,
         base_margin: formData.base_margin ? parseFloat(formData.base_margin) : null,
         gst_percent: parseFloat(formData.gst_percent),
-        printing_charges: formData.printing_charges ? parseFloat(formData.printing_charges) : null,
-        mounting_charges: formData.mounting_charges ? parseFloat(formData.mounting_charges) : null,
+        printing_rate_default: formData.printing_rate_default ? parseFloat(formData.printing_rate_default) : null,
+        mounting_rate_default: formData.mounting_rate_default ? parseFloat(formData.mounting_rate_default) : null,
         concession_fee: formData.concession_fee ? parseFloat(formData.concession_fee) : null,
         ad_tax: formData.ad_tax ? parseFloat(formData.ad_tax) : null,
         electricity: formData.electricity ? parseFloat(formData.electricity) : null,
@@ -362,7 +362,7 @@ export default function MediaAssetNew() {
     );
   };
 
-  const showPowerFields = formData.illumination && ['Frontlit', 'Backlit', 'Digital'].includes(formData.illumination);
+  const showPowerFields = formData.illumination_type && ['Frontlit', 'Backlit', 'Digital'].includes(formData.illumination_type);
 
   return (
     <form onSubmit={handleSubmit} className="container mx-auto px-6 py-8 max-w-6xl">
@@ -464,7 +464,7 @@ export default function MediaAssetNew() {
               </div>
               <div>
                 <Label>Illumination</Label>
-                <Select value={formData.illumination} onValueChange={(v) => updateField('illumination', v)}>
+                <Select value={formData.illumination_type} onValueChange={(v) => updateField('illumination_type', v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select..." />
                   </SelectTrigger>
@@ -616,8 +616,8 @@ export default function MediaAssetNew() {
                 <Input type="number" required value={formData.card_rate} onChange={(e) => updateField('card_rate', e.target.value)} />
               </div>
               <div>
-                <Label>Base Rent (₹)</Label>
-                <Input type="number" value={formData.base_rent} onChange={(e) => updateField('base_rent', e.target.value)} />
+                <Label>Base Rate (₹)</Label>
+                <Input type="number" value={formData.base_rate} onChange={(e) => updateField('base_rate', e.target.value)} />
               </div>
               <div>
                 <Label>Base Margin (%)</Label>
@@ -628,12 +628,12 @@ export default function MediaAssetNew() {
                 <Input type="number" value={formData.gst_percent} onChange={(e) => updateField('gst_percent', e.target.value)} />
               </div>
               <div>
-                <Label>Printing Charges (₹)</Label>
-                <Input type="number" value={formData.printing_charges} onChange={(e) => updateField('printing_charges', e.target.value)} />
+                <Label>Printing Rate Default (₹)</Label>
+                <Input type="number" value={formData.printing_rate_default} onChange={(e) => updateField('printing_rate_default', e.target.value)} />
               </div>
               <div>
-                <Label>Mounting Charges (₹)</Label>
-                <Input type="number" value={formData.mounting_charges} onChange={(e) => updateField('mounting_charges', e.target.value)} />
+                <Label>Mounting Rate Default (₹)</Label>
+                <Input type="number" value={formData.mounting_rate_default} onChange={(e) => updateField('mounting_rate_default', e.target.value)} />
               </div>
               <div>
                 <Label>Concession Fee (₹)</Label>

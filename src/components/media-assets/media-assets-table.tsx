@@ -106,11 +106,11 @@ interface Asset {
   dimensions: string;
   total_sqft?: number;
   card_rate: number;
-  base_rent?: number;
+  base_rate?: number;
   gst_percent?: number;
   status: string;
-  image_urls?: string[];
-  illumination?: string;
+  primary_photo_url?: string;
+  illumination_type?: string;
   direction?: string;
   ownership?: string;
   latitude?: number;
@@ -434,7 +434,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
           return value ? value.toFixed(2) : '0.00';
         },
       },
-      { accessorKey: "illumination", header: "Illumination" },
+      { accessorKey: "illumination_type", header: "Illumination" },
       { accessorKey: "direction", header: "Direction" },
       {
         accessorKey: "card_rate",
@@ -450,12 +450,12 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
         },
       },
       {
-        accessorKey: "base_rent",
-        header: "Base Rent",
+        accessorKey: "base_rate",
+        header: "Base Rate",
         cell: ({ row }) => {
-          if (!settingsReady) return formatCurrency(row.original.base_rent);
+          if (!settingsReady) return formatCurrency(row.original.base_rate);
           return formatCurrencyUtil(
-            row.original.base_rent,
+            row.original.base_rate,
             settings.currencyFormat,
             settings.currencySymbol,
             settings.compactNumbers

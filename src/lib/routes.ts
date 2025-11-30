@@ -84,6 +84,9 @@ export const ROUTES = {
   USER_MANAGEMENT: "/admin/users",
   
   // Approvals
+  APPROVALS_QUEUE: "/admin/approvals",
+  APPROVAL_HISTORY: "/admin/approval-history",
+  APPROVAL_RULES_SETTINGS: "/admin/approvals/rules",
   APPROVAL_SETTINGS: "/admin/approvals/settings",
   APPROVAL_DELEGATION: "/admin/approvals/delegation",
   APPROVAL_ANALYTICS: "/admin/approvals/analytics",

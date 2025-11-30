@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useRBAC } from "@/hooks/useRBAC";
@@ -6,7 +7,7 @@ import {
   LayoutDashboard, Building2, Map, Layers, Briefcase, Users, TrendingUp,
   FileText, Receipt, Zap, UserCog, Palette, FileSpreadsheet,
   Shield, DollarSign, Smartphone, Image, Settings, FileCheck, 
-  CreditCard, Globe, ShoppingBag, BarChart3, Sparkles, Menu
+  CreditCard, Globe, ShoppingBag, BarChart3, Sparkles, Menu, CheckCircle2, History, ListChecks
 } from "lucide-react";
 import {
   Sidebar,
@@ -38,18 +39,49 @@ export function ResponsiveSidebar() {
   const { company, isPlatformAdmin, companyUser } = useCompany();
   const rbac = useRBAC();
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
   
   const isCompanyAdmin = companyUser?.role === 'admin' || isAdmin;
   const collapsed = state === "collapsed";
   const isActive = (path: string) => location.pathname === path;
+
+  // Fetch pending approvals count
+  useEffect(() => {
+    if (user && company) {
+      fetchPendingApprovalsCount();
+    }
+  }, [user, company]);
+
+  const fetchPendingApprovalsCount = async () => {
+    try {
+      const { data: userRoles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user?.id);
+
+      if (!userRoles || userRoles.length === 0) return;
+
+      const roles = userRoles.map(ur => ur.role);
+
+      const { count } = await supabase
+        .from("plan_approvals")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "pending")
+        .in("required_role", roles);
+
+      setPendingApprovalsCount(count || 0);
+    } catch (error) {
+      console.error("Error fetching pending approvals count:", error);
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/auth');
   };
 
-  const MenuItem = ({ icon: Icon, label, href }: { icon: any; label: string; href: string }) => {
+  const MenuItem = ({ icon: Icon, label, href, badge }: { icon: any; label: string; href: string; badge?: number }) => {
     const active = isActive(href);
     
     if (collapsed) {
@@ -60,6 +92,11 @@ export function ResponsiveSidebar() {
               <SidebarMenuButton asChild isActive={active}>
                 <Link to={href}>
                   <Icon />
+                  {badge !== undefined && badge > 0 && (
+                    <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+                      {badge > 9 ? "9+" : badge}
+                    </span>
+                  )}
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -75,6 +112,11 @@ export function ResponsiveSidebar() {
           <Link to={href}>
             <Icon />
             <span>{label}</span>
+            {badge !== undefined && badge > 0 && (
+              <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">
+                {badge > 9 ? "9+" : badge}
+              </span>
+            )}
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
@@ -208,6 +250,14 @@ export function ResponsiveSidebar() {
                   <MenuItem icon={Layers} label="All Plans" href="/admin/plans" />
                   {(isCompanyAdmin || isPlatformAdmin) && (
                     <MenuItem icon={FileText} label="Plan Templates" href="/admin/plan-templates" />
+                  )}
+                </MenuGroup>
+
+                <MenuGroup icon={CheckCircle2} label="Approvals">
+                  <MenuItem icon={ListChecks} label="Pending Approvals" href="/admin/approvals" badge={pendingApprovalsCount} />
+                  <MenuItem icon={History} label="Approval History" href="/admin/approval-history" />
+                  {(isCompanyAdmin || isPlatformAdmin) && (
+                    <MenuItem icon={Settings} label="Approval Rules" href="/admin/approvals/rules" />
                   )}
                 </MenuGroup>
                 

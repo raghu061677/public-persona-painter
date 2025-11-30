@@ -57,6 +57,7 @@ export function SaveAsTemplateDialog({
       if (!user) throw new Error("Not authenticated");
 
       // Prepare template items (remove plan-specific fields)
+      // Note: plan_items DB column is 'base_rent', template schema uses 'base_rate'
       const templateItems = planItems.map(item => ({
         asset_id: item.asset_id,
         location: item.location,
@@ -65,7 +66,7 @@ export function SaveAsTemplateDialog({
         media_type: item.media_type,
         dimensions: item.dimensions,
         card_rate: item.card_rate,
-        base_rate: item.base_rent,  // plan_items.base_rent is correct (stores base cost)
+        base_rate: item.base_rent,  // Mapping DB field base_rent to template field base_rate
         sales_price: item.sales_price,
         discount_type: item.discount_type,
         discount_value: item.discount_value,

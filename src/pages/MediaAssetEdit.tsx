@@ -149,9 +149,7 @@ export default function MediaAssetEdit() {
         unique_service_number: data.unique_service_number || "",
         ero: data.ero || "",
         section_name: data.section_name || "",
-        images: {
-          photos: photos,
-        },
+        photos,
       };
       setFormData(formattedData);
     }

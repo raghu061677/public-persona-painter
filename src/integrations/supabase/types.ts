@@ -5215,7 +5215,7 @@ export type Database = {
         | "PhotoUploaded"
         | "Verified"
         | "Completed"
-        | "active"
+        | "Cancelled"
       company_status: "pending" | "active" | "suspended" | "cancelled"
       company_type: "media_owner" | "agency" | "platform_admin"
       document_type:
@@ -5240,16 +5240,7 @@ export type Database = {
       media_category: "OOH" | "DOOH" | "Transit"
       ownership_type: "own" | "rented"
       payment_status: "Pending" | "Paid"
-      plan_status:
-        | "Draft"
-        | "Sent"
-        | "Approved"
-        | "Rejected"
-        | "Converted"
-        | "pending"
-        | "approved"
-        | "converted"
-        | "rejected"
+      plan_status: "Draft" | "Sent" | "Approved" | "Rejected" | "Converted"
       plan_type: "Quotation" | "Proposal" | "Estimate"
       subscription_status: "active" | "expired" | "cancelled" | "trialing"
       subscription_tier: "free" | "starter" | "pro" | "enterprise"
@@ -5426,7 +5417,7 @@ export const Constants = {
         "PhotoUploaded",
         "Verified",
         "Completed",
-        "active",
+        "Cancelled",
       ],
       company_status: ["pending", "active", "suspended", "cancelled"],
       company_type: ["media_owner", "agency", "platform_admin"],
@@ -5454,17 +5445,7 @@ export const Constants = {
       media_category: ["OOH", "DOOH", "Transit"],
       ownership_type: ["own", "rented"],
       payment_status: ["Pending", "Paid"],
-      plan_status: [
-        "Draft",
-        "Sent",
-        "Approved",
-        "Rejected",
-        "Converted",
-        "pending",
-        "approved",
-        "converted",
-        "rejected",
-      ],
+      plan_status: ["Draft", "Sent", "Approved", "Rejected", "Converted"],
       plan_type: ["Quotation", "Proposal", "Estimate"],
       subscription_status: ["active", "expired", "cancelled", "trialing"],
       subscription_tier: ["free", "starter", "pro", "enterprise"],

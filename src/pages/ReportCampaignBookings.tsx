@@ -72,7 +72,7 @@ export default function ReportCampaignBookings() {
   };
 
   const totalRevenue = campaigns.reduce((sum, c) => sum + c.grand_total, 0);
-  const activeCampaigns = campaigns.filter(c => c.status.toLowerCase() === 'active').length;
+  const activeCampaigns = campaigns.filter(c => c.status === 'InProgress').length;
 
   return (
     <div className="h-full flex flex-col space-y-6 p-8">

@@ -39,7 +39,7 @@ export function CreateCampaignFromPlanDialog({
     const { data, error } = await supabase
       .from("plans")
       .select("*")
-      .eq("status", "approved")
+      .eq("status", "Approved")
       .order("created_at", { ascending: false });
 
     if (error) {

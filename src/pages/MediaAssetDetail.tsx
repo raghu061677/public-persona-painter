@@ -62,9 +62,7 @@ export default function MediaAssetDetail() {
       // Add photos to asset data
       setAsset({
         ...data,
-        images: {
-          photos: photos,
-        },
+        photos,
       });
     }
     setLoading(false);

@@ -2692,6 +2692,33 @@ export type Database = {
           },
         ]
       }
+      media_asset_sequences: {
+        Row: {
+          city: string
+          created_at: string | null
+          media_type: string
+          next_value: number
+          prefix: string
+          updated_at: string | null
+        }
+        Insert: {
+          city: string
+          created_at?: string | null
+          media_type: string
+          next_value?: number
+          prefix?: string
+          updated_at?: string | null
+        }
+        Update: {
+          city?: string
+          created_at?: string | null
+          media_type?: string
+          next_value?: number
+          prefix?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       media_assets: {
         Row: {
           ad_tax: number | null
@@ -2731,6 +2758,7 @@ export type Database = {
           location: string
           longitude: number | null
           maintenance: number | null
+          media_asset_code: string | null
           media_type: string
           min_booking_days: number | null
           monthly_land_rent: number | null
@@ -2797,6 +2825,7 @@ export type Database = {
           location: string
           longitude?: number | null
           maintenance?: number | null
+          media_asset_code?: string | null
           media_type: string
           min_booking_days?: number | null
           monthly_land_rent?: number | null
@@ -2863,6 +2892,7 @@ export type Database = {
           location?: string
           longitude?: number | null
           maintenance?: number | null
+          media_asset_code?: string | null
           media_type?: string
           min_booking_days?: number | null
           monthly_land_rent?: number | null
@@ -5237,6 +5267,14 @@ export type Database = {
       generate_estimation_id: { Args: never; Returns: string }
       generate_expense_id: { Args: never; Returns: string }
       generate_invoice_id: { Args: never; Returns: string }
+      generate_mns_code: {
+        Args: { p_city: string; p_media_type: string }
+        Returns: string
+      }
+      generate_new_media_asset_code: {
+        Args: { p_area: string; p_city: string; p_media_type: string }
+        Returns: string
+      }
       generate_plan_id: { Args: never; Returns: string }
       generate_share_token: { Args: never; Returns: string }
       get_active_subscription: {

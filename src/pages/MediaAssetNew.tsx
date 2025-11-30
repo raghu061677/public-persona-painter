@@ -301,6 +301,23 @@ export default function MediaAssetNew() {
         throw assetError;
       }
 
+      // Generate MNS code after successful asset creation
+      const { data: mnsCode, error: codeError } = await supabase.rpc('generate_mns_code', {
+        p_city: formData.city,
+        p_media_type: formData.media_type,
+      });
+
+      if (codeError) {
+        console.error('Code generation error:', codeError);
+        // Don't fail the entire operation if code generation fails
+      } else if (mnsCode) {
+        // Update the asset with the generated code
+        await supabase
+          .from('media_assets')
+          .update({ media_asset_code: mnsCode })
+          .eq('id', formData.id);
+      }
+
       // Set the created asset ID to enable photo uploads
       setCreatedAssetId(formData.id);
       setIsAssetCreated(true);

@@ -323,6 +323,22 @@ export default function MediaAssetEdit() {
                     </div>
                     <Input value={formData.id} readOnly disabled />
                   </div>
+                  {formData.media_asset_code && (
+                    <div className="input-group">
+                      <div className="flex items-center gap-2">
+                        <Label>MNS Code</Label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Matrix Network Solutions unique code (read-only)</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <Input value={formData.media_asset_code} readOnly disabled className="font-mono" />
+                    </div>
+                  )}
                   <div className="input-group">
                     <div className="flex items-center gap-2">
                       <Label>Municipal Ref. ID</Label>

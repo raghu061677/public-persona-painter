@@ -86,10 +86,6 @@ export default function MediaAssetNew() {
     unique_service_number: "",
     ero: "",
     section_name: "",
-    // Date fields
-    site_photo_date: null as Date | null,
-    site_end_date: null as Date | null,
-    available_from: null as Date | null,
   });
 
 
@@ -241,10 +237,6 @@ export default function MediaAssetNew() {
         unique_service_number: formData.unique_service_number || null,
         ero: formData.ero || null,
         section_name: formData.section_name || null,
-        // Date fields  
-        site_photo_date: formData.site_photo_date || null,
-        site_end_date: formData.site_end_date || null,
-        available_from: formData.available_from || null,
       } as any);
 
       if (assetError) {
@@ -636,63 +628,6 @@ export default function MediaAssetNew() {
                   <p className="text-xs text-muted-foreground">Show on public map</p>
                 </div>
                 <Switch checked={formData.is_public} onCheckedChange={(checked) => updateField('is_public', checked)} />
-              </div>
-              
-              <div>
-                <Label>Next Available From</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal" type="button">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.available_from ? format(formData.available_from, 'PPP') : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={formData.available_from || undefined}
-                      onSelect={(date) => updateField('available_from', date || null)}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div>
-                <Label>Site End Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal" type="button">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.site_end_date ? format(formData.site_end_date, 'PPP') : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={formData.site_end_date || undefined}
-                      onSelect={(date) => updateField('site_end_date', date || null)}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div>
-                <Label>Site Photo Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal" type="button">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.site_photo_date ? format(formData.site_photo_date, 'PPP') : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={formData.site_photo_date || undefined}
-                      onSelect={(date) => updateField('site_photo_date', date || null)}
-                    />
-                  </PopoverContent>
-                </Popover>
               </div>
             </CardContent>
           </Card>

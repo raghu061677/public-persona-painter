@@ -195,7 +195,7 @@ export default function MediaAssetsImport() {
           const insertData = {
             id: assetId,
             media_type: row.mediaType || '',
-            media_id: row.mediaId || null,
+            municipal_id: row.mediaId || null,
             status: row.status || 'Available',
             category: row.category || 'OOH',
             location: row.location || '',

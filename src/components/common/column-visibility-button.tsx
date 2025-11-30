@@ -62,7 +62,7 @@ const DEFAULT_PRESETS: ColumnPreset[] = [
     id: 'detailed',
     name: 'Detailed',
     icon: '📋',
-    columns: ['select', 'id', 'images', 'media_id', 'location', 'area', 'city', 'district', 'state', 'media_type', 'dimensions', 'total_sqft', 'illumination_type', 'direction', 'card_rate', 'base_rate', 'gst_percent', 'status', 'ownership', 'actions']
+    columns: ['select', 'id', 'images', 'municipal_id', 'location', 'area', 'city', 'district', 'state', 'media_type', 'dimensions', 'total_sqft', 'illumination_type', 'direction', 'card_rate', 'base_rate', 'gst_percent', 'status', 'ownership', 'actions']
   },
   {
     id: 'financial',

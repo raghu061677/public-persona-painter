@@ -168,7 +168,7 @@ export default function MediaAssetEdit() {
       const parsed = parseDimensions(formData.dimensions);
       const search_tokens = buildSearchTokens([
         formData.id,
-        formData.media_id,
+        formData.municipal_id,
         formData.city,
         formData.area,
         formData.location,
@@ -178,7 +178,7 @@ export default function MediaAssetEdit() {
         .from('media_assets')
         .update({
           media_type: formData.media_type,
-          media_id: formData.media_id || null,
+          municipal_id: formData.municipal_id || null,
           status: formData.status,
           category: formData.category,
           location: formData.location,
@@ -336,8 +336,8 @@ export default function MediaAssetEdit() {
                       </Tooltip>
                     </div>
                     <Input 
-                      value={formData.media_id} 
-                      onChange={(e) => updateField('media_id', e.target.value)}
+                      value={formData.municipal_id} 
+                      onChange={(e) => updateField('municipal_id', e.target.value)}
                       placeholder="Optional reference number"
                     />
                   </div>

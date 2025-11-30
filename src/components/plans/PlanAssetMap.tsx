@@ -13,7 +13,7 @@ interface Asset {
   media_type: string;
   dimensions: string;
   direction?: string;
-  illumination?: string;
+  illumination_type?: string;
   total_sqft?: number;
   latitude?: number;
   longitude?: number;
@@ -124,8 +124,8 @@ export function PlanAssetMap({ assets, planItems }: PlanAssetMapProps) {
                     {asset.direction && (
                       <p><span className="font-semibold">Direction:</span> {asset.direction}</p>
                     )}
-                    {asset.illumination && (
-                      <p><span className="font-semibold">Lighting:</span> {asset.illumination}</p>
+                    {asset.illumination_type && (
+                      <p><span className="font-semibold">Lighting:</span> {asset.illumination_type}</p>
                     )}
                     {getAssetPrice(asset.id) && (
                       <p className="mt-2 pt-2 border-t">

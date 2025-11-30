@@ -32,7 +32,7 @@ interface BulkEditDialogProps {
 interface BulkEditFields {
   status?: string;
   card_rate?: number;
-  base_rent?: number;
+  base_rate?: number;
   gst_percent?: number;
   is_public?: boolean;
 }
@@ -55,7 +55,7 @@ export function BulkEditDialog({
   const [values, setValues] = useState<BulkEditFields>({
     status: "Available",
     card_rate: 0,
-    base_rent: 0,
+    base_rate: 0,
     gst_percent: 18,
     is_public: false,
   });
@@ -69,7 +69,7 @@ export function BulkEditDialog({
       
       if (fields.updateStatus) updateData.status = values.status;
       if (fields.updateCardRate) updateData.card_rate = values.card_rate;
-      if (fields.updateBaseRent) updateData.base_rent = values.base_rent;
+      if (fields.updateBaseRent) updateData.base_rate = values.base_rate;
       if (fields.updateGst) updateData.gst_percent = values.gst_percent;
       if (fields.updateIsPublic) updateData.is_public = values.is_public;
       
@@ -196,16 +196,16 @@ export function BulkEditDialog({
               className="mt-2"
             />
             <div className="flex-1 space-y-2">
-              <Label htmlFor="base_rent" className={!fields.updateBaseRent ? "text-muted-foreground" : ""}>
-                Base Rent (₹)
+              <Label htmlFor="base_rate" className={!fields.updateBaseRent ? "text-muted-foreground" : ""}>
+                Base Rate (₹)
               </Label>
               <Input
-                id="base_rent"
+                id="base_rate"
                 type="number"
-                value={values.base_rent}
-                onChange={(e) => setValues({ ...values, base_rent: parseFloat(e.target.value) || 0 })}
+                value={values.base_rate}
+                onChange={(e) => setValues({ ...values, base_rate: parseFloat(e.target.value) || 0 })}
                 disabled={!fields.updateBaseRent}
-                placeholder="Enter base rent"
+                placeholder="Enter base rate"
               />
             </div>
           </div>

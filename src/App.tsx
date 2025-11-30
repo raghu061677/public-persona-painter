@@ -56,6 +56,9 @@ const PlanShare = lazy(() => import("./pages/PlanShare"));
 const PlanTemplatesList = lazy(() => import("./pages/PlanTemplatesList"));
 const PlanTemplateForm = lazy(() => import("./pages/PlanTemplateForm"));
 const PlanTemplatePreview = lazy(() => import("./pages/PlanTemplatePreview"));
+const ApprovalsQueue = lazy(() => import("./pages/approvals/ApprovalsQueue"));
+const ApprovalHistory = lazy(() => import("./pages/approvals/ApprovalHistory"));
+const ApprovalRulesSettings = lazy(() => import("./pages/approvals/ApprovalRulesSettings"));
 const CampaignsList = lazy(() => import("./pages/CampaignsList"));
 const CampaignDetail = lazy(() => import("./pages/CampaignDetail"));
 const CampaignEdit = lazy(() => import("./pages/CampaignEdit"));
@@ -321,6 +324,9 @@ const App = () => (
             <Route path="/reports" element={<ModernAppLayout><ReportsDashboard /></ModernAppLayout>} />
             <Route path="/reports/vacant-media" element={<ModernAppLayout><VacantMediaReport /></ModernAppLayout>} />
             <Route path="/admin/reports/vacant-media" element={<ModernAppLayout><VacantMediaReport /></ModernAppLayout>} />
+            <Route path="/admin/approvals" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalsQueue /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/approval-history" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalHistory /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/approvals/rules" element={<RoleGuard requireCompanyRole="company_admin"><ModernAppLayout><ApprovalRulesSettings /></ModernAppLayout></RoleGuard>} />
             <Route path="/admin/ai-assistant" element={<ModernAppLayout><AIAssistant /></ModernAppLayout>} />
             <Route path="/admin/assistant" element={<ModernAppLayout><AIAssistant /></ModernAppLayout>} />
             <Route path="/admin/tenant-analytics" element={<ModernAppLayout><TenantAnalytics /></ModernAppLayout>} />

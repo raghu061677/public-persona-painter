@@ -306,6 +306,77 @@ export type Database = {
         }
         Relationships: []
       }
+      approval_rules: {
+        Row: {
+          client_type: string | null
+          company_id: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          max_amount: number | null
+          min_amount: number | null
+          min_discount_percent: number | null
+          name: string
+          plan_type: string | null
+          priority: number | null
+          require_director_approval: boolean | null
+          require_finance_approval: boolean | null
+          require_operations_approval: boolean | null
+          require_sales_approval: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_type?: string | null
+          company_id: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_amount?: number | null
+          min_amount?: number | null
+          min_discount_percent?: number | null
+          name: string
+          plan_type?: string | null
+          priority?: number | null
+          require_director_approval?: boolean | null
+          require_finance_approval?: boolean | null
+          require_operations_approval?: boolean | null
+          require_sales_approval?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_type?: string | null
+          company_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_amount?: number | null
+          min_amount?: number | null
+          min_discount_percent?: number | null
+          name?: string
+          plan_type?: string | null
+          priority?: number | null
+          require_director_approval?: boolean | null
+          require_finance_approval?: boolean | null
+          require_operations_approval?: boolean | null
+          require_sales_approval?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       approval_settings: {
         Row: {
           approval_levels: Json

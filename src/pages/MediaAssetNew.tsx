@@ -19,6 +19,8 @@ import { ArrowLeft, Sparkles, Image as ImageIcon, Calendar as CalendarIcon, Exte
 import { format } from "date-fns";
 import { PhotoUploadSection } from "@/components/media-assets/PhotoUploadSection";
 import { UnifiedPhotoGallery } from "@/components/common/UnifiedPhotoGallery";
+import { StateSelect } from "@/components/clients/StateSelect";
+import { DistrictSelect } from "@/components/media-assets/DistrictSelect";
 
 const CITY_CODES = [
   { label: "Hyderabad", value: "HYD" },
@@ -422,12 +424,28 @@ export default function MediaAssetNew() {
                 <Input value={formData.city} readOnly disabled />
               </div>
               <div>
-                <Label>District</Label>
-                <Input value={formData.district} onChange={(e) => updateField('district', e.target.value)} />
+                <Label>State</Label>
+                <StateSelect
+                  value={formData.state}
+                  onValueChange={(value) => {
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      state: value,
+                      district: "" // Reset district when state changes
+                    }));
+                  }}
+                  placeholder="Select state..."
+                />
               </div>
               <div>
-                <Label>State</Label>
-                <Input value={formData.state} onChange={(e) => updateField('state', e.target.value)} />
+                <Label>District</Label>
+                <DistrictSelect
+                  value={formData.district}
+                  onValueChange={(value) => updateField('district', value)}
+                  selectedState={formData.state}
+                  placeholder="Select district..."
+                  disabled={!formData.state}
+                />
               </div>
               <div>
                 <Label>Latitude</Label>

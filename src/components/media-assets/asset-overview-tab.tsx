@@ -87,10 +87,10 @@ export function AssetOverviewTab({ asset }: AssetOverviewTabProps) {
               <p className="text-sm text-muted-foreground">Total Area</p>
               <p className="font-medium">{asset.total_sqft} sq ft</p>
             </div>
-            {asset.media_id && (
+            {asset.municipal_id && (
               <div>
-                <p className="text-sm text-muted-foreground">Media ID</p>
-                <p className="font-medium">{asset.media_id}</p>
+                <p className="text-sm text-muted-foreground">Municipal ID</p>
+                <p className="font-medium">{asset.municipal_id}</p>
               </div>
             )}
           </div>

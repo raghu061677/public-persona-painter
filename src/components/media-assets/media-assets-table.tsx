@@ -116,7 +116,7 @@ interface Asset {
   latitude?: number;
   longitude?: number;
   is_public?: boolean;
-  media_id?: string;
+  municipal_id?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -397,11 +397,11 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
         enableSorting: false,
       },
       { 
-        accessorKey: "media_id", 
+        accessorKey: "municipal_id", 
         header: "Municipal ID",
         cell: ({ row, table }) => {
           const globalFilter = (table.getState() as any).globalFilter || "";
-          return row.original.media_id ? highlightText(row.original.media_id, globalFilter) : "-";
+          return row.original.municipal_id ? highlightText(row.original.municipal_id, globalFilter) : "-";
         },
       },
       {

@@ -57,7 +57,7 @@ export default function MediaAssetNew() {
   const [formData, setFormData] = useState({
     id: "",
     media_type: "",
-    media_id: "",
+    municipal_id: "",
     status: "Available",
     category: "OOH",
     location: "",
@@ -263,7 +263,7 @@ export default function MediaAssetNew() {
       const parsed = parseDimensions(formData.dimensions);
       const search_tokens = buildSearchTokens([
         formData.id,
-        formData.media_id,
+        formData.municipal_id,
         formData.city,
         formData.area,
         formData.location,
@@ -272,7 +272,7 @@ export default function MediaAssetNew() {
       const { error } = await supabase.from('media_assets').insert({
         id: formData.id,
         media_type: formData.media_type,
-        media_id: formData.media_id || null,
+        municipal_id: formData.municipal_id || null,
         status: formData.status,
         category: formData.category,
         location: formData.location,
@@ -443,7 +443,7 @@ export default function MediaAssetNew() {
               </div>
               <div>
                 <Label>Municipal Ref. ID</Label>
-                <Input value={formData.media_id} onChange={(e) => updateField('media_id', e.target.value)} />
+                <Input value={formData.municipal_id} onChange={(e) => updateField('municipal_id', e.target.value)} />
               </div>
               <div>
                 <Label>Media Type</Label>

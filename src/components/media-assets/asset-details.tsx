@@ -155,7 +155,9 @@ export function AssetDetails({ asset, isAdmin = false, onQRGenerated }: AssetDet
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">{currentAsset.id}</h1>
+          <h1 className="text-3xl font-bold mb-2">
+            {currentAsset.media_asset_code || currentAsset.asset_code || currentAsset.id}
+          </h1>
           <div className="flex items-center gap-3">
             <Badge className={getStatusColor(currentAsset.status)}>
               {currentAsset.status}

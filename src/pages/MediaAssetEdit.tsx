@@ -1180,7 +1180,7 @@ export default function MediaAssetEdit() {
                           try {
                             setLoading(true);
                             const { data, error } = await supabase.functions.invoke('generate-asset-qr', {
-                              body: { assetId: formData.id }
+                              body: { asset_id: formData.id }
                             });
                             
                             if (error) throw error;

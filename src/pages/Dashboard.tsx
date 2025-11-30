@@ -71,27 +71,8 @@ const Dashboard = () => {
     pendingTasks: 0,
   });
 
-  const [revenueData] = useState([
-    { month: 'Jan', revenue: 450000 },
-    { month: 'Feb', revenue: 420000 },
-    { month: 'Mar', revenue: 580000 },
-    { month: 'Apr', revenue: 510000 },
-    { month: 'May', revenue: 620000 },
-    { month: 'Jun', revenue: 780000 },
-    { month: 'Jul', revenue: 820000 },
-    { month: 'Aug', revenue: 750000 },
-    { month: 'Sep', revenue: 900000 },
-    { month: 'Oct', revenue: 1100000 },
-    { month: 'Nov', revenue: 1050000 },
-    { month: 'Dec', revenue: 1350000 },
-  ]);
-
-  const [assetStatusData] = useState([
-    { name: 'Booked', value: 480 },
-    { name: 'Vacant', value: 220 },
-    { name: 'Maintenance', value: 50 },
-    { name: 'Blocked', value: 25 },
-  ]);
+  const [revenueData, setRevenueData] = useState<Array<{ month: string; revenue: number }>>([]);
+  const [assetStatusData, setAssetStatusData] = useState<Array<{ name: string; value: number }>>([]);
 
   const [financials, setFinancials] = useState({
     profitLoss: 125000,
@@ -191,16 +172,63 @@ const Dashboard = () => {
         }
       });
 
+      // Fetch asset status distribution
+      const { data: assetsByStatus } = await supabase
+        .from("media_assets")
+        .select("status")
+        .eq("company_id", selectedCompanyId);
+
+      const statusCounts: Record<string, number> = {};
+      assetsByStatus?.forEach((asset) => {
+        statusCounts[asset.status] = (statusCounts[asset.status] || 0) + 1;
+      });
+
+      setAssetStatusData(
+        Object.entries(statusCounts).map(([name, value]) => ({ name, value }))
+      );
+
+      // Fetch monthly revenue data (last 12 months)
+      const monthlyRevenue: Array<{ month: string; revenue: number }> = [];
+      const now = new Date();
+      
+      for (let i = 11; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthStart = date.toISOString();
+        const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString();
+        
+        const { data: monthInvoices } = await supabase
+          .from("invoices")
+          .select("total_amount")
+          .eq("company_id", selectedCompanyId)
+          .gte("created_at", monthStart)
+          .lte("created_at", monthEnd);
+        
+        const monthTotal = monthInvoices?.reduce((sum, inv) => sum + Number(inv.total_amount || 0), 0) || 0;
+        
+        monthlyRevenue.push({
+          month: date.toLocaleDateString('en-US', { month: 'short' }),
+          revenue: monthTotal,
+        });
+      }
+      
+      setRevenueData(monthlyRevenue);
+
+      // Calculate pending tasks (real data)
+      const { count: pendingTasksCount } = await supabase
+        .from("campaign_assets")
+        .select("*", { count: "exact", head: true })
+        .neq("status", "Verified");
+
       setMetrics({
         totalAssets: assetsCount || 0,
         activeCampaigns: campaignsCount || 0,
         leadsThisMonth: leadsCount || 0,
         revenueThisMonth: totalRevenue,
-        pendingTasks: 6, // Mock data
+        pendingTasks: pendingTasksCount || 0,
       });
 
       setFinancials({
-        profitLoss: 125000, // Mock data - calculate from expenses vs revenue
+        profitLoss: totalRevenue - (gstCollected * 5.56), // Approximate profit (revenue - expenses estimate)
         gstCollected,
         pendingInvoices,
         paidInvoices,

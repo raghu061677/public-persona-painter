@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,16 +22,21 @@ export const MediaAssetQrSection = ({
   const { toast } = useToast();
   const { loading, error, qrUrl, setQrUrl, generateSingle } = useGenerateQrForAsset(assetId);
   const [displayQr, setDisplayQr] = useState<string | null>(null);
+  const lastNotifiedQrRef = useRef<string | null>(null);
 
   useEffect(() => {
     const currentQr = qrUrl || qrCodeUrl;
-    if (currentQr) {
+    if (currentQr && currentQr !== displayQr) {
       setDisplayQr(currentQr);
-      if (qrUrl && onQrGenerated) {
-        onQrGenerated(qrUrl);
-      }
     }
-  }, [qrUrl, qrCodeUrl, onQrGenerated]);
+  }, [qrUrl, qrCodeUrl]);
+
+  useEffect(() => {
+    if (qrUrl && qrUrl !== lastNotifiedQrRef.current && onQrGenerated) {
+      lastNotifiedQrRef.current = qrUrl;
+      onQrGenerated(qrUrl);
+    }
+  }, [qrUrl]);
 
   const handleCopyLocation = async () => {
     if (!locationUrl) return;

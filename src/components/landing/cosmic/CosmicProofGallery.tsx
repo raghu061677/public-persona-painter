@@ -9,7 +9,7 @@ interface MediaAsset {
   city: string;
   area: string;
   dimensions: string;
-  illumination: string | null;
+  illumination_type: string | null;
 }
 
 export const CosmicProofGallery = () => {
@@ -21,49 +21,20 @@ export const CosmicProofGallery = () => {
       try {
         const { data: mediaAssets, error: assetsError } = await supabase
           .from('media_assets')
-          .select('id, city, area, dimensions, illumination, image_urls, images')
+          .select('id, city, area, dimensions, illumination_type, primary_photo_url')
           .eq('is_public', true)
           .limit(9);
 
         if (assetsError) throw assetsError;
 
-        const assetsWithPhotos = await Promise.all(
-          (mediaAssets || []).map(async (asset) => {
-            let imageUrl = '/placeholder.svg';
-            
-            // Try to get from image_urls array first
-            if (asset.image_urls && asset.image_urls.length > 0) {
-              imageUrl = asset.image_urls[0];
-            } 
-            // Try legacy images JSON format
-            else if (asset.images && typeof asset.images === 'object') {
-              const imagesObj = asset.images as any;
-              imageUrl = imagesObj.front || imagesObj.back || imagesObj.side || '/placeholder.svg';
-            }
-            // Fallback: fetch from media_photos table
-            else {
-              const { data: photos } = await supabase
-                .from('media_photos')
-                .select('photo_url')
-                .eq('asset_id', asset.id)
-                .limit(1)
-                .single();
-              
-              if (photos?.photo_url) {
-                imageUrl = photos.photo_url;
-              }
-            }
-
-            return {
-              id: asset.id,
-              image: imageUrl,
-              city: asset.city,
-              area: asset.area,
-              dimensions: asset.dimensions,
-              illumination: asset.illumination || 'Standard',
-            };
-          })
-        );
+        const assetsWithPhotos = (mediaAssets || []).map((asset) => ({
+          id: asset.id,
+          image: asset.primary_photo_url || '/placeholder.svg',
+          city: asset.city,
+          area: asset.area,
+          dimensions: asset.dimensions,
+          illumination_type: asset.illumination_type || 'Standard',
+        }));
 
         setAssets(assetsWithPhotos);
       } catch (error) {
@@ -173,7 +144,7 @@ export const CosmicProofGallery = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-white font-semibold">{asset.dimensions}</p>
-                      <p className="text-white/60 text-xs">{asset.illumination}</p>
+                      <p className="text-white/60 text-xs">{asset.illumination_type}</p>
                     </div>
                     <button className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-xl text-white text-sm font-semibold hover:shadow-glow transition-all duration-300">
                       Add to Plan

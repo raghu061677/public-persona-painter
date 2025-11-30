@@ -118,42 +118,35 @@ export default function PlanNew() {
   };
 
   const loadTemplateFromSession = () => {
-    const templateData = sessionStorage.getItem('planTemplate');
+    const templateData = sessionStorage.getItem('planTemplateNew');
     if (templateData) {
       try {
         const template = JSON.parse(templateData);
         
-        // Load template configuration
-        setFormData(prev => ({
-          ...prev,
-          plan_type: template.plan_type,
-          gst_percent: template.gst_percent.toString(),
-          notes: template.notes || "",
-        }));
-
-        // Calculate dates based on template duration
-        const startDate = new Date();
-        const endDate = new Date(startDate.getTime() + (template.duration_days || 30) * 24 * 60 * 60 * 1000);
-        setFormData(prev => ({
-          ...prev,
-          start_date: startDate,
-          end_date: endDate,
-        }));
+        // Pre-select default client if available
+        if (template.default_client_id) {
+          const client = clients.find(c => c.id === template.default_client_id);
+          if (client) {
+            setFormData(prev => ({
+              ...prev,
+              client_id: template.default_client_id,
+              client_name: client.name,
+            }));
+          }
+        }
 
         // Load template assets
         if (Array.isArray(template.template_items)) {
           const assetIds = new Set<string>(template.template_items.map((item: any) => item.asset_id));
           setSelectedAssets(assetIds);
 
-          // Load pricing for each asset
+          // Load pricing from template defaults
           const pricing: Record<string, any> = {};
           template.template_items.forEach((item: any) => {
             pricing[item.asset_id] = {
-              sales_price: item.sales_price,
-              printing_charges: item.printing_charges || 0,
-              mounting_charges: item.mounting_charges || 0,
-              discount_type: item.discount_type || 'Percent',
-              discount_value: item.discount_value || 0,
+              negotiated_price: item.default_base_rent || 0,
+              printing_charges: item.default_printing_charges || 0,
+              mounting_charges: item.default_mounting_charges || 0,
             };
           });
           setAssetPricing(pricing);
@@ -165,7 +158,7 @@ export default function PlanNew() {
         });
 
         // Clear from session storage
-        sessionStorage.removeItem('planTemplate');
+        sessionStorage.removeItem('planTemplateNew');
       } catch (error) {
         console.error('Error loading template:', error);
       }

@@ -53,6 +53,9 @@ const PlanNew = lazy(() => import("./pages/PlanNew"));
 const PlanEdit = lazy(() => import("./pages/PlanEdit"));
 const PlanDetail = lazy(() => import("./pages/PlanDetail"));
 const PlanShare = lazy(() => import("./pages/PlanShare"));
+const PlanTemplatesListNew = lazy(() => import("./pages/PlanTemplatesListNew"));
+const PlanTemplateForm = lazy(() => import("./pages/PlanTemplateForm"));
+const PlanTemplatePreview = lazy(() => import("./pages/PlanTemplatePreview"));
 const CampaignsList = lazy(() => import("./pages/CampaignsList"));
 const CampaignDetail = lazy(() => import("./pages/CampaignDetail"));
 const CampaignEdit = lazy(() => import("./pages/CampaignEdit"));
@@ -276,6 +279,10 @@ const App = () => (
             <Route path="/admin/plans/new" element={<ProtectedRoute requiredModule="plans" requiredAction="create"><ModernAppLayout><PlanNew /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/plans/edit/:id" element={<ProtectedRoute requiredModule="plans" requiredAction="update"><ModernAppLayout><PlanEdit /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/plans/:id" element={<ProtectedRoute requiredModule="plans" requiredAction="view"><ModernAppLayout><PlanDetail /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/plan-templates" element={<RoleGuard allowedRoles={['admin']}><ModernAppLayout><PlanTemplatesListNew /></ModernAppLayout></RoleGuard>} />
+            <Route path="/admin/plan-templates/new" element={<RoleGuard allowedRoles={['admin']}><ModernAppLayout><PlanTemplateForm /></ModernAppLayout></RoleGuard>} />
+            <Route path="/admin/plan-templates/:id" element={<RoleGuard allowedRoles={['admin']}><ModernAppLayout><PlanTemplateForm /></ModernAppLayout></RoleGuard>} />
+            <Route path="/admin/plan-templates/:id/preview" element={<RoleGuard allowedRoles={['admin']}><ModernAppLayout><PlanTemplatePreview /></ModernAppLayout></RoleGuard>} />
             <Route path="/admin/plans-compare" element={<ProtectedRoute requiredModule="plans" requiredAction="view"><ModernAppLayout><PlanComparison /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/campaigns" element={<ProtectedRoute requiredModule="campaigns" requiredAction="view"><ModernAppLayout><CampaignsList /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/campaigns/edit/:id" element={<ProtectedRoute requiredModule="campaigns" requiredAction="update"><ModernAppLayout><CampaignEdit /></ModernAppLayout></ProtectedRoute>} />

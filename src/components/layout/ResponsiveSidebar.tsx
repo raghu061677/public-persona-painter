@@ -203,7 +203,14 @@ export function ResponsiveSidebar() {
                 <MenuItem icon={LayoutDashboard} label="Dashboard" href="/admin/dashboard" />
                 <MenuItem icon={Map} label="Media Assets" href="/admin/media-assets" />
                 <MenuItem icon={Users} label="Clients" href="/admin/clients" />
-                <MenuItem icon={Layers} label="Plans" href="/admin/plans" />
+                
+                <MenuGroup icon={Layers} label="Plans">
+                  <MenuItem icon={Layers} label="All Plans" href="/admin/plans" />
+                  {(isCompanyAdmin || isPlatformAdmin) && (
+                    <MenuItem icon={FileText} label="Plan Templates" href="/admin/plan-templates" />
+                  )}
+                </MenuGroup>
+                
                 <MenuItem icon={Briefcase} label="Campaigns" href="/admin/campaigns" />
 
                 {rbac.canViewModule('operations') && (

@@ -18,17 +18,14 @@ import { formatDate } from "@/utils/plans";
 
 interface Template {
   id: string;
+  company_id?: string;
   template_name: string;
   description: string | null;
-  plan_type: string;
-  duration_days: number | null;
-  gst_percent: number;
-  template_items: any;
-  usage_count: number;
+  default_client_id?: string | null;
+  tags?: string[] | null;
+  is_active: boolean;
   created_at: string;
   created_by: string;
-  is_active: boolean;
-  notes: string | null;
   updated_at: string;
 }
 
@@ -75,11 +72,21 @@ export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
 
   const handleUseTemplate = async (template: Template) => {
     try {
-      // Increment usage count
-      await supabase
-        .from('plan_templates')
-        .update({ usage_count: template.usage_count + 1 })
-        .eq('id', template.id);
+      // Track usage
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (companyUser) {
+        await supabase.from('plan_template_usage').insert({
+          company_id: companyUser.company_id,
+          template_id: template.id,
+          used_by: user?.id,
+        });
+      }
 
       // Store template data in session storage for PlanNew to use
       sessionStorage.setItem('planTemplate', JSON.stringify(template));

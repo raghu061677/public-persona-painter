@@ -3729,53 +3729,180 @@ export type Database = {
           },
         ]
       }
-      plan_templates: {
+      plan_template_items: {
         Row: {
+          asset_id: string
+          company_id: string
           created_at: string | null
-          created_by: string
-          description: string | null
-          duration_days: number | null
-          gst_percent: number
+          default_base_rent: number | null
+          default_mounting_charges: number | null
+          default_printing_charges: number | null
           id: string
-          is_active: boolean | null
-          notes: string | null
-          plan_type: Database["public"]["Enums"]["plan_type"]
-          template_items: Json
-          template_name: string
-          updated_at: string | null
-          usage_count: number | null
+          position_index: number | null
+          template_id: string
         }
         Insert: {
+          asset_id: string
+          company_id: string
           created_at?: string | null
-          created_by: string
-          description?: string | null
-          duration_days?: number | null
-          gst_percent?: number
+          default_base_rent?: number | null
+          default_mounting_charges?: number | null
+          default_printing_charges?: number | null
           id?: string
-          is_active?: boolean | null
-          notes?: string | null
-          plan_type?: Database["public"]["Enums"]["plan_type"]
-          template_items?: Json
-          template_name: string
-          updated_at?: string | null
-          usage_count?: number | null
+          position_index?: number | null
+          template_id: string
         }
         Update: {
+          asset_id?: string
+          company_id?: string
           created_at?: string | null
-          created_by?: string
+          default_base_rent?: number | null
+          default_mounting_charges?: number | null
+          default_printing_charges?: number | null
+          id?: string
+          position_index?: number | null
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_template_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_template_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_template_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "plan_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_template_usage: {
+        Row: {
+          company_id: string
+          id: string
+          plan_id: string | null
+          template_id: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          company_id: string
+          id?: string
+          plan_id?: string | null
+          template_id: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          id?: string
+          plan_id?: string | null
+          template_id?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_template_usage_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_template_usage_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_template_usage_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "plan_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_templates: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          created_by: string | null
+          default_client_id: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          tags: string[] | null
+          template_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          created_by?: string | null
+          default_client_id?: string | null
           description?: string | null
-          duration_days?: number | null
-          gst_percent?: number
           id?: string
           is_active?: boolean | null
-          notes?: string | null
-          plan_type?: Database["public"]["Enums"]["plan_type"]
-          template_items?: Json
+          tags?: string[] | null
+          template_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          default_client_id?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          tags?: string[] | null
           template_name?: string
           updated_at?: string | null
-          usage_count?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "plan_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_templates_default_client_id_fkey"
+            columns: ["default_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_templates_default_client_id_fkey"
+            columns: ["default_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       plan_terms_settings: {
         Row: {

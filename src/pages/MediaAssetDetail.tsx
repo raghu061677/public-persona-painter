@@ -112,15 +112,17 @@ export default function MediaAssetDetail() {
     setAsset((prev: any) => prev ? { ...prev, qr_code_url: qrUrl } : null);
   };
 
+  const displayCode = asset.media_asset_code || asset.asset_code || asset.id;
+
   return (
     <div className="flex-1 space-y-4 p-4 sm:p-8 pt-6">
       <PageHeader
-        title={asset.id}
+        title={displayCode}
         description={`${asset.media_type} at ${asset.location}, ${asset.area}`}
         breadcrumbs={[
           { label: "Dashboard", path: ROUTES.DASHBOARD },
           { label: "Media Assets", path: ROUTES.MEDIA_ASSETS },
-          { label: asset.id },
+          { label: displayCode },
         ]}
         showBackButton
         backPath={ROUTES.MEDIA_ASSETS}

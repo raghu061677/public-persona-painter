@@ -34,15 +34,6 @@ const MEDIA_TYPE_CODES = [
   { label: "Cantilever", value: "CNT", fullName: "Cantilever" },
 ];
 
-type ImageField = 'site_photo' | 'geo_tagged' | 'newspaper' | 'traffic_view';
-
-const PHOTO_TYPES = [
-  { field: 'site_photo' as ImageField, label: 'Site Photo' },
-  { field: 'geo_tagged' as ImageField, label: 'Geo Tagged Photo' },
-  { field: 'newspaper' as ImageField, label: 'Newspaper Photo' },
-  { field: 'traffic_view' as ImageField, label: 'Traffic View Photo' },
-];
-
 export default function MediaAssetNew() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -50,18 +41,6 @@ export default function MediaAssetNew() {
   const [cityCode, setCityCode] = useState("");
   const [mediaTypeCode, setMediaTypeCode] = useState("");
   const [municipalAuthorities, setMunicipalAuthorities] = useState<{ label: string; value: string }[]>([]);
-  const [imageFiles, setImageFiles] = useState<Record<ImageField, File | null>>({
-    site_photo: null,
-    geo_tagged: null,
-    newspaper: null,
-    traffic_view: null,
-  });
-  const [imagePreviews, setImagePreviews] = useState<Record<ImageField, string>>({
-    site_photo: '',
-    geo_tagged: '',
-    newspaper: '',
-    traffic_view: '',
-  });
   const [uploadedPhotos, setUploadedPhotos] = useState<Array<{
     id: string;
     photo_url: string;
@@ -223,65 +202,6 @@ export default function MediaAssetNew() {
     }
   };
 
-  const handleImageSelect = (file: File, field: ImageField) => {
-    if (!file) return;
-    const localUrl = URL.createObjectURL(file);
-    
-    setImageFiles(prev => ({ ...prev, [field]: file }));
-    setImagePreviews(prev => ({ ...prev, [field]: localUrl }));
-  };
-
-  const uploadImages = async (assetId: string, companyId: string) => {
-    const uploadedPhotos: Array<{
-      photo_url: string;
-      photo_type: string;
-      file_name: string;
-      file_size: number;
-      mime_type: string;
-    }> = [];
-    
-    for (const key of Object.keys(imageFiles) as ImageField[]) {
-      const file = imageFiles[key];
-      if (file) {
-        try {
-          const fileExt = file.name.split('.').pop();
-          const fileName = `${assetId}/${key}_${Date.now()}.${fileExt}`;
-          
-          // Upload to storage
-          const { error: uploadError } = await supabase.storage
-            .from('hero-images')
-            .upload(fileName, file, {
-              cacheControl: '3600',
-              upsert: false
-            });
-
-          if (uploadError) {
-            console.error('Storage upload error:', uploadError);
-            throw uploadError;
-          }
-
-          // Get public URL
-          const { data: { publicUrl } } = supabase.storage
-            .from('hero-images')
-            .getPublicUrl(fileName);
-
-          uploadedPhotos.push({
-            photo_url: publicUrl,
-            photo_type: key,
-            file_name: file.name,
-            file_size: file.size,
-            mime_type: file.type,
-          });
-        } catch (error) {
-          console.error(`Error uploading ${key}:`, error);
-          // Continue with other photos even if one fails
-        }
-      }
-    }
-    
-    return uploadedPhotos;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -408,37 +328,6 @@ export default function MediaAssetNew() {
 
   const updateField = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const ImageUploader = ({ field, label }: { field: ImageField; label: string }) => {
-    const fileRef = useRef<HTMLInputElement>(null);
-    const imgUrl = imagePreviews[field];
-
-    return (
-      <div className="space-y-2">
-        <Label>{label}</Label>
-        <input
-          type="file"
-          ref={fileRef}
-          onChange={(e) => e.target.files && handleImageSelect(e.target.files[0], field)}
-          className="hidden"
-          accept="image/*"
-        />
-        <div
-          className="relative aspect-video w-full border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors"
-          onClick={() => fileRef.current?.click()}
-        >
-          {imgUrl ? (
-            <img src={imgUrl} alt={label} className="object-cover w-full h-full rounded-md" />
-          ) : (
-            <>
-              <ImageIcon className="h-8 w-8 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground mt-1">Click to upload</p>
-            </>
-          )}
-        </div>
-      </div>
-    );
   };
 
   const showPowerFields = formData.illumination_type && ['Frontlit', 'Backlit', 'Digital'].includes(formData.illumination_type);

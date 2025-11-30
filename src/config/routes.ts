@@ -19,6 +19,7 @@ export const ROUTES = {
   MEDIA_ASSETS_MAP: '/admin/media-assets-map',
   MEDIA_ASSETS_IMPORT: '/admin/import-media-assets',
   MEDIA_ASSETS_VALIDATION: '/admin/media-assets-validation',
+  MEDIA_ASSETS_HEALTH: '/admin/media-assets-health',
   
   // Clients
   CLIENTS: '/admin/clients',
@@ -144,6 +145,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.MEDIA_ASSETS_MAP]: 'Map View',
   [ROUTES.MEDIA_ASSETS_IMPORT]: 'Import Assets',
   [ROUTES.MEDIA_ASSETS_VALIDATION]: 'Validation',
+  [ROUTES.MEDIA_ASSETS_HEALTH]: 'Health Report',
   [ROUTES.CLIENTS]: 'Clients',
   [ROUTES.CLIENTS_NEW]: 'New Client',
   [ROUTES.CLIENTS_IMPORT]: 'Import Clients',

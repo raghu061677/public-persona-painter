@@ -5307,6 +5307,82 @@ export type Database = {
           tier: Database["public"]["Enums"]["subscription_tier"]
         }[]
       }
+      get_asset_by_code: {
+        Args: { p_code: string }
+        Returns: {
+          ad_tax: number | null
+          area: string
+          base_margin: number | null
+          base_rate: number | null
+          booked_from: string | null
+          booked_to: string | null
+          card_rate: number
+          category: Database["public"]["Enums"]["media_category"]
+          city: string
+          company_id: string
+          concession_fee: number | null
+          consumer_name: string | null
+          created_at: string | null
+          created_by: string | null
+          current_campaign_id: string | null
+          default_duration_mode: string | null
+          dimensions: string
+          direction: string | null
+          display_title: string | null
+          district: string | null
+          electricity: number | null
+          ero: string | null
+          faces: Json | null
+          google_street_view_url: string | null
+          gst_percent: number | null
+          id: string
+          illumination_type: string | null
+          installation_type: string | null
+          is_active: boolean | null
+          is_featured: boolean | null
+          is_multi_face: boolean | null
+          is_public: boolean | null
+          last_maintenance_date: string | null
+          latitude: number | null
+          location: string
+          longitude: number | null
+          maintenance: number | null
+          media_asset_code: string | null
+          media_type: string
+          min_booking_days: number | null
+          monthly_land_rent: number | null
+          mounting_rate_default: number | null
+          municipal_authority: string | null
+          municipal_id: string | null
+          next_maintenance_due: string | null
+          ownership: Database["public"]["Enums"]["ownership_type"] | null
+          primary_photo_url: string | null
+          printing_rate_default: number | null
+          qr_code_url: string | null
+          search_tokens: string[] | null
+          section_name: string | null
+          seo_description: string | null
+          service_number: string | null
+          slug: string | null
+          state: string | null
+          status: Database["public"]["Enums"]["media_asset_status"]
+          structure_ownership: string | null
+          tags: string[] | null
+          target_audience: string[] | null
+          total_sqft: number | null
+          traffic_density: string | null
+          unique_service_number: string | null
+          updated_at: string | null
+          vendor_details: Json | null
+          visibility_score: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "media_assets"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_asset_code_health: { Args: never; Returns: Json }
       get_asset_face_count: { Args: { p_asset_id: string }; Returns: number }
       get_asset_total_sqft: { Args: { p_asset_id: string }; Returns: number }

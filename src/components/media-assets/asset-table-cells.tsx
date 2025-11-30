@@ -5,6 +5,7 @@ import { QRCodeButton } from "./QRCodeButton";
 
 interface Asset {
   id: string;
+  media_asset_code?: string;
   primary_photo_url?: string;
   latitude?: number;
   longitude?: number;
@@ -15,15 +16,16 @@ interface Asset {
 export function ImageCell({ row }: any) {
   const navigate = useNavigate();
   const asset = row.original;
+  const displayCode = asset.media_asset_code || asset.asset_code || asset.id;
   
   const imageUrl = asset.primary_photo_url || "/placeholder.svg";
 
   return (
     <img
       src={imageUrl}
-      alt={asset.id}
+      alt={displayCode}
       className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
-      onClick={() => navigate(`/admin/media-assets/${asset.id}`)}
+      onClick={() => navigate(`/admin/media-assets/${displayCode}`)}
       title="Click to view details"
     />
   );
@@ -37,6 +39,7 @@ export function ActionCell({
   const navigate = useNavigate();
   const asset = row.original;
   const assetId = asset.id;
+  const displayCode = asset.media_asset_code || asset.asset_code || asset.id;
   const hasLocation = asset.latitude && asset.longitude;
 
   const openStreetView = () => {
@@ -54,7 +57,7 @@ export function ActionCell({
         variant="ghost"
         size="icon"
         className="h-8 w-8"
-        onClick={() => navigate(`/admin/media-assets/${assetId}`)}
+        onClick={() => navigate(`/admin/media-assets/${displayCode}`)}
         title="View Details"
       >
         <Eye className="h-4 w-4" />
@@ -64,7 +67,7 @@ export function ActionCell({
         variant="ghost"
         size="icon"
         className="h-8 w-8"
-        onClick={() => navigate(`/admin/media-assets/edit/${assetId}`)}
+        onClick={() => navigate(`/admin/media-assets/edit/${displayCode}`)}
         title="Edit"
       >
         <Edit className="h-4 w-4" />

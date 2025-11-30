@@ -238,7 +238,7 @@ const App = () => (
             {/* Redirect common paths to their correct /admin prefixed routes */}
             <Route path="/media-assets" element={<Navigate to="/admin/media-assets" replace />} />
             <Route path="/media-assets/new" element={<Navigate to="/admin/media-assets/new" replace />} />
-            <Route path="/media-assets/:id" element={<Navigate to="/admin/media-assets/:id" replace />} />
+            <Route path="/media-assets/:code" element={<Navigate to="/admin/media-assets/:code" replace />} />
             <Route path="/clients" element={<Navigate to="/admin/clients" replace />} />
             <Route path="/plans" element={<Navigate to="/admin/plans" replace />} />
             <Route path="/campaigns" element={<Navigate to="/admin/campaigns" replace />} />
@@ -277,8 +277,8 @@ const App = () => (
             <Route path="/admin/media-assets-validation" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetsValidation /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets-health" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetsHealthReport /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/clients/import" element={<ProtectedRoute requiredModule="clients" requiredAction="create"><ModernAppLayout><ClientsImport /></ModernAppLayout></ProtectedRoute>} />
-            <Route path="/admin/media-assets/edit/:id" element={<ProtectedRoute requiredModule="media_assets" requiredAction="update"><ModernAppLayout><MediaAssetEdit /></ModernAppLayout></ProtectedRoute>} />
-            <Route path="/admin/media-assets/:id" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetDetail /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/media-assets/edit/:code" element={<ProtectedRoute requiredModule="media_assets" requiredAction="update"><ModernAppLayout><MediaAssetEdit /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/media-assets/:code" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetDetail /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets-map" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetsMap /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/marketplace" element={<ProtectedRoute requireAuth><ModernAppLayout><Marketplace /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/plans" element={<ProtectedRoute requiredModule="plans" requiredAction="view"><ModernAppLayout><PlansList /></ModernAppLayout></ProtectedRoute>} />

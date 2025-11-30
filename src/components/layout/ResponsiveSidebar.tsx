@@ -243,7 +243,12 @@ export function ResponsiveSidebar() {
               {!collapsed && <SidebarGroupLabel className="px-4">Company Workspace</SidebarGroupLabel>}
               <SidebarMenu>
                 <MenuItem icon={LayoutDashboard} label="Dashboard" href="/admin/dashboard" />
-                <MenuItem icon={Map} label="Media Assets" href="/admin/media-assets" />
+                
+                <MenuGroup icon={Map} label="Media Assets">
+                  <MenuItem icon={Map} label="All Assets" href="/admin/media-assets" />
+                  <MenuItem icon={FileCheck} label="Asset Validation" href="/admin/media-assets-validation" />
+                </MenuGroup>
+                
                 <MenuItem icon={Users} label="Clients" href="/admin/clients" />
                 
                 <MenuGroup icon={Layers} label="Plans">

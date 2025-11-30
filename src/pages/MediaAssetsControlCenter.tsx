@@ -104,7 +104,7 @@ export default function MediaAssetsControlCenter() {
 
     let query = supabase
       .from('media_assets')
-      .select('id, city, area, location, media_type, status, card_rate, dimensions, latitude, longitude, illumination, created_at, image_urls, images, company_id');
+      .select('id, city, area, location, media_type, status, card_rate, dimensions, latitude, longitude, illumination_type, created_at, primary_photo_url, company_id');
 
     // Filter by company_id unless platform admin viewing all
     if (companyUserData?.company_id) {
@@ -147,21 +147,11 @@ export default function MediaAssetsControlCenter() {
     }
 
     const enrichedAssets = (assetsData || []).map(asset => {
-      const images = typeof asset.images === 'object' && asset.images !== null 
-        ? asset.images as any 
-        : {};
-      
-      const existingPhotos = Array.isArray(images.photos) ? images.photos : [];
       const latestPhoto = latestPhotoMap.get(asset.id);
       
       return {
         ...asset,
-        images: {
-          ...images,
-          photos: latestPhoto 
-            ? [{ url: latestPhoto, tag: 'Latest', uploaded_at: new Date().toISOString() }, ...existingPhotos]
-            : existingPhotos
-        }
+        primary_photo_url: latestPhoto || asset.primary_photo_url || null,
       };
     });
 
@@ -200,7 +190,7 @@ export default function MediaAssetsControlCenter() {
     availableAssets: filteredAssets.filter(a => a.status === 'Available').length,
     bookedAssets: filteredAssets.filter(a => a.status === 'Booked').length,
     uniqueCities: new Set(filteredAssets.map(a => a.city).filter(Boolean)).size,
-    litAssets: filteredAssets.filter(a => a.illumination === 'Lit').length,
+    litAssets: filteredAssets.filter(a => a.illumination_type && a.illumination_type !== 'Non-lit').length,
     totalValue: filteredAssets.reduce((sum, a) => sum + (Number(a.card_rate) || 0), 0),
     newThisMonth: 0,
   }), [filteredAssets]);

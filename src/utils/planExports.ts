@@ -31,10 +31,9 @@ interface AssetDetails {
   media_type: string;
   dimensions: string;
   direction: string | null;
-  illumination: string | null;
+  illumination_type: string | null;
   total_sqft: number | null;
-  image_urls: string[] | null;
-  images: any;
+  primary_photo_url: string | null;
 }
 
 /**
@@ -43,7 +42,7 @@ interface AssetDetails {
 async function fetchAssetDetails(assetIds: string[]): Promise<Map<string, AssetDetails>> {
   const { data } = await supabase
     .from('media_assets')
-    .select('id, location, area, city, media_type, dimensions, direction, illumination, total_sqft, image_urls, images')
+    .select('id, location, area, city, media_type, dimensions, direction, illumination_type, total_sqft, primary_photo_url')
     .in('id', assetIds);
 
   const assetMap = new Map<string, AssetDetails>();
@@ -54,29 +53,17 @@ async function fetchAssetDetails(assetIds: string[]): Promise<Map<string, AssetD
 }
 
 /**
- * Get all image URLs from asset
+ * Get all image URLs from asset - now fetches from media_photos table
  */
-function getAssetImageUrls(asset: AssetDetails): string[] {
-  const urls: string[] = [];
+async function getAssetImageUrls(assetId: string): Promise<string[]> {
+  const { data: photos } = await supabase
+    .from('media_photos')
+    .select('photo_url')
+    .eq('asset_id', assetId)
+    .order('uploaded_at', { ascending: false });
   
-  // Try images.photos array (current storage format)
-  if (asset.images && typeof asset.images === 'object') {
-    const imagesObj = asset.images as any;
-    if (imagesObj.photos && Array.isArray(imagesObj.photos)) {
-      imagesObj.photos.forEach((photo: any) => {
-        if (photo && photo.url && typeof photo.url === 'string') {
-          urls.push(photo.url);
-        }
-      });
-    }
-  }
-  
-  // Fallback to image_urls array
-  if (urls.length === 0 && asset.image_urls && Array.isArray(asset.image_urls)) {
-    urls.push(...asset.image_urls.filter(url => url && typeof url === 'string'));
-  }
-  
-  console.log(`Asset ${asset.id} has ${urls.length} images:`, urls);
+  const urls = photos?.map(p => p.photo_url).filter(url => url) || [];
+  console.log(`Asset ${assetId} has ${urls.length} images:`, urls);
   return urls;
 }
 
@@ -347,8 +334,8 @@ export async function exportPlanToPPT(
       const assetDetail = assetDetailsMap.get(item.asset_id);
       if (!assetDetail) continue;
 
-      // Get all images for this asset
-      const allImages = getAssetImageUrls(assetDetail);
+      // Get all images for this asset from media_photos table
+      const allImages = await getAssetImageUrls(item.asset_id);
       console.log(`Processing asset ${item.asset_id}, found ${allImages.length} images`);
 
       // SLIDE 1: Professional full-size images with border
@@ -536,7 +523,7 @@ export async function exportPlanToPPT(
         { label: "Direction", value: assetDetail.direction || "N/A" },
         { label: "Dimensions", value: assetDetail.dimensions },
         { label: "Total Sqft", value: assetDetail.total_sqft?.toString() || "N/A" },
-        { label: "Illumination", value: assetDetail.illumination || "N/A" },
+        { label: "Illumination", value: assetDetail.illumination_type || "N/A" },
       ];
 
       let yPos = 1.15;

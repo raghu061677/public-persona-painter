@@ -97,6 +97,8 @@ import "./media-assets-table.css";
 
 interface Asset {
   id: string;
+  media_asset_code?: string;
+  asset_code?: string;
   media_type: string;
   location: string;
   area: string;
@@ -361,12 +363,13 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
         header: "Asset ID",
         cell: ({ row, table }) => {
           const globalFilter = (table.getState() as any).globalFilter || "";
+          const displayCode = row.original.media_asset_code || row.original.asset_code || row.original.id;
           return (
             <button
               onClick={() => navigate(`/admin/media-assets/${row.original.id}`)}
               className="hover:underline font-mono text-xs text-left"
             >
-              {highlightText(row.original.id, globalFilter)}
+              {highlightText(displayCode, globalFilter)}
             </button>
           );
         },

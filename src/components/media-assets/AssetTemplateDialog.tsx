@@ -15,8 +15,8 @@ interface AssetTemplate {
   category: string;
   dimension: string;
   card_rate: number;
-  printing_charges: number;
-  mounting_charges: number;
+  printing_rate_default: number;
+  mounting_rate_default: number;
   created_at: string;
 }
 
@@ -36,8 +36,8 @@ export function AssetTemplateDialog({ open, onOpenChange, onSelectTemplate }: As
     category: "standard",
     dimension: "",
     card_rate: 0,
-    printing_charges: 0,
-    mounting_charges: 0,
+    printing_rate_default: 0,
+    mounting_rate_default: 0,
   });
 
   useEffect(() => {
@@ -93,8 +93,8 @@ export function AssetTemplateDialog({ open, onOpenChange, onSelectTemplate }: As
         category: "standard",
         dimension: "",
         card_rate: 0,
-        printing_charges: 0,
-        mounting_charges: 0,
+        printing_rate_default: 0,
+        mounting_rate_default: 0,
       });
     } catch (error: any) {
       toast({
@@ -121,8 +121,8 @@ export function AssetTemplateDialog({ open, onOpenChange, onSelectTemplate }: As
       category: template.category,
       dimension: template.dimension,
       card_rate: template.card_rate,
-      printing_charges: template.printing_charges,
-      mounting_charges: template.mounting_charges,
+      printing_rate_default: template.printing_rate_default,
+      mounting_rate_default: template.mounting_rate_default,
     });
     onOpenChange(false);
   };
@@ -178,20 +178,20 @@ export function AssetTemplateDialog({ open, onOpenChange, onSelectTemplate }: As
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Printing Charges (₹)</Label>
+                  <Label>Printing Rate Default (₹)</Label>
                   <Input
                     type="number"
-                    value={newTemplate.printing_charges}
-                    onChange={(e) => setNewTemplate({ ...newTemplate, printing_charges: Number(e.target.value) })}
+                    value={newTemplate.printing_rate_default}
+                    onChange={(e) => setNewTemplate({ ...newTemplate, printing_rate_default: Number(e.target.value) })}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Mounting Charges (₹)</Label>
+                  <Label>Mounting Rate Default (₹)</Label>
                   <Input
                     type="number"
-                    value={newTemplate.mounting_charges}
-                    onChange={(e) => setNewTemplate({ ...newTemplate, mounting_charges: Number(e.target.value) })}
+                    value={newTemplate.mounting_rate_default}
+                    onChange={(e) => setNewTemplate({ ...newTemplate, mounting_rate_default: Number(e.target.value) })}
                   />
                 </div>
               </div>

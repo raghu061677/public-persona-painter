@@ -38,24 +38,32 @@ export function LatestPhotosSection({ assetId, asset }: LatestPhotosSectionProps
   const loadLatestPhotos = async () => {
     setLoading(true);
     try {
-      // Load photos from the asset's images.photos field
-      if (asset?.images?.photos && Array.isArray(asset.images.photos)) {
-        const transformedPhotos = asset.images.photos.map((photo: any, index: number) => ({
-          id: `${assetId}-${index}`,
-          photo_url: photo.url,
-          category: photo.tag || 'Other Photo',
-          uploaded_at: photo.uploaded_at || new Date().toISOString(),
-          campaign_id: null,
-          latitude: photo.latitude,
-          longitude: photo.longitude,
-          validation_score: photo.validation?.score,
-          validation_issues: photo.validation?.issues,
-          validation_suggestions: photo.validation?.suggestions,
-        }));
-        setPhotos(transformedPhotos);
-      } else {
-        setPhotos([]);
-      }
+      // Fetch photos from media_photos table
+      const { data: photosData, error } = await supabase
+        .from('media_photos')
+        .select('*')
+        .eq('asset_id', assetId)
+        .order('uploaded_at', { ascending: false });
+
+      if (error) throw error;
+
+      const transformedPhotos = photosData?.map((photo: any) => {
+        const metadata = photo.metadata as Record<string, any> | null;
+        return {
+          id: photo.id,
+          photo_url: photo.photo_url,
+          category: photo.category,
+          uploaded_at: photo.uploaded_at,
+          campaign_id: photo.campaign_id,
+          latitude: metadata?.latitude,
+          longitude: metadata?.longitude,
+          validation_score: metadata?.validation_score,
+          validation_issues: metadata?.validation_issues,
+          validation_suggestions: metadata?.validation_suggestions,
+        };
+      }) || [];
+      
+      setPhotos(transformedPhotos);
     } catch (error) {
       console.error('Error loading photos:', error);
     } finally {
@@ -131,7 +139,7 @@ export function LatestPhotosSection({ assetId, asset }: LatestPhotosSectionProps
                 </div>
                 <div>
                   <span className="text-muted-foreground">Lighting Type:</span>
-                  <p className="font-medium">{asset.illumination || 'Non-lit'}</p>
+                  <p className="font-medium">{asset.illumination_type || 'Non-lit'}</p>
                 </div>
               </div>
               

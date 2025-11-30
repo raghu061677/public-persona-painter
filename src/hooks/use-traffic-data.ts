@@ -61,7 +61,7 @@ export function useTrafficData(asset: any): TrafficData {
     }
 
     // Illumination bonus (lit assets get more evening impressions)
-    if (asset.illumination === 'Lit') {
+    if (asset.illumination_type && asset.illumination_type !== 'Non-lit') {
       trafficWeight += 0.1;
     }
 

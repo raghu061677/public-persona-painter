@@ -95,9 +95,9 @@ export function GalleryView({
 
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">{asset.dimensions}</span>
-                {asset.illumination && (
+                {asset.illumination_type && (
                   <Badge variant="outline" className="text-xs">
-                    {asset.illumination}
+                    {asset.illumination_type}
                   </Badge>
                 )}
               </div>

@@ -27,7 +27,7 @@ export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
           direction: asset.direction,
           dimension: asset.dimension,
           total_sqft: asset.total_sqft,
-          illumination: asset.illumination,
+          illumination_type: asset.illumination_type,
         },
         imageUrl: photoUrl,
         category: photoType,

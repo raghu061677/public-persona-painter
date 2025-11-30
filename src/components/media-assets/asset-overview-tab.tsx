@@ -77,7 +77,7 @@ export function AssetOverviewTab({ asset }: AssetOverviewTabProps) {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Lighting Type</p>
-              <p className="font-medium">{asset.illumination || 'Non-lit'}</p>
+              <p className="font-medium">{asset.illumination_type || 'Non-lit'}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Category</p>
@@ -116,8 +116,8 @@ export function AssetOverviewTab({ asset }: AssetOverviewTabProps) {
               <p className="font-medium text-lg">{formatCurrency(asset.card_rate)}/month</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Base Rent</p>
-              <p className="font-medium">{formatCurrency(asset.base_rent)}</p>
+              <p className="text-sm text-muted-foreground">Base Rate</p>
+              <p className="font-medium">{formatCurrency(asset.base_rate)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">GST</p>
@@ -141,12 +141,12 @@ export function AssetOverviewTab({ asset }: AssetOverviewTabProps) {
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-muted-foreground">Printing</p>
-              <p className="font-medium">{formatCurrency(asset.printing_charges)}</p>
+              <p className="text-sm text-muted-foreground">Printing (Default)</p>
+              <p className="font-medium">{formatCurrency(asset.printing_rate_default)}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Mounting</p>
-              <p className="font-medium">{formatCurrency(asset.mounting_charges)}</p>
+              <p className="text-sm text-muted-foreground">Mounting (Default)</p>
+              <p className="font-medium">{formatCurrency(asset.mounting_rate_default)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Concession Fee</p>

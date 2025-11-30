@@ -57,7 +57,7 @@ export function GodModeHUD({ assets, isVisible = true }: GodModeHUDProps) {
     const premiumPercentage = Math.round((premiumCount / totalAssets) * 100);
     
     // Lit assets percentage
-    const litCount = assets.filter(a => a.illumination === 'Lit').length;
+    const litCount = assets.filter(a => a.illumination_type && a.illumination_type !== 'Non-lit').length;
     const litPercentage = Math.round((litCount / totalAssets) * 100);
 
     setStats({

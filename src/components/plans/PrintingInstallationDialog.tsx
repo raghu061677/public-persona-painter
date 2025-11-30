@@ -248,7 +248,7 @@ export function PrintingInstallationDialog({
                         <TableCell className="font-medium">{item.asset_id}</TableCell>
                         <TableCell className="text-sm">{item.dimensions || "—"}</TableCell>
                         <TableCell className="text-sm">{item.total_sqft || "—"}</TableCell>
-                        <TableCell className="text-sm">{item.illumination || "—"}</TableCell>
+                        <TableCell className="text-sm">{item.illumination_type || "—"}</TableCell>
                         <TableCell className="text-right text-blue-600 font-medium">
                           {printCost}
                         </TableCell>

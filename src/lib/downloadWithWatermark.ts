@@ -14,7 +14,7 @@ export interface AssetWatermarkData {
   direction?: string;
   dimension?: string;
   total_sqft?: number;
-  illumination?: string;
+  illumination_type?: string;
 }
 
 interface WatermarkOptions {
@@ -82,7 +82,7 @@ async function getWatermarkSettings(): Promise<WatermarkSettings> {
       text_color: 'rgba(255, 255, 255, 1)',
       border_color: 'rgba(16, 185, 129, 0.8)',
       show_logo: false,
-      fields_to_show: ['location', 'address', 'direction', 'dimension', 'area', 'illumination'],
+      fields_to_show: ['location', 'address', 'direction', 'dimension', 'area', 'illumination_type'],
       panel_width: 380,
       panel_padding: 30,
       font_size: 16,
@@ -143,7 +143,7 @@ export async function downloadImageWithWatermark({
     if (fieldsToShow.includes('direction') && assetData.direction) fieldCount++;
     if (fieldsToShow.includes('dimension') && assetData.dimension) fieldCount++;
     if (fieldsToShow.includes('area') && assetData.total_sqft) fieldCount++;
-    if (fieldsToShow.includes('illumination') && assetData.illumination) fieldCount++;
+    if (fieldsToShow.includes('illumination_type') && assetData.illumination_type) fieldCount++;
     
     const panelHeight = 35 + (fieldCount * lineHeight) + 20;
     const panelWidth = settings.panel_width;
@@ -246,8 +246,8 @@ export async function downloadImageWithWatermark({
       y += lineHeight;
     }
 
-    if (fieldsToShow.includes('illumination') && assetData.illumination) {
-      drawText('Lighting Type:', assetData.illumination, y);
+    if (fieldsToShow.includes('illumination_type') && assetData.illumination_type) {
+      drawText('Lighting Type:', assetData.illumination_type, y);
     }
 
     // Convert canvas to blob and download

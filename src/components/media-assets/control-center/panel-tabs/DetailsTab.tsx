@@ -17,10 +17,7 @@ export function DetailsTab({ asset }: DetailsTabProps) {
   }
 
   const getAssetImage = (asset: any) => {
-    if (asset.images?.photos?.[0]?.url) {
-      return asset.images.photos[0].url;
-    }
-    return "/placeholder.svg";
+    return asset.primary_photo_url || "/placeholder.svg";
   };
 
   return (
@@ -77,13 +74,13 @@ export function DetailsTab({ asset }: DetailsTabProps) {
               <p className="text-xs text-muted-foreground">per month</p>
             </div>
 
-            {asset.illumination && (
+            {asset.illumination_type && (
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <Lightbulb className="h-3 w-3" />
                   Illumination
                 </p>
-                <p className="text-sm font-medium">{asset.illumination}</p>
+                <p className="text-sm font-medium">{asset.illumination_type}</p>
               </div>
             )}
 
@@ -126,10 +123,10 @@ export function DetailsTab({ asset }: DetailsTabProps) {
             </div>
           )}
 
-          {asset.base_rent && (
+          {asset.base_rate && (
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Base Rent</span>
-              <span className="font-medium">{formatCurrency(asset.base_rent)}</span>
+              <span className="text-muted-foreground">Base Rate</span>
+              <span className="font-medium">{formatCurrency(asset.base_rate)}</span>
             </div>
           )}
         </CardContent>

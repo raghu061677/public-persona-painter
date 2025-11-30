@@ -96,7 +96,7 @@ export function MapView({ assets, onAssetClick }: MapViewProps) {
             <p><span class="font-semibold">Type:</span> ${asset.media_type}</p>
             <p><span class="font-semibold">Size:</span> ${asset.dimensions}</p>
             ${asset.direction ? `<p><span class="font-semibold">Direction:</span> ${asset.direction}</p>` : ""}
-            ${asset.illumination ? `<p><span class="font-semibold">Lighting:</span> ${asset.illumination}</p>` : ""}
+            ${asset.illumination_type ? `<p><span class="font-semibold">Lighting:</span> ${asset.illumination_type}</p>` : ""}
           </div>
         </div>
       `;

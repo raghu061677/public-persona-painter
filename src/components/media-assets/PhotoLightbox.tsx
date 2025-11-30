@@ -19,7 +19,7 @@ interface PhotoLightboxProps {
     direction: string;
     dimension: string;
     total_sqft: number;
-    illumination?: string;
+    illumination_type?: string;
     city?: string;
     area?: string;
   };
@@ -173,7 +173,7 @@ export function PhotoLightbox({ photos, initialIndex, isOpen, onClose, assetData
           direction: assetData.direction,
           dimension: assetData.dimension,
           total_sqft: assetData.total_sqft,
-          illumination: assetData.illumination,
+          illumination_type: assetData.illumination_type,
         },
         imageUrl: currentPhoto.photo_url,
         category: currentPhoto.category,
@@ -355,7 +355,7 @@ export function PhotoLightbox({ photos, initialIndex, isOpen, onClose, assetData
               <div className="flex flex-col">
                 <span className="text-xs text-muted-foreground">Lighting Type</span>
                 <span className="text-sm font-medium text-foreground">
-                  {assetData.illumination || 'Non-lit'}
+                  {assetData.illumination_type || 'Non-lit'}
                 </span>
               </div>
               

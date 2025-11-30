@@ -155,21 +155,11 @@ Deno.serve(async (req) => {
     const streetViewUrl = buildStreetViewUrl(finalLat, finalLng, heading, pitch, fov);
 
     // Update asset if requested and assetId provided
+    // Note: google_street_view_url column does not exist in media_assets table
+    // Street View URL is returned in response for frontend display only
     if (updateAsset && assetId) {
-      const { error: updateError } = await supabaseClient
-        .from('media_assets')
-        .update({
-          google_street_view_url: streetViewUrl,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', assetId);
-
-      if (updateError) {
-        console.error('Error updating asset:', updateError);
-        throw new Error('Failed to update asset with Street View URL');
-      }
-
-      console.log(`Updated asset ${assetId} with Street View URL`);
+      console.log('Update requested but google_street_view_url column does not exist');
+      // No database update performed
     }
 
     return new Response(

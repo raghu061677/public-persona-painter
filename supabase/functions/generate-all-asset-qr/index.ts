@@ -29,7 +29,7 @@ serve(async (req) => {
     // Fetch all assets without QR codes
     const { data: assets, error: fetchError } = await supabase
       .from('media_assets')
-      .select('id, latitude, longitude, google_street_view_url, location_url')
+      .select('id, latitude, longitude')
       .is('qr_code_url', null);
 
     if (fetchError) {
@@ -59,11 +59,7 @@ serve(async (req) => {
         // Determine the URL to encode in QR
         let targetUrl: string;
         
-        if (asset.google_street_view_url) {
-          targetUrl = asset.google_street_view_url;
-        } else if (asset.location_url) {
-          targetUrl = asset.location_url;
-        } else if (asset.latitude && asset.longitude) {
+        if (asset.latitude && asset.longitude) {
           targetUrl = `https://www.google.com/maps?q=${asset.latitude},${asset.longitude}`;
         } else {
           // Use asset detail page as fallback

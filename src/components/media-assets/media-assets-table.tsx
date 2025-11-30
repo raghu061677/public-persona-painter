@@ -97,7 +97,6 @@ import "./media-assets-table.css";
 
 interface Asset {
   id: string;
-  media_asset_code?: string;
   media_type: string;
   location: string;
   area: string;
@@ -358,17 +357,16 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
         enableHiding: false,
       },
       {
-        accessorKey: "media_asset_code",
-        header: "Asset Code",
+        accessorKey: "id",
+        header: "Asset ID",
         cell: ({ row, table }) => {
           const globalFilter = (table.getState() as any).globalFilter || "";
-          const code = row.original.media_asset_code || row.original.id;
           return (
             <button
               onClick={() => navigate(`/admin/media-assets/${row.original.id}`)}
               className="hover:underline font-mono text-xs text-left"
             >
-              {highlightText(code, globalFilter)}
+              {highlightText(row.original.id, globalFilter)}
             </button>
           );
         },
@@ -497,7 +495,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
     reset: resetColumnPrefs,
   } = useColumnPrefs("media-assets", allColumnKeys, [
     "select",
-    "media_asset_code",
+    "id",
     "actions",
     "images",
     "location",

@@ -273,6 +273,7 @@ const App = () => (
             <Route path="/admin/media-assets/new" element={<ProtectedRoute requiredModule="media_assets" requiredAction="create"><ModernAppLayout><MediaAssetNew /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets/import" element={<ProtectedRoute requiredModule="media_assets" requiredAction="create"><ModernAppLayout><MediaAssetsImport /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets/validate" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetsValidation /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/media-assets-validation" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetsValidation /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/clients/import" element={<ProtectedRoute requiredModule="clients" requiredAction="create"><ModernAppLayout><ClientsImport /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets/edit/:id" element={<ProtectedRoute requiredModule="media_assets" requiredAction="update"><ModernAppLayout><MediaAssetEdit /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets/:id" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetDetail /></ModernAppLayout></ProtectedRoute>} />

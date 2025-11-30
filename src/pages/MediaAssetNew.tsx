@@ -257,9 +257,6 @@ export default function MediaAssetNew() {
         throw new Error("No active company association found");
       }
 
-      // Upload images
-      const images = await uploadImages(formData.id);
-
       const parsed = parseDimensions(formData.dimensions);
       const search_tokens = buildSearchTokens([
         formData.id,
@@ -269,7 +266,8 @@ export default function MediaAssetNew() {
         formData.location,
       ]);
 
-      const { error } = await supabase.from('media_assets').insert({
+      // First create the media asset
+      const { error: assetError } = await supabase.from('media_assets').insert({
         id: formData.id,
         media_type: formData.media_type,
         municipal_id: formData.municipal_id || null,
@@ -303,14 +301,42 @@ export default function MediaAssetNew() {
         municipal_authority: formData.municipal_authority || null,
         is_public: formData.is_public,
         vendor_details: formData.ownership === 'rented' ? formData.vendor_details : null,
-        photos: images,
-        primary_photo_url: images.geoTaggedPhoto?.url || images.newspaperPhoto?.url || null,
         search_tokens,
         company_id: companyUser.company_id,
         created_by: user.id,
       } as any);
 
-      if (error) throw error;
+      if (assetError) throw assetError;
+
+      // Then upload and create photo records
+      const images = await uploadImages(formData.id);
+      
+      // Insert photos into media_photos table
+      const photoEntries = [];
+      for (const [key, value] of Object.entries(images)) {
+        if (value && typeof value === 'object' && 'url' in value) {
+          const photoData = value as { url: string; name: string; size: number; type: string };
+          photoEntries.push({
+            asset_id: formData.id,
+            photo_type: key,
+            photo_url: photoData.url,
+            file_name: photoData.name,
+            file_size: photoData.size,
+            mime_type: photoData.type,
+          });
+        }
+      }
+
+      if (photoEntries.length > 0) {
+        const { error: photoError } = await supabase
+          .from('media_photos')
+          .insert(photoEntries);
+        
+        if (photoError) {
+          console.error('Photo insert error:', photoError);
+          // Don't throw - asset was created successfully
+        }
+      }
 
       toast({
         title: "Success",

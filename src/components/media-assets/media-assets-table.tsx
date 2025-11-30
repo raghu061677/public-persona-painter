@@ -366,7 +366,7 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
           const displayCode = row.original.media_asset_code || row.original.asset_code || row.original.id;
           return (
             <button
-              onClick={() => navigate(`/admin/media-assets/${row.original.id}`)}
+              onClick={() => navigate(`/admin/media-assets/${displayCode}`)}
               className="hover:underline font-mono text-xs text-left"
             >
               {highlightText(displayCode, globalFilter)}

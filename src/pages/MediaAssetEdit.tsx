@@ -22,7 +22,7 @@ import { PhotoUploadSection } from "@/components/media-assets/PhotoUploadSection
 import { UnifiedPhotoGallery } from "@/components/common/UnifiedPhotoGallery";
 
 export default function MediaAssetEdit() {
-  const { id } = useParams();
+  const { code } = useParams();
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -41,7 +41,7 @@ export default function MediaAssetEdit() {
       return;
     }
     fetchAsset();
-  }, [id, isAdmin]);
+  }, [code, isAdmin]);
 
   // Fetch municipal authorities
   useEffect(() => {
@@ -94,7 +94,7 @@ export default function MediaAssetEdit() {
     const { data, error } = await supabase
       .from('media_assets')
       .select('*')
-      .eq('id', id)
+      .eq('media_asset_code', code)
       .maybeSingle();
 
     if (error || !data) {
@@ -109,7 +109,7 @@ export default function MediaAssetEdit() {
       const { data: photosData } = await supabase
         .from('media_photos')
         .select('*')
-        .eq('asset_id', id)
+        .eq('asset_id', data.id)
         .order('uploaded_at', { ascending: false });
 
       // Transform photos data to match expected format
@@ -217,7 +217,7 @@ export default function MediaAssetEdit() {
           ero: formData.ero || null,
           section_name: formData.section_name || null,
         })
-        .eq('id', id);
+        .eq('id', formData.id);
 
       if (error) throw error;
 
@@ -225,7 +225,7 @@ export default function MediaAssetEdit() {
         title: "Success",
         description: "Media asset updated successfully",
       });
-      navigate(`/admin/media-assets/${id}`);
+      navigate(`/admin/media-assets/${code}`);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -269,7 +269,7 @@ export default function MediaAssetEdit() {
                 <Button 
                   variant="outline" 
                   size="icon" 
-                  onClick={() => navigate(`/admin/media-assets/${id}`)} 
+                  onClick={() => navigate(`/admin/media-assets/${code}`)} 
                   type="button"
                   className="bg-background/80 hover:bg-background"
                 >
@@ -1237,7 +1237,7 @@ export default function MediaAssetEdit() {
 
           {/* PROOF PHOTOS UPLOAD SECTION - Full Width Below */}
           <div className="space-y-6 mt-8">
-            <PhotoUploadSection assetId={id!} onUploadComplete={fetchAsset} />
+            <PhotoUploadSection assetId={formData?.id!} onUploadComplete={fetchAsset} />
           </div>
         </div>
       </form>

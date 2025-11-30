@@ -9,7 +9,7 @@ import { MediaAssetQrSection } from "@/components/media-assets/MediaAssetQrSecti
 import { ROUTES } from "@/config/routes";
 
 export default function MediaAssetDetail() {
-  const { id } = useParams();
+  const { code } = useParams();
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
   const [asset, setAsset] = useState<any>(null);
@@ -17,14 +17,14 @@ export default function MediaAssetDetail() {
 
   useEffect(() => {
     fetchAsset();
-  }, [id]);
+  }, [code]);
 
   const fetchAsset = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('media_assets')
       .select('*')
-      .eq('id', id)
+      .eq('media_asset_code', code)
       .maybeSingle();
 
     if (error || !data) {
@@ -39,7 +39,7 @@ export default function MediaAssetDetail() {
       const { data: photosData } = await supabase
         .from('media_photos')
         .select('*')
-        .eq('asset_id', id)
+        .eq('asset_id', data.id)
         .order('uploaded_at', { ascending: false });
 
       // Transform photos data to match expected format

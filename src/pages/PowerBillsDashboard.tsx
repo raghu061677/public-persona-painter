@@ -37,7 +37,7 @@ interface MediaAssetWithBill {
   location: string;
   area: string;
   city: string;
-  illumination: string | null;
+  illumination_type: string | null;
   service_number: string | null;
   unique_service_number: string | null;
   consumer_name: string | null;
@@ -96,9 +96,9 @@ export default function PowerBillsDashboard() {
       // Fetch all illumination media assets (assets with power connections)
       const { data: assetsData, error: assetsError } = await supabase
         .from('media_assets')
-        .select('id, location, area, city, illumination, service_number, unique_service_number, consumer_name, ero, section_name')
-        .not('illumination', 'is', null)
-        .neq('illumination', '')
+        .select('id, location, area, city, illumination_type, service_number, unique_service_number, consumer_name, ero, section_name')
+        .not('illumination_type', 'is', null)
+        .neq('illumination_type', '')
         .order('city', { ascending: true });
 
       if (assetsError) throw assetsError;
@@ -290,7 +290,7 @@ export default function PowerBillsDashboard() {
       'Area': asset.area,
       'Location': asset.location,
       'City': asset.city,
-      'Illumination Type': asset.illumination || 'N/A',
+      'Illumination Type': asset.illumination_type || 'N/A',
       'Consumer Name': asset.consumer_name || 'N/A',
       'Service Number': asset.service_number || 'N/A',
       'Unique Service Number': asset.unique_service_number || 'N/A',
@@ -353,7 +353,7 @@ export default function PowerBillsDashboard() {
       asset.area,
       asset.location,
       asset.city,
-      asset.illumination || 'N/A',
+      asset.illumination_type || 'N/A',
       asset.consumer_name || 'N/A',
       asset.service_number || 'N/A',
       asset.payment_status || 'No Data',
@@ -680,8 +680,8 @@ export default function PowerBillsDashboard() {
                     <TableCell>{asset.city}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {getIlluminationIcon(asset.illumination)}
-                        <span className="text-sm">{asset.illumination || 'N/A'}</span>
+                        {getIlluminationIcon(asset.illumination_type)}
+                        <span className="text-sm">{asset.illumination_type || 'N/A'}</span>
                       </div>
                     </TableCell>
                     {showColumns.serviceNumber && (

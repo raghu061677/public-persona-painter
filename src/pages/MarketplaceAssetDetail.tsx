@@ -100,7 +100,10 @@ export default function MarketplaceAssetDetail() {
     try {
       const { data, error } = await supabase
         .from('public_media_assets_safe')
-        .select('*')
+        .select(`
+          *,
+          companies!inner(name)
+        `)
         .eq('id', assetId)
         .single();
 
@@ -116,7 +119,13 @@ export default function MarketplaceAssetDetail() {
         return;
       }
 
-      setAsset(data);
+      // Map company data
+      const mappedData = {
+        ...data,
+        company_name: data.companies?.name || '',
+      };
+      
+      setAsset(mappedData);
 
       // Fetch gallery photos from media_photos table
       const { data: photos } = await supabase

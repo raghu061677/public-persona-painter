@@ -96,7 +96,15 @@ export default function Marketplace() {
       // Use the secure public view that excludes pricing and vendor details
       let query = supabase
         .from('public_media_assets_safe')
-        .select('*');
+        .select(`
+          *,
+          companies!inner(
+            name,
+            city,
+            phone,
+            email
+          )
+        `);
 
       if (selectedCity !== "all") {
         query = query.eq('city', selectedCity);
@@ -112,7 +120,16 @@ export default function Marketplace() {
 
       if (error) throw error;
 
-      setAssets(data || []);
+      // Map company data to flat structure
+      const mappedAssets = (data || []).map(asset => ({
+        ...asset,
+        company_name: asset.companies?.name || '',
+        company_city: asset.companies?.city || null,
+        company_phone: asset.companies?.phone || null,
+        company_email: asset.companies?.email || null,
+      }));
+
+      setAssets(mappedAssets);
     } catch (error: any) {
       console.error('Error fetching marketplace assets:', error);
       toast({

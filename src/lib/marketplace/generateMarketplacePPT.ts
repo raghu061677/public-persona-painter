@@ -10,15 +10,10 @@ interface MarketplaceAsset {
   dimensions: string;
   total_sqft: number | null;
   direction: string | null;
-  illumination: string | null;
+  illumination_type: string | null;
   latitude: number | null;
   longitude: number | null;
-  is_multi_face: boolean | null;
-  faces: any;
-  image_urls?: string[];
-  images?: {
-    photos?: Array<{ url: string; tag: string }>;
-  };
+  primary_photo_url?: string | null;
   qr_code_url?: string | null;
   google_street_view_url?: string | null;
   location_url?: string | null;
@@ -118,21 +113,9 @@ export async function generateMarketplacePPT(
 
   // ===== ASSET SLIDES =====
   for (const asset of assets) {
-    // Handle different photo storage formats
-    let photoUrls: string[] = [];
-    
-    // Check for image_urls array (preferred format)
-    if (Array.isArray(asset.image_urls) && asset.image_urls.length > 0) {
-      photoUrls = asset.image_urls.filter(url => url && url.trim() !== '');
-    }
-    // Fallback to images.photos format
-    else if (asset.images?.photos && Array.isArray(asset.images.photos)) {
-      photoUrls = asset.images.photos.map((p: any) => p.url).filter(Boolean);
-    }
-    
-    // Ensure we have at least placeholder images
-    const photo1 = photoUrls[0] || DEFAULT_PLACEHOLDER;
-    const photo2 = photoUrls[1] || photoUrls[0] || DEFAULT_PLACEHOLDER;
+    // Get photos from primary_photo_url
+    const photo1 = asset.primary_photo_url || DEFAULT_PLACEHOLDER;
+    const photo2 = asset.primary_photo_url || DEFAULT_PLACEHOLDER;
 
     // ===== SLIDE 1: TWO-IMAGE PRESENTATION SLIDE =====
     const slide1 = prs.addSlide();
@@ -327,20 +310,6 @@ export async function generateMarketplacePPT(
       }
     }
 
-    // Number of faces
-    let facesInfo = '1 Face';
-    if (asset.is_multi_face && asset.faces) {
-      const facesData = typeof asset.faces === 'string' ? JSON.parse(asset.faces) : asset.faces;
-      if (Array.isArray(facesData)) {
-        facesInfo = `${facesData.length} Faces`;
-        facesData.forEach((face: any, idx: number) => {
-          if (face.size) {
-            facesInfo += ` | Face ${idx + 1}: ${face.size}`;
-          }
-        });
-      }
-    }
-
     // Generate location URL for QR
     let locationUrl = '';
     if (asset.google_street_view_url) {
@@ -360,8 +329,7 @@ export async function generateMarketplacePPT(
       { label: 'Media Type:', value: asset.media_type },
       { label: 'Dimensions:', value: width && height ? `${width} ft × ${height} ft` : asset.dimensions || 'N/A' },
       { label: 'Total Sqft:', value: asset.total_sqft?.toString() || 'N/A' },
-      { label: 'Illumination:', value: asset.illumination || 'Non-lit' },
-      { label: 'Number of Faces:', value: facesInfo },
+      { label: 'Illumination:', value: asset.illumination_type || 'Non-lit' },
       { label: 'GPS Coordinates:', value: asset.latitude && asset.longitude ? `${asset.latitude.toFixed(6)}, ${asset.longitude.toFixed(6)}` : 'N/A' },
     ];
 

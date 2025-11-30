@@ -45,7 +45,7 @@ interface PowerBill {
     location: string;
     area: string;
     city: string;
-    illumination: string;
+    illumination_type: string;
   } | null;
 }
 
@@ -88,7 +88,7 @@ export default function MobilePowerBills() {
             location,
             area,
             city,
-            illumination
+            illumination_type
           )
         `)
         .order('bill_month', { ascending: false });
@@ -328,7 +328,7 @@ export default function MobilePowerBills() {
                   </div>
                   <div>
                     <div className="text-muted-foreground text-xs">Type</div>
-                    <div className="font-medium capitalize">{bill.media_assets?.illumination || 'N/A'}</div>
+                    <div className="font-medium capitalize">{bill.media_assets?.illumination_type || 'N/A'}</div>
                   </div>
                   <div>
                     <div className="text-muted-foreground text-xs">Amount Due</div>

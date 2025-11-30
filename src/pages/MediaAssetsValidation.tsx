@@ -183,7 +183,7 @@ export default function MediaAssetsValidation() {
 
       const { data: assets, error } = await supabase
         .from('media_assets')
-        .select('id, location, city, images')
+        .select('id, location, city, primary_photo_url')
         .order('id');
 
       if (error) throw error;
@@ -234,34 +234,10 @@ export default function MediaAssetsValidation() {
 
       if (fetchError) throw fetchError;
 
+      // Skip validation for now as images are in media_photos table
       const photos = [];
-      const oldImages = asset.images as any;
 
-      const mapping = [
-        { key: 'geoTaggedPhoto', tag: 'Geo-Tagged Photo' },
-        { key: 'newspaperPhoto', tag: 'Newspaper Photo' },
-        { key: 'trafficPhoto1', tag: 'Traffic Photo 1' },
-        { key: 'trafficPhoto2', tag: 'Traffic Photo 2' },
-      ];
-
-      for (const { key, tag } of mapping) {
-        if (oldImages[key]?.url) {
-          photos.push({
-            url: oldImages[key].url,
-            tag,
-            uploaded_at: oldImages[key].uploaded_at || new Date().toISOString(),
-            latitude: oldImages[key].latitude,
-            longitude: oldImages[key].longitude,
-          });
-        }
-      }
-
-      const { error: updateError } = await supabase
-        .from('media_assets')
-        .update({ images: { photos } })
-        .eq('id', assetId);
-
-      if (updateError) throw updateError;
+      // Images are now in media_photos table, so this migration is not needed
 
       toast({
         title: "Format Fixed",

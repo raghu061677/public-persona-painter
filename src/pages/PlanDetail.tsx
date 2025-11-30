@@ -193,23 +193,13 @@ export default function PlanDetail() {
   const fetchPlanItems = async () => {
     const { data } = await supabase
       .from('plan_items')
-      .select(`
-        *,
-        media_assets!inner(
-          total_sqft,
-          dimensions,
-          illumination
-        )
-      `)
+      .select('*')
       .eq('plan_id', id)
       .order('created_at');
     
-    // Flatten the data structure
+    // Plan items already contain all necessary fields as snapshots
     const items = (data || []).map(item => ({
       ...item,
-      total_sqft: item.media_assets?.total_sqft,
-      dimensions: item.media_assets?.dimensions,
-      illumination: item.media_assets?.illumination,
       plan_item_id: item.id // Store plan_items.id for updates
     }));
     

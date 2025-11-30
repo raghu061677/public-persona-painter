@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { AnimatedSidebar } from "@/components/media-assets/control-center/AnimatedSidebar";
 import { HeaderBar, type ViewMode, type ThemeMode } from "@/components/media-assets/control-center/HeaderBar";
 import { SummaryCards } from "@/components/media-assets/control-center/SummaryCards";
 import { GalleryView } from "@/components/media-assets/control-center/GalleryView";
@@ -223,11 +222,8 @@ export default function MediaAssetsControlCenter() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Sidebar */}
-      <AnimatedSidebar />
-
       {/* Main Content */}
-      <div className="flex-1 pl-14 pt-14">
+      <div className="flex-1">
         <div className="flex flex-col h-[calc(100vh-3.5rem)]">
           {/* Header */}
           <HeaderBar

@@ -37,12 +37,13 @@ import {
 } from "@/utils/billingEngine";
 import { LineItemDurationControl } from "@/components/plans/LineItemDurationControl";
 import { generatePlanCode } from "@/lib/codeGenerator";
-import { ArrowLeft, Calendar as CalendarIcon, Info, Sparkles } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Info, Sparkles, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AssetSelectionTable } from "@/components/plans/AssetSelectionTable";
 import { SelectedAssetsTable } from "@/components/plans/SelectedAssetsTable";
 import { PlanSummaryCard } from "@/components/plans/PlanSummaryCard";
 import { AIVacantAssetsDialog } from "@/components/plans/AIVacantAssetsDialog";
+import { StartFromTemplateDialog } from "@/components/plans/StartFromTemplateDialog";
 
 export default function PlanNew() {
   const navigate = useNavigate();
@@ -52,6 +53,7 @@ export default function PlanNew() {
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [assetPricing, setAssetPricing] = useState<Record<string, any>>({});
   const [showAIRecommendations, setShowAIRecommendations] = useState(false);
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   
   const [formData, setFormData] = useState({
     id: "",
@@ -122,47 +124,73 @@ export default function PlanNew() {
     if (templateData) {
       try {
         const template = JSON.parse(templateData);
-        
-        // Pre-select default client if available
-        if (template.default_client_id) {
-          const client = clients.find(c => c.id === template.default_client_id);
-          if (client) {
-            setFormData(prev => ({
-              ...prev,
-              client_id: template.default_client_id,
-              client_name: client.name,
-            }));
-          }
-        }
-
-        // Load template assets
-        if (Array.isArray(template.template_items)) {
-          const assetIds = new Set<string>(template.template_items.map((item: any) => item.asset_id));
-          setSelectedAssets(assetIds);
-
-          // Load pricing from template defaults
-          const pricing: Record<string, any> = {};
-          template.template_items.forEach((item: any) => {
-            pricing[item.asset_id] = {
-              negotiated_price: item.default_base_rent || 0,
-              printing_charges: item.default_printing_charges || 0,
-              mounting_charges: item.default_mounting_charges || 0,
-            };
-          });
-          setAssetPricing(pricing);
-        }
-
-        toast({
-          title: "Template Loaded",
-          description: `Template "${template.template_name}" loaded successfully`,
-        });
-
-        // Clear from session storage
+        applyTemplate(template.template, template.template_items);
         sessionStorage.removeItem('planTemplateNew');
       } catch (error) {
         console.error('Error loading template:', error);
       }
     }
+  };
+
+  const applyTemplate = (template: any, templateItems: any[]) => {
+    // Pre-select default client if available
+    if (template.default_client_id) {
+      const client = clients.find(c => c.id === template.default_client_id);
+      if (client) {
+        setFormData(prev => ({
+          ...prev,
+          client_id: template.default_client_id,
+          client_name: client.name,
+        }));
+      }
+    }
+
+    // Apply template settings
+    if (template.plan_type) {
+      setFormData(prev => ({ ...prev, plan_type: template.plan_type }));
+    }
+    if (template.gst_percent) {
+      setFormData(prev => ({ ...prev, gst_percent: template.gst_percent.toString() }));
+    }
+    if (template.duration_days) {
+      const startDate = formData.start_date;
+      const endDate = new Date(startDate.getTime() + template.duration_days * 24 * 60 * 60 * 1000);
+      setFormData(prev => ({
+        ...prev,
+        end_date: endDate,
+        duration_days: template.duration_days,
+      }));
+    }
+    if (template.notes) {
+      setFormData(prev => ({ ...prev, notes: template.notes }));
+    }
+
+    // Load template assets
+    if (Array.isArray(templateItems) && templateItems.length > 0) {
+      const assetIds = new Set<string>(templateItems.map((item: any) => item.asset_id));
+      setSelectedAssets(assetIds);
+
+      // Load pricing from template defaults
+      const pricing: Record<string, any> = {};
+      templateItems.forEach((item: any) => {
+        pricing[item.asset_id] = {
+          base_rent: item.default_base_rent || item.media_assets?.base_rent || 0,
+          negotiated_price: item.default_base_rent || item.media_assets?.card_rate || 0,
+          printing_charges: item.default_printing_charges || 0,
+          mounting_charges: item.default_mounting_charges || 0,
+        };
+      });
+      setAssetPricing(pricing);
+    }
+  };
+
+  const handleSelectTemplate = (template: any, items: any[]) => {
+    applyTemplate(template, items);
+    
+    toast({
+      title: "Template Loaded",
+      description: `Template "${template.template_name}" loaded successfully`,
+    });
   };
 
   const handleClientSelect = (clientId: string) => {
@@ -464,8 +492,20 @@ export default function PlanNew() {
         </Button>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Create New Plan</h1>
-          <p className="text-muted-foreground mt-1">Fill in the details below to create a new quotation for your client</p>
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Create New Plan</h1>
+              <p className="text-muted-foreground mt-1">Fill in the details below to create a new quotation for your client</p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowTemplateDialog(true)}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Start from Template
+            </Button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -675,6 +715,12 @@ export default function PlanNew() {
               if (asset) toggleAssetSelection(id, asset);
             });
           }}
+        />
+
+        <StartFromTemplateDialog
+          open={showTemplateDialog}
+          onOpenChange={setShowTemplateDialog}
+          onSelectTemplate={handleSelectTemplate}
         />
       </div>
     </div>

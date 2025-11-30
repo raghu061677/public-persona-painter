@@ -33,6 +33,10 @@ export default function PlanTemplateForm() {
     template_name: "",
     description: "",
     default_client_id: "",
+    plan_type: "Quotation",
+    duration_days: 30,
+    gst_percent: 18,
+    notes: "",
     tags: [] as string[],
     is_active: true,
   });
@@ -76,6 +80,10 @@ export default function PlanTemplateForm() {
         template_name: (template as any).template_name,
         description: (template as any).description || "",
         default_client_id: (template as any).default_client_id || "",
+        plan_type: (template as any).plan_type || "Quotation",
+        duration_days: (template as any).duration_days || 30,
+        gst_percent: (template as any).gst_percent || 18,
+        notes: (template as any).notes || "",
         tags: (template as any).tags || [],
         is_active: (template as any).is_active,
       });
@@ -195,6 +203,10 @@ export default function PlanTemplateForm() {
             template_name: formData.template_name,
             description: formData.description || null,
             default_client_id: formData.default_client_id || null,
+            plan_type: formData.plan_type,
+            duration_days: formData.duration_days,
+            gst_percent: formData.gst_percent,
+            notes: formData.notes || null,
             tags: formData.tags,
             is_active: formData.is_active,
           })
@@ -218,6 +230,10 @@ export default function PlanTemplateForm() {
             template_name: formData.template_name,
             description: formData.description || null,
             default_client_id: formData.default_client_id || null,
+            plan_type: formData.plan_type,
+            duration_days: formData.duration_days,
+            gst_percent: formData.gst_percent,
+            notes: formData.notes || null,
             tags: formData.tags,
             is_active: formData.is_active,
             created_by: user.id,
@@ -331,6 +347,57 @@ export default function PlanTemplateForm() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Plan Type</Label>
+                  <Select
+                    value={formData.plan_type}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, plan_type: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Quotation">Quotation</SelectItem>
+                      <SelectItem value="Proposal">Proposal</SelectItem>
+                      <SelectItem value="Estimate">Estimate</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Duration (Days)</Label>
+                  <Input
+                    type="number"
+                    value={formData.duration_days}
+                    onChange={(e) => setFormData(prev => ({ ...prev, duration_days: parseInt(e.target.value) || 30 }))}
+                    min={1}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>GST %</Label>
+                  <Input
+                    type="number"
+                    value={formData.gst_percent}
+                    onChange={(e) => setFormData(prev => ({ ...prev, gst_percent: parseFloat(e.target.value) || 18 }))}
+                    step="0.01"
+                    min={0}
+                    max={100}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Notes</Label>
+                <Textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Additional notes or instructions..."
+                  rows={2}
+                />
               </div>
 
               <div className="space-y-2">

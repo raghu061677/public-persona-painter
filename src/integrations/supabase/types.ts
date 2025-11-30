@@ -3850,8 +3850,12 @@ export type Database = {
           created_by: string | null
           default_client_id: string | null
           description: string | null
+          duration_days: number | null
+          gst_percent: number | null
           id: string
           is_active: boolean | null
+          notes: string | null
+          plan_type: string | null
           tags: string[] | null
           template_name: string
           updated_at: string | null
@@ -3862,8 +3866,12 @@ export type Database = {
           created_by?: string | null
           default_client_id?: string | null
           description?: string | null
+          duration_days?: number | null
+          gst_percent?: number | null
           id?: string
           is_active?: boolean | null
+          notes?: string | null
+          plan_type?: string | null
           tags?: string[] | null
           template_name: string
           updated_at?: string | null
@@ -3874,8 +3882,12 @@ export type Database = {
           created_by?: string | null
           default_client_id?: string | null
           description?: string | null
+          duration_days?: number | null
+          gst_percent?: number | null
           id?: string
           is_active?: boolean | null
+          notes?: string | null
+          plan_type?: string | null
           tags?: string[] | null
           template_name?: string
           updated_at?: string | null

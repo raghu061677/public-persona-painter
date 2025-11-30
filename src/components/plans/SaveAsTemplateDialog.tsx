@@ -56,38 +56,58 @@ export function SaveAsTemplateDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Prepare template items (remove plan-specific fields)
-      // Note: plan_items DB column is 'base_rent', template schema uses 'base_rate'
-      const templateItems = planItems.map(item => ({
-        asset_id: item.asset_id,
-        location: item.location,
-        city: item.city,
-        area: item.area,
-        media_type: item.media_type,
-        dimensions: item.dimensions,
-        card_rate: item.card_rate,
-        base_rate: item.base_rent,  // Mapping DB field base_rent to template field base_rate
-        sales_price: item.sales_price,
-        discount_type: item.discount_type,
-        discount_value: item.discount_value,
-        printing_charges: item.printing_charges,
-        mounting_charges: item.mounting_charges,
-      }));
+      // Get current company ID
+      const { data: companyUser } = await supabase
+        .from("company_users")
+        .select("company_id")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .single();
 
-      const { error } = await supabase
+      if (!companyUser?.company_id) {
+        throw new Error("No active company association found");
+      }
+
+      // Insert template
+      const { data: template, error: templateError } = await supabase
         .from('plan_templates')
         .insert({
+          company_id: companyUser.company_id,
           template_name: templateName.trim(),
           description: description.trim() || null,
-          plan_type: planType as any,
+          plan_type: planType,
           duration_days: durationDays,
           gst_percent: gstPercent,
           notes: notes || null,
-          template_items: templateItems as any,
+          is_active: true,
           created_by: user.id,
-        } as any);
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (templateError) throw templateError;
+
+      // Insert template items
+      if (template && planItems && planItems.length > 0) {
+        const itemsPayload = planItems.map((item, index) => ({
+          company_id: companyUser.company_id,
+          template_id: template.id,
+          asset_id: item.asset_id,
+          position_index: index,
+          default_base_rent: item.base_rent || item.sales_price || 0,
+          default_printing_charges: item.printing_charges || 0,
+          default_mounting_charges: item.mounting_charges || 0,
+        }));
+
+        const { error: itemsError } = await supabase
+          .from("plan_template_items")
+          .insert(itemsPayload);
+
+        if (itemsError) {
+          console.error("Error saving template items:", itemsError);
+          // Continue anyway - template was saved
+        }
+      }
 
       toast({
         title: "Success",

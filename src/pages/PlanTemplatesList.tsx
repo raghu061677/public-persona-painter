@@ -25,7 +25,7 @@ interface Template {
   usage_count?: number;
 }
 
-export default function PlanTemplatesListNew() {
+export default function PlanTemplatesList() {
   const navigate = useNavigate();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,8 +116,7 @@ export default function PlanTemplatesListNew() {
       // Store in session storage for PlanNew to pick up
       sessionStorage.setItem("planTemplateNew", JSON.stringify({
         template_id: template.id,
-        template_name: template.template_name,
-        default_client_id: template.default_client_id,
+        template,
         template_items: items,
       }));
 

@@ -400,6 +400,66 @@ export default function MediaAssetsHealthReport() {
         </CardContent>
       </Card>
 
+      {/* Assets with Photos & Street View */}
+      <Card>
+        <CardHeader>
+          <CardTitle>✅ Complete Assets (Photos + Street View)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Asset ID</TableHead>
+                  <TableHead>City</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead className="text-center">Photos</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {assets.filter(a => a.has_street_view && a.photo_count > 0).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      No assets with both photos and street view found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  assets
+                    .filter(a => a.has_street_view && a.photo_count > 0)
+                    .map((asset) => (
+                      <TableRow key={asset.id}>
+                        <TableCell className="font-mono text-sm">{asset.id}</TableCell>
+                        <TableCell>{asset.city}</TableCell>
+                        <TableCell>{asset.media_type}</TableCell>
+                        <TableCell className="max-w-xs truncate">
+                          {/* We don't have location in the current data, showing placeholder */}
+                          <span className="text-muted-foreground">-</span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="default">{asset.photo_count}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge className="bg-green-500">
+                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                            Complete
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-sm">
+              <strong>✅ {assets.filter(a => a.has_street_view && a.photo_count > 0).length} assets</strong> have both photos and Street View URLs and are ready for campaigns.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Issue Categories */}
       <Card>
         <CardHeader>

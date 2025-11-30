@@ -17,6 +17,8 @@ import { generateMediaAssetCode } from "@/lib/codeGenerator";
 import { buildStreetViewUrl } from "@/lib/streetview";
 import { ArrowLeft, Sparkles, Image as ImageIcon, Calendar as CalendarIcon, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
+import { PhotoUploadSection } from "@/components/media-assets/PhotoUploadSection";
+import { UnifiedPhotoGallery } from "@/components/common/UnifiedPhotoGallery";
 
 const CITY_CODES = [
   { label: "Hyderabad", value: "HYD" },
@@ -60,6 +62,14 @@ export default function MediaAssetNew() {
     newspaper: '',
     traffic_view: '',
   });
+  const [uploadedPhotos, setUploadedPhotos] = useState<Array<{
+    id: string;
+    photo_url: string;
+    category: string;
+    uploaded_at: string;
+  }>>([]);
+  const [isAssetCreated, setIsAssetCreated] = useState(false);
+  const [createdAssetId, setCreatedAssetId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     id: "",
@@ -199,6 +209,20 @@ export default function MediaAssetNew() {
     }
   };
 
+  const refreshPhotos = async () => {
+    if (!createdAssetId) return;
+    
+    const { data: photosData } = await supabase
+      .from('media_photos')
+      .select('id, photo_url, category, uploaded_at')
+      .eq('asset_id', createdAssetId)
+      .order('uploaded_at', { ascending: false });
+
+    if (photosData) {
+      setUploadedPhotos(photosData);
+    }
+  };
+
   const handleImageSelect = (file: File, field: ImageField) => {
     if (!file) return;
     const localUrl = URL.createObjectURL(file);
@@ -224,7 +248,7 @@ export default function MediaAssetNew() {
           const fileName = `${assetId}/${key}_${Date.now()}.${fileExt}`;
           
           // Upload to storage
-          const { error: uploadError, data } = await supabase.storage
+          const { error: uploadError } = await supabase.storage
             .from('hero-images')
             .upload(fileName, file, {
               cacheControl: '3600',
@@ -353,53 +377,23 @@ export default function MediaAssetNew() {
       } as any);
 
       if (assetError) {
-        console.error('Asset insert error:', assetError);
+        console.error('Asset creation error:', assetError);
         throw assetError;
       }
 
-      // Upload and insert photos
-      try {
-        const uploadedPhotos = await uploadImages(formData.id, companyUser.company_id);
-        
-        if (uploadedPhotos.length > 0) {
-          const photoInserts = uploadedPhotos.map(photo => ({
-            asset_id: formData.id,
-            company_id: companyUser.company_id,
-            category: 'asset_photo', // Required field
-            photo_url: photo.photo_url,
-            metadata: {
-              photo_type: photo.photo_type,
-              file_name: photo.file_name,
-              file_size: photo.file_size,
-              mime_type: photo.mime_type,
-            },
-            uploaded_by: user.id,
-          }));
-
-          const { error: photoError } = await supabase
-            .from('media_photos')
-            .insert(photoInserts);
-          
-          if (photoError) {
-            console.error('Photo insert error:', photoError);
-            // Don't throw - asset was created successfully
-            toast({
-              title: "Partial Success",
-              description: "Asset created but some photos failed to save",
-              variant: "default",
-            });
-          }
-        }
-      } catch (photoUploadError) {
-        console.error('Photo upload error:', photoUploadError);
-        // Don't throw - asset was created
-      }
+      // Set the created asset ID to enable photo uploads
+      setCreatedAssetId(formData.id);
+      setIsAssetCreated(true);
 
       toast({
         title: "Success",
-        description: "Media asset created successfully",
+        description: "Media asset created successfully. You can now upload photos below.",
       });
-      navigate(`/admin/media-assets/${formData.id}`);
+      
+      // Scroll to photo upload section
+      setTimeout(() => {
+        document.getElementById('photo-upload-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     } catch (error: any) {
       console.error('Submit error:', error);
       toast({
@@ -854,19 +848,72 @@ export default function MediaAssetNew() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Asset Photos</CardTitle>
-              <CardDescription>Upload photos for this asset</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {PHOTO_TYPES.map(({ field, label }) => (
-                <ImageUploader key={field} field={field} label={label} />
-              ))}
-            </CardContent>
-          </Card>
+          {!isAssetCreated && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Asset Photos</CardTitle>
+                <CardDescription>Save the asset first to upload photos</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Photos can be uploaded after creating the asset
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Click "Create Asset" button above to enable photo uploads
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {isAssetCreated && uploadedPhotos.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Uploaded Photos</CardTitle>
+                <CardDescription>{uploadedPhotos.length} photo(s) uploaded</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <UnifiedPhotoGallery 
+                  photos={uploadedPhotos.map(p => ({
+                    id: p.id,
+                    photo_url: p.photo_url,
+                    category: p.category,
+                    uploaded_at: p.uploaded_at,
+                  }))}
+                  onPhotoDeleted={refreshPhotos}
+                  canDelete={true}
+                  bucket="media-assets"
+                  title="Asset Photos"
+                />
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
+
+      {/* Photo Upload Section - Full Width Below (Only shown after asset is created) */}
+      {isAssetCreated && createdAssetId && (
+        <div id="photo-upload-section" className="space-y-6 mt-8">
+          <PhotoUploadSection assetId={createdAssetId} onUploadComplete={refreshPhotos} />
+          
+          <div className="flex justify-end gap-4 mt-6">
+            <Button 
+              type="button" 
+              variant="outline"
+              onClick={() => navigate('/admin/media-assets')}
+            >
+              Go to Asset List
+            </Button>
+            <Button 
+              type="button"
+              onClick={() => navigate(`/admin/media-assets/${createdAssetId}`)}
+            >
+              View Asset Details
+            </Button>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

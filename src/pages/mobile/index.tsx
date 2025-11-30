@@ -260,7 +260,7 @@ function MobileFieldApp() {
     t.status === 'PhotoUploaded' || t.status === 'Verified'
   );
   const ongoingCampaigns = campaigns.filter(c => 
-    c.status === 'Active' || c.status === 'InProgress'
+    c.status === 'InProgress'
   );
 
   return (

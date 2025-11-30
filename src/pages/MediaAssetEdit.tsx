@@ -15,7 +15,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "@/hooks/use-toast";
 import { parseDimensions, buildSearchTokens } from "@/utils/mediaAssets";
 import { buildStreetViewUrl } from "@/lib/streetview";
-import { ArrowLeft, Save, Calendar as CalendarIcon, ExternalLink, HelpCircle, MapPin, DollarSign, FileText } from "lucide-react";
+import { ArrowLeft, Save, Calendar as CalendarIcon, ExternalLink, HelpCircle, MapPin, DollarSign, FileText, QrCode, Download } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { PhotoUploadSection } from "@/components/media-assets/PhotoUploadSection";
@@ -1096,6 +1096,124 @@ export default function MediaAssetEdit() {
                       </SelectContent>
                     </Select>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* QR Code Card */}
+              <Card className="overflow-hidden border-primary/20 shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 border-b">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <QrCode className="h-5 w-5 text-primary" />
+                    </div>
+                    <CardTitle className="text-xl">QR Code</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  {formData.qr_code_url ? (
+                    <div className="space-y-4">
+                      <div className="flex justify-center p-4 bg-white rounded-lg border-2 border-dashed border-primary/20">
+                        <img 
+                          src={formData.qr_code_url} 
+                          alt="Asset QR Code" 
+                          className="w-48 h-48 object-contain"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          type="button"
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => window.open(formData.qr_code_url, '_blank')}
+                        >
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          View Full Size
+                        </Button>
+                        <Button 
+                          type="button"
+                          variant="outline"
+                          onClick={async () => {
+                            try {
+                              const response = await fetch(formData.qr_code_url);
+                              const blob = await response.blob();
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `qr-code-${formData.id}.png`;
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                              window.URL.revokeObjectURL(url);
+                              toast({
+                                title: "Success",
+                                description: "QR Code downloaded successfully",
+                              });
+                            } catch (error) {
+                              toast({
+                                title: "Error",
+                                description: "Failed to download QR Code",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-center text-muted-foreground">
+                        Scan to view asset location and details
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex justify-center p-8 bg-muted/50 rounded-lg border-2 border-dashed">
+                        <div className="text-center">
+                          <QrCode className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                          <p className="text-sm text-muted-foreground">No QR Code generated yet</p>
+                        </div>
+                      </div>
+                      <Button 
+                        type="button"
+                        variant="outline" 
+                        className="w-full"
+                        onClick={async () => {
+                          try {
+                            setLoading(true);
+                            const { data, error } = await supabase.functions.invoke('generate-asset-qr', {
+                              body: { assetId: formData.id }
+                            });
+                            
+                            if (error) throw error;
+                            
+                            toast({
+                              title: "Success",
+                              description: "QR Code generated successfully",
+                            });
+                            
+                            // Refresh to show new QR code
+                            await fetchAsset();
+                          } catch (error: any) {
+                            toast({
+                              title: "Error",
+                              description: error.message || "Failed to generate QR Code",
+                              variant: "destructive",
+                            });
+                          } finally {
+                            setLoading(false);
+                          }
+                        }}
+                        disabled={loading || !formData.latitude || !formData.longitude}
+                      >
+                        <QrCode className="mr-2 h-4 w-4" />
+                        Generate QR Code
+                      </Button>
+                      {(!formData.latitude || !formData.longitude) && (
+                        <p className="text-xs text-center text-amber-600">
+                          Add latitude and longitude coordinates first
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>

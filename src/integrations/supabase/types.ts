@@ -339,6 +339,80 @@ export type Database = {
         }
         Relationships: []
       }
+      asset_bookings: {
+        Row: {
+          asset_id: string
+          booking_type: string
+          campaign_id: string | null
+          created_at: string | null
+          created_by: string | null
+          end_date: string
+          id: string
+          notes: string | null
+          plan_id: string | null
+          start_date: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          asset_id: string
+          booking_type: string
+          campaign_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          end_date: string
+          id?: string
+          notes?: string | null
+          plan_id?: string | null
+          start_date: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          asset_id?: string
+          booking_type?: string
+          campaign_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          end_date?: string
+          id?: string
+          notes?: string | null
+          plan_id?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_bookings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_bookings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_bookings_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_bookings_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_expenses: {
         Row: {
           amount: number
@@ -2428,7 +2502,7 @@ export type Database = {
           ad_tax: number | null
           area: string
           base_margin: number | null
-          base_rent: number | null
+          base_rate: number | null
           booked_from: string | null
           booked_to: string | null
           card_rate: number
@@ -2440,8 +2514,10 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           current_campaign_id: string | null
+          default_duration_mode: string | null
           dimensions: string
           direction: string | null
+          display_title: string | null
           district: string | null
           electricity: number | null
           ero: string | null
@@ -2449,38 +2525,50 @@ export type Database = {
           google_street_view_url: string | null
           gst_percent: number | null
           id: string
-          illumination: string | null
-          image_urls: string[] | null
-          images: Json | null
+          illumination_type: string | null
+          installation_type: string | null
+          is_active: boolean | null
+          is_featured: boolean | null
           is_multi_face: boolean | null
           is_public: boolean | null
+          last_maintenance_date: string | null
           latitude: number | null
           location: string
-          location_url: string | null
           longitude: number | null
           maintenance: number | null
-          media_id: string | null
           media_type: string
-          mounting_charges: number | null
+          min_booking_days: number | null
+          monthly_land_rent: number | null
+          mounting_rate_default: number | null
           municipal_authority: string | null
+          municipal_id: string | null
+          next_maintenance_due: string | null
           ownership: Database["public"]["Enums"]["ownership_type"] | null
-          printing_charges: number | null
+          primary_photo_url: string | null
+          printing_rate_default: number | null
           qr_code_url: string | null
           search_tokens: string[] | null
           section_name: string | null
+          seo_description: string | null
           service_number: string | null
+          slug: string | null
           state: string | null
           status: Database["public"]["Enums"]["media_asset_status"]
+          structure_ownership: string | null
+          tags: string[] | null
+          target_audience: string[] | null
           total_sqft: number | null
+          traffic_density: string | null
           unique_service_number: string | null
           updated_at: string | null
           vendor_details: Json | null
+          visibility_score: number | null
         }
         Insert: {
           ad_tax?: number | null
           area: string
           base_margin?: number | null
-          base_rent?: number | null
+          base_rate?: number | null
           booked_from?: string | null
           booked_to?: string | null
           card_rate: number
@@ -2492,8 +2580,10 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           current_campaign_id?: string | null
+          default_duration_mode?: string | null
           dimensions: string
           direction?: string | null
+          display_title?: string | null
           district?: string | null
           electricity?: number | null
           ero?: string | null
@@ -2501,38 +2591,50 @@ export type Database = {
           google_street_view_url?: string | null
           gst_percent?: number | null
           id: string
-          illumination?: string | null
-          image_urls?: string[] | null
-          images?: Json | null
+          illumination_type?: string | null
+          installation_type?: string | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
           is_multi_face?: boolean | null
           is_public?: boolean | null
+          last_maintenance_date?: string | null
           latitude?: number | null
           location: string
-          location_url?: string | null
           longitude?: number | null
           maintenance?: number | null
-          media_id?: string | null
           media_type: string
-          mounting_charges?: number | null
+          min_booking_days?: number | null
+          monthly_land_rent?: number | null
+          mounting_rate_default?: number | null
           municipal_authority?: string | null
+          municipal_id?: string | null
+          next_maintenance_due?: string | null
           ownership?: Database["public"]["Enums"]["ownership_type"] | null
-          printing_charges?: number | null
+          primary_photo_url?: string | null
+          printing_rate_default?: number | null
           qr_code_url?: string | null
           search_tokens?: string[] | null
           section_name?: string | null
+          seo_description?: string | null
           service_number?: string | null
+          slug?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["media_asset_status"]
+          structure_ownership?: string | null
+          tags?: string[] | null
+          target_audience?: string[] | null
           total_sqft?: number | null
+          traffic_density?: string | null
           unique_service_number?: string | null
           updated_at?: string | null
           vendor_details?: Json | null
+          visibility_score?: number | null
         }
         Update: {
           ad_tax?: number | null
           area?: string
           base_margin?: number | null
-          base_rent?: number | null
+          base_rate?: number | null
           booked_from?: string | null
           booked_to?: string | null
           card_rate?: number
@@ -2544,8 +2646,10 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           current_campaign_id?: string | null
+          default_duration_mode?: string | null
           dimensions?: string
           direction?: string | null
+          display_title?: string | null
           district?: string | null
           electricity?: number | null
           ero?: string | null
@@ -2553,32 +2657,44 @@ export type Database = {
           google_street_view_url?: string | null
           gst_percent?: number | null
           id?: string
-          illumination?: string | null
-          image_urls?: string[] | null
-          images?: Json | null
+          illumination_type?: string | null
+          installation_type?: string | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
           is_multi_face?: boolean | null
           is_public?: boolean | null
+          last_maintenance_date?: string | null
           latitude?: number | null
           location?: string
-          location_url?: string | null
           longitude?: number | null
           maintenance?: number | null
-          media_id?: string | null
           media_type?: string
-          mounting_charges?: number | null
+          min_booking_days?: number | null
+          monthly_land_rent?: number | null
+          mounting_rate_default?: number | null
           municipal_authority?: string | null
+          municipal_id?: string | null
+          next_maintenance_due?: string | null
           ownership?: Database["public"]["Enums"]["ownership_type"] | null
-          printing_charges?: number | null
+          primary_photo_url?: string | null
+          printing_rate_default?: number | null
           qr_code_url?: string | null
           search_tokens?: string[] | null
           section_name?: string | null
+          seo_description?: string | null
           service_number?: string | null
+          slug?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["media_asset_status"]
+          structure_ownership?: string | null
+          tags?: string[] | null
+          target_audience?: string[] | null
           total_sqft?: number | null
+          traffic_density?: string | null
           unique_service_number?: string | null
           updated_at?: string | null
           vendor_details?: Json | null
+          visibility_score?: number | null
         }
         Relationships: [
           {
@@ -4556,28 +4672,105 @@ export type Database = {
       public_media_assets_safe: {
         Row: {
           area: string | null
+          base_rate: number | null
+          card_rate: number | null
           category: Database["public"]["Enums"]["media_category"] | null
           city: string | null
-          company_city: string | null
-          company_email: string | null
           company_id: string | null
-          company_name: string | null
-          company_phone: string | null
+          created_at: string | null
           dimensions: string | null
           direction: string | null
-          faces: Json | null
+          display_title: string | null
+          district: string | null
           google_street_view_url: string | null
           id: string | null
-          illumination: string | null
-          image_urls: string[] | null
-          images: Json | null
-          is_multi_face: boolean | null
+          illumination_type: string | null
+          is_active: boolean | null
+          is_featured: boolean | null
+          is_public: boolean | null
           latitude: number | null
           location: string | null
           longitude: number | null
           media_type: string | null
+          mounting_rate_default: number | null
+          municipal_authority: string | null
+          municipal_id: string | null
+          primary_photo_url: string | null
+          printing_rate_default: number | null
+          qr_code_url: string | null
+          state: string | null
           status: Database["public"]["Enums"]["media_asset_status"] | null
+          tags: string[] | null
           total_sqft: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          area?: string | null
+          base_rate?: number | null
+          card_rate?: number | null
+          category?: Database["public"]["Enums"]["media_category"] | null
+          city?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          dimensions?: string | null
+          direction?: string | null
+          display_title?: string | null
+          district?: string | null
+          google_street_view_url?: string | null
+          id?: string | null
+          illumination_type?: string | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          is_public?: boolean | null
+          latitude?: number | null
+          location?: string | null
+          longitude?: number | null
+          media_type?: string | null
+          mounting_rate_default?: number | null
+          municipal_authority?: string | null
+          municipal_id?: string | null
+          primary_photo_url?: string | null
+          printing_rate_default?: number | null
+          qr_code_url?: string | null
+          state?: string | null
+          status?: Database["public"]["Enums"]["media_asset_status"] | null
+          tags?: string[] | null
+          total_sqft?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          area?: string | null
+          base_rate?: number | null
+          card_rate?: number | null
+          category?: Database["public"]["Enums"]["media_category"] | null
+          city?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          dimensions?: string | null
+          direction?: string | null
+          display_title?: string | null
+          district?: string | null
+          google_street_view_url?: string | null
+          id?: string | null
+          illumination_type?: string | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          is_public?: boolean | null
+          latitude?: number | null
+          location?: string | null
+          longitude?: number | null
+          media_type?: string | null
+          mounting_rate_default?: number | null
+          municipal_authority?: string | null
+          municipal_id?: string | null
+          primary_photo_url?: string | null
+          printing_rate_default?: number | null
+          qr_code_url?: string | null
+          state?: string | null
+          status?: Database["public"]["Enums"]["media_asset_status"] | null
+          tags?: string[] | null
+          total_sqft?: number | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -4611,6 +4804,15 @@ export type Database = {
       calculate_subscription_usage: {
         Args: { p_company_id: string }
         Returns: Json
+      }
+      check_asset_availability: {
+        Args: {
+          p_asset_id: string
+          p_end_date: string
+          p_exclude_booking_id?: string
+          p_start_date: string
+        }
+        Returns: boolean
       }
       check_subscription_user_limit: {
         Args: { p_company_id: string }

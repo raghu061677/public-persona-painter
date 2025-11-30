@@ -41,6 +41,7 @@ const MediaAssetEdit = lazy(() => import("./pages/MediaAssetEdit"));
 const MediaAssetsMap = lazy(() => import("./pages/MediaAssetsMap"));
 const MediaAssetsImport = lazy(() => import("./pages/MediaAssetsImport"));
 const MediaAssetsValidation = lazy(() => import("./pages/MediaAssetsValidation"));
+const MediaAssetsHealthReport = lazy(() => import("./pages/MediaAssetsHealthReport"));
 const TenantAnalytics = lazy(() => import("./pages/TenantAnalytics"));
 const ClientsImport = lazy(() => import("./pages/ClientsImport"));
 const ClientsList = lazy(() => import("./pages/ClientsList"));
@@ -274,6 +275,7 @@ const App = () => (
             <Route path="/admin/media-assets/import" element={<ProtectedRoute requiredModule="media_assets" requiredAction="create"><ModernAppLayout><MediaAssetsImport /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets/validate" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetsValidation /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets-validation" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetsValidation /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/media-assets-health" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetsHealthReport /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/clients/import" element={<ProtectedRoute requiredModule="clients" requiredAction="create"><ModernAppLayout><ClientsImport /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets/edit/:id" element={<ProtectedRoute requiredModule="media_assets" requiredAction="update"><ModernAppLayout><MediaAssetEdit /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets/:id" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetDetail /></ModernAppLayout></ProtectedRoute>} />

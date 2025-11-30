@@ -9,16 +9,14 @@ interface PlanAsset {
   direction?: string;
   dimensions?: string;
   total_sqft?: number;
-  illumination?: string;
+  illumination_type?: string;
   card_rate: number;
   media_type: string;
   latitude?: number;
   longitude?: number;
   google_street_view_url?: string;
   qr_code_url?: string;
-  images?: {
-    photos?: Array<{ url: string; tag: string }>;
-  };
+  primary_photo_url?: string;
 }
 
 interface PlanData {
@@ -121,9 +119,9 @@ export async function generatePlanPPT(
 
   // ===== ASSET SLIDES =====
   for (const asset of plan.assets) {
-    const photos = asset.images?.photos || [];
-    const photo1 = photos[0]?.url || DEFAULT_PLACEHOLDER;
-    const photo2 = photos[1]?.url || photos[0]?.url || DEFAULT_PLACEHOLDER;
+    // Use primary_photo_url for presentation
+    const photo1 = asset.primary_photo_url || DEFAULT_PLACEHOLDER;
+    const photo2 = asset.primary_photo_url || DEFAULT_PLACEHOLDER;
 
     // Parse dimensions
     let width = '';
@@ -280,7 +278,7 @@ export async function generatePlanPPT(
       { label: 'Direction:', value: asset.direction || 'N/A' },
       { label: 'Dimensions:', value: width && height ? `${width} ft × ${height} ft` : asset.dimensions || 'N/A' },
       { label: 'Total Sqft:', value: asset.total_sqft?.toString() || 'N/A' },
-      { label: 'Illumination:', value: asset.illumination || 'Non-lit' },
+      { label: 'Illumination:', value: asset.illumination_type || 'Non-lit' },
       { label: 'Media Type:', value: asset.media_type },
       { label: 'Card Rate:', value: `₹${asset.card_rate.toLocaleString('en-IN')}` },
       {

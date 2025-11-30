@@ -37,9 +37,9 @@ const ALL_COLUMNS = [
   'media_type',
   'dimensions',
   'card_rate',
-  'base_rent',
-  'printing_charges',
-  'mounting_charges',
+  'base_rate',
+  'printing_rate_default',
+  'mounting_rate_default',
 ] as const;
 
 const DEFAULT_VISIBLE = [
@@ -59,9 +59,9 @@ const COLUMN_LABELS: Record<string, string> = {
   media_type: 'Type',
   dimensions: 'Dimensions',
   card_rate: 'Card Rate',
-  base_rent: 'Base Rent',
-  printing_charges: 'Printing',
-  mounting_charges: 'Mounting',
+  base_rate: 'Base Rate',
+  printing_rate_default: 'Printing',
+  mounting_rate_default: 'Mounting',
 };
 
 export function AssetSelectionTable({ assets, selectedIds, onSelect, onMultiSelect }: AssetSelectionTableProps) {
@@ -278,7 +278,7 @@ export function AssetSelectionTable({ assets, selectedIds, onSelect, onMultiSele
                     if (key === 'asset_id') {
                       return <TableCell key={key} className="font-medium">{asset.id}</TableCell>;
                     }
-                    if (key === 'card_rate' || key === 'base_rent' || key === 'printing_charges' || key === 'mounting_charges') {
+                    if (key === 'card_rate' || key === 'base_rate' || key === 'printing_rate_default' || key === 'mounting_rate_default') {
                       return <TableCell key={key} className="text-right">{formatCurrency(asset[key] || 0)}</TableCell>;
                     }
                     return <TableCell key={key}>{asset[key] || '-'}</TableCell>;

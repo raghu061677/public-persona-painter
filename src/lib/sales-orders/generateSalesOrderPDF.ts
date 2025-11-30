@@ -211,7 +211,7 @@ function createSalesOrderPDF(data: SalesOrderData): Blob {
       asset?.direction || '',
       `${asset?.dimensions || 'N/A'}`,
       asset?.total_sqft?.toString() || 'N/A',
-      asset?.illumination || 'Non-Lit',
+      asset?.illumination_type || 'Non-Lit',
       formatINR(asset?.card_rate || 0),
       formatINR(item.negotiated_rate || item.rate || 0),
       formatINR(item.discount_amount || 0),

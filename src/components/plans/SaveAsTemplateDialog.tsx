@@ -65,7 +65,7 @@ export function SaveAsTemplateDialog({
         media_type: item.media_type,
         dimensions: item.dimensions,
         card_rate: item.card_rate,
-        base_rent: item.base_rent,
+        base_rate: item.base_rent,  // plan_items.base_rent is correct (stores base cost)
         sales_price: item.sales_price,
         discount_type: item.discount_type,
         discount_value: item.discount_value,

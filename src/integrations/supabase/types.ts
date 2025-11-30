@@ -979,6 +979,70 @@ export type Database = {
           },
         ]
       }
+      campaign_item_faces: {
+        Row: {
+          asset_id: string
+          campaign_item_id: string
+          created_at: string | null
+          face_label: string
+          height: number | null
+          id: string
+          illumination_type: string | null
+          order_index: number | null
+          photo_url: string | null
+          sqft: number | null
+          width: number | null
+        }
+        Insert: {
+          asset_id: string
+          campaign_item_id: string
+          created_at?: string | null
+          face_label: string
+          height?: number | null
+          id?: string
+          illumination_type?: string | null
+          order_index?: number | null
+          photo_url?: string | null
+          sqft?: number | null
+          width?: number | null
+        }
+        Update: {
+          asset_id?: string
+          campaign_item_id?: string
+          created_at?: string | null
+          face_label?: string
+          height?: number | null
+          id?: string
+          illumination_type?: string | null
+          order_index?: number | null
+          photo_url?: string | null
+          sqft?: number | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_item_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_item_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_item_faces_campaign_item_id_fkey"
+            columns: ["campaign_item_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_items: {
         Row: {
           asset_id: string
@@ -2497,6 +2561,66 @@ export type Database = {
           },
         ]
       }
+      media_asset_faces: {
+        Row: {
+          asset_id: string
+          created_at: string | null
+          face_label: string
+          height: number | null
+          id: string
+          illumination_type: string | null
+          is_active: boolean | null
+          order_index: number | null
+          photo_url: string | null
+          sqft: number | null
+          updated_at: string | null
+          width: number | null
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string | null
+          face_label: string
+          height?: number | null
+          id?: string
+          illumination_type?: string | null
+          is_active?: boolean | null
+          order_index?: number | null
+          photo_url?: string | null
+          sqft?: number | null
+          updated_at?: string | null
+          width?: number | null
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string | null
+          face_label?: string
+          height?: number | null
+          id?: string
+          illumination_type?: string | null
+          is_active?: boolean | null
+          order_index?: number | null
+          photo_url?: string | null
+          sqft?: number | null
+          updated_at?: string | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_asset_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_asset_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_assets: {
         Row: {
           ad_tax: number | null
@@ -3407,6 +3531,70 @@ export type Database = {
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_item_faces: {
+        Row: {
+          asset_id: string
+          created_at: string | null
+          face_label: string
+          height: number | null
+          id: string
+          illumination_type: string | null
+          order_index: number | null
+          photo_url: string | null
+          plan_item_id: string
+          sqft: number | null
+          width: number | null
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string | null
+          face_label: string
+          height?: number | null
+          id?: string
+          illumination_type?: string | null
+          order_index?: number | null
+          photo_url?: string | null
+          plan_item_id: string
+          sqft?: number | null
+          width?: number | null
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string | null
+          face_label?: string
+          height?: number | null
+          id?: string
+          illumination_type?: string | null
+          order_index?: number | null
+          photo_url?: string | null
+          plan_item_id?: string
+          sqft?: number | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_item_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_item_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_item_faces_plan_item_id_fkey"
+            columns: ["plan_item_id"]
+            isOneToOne: false
+            referencedRelation: "plan_items"
             referencedColumns: ["id"]
           },
         ]
@@ -4853,6 +5041,8 @@ export type Database = {
           tier: Database["public"]["Enums"]["subscription_tier"]
         }[]
       }
+      get_asset_face_count: { Args: { p_asset_id: string }; Returns: number }
+      get_asset_total_sqft: { Args: { p_asset_id: string }; Returns: number }
       get_company_active_modules: {
         Args: { p_company_id: string }
         Returns: Json

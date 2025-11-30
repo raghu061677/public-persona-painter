@@ -39,8 +39,8 @@ interface VacantAsset {
   status: string;
   next_available_from?: string;
   direction?: string;
-  illumination?: string;
-  images?: any;
+  illumination_type?: string;
+  primary_photo_url?: string;
   latitude?: number;
   longitude?: number;
 }

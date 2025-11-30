@@ -161,7 +161,7 @@ export default function PlanEdit() {
       newSelected.add(assetId);
       // Default negotiated price to card_rate
       const cardRate = asset.card_rate || 0;
-      const baseRate = asset.base_rent || 0;
+      const baseRate = asset.base_rate || 0;
       const days = calculateDurationDays(new Date(formData.start_date), new Date(formData.end_date));
       
       // Calculate initial values
@@ -194,7 +194,7 @@ export default function PlanEdit() {
     assets.forEach(asset => {
       newSelected.add(asset.id);
       const cardRate = asset.card_rate || 0;
-      const baseRate = asset.base_rent || 0;
+      const baseRate = asset.base_rate || 0;
       
       const proRata = calcProRata(cardRate, days);
       const discount = calcDiscount(cardRate, cardRate);
@@ -256,7 +256,7 @@ export default function PlanEdit() {
       
       if (pricing && asset) {
         const cardRate = asset.card_rate || 0;
-        const baseRate = asset.base_rent || 0;
+        const baseRate = asset.base_rate || 0;
         const negotiatedPrice = pricing.negotiated_price || cardRate;
         const printing = pricing.printing_charges || 0;
         const mounting = pricing.mounting_charges || 0;
@@ -357,7 +357,7 @@ export default function PlanEdit() {
         const pricing = assetPricing[assetId];
         
         const cardRate = asset.card_rate || 0;
-        const baseRate = asset.base_rent || 0;
+        const baseRate = asset.base_rate || 0;
         const negotiatedPrice = pricing.negotiated_price || cardRate;
         const printing = pricing.printing_charges || 0;
         const mounting = pricing.mounting_charges || 0;
@@ -392,7 +392,7 @@ export default function PlanEdit() {
           longitude: asset.longitude,
           // Pricing fields
           card_rate: cardRate,
-          base_rent: baseRate,
+          base_rent: baseRate,  // Note: plan_items.base_rent stores media_assets.base_rate
           sales_price: negotiatedPrice,
           discount_type: 'Amount',
           discount_value: discountMonthly,

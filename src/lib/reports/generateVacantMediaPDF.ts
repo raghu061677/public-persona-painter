@@ -13,7 +13,7 @@ interface VacantAsset {
   total_sqft: number | null;
   status: string;
   direction?: string;
-  illumination?: string;
+  illumination_type?: string;
 }
 
 export async function generateVacantMediaPDF(

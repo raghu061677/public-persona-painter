@@ -35,7 +35,7 @@ interface PlanItemData {
   direction?: string;
   dimensions: string;
   total_sqft?: number;
-  illumination?: string;
+  illumination_type?: string;
   card_rate: number;
   sales_price: number;
   discount_amount?: number;
@@ -289,7 +289,7 @@ export async function generatePlanExcel(planId: string): Promise<void> {
         asset?.direction || "N/A",
         asset?.dimensions || "N/A",
         asset?.total_sqft || "",
-        asset?.illumination || "N/A",
+        asset?.illumination_type || "N/A",
         item.card_rate || 0,
         item.sales_price || 0,
         item.discount_amount || 0,

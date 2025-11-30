@@ -12,11 +12,11 @@ interface VacantAsset {
   total_sqft: number | null;
   status: string;
   direction?: string;
-  illumination?: string;
+  illumination_type?: string;
+  primary_photo_url?: string;
   latitude?: number;
   longitude?: number;
   qr_code_url?: string;
-  images?: any;
 }
 
 const DEFAULT_PLACEHOLDER = "https://via.placeholder.com/800x600/f3f4f6/6b7280?text=No+Image+Available";
@@ -157,9 +157,9 @@ export async function generateVacantMediaPPT(
 
   // ===== ASSET SLIDES =====
   for (const asset of assets) {
-    const photos = asset.images?.photos || [];
-    const photo1 = photos[0]?.url || DEFAULT_PLACEHOLDER;
-    const photo2 = photos[1]?.url || photos[0]?.url || DEFAULT_PLACEHOLDER;
+    // Use primary_photo_url for presentation
+    const photo1 = asset.primary_photo_url || DEFAULT_PLACEHOLDER;
+    const photo2 = asset.primary_photo_url || DEFAULT_PLACEHOLDER;
 
     const slide = prs.addSlide();
 
@@ -249,7 +249,7 @@ export async function generateVacantMediaPPT(
       `Media Type: ${asset.media_type}`,
       `Dimensions: ${asset.dimensions}`,
       `Direction: ${asset.direction || "N/A"}`,
-      `Illumination: ${asset.illumination || "N/A"}`,
+      `Illumination: ${asset.illumination_type || "N/A"}`,
       `Sq.Ft: ${asset.total_sqft || 0}`,
       `Card Rate: ₹${asset.card_rate.toLocaleString("en-IN")}`,
     ].join("\n");

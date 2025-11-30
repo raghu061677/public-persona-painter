@@ -247,7 +247,7 @@ export async function generateUnifiedExcel(data: ExportData): Promise<Blob> {
       item.location,
       item.dimensions,
       Math.round(item.total_sqft || 0),
-      item.illumination || 'Non-Lit',
+      item.illumination_type || 'Non-Lit',
       1,
       formatDateToDDMonYY(item.start_date || plan.start_date),
       formatDateToDDMonYY(item.end_date || plan.end_date),

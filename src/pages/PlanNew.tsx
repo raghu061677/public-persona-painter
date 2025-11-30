@@ -268,7 +268,7 @@ export default function PlanNew() {
         // All rates are monthly - apply pro-rata factor
         const negotiatedMonthly = pricing.negotiated_price || asset.card_rate || 0;
         const cardRateMonthly = asset.card_rate || 0;
-        const baseRateMonthly = asset.base_rent || 0;
+        const baseRateMonthly = asset.base_rate || 0;
         const printing = pricing.printing_charges || 0;
         const mounting = pricing.mounting_charges || 0;
         
@@ -411,7 +411,7 @@ export default function PlanNew() {
           longitude: asset.longitude,
           // Pricing fields
           card_rate: asset.card_rate,
-          base_rent: asset.base_rent,
+          base_rent: asset.base_rate,  // Note: plan_items.base_rent stores media_assets.base_rate
           sales_price: salesPrice,
           discount_type: discountType,
           discount_value: discountValue,

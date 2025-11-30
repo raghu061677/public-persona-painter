@@ -94,7 +94,7 @@ export function LatestPhotosSection({ assetId, asset }: LatestPhotosSectionProps
     location: asset.location,
     dimensions: asset.dimensions,
     direction: asset.direction,
-    illumination: asset.illumination,
+    illumination_type: asset.illumination_type,
     total_sqft: asset.total_sqft
   } : null;
 

@@ -361,10 +361,10 @@ export default function PlanDetail() {
         longitude: asset.longitude,
         // Pricing
         card_rate: asset.card_rate,
-        base_rent: asset.base_rent,
+        base_rent: asset.base_rate,  // Note: plan_items.base_rent stores media_assets.base_rate
         sales_price: asset.card_rate,
-        printing_charges: asset.printing_charges || 0,
-        mounting_charges: asset.mounting_charges || 0,
+        printing_charges: asset.printing_rate_default || 0,
+        mounting_charges: asset.mounting_rate_default || 0,
         discount_type: 'Percent',
         discount_value: 0,
         discount_amount: 0,

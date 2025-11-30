@@ -647,7 +647,7 @@ async function generateWithPhotosPDF(
       
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      const subtitle = `${asset.area}, ${assetDetails?.dimensions || 'N/A'}, ${assetDetails?.illumination || 'N/A'}`;
+      const subtitle = `${asset.area}, ${assetDetails?.dimensions || 'N/A'}, ${assetDetails?.illumination_type || 'N/A'}`;
       doc.text(subtitle, pageWidth / 2, yPos + 14, { align: 'center' });
       
       // ======= QR CODE SECTION =======

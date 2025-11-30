@@ -107,13 +107,13 @@ export function ExportPlanPPTDialog({ planId, planName }: ExportPlanPPTDialogPro
         direction: item.asset.direction,
         dimensions: item.asset.dimensions,
         total_sqft: item.asset.total_sqft,
-        illumination: item.asset.illumination,
+        illumination_type: item.asset.illumination_type,
         card_rate: item.card_rate || item.asset.card_rate,
         media_type: item.asset.media_type,
         latitude: item.asset.latitude,
         longitude: item.asset.longitude,
         google_street_view_url: item.asset.google_street_view_url,
-        images: item.asset.images,
+        primary_photo_url: item.asset.primary_photo_url,
       }));
 
       // Generate PPT

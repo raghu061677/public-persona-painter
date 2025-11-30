@@ -40,15 +40,8 @@ interface MediaAsset {
   card_rate: number;
   status: string;
   direction?: string;
-  illumination?: string;
-  image_urls?: string[];
-  images?: {
-    frontView?: string;
-    backView?: string;
-    leftView?: string;
-    rightView?: string;
-    [key: string]: string | undefined;
-  };
+  illumination_type?: string;
+  primary_photo_url?: string;
 }
 
 type AssetStatus = 'Available' | 'Booked' | 'Blocked' | 'Maintenance' | 'Pending Compliance';
@@ -239,53 +232,19 @@ export default function MediaAssetsMap() {
 
     // Add new markers
     filteredAssets.forEach((asset) => {
-      // Get all available images
-      let imageUrls: string[] = [];
+      // Use primary_photo_url for map markers
+      const imageUrl = asset.primary_photo_url || '/placeholder.svg';
       
-      // Try image_urls array first
-      if (asset.image_urls && asset.image_urls.length > 0) {
-        imageUrls = asset.image_urls.map(url => {
-          // If it's a Supabase storage path, get the public URL
-          if (url.startsWith('media-assets/')) {
-            const { data } = supabase.storage.from('media-assets').getPublicUrl(url);
-            return data.publicUrl;
-          }
-          return url;
-        });
-      } 
-      // Then try images object
-      else if (asset.images) {
-        const imageKeys = ['frontView', 'backView', 'leftView', 'rightView'];
-        imageUrls = imageKeys
-          .map(key => {
-            const url = asset.images?.[key];
-            if (!url) return null;
-            // If it's a Supabase storage path, get the public URL
-            if (url.startsWith('media-assets/')) {
-              const { data } = supabase.storage.from('media-assets').getPublicUrl(url);
-              return data.publicUrl;
-            }
-            return url;
-          })
-          .filter((url): url is string => !!url);
-      }
-
-      const firstImageUrl = imageUrls[0] || "";
       const filter = statusFilters.find(f => f.status === asset.status);
       const statusColor = filter?.color || '#9ca3af';
 
       const popupContent = `
         <div style="min-width: 300px; max-width: 350px; font-family: system-ui;">
-          ${firstImageUrl ? `
+          ${imageUrl && imageUrl !== '/placeholder.svg' ? `
             <div style="margin-bottom: 12px; position: relative;">
-              <img src="${firstImageUrl}" alt="${asset.location}" 
+              <img src="${imageUrl}" alt="${asset.location}" 
                    style="width: 100%; height: 180px; object-fit: cover; border-radius: 8px;" 
                    onerror="this.style.display='none'" />
-              ${imageUrls.length > 1 ? `
-                <div style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">
-                  +${imageUrls.length - 1} photos
-                </div>
-              ` : ''}
             </div>
           ` : ''}
           <h3 style="font-weight: 700; font-size: 1.1rem; margin-bottom: 4px; color: #1f2937;">${asset.location}</h3>
@@ -304,12 +263,12 @@ export default function MediaAssetsMap() {
             ` : ''}
           </div>
 
-          ${asset.illumination || asset.direction ? `
+          ${asset.illumination_type || asset.direction ? `
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; font-size: 0.875rem;">
-              ${asset.illumination ? `
+              ${asset.illumination_type ? `
                 <div>
                   <div style="font-weight: 500; color: #6b7280; font-size: 0.75rem;">Illumination</div>
-                  <div style="font-weight: 600; color: #1f2937;">${asset.illumination}</div>
+                  <div style="font-weight: 600; color: #1f2937;">${asset.illumination_type}</div>
                 </div>
               ` : ''}
               ${asset.direction ? `

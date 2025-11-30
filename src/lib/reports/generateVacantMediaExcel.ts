@@ -12,7 +12,8 @@ interface VacantAsset {
   total_sqft: number | null;
   status: string;
   direction?: string;
-  illumination?: string;
+  illumination_type?: string;
+  primary_photo_url?: string;
   next_available_from?: string;
 }
 
@@ -136,7 +137,7 @@ export async function generateVacantMediaExcel(
       asset.dimensions,
       asset.total_sqft || 0,
       asset.direction || "N/A",
-      asset.illumination || "N/A",
+      asset.illumination_type || "N/A",
       asset.card_rate,
       asset.status,
     ];

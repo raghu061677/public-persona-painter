@@ -243,7 +243,7 @@ export function SelectedAssetsTable({
                 
                 // Get rates from asset
                 const cardRate = asset.card_rate || 0;
-                const baseRate = asset.base_rent || asset.base_rate || 0;
+                const baseRate = asset.base_rate || 0;
                 const negotiatedPrice = pricing.negotiated_price || cardRate;
                 
                 // Calculate pro-rata
@@ -319,8 +319,8 @@ export function SelectedAssetsTable({
                     {isColumnVisible('total_sqft') && (
                       <TableCell className="text-sm">{asset.total_sqft || '-'}</TableCell>
                     )}
-                    {isColumnVisible('illumination') && (
-                      <TableCell className="text-sm">{asset.illumination || '-'}</TableCell>
+                {isColumnVisible('illumination') && (
+                  <TableCell className="text-sm">{asset.illumination_type || '-'}</TableCell>
                     )}
                     {isColumnVisible('card_rate') && (
                       <TableCell className="text-right bg-muted/30">

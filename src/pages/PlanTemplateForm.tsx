@@ -332,14 +332,14 @@ export default function PlanTemplateForm() {
               <div className="space-y-2">
                 <Label>Default Client (Optional)</Label>
                 <Select
-                  value={formData.default_client_id}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, default_client_id: value }))}
+                  value={formData.default_client_id || "none"}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, default_client_id: value === "none" ? "" : value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select default client" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {clients.map((client) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.name}

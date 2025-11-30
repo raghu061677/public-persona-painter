@@ -28,10 +28,7 @@ export function GalleryAssetCard({
   const trafficData = useTrafficData(asset);
 
   const getAssetImage = () => {
-    if (asset.images?.photos?.[0]?.url) {
-      return asset.images.photos[0].url;
-    }
-    return "/placeholder.svg";
+    return asset.primary_photo_url || "/placeholder.svg";
   };
 
   return (

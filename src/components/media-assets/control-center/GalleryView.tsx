@@ -25,10 +25,7 @@ export function GalleryView({
   onAddToPlan,
 }: GalleryViewProps) {
   const getAssetImage = (asset: any) => {
-    if (asset.images?.photos?.[0]?.url) {
-      return asset.images.photos[0].url;
-    }
-    return "/placeholder.svg";
+    return asset.primary_photo_url || "/placeholder.svg";
   };
 
   return (

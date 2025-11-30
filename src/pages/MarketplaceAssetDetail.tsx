@@ -34,14 +34,12 @@ interface PublicAssetDetail {
   dimensions: string;
   total_sqft: number | null;
   direction: string | null;
-  illumination: string | null;
+  illumination_type: string | null;
   status: string;
-  image_urls: string[];
+  primary_photo_url: string | null;
   latitude: number | null;
   longitude: number | null;
   google_street_view_url: string | null;
-  is_multi_face: boolean | null;
-  faces: any;
   company_name: string;
 }
 
@@ -120,8 +118,14 @@ export default function MarketplaceAssetDetail() {
 
       setAsset(data);
 
-      // Use image_urls directly from the view
-      setImageUrls(data.image_urls || []);
+      // Fetch gallery photos from media_photos table
+      const { data: photos } = await supabase
+        .from('media_photos')
+        .select('photo_url')
+        .eq('asset_id', assetId)
+        .order('created_at', { ascending: false });
+
+      setImageUrls(photos?.map(p => p.photo_url) || (data.primary_photo_url ? [data.primary_photo_url] : []));
     } catch (error: any) {
       console.error('Error fetching asset detail:', error);
       toast({
@@ -334,28 +338,12 @@ export default function MarketplaceAssetDetail() {
                   </p>
                 </div>
               )}
-              {asset.illumination && (
+              {asset.illumination_type && (
                 <div>
                   <p className="text-sm text-muted-foreground font-medium">Illumination</p>
                   <div className="flex items-center gap-2 mt-1">
                     <Sun className="h-5 w-5 text-yellow-500" />
-                    <p className="font-bold text-lg">{asset.illumination}</p>
-                  </div>
-                </div>
-              )}
-              {asset.is_multi_face && asset.faces && (
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium mb-2">Faces</p>
-                  <div className="space-y-2">
-                    {Array.isArray(asset.faces) && asset.faces.map((face: any, idx: number) => (
-                      <div key={idx} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                        <Layers className="h-5 w-5 text-primary" />
-                        <span className="font-semibold">
-                          Face {idx + 1}: {face.width}x{face.height} ft
-                          {face.sqft && ` (${face.sqft} sq ft)`}
-                        </span>
-                      </div>
-                    ))}
+                    <p className="font-bold text-lg">{asset.illumination_type}</p>
                   </div>
                 </div>
               )}

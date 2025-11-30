@@ -47,7 +47,7 @@ export function UnifiedExportButton({
           media_assets!inner(
             total_sqft,
             dimensions,
-            illumination,
+            illumination_type,
             qr_code_url
           )
         `)
@@ -61,7 +61,7 @@ export function UnifiedExportButton({
         ...item,
         total_sqft: item.media_assets?.total_sqft,
         dimensions: item.media_assets?.dimensions,
-        illumination: item.media_assets?.illumination,
+        illumination_type: item.media_assets?.illumination_type,
         qr_code_url: item.media_assets?.qr_code_url,
       }));
 

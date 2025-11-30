@@ -5,11 +5,7 @@ import { QRCodeButton } from "./QRCodeButton";
 
 interface Asset {
   id: string;
-  image_urls?: string[];
-  images?: {
-    photos?: Array<{ url: string; tag: string; uploaded_at: string }>;
-    [key: string]: any;
-  };
+  primary_photo_url?: string;
   latitude?: number;
   longitude?: number;
   google_street_view_url?: string;
@@ -20,25 +16,7 @@ export function ImageCell({ row }: any) {
   const navigate = useNavigate();
   const asset = row.original;
   
-  // Try to get the first image from images.photos array (new format)
-  let imageUrl: string | null = null;
-  
-  if (asset.images?.photos && Array.isArray(asset.images.photos) && asset.images.photos.length > 0) {
-    imageUrl = asset.images.photos[0].url;
-  }
-  
-  // Fallback to legacy image_urls array if new format is empty
-  if (!imageUrl && asset.image_urls && asset.image_urls.length > 0) {
-    imageUrl = asset.image_urls[0];
-  }
-
-  if (!imageUrl) {
-    return (
-      <div className="w-16 h-16 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
-        No Image
-      </div>
-    );
-  }
+  const imageUrl = asset.primary_photo_url || "/placeholder.svg";
 
   return (
     <img

@@ -44,26 +44,20 @@ export function AssetDetails({ asset, isAdmin = false, onQRGenerated }: AssetDet
   const [editingVisibility, setEditingVisibility] = useState(false);
   const [currentAsset, setCurrentAsset] = useState(asset);
 
-  // Collect all images from images.photos array
+  // Collect all images - use primary_photo_url as fallback
   const allImages: { url: string; name: string; tag?: string }[] = [];
   
-  // New format: images.photos array
-  if (asset.images?.photos && Array.isArray(asset.images.photos)) {
-    asset.images.photos.forEach((photo: any, index: number) => {
-      allImages.push({ 
-        url: photo.url, 
-        name: photo.tag || `Photo ${index + 1}`,
-        tag: photo.tag 
-      });
+  // Primary photo as first image
+  if (asset.primary_photo_url) {
+    allImages.push({ 
+      url: asset.primary_photo_url, 
+      name: 'Primary Photo',
+      tag: 'Main' 
     });
   }
   
-  // Legacy: image_urls array (if any old records exist)
-  if (asset.image_urls && Array.isArray(asset.image_urls) && asset.image_urls.length > 0) {
-    asset.image_urls.forEach((url: string, index: number) => {
-      allImages.push({ url, name: `Image ${index + 1}` });
-    });
-  }
+  // Additional photos from media_photos should be loaded separately if needed
+  // For now, just use the primary photo
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this asset?")) return;

@@ -4782,6 +4782,24 @@ export type Database = {
           },
         ]
       }
+      unused_asset_codes: {
+        Row: {
+          created_at: string | null
+          generated_code: string
+          used: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          generated_code: string
+          used?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          generated_code?: string
+          used?: boolean | null
+        }
+        Relationships: []
+      }
       user_activity_logs: {
         Row: {
           activity_description: string | null
@@ -5289,6 +5307,7 @@ export type Database = {
           tier: Database["public"]["Enums"]["subscription_tier"]
         }[]
       }
+      get_asset_code_health: { Args: never; Returns: Json }
       get_asset_face_count: { Args: { p_asset_id: string }; Returns: number }
       get_asset_total_sqft: { Args: { p_asset_id: string }; Returns: number }
       get_company_active_modules: {
@@ -5309,6 +5328,13 @@ export type Database = {
           p_period: string
         }
         Returns: number
+      }
+      get_unused_asset_codes: {
+        Args: never
+        Returns: {
+          created_at: string
+          generated_code: string
+        }[]
       }
       get_user_all_roles: {
         Args: { p_user_id: string }

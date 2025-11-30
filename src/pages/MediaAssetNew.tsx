@@ -37,9 +37,6 @@ const MEDIA_TYPE_CODES = [
 export default function MediaAssetNew() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [cityCode, setCityCode] = useState("");
-  const [mediaTypeCode, setMediaTypeCode] = useState("");
   const [municipalAuthorities, setMunicipalAuthorities] = useState<{ label: string; value: string }[]>([]);
   const [uploadedPhotos, setUploadedPhotos] = useState<Array<{
     id: string;
@@ -51,14 +48,13 @@ export default function MediaAssetNew() {
   const [createdAssetId, setCreatedAssetId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
-    id: "",
+    city: "",
     media_type: "",
     municipal_id: "",
     status: "Available",
     category: "OOH",
     location: "",
     area: "",
-    city: "",
     district: "",
     state: "",
     latitude: "",
@@ -94,20 +90,6 @@ export default function MediaAssetNew() {
     available_from: null as Date | null,
   });
 
-  // Auto-populate city and media_type when codes are selected
-  useEffect(() => {
-    if (cityCode) {
-      const cityLabel = CITY_CODES.find(c => c.value === cityCode)?.label || "";
-      updateField('city', cityLabel);
-    }
-  }, [cityCode]);
-
-  useEffect(() => {
-    if (mediaTypeCode) {
-      const mediaTypeLabel = MEDIA_TYPE_CODES.find(m => m.value === mediaTypeCode)?.fullName || "";
-      updateField('media_type', mediaTypeLabel);
-    }
-  }, [mediaTypeCode]);
 
   // Fetch municipal authorities
   useEffect(() => {
@@ -151,42 +133,6 @@ export default function MediaAssetNew() {
     }
   }, [formData.dimensions]);
 
-  const generateAssetId = async () => {
-    if (!cityCode || !mediaTypeCode) {
-      toast({
-        title: "Missing Information",
-        description: "Please select both City and Media Type first",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setGenerating(true);
-    try {
-      const cityLabel = CITY_CODES.find(c => c.value === cityCode)?.label || "";
-      const mediaTypeLabel = MEDIA_TYPE_CODES.find(m => m.value === mediaTypeCode)?.fullName || "";
-      
-      if (!cityLabel || !mediaTypeLabel) {
-        throw new Error("Invalid city or media type selection");
-      }
-
-      const generatedId = await generateMediaAssetCode(cityLabel, mediaTypeLabel);
-      updateField('id', generatedId);
-      
-      toast({
-        title: "ID Generated",
-        description: `Asset ID: ${generatedId}`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setGenerating(false);
-    }
-  };
 
   const refreshPhotos = async () => {
     if (!createdAssetId) return;
@@ -208,8 +154,8 @@ export default function MediaAssetNew() {
 
     try {
       // Validation
-      if (!formData.id) {
-        throw new Error("Please generate an Asset ID first");
+      if (!formData.city || !formData.media_type) {
+        throw new Error("City and Media Type are required");
       }
       if (!formData.location || !formData.area) {
         throw new Error("Location and Area are required");
@@ -237,18 +183,21 @@ export default function MediaAssetNew() {
         throw new Error("No active company association found");
       }
 
+      // First, generate temporary UUID for the asset
+      const tempAssetId = crypto.randomUUID();
+      
       const parsed = parseDimensions(formData.dimensions);
       const search_tokens = buildSearchTokens([
-        formData.id,
+        tempAssetId,
         formData.municipal_id,
         formData.city,
         formData.area,
         formData.location,
       ]);
 
-      // Create the media asset
+      // Create the media asset WITHOUT media_asset_code (it will be generated after)
       const { error: assetError } = await supabase.from('media_assets').insert({
-        id: formData.id,
+        id: tempAssetId,
         media_type: formData.media_type,
         municipal_id: formData.municipal_id || null,
         status: formData.status,
@@ -301,7 +250,7 @@ export default function MediaAssetNew() {
         throw assetError;
       }
 
-      // Generate MNS code after successful asset creation
+      // NOW generate MNS code AFTER successful asset creation
       const { data: mnsCode, error: codeError } = await supabase.rpc('generate_mns_code', {
         p_city: formData.city,
         p_media_type: formData.media_type,
@@ -309,17 +258,21 @@ export default function MediaAssetNew() {
 
       if (codeError) {
         console.error('Code generation error:', codeError);
-        // Don't fail the entire operation if code generation fails
+        toast({
+          title: "Warning",
+          description: "Asset created but code generation failed. Please contact support.",
+          variant: "destructive",
+        });
       } else if (mnsCode) {
         // Update the asset with the generated code
         await supabase
           .from('media_assets')
           .update({ media_asset_code: mnsCode })
-          .eq('id', formData.id);
+          .eq('id', tempAssetId);
       }
 
       // Set the created asset ID to enable photo uploads
-      setCreatedAssetId(formData.id);
+      setCreatedAssetId(tempAssetId);
       setIsAssetCreated(true);
 
       toast({
@@ -358,10 +311,10 @@ export default function MediaAssetNew() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold">Create Media Asset</h1>
-            {formData.id && <p className="text-sm text-muted-foreground font-mono">{formData.id}</p>}
+            <p className="text-sm text-muted-foreground">Fill in details and save to generate MNS code</p>
           </div>
         </div>
-        <Button type="submit" disabled={loading || !formData.id}>
+        <Button type="submit" disabled={loading || !formData.city || !formData.media_type}>
           {loading ? 'Saving...' : 'Create Asset'}
         </Button>
       </header>
@@ -369,52 +322,6 @@ export default function MediaAssetNew() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* LEFT COLUMN */}
         <div className="lg:col-span-2 space-y-8">
-          {/* Auto-Generate ID */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Auto-Generate Asset ID</CardTitle>
-              <CardDescription>Select city and media type to generate a unique ID</CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label>City *</Label>
-                <Select value={cityCode} onValueChange={setCityCode}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select city..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CITY_CODES.map(c => (
-                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Media Type *</Label>
-                <Select value={mediaTypeCode} onValueChange={setMediaTypeCode}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MEDIA_TYPE_CODES.map(m => (
-                      <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-end">
-                <Button 
-                  type="button" 
-                  onClick={generateAssetId} 
-                  disabled={!cityCode || !mediaTypeCode || generating}
-                  className="w-full"
-                >
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  {generating ? 'Generating...' : 'Generate ID'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Basic Information */}
           <Card>
@@ -423,16 +330,34 @@ export default function MediaAssetNew() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label>Asset ID</Label>
-                <Input value={formData.id} readOnly disabled />
+                <Label>City *</Label>
+                <Select value={formData.city} onValueChange={(v) => updateField('city', v)} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select city..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CITY_CODES.map(c => (
+                      <SelectItem key={c.value} value={c.label}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Media Type *</Label>
+                <Select value={formData.media_type} onValueChange={(v) => updateField('media_type', v)} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MEDIA_TYPE_CODES.map(m => (
+                      <SelectItem key={m.value} value={m.fullName}>{m.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label>Municipal Ref. ID</Label>
                 <Input value={formData.municipal_id} onChange={(e) => updateField('municipal_id', e.target.value)} />
-              </div>
-              <div>
-                <Label>Media Type</Label>
-                <Input value={formData.media_type} readOnly disabled />
               </div>
               <div>
                 <Label>Category</Label>

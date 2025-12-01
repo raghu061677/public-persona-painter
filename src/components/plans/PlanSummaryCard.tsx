@@ -20,6 +20,7 @@ interface PlanSummaryCardProps {
   grandTotal: number;
   baseRent?: number;
   withCard?: boolean;
+  showDiscount?: boolean;
 }
 
 export function PlanSummaryCard({
@@ -37,6 +38,7 @@ export function PlanSummaryCard({
   grandTotal,
   baseRent,
   withCard = true,
+  showDiscount = true,
 }: PlanSummaryCardProps) {
   const profitPercent = netTotal > 0 ? (profit / netTotal) * 100 : 0;
   const isLowMargin = profitPercent < 10;
@@ -105,7 +107,7 @@ export function PlanSummaryCard({
 
         {/* Adjustments */}
         <div className="space-y-3 pt-2 border-t">
-          {discount > 0 && (
+          {showDiscount && discount > 0 && (
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium text-destructive">Discount</span>
               <span className="font-semibold text-destructive">-{formatCurrency(discount)}</span>

@@ -58,6 +58,7 @@ import { SaveAsTemplateDialog } from "@/components/plans/SaveAsTemplateDialog";
 import { ApprovalWorkflowDialog } from "@/components/plans/ApprovalWorkflowDialog";
 import { ApprovalHistoryTimeline } from "@/components/plans/ApprovalHistoryTimeline";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PageCustomization } from "@/components/ui/page-customization";
 
 export default function PlanDetail() {
   const { id } = useParams();
@@ -93,6 +94,7 @@ export default function PlanDetail() {
     end_date: "",
     notes: "",
   });
+  const [showDiscount, setShowDiscount] = useState(true);
 
   const loadPendingApprovals = async () => {
     if (!id) return;
@@ -863,14 +865,29 @@ export default function PlanDetail() {
 
         {/* Header */}
         <div className="flex items-start justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">{plan.plan_name}</h1>
-            <div className="flex items-center gap-3">
-              <Badge className={getPlanStatusColor(plan.status)}>
-                {plan.status}
-              </Badge>
-              <span className="text-muted-foreground">{plan.id}</span>
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">{plan.plan_name}</h1>
+              <div className="flex items-center gap-3">
+                <Badge className={getPlanStatusColor(plan.status)}>
+                  {plan.status}
+                </Badge>
+                <span className="text-muted-foreground">{plan.id}</span>
+              </div>
             </div>
+            
+            {/* Page Customization */}
+            <PageCustomization
+              options={[
+                {
+                  id: "show-discount",
+                  label: "Show Discount",
+                  description: "Display discount information in financial summary",
+                  enabled: showDiscount,
+                  onChange: setShowDiscount,
+                },
+              ]}
+            />
           </div>
           
           {/* Action Buttons */}
@@ -1292,7 +1309,7 @@ export default function PlanDetail() {
               </div>
               
               {/* Discount - Blue */}
-              {(() => {
+              {showDiscount && (() => {
                 const totalDiscount = planItems.reduce((sum, item) => sum + (item.discount_amount || 0), 0);
                 if (totalDiscount > 0) {
                   return (

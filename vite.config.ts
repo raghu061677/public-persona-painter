@@ -62,7 +62,7 @@ export default defineConfig(({ mode }) => ({
     }),
     mode === "development" && componentTagger(),
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt",
       injectRegister: 'auto',
       includeAssets: ["favicon.ico", "robots.txt", "favicon-16x16.png", "favicon-32x32.png", "favicon-192x192.png", "apple-touch-icon.png"],
       manifestFilename: "manifest.json",
@@ -131,6 +131,9 @@ export default defineConfig(({ mode }) => ({
           '**/*.js.map',
           '**/manifest.json'
         ],
+        // Skip waiting to prevent automatic reloads
+        skipWaiting: false,
+        clientsClaim: false,
         runtimeCaching: [
           {
             // Cache JavaScript files on demand with NetworkFirst strategy

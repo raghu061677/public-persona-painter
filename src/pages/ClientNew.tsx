@@ -102,11 +102,42 @@ export default function ClientNew() {
     shipping_same_as_billing: false,
   });
 
-  // Prevent page refresh when tab visibility changes
+  // Aggressively prevent page refresh/reload when tab visibility changes
   useEffect(() => {
-    const stopRefetch = () => {};
-    document.addEventListener("visibilitychange", stopRefetch);
-    return () => document.removeEventListener("visibilitychange", stopRefetch);
+    const preventReload = (e: Event) => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return false;
+    };
+
+    const preventVisibilityReload = () => {
+      // Prevent service worker from reloading the page
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          registrations.forEach(registration => {
+            // Don't unregister, just prevent updates during form editing
+            registration.update = async () => registration;
+          });
+        });
+      }
+    };
+
+    // Prevent various events that could trigger reload
+    document.addEventListener("visibilitychange", preventVisibilityReload);
+    window.addEventListener("beforeunload", preventReload);
+    window.addEventListener("pageshow", preventReload);
+    window.addEventListener("focus", preventReload);
+    
+    // Mark that we're editing a form (used by service worker)
+    sessionStorage.setItem("editing-form", "true");
+    
+    return () => {
+      document.removeEventListener("visibilitychange", preventVisibilityReload);
+      window.removeEventListener("beforeunload", preventReload);
+      window.removeEventListener("pageshow", preventReload);
+      window.removeEventListener("focus", preventReload);
+      sessionStorage.removeItem("editing-form");
+    };
   }, []);
 
   // Load saved form from localStorage on mount
@@ -115,11 +146,18 @@ export default function ClientNew() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
+        console.log("✅ Restored form data from localStorage:", {
+          id: parsed.id,
+          customer_type: parsed.customer_type,
+          company: parsed.company,
+          first_name: parsed.first_name,
+        });
         setFormData(parsed);
-        console.log("Restored form from localStorage");
       } catch (error) {
-        console.error("Failed to restore form data:", error);
+        console.error("❌ Failed to restore form data:", error);
       }
+    } else {
+      console.log("ℹ️ No saved form data found in localStorage");
     }
   }, []);
 
@@ -127,8 +165,17 @@ export default function ClientNew() {
   useEffect(() => {
     if (formData.id || formData.company || formData.first_name || formData.email) {
       localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(formData));
+      console.log("💾 Form auto-saved to localStorage");
     }
   }, [formData]);
+  
+  // Log when component mounts/unmounts to detect reload issues
+  useEffect(() => {
+    console.log("🚀 ClientNew component mounted");
+    return () => {
+      console.log("💥 ClientNew component unmounted");
+    };
+  }, []);
 
   const [contactPersons, setContactPersons] = useState<ContactPerson[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});

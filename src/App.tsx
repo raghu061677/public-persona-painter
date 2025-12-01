@@ -56,9 +56,7 @@ const PlanNew = lazy(() => import("./pages/PlanNew"));
 const PlanEdit = lazy(() => import("./pages/PlanEdit"));
 const PlanDetail = lazy(() => import("./pages/PlanDetail"));
 const PlanShare = lazy(() => import("./pages/PlanShare"));
-const PlanTemplatesList = lazy(() => import("./pages/PlanTemplatesList"));
-const PlanTemplateForm = lazy(() => import("./pages/PlanTemplateForm"));
-const PlanTemplatePreview = lazy(() => import("./pages/PlanTemplatePreview"));
+// Removed Plan Templates feature
 const ApprovalsQueue = lazy(() => import("./pages/approvals/ApprovalsQueue"));
 const ApprovalHistory = lazy(() => import("./pages/approvals/ApprovalHistory"));
 const ApprovalRulesSettings = lazy(() => import("./pages/approvals/ApprovalRulesSettings"));
@@ -289,10 +287,7 @@ const App = () => (
             <Route path="/admin/plans/new" element={<ProtectedRoute requiredModule="plans" requiredAction="create"><ModernAppLayout><PlanNew /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/plans/edit/:id" element={<ProtectedRoute requiredModule="plans" requiredAction="update"><ModernAppLayout><PlanEdit /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/plans/:id" element={<ProtectedRoute requiredModule="plans" requiredAction="view"><ModernAppLayout><PlanDetail /></ModernAppLayout></ProtectedRoute>} />
-            <Route path="/admin/plan-templates" element={<RoleGuard requireCompanyRole="company_admin"><ModernAppLayout><PlanTemplatesList /></ModernAppLayout></RoleGuard>} />
-            <Route path="/admin/plan-templates/new" element={<RoleGuard requireCompanyRole="company_admin"><ModernAppLayout><PlanTemplateForm /></ModernAppLayout></RoleGuard>} />
-            <Route path="/admin/plan-templates/:id" element={<RoleGuard requireCompanyRole="company_admin"><ModernAppLayout><PlanTemplateForm /></ModernAppLayout></RoleGuard>} />
-            <Route path="/admin/plan-templates/:id/preview" element={<RoleGuard requireCompanyRole="company_admin"><ModernAppLayout><PlanTemplatePreview /></ModernAppLayout></RoleGuard>} />
+            {/* Plan Templates routes removed */}
             <Route path="/admin/plans-compare" element={<ProtectedRoute requiredModule="plans" requiredAction="view"><ModernAppLayout><PlanComparison /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/campaigns" element={<ProtectedRoute requiredModule="campaigns" requiredAction="view"><ModernAppLayout><CampaignsList /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/campaigns/edit/:id" element={<ProtectedRoute requiredModule="campaigns" requiredAction="update"><ModernAppLayout><CampaignEdit /></ModernAppLayout></ProtectedRoute>} />

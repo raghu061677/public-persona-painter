@@ -1519,7 +1519,7 @@ export type Database = {
           billing_state: string | null
           city: string | null
           company: string | null
-          company_id: string | null
+          company_id: string
           contact_person: string | null
           created_at: string | null
           created_by: string | null
@@ -1547,7 +1547,7 @@ export type Database = {
           billing_state?: string | null
           city?: string | null
           company?: string | null
-          company_id?: string | null
+          company_id: string
           contact_person?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -1575,7 +1575,7 @@ export type Database = {
           billing_state?: string | null
           city?: string | null
           company?: string | null
-          company_id?: string | null
+          company_id?: string
           contact_person?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -2464,6 +2464,7 @@ export type Database = {
       }
       leads: {
         Row: {
+          client_id: string | null
           company: string | null
           company_id: string | null
           created_at: string | null
@@ -2482,6 +2483,7 @@ export type Database = {
           zoho_lead_id: string | null
         }
         Insert: {
+          client_id?: string | null
           company?: string | null
           company_id?: string | null
           created_at?: string | null
@@ -2500,6 +2502,7 @@ export type Database = {
           zoho_lead_id?: string | null
         }
         Update: {
+          client_id?: string | null
           company?: string | null
           company_id?: string | null
           created_at?: string | null
@@ -2518,6 +2521,20 @@ export type Database = {
           zoho_lead_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "leads_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "leads_company_id_fkey"
             columns: ["company_id"]

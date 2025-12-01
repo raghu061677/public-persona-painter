@@ -58,6 +58,7 @@ describe('Database Operations', () => {
         name: 'Test Client',
         email: 'test@example.com',
         company: 'Test Corp',
+        company_id: 'test-company-id',
       };
 
       vi.mocked(supabase.from).mockReturnValue({

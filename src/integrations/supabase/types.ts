@@ -2569,9 +2569,11 @@ export type Database = {
       }
       leads: {
         Row: {
+          assigned_to: string | null
           client_id: string | null
           company: string | null
           company_id: string | null
+          converted_at: string | null
           created_at: string | null
           email: string | null
           id: string
@@ -2588,9 +2590,11 @@ export type Database = {
           zoho_lead_id: string | null
         }
         Insert: {
+          assigned_to?: string | null
           client_id?: string | null
           company?: string | null
           company_id?: string | null
+          converted_at?: string | null
           created_at?: string | null
           email?: string | null
           id?: string
@@ -2607,9 +2611,11 @@ export type Database = {
           zoho_lead_id?: string | null
         }
         Update: {
+          assigned_to?: string | null
           client_id?: string | null
           company?: string | null
           company_id?: string | null
+          converted_at?: string | null
           created_at?: string | null
           email?: string | null
           id?: string

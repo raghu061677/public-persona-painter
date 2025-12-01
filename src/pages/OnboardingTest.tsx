@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useCompany } from "@/contexts/CompanyContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -271,22 +272,22 @@ export default function OnboardingTest() {
         <h3 className="text-lg font-semibold mb-4">Quick Navigation</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           <Button variant="outline" asChild>
-            <a href="/media-assets">Go to Media Assets</a>
+            <Link to="/admin/media-assets">Go to Media Assets</Link>
           </Button>
           <Button variant="outline" asChild>
-            <a href="/leads">Go to Leads</a>
+            <Link to="/admin/leads">Go to Leads</Link>
           </Button>
           <Button variant="outline" asChild>
-            <a href="/clients">Go to Clients</a>
+            <Link to="/admin/clients">Go to Clients</Link>
           </Button>
           <Button variant="outline" asChild>
-            <a href="/plans">Go to Plans</a>
+            <Link to="/admin/plans">Go to Plans</Link>
           </Button>
           <Button variant="outline" asChild>
-            <a href="/campaigns">Go to Campaigns</a>
+            <Link to="/admin/campaigns">Go to Campaigns</Link>
           </Button>
           <Button variant="outline" asChild>
-            <a href="/operations">Go to Operations</a>
+            <Link to="/admin/operations">Go to Operations</Link>
           </Button>
         </div>
       </Card>

@@ -1265,8 +1265,10 @@ export default function PlanDetail() {
                 <span className="text-xs text-muted-foreground">Display Cost</span>
                 <span className="font-semibold text-orange-600 dark:text-orange-400">
                   {formatCurrency(planItems.reduce((sum, item) => {
-                    const proRata = calcProRata(item.sales_price || 0, plan.duration_days || 0);
-                    return sum + proRata;
+                    // Use sales_price, negotiated_rate, or subtotal minus charges
+                    const displayCost = item.sales_price || item.negotiated_rate || 
+                      ((item.subtotal || 0) - (item.printing_charges || item.printing_cost || 0) - (item.mounting_charges || item.installation_cost || 0));
+                    return sum + displayCost;
                   }, 0))}
                 </span>
               </div>

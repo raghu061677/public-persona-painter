@@ -63,6 +63,8 @@ interface ContactPerson {
   mobile: string;
 }
 
+const FORM_STORAGE_KEY = "client-new-form-draft";
+
 export default function ClientNew() {
   const navigate = useNavigate();
   const { company, isLoading: companyLoading } = useCompany();
@@ -99,6 +101,34 @@ export default function ClientNew() {
     shipping_pincode: "",
     shipping_same_as_billing: false,
   });
+
+  // Prevent page refresh when tab visibility changes
+  useEffect(() => {
+    const stopRefetch = () => {};
+    document.addEventListener("visibilitychange", stopRefetch);
+    return () => document.removeEventListener("visibilitychange", stopRefetch);
+  }, []);
+
+  // Load saved form from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(FORM_STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setFormData(parsed);
+        console.log("Restored form from localStorage");
+      } catch (error) {
+        console.error("Failed to restore form data:", error);
+      }
+    }
+  }, []);
+
+  // Auto-save form to localStorage whenever formData changes
+  useEffect(() => {
+    if (formData.id || formData.company || formData.first_name || formData.email) {
+      localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(formData));
+    }
+  }, [formData]);
 
   const [contactPersons, setContactPersons] = useState<ContactPerson[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -335,6 +365,9 @@ export default function ClientNew() {
         }
       }
 
+      // Clear saved form draft after successful creation
+      localStorage.removeItem(FORM_STORAGE_KEY);
+      
       toast.success(`Client created successfully with ID: ${formData.id}`);
       navigate("/admin/clients");
 

@@ -8,7 +8,7 @@ import { parseDimensions } from "@/utils/mediaAssets";
 
 interface MediaAsset {
   id: string;
-  asset_code?: string | null;
+  media_asset_code?: string | null;
   primary_photo_url: string | null;
   dimensions: string | null;
   total_sqft: number | null;
@@ -158,7 +158,7 @@ export default function MediaAssetsValidation() {
             <Card key={asset.id} className={hasErrors ? "border-red-500" : ""}>
               <CardHeader>
                 <CardTitle className="flex justify-between items-center">
-                  <span>{asset.asset_code || asset.id}</span>
+                  <span>{asset.media_asset_code || asset.id}</span>
                   {hasErrors ? (
                     <Badge variant="destructive">
                       <XCircle className="mr-1 h-4" /> {errors.length} Issues

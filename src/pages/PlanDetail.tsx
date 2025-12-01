@@ -694,13 +694,21 @@ export default function PlanDetail() {
 
   const handleConvertToCampaign = async () => {
     try {
+      console.log("🚀 Starting Plan → Campaign conversion", plan.id);
+
       // Validation 1: Check authentication
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error("You must be logged in to convert a plan to campaign");
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        toast({
+          title: "Authentication Required",
+          description: "You are logged out. Please login again.",
+          variant: "destructive",
+        });
+        return;
       }
 
-      // Validation 2: Check if plan is approved or rejected
+      // Validation 2: Check if plan is approved
       if (plan.status === 'rejected' || plan.status === 'Rejected') {
         toast({
           title: "Cannot Convert Plan",
@@ -738,39 +746,69 @@ export default function PlanDetail() {
         throw new Error("Plan must have at least one asset to convert to campaign");
       }
 
-      console.log('Calling Edge Function to convert plan...');
-      
-      // Call Edge Function to handle conversion with asset booking and overlap validation
-      const { data, error } = await supabase.functions.invoke('convert-plan-to-campaign', {
-        body: { 
-          plan_id: plan.id,
-          campaign_name: campaignData.campaign_name || plan.plan_name,
-          start_date: campaignData.start_date || plan.start_date,
-          end_date: campaignData.end_date || plan.end_date,
-          notes: campaignData.notes || plan.notes || ""
-        }
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/convert-plan-to-campaign`;
+      console.log("📡 Calling Edge Function:", url);
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          planId: plan.id,
+        }),
       });
 
-      if (error) {
-        throw new Error(error.message || 'Edge Function invocation failed');
+      // Network-level failure
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = `HTTP ${response.status}`;
+        
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        
+        console.error("❌ Edge Function Error Response:", errorText);
+        toast({
+          title: "Conversion Failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        return;
       }
 
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to convert plan');
+      const result = await response.json();
+      console.log("🎉 Conversion Result:", result);
+
+      if (result.error || !result.success) {
+        toast({
+          title: "Conversion Failed",
+          description: result.error || "Unknown error occurred",
+          variant: "destructive",
+        });
+        return;
       }
 
       toast({
         title: "Campaign Created Successfully",
-        description: `Campaign ${data.campaign_code} has been created with ${planItems.length} assets. All assets have been marked as booked.`,
+        description: `Campaign created with ${result.total_items || planItems.length} assets`,
       });
 
       setShowConvertDialog(false);
-      navigate(`/admin/campaigns/${data.campaign_id}`);
+      
+      // Redirect to new campaign
+      if (result.campaign_id) {
+        navigate(`/admin/campaigns/${result.campaign_id}`);
+      }
     } catch (error: any) {
-      console.error("Campaign conversion error:", error);
+      console.error("💥 Conversion error:", error);
       toast({
         title: "Conversion Failed",
-        description: error.message || "An unexpected error occurred",
+        description: error.message || "Failed to reach server. Check internet or CORS settings.",
         variant: "destructive",
       });
       setShowConvertDialog(false);

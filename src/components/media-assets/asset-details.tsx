@@ -85,7 +85,8 @@ export function AssetDetails({ asset, isAdmin = false, onQRGenerated }: AssetDet
   };
 
   const handleEdit = () => {
-    navigate(`/admin/media-assets/edit/${asset.id}`);
+    const displayCode = asset.media_asset_code || asset.id;
+    navigate(`/admin/media-assets/edit/${displayCode}`);
   };
 
   const handleDuplicate = () => {
@@ -156,7 +157,7 @@ export function AssetDetails({ asset, isAdmin = false, onQRGenerated }: AssetDet
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-bold mb-2">
-            {currentAsset.media_asset_code || currentAsset.asset_code || currentAsset.id}
+            {currentAsset.media_asset_code || currentAsset.id}
           </h1>
           <div className="flex items-center gap-3">
             <Badge className={getStatusColor(currentAsset.status)}>

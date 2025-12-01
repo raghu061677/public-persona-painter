@@ -16,7 +16,7 @@ interface Asset {
 export function ImageCell({ row }: any) {
   const navigate = useNavigate();
   const asset = row.original;
-  const displayCode = asset.media_asset_code || asset.asset_code || asset.id;
+  const displayCode = asset.media_asset_code || asset.id;
   
   const imageUrl = asset.primary_photo_url || "/placeholder.svg";
 
@@ -39,7 +39,7 @@ export function ActionCell({
   const navigate = useNavigate();
   const asset = row.original;
   const assetId = asset.id;
-  const displayCode = asset.media_asset_code || asset.asset_code || asset.id;
+  const displayCode = asset.media_asset_code || asset.id;
   const hasLocation = asset.latitude && asset.longitude;
 
   const openStreetView = () => {

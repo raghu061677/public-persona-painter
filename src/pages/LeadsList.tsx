@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/navigation/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Filter } from "lucide-react";
+import { Plus, Search, Filter, UserPlus, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -18,13 +18,32 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
+import { ConvertLeadToClientDialog } from "@/components/leads/ConvertLeadToClientDialog";
+
+interface Lead {
+  id: string;
+  name: string | null;
+  company: string | null;
+  email: string | null;
+  phone: string | null;
+  location: string | null;
+  source: string;
+  status: string;
+  requirement: string | null;
+  raw_message: string | null;
+  created_at: string;
+  client_id: string | null;
+  converted_at: string | null;
+}
 
 export default function LeadsList() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
-  const { data: leads, isLoading } = useQuery({
+  const { data: leads, isLoading, refetch } = useQuery({
     queryKey: ["leads", statusFilter],
     queryFn: async () => {
       let query = supabase
@@ -38,7 +57,7 @@ export default function LeadsList() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data as Lead[];
     },
   });
 
@@ -152,11 +171,12 @@ export default function LeadsList() {
       {/* Leads Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredLeads?.map((lead) => {
+          const isConverted = !!lead.client_id;
+          
           return (
             <Card
               key={lead.id}
-              className="p-4 hover:shadow-lg transition-all cursor-pointer"
-              onClick={() => navigate(`/admin/leads/${lead.id}`)}
+              className="p-4 hover:shadow-lg transition-all"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
@@ -164,6 +184,12 @@ export default function LeadsList() {
                   <Badge className={getStatusBadge(lead.status)}>
                     {lead.status}
                   </Badge>
+                  {isConverted && (
+                    <Badge variant="outline" className="gap-1">
+                      <ExternalLink className="h-3 w-3" />
+                      Converted
+                    </Badge>
+                  )}
                 </div>
                 <span className="text-xs text-muted-foreground">
                   {formatDistanceToNow(new Date(lead.created_at), {
@@ -172,7 +198,10 @@ export default function LeadsList() {
                 </span>
               </div>
 
-              <div className="space-y-2">
+              <div 
+                className="space-y-2 cursor-pointer"
+                onClick={() => navigate(`/admin/leads/${lead.id}`)}
+              >
                 <h3 className="font-semibold text-lg">
                   {lead.name || "Unknown"}
                 </h3>
@@ -195,10 +224,54 @@ export default function LeadsList() {
                   </p>
                 )}
               </div>
+
+              {/* Action Buttons */}
+              <div className="mt-4 pt-4 border-t">
+                {isConverted ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/admin/clients/${lead.client_id}`);
+                    }}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    View Client
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="w-full"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedLead(lead);
+                      setConvertDialogOpen(true);
+                    }}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Convert to Client
+                  </Button>
+                )}
+              </div>
             </Card>
           );
         })}
       </div>
+
+      {selectedLead && (
+        <ConvertLeadToClientDialog
+          lead={selectedLead}
+          open={convertDialogOpen}
+          onOpenChange={setConvertDialogOpen}
+          onConverted={() => {
+            refetch();
+            setSelectedLead(null);
+          }}
+        />
+      )}
     </div>
   );
 }

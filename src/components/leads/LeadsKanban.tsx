@@ -4,8 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Phone, Mail, MapPin, Calendar, Plus } from "lucide-react";
+import { Phone, Mail, MapPin, Calendar, Plus, UserPlus, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
+import { ConvertLeadToClientDialog } from "./ConvertLeadToClientDialog";
+import { useNavigate } from "react-router-dom";
 
 interface Lead {
   id: string;
@@ -18,6 +20,8 @@ interface Lead {
   status: string;
   requirement: string | null;
   created_at: string;
+  client_id: string | null;
+  converted_at: string | null;
 }
 
 const STATUSES = [
@@ -32,7 +36,10 @@ const STATUSES = [
 export function LeadsKanban() {
   const [leadsByStatus, setLeadsByStatus] = useState<Record<string, Lead[]>>({});
   const [loading, setLoading] = useState(true);
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadLeads();
@@ -180,22 +187,53 @@ export function LeadsKanban() {
                     </p>
                   )}
 
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="flex-1">
-                      View
-                    </Button>
-                    <select
-                      className="text-sm border rounded px-2 flex-1"
-                      value={lead.status}
-                      onChange={(e) => handleStatusChange(lead.id, e.target.value)}
-                    >
-                      {STATUSES.map((s) => (
-                        <option key={s.value} value={s.value}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {lead.client_id ? (
+                    <div className="space-y-2">
+                      <Badge variant="outline" className="w-full justify-center">
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Converted
+                      </Badge>
+                      <Button
+                        size="sm"
+                        variant="link"
+                        className="w-full text-xs"
+                        onClick={() => navigate(`/admin/clients/${lead.client_id}`)}
+                      >
+                        View Client
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className="w-full"
+                        onClick={() => {
+                          setSelectedLead(lead);
+                          setConvertDialogOpen(true);
+                        }}
+                      >
+                        <UserPlus className="h-3.5 w-3.5 mr-1" />
+                        Convert to Client
+                      </Button>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" className="flex-1">
+                          View
+                        </Button>
+                        <select
+                          className="text-sm border rounded px-2 flex-1"
+                          value={lead.status}
+                          onChange={(e) => handleStatusChange(lead.id, e.target.value)}
+                        >
+                          {STATUSES.map((s) => (
+                            <option key={s.value} value={s.value}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
                 </Card>
               ))}
 
@@ -208,6 +246,15 @@ export function LeadsKanban() {
           </Card>
         </div>
       ))}
+
+      {selectedLead && (
+        <ConvertLeadToClientDialog
+          lead={selectedLead}
+          open={convertDialogOpen}
+          onOpenChange={setConvertDialogOpen}
+          onConverted={loadLeads}
+        />
+      )}
     </div>
   );
 }

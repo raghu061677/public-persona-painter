@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { generateClientCode } from "@/lib/codeGenerator";
 import { useCompany } from "@/contexts/CompanyContext";
+import { PageHeader } from "@/components/navigation/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ROUTES } from "@/config/routes";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -242,16 +244,17 @@ export default function ClientNew() {
 
   return (
     <div className="p-8 space-y-6">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/admin/clients")}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
-        <h1 className="text-3xl font-bold">New Client</h1>
-      </div>
+      <PageHeader
+        title="New Client"
+        description="Create a new client record with complete information"
+        breadcrumbs={[
+          { label: "Dashboard", path: ROUTES.DASHBOARD },
+          { label: "Clients", path: ROUTES.CLIENTS },
+          { label: "New Client" },
+        ]}
+        showBackButton
+        backPath={ROUTES.CLIENTS}
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>

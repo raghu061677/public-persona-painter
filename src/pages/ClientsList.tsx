@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { generateClientCode } from "@/lib/codeGenerator";
 import { PageContainer } from "@/components/ui/page-container";
+import { PageHeader } from "@/components/navigation/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ROUTES } from "@/config/routes";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -600,24 +602,32 @@ export default function ClientsList() {
   return (
     <div className="min-h-screen bg-background">
       <PageContainer>
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">Clients</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage your client database
-            </p>
-          </div>
-          {isAdmin && (
-            <Button 
-              onClick={() => navigate('/admin/clients/new')}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              size="lg"
-            >
-              <Plus className="mr-2 h-5 w-5" />
-              Add Client
-            </Button>
-          )}
-        </div>
+        <PageHeader
+          title="Clients"
+          description="Manage your client database and contact information"
+          breadcrumbs={[
+            { label: "Dashboard", path: ROUTES.DASHBOARD },
+            { label: "Clients" },
+          ]}
+          actions={
+            <>
+              {isAdmin && (
+                <Button 
+                  onClick={() => navigate(ROUTES.CLIENTS_NEW)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  size="lg"
+                >
+                  <Plus className="mr-2 h-5 w-5" />
+                  Add Client
+                </Button>
+              )}
+              <Button variant="outline" onClick={exportToExcel}>
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </>
+          }
+        />
 
         {/* Bulk Actions Bar */}
         {selectedClients.size > 0 && (

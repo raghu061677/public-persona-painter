@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { generateClientCode } from "@/lib/codeGenerator";
 import { useCompany } from "@/contexts/CompanyContext";
 import { PageHeader } from "@/components/navigation/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -81,21 +80,33 @@ export default function ClientNew() {
   const [contactPersons, setContactPersons] = useState<ContactPerson[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Auto-generate client ID when state changes
   useEffect(() => {
-    if (formData.state && !formData.id) {
+    if (formData.state && company?.id) {
       generateClientId();
     }
-  }, [formData.state]);
+  }, [formData.state, company?.id]);
 
   const generateClientId = async () => {
-    if (!formData.state) return;
+    if (!formData.state || !company?.id) return;
+    
     try {
       const stateCode = getStateCode(formData.state);
-      const clientId = await generateClientCode(stateCode);
-      setFormData(prev => ({ ...prev, id: clientId }));
-    } catch (error) {
+      
+      // Call server-side RPC function for guaranteed unique ID
+      const { data, error } = await supabase.rpc('generate_client_id', {
+        p_state_code: stateCode,
+        p_company_id: company.id
+      });
+
+      if (error) throw error;
+      
+      if (data) {
+        setFormData(prev => ({ ...prev, id: data }));
+      }
+    } catch (error: any) {
       console.error("Error generating client ID:", error);
-      toast.error("Failed to generate client ID");
+      toast.error(error.message || "Failed to generate client ID");
     }
   };
 
@@ -144,150 +155,124 @@ export default function ClientNew() {
   };
 
   const handleSubmit = async () => {
-    // Retry logic for duplicate key errors
-    const MAX_RETRIES = 3;
-    let retryCount = 0;
+    try {
+      setLoading(true);
+      setErrors({});
 
-    while (retryCount < MAX_RETRIES) {
-      try {
-        setLoading(true);
-        setErrors({});
-
-        // Check if company data is available
-        if (!company?.id) {
-          toast.error("Company information not available. Please refresh the page.");
-          setLoading(false);
-          return;
-        }
-
-        // Validate state is selected
-        if (!formData.state) {
-          toast.error("Please select a state");
-          setLoading(false);
-          return;
-        }
-
-        // Generate a fresh client ID for this attempt
-        const stateCode = getStateCode(formData.state);
-        const freshClientId = await generateClientCode(stateCode);
-        
-        // Update formData with fresh ID
-        const submissionData = { ...formData, id: freshClientId };
-
-        // Validate basic fields
-        const validation = clientSchema.safeParse(submissionData);
-        if (!validation.success) {
-          const newErrors: Record<string, string> = {};
-          validation.error.errors.forEach((err) => {
-            if (err.path[0]) {
-              newErrors[err.path[0] as string] = err.message;
-            }
-          });
-          setErrors(newErrors);
-          toast.error("Please fix validation errors");
-          setLoading(false);
-          return;
-        }
-
-        // Insert client with fresh ID
-        const { error: clientError } = await supabase
-          .from("clients")
-          .insert({
-            id: submissionData.id,
-            name: submissionData.name,
-            company: submissionData.company || null,
-            company_id: company.id,
-            email: submissionData.email || null,
-            phone: submissionData.phone || null,
-            gst_number: submissionData.gst_number || null,
-            state: submissionData.state,
-            city: submissionData.city || null,
-            notes: submissionData.notes || null,
-            billing_address_line1: submissionData.billing_address_line1 || null,
-            billing_address_line2: submissionData.billing_address_line2 || null,
-            billing_city: submissionData.billing_city || null,
-            billing_state: submissionData.billing_state || null,
-            billing_pincode: submissionData.billing_pincode || null,
-            shipping_address_line1: submissionData.shipping_address_line1 || null,
-            shipping_address_line2: submissionData.shipping_address_line2 || null,
-            shipping_city: submissionData.shipping_city || null,
-            shipping_state: submissionData.shipping_state || null,
-            shipping_pincode: submissionData.shipping_pincode || null,
-            shipping_same_as_billing: submissionData.shipping_same_as_billing,
-          });
-
-        // Check for duplicate key error and retry
-        if (clientError?.code === '23505') {
-          retryCount++;
-          if (retryCount < MAX_RETRIES) {
-            console.log(`Duplicate ID detected, retrying (${retryCount}/${MAX_RETRIES})...`);
-            await new Promise(resolve => setTimeout(resolve, 100 * retryCount)); // Exponential backoff
-            continue;
-          } else {
-            throw new Error("Failed to generate unique client ID after multiple attempts. Please try again.");
-          }
-        }
-
-        if (clientError) throw clientError;
-
-        // Insert contact persons if any
-        if (contactPersons.length > 0) {
-          const contactsPayload = contactPersons
-            .filter(c => c.firstName || c.lastName || c.email || c.mobile) // ignore empty
-            .map((c, index) => ({
-              client_id: submissionData.id,
-              company_id: company.id,
-              salutation: c.salutation || null,
-              first_name: c.firstName || null,
-              last_name: c.lastName || null,
-              name: [c.firstName, c.lastName].filter(Boolean).join(' ') || null,
-              email: c.email || null,
-              work_phone: c.workPhone || null,
-              mobile: c.mobile || null,
-              phone: c.mobile || c.workPhone || null,
-              is_primary: index === 0,
-            }));
-
-          if (contactsPayload.length > 0) {
-            const { error: contactsError } = await supabase
-              .from('client_contacts')
-              .insert(contactsPayload);
-            
-            if (contactsError) {
-              console.error("Error inserting contacts:", contactsError);
-              toast.error("Client created but failed to add contacts");
-            }
-          }
-        }
-
-        // Success - break out of retry loop
-        toast.success(`Client created successfully with ID: ${submissionData.id}`);
-        navigate("/admin/clients");
-        return;
-
-      } catch (error: any) {
-        console.error("Error creating client:", error);
-        
-        // Only retry on duplicate key errors
-        if (error.code === '23505') {
-          retryCount++;
-          if (retryCount < MAX_RETRIES) {
-            console.log(`Duplicate ID detected, retrying (${retryCount}/${MAX_RETRIES})...`);
-            await new Promise(resolve => setTimeout(resolve, 100 * retryCount));
-            continue;
-          }
-        }
-        
-        // Show error and exit
-        toast.error(error.message || "Failed to create client");
+      // Check if company data is available
+      if (!company?.id) {
+        toast.error("Company information not available. Please refresh the page.");
         setLoading(false);
         return;
       }
+
+      // Validate state is selected
+      if (!formData.state) {
+        toast.error("Please select a state");
+        setLoading(false);
+        return;
+      }
+
+      // Ensure we have a client ID
+      if (!formData.id) {
+        toast.error("Client ID not generated. Please select a state first.");
+        setLoading(false);
+        return;
+      }
+
+      // Validate basic fields
+      const validation = clientSchema.safeParse(formData);
+      if (!validation.success) {
+        const newErrors: Record<string, string> = {};
+        validation.error.errors.forEach((err) => {
+          if (err.path[0]) {
+            newErrors[err.path[0] as string] = err.message;
+          }
+        });
+        setErrors(newErrors);
+        toast.error("Please fix validation errors");
+        setLoading(false);
+        return;
+      }
+
+      // Insert client using the pre-generated ID from RPC
+      const { error: clientError } = await supabase
+        .from("clients")
+        .insert({
+          id: formData.id,
+          name: formData.name,
+          company: formData.company || null,
+          company_id: company.id,
+          email: formData.email || null,
+          phone: formData.phone || null,
+          gst_number: formData.gst_number || null,
+          state: formData.state,
+          city: formData.city || null,
+          notes: formData.notes || null,
+          billing_address_line1: formData.billing_address_line1 || null,
+          billing_address_line2: formData.billing_address_line2 || null,
+          billing_city: formData.billing_city || null,
+          billing_state: formData.billing_state || null,
+          billing_pincode: formData.billing_pincode || null,
+          shipping_address_line1: formData.shipping_address_line1 || null,
+          shipping_address_line2: formData.shipping_address_line2 || null,
+          shipping_city: formData.shipping_city || null,
+          shipping_state: formData.shipping_state || null,
+          shipping_pincode: formData.shipping_pincode || null,
+          shipping_same_as_billing: formData.shipping_same_as_billing,
+        });
+
+      if (clientError) {
+        // If duplicate error, regenerate ID and try one more time
+        if (clientError.code === '23505') {
+          console.log("Duplicate detected, regenerating ID...");
+          await generateClientId();
+          toast.error("Client ID conflict detected. Please try again.");
+          setLoading(false);
+          return;
+        }
+        throw clientError;
+      }
+
+      // Insert contact persons if any
+      if (contactPersons.length > 0) {
+        const contactsPayload = contactPersons
+          .filter(c => c.firstName || c.lastName || c.email || c.mobile)
+          .map((c, index) => ({
+            client_id: formData.id,
+            company_id: company.id,
+            salutation: c.salutation || null,
+            first_name: c.firstName || null,
+            last_name: c.lastName || null,
+            name: [c.firstName, c.lastName].filter(Boolean).join(' ') || null,
+            email: c.email || null,
+            work_phone: c.workPhone || null,
+            mobile: c.mobile || null,
+            phone: c.mobile || c.workPhone || null,
+            is_primary: index === 0,
+          }));
+
+        if (contactsPayload.length > 0) {
+          const { error: contactsError } = await supabase
+            .from('client_contacts')
+            .insert(contactsPayload);
+          
+          if (contactsError) {
+            console.error("Error inserting contacts:", contactsError);
+            toast.error("Client created but failed to add contacts");
+          }
+        }
+      }
+
+      toast.success(`Client created successfully with ID: ${formData.id}`);
+      navigate("/admin/clients");
+
+    } catch (error: any) {
+      console.error("Error creating client:", error);
+      toast.error(error.message || "Failed to create client");
+    } finally {
+      setLoading(false);
     }
-    
-    // If we exhausted all retries
-    toast.error("Failed to generate unique client ID after multiple attempts. Please try again.");
-    setLoading(false);
   };
 
   if (companyLoading) {

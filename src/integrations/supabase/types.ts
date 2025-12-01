@@ -5432,9 +5432,14 @@ export type Database = {
         Returns: Json
       }
       delete_user_account: { Args: never; Returns: undefined }
+      extract_state_code: { Args: { client_id: string }; Returns: string }
       generate_campaign_id:
         | { Args: never; Returns: string }
         | { Args: { p_user_id?: string }; Returns: string }
+      generate_client_id: {
+        Args: { p_company_id: string; p_state_code: string }
+        Returns: string
+      }
       generate_company_slug: { Args: { company_name: string }; Returns: string }
       generate_csrf_token: { Args: never; Returns: string }
       generate_estimation_id: { Args: never; Returns: string }
@@ -5552,6 +5557,10 @@ export type Database = {
       get_current_user_company_id: { Args: never; Returns: string }
       get_enum_values: { Args: { enum_name: string }; Returns: Json }
       get_financial_year: { Args: never; Returns: string }
+      get_next_client_number: {
+        Args: { p_company_id: string; p_state_code: string }
+        Returns: number
+      }
       get_next_code_number: {
         Args: {
           p_counter_key: string

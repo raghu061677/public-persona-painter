@@ -48,6 +48,12 @@ export default function MediaAssetDetail() {
       });
       navigate('/admin/media-assets');
     } else {
+      // If accessed via UUID but has media_asset_code, redirect to MNS code URL
+      if (data.media_asset_code && code !== data.media_asset_code) {
+        navigate(`/admin/media-assets/${data.media_asset_code}`, { replace: true });
+        return;
+      }
+      
       // Fetch photos from media_photos table
       const { data: photosData } = await supabase
         .from('media_photos')

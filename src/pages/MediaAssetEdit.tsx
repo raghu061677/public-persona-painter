@@ -281,7 +281,7 @@ export default function MediaAssetEdit() {
                   </h1>
                   <p className="text-sm text-muted-foreground font-mono mt-1 flex items-center gap-2">
                     <FileText className="h-3 w-3" />
-                    {formData.id}
+                    {formData.media_asset_code || formData.id}
                   </p>
                 </div>
               </div>

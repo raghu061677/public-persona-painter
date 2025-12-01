@@ -5730,7 +5730,14 @@ export type Database = {
         | "Verified"
         | "Completed"
         | "Cancelled"
-      client_type: "Agency" | "Direct" | "Government" | "Corporate" | "Other"
+      client_type:
+        | "Agency"
+        | "Direct"
+        | "Government"
+        | "Corporate"
+        | "Other"
+        | "Business"
+        | "Individual"
       company_status: "pending" | "active" | "suspended" | "cancelled"
       company_type: "media_owner" | "agency" | "platform_admin"
       document_type:
@@ -5934,7 +5941,15 @@ export const Constants = {
         "Completed",
         "Cancelled",
       ],
-      client_type: ["Agency", "Direct", "Government", "Corporate", "Other"],
+      client_type: [
+        "Agency",
+        "Direct",
+        "Government",
+        "Corporate",
+        "Other",
+        "Business",
+        "Individual",
+      ],
       company_status: ["pending", "active", "suspended", "cancelled"],
       company_type: ["media_owner", "agency", "platform_admin"],
       document_type: [

@@ -24,17 +24,35 @@ import { z } from "zod";
 import { StateSelect } from "@/components/clients/StateSelect";
 import { getStateCode } from "@/lib/stateCodeMapping";
 
-const clientSchema = z.object({
+// Discriminated union schema for customer type
+const baseSchema = z.object({
   id: z.string().min(1, "Client ID is required"),
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email").optional().or(z.literal("")),
-  phone: z.string().regex(/^[0-9]{10}$/, "Phone must be 10 digits").optional().or(z.literal("")),
-  company: z.string().optional(),
-  gst_number: z.string().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST format").optional().or(z.literal("")),
+  email: z.string().trim().email("Invalid email").max(255, "Email must be less than 255 characters").optional().or(z.literal("")),
+  phone: z.string().trim().regex(/^[0-9]{10}$/, "Phone must be 10 digits").optional().or(z.literal("")),
+  gst_number: z.string().trim().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST format").optional().or(z.literal("")),
   state: z.string().min(1, "State is required"),
-  city: z.string().optional(),
-  notes: z.string().optional(),
+  city: z.string().trim().max(50, "City must be less than 50 characters").optional().or(z.literal("")),
+  notes: z.string().trim().max(1000, "Notes must be less than 1000 characters").optional().or(z.literal("")),
 });
+
+const clientSchema = z.discriminatedUnion("customer_type", [
+  // Business customer
+  baseSchema.extend({
+    customer_type: z.literal("business"),
+    company: z.string().trim().min(2, "Company name is required for business customers").max(100, "Company name must be less than 100 characters"),
+    salutation: z.string().optional(),
+    first_name: z.string().optional(),
+    last_name: z.string().optional(),
+  }),
+  // Individual customer
+  baseSchema.extend({
+    customer_type: z.literal("individual"),
+    salutation: z.string().min(1, "Salutation is required"),
+    first_name: z.string().trim().min(2, "First name is required").max(50, "First name must be less than 50 characters"),
+    last_name: z.string().trim().max(50, "Last name must be less than 50 characters").optional().or(z.literal("")),
+    company: z.string().optional(),
+  }),
+]);
 
 interface ContactPerson {
   salutation: string;
@@ -53,9 +71,14 @@ export default function ClientNew() {
   
   const [formData, setFormData] = useState({
     id: "",
-    customerType: "Business",
-    name: "",
+    customer_type: "business" as "business" | "individual",
+    // Individual fields
+    salutation: "Mr.",
+    first_name: "",
+    last_name: "",
+    // Business field
     company: "",
+    // Common fields
     email: "",
     phone: "",
     gst_number: "",
@@ -111,7 +134,25 @@ export default function ClientNew() {
   };
 
   const updateField = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value };
+      
+      // When switching customer type, clear fields not relevant to new type
+      if (field === "customer_type") {
+        if (value === "business") {
+          // Clear individual fields
+          updated.salutation = "Mr.";
+          updated.first_name = "";
+          updated.last_name = "";
+        } else if (value === "individual") {
+          // Clear business fields
+          updated.company = "";
+        }
+      }
+      
+      return updated;
+    });
+    
     if (errors[field]) {
       setErrors(prev => {
         const newErrors = { ...prev };
@@ -180,8 +221,29 @@ export default function ClientNew() {
         return;
       }
 
-      // Validate basic fields
-      const validation = clientSchema.safeParse(formData);
+      // Prepare validation data based on customer type
+      const validationData = {
+        id: formData.id,
+        customer_type: formData.customer_type,
+        ...(formData.customer_type === "business"
+          ? {
+              company: formData.company,
+            }
+          : {
+              salutation: formData.salutation,
+              first_name: formData.first_name,
+              last_name: formData.last_name,
+            }),
+        email: formData.email,
+        phone: formData.phone,
+        gst_number: formData.gst_number,
+        state: formData.state,
+        city: formData.city,
+        notes: formData.notes,
+      };
+
+      // Validate with schema
+      const validation = clientSchema.safeParse(validationData);
       if (!validation.success) {
         const newErrors: Record<string, string> = {};
         validation.error.errors.forEach((err) => {
@@ -195,32 +257,41 @@ export default function ClientNew() {
         return;
       }
 
+      // Prepare name field based on customer type
+      const clientName = formData.customer_type === "business" 
+        ? formData.company 
+        : [formData.salutation, formData.first_name, formData.last_name].filter(Boolean).join(' ');
+
       // Insert client using the pre-generated ID from RPC
+      // Map customer_type to database client_type enum (capitalize first letter)
+      const dbClientType = formData.customer_type.charAt(0).toUpperCase() + formData.customer_type.slice(1);
+      
       const { error: clientError } = await supabase
         .from("clients")
-        .insert({
+        .insert([{
           id: formData.id,
-          name: formData.name,
-          company: formData.company || null,
+          name: clientName,
+          client_type: dbClientType as any,
+          company: formData.customer_type === "business" ? formData.company.trim() : null,
           company_id: company.id,
-          email: formData.email || null,
-          phone: formData.phone || null,
-          gst_number: formData.gst_number || null,
+          email: formData.email.trim() || null,
+          phone: formData.phone.trim() || null,
+          gst_number: formData.gst_number.trim() || null,
           state: formData.state,
-          city: formData.city || null,
-          notes: formData.notes || null,
-          billing_address_line1: formData.billing_address_line1 || null,
-          billing_address_line2: formData.billing_address_line2 || null,
-          billing_city: formData.billing_city || null,
+          city: formData.city.trim() || null,
+          notes: formData.notes.trim() || null,
+          billing_address_line1: formData.billing_address_line1.trim() || null,
+          billing_address_line2: formData.billing_address_line2.trim() || null,
+          billing_city: formData.billing_city.trim() || null,
           billing_state: formData.billing_state || null,
-          billing_pincode: formData.billing_pincode || null,
-          shipping_address_line1: formData.shipping_address_line1 || null,
-          shipping_address_line2: formData.shipping_address_line2 || null,
-          shipping_city: formData.shipping_city || null,
+          billing_pincode: formData.billing_pincode.trim() || null,
+          shipping_address_line1: formData.shipping_address_line1.trim() || null,
+          shipping_address_line2: formData.shipping_address_line2.trim() || null,
+          shipping_city: formData.shipping_city.trim() || null,
           shipping_state: formData.shipping_state || null,
-          shipping_pincode: formData.shipping_pincode || null,
+          shipping_pincode: formData.shipping_pincode.trim() || null,
           shipping_same_as_billing: formData.shipping_same_as_billing,
-        });
+        }]);
 
       if (clientError) {
         // If duplicate error, regenerate ID and try one more time
@@ -307,7 +378,7 @@ export default function ClientNew() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="basic">Other Details</TabsTrigger>
+          <TabsTrigger value="basic">Basic Information</TabsTrigger>
           <TabsTrigger value="address">Address</TabsTrigger>
           <TabsTrigger value="contacts">Contact Persons</TabsTrigger>
           <TabsTrigger value="remarks">Remarks</TabsTrigger>
@@ -320,70 +391,97 @@ export default function ClientNew() {
               <CardTitle>Basic Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Client ID Display */}
+              {formData.id && (
+                <div className="space-y-2 bg-muted/50 p-4 rounded-lg border border-border">
+                  <Label className="text-sm font-medium">Client ID (Auto-generated)</Label>
+                  <p className="text-lg font-semibold text-primary">{formData.id}</p>
+                  <p className="text-xs text-muted-foreground">
+                    This ID is automatically generated based on the state you select below
+                  </p>
+                </div>
+              )}
               {/* Customer Type */}
               <div className="space-y-2">
-                <Label>Customer Type</Label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2">
+                <Label>Customer Type *</Label>
+                <div className="flex gap-6">
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
-                      checked={formData.customerType === "Business"}
-                      onChange={() => updateField("customerType", "Business")}
+                      checked={formData.customer_type === "business"}
+                      onChange={() => updateField("customer_type", "business")}
                       className="text-primary"
                     />
-                    Business
+                    <span className="text-sm">Business</span>
                   </label>
-                  <label className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
-                      checked={formData.customerType === "Individual"}
-                      onChange={() => updateField("customerType", "Individual")}
+                      checked={formData.customer_type === "individual"}
+                      onChange={() => updateField("customer_type", "individual")}
                       className="text-primary"
                     />
-                    Individual
+                    <span className="text-sm">Individual</span>
                   </label>
                 </div>
               </div>
 
-              {/* Primary Contact */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Conditional Fields Based on Customer Type */}
+              {formData.customer_type === "business" ? (
+                /* Business Customer - Company Name */
                 <div className="space-y-2">
-                  <Label>Salutation</Label>
-                  <Select defaultValue="Mr.">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Mr.">Mr.</SelectItem>
-                      <SelectItem value="Mrs.">Mrs.</SelectItem>
-                      <SelectItem value="Ms.">Ms.</SelectItem>
-                      <SelectItem value="Dr.">Dr.</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>First Name *</Label>
+                  <Label>Business Name *</Label>
                   <Input
-                    value={formData.name.split(' ')[0] || ''}
-                    onChange={(e) => updateField("name", e.target.value)}
-                    className={errors.name ? "border-destructive" : ""}
+                    value={formData.company}
+                    onChange={(e) => updateField("company", e.target.value)}
+                    placeholder="Enter company name"
+                    className={errors.company ? "border-destructive" : ""}
                   />
-                  {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+                  {errors.company && <p className="text-xs text-destructive">{errors.company}</p>}
                 </div>
-                <div className="space-y-2">
-                  <Label>Last Name</Label>
-                  <Input />
+              ) : (
+                /* Individual Customer - Name Fields */
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Salutation *</Label>
+                    <Select 
+                      value={formData.salutation} 
+                      onValueChange={(value) => updateField("salutation", value)}
+                    >
+                      <SelectTrigger className={errors.salutation ? "border-destructive" : ""}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Mr.">Mr.</SelectItem>
+                        <SelectItem value="Mrs.">Mrs.</SelectItem>
+                        <SelectItem value="Ms.">Ms.</SelectItem>
+                        <SelectItem value="Dr.">Dr.</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.salutation && <p className="text-xs text-destructive">{errors.salutation}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>First Name *</Label>
+                    <Input
+                      value={formData.first_name}
+                      onChange={(e) => updateField("first_name", e.target.value)}
+                      placeholder="Enter first name"
+                      className={errors.first_name ? "border-destructive" : ""}
+                    />
+                    {errors.first_name && <p className="text-xs text-destructive">{errors.first_name}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Last Name</Label>
+                    <Input
+                      value={formData.last_name}
+                      onChange={(e) => updateField("last_name", e.target.value)}
+                      placeholder="Enter last name (optional)"
+                      className={errors.last_name ? "border-destructive" : ""}
+                    />
+                    {errors.last_name && <p className="text-xs text-destructive">{errors.last_name}</p>}
+                  </div>
                 </div>
-              </div>
-
-              {/* Company Name */}
-              <div className="space-y-2">
-                <Label>Company Name</Label>
-                <Input
-                  value={formData.company}
-                  onChange={(e) => updateField("company", e.target.value)}
-                />
-              </div>
+              )}
 
               {/* Email */}
               <div className="space-y-2">
@@ -657,7 +755,14 @@ export default function ClientNew() {
         <TabsContent value="contacts" className="space-y-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Contact Persons</CardTitle>
+              <div className="space-y-1">
+                <CardTitle>Contact Persons</CardTitle>
+                {formData.customer_type === "business" && (
+                  <p className="text-sm text-muted-foreground">
+                    Add contact persons for this business client
+                  </p>
+                )}
+              </div>
               <Button onClick={addContactPerson} size="sm">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Contact Person

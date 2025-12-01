@@ -49,6 +49,8 @@ const ClientNew = lazy(() => import("./pages/ClientNew"));
 const ClientEdit = lazy(() => import("./pages/ClientEdit"));
 const ClientAnalytics = lazy(() => import("./pages/ClientAnalytics"));
 const ClientDetail = lazy(() => import("./pages/ClientDetail"));
+const LeadsList = lazy(() => import("./pages/LeadsList"));
+const LeadDetail = lazy(() => import("./pages/LeadDetail"));
 const PlansList = lazy(() => import("./pages/PlansList"));
 const PlanNew = lazy(() => import("./pages/PlanNew"));
 const PlanEdit = lazy(() => import("./pages/PlanEdit"));
@@ -270,6 +272,8 @@ const App = () => (
             <Route path="/admin/clients/edit/:id" element={<ProtectedRoute requiredModule="clients" requiredAction="update"><ModernAppLayout><ClientEdit /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/clients/:id" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><ModernAppLayout><ClientDetail /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/clients/:id/analytics" element={<ModernAppLayout><ClientAnalytics /></ModernAppLayout>} />
+            <Route path="/admin/leads" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><ModernAppLayout><LeadsList /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/leads/:id" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><ModernAppLayout><LeadDetail /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetsList /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets/new" element={<ProtectedRoute requiredModule="media_assets" requiredAction="create"><ModernAppLayout><MediaAssetNew /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets/import" element={<ProtectedRoute requiredModule="media_assets" requiredAction="create"><ModernAppLayout><MediaAssetsImport /></ModernAppLayout></ProtectedRoute>} />

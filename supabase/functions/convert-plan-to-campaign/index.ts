@@ -111,43 +111,39 @@ Deno.serve(async (req) => {
       console.warn('[v8.0] WARNING: Converting non-approved plan. Status:', plan.status)
     }
 
-    // 5. Fetch plan items WITH media asset details
+    // 5. Fetch plan items (no FK to media_assets, so fetch separately)
     const { data: planItems, error: itemsError } = await supabase
       .from('plan_items')
-      .select(`
-        *,
-        media_assets!inner(
-          id,
-          media_type,
-          state,
-          district,
-          city,
-          area,
-          location,
-          direction,
-          dimensions,
-          total_sqft,
-          illumination_type,
-          illumination,
-          latitude,
-          longitude,
-          card_rate,
-          base_rent
-        )
-      `)
+      .select('*')
       .eq('plan_id', plan_id)
 
     if (itemsError || !planItems || planItems.length === 0) {
+      console.error('[v8.0] Plan items error:', itemsError)
       return new Response(
         JSON.stringify({ error: 'No plan items found' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log('[v8.0] Found', planItems.length, 'plan items with media asset details')
+    console.log('[v8.0] Found', planItems.length, 'plan items')
+
+    // Fetch corresponding media assets
+    const assetIds = planItems.map((item: any) => item.asset_id)
+    const { data: mediaAssets } = await supabase
+      .from('media_assets')
+      .select('id, media_type, state, district, city, area, location, direction, dimensions, total_sqft, illumination_type, illumination, latitude, longitude, card_rate, base_rent')
+      .in('id', assetIds)
+
+    // Create a map for easy lookup
+    const assetsMap = new Map(mediaAssets?.map(a => [a.id, a]) || [])
+    
+    // Enrich plan items with media asset data
+    const enrichedPlanItems = planItems.map((item: any) => ({
+      ...item,
+      media_assets: assetsMap.get(item.asset_id) || null
+    }))
 
     // 6. Check for booking conflicts
-    const assetIds = planItems.map((item: any) => item.asset_id)
     const finalStartDate = start_date || plan.start_date
     const finalEndDate = end_date || plan.end_date
 
@@ -229,7 +225,7 @@ Deno.serve(async (req) => {
     console.log('[v8.0] Campaign created successfully:', campaign.id)
 
     // 10. Create campaign_items (for finance tracking)
-    const campaignItemsData = planItems.map((item: any) => ({
+    const campaignItemsData = enrichedPlanItems.map((item: any) => ({
       campaign_id: campaignCode,
       plan_item_id: item.id,
       asset_id: item.asset_id,
@@ -253,7 +249,7 @@ Deno.serve(async (req) => {
     }
 
     // 11. Create campaign_assets (for operations tracking) with FULL media asset data
-    const campaignAssetsData = planItems.map((item: any) => {
+    const campaignAssetsData = enrichedPlanItems.map((item: any) => {
       const asset = item.media_assets
       
       return {

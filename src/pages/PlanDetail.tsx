@@ -1265,9 +1265,10 @@ export default function PlanDetail() {
                 <span className="text-xs text-muted-foreground">Display Cost</span>
                 <span className="font-semibold text-orange-600 dark:text-orange-400">
                   {formatCurrency(planItems.reduce((sum, item) => {
-                    // Use sales_price, negotiated_rate, or subtotal minus charges
-                    const displayCost = item.sales_price || item.negotiated_rate || 
-                      ((item.subtotal || 0) - (item.printing_charges || item.printing_cost || 0) - (item.mounting_charges || item.installation_cost || 0));
+                    // Calculate display cost from subtotal minus printing and mounting charges
+                    const printingCharge = item.printing_charges || item.printing_cost || 0;
+                    const mountingCharge = item.mounting_charges || item.installation_cost || 0;
+                    const displayCost = (item.subtotal || 0) - printingCharge - mountingCharge;
                     return sum + displayCost;
                   }, 0))}
                 </span>
@@ -1276,13 +1277,13 @@ export default function PlanDetail() {
               {/* Printing Cost */}
               <div className="flex justify-between items-center">
                 <span className="text-xs text-muted-foreground">Printing Cost</span>
-                <span className="font-semibold text-blue-600">{formatCurrency(planItems.reduce((sum, item) => sum + (item.printing_cost || item.printing_charges || 0), 0))}</span>
+                <span className="font-semibold text-blue-600">{formatCurrency(planItems.reduce((sum, item) => sum + (item.printing_charges || item.printing_cost || 0), 0))}</span>
               </div>
               
               {/* Installation/Mounting Cost */}
               <div className="flex justify-between items-center">
                 <span className="text-xs text-muted-foreground">Installation Cost</span>
-                <span className="font-semibold text-green-600">{formatCurrency(planItems.reduce((sum, item) => sum + (item.installation_cost || item.mounting_charges || 0), 0))}</span>
+                <span className="font-semibold text-green-600">{formatCurrency(planItems.reduce((sum, item) => sum + (item.mounting_charges || item.installation_cost || 0), 0))}</span>
               </div>
               
               {/* Total Before Tax */}

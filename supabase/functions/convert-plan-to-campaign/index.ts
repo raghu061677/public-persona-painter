@@ -1,342 +1,338 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
-import { corsHeaders } from '../_shared/cors.ts'
+// supabase/functions/convert-plan-to-campaign/index.ts
+// v9.0 - Schema-validated conversion with proper error handling
 
-// Version 8.0 - Complete workflow standardization with PascalCase statuses and full media asset propagation
-console.log('Convert Plan to Campaign function v8.0 - PascalCase statuses + media field propagation')
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-interface ConvertPlanRequest {
-  plan_id: string
-  campaign_name?: string
-  start_date?: string
-  end_date?: string
-  notes?: string
-}
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    if (req.method !== "POST") {
+      return jsonError("Only POST is allowed", 405);
+    }
 
-    // 1. Authenticate user
-    const authHeader = req.headers.get('Authorization')
+    const body = await req.json().catch(() => null) as { plan_id?: string; planId?: string } | null;
+    const planId = body?.plan_id || body?.planId;
+
+    if (!planId) {
+      return jsonError("Missing required field: plan_id or planId", 400);
+    }
+
+    console.log("[v9.0] Converting plan to campaign:", planId);
+
+    // 1) Get current user
+    const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return jsonError("Missing authorization header", 401);
     }
 
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
 
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    if (userError || !user) {
+      console.error("[v9.0] Auth error:", userError);
+      return jsonError("Unauthorized – could not load current user", 401);
     }
 
-    // 2. Get user's company
-    const { data: companyUser, error: companyError } = await supabase
-      .from('company_users')
-      .select('company_id')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .single()
+    // 2) Get user's company
+    const { data: companyRow, error: companyError } = await supabase
+      .from("company_users")
+      .select("company_id")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .maybeSingle();
 
-    if (companyError || !companyUser) {
-      return new Response(
-        JSON.stringify({ error: 'No active company association found' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    if (companyError) {
+      console.error("[v9.0] Error loading company:", companyError);
+      return jsonError("Could not determine company for current user", 400);
     }
 
-    const companyId = companyUser.company_id
-
-    // 3. Parse request body
-    const body: ConvertPlanRequest = await req.json()
-    const { plan_id, campaign_name, start_date, end_date, notes } = body
-
-    if (!plan_id) {
-      return new Response(
-        JSON.stringify({ error: 'plan_id is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    if (!companyRow?.company_id) {
+      return jsonError("No active company found for current user", 400);
     }
 
-    console.log('[v8.0] Converting plan:', plan_id, 'for company:', companyId)
+    const companyId: string = companyRow.company_id;
+    console.log("[v9.0] User company ID:", companyId);
 
-    // 4. Fetch plan with validation
+    // 3) Load Plan (must be Approved)
     const { data: plan, error: planError } = await supabase
-      .from('plans')
-      .select('*')
-      .eq('id', plan_id)
-      .eq('company_id', companyId)
-      .single()
+      .from("plans")
+      .select(`
+        id,
+        plan_name,
+        status,
+        company_id,
+        client_id,
+        client_name,
+        start_date,
+        end_date,
+        duration_days,
+        total_amount,
+        gst_percent,
+        gst_amount,
+        grand_total,
+        notes,
+        converted_to_campaign_id
+      `)
+      .eq("id", planId)
+      .eq("company_id", companyId)
+      .maybeSingle();
 
-    if (planError || !plan) {
-      return new Response(
-        JSON.stringify({ error: 'Plan not found or access denied' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    if (planError) {
+      console.error("[v9.0] Error loading plan:", planError);
+      return jsonError("Could not load plan", 500);
+    }
+
+    if (!plan) {
+      return jsonError("Plan not found for this company", 404);
     }
 
     // Check if already converted
-    if (plan.status === 'Converted') {
-      const { data: existingCampaign } = await supabase
-        .from('campaigns')
-        .select('id')
-        .eq('plan_id', plan_id)
-        .maybeSingle()
-
-      if (existingCampaign) {
-        return new Response(
-          JSON.stringify({ 
-            error: 'Plan already converted',
-            existing_campaign_id: existingCampaign.id 
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
+    if (plan.converted_to_campaign_id) {
+      return jsonError(`Plan already converted to campaign ${plan.converted_to_campaign_id}`, 400);
     }
 
-    // Check if plan is approved (recommended but not enforced)
-    if (plan.status !== 'Approved' && plan.status !== 'approved') {
-      console.warn('[v8.0] WARNING: Converting non-approved plan. Status:', plan.status)
+    if (plan.status !== "Approved") {
+      return jsonError(`Plan status is "${plan.status}" - must be "Approved" to convert`, 400);
     }
 
-    // 5. Fetch plan items (no FK to media_assets, so fetch separately)
+    console.log("[v9.0] Plan validated:", plan.id, "Status:", plan.status);
+
+    // 4) Load Plan Items
     const { data: planItems, error: itemsError } = await supabase
-      .from('plan_items')
-      .select('*')
-      .eq('plan_id', plan_id)
+      .from("plan_items")
+      .select(`
+        id,
+        plan_id,
+        asset_id,
+        location,
+        city,
+        area,
+        media_type,
+        dimensions,
+        card_rate,
+        sales_price,
+        printing_charges,
+        mounting_charges,
+        total_with_gst,
+        state,
+        district,
+        latitude,
+        longitude,
+        illumination_type,
+        direction,
+        total_sqft
+      `)
+      .eq("plan_id", planId);
 
-    if (itemsError || !planItems || planItems.length === 0) {
-      console.error('[v8.0] Plan items error:', itemsError)
-      return new Response(
-        JSON.stringify({ error: 'No plan items found' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    if (itemsError) {
+      console.error("[v9.0] Error loading plan items:", itemsError);
+      return jsonError("Could not load plan items", 500);
     }
 
-    console.log('[v8.0] Found', planItems.length, 'plan items')
+    if (!planItems || planItems.length === 0) {
+      return jsonError("Plan has no items to convert", 400);
+    }
 
-    // Fetch corresponding media assets
-    const assetIds = planItems.map((item: any) => item.asset_id)
-    const { data: mediaAssets } = await supabase
-      .from('media_assets')
-      .select('id, media_type, state, district, city, area, location, direction, dimensions, total_sqft, illumination_type, illumination, latitude, longitude, card_rate, base_rent')
-      .in('id', assetIds)
+    console.log(`[v9.0] Loaded ${planItems.length} plan items`);
 
-    // Create a map for easy lookup
-    const assetsMap = new Map(mediaAssets?.map(a => [a.id, a]) || [])
-    
-    // Enrich plan items with media asset data
-    const enrichedPlanItems = planItems.map((item: any) => ({
-      ...item,
-      media_assets: assetsMap.get(item.asset_id) || null
-    }))
-
-    // 6. Check for booking conflicts
-    const finalStartDate = start_date || plan.start_date
-    const finalEndDate = end_date || plan.end_date
-
+    // 5) Check for booking conflicts
+    const assetIds = planItems.map(item => item.asset_id);
     const { data: conflicts } = await supabase
-      .from('media_assets')
-      .select('id, location, status, booked_from, booked_to')
-      .in('id', assetIds)
-      .eq('status', 'Booked')
-      .or(`and(booked_from.lte.${finalEndDate},booked_to.gte.${finalStartDate})`)
+      .from("media_assets")
+      .select("id, location, status, booked_from, booked_to, current_campaign_id")
+      .in("id", assetIds)
+      .eq("status", "Booked")
+      .or(`and(booked_from.lte.${plan.end_date},booked_to.gte.${plan.start_date})`);
 
     if (conflicts && conflicts.length > 0) {
-      return new Response(
-        JSON.stringify({
-          error: 'Some assets are already booked',
-          conflicts: conflicts.map((c: any) => ({
-            asset_id: c.id,
-            location: c.location,
-            booked_from: c.booked_from,
-            booked_to: c.booked_to
-          }))
-        }),
-        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      console.warn("[v9.0] Booking conflicts found:", conflicts);
+      return jsonError(
+        `${conflicts.length} asset(s) already booked during this period`,
+        409
+      );
     }
 
-    // 7. Generate campaign ID (pass user.id for service role context)
-    const { data: campaignCode, error: codeError } = await supabase.rpc('generate_campaign_id', {
-      p_user_id: user.id
-    })
-    if (codeError || !campaignCode) {
-      console.error('[v8.0] Campaign ID generation error:', codeError)
-      return new Response(
-        JSON.stringify({ error: 'Failed to generate campaign ID', details: codeError?.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    // 6) Generate Campaign ID
+    const { data: campaignIdData, error: campaignIdError } = await supabase
+      .rpc("generate_campaign_id", { p_user_id: user.id });
+
+    if (campaignIdError) {
+      console.error("[v9.0] Error generating campaign ID:", campaignIdError);
+      return jsonError("Failed to generate campaign ID", 500);
     }
 
-    console.log('[v8.0] Generated campaign ID:', campaignCode)
+    const campaignId = campaignIdData as string;
+    console.log("[v9.0] Generated campaign ID:", campaignId);
 
-    // 8. FORCE STATUS TO 'Planned' (PascalCase standard)
-    const normalizedStatus = 'Planned' as const
-
-    // 9. Create campaign record
-    const campaignInsertData = {
-      id: campaignCode,
+    // 7) Insert Campaign
+    const campaignInsertPayload = {
+      id: campaignId,
+      plan_id: plan.id,
       company_id: companyId,
-      plan_id: plan_id,
-      campaign_name: campaign_name || plan.plan_name,
       client_id: plan.client_id,
       client_name: plan.client_name,
-      start_date: finalStartDate,
-      end_date: finalEndDate,
-      status: normalizedStatus, // Always 'Planned' for new campaigns
+      campaign_name: plan.plan_name,
+      status: "Planned" as const,
+      start_date: plan.start_date,
+      end_date: plan.end_date,
+      total_assets: planItems.length,
       total_amount: plan.total_amount,
       gst_percent: plan.gst_percent,
       gst_amount: plan.gst_amount,
       grand_total: plan.grand_total,
-      total_assets: planItems.length,
-      notes: notes || plan.notes || '',
+      notes: plan.notes || "",
       created_by: user.id,
-    }
-
-    console.log('[v8.0] Creating campaign with status:', normalizedStatus)
+    };
 
     const { data: campaign, error: campaignError } = await supabase
-      .from('campaigns')
-      .insert(campaignInsertData)
-      .select()
-      .single()
+      .from("campaigns")
+      .insert(campaignInsertPayload)
+      .select("id")
+      .maybeSingle();
 
     if (campaignError) {
-      console.error('[v8.0] Campaign insert error:', campaignError)
-      return new Response(
-        JSON.stringify({ 
-          error: 'Failed to create campaign', 
-          details: campaignError.message 
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      console.error("[v9.0] Error inserting campaign:", campaignError);
+      return jsonError(`Failed to create campaign: ${campaignError.message}`, 500);
     }
 
-    console.log('[v8.0] Campaign created successfully:', campaign.id)
+    if (!campaign) {
+      return jsonError("Campaign insert did not return a record", 500);
+    }
 
-    // 10. Create campaign_items (for finance tracking)
-    const campaignItemsData = enrichedPlanItems.map((item: any) => ({
-      campaign_id: campaignCode,
+    console.log("[v9.0] Campaign created successfully:", campaign.id);
+
+    // 8) Insert campaign_items (for financial tracking)
+    const campaignItemsPayload = planItems.map((item) => ({
+      campaign_id: campaignId,
       plan_item_id: item.id,
       asset_id: item.asset_id,
-      start_date: finalStartDate,
-      end_date: finalEndDate,
-      card_rate: item.card_rate || item.media_assets.card_rate || 0,
-      negotiated_rate: item.sales_price || item.card_rate || 0,
+      start_date: plan.start_date,
+      end_date: plan.end_date,
+      card_rate: item.card_rate || 0,
+      negotiated_rate: item.sales_price || 0,
       printing_charge: item.printing_charges || 0,
       mounting_charge: item.mounting_charges || 0,
-      quantity: 1,
       final_price: item.total_with_gst || 0,
-    }))
+      quantity: 1,
+    }));
 
     const { error: campaignItemsError } = await supabase
-      .from('campaign_items')
-      .insert(campaignItemsData)
+      .from("campaign_items")
+      .insert(campaignItemsPayload);
 
     if (campaignItemsError) {
-      console.error('[v8.0] Campaign items error:', campaignItemsError)
-      // Don't fail the entire operation, just log
+      console.error("[v9.0] Error inserting campaign items:", campaignItemsError);
+      return jsonError(`Campaign created but failed to attach items: ${campaignItemsError.message}`, 500);
     }
 
-    // 11. Create campaign_assets (for operations tracking) with FULL media asset data
-    const campaignAssetsData = enrichedPlanItems.map((item: any) => {
-      const asset = item.media_assets
-      
-      return {
-        campaign_id: campaignCode,
-        asset_id: item.asset_id,
-        // Media asset snapshot fields from plan_items (or fallback to media_assets)
-        media_type: item.media_type || asset.media_type || 'Unknown',
-        city: item.city || asset.city || '',
-        area: item.area || asset.area || '',
-        location: item.location || asset.location || '',
-        latitude: item.latitude || asset.latitude || null,
-        longitude: item.longitude || asset.longitude || null,
-        // Pricing snapshot
-        card_rate: item.card_rate || asset.card_rate || 0,
-        printing_charges: item.printing_charges || 0,
-        mounting_charges: item.mounting_charges || 0,
-        // Status always starts as 'Pending' for operations
-        status: 'Pending',
-      }
-    })
+    console.log(`[v9.0] Created ${campaignItemsPayload.length} campaign items`);
 
-    const { error: assetsError } = await supabase
-      .from('campaign_assets')
-      .insert(campaignAssetsData)
+    // 9) Insert campaign_assets (for operations tracking with full snapshot)
+    const campaignAssetsPayload = planItems.map((item) => ({
+      campaign_id: campaignId,
+      asset_id: item.asset_id,
+      media_type: item.media_type || "Unknown",
+      city: item.city || "",
+      area: item.area || "",
+      location: item.location || "",
+      latitude: item.latitude || null,
+      longitude: item.longitude || null,
+      card_rate: item.card_rate || 0,
+      printing_charges: item.printing_charges || 0,
+      mounting_charges: item.mounting_charges || 0,
+      status: "Pending" as const,
+    }));
 
-    if (assetsError) {
-      console.error('[v8.0] Campaign assets error:', assetsError)
-      return new Response(
-        JSON.stringify({ 
-          error: 'Failed to create campaign assets', 
-          details: assetsError.message 
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    const { error: campaignAssetsError } = await supabase
+      .from("campaign_assets")
+      .insert(campaignAssetsPayload);
+
+    if (campaignAssetsError) {
+      console.error("[v9.0] Error inserting campaign assets:", campaignAssetsError);
+      return jsonError(`Failed to create campaign assets: ${campaignAssetsError.message}`, 500);
     }
 
-    console.log('[v8.0] Created', campaignAssetsData.length, 'campaign assets')
+    console.log(`[v9.0] Created ${campaignAssetsPayload.length} campaign assets`);
 
-    // 12. Update media assets booking status
-    const bookingUpdates = assetIds.map(assetId => ({
-      id: assetId,
-      status: 'Booked',
-      booked_from: finalStartDate,
-      booked_to: finalEndDate,
-      current_campaign_id: campaignCode,
-    }))
+    // 10) Update media assets to "Booked"
+    const { error: assetUpdateError } = await supabase
+      .from("media_assets")
+      .update({
+        status: "Booked",
+        booked_from: plan.start_date,
+        booked_to: plan.end_date,
+        current_campaign_id: campaignId,
+      })
+      .in("id", assetIds);
 
-    for (const update of bookingUpdates) {
-      await supabase
-        .from('media_assets')
-        .update({
-          status: update.status,
-          booked_from: update.booked_from,
-          booked_to: update.booked_to,
-          current_campaign_id: update.current_campaign_id,
-        })
-        .eq('id', update.id)
+    if (assetUpdateError) {
+      console.error("[v9.0] Error updating asset statuses:", assetUpdateError);
+      // Non-fatal - campaign is still created
+    } else {
+      console.log(`[v9.0] Updated ${assetIds.length} assets to Booked status`);
     }
 
-    // 13. Update plan status to 'Converted'
-    await supabase
-      .from('plans')
-      .update({ status: 'Converted' })
-      .eq('id', plan_id)
+    // 11) Update Plan to mark as converted
+    const { error: planUpdateError } = await supabase
+      .from("plans")
+      .update({
+        status: "Converted",
+        converted_to_campaign_id: campaignId,
+        converted_at: new Date().toISOString(),
+      })
+      .eq("id", planId);
 
-    console.log('[v8.0] Plan marked as Converted')
+    if (planUpdateError) {
+      console.error("[v9.0] Error updating plan after conversion:", planUpdateError);
+      // Non-fatal
+    }
 
-    // 14. Success response
+    console.log("[v9.0] Plan marked as Converted");
+
+    // 12) Success response
     return new Response(
       JSON.stringify({
         success: true,
-        campaign_id: campaignCode,
-        campaign: campaign,
-        message: `Campaign ${campaignCode} created successfully with status: ${normalizedStatus}`,
+        message: "Plan converted to campaign successfully",
+        campaign_id: campaignId,
+        campaign_code: campaignId,
+        plan_id: plan.id,
+        total_items: planItems.length,
+        status: "Planned",
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-
-  } catch (error) {
-    console.error('[v8.0] Unexpected error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  } catch (err) {
+    console.error("[v9.0] Unexpected error in convert-plan-to-campaign:", err);
+    return jsonError(`Unexpected error: ${err instanceof Error ? err.message : "Unknown error"}`, 500);
   }
-})
+});
+
+function jsonError(message: string, status = 400): Response {
+  return new Response(
+    JSON.stringify({ success: false, error: message }),
+    {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    }
+  );
+}

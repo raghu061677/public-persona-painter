@@ -1265,12 +1265,9 @@ export default function PlanDetail() {
                 <span className="text-xs text-muted-foreground">Display Cost</span>
                 <span className="font-semibold text-orange-600 dark:text-orange-400">
                   {formatCurrency(planItems.reduce((sum, item) => {
-                    // Calculate display cost: use effective price minus charges
+                    // Display cost is the negotiated price (sales_price or card_rate)
                     const effectivePrice = item.sales_price || item.card_rate;
-                    const printingCharge = item.printing_charges || item.printing_cost || 0;
-                    const mountingCharge = item.mounting_charges || item.installation_cost || 0;
-                    const displayCost = effectivePrice - printingCharge - mountingCharge;
-                    return sum + displayCost;
+                    return sum + effectivePrice;
                   }, 0))}
                 </span>
               </div>

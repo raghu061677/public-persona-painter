@@ -1410,7 +1410,7 @@ export default function PlanDetail() {
                       onCheckedChange={toggleAllItems}
                     />
                   </TableHead>
-                  {isAdmin && <TableHead className="w-12"></TableHead>}
+                  {isAdmin && ['pending', 'approved'].includes(plan.status?.toLowerCase()) && <TableHead className="w-12"></TableHead>}
                   <TableHead>Asset ID</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>City</TableHead>

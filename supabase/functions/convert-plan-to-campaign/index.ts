@@ -169,11 +169,14 @@ Deno.serve(async (req) => {
       )
     }
 
-    // 7. Generate campaign ID
-    const { data: campaignCode, error: codeError } = await supabase.rpc('generate_campaign_id')
+    // 7. Generate campaign ID (pass user.id for service role context)
+    const { data: campaignCode, error: codeError } = await supabase.rpc('generate_campaign_id', {
+      p_user_id: user.id
+    })
     if (codeError || !campaignCode) {
+      console.error('[v8.0] Campaign ID generation error:', codeError)
       return new Response(
-        JSON.stringify({ error: 'Failed to generate campaign ID' }),
+        JSON.stringify({ error: 'Failed to generate campaign ID', details: codeError?.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

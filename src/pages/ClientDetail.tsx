@@ -23,7 +23,8 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  Send
+  Send,
+  Plus
 } from "lucide-react";
 import { formatINR, getInvoiceStatusColor, getDaysOverdue } from "@/utils/finance";
 import { toast } from "sonner";
@@ -655,9 +656,18 @@ export default function ClientDetail() {
         {/* Plans Tab */}
         <TabsContent value="plans">
           <Card>
-            <CardHeader>
-              <CardTitle>All Plans</CardTitle>
-              <CardDescription>Quotations and proposals for this client</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <div className="space-y-1">
+                <CardTitle>All Plans</CardTitle>
+                <CardDescription>Quotations and proposals for this client</CardDescription>
+              </div>
+              <Button 
+                onClick={() => navigate(`/admin/plans/new?client_id=${client.id}`)}
+                size="sm"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Create Plan
+              </Button>
             </CardHeader>
             <CardContent>
               {plans.length > 0 ? (

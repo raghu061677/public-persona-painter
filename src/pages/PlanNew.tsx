@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +47,7 @@ import { StartFromTemplateDialog } from "@/components/plans/StartFromTemplateDia
 
 export default function PlanNew() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
   const [availableAssets, setAvailableAssets] = useState<any[]>([]);
@@ -76,6 +77,21 @@ export default function PlanNew() {
     generateNewPlanId();
     loadTemplateFromSession();
   }, []);
+
+  // Pre-fill client from URL parameter if provided
+  useEffect(() => {
+    const clientId = searchParams.get('client_id');
+    if (clientId && clients.length > 0) {
+      const client = clients.find(c => c.id === clientId);
+      if (client) {
+        setFormData(prev => ({
+          ...prev,
+          client_id: clientId,
+          client_name: client.name,
+        }));
+      }
+    }
+  }, [searchParams, clients]);
 
   // Calculate duration days whenever dates change
   useEffect(() => {

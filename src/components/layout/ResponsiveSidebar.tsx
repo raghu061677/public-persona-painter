@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Building2, Map, Layers, Briefcase, Users, TrendingUp,
   FileText, Receipt, Zap, UserCog, Palette, FileSpreadsheet,
   Shield, DollarSign, Smartphone, Image, Settings, FileCheck, 
-  CreditCard, Globe, ShoppingBag, BarChart3, Sparkles, Menu, CheckCircle2, History, ListChecks
+  CreditCard, Globe, ShoppingBag, BarChart3, Sparkles, Menu, CheckCircle2, History, ListChecks, UserPlus
 } from "lucide-react";
 import {
   Sidebar,
@@ -244,19 +244,13 @@ export function ResponsiveSidebar() {
               <SidebarMenu>
                 <MenuItem icon={LayoutDashboard} label="Dashboard" href="/admin/dashboard" />
                 
-                <MenuGroup icon={Map} label="Media Assets">
-                  <MenuItem icon={Map} label="All Assets" href="/admin/media-assets" />
-                  <MenuItem icon={FileCheck} label="Asset Validation" href="/admin/media-assets-validation" />
-                </MenuGroup>
+                <MenuItem icon={Map} label="Media Assets" href="/admin/media-assets" />
+                
+                <MenuItem icon={UserPlus} label="Leads" href="/admin/leads" />
                 
                 <MenuItem icon={Users} label="Clients" href="/admin/clients" />
                 
-                <MenuGroup icon={Layers} label="Plans">
-                  <MenuItem icon={Layers} label="All Plans" href="/admin/plans" />
-                  {(isCompanyAdmin || isPlatformAdmin) && (
-                    <MenuItem icon={FileText} label="Plan Templates" href="/admin/plan-templates" />
-                  )}
-                </MenuGroup>
+                <MenuItem icon={Layers} label="Plans" href="/admin/plans" />
 
                 <MenuGroup icon={CheckCircle2} label="Approvals">
                   <MenuItem icon={ListChecks} label="Pending Approvals" href="/admin/approvals" badge={pendingApprovalsCount} />
@@ -328,6 +322,10 @@ export function ResponsiveSidebar() {
                     <MenuGroup icon={UserCog} label="Users & Access">
                       <MenuItem icon={Users} label="Users" href="/admin/users" />
                       <MenuItem icon={Shield} label="Roles" href="/admin/company-settings/roles" />
+                    </MenuGroup>
+
+                    <MenuGroup icon={Settings} label="Data Management">
+                      <MenuItem icon={FileCheck} label="Asset Validation" href="/admin/media-assets-validation" />
                     </MenuGroup>
                   </SidebarMenu>
                 </>

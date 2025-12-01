@@ -479,9 +479,21 @@ export default function PlansList() {
 
       if (error) throw error;
 
+      // If status is being changed to "Sent", create approval workflows
+      if (status === "Sent") {
+        const planIds = Array.from(selectedPlans);
+        for (const planId of planIds) {
+          try {
+            await supabase.rpc("create_plan_approval_workflow", { p_plan_id: planId });
+          } catch (workflowError) {
+            console.log(`Approval workflow creation skipped for plan ${planId}:`, workflowError);
+          }
+        }
+      }
+
       toast({
         title: "Success",
-        description: `${selectedPlans.size} plan(s) updated to ${status}`,
+        description: `${selectedPlans.size} plan(s) updated to ${status}${status === "Sent" ? " and submitted for approval" : ""}`,
       });
 
       setSelectedPlans(new Set());
@@ -687,6 +699,7 @@ export default function PlansList() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Sent">Sent (For Approval)</SelectItem>
                     <SelectItem value="Approved">Approved</SelectItem>
                     <SelectItem value="Rejected">Rejected</SelectItem>
                   </SelectContent>

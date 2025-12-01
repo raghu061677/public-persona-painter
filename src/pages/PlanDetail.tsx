@@ -1265,9 +1265,10 @@ export default function PlanDetail() {
                 <span className="text-xs text-muted-foreground">Display Cost</span>
                 <span className="font-semibold text-orange-600 dark:text-orange-400">
                   {formatCurrency(planItems.reduce((sum, item) => {
-                    // Display cost is the negotiated price (sales_price or card_rate)
+                    // Display cost is the sum of pro-rata amounts (monthly rate adjusted for actual days)
                     const effectivePrice = item.sales_price || item.card_rate;
-                    return sum + effectivePrice;
+                    const proRata = calcProRata(effectivePrice, plan.duration_days);
+                    return sum + proRata;
                   }, 0))}
                 </span>
               </div>

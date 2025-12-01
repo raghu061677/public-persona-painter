@@ -27,8 +27,10 @@ import {
 } from "lucide-react";
 import { formatINR, getInvoiceStatusColor, getDaysOverdue } from "@/utils/finance";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/navigation/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ROUTES } from "@/config/routes";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { ClientDocuments } from "@/components/clients/ClientDocuments";
@@ -297,19 +299,18 @@ export default function ClientDetail() {
 
   return (
     <div className="p-8 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/admin/clients")}
-            className="mb-2 -ml-2"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Clients
-          </Button>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold">{client.name}</h1>
+      <PageHeader
+        title={client.name}
+        description={client.company || undefined}
+        breadcrumbs={[
+          { label: "Dashboard", path: ROUTES.DASHBOARD },
+          { label: "Clients", path: ROUTES.CLIENTS },
+          { label: client.name },
+        ]}
+        showBackButton
+        backPath={ROUTES.CLIENTS}
+        actions={
+          <>
             <Button
               variant="outline"
               size="sm"
@@ -318,35 +319,26 @@ export default function ClientDetail() {
               <BarChart3 className="mr-2 h-4 w-4" />
               Analytics
             </Button>
-          </div>
-          {client.company && (
-            <p className="text-muted-foreground flex items-center gap-2">
-              <Building2 className="h-4 w-4" />
-              {client.company}
-            </p>
-          )}
-        </div>
-        
-        <div className="flex gap-2">
-          <Button
-            variant="default"
-            onClick={() => setShowInviteDialog(true)}
-          >
-            <Send className="mr-2 h-4 w-4" />
-            Send Portal Invite
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setSearchParams({ edit: 'true' });
-              setShowEditDialog(true);
-            }}
-          >
-            <Edit className="mr-2 h-4 w-4" />
-            Edit Client
-          </Button>
-        </div>
-      </div>
+            <Button
+              variant="default"
+              onClick={() => setShowInviteDialog(true)}
+            >
+              <Send className="mr-2 h-4 w-4" />
+              Send Portal Invite
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchParams({ edit: 'true' });
+                setShowEditDialog(true);
+              }}
+            >
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Client
+            </Button>
+          </>
+        }
+      />
 
       {/* Key Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

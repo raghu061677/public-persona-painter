@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, Smartphone, Wifi, Bell, CheckCircle2, Zap, Shield, HardDrive, Clock } from "lucide-react";
@@ -364,7 +365,7 @@ const Install = () => {
         {/* Back to App */}
         <div className="text-center">
           <Button variant="outline" asChild>
-            <a href="/dashboard">Go to Dashboard</a>
+            <Link to="/admin/dashboard">Go to Dashboard</Link>
           </Button>
         </div>
       </div>

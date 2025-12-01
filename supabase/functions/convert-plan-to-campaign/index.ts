@@ -180,7 +180,7 @@ serve(async (req) => {
     const campaignId = campaignIdData as string;
     console.log("[v9.0] Generated campaign ID:", campaignId);
 
-    // 7) Insert Campaign
+    // 7) Insert Campaign - Using correct enum value
     const campaignInsertPayload = {
       id: campaignId,
       plan_id: plan.id,
@@ -188,7 +188,7 @@ serve(async (req) => {
       client_id: plan.client_id,
       client_name: plan.client_name,
       campaign_name: plan.plan_name,
-      status: "Planned" as const,
+      status: "Planned",
       start_date: plan.start_date,
       end_date: plan.end_date,
       total_assets: planItems.length,

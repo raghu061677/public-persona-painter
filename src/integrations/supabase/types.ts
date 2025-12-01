@@ -1356,6 +1356,63 @@ export type Database = {
         }
         Relationships: []
       }
+      client_contacts: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          created_by: string | null
+          designation: string | null
+          email: string | null
+          id: string
+          is_primary: boolean | null
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          created_by?: string | null
+          designation?: string | null
+          email?: string | null
+          id?: string
+          is_primary?: boolean | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          designation?: string | null
+          email?: string | null
+          id?: string
+          is_primary?: boolean | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_documents: {
         Row: {
           client_id: string
@@ -1509,6 +1566,48 @@ export type Database = {
           },
         ]
       }
+      client_tags: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          tag_color: string | null
+          tag_name: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          tag_color?: string | null
+          tag_name: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          tag_color?: string | null
+          tag_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_tags_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_tags_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
@@ -1518,6 +1617,7 @@ export type Database = {
           billing_pincode: string | null
           billing_state: string | null
           city: string | null
+          client_type: Database["public"]["Enums"]["client_type"] | null
           company: string | null
           company_id: string
           contact_person: string | null
@@ -1529,6 +1629,7 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
+          search_vector: unknown
           shipping_address_line1: string | null
           shipping_address_line2: string | null
           shipping_city: string | null
@@ -1546,6 +1647,7 @@ export type Database = {
           billing_pincode?: string | null
           billing_state?: string | null
           city?: string | null
+          client_type?: Database["public"]["Enums"]["client_type"] | null
           company?: string | null
           company_id: string
           contact_person?: string | null
@@ -1557,6 +1659,7 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
+          search_vector?: unknown
           shipping_address_line1?: string | null
           shipping_address_line2?: string | null
           shipping_city?: string | null
@@ -1574,6 +1677,7 @@ export type Database = {
           billing_pincode?: string | null
           billing_state?: string | null
           city?: string | null
+          client_type?: Database["public"]["Enums"]["client_type"] | null
           company?: string | null
           company_id?: string
           contact_person?: string | null
@@ -1585,6 +1689,7 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
+          search_vector?: unknown
           shipping_address_line1?: string | null
           shipping_address_line2?: string | null
           shipping_city?: string | null
@@ -5583,6 +5688,7 @@ export type Database = {
         | "Verified"
         | "Completed"
         | "Cancelled"
+      client_type: "Agency" | "Direct" | "Government" | "Corporate" | "Other"
       company_status: "pending" | "active" | "suspended" | "cancelled"
       company_type: "media_owner" | "agency" | "platform_admin"
       document_type:
@@ -5786,6 +5892,7 @@ export const Constants = {
         "Completed",
         "Cancelled",
       ],
+      client_type: ["Agency", "Direct", "Government", "Corporate", "Other"],
       company_status: ["pending", "active", "suspended", "cancelled"],
       company_type: ["media_owner", "agency", "platform_admin"],
       document_type: [

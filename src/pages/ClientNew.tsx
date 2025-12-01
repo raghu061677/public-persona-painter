@@ -80,7 +80,7 @@ export default function ClientNew() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (formData.state) {
+    if (formData.state && !formData.id) {
       generateClientId();
     }
   }, [formData.state]);
@@ -153,8 +153,21 @@ export default function ClientNew() {
         return;
       }
 
+      // Generate a fresh client ID right before submission to avoid duplicates
+      if (!formData.state) {
+        toast.error("Please select a state");
+        setLoading(false);
+        return;
+      }
+
+      const stateCode = getStateCode(formData.state);
+      const freshClientId = await generateClientCode(stateCode);
+      
+      // Update formData with fresh ID
+      const submissionData = { ...formData, id: freshClientId };
+
       // Validate basic fields
-      const validation = clientSchema.safeParse(formData);
+      const validation = clientSchema.safeParse(submissionData);
       if (!validation.success) {
         const newErrors: Record<string, string> = {};
         validation.error.errors.forEach((err) => {
@@ -164,43 +177,48 @@ export default function ClientNew() {
         });
         setErrors(newErrors);
         toast.error("Please fix validation errors");
+        setLoading(false);
         return;
       }
 
-      // Insert client
+      // Insert client with fresh ID
       const { error: clientError } = await supabase
         .from("clients")
         .insert({
-          id: formData.id,
-          name: formData.name,
-          company: formData.company || null,
+          id: submissionData.id,
+          name: submissionData.name,
+          company: submissionData.company || null,
           company_id: company.id,
-          email: formData.email || null,
-          phone: formData.phone || null,
-          gst_number: formData.gst_number || null,
-          state: formData.state,
-          city: formData.city || null,
-          notes: formData.notes || null,
-          billing_address_line1: formData.billing_address_line1 || null,
-          billing_address_line2: formData.billing_address_line2 || null,
-          billing_city: formData.billing_city || null,
-          billing_state: formData.billing_state || null,
-          billing_pincode: formData.billing_pincode || null,
-          shipping_address_line1: formData.shipping_address_line1 || null,
-          shipping_address_line2: formData.shipping_address_line2 || null,
-          shipping_city: formData.shipping_city || null,
-          shipping_state: formData.shipping_state || null,
-          shipping_pincode: formData.shipping_pincode || null,
-          shipping_same_as_billing: formData.shipping_same_as_billing,
+          email: submissionData.email || null,
+          phone: submissionData.phone || null,
+          gst_number: submissionData.gst_number || null,
+          state: submissionData.state,
+          city: submissionData.city || null,
+          notes: submissionData.notes || null,
+          billing_address_line1: submissionData.billing_address_line1 || null,
+          billing_address_line2: submissionData.billing_address_line2 || null,
+          billing_city: submissionData.billing_city || null,
+          billing_state: submissionData.billing_state || null,
+          billing_pincode: submissionData.billing_pincode || null,
+          shipping_address_line1: submissionData.shipping_address_line1 || null,
+          shipping_address_line2: submissionData.shipping_address_line2 || null,
+          shipping_city: submissionData.shipping_city || null,
+          shipping_state: submissionData.shipping_state || null,
+          shipping_pincode: submissionData.shipping_pincode || null,
+          shipping_same_as_billing: submissionData.shipping_same_as_billing,
         });
 
       if (clientError) throw clientError;
 
-      toast.success("Client created successfully");
+      toast.success(`Client created successfully with ID: ${submissionData.id}`);
       navigate("/admin/clients");
     } catch (error: any) {
       console.error("Error creating client:", error);
-      toast.error(error.message || "Failed to create client");
+      if (error.code === '23505') {
+        toast.error("Duplicate client ID detected. Please try again.");
+      } else {
+        toast.error(error.message || "Failed to create client");
+      }
     } finally {
       setLoading(false);
     }

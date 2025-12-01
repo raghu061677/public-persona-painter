@@ -1265,10 +1265,11 @@ export default function PlanDetail() {
                 <span className="text-xs text-muted-foreground">Display Cost</span>
                 <span className="font-semibold text-orange-600 dark:text-orange-400">
                   {formatCurrency(planItems.reduce((sum, item) => {
-                    // Calculate display cost from subtotal minus printing and mounting charges
+                    // Calculate display cost: use effective price minus charges
+                    const effectivePrice = item.sales_price || item.card_rate;
                     const printingCharge = item.printing_charges || item.printing_cost || 0;
                     const mountingCharge = item.mounting_charges || item.installation_cost || 0;
-                    const displayCost = (item.subtotal || 0) - printingCharge - mountingCharge;
+                    const displayCost = effectivePrice - printingCharge - mountingCharge;
                     return sum + displayCost;
                   }, 0))}
                 </span>
@@ -1410,9 +1411,11 @@ export default function PlanDetail() {
               </TableHeader>
               <TableBody>
                 {planItems.map((item) => {
-                  const proRata = calcProRata(item.sales_price, plan.duration_days);
-                  const discount = calcDiscount(item.card_rate, item.sales_price);
-                  const profit = calcProfit(item.base_rent || 0, item.sales_price);
+                  // Use sales_price if available, otherwise fall back to card_rate
+                  const effectivePrice = item.sales_price || item.card_rate;
+                  const proRata = calcProRata(effectivePrice, plan.duration_days);
+                  const discount = calcDiscount(item.card_rate, effectivePrice);
+                  const profit = calcProfit(item.base_rent || 0, effectivePrice);
                   
                   return (
                     <TableRow key={item.id}>
@@ -1437,7 +1440,7 @@ export default function PlanDetail() {
                       <TableCell>{item.location}</TableCell>
                       <TableCell>{item.city}</TableCell>
                       <TableCell className="text-right">{formatCurrency(item.card_rate)}</TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(item.sales_price)}</TableCell>
+                      <TableCell className="text-right font-medium">{formatCurrency(effectivePrice)}</TableCell>
                       <TableCell className="text-right text-purple-600">{formatCurrency(proRata)}</TableCell>
                       <TableCell className="text-right text-blue-600 font-medium">
                         -{formatCurrency(discount.value)} ({discount.percent.toFixed(2)}%)

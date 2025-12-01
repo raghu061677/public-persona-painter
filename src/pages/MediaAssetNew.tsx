@@ -265,19 +265,14 @@ export default function MediaAssetNew() {
           .eq('id', tempAssetId);
       }
 
-      // Set the created asset ID to enable photo uploads
-      setCreatedAssetId(tempAssetId);
-      setIsAssetCreated(true);
-
       toast({
         title: "Success",
-        description: "Media asset created successfully. You can now upload photos below.",
+        description: "Media asset created successfully. Redirecting to upload photos...",
       });
       
-      // Scroll to photo upload section
-      setTimeout(() => {
-        document.getElementById('photo-upload-section')?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+      // Redirect to edit page with the MNS code (or UUID as fallback)
+      const redirectCode = mnsCode || tempAssetId;
+      navigate(`/admin/media-assets/edit/${redirectCode}`);
     } catch (error: any) {
       console.error('Submit error:', error);
       toast({

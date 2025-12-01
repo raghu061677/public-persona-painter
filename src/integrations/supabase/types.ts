@@ -5432,7 +5432,9 @@ export type Database = {
         Returns: Json
       }
       delete_user_account: { Args: never; Returns: undefined }
-      generate_campaign_id: { Args: never; Returns: string }
+      generate_campaign_id:
+        | { Args: never; Returns: string }
+        | { Args: { p_user_id?: string }; Returns: string }
       generate_company_slug: { Args: { company_name: string }; Returns: string }
       generate_csrf_token: { Args: never; Returns: string }
       generate_estimation_id: { Args: never; Returns: string }

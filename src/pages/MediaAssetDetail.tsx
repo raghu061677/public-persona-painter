@@ -21,11 +21,24 @@ export default function MediaAssetDetail() {
 
   const fetchAsset = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    
+    // Try to fetch by media_asset_code first
+    let { data, error } = await supabase
       .from('media_assets')
       .select('*')
       .eq('media_asset_code', code)
       .maybeSingle();
+
+    // If not found by media_asset_code, try by id (for backwards compatibility with old URLs)
+    if (!data && !error) {
+      const result = await supabase
+        .from('media_assets')
+        .select('*')
+        .eq('id', code)
+        .maybeSingle();
+      data = result.data;
+      error = result.error;
+    }
 
     if (error || !data) {
       toast({

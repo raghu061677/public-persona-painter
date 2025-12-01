@@ -33,11 +33,12 @@ export function CompanySwitcher({ collapsed }: CompanySwitcherProps) {
     return (
       <div className="px-2 py-3">
         <div className="flex items-center justify-center p-2 rounded-xl bg-accent/50">
-          {company.logo_url ? (
-            <img src={company.logo_url} alt={company.name} className="h-6 w-6 rounded object-cover" />
-          ) : (
-            <Building2 className="h-5 w-5 text-muted-foreground" />
-          )}
+          <div className="flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-primary" />
+            {!collapsed && (
+              <span className="text-sm font-semibold">{company.name}</span>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -64,17 +65,9 @@ export function CompanySwitcher({ collapsed }: CompanySwitcherProps) {
             className="w-full justify-between p-3 h-auto rounded-xl bg-accent/30 border border-border/40 hover:bg-accent/50"
           >
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              {company.logo_url ? (
-                <img
-                  src={company.logo_url}
-                  alt={company.name}
-                  className="h-8 w-8 rounded object-cover shrink-0"
-                />
-              ) : (
-                <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center shrink-0">
-                  <Building2 className="h-4 w-4 text-primary" />
-                </div>
-              )}
+              <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center shrink-0">
+                <Building2 className="h-4 w-4 text-primary" />
+              </div>
               <div className="flex-1 min-w-0 text-left">
                 <p className="text-sm font-semibold truncate">{company.name}</p>
                 <p className="text-xs text-muted-foreground capitalize">{company.type.replace('_', ' ')}</p>
@@ -101,11 +94,7 @@ export function CompanySwitcher({ collapsed }: CompanySwitcherProps) {
                       }}
                     >
                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                        {c.logo_url ? (
-                          <img src={c.logo_url} alt={c.name} className="h-5 w-5 rounded object-cover shrink-0" />
-                        ) : (
-                          <Building2 className="h-4 w-4 shrink-0" />
-                        )}
+                        <Building2 className="h-4 w-4 shrink-0 text-primary" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm truncate">{c.name}</p>
                           <p className="text-xs text-muted-foreground capitalize">{c.type.replace('_', ' ')}</p>
@@ -136,11 +125,7 @@ export function CompanySwitcher({ collapsed }: CompanySwitcherProps) {
                         }}
                       >
                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                          {c.logo_url ? (
-                            <img src={c.logo_url} alt={c.name} className="h-5 w-5 rounded object-cover shrink-0" />
-                          ) : (
-                            <Building2 className="h-4 w-4 shrink-0" />
-                          )}
+                          <Building2 className="h-4 w-4 shrink-0 text-primary" />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm truncate">{c.name}</p>
                             <p className="text-xs text-muted-foreground capitalize">{c.type.replace('_', ' ')}</p>

@@ -65,6 +65,7 @@ export default function PlanDetail() {
   const { company } = useCompany();
   const [plan, setPlan] = useState<any>(null);
   const [planItems, setPlanItems] = useState<any[]>([]);
+  const [clientDetails, setClientDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
@@ -186,6 +187,15 @@ export default function PlanDetail() {
       navigate('/admin/plans');
     } else {
       setPlan(data);
+      // Fetch client details
+      if (data?.client_id) {
+        const { data: client } = await supabase
+          .from('clients')
+          .select('gst_number, billing_address_line1, billing_address_line2, billing_city, billing_state, billing_pincode')
+          .eq('id', data.client_id)
+          .single();
+        setClientDetails(client);
+      }
     }
     setLoading(false);
   };
@@ -1177,6 +1187,26 @@ export default function PlanDetail() {
                 <p className="text-xs text-muted-foreground">Client ID</p>
                 <p className="font-mono">{plan.client_id}</p>
               </div>
+              {clientDetails?.gst_number && (
+                <div>
+                  <p className="text-xs text-muted-foreground">GST Number</p>
+                  <p className="font-mono text-sm">{clientDetails.gst_number}</p>
+                </div>
+              )}
+              {(clientDetails?.billing_address_line1 || clientDetails?.billing_city) && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Billing Address</p>
+                  <p className="text-sm">
+                    {[
+                      clientDetails?.billing_address_line1,
+                      clientDetails?.billing_address_line2,
+                      clientDetails?.billing_city,
+                      clientDetails?.billing_state,
+                      clientDetails?.billing_pincode
+                    ].filter(Boolean).join(', ')}
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -1212,6 +1242,13 @@ export default function PlanDetail() {
                   )}
                 </div>
               </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Display Period</p>
+                <p className="font-semibold">
+                  {formatDate(plan.start_date)} to {formatDate(plan.end_date)}
+                  <span className="text-xs text-muted-foreground ml-2">({plan.duration_days}d)</span>
+                </p>
+              </div>
             </CardContent>
           </Card>
 
@@ -1226,10 +1263,12 @@ export default function PlanDetail() {
               {/* Display Cost */}
               <div className="flex justify-between items-center">
                 <span className="text-xs text-muted-foreground">Display Cost</span>
-                <span className="font-semibold">{formatCurrency(planItems.reduce((sum, item) => {
-                  const proRata = calcProRata(item.sales_price, plan.duration_days);
-                  return sum + proRata;
-                }, 0))}</span>
+                <span className="font-semibold text-orange-600 dark:text-orange-400">
+                  {formatCurrency(planItems.reduce((sum, item) => {
+                    const proRata = calcProRata(item.sales_price || 0, plan.duration_days || 0);
+                    return sum + proRata;
+                  }, 0))}
+                </span>
               </div>
               
               {/* Printing Cost */}

@@ -36,6 +36,7 @@ import { Progress } from "@/components/ui/progress";
 import { ClientDocuments } from "@/components/clients/ClientDocuments";
 import { SendPortalInviteDialog } from "@/components/clients/SendPortalInviteDialog";
 import { EditClientDialog } from "@/components/clients/EditClientDialog";
+import { ClientContactsManager } from "@/components/clients/ClientContactsManager";
 
 interface Client {
   id: string;
@@ -490,6 +491,16 @@ export default function ClientDetail() {
                     </div>
                   )}
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Address Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Contact Persons</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ClientContactsManager clientId={client.id} />
               </CardContent>
             </Card>
 

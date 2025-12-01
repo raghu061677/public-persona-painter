@@ -200,6 +200,8 @@ serve(async (req) => {
       created_by: user.id,
     };
 
+    console.log("[v9.0] Campaign insert payload:", JSON.stringify(campaignInsertPayload, null, 2));
+
     const { data: campaign, error: campaignError } = await supabase
       .from("campaigns")
       .insert(campaignInsertPayload)

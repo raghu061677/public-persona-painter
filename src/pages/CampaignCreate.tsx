@@ -82,40 +82,104 @@ export default function CampaignCreate() {
   };
 
   const fetchAssets = async () => {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) return;
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        console.error('No authenticated user');
+        return;
+      }
 
-    const { data: companyUserData } = await supabase
-      .from('company_users')
-      .select('company_id')
-      .eq('user_id', userData.user.id)
-      .eq('status', 'active')
-      .maybeSingle();
+      const { data: companyUserData, error: companyError } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', userData.user.id)
+        .eq('status', 'active')
+        .maybeSingle();
 
-    if (!companyUserData) return;
+      if (companyError) {
+        console.error('Error fetching company user:', companyError);
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch company information',
+          variant: 'destructive',
+        });
+        return;
+      }
 
-    const { data, error } = await supabase
-      .from('media_assets')
-      .select('id, location, city, area, media_type, card_rate, printing_charge, mounting_charge')
-      .eq('company_id', companyUserData.company_id)
-      .eq('status', 'Available')
-      .order('city', { ascending: true });
+      if (!companyUserData) {
+        console.error('No company association found');
+        toast({
+          title: 'Error',
+          description: 'No company association found',
+          variant: 'destructive',
+        });
+        return;
+      }
 
-    if (error) {
+      console.log('Fetching assets for company:', companyUserData.company_id);
+
+      const { data, error } = await supabase
+        .from('media_assets')
+        .select(`
+          id, 
+          location, 
+          city, 
+          area, 
+          media_type, 
+          card_rate, 
+          printing_charge, 
+          mounting_charge,
+          status,
+          dimensions,
+          total_sqft
+        `)
+        .eq('company_id', companyUserData.company_id)
+        .eq('status', 'Available')
+        .order('city', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching assets:', error);
+        toast({
+          title: 'Error',
+          description: `Failed to fetch assets: ${error.message}`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      console.log('Fetched assets:', data?.length || 0);
+      setAssets(data || []);
+
+      if (!data || data.length === 0) {
+        toast({
+          title: 'No Assets Available',
+          description: 'No available assets found. Please add assets or check their status.',
+          variant: 'default',
+        });
+      }
+    } catch (error) {
+      console.error('Unexpected error fetching assets:', error);
       toast({
         title: 'Error',
-        description: 'Failed to fetch assets',
+        description: 'An unexpected error occurred while fetching assets',
         variant: 'destructive',
       });
-      return;
     }
-
-    setAssets(data || []);
   };
 
   const handleAddAsset = (assetId: string) => {
     const asset = assets.find(a => a.id === assetId);
     if (!asset) return;
+
+    // Check if asset is already added
+    if (selectedAssets.find(sa => sa.asset_id === assetId)) {
+      toast({
+        title: 'Asset Already Added',
+        description: 'This asset is already in your campaign',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     const newAsset: AssetItem = {
       asset_id: asset.id,
@@ -123,8 +187,8 @@ export default function CampaignCreate() {
       city: asset.city,
       area: asset.area,
       media_type: asset.media_type,
-      display_from: formData.start_date,
-      display_to: formData.end_date,
+      display_from: formData.start_date || '',
+      display_to: formData.end_date || '',
       sales_price: asset.card_rate || 0,
       printing_cost: asset.printing_charge || 0,
       mounting_cost: asset.mounting_charge || 0,
@@ -132,6 +196,11 @@ export default function CampaignCreate() {
     };
 
     setSelectedAssets([...selectedAssets, newAsset]);
+    
+    toast({
+      title: 'Asset Added',
+      description: `${asset.location} added to campaign`,
+    });
   };
 
   const handleRemoveAsset = (index: number) => {
@@ -327,22 +396,49 @@ export default function CampaignCreate() {
               <CardDescription>Add media assets to this campaign</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <Label>Add Asset</Label>
-                <Select onValueChange={handleAddAsset}>
+              <div className="space-y-2">
+                <Label>Add Asset to Campaign</Label>
+                <Select 
+                  onValueChange={handleAddAsset}
+                  disabled={!formData.start_date || !formData.end_date}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select an asset to add" />
+                    <SelectValue placeholder={
+                      !formData.start_date || !formData.end_date 
+                        ? "Set campaign dates first" 
+                        : `Select from ${assets.filter(a => !selectedAssets.find(sa => sa.asset_id === a.id)).length} available assets`
+                    } />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-[300px]">
                     {assets
                       .filter(a => !selectedAssets.find(sa => sa.asset_id === a.id))
-                      .map((asset) => (
-                        <SelectItem key={asset.id} value={asset.id}>
-                          {asset.location} - {asset.city}, {asset.area} ({asset.media_type})
-                        </SelectItem>
-                      ))}
+                      .length === 0 ? (
+                      <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                        {assets.length === 0 
+                          ? "No available assets found" 
+                          : "All available assets have been added"}
+                      </div>
+                    ) : (
+                      assets
+                        .filter(a => !selectedAssets.find(sa => sa.asset_id === a.id))
+                        .map((asset) => (
+                          <SelectItem key={asset.id} value={asset.id}>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{asset.location}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {asset.city}, {asset.area} • {asset.media_type} • ₹{asset.card_rate?.toLocaleString('en-IN') || 0}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))
+                    )}
                   </SelectContent>
                 </Select>
+                {!formData.start_date || !formData.end_date ? (
+                  <p className="text-xs text-muted-foreground">
+                    Please set campaign start and end dates before adding assets
+                  </p>
+                ) : null}
               </div>
 
               <Separator />

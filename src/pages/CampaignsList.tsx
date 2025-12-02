@@ -467,11 +467,15 @@ export default function CampaignsList() {
                 filteredCampaigns.map((campaign, index) => (
                   <TableRow 
                     key={campaign.id} 
-                    className={`transition-all duration-150 hover:bg-muted/80 ${
+                    className={`transition-all duration-150 hover:bg-muted/80 cursor-pointer ${
                       index % 2 === 0 ? 'bg-background' : 'bg-muted/30'
                     } ${getRowClassName()}`}
+                    onClick={() => navigate(`/admin/campaigns/edit/${campaign.id}`)}
                   >
-                    <TableCell className={`sticky left-0 z-10 bg-inherit px-4 py-3 border-r ${getCellClassName()}`}>
+                    <TableCell 
+                      className={`sticky left-0 z-10 bg-inherit px-4 py-3 border-r ${getCellClassName()}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Checkbox
                         checked={selectedCampaigns.has(campaign.id)}
                         onCheckedChange={() => toggleCampaignSelection(campaign.id)}
@@ -479,7 +483,9 @@ export default function CampaignsList() {
                     </TableCell>
                     <TableCell className={`font-medium px-4 py-3 ${getCellClassName()}`}>{campaign.id}</TableCell>
                     <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{campaign.client_name}</TableCell>
-                    <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{campaign.campaign_name}</TableCell>
+                    <TableCell className={`px-4 py-3 font-medium text-primary hover:underline ${getCellClassName()}`}>
+                      {campaign.campaign_name}
+                    </TableCell>
                     <TableCell className={`px-4 py-3 ${getCellClassName()}`}>
                       {formatDateUtil(campaign.start_date, settings.dateFormat)} - {formatDateUtil(campaign.end_date, settings.dateFormat)}
                     </TableCell>
@@ -492,7 +498,10 @@ export default function CampaignsList() {
                     <TableCell className={`px-4 py-3 text-right ${getCellClassName()}`}>
                       {formatCurrencyUtil(campaign.grand_total, settings.currencyFormat, settings.currencySymbol, settings.compactNumbers)}
                     </TableCell>
-                    <TableCell className={`px-4 py-3 text-right ${getCellClassName()}`}>
+                    <TableCell 
+                      className={`px-4 py-3 text-right ${getCellClassName()}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="ghost"

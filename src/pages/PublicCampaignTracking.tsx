@@ -8,6 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { Download, MapPin, Calendar, QrCode } from 'lucide-react';
 import { formatDate } from '@/utils/plans';
 import { getCampaignStatusColor } from '@/utils/campaigns';
+import { CampaignTimelineView } from '@/components/campaigns/CampaignTimelineView';
 
 export default function PublicCampaignTracking() {
   const { token } = useParams();
@@ -162,6 +163,11 @@ export default function PublicCampaignTracking() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Timeline */}
+        <div className="mb-6">
+          <CampaignTimelineView campaignId={campaign.id} isPublicView={true} />
+        </div>
 
         {/* Assets Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

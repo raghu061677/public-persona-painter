@@ -1326,6 +1326,60 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_timeline: {
+        Row: {
+          campaign_id: string
+          company_id: string
+          created_at: string | null
+          created_by: string | null
+          event_description: string | null
+          event_time: string | null
+          event_title: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          campaign_id: string
+          company_id: string
+          created_at?: string | null
+          created_by?: string | null
+          event_description?: string | null
+          event_time?: string | null
+          event_title?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          campaign_id?: string
+          company_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          event_description?: string | null
+          event_time?: string | null
+          event_title?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_timeline_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_timeline_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           assigned_to: string | null
@@ -3484,6 +3538,10 @@ export type Database = {
           deadline: string | null
           id: string
           mounter_id: string | null
+          qr_location_lat: number | null
+          qr_location_lng: number | null
+          qr_verified: boolean | null
+          qr_verified_at: string | null
           status: string | null
         }
         Insert: {
@@ -3496,6 +3554,10 @@ export type Database = {
           deadline?: string | null
           id?: string
           mounter_id?: string | null
+          qr_location_lat?: number | null
+          qr_location_lng?: number | null
+          qr_verified?: boolean | null
+          qr_verified_at?: string | null
           status?: string | null
         }
         Update: {
@@ -3508,6 +3570,10 @@ export type Database = {
           deadline?: string | null
           id?: string
           mounter_id?: string | null
+          qr_location_lat?: number | null
+          qr_location_lng?: number | null
+          qr_verified?: boolean | null
+          qr_verified_at?: string | null
           status?: string | null
         }
         Relationships: [

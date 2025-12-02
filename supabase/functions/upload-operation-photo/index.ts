@@ -112,6 +112,19 @@ Deno.serve(async (req) => {
       throw insertError;
     }
 
+    // Log photo upload event
+    await supabase.functions.invoke('add-timeline-event', {
+      body: {
+        campaign_id: operation.campaign_id,
+        company_id: operation.campaigns.company_id,
+        event_type: 'photo_uploaded',
+        event_title: 'Proof Photo Uploaded',
+        event_description: `${photo_type.charAt(0).toUpperCase() + photo_type.slice(1)} photo uploaded`,
+        created_by: user.id,
+        metadata: { photo_type, operation_id },
+      },
+    });
+
     // Check if all 4 photos are uploaded
     const { data: allPhotos } = await supabase
       .from('operation_photos')
@@ -121,7 +134,7 @@ Deno.serve(async (req) => {
     const uploadedTypes = new Set(allPhotos?.map(p => p.photo_type) || []);
     const allPhotosUploaded = REQUIRED_PHOTO_TYPES.every(type => uploadedTypes.has(type));
 
-    // Update operation status if all photos uploaded
+    // Update operation status if all photos uploaded (NO QR REQUIREMENT)
     if (allPhotosUploaded && operation.status !== 'Completed' && operation.status !== 'Verified') {
       await supabase
         .from('operations')
@@ -140,6 +153,19 @@ Deno.serve(async (req) => {
         })
         .eq('campaign_id', operation.campaign_id)
         .eq('asset_id', operation.asset_id);
+
+      // Log operations completed event
+      await supabase.functions.invoke('add-timeline-event', {
+        body: {
+          campaign_id: operation.campaign_id,
+          company_id: operation.campaigns.company_id,
+          event_type: 'operations_completed',
+          event_title: 'Installation Completed',
+          event_description: 'All proof photos uploaded and installation marked complete',
+          created_by: user.id,
+          metadata: { operation_id },
+        },
+      });
     }
 
     console.log('Photo uploaded successfully:', storagePath);

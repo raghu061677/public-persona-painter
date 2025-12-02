@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
         start_date,
         end_date,
         notes,
-        status: 'Planned',
+        status: 'Draft',
         total_assets: assets.length,
         total_amount,
         gst_percent,
@@ -162,6 +162,21 @@ Deno.serve(async (req) => {
     }
 
     console.log('Campaign created:', campaign.id);
+
+    // Add timeline event for direct campaign creation
+    await supabase.functions.invoke('add-timeline-event', {
+      body: {
+        campaign_id: campaign.id,
+        company_id,
+        event_type: 'draft_created',
+        event_title: 'Campaign Created (Direct)',
+        event_description: 'Created directly from the Campaigns module',
+        created_by: user.id,
+      },
+    });
+
+    // Auto-update campaign status based on dates
+    await supabase.rpc('auto_update_campaign_status');
 
     // Fetch full asset details for campaign_assets
     const assetIds = assets.map(a => a.asset_id);

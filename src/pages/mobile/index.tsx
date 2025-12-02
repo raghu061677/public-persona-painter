@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Routes, Route, useLocation } from "react-router-dom";
+import { useNavigate, Routes, Route, useLocation, useParams } from "react-router-dom";
 import { db, auth } from "@/lib/supabase-wrapper";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -759,6 +759,17 @@ function VacantMediaCard({ asset }: { asset: any }) {
 
 // Mobile Operations Upload Component
 function MobileOperationsUpload() {
+  const { campaignId, assetId } = useParams<{ campaignId?: string; assetId?: string }>();
+  const navigate = useNavigate();
+
+  // If both campaignId and assetId are provided, redirect to the full upload page
+  useEffect(() => {
+    if (campaignId && assetId) {
+      navigate(`/admin/operations/${campaignId}/assets/${assetId}`, { replace: true });
+    }
+  }, [campaignId, assetId, navigate]);
+
+  // Show placeholder if no task selected
   return (
     <div className="min-h-screen bg-background pb-24 p-4">
       <Card>

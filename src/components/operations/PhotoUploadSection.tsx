@@ -14,6 +14,9 @@ import { PhotoEditorDialog } from "./PhotoEditorDialog";
 import { logActivity } from "@/utils/activityLogger";
 import { useCompany } from "@/contexts/CompanyContext";
 
+// Add debug logging
+const DEBUG = true;
+
 interface PhotoUploadSectionProps {
   campaignId: string;
   assetId: string;
@@ -124,7 +127,10 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
   };
 
   const handleConfirmUpload = async () => {
+    if (DEBUG) console.log('Starting upload with:', { company, campaignId, assetId });
+    
     if (!company?.id) {
+      console.error('No company ID available');
       toast({
         title: "Error",
         description: "Company context not available",
@@ -134,6 +140,8 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
     }
 
     const files = previewFiles.map(p => p.file);
+    if (DEBUG) console.log(`Processing ${files.length} files for upload`);
+    
     setShowPreview(false);
     setIsProcessing(true);
 
@@ -168,12 +176,15 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
       setIsUploading(true);
       setIsProcessing(false);
 
+      if (DEBUG) console.log('Calling uploadOperationsProofBatch with watermarked files');
+      
       const results = await uploadOperationsProofBatch(
         company.id,
         campaignId,
         assetId,
         watermarkedFiles,
         (fileIndex, progress) => {
+          if (DEBUG) console.log(`File ${fileIndex} progress:`, progress);
           setUploadingFiles(prev => {
             const updated = [...prev];
             updated[fileIndex] = {
@@ -185,6 +196,8 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
           });
         }
       );
+      
+      if (DEBUG) console.log('Upload results:', results);
 
       // Run AI quality check on uploaded photos (async, non-blocking)
       if (shouldCheckQuality && results.length > 0) {
@@ -251,9 +264,12 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
 
     } catch (error: any) {
       console.error('Upload error:', error);
+      console.error('Error stack:', error.stack);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      
       toast({
         title: "Upload Failed",
-        description: error.message || "Failed to upload photos",
+        description: error.message || "Failed to upload photos. Please check console for details.",
         variant: "destructive",
       });
       

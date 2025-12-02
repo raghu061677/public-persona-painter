@@ -79,17 +79,14 @@ export default function CampaignAssetProofs() {
 
     try {
       setLoading(true);
-      // @ts-ignore - Complex Supabase type inference issue
-      const photoQuery = await supabase
+      // Query for photos with campaign_id and asset_id
+      // Note: photo_type is stored in metadata JSONB, not as a column
+      const { data, error } = await supabase
         .from('media_photos')
         .select('*')
         .eq('campaign_id', campaignId)
         .eq('asset_id', assetId)
-        .eq('photo_type', 'operations_proof')
         .order('uploaded_at', { ascending: false });
-      
-      const data = (photoQuery?.data || []) as any[];
-      const error = photoQuery?.error;
 
       if (error) throw error;
       setPhotos(data || []);

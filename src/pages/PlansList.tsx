@@ -60,7 +60,7 @@ export default function PlansList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
-  const [statusTab, setStatusTab] = useState<"pending" | "approved" | "converted" | "rejected" | "all">("pending");
+  const [statusTab, setStatusTab] = useState<"pending" | "approved" | "converted" | "rejected" | "all">("all");
   const [selectedPlans, setSelectedPlans] = useState<Set<string>>(new Set());
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
   const [showTemplatesDialog, setShowTemplatesDialog] = useState(false);
@@ -576,6 +576,15 @@ export default function PlansList() {
           <CardContent className="p-2">
             <div className="flex items-center gap-1 overflow-x-auto pb-1">
               <Button
+                variant={statusTab === "all" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setStatusTab("all")}
+                className="whitespace-nowrap"
+              >
+                <ClipboardList className="mr-1.5 h-4 w-4" />
+                All Plans ({plans.length})
+              </Button>
+              <Button
                 variant={statusTab === "pending" ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setStatusTab("pending")}
@@ -610,15 +619,6 @@ export default function PlansList() {
               >
                 <Ban className="mr-1.5 h-4 w-4" />
                 Rejected ({plans.filter(p => (p.status?.toLowerCase() || "") === "rejected").length})
-              </Button>
-              <Button
-                variant={statusTab === "all" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setStatusTab("all")}
-                className="whitespace-nowrap"
-              >
-                <ClipboardList className="mr-1.5 h-4 w-4" />
-                All Plans ({plans.length})
               </Button>
             </div>
           </CardContent>

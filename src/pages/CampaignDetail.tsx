@@ -39,6 +39,7 @@ import { ShareTrackingLinkDialog } from "@/components/campaigns/ShareTrackingLin
 import { GenerateProofPPTButtonNew } from "@/components/campaigns/GenerateProofPPTButtonNew";
 import { useCompany } from "@/contexts/CompanyContext";
 import { CampaignTimelineView } from "@/components/campaigns/CampaignTimelineView";
+import { ProofPPTv2 } from "@/components/exports/ProofPPTv2";
 
 export default function CampaignDetail() {
   const { id } = useParams();
@@ -266,6 +267,11 @@ export default function CampaignDetail() {
                       onSuccess={refreshData}
                     />
                     <GenerateProofPPTButtonNew
+                      campaignId={campaign.id}
+                      companyId={company.id}
+                      onSuccess={refreshData}
+                    />
+                    <ProofPPTv2
                       campaignId={campaign.id}
                       companyId={company.id}
                       onSuccess={refreshData}

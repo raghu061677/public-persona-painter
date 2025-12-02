@@ -382,6 +382,9 @@ export default function PlanNew() {
       const totals = calculateTotals();
       const { netTotal, gstAmount, grandTotal } = totals;
 
+      // Ensure months_count is at least 0.5 (database constraint)
+      const monthsCount = Math.max(0.5, calculateMonthsFromDays(durationDays));
+
       // Create plan with duration mode and months
       const { data: plan, error: planError } = await supabase
         .from('plans')
@@ -395,7 +398,7 @@ export default function PlanNew() {
           end_date: formatForSupabase(toDateOnly(formData.end_date)),
           duration_days: durationDays,
           duration_mode: formData.duration_mode,
-          months_count: formData.months_count,
+          months_count: monthsCount,
           status: 'Draft',
           total_amount: netTotal,
           gst_percent: parseFloat(formData.gst_percent),

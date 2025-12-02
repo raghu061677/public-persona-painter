@@ -9,14 +9,9 @@ import {
   ArrowLeft, 
   MapPin, 
   Maximize2, 
-  Navigation, 
   Sun, 
-  Layers,
   ExternalLink 
 } from "lucide-react";
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import { StreetViewPreview } from "@/components/media-assets/StreetViewPreview";
 import {
   Carousel,
   CarouselContent,
@@ -49,8 +44,6 @@ export default function MarketplaceAssetDetail() {
   const [asset, setAsset] = useState<PublicAssetDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<L.Map | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -58,42 +51,6 @@ export default function MarketplaceAssetDetail() {
     }
   }, [id]);
 
-  useEffect(() => {
-    if (asset?.latitude && asset?.longitude && mapRef.current && !mapInstanceRef.current) {
-      // Initialize map
-      const map = L.map(mapRef.current).setView([asset.latitude, asset.longitude], 16);
-      
-      // Add tile layer
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-      }).addTo(map);
-
-      // Add marker
-      const icon = L.icon({
-        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowSize: [41, 41]
-      });
-
-      L.marker([asset.latitude, asset.longitude], { icon })
-        .addTo(map)
-        .bindPopup(`<b>${asset.id}</b><br>${asset.location}`)
-        .openPopup();
-
-      mapInstanceRef.current = map;
-    }
-
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, [asset]);
 
   const fetchAssetDetail = async (assetId: string) => {
     setLoading(true);
@@ -148,19 +105,6 @@ export default function MarketplaceAssetDetail() {
     }
   };
 
-  const openStreetView = () => {
-    if (asset?.latitude && asset?.longitude) {
-      const url = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${asset.latitude},${asset.longitude}`;
-      window.open(url, '_blank');
-    }
-  };
-
-  const openGoogleMaps = () => {
-    if (asset?.latitude && asset?.longitude) {
-      const url = `https://www.google.com/maps/search/?api=1&query=${asset.latitude},${asset.longitude}`;
-      window.open(url, '_blank');
-    }
-  };
 
   if (loading) {
     return (
@@ -242,41 +186,35 @@ export default function MarketplaceAssetDetail() {
             </CardContent>
           </Card>
 
-          {/* Street View & Map */}
-          {asset.latitude && asset.longitude && (
+          {/* Google Street View QR Code */}
+          {asset.google_street_view_url && (
             <Card className="border-2 shadow-lg">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2 text-xl">
                   <MapPin className="h-6 w-6 text-primary" />
-                  Location Views
+                  Google Street View
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Street View Preview Component */}
-                <StreetViewPreview
-                  latitude={asset.latitude}
-                  longitude={asset.longitude}
-                  streetViewUrl={asset.google_street_view_url}
-                  showPreview={true}
-                />
-                
-                {/* Google Maps Button */}
+              <CardContent className="flex flex-col items-center space-y-4">
+                <div className="bg-white p-6 rounded-xl shadow-md">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(asset.google_street_view_url)}`}
+                    alt="Google Street View QR Code"
+                    className="w-64 h-64"
+                  />
+                </div>
+                <div className="text-center space-y-2">
+                  <p className="font-semibold text-lg">Scan to View Location</p>
+                  <p className="text-sm text-muted-foreground">Use your phone camera to scan this QR code</p>
+                </div>
                 <Button
                   variant="outline"
-                  className="w-full h-auto py-4 flex items-center justify-center gap-3 hover:bg-primary/5 hover:border-primary transition-all"
-                  onClick={openGoogleMaps}
+                  className="w-full"
+                  onClick={() => window.open(asset.google_street_view_url, '_blank')}
                 >
-                  <MapPin className="h-6 w-6 text-primary" />
-                  <span className="text-base font-semibold">Open in Google Maps</span>
-                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Open Street View
                 </Button>
-                
-                {/* Interactive Map with Marker */}
-                <div 
-                  ref={mapRef} 
-                  className="aspect-video rounded-xl overflow-hidden border-2 shadow-md"
-                  style={{ minHeight: '400px' }}
-                />
               </CardContent>
             </Card>
           )}

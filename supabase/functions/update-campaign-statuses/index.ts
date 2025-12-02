@@ -22,6 +22,7 @@ Deno.serve(async (req) => {
     console.log('Starting automated campaign status updates...');
 
     // Call the auto_update_campaign_status function
+    // This function handles all status transitions with correct enum values
     const { error: updateError } = await supabaseClient.rpc('auto_update_campaign_status');
 
     if (updateError) {
@@ -33,7 +34,7 @@ Deno.serve(async (req) => {
     const { data: summary, error: summaryError } = await supabaseClient
       .from('campaigns')
       .select('status')
-      .in('status', ['Draft', 'Upcoming', 'Running', 'Completed']);
+      .in('status', ['Draft', 'Upcoming', 'Running', 'Completed', 'Cancelled', 'Archived']);
 
     if (summaryError) {
       console.error('Error fetching summary:', summaryError);

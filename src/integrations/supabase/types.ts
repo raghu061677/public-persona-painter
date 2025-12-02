@@ -5974,6 +5974,18 @@ export type Database = {
         Args: { test_company_id: string; test_user_id: string }
         Returns: Json
       }
+      update_completed_campaigns: {
+        Args: { p_today: string }
+        Returns: undefined
+      }
+      update_running_campaigns: {
+        Args: { p_today: string }
+        Returns: undefined
+      }
+      update_upcoming_campaigns: {
+        Args: { p_today: string }
+        Returns: undefined
+      }
       user_in_company: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean

@@ -41,7 +41,7 @@ export default function CampaignsList() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
   const [isAdmin, setIsAdmin] = useState(false);
   const [selectedCampaigns, setSelectedCampaigns] = useState<Set<string>>(new Set());
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
@@ -168,7 +168,7 @@ export default function CampaignsList() {
     }
     
     // Status filter
-    if (filterStatus && campaign.status !== filterStatus) return false;
+    if (filterStatus && filterStatus !== "all" && campaign.status !== filterStatus) return false;
     
     return true;
   });
@@ -337,6 +337,53 @@ export default function CampaignsList() {
           </div>
         </div>
 
+        {/* Status Filter Tabs */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 border-b border-border overflow-x-auto pb-0">
+            {[
+              { label: "All Campaigns", value: "all" },
+              { label: "Running", value: "Running" },
+              { label: "Draft", value: "Draft" },
+              { label: "Upcoming", value: "Upcoming" },
+              { label: "Completed", value: "Completed" },
+              { label: "Cancelled", value: "Cancelled" },
+              { label: "Archived", value: "Archived" },
+            ].map((tab) => {
+              const count = tab.value === "all" 
+                ? campaigns.length 
+                : campaigns.filter(c => c.status === tab.value).length;
+              
+              return (
+                <button
+                  key={tab.value}
+                  onClick={() => setFilterStatus(tab.value)}
+                  className={`
+                    px-4 py-3 text-sm font-medium whitespace-nowrap
+                    border-b-2 transition-smooth
+                    ${filterStatus === tab.value
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                    }
+                  `}
+                >
+                  {tab.label}
+                  {count > 0 && (
+                    <span className={`
+                      ml-2 px-2 py-0.5 rounded-full text-xs
+                      ${filterStatus === tab.value
+                        ? 'bg-primary/10 text-primary'
+                        : 'bg-muted text-muted-foreground'
+                      }
+                    `}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Health Alerts */}
         <div className="mb-6">
           <CampaignHealthAlerts />
@@ -399,7 +446,7 @@ export default function CampaignsList() {
           }}
           onClearFilters={() => {
             setSearchTerm("");
-            setFilterStatus("");
+            setFilterStatus("all");
           }}
           allColumns={[
             { key: "select", label: "Select" },

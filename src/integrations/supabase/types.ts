@@ -1261,18 +1261,22 @@ export type Database = {
           company_id: string | null
           created_at: string | null
           created_by: string
+          created_from: string | null
           end_date: string
           grand_total: number
           gst_amount: number
           gst_percent: number
           id: string
+          mounting_total: number | null
           notes: string | null
           notification_settings: Json | null
           plan_id: string | null
+          printing_total: number | null
           public_share_enabled: boolean | null
           public_tracking_token: string | null
           start_date: string
           status: Database["public"]["Enums"]["campaign_status"]
+          subtotal: number | null
           total_amount: number
           total_assets: number | null
           updated_at: string | null
@@ -1285,18 +1289,22 @@ export type Database = {
           company_id?: string | null
           created_at?: string | null
           created_by: string
+          created_from?: string | null
           end_date: string
           grand_total: number
           gst_amount: number
           gst_percent: number
           id: string
+          mounting_total?: number | null
           notes?: string | null
           notification_settings?: Json | null
           plan_id?: string | null
+          printing_total?: number | null
           public_share_enabled?: boolean | null
           public_tracking_token?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["campaign_status"]
+          subtotal?: number | null
           total_amount: number
           total_assets?: number | null
           updated_at?: string | null
@@ -1309,18 +1317,22 @@ export type Database = {
           company_id?: string | null
           created_at?: string | null
           created_by?: string
+          created_from?: string | null
           end_date?: string
           grand_total?: number
           gst_amount?: number
           gst_percent?: number
           id?: string
+          mounting_total?: number | null
           notes?: string | null
           notification_settings?: Json | null
           plan_id?: string | null
+          printing_total?: number | null
           public_share_enabled?: boolean | null
           public_tracking_token?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["campaign_status"]
+          subtotal?: number | null
           total_amount?: number
           total_assets?: number | null
           updated_at?: string | null

@@ -210,3 +210,6 @@ verify_jwt = true
 [functions.batch-generate-qr-codes]
 verify_jwt = true
 
+[functions.create-direct-campaign]
+verify_jwt = true
+

@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import pptxgen from 'https://esm.sh/pptxgenjs@3.12.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,7 +7,8 @@ const corsHeaders = {
 };
 
 interface RequestBody {
-  campaignId: string;
+  campaign_id: string;
+  company_id: string;
 }
 
 Deno.serve(async (req) => {
@@ -20,7 +22,6 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Verify user authentication and company access
     const authHeader = req.headers.get('Authorization');
     const token = authHeader?.replace('Bearer ', '');
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
@@ -32,120 +33,309 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { campaignId } = await req.json() as RequestBody;
+    const { campaign_id, company_id } = await req.json() as RequestBody;
 
-    console.log('Generating proof PPT for campaign:', campaignId);
+    console.log('Generating proof PPT for campaign:', campaign_id);
 
-    // Fetch campaign with assets and photos
+    // Verify user access
+    const { data: companyUser } = await supabase
+      .from('company_users')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .eq('company_id', company_id)
+      .eq('status', 'active')
+      .single();
+    
+    if (!companyUser) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Fetch campaign with operations and photos
     const { data: campaign, error: campaignError } = await supabase
       .from('campaigns')
       .select(`
         *,
-        clients!inner(name),
-        campaign_assets(
-          id,
-          asset_id,
-          location,
-          city,
-          area,
-          media_type,
-          status,
-          photos
-        )
+        clients!inner(name)
       `)
-      .eq('id', campaignId)
+      .eq('id', campaign_id)
       .single();
 
     if (campaignError || !campaign) {
       throw new Error('Campaign not found');
     }
 
-    // Verify user has access to this campaign's company
-    const { data: companyUser } = await supabase
-      .from('company_users')
-      .select('company_id')
-      .eq('user_id', user.id)
-      .eq('company_id', campaign.company_id)
-      .eq('status', 'active')
-      .single();
-    
-    if (!companyUser) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized - No access to this campaign' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Fetch operations with photos
+    const { data: operations } = await supabase
+      .from('operations')
+      .select(`
+        *,
+        mounters(name),
+        operation_photos(*)
+      `)
+      .eq('campaign_id', campaign_id);
 
     // Fetch company details
     const { data: company } = await supabase
       .from('companies')
       .select('name, logo_url')
-      .eq('id', campaign.company_id)
+      .eq('id', company_id)
       .single();
 
-    // Prepare slides data
-    const slides = [];
+    // Fetch media assets for additional info
+    const assetIds = operations?.map(op => op.asset_id).filter(Boolean) || [];
+    const { data: assets } = await supabase
+      .from('media_assets')
+      .select('id, location, city, area, media_type, dimension, qr_code_url, latitude, longitude')
+      .in('id', assetIds);
 
-    // Title slide
-    slides.push({
-      type: 'title',
-      title: campaign.campaign_name,
-      subtitle: `Proof of Performance\n${campaign.clients.name}`,
-      date: new Date().toLocaleDateString('en-IN'),
-      companyName: company?.name,
-      companyLogo: company?.logo_url,
+    const assetMap = new Map(assets?.map(a => [a.id, a]) || []);
+
+    // Create PowerPoint
+    const pptx = new pptxgen();
+    pptx.author = company?.name || 'Go-Ads 360°';
+    pptx.company = company?.name || 'Go-Ads 360°';
+    pptx.title = `${campaign.campaign_name} - Proof of Performance`;
+
+    // Slide 1: Title/Cover
+    const titleSlide = pptx.addSlide();
+    titleSlide.background = { color: '1E40AF' };
+    
+    if (company?.logo_url) {
+      titleSlide.addImage({ 
+        path: company.logo_url, 
+        x: 4.0, 
+        y: 1.0, 
+        w: 2.0, 
+        h: 0.8 
+      });
+    }
+
+    titleSlide.addText('PROOF OF PERFORMANCE', {
+      x: 1.0,
+      y: 2.5,
+      w: 8.0,
+      h: 1.0,
+      fontSize: 44,
+      bold: true,
+      color: 'FFFFFF',
+      align: 'center',
     });
 
-    // Asset slides with photos
-    for (const asset of campaign.campaign_assets || []) {
-      if (asset.photos && Object.keys(asset.photos).length > 0) {
-        const photos = asset.photos as Record<string, string>;
-        
-        slides.push({
-          type: 'asset',
-          location: asset.location,
-          city: asset.city,
-          area: asset.area,
-          mediaType: asset.media_type,
-          status: asset.status,
-          photos: [
-            { type: 'Newspaper', url: photos.newspaper },
-            { type: 'Geo-tagged', url: photos.geotag },
-            { type: 'Traffic View 1', url: photos.traffic1 },
-            { type: 'Traffic View 2', url: photos.traffic2 },
-          ].filter(p => p.url),
+    titleSlide.addText(campaign.campaign_name, {
+      x: 1.0,
+      y: 3.6,
+      w: 8.0,
+      h: 0.6,
+      fontSize: 32,
+      color: 'FFFFFF',
+      align: 'center',
+    });
+
+    titleSlide.addText(`Client: ${campaign.clients.name}`, {
+      x: 1.0,
+      y: 4.4,
+      w: 8.0,
+      h: 0.5,
+      fontSize: 20,
+      color: 'E0E7FF',
+      align: 'center',
+    });
+
+    titleSlide.addText(`Campaign Period: ${new Date(campaign.start_date).toLocaleDateString('en-IN')} - ${new Date(campaign.end_date).toLocaleDateString('en-IN')}`, {
+      x: 1.0,
+      y: 5.0,
+      w: 8.0,
+      h: 0.4,
+      fontSize: 16,
+      color: 'E0E7FF',
+      align: 'center',
+    });
+
+    // Add asset slides with photos
+    for (const operation of operations || []) {
+      const asset = assetMap.get(operation.asset_id);
+      if (!asset) continue;
+
+      const photos = operation.operation_photos || [];
+      if (photos.length === 0) continue;
+
+      const slide = pptx.addSlide();
+
+      // Header with asset info
+      slide.addText(asset.location, {
+        x: 0.5,
+        y: 0.3,
+        w: 9.0,
+        h: 0.5,
+        fontSize: 24,
+        bold: true,
+        color: '1E40AF',
+      });
+
+      slide.addText(`${asset.city}, ${asset.area} • ${asset.media_type} • ${asset.dimension || 'N/A'}`, {
+        x: 0.5,
+        y: 0.8,
+        w: 6.5,
+        h: 0.3,
+        fontSize: 12,
+        color: '666666',
+      });
+
+      // Status badge
+      slide.addShape(pptx.ShapeType.roundRect, {
+        x: 7.5,
+        y: 0.75,
+        w: 1.5,
+        h: 0.35,
+        fill: { color: '10B981' },
+      });
+
+      slide.addText(operation.status, {
+        x: 7.5,
+        y: 0.8,
+        w: 1.5,
+        h: 0.3,
+        fontSize: 10,
+        bold: true,
+        color: 'FFFFFF',
+        align: 'center',
+      });
+
+      // Add QR code if available
+      if (asset.qr_code_url) {
+        slide.addImage({
+          path: asset.qr_code_url,
+          x: 7.8,
+          y: 1.5,
+          w: 1.2,
+          h: 1.2,
+        });
+        slide.addText('QR Code', {
+          x: 7.8,
+          y: 2.8,
+          w: 1.2,
+          h: 0.2,
+          fontSize: 8,
+          color: '666666',
+          align: 'center',
         });
       }
+
+      // Add photos in 2x2 grid
+      const photoTypes = ['geo', 'newspaper', 'traffic1', 'traffic2'];
+      const photoLabels = ['Geo-tagged Photo', 'Newspaper Ad', 'Traffic View 1', 'Traffic View 2'];
+      
+      for (let i = 0; i < Math.min(4, photos.length); i++) {
+        const photo = photos.find((p: any) => p.photo_type === photoTypes[i]) || photos[i];
+        if (!photo?.file_path) continue;
+
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        const x = 0.5 + (col * 3.5);
+        const y = 1.5 + (row * 2.5);
+
+        // Photo image
+        slide.addImage({
+          path: photo.file_path,
+          x,
+          y,
+          w: 3.2,
+          h: 2.0,
+        });
+
+        // Photo label
+        slide.addText(photoLabels[i], {
+          x,
+          y: y + 2.05,
+          w: 3.2,
+          h: 0.25,
+          fontSize: 10,
+          bold: true,
+          color: '333333',
+          align: 'center',
+        });
+      }
+
+      // Footer with mounter info
+      slide.addText(`Installed by: ${operation.mounters?.name || 'N/A'} | Completed: ${operation.verified_at ? new Date(operation.verified_at).toLocaleDateString('en-IN') : 'Pending'}`, {
+        x: 0.5,
+        y: 6.8,
+        w: 9.0,
+        h: 0.3,
+        fontSize: 10,
+        color: '999999',
+        italic: true,
+      });
     }
 
     // Summary slide
-    const verifiedCount = campaign.campaign_assets?.filter((a: any) => a.status === 'Verified').length || 0;
-    const totalAssets = campaign.campaign_assets?.length || 0;
-
-    slides.push({
-      type: 'summary',
-      title: 'Campaign Summary',
-      stats: {
-        totalAssets,
-        verifiedAssets: verifiedCount,
-        completionRate: totalAssets > 0 ? Math.round((verifiedCount / totalAssets) * 100) : 0,
-        startDate: new Date(campaign.start_date).toLocaleDateString('en-IN'),
-        endDate: new Date(campaign.end_date).toLocaleDateString('en-IN'),
-      },
+    const summarySlide = pptx.addSlide();
+    summarySlide.addText('Campaign Summary', {
+      x: 0.5,
+      y: 0.5,
+      w: 9.0,
+      h: 0.6,
+      fontSize: 32,
+      bold: true,
+      color: '1E40AF',
     });
 
-    // Generate PPT using simple HTML-based approach
-    const pptHtml = generatePPTHTML(slides);
-    
-    // Convert to bytes
-    const pptBuffer = new TextEncoder().encode(pptHtml);
+    const totalAssets = operations?.length || 0;
+    const completedAssets = operations?.filter(op => op.status === 'Verified').length || 0;
+    const completionRate = totalAssets > 0 ? Math.round((completedAssets / totalAssets) * 100) : 0;
+
+    const stats = [
+      { label: 'Total Assets', value: totalAssets.toString() },
+      { label: 'Completed', value: completedAssets.toString() },
+      { label: 'Completion Rate', value: `${completionRate}%` },
+      { label: 'Campaign Period', value: `${new Date(campaign.start_date).toLocaleDateString('en-IN')} - ${new Date(campaign.end_date).toLocaleDateString('en-IN')}` },
+    ];
+
+    stats.forEach((stat, i) => {
+      const y = 1.8 + (i * 1.2);
+      
+      summarySlide.addShape(pptx.ShapeType.roundRect, {
+        x: 1.5,
+        y,
+        w: 7.0,
+        h: 0.8,
+        fill: { color: 'F8FAFC' },
+        line: { color: '1E40AF', width: 1, type: 'solid' },
+      });
+
+      summarySlide.addText(stat.label, {
+        x: 2.0,
+        y: y + 0.15,
+        w: 4.0,
+        h: 0.5,
+        fontSize: 18,
+        color: '666666',
+      });
+
+      summarySlide.addText(stat.value, {
+        x: 6.0,
+        y: y + 0.1,
+        w: 2.0,
+        h: 0.6,
+        fontSize: 24,
+        bold: true,
+        color: '1E40AF',
+        align: 'right',
+      });
+    });
+
+    // Generate PPT binary
+    const pptxBuffer = await pptx.write({ outputType: 'arraybuffer' });
 
     // Upload to storage
-    const fileName = `proof-${campaign.id}-${Date.now()}.html`;
+    const fileName = `PROOF-${campaign.id}-${Date.now()}.pptx`;
     const { error: uploadError } = await supabase.storage
       .from('client-documents')
-      .upload(fileName, pptBuffer, {
-        contentType: 'text/html',
+      .upload(fileName, pptxBuffer, {
+        contentType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         upsert: false,
       });
 
@@ -153,8 +343,21 @@ Deno.serve(async (req) => {
       throw uploadError;
     }
 
-    // Get signed URL
-    const { data: urlData } = await supabase.storage
+    // Update campaign with proof URL
+    const { data: urlData } = supabase.storage
+      .from('client-documents')
+      .getPublicUrl(fileName);
+
+    await supabase
+      .from('campaigns')
+      .update({ 
+        proof_ppt_url: urlData.publicUrl,
+        public_proof_ppt_url: urlData.publicUrl 
+      })
+      .eq('id', campaign_id);
+
+    // Get signed URL for immediate download
+    const { data: signedUrlData } = await supabase.storage
       .from('client-documents')
       .createSignedUrl(fileName, 3600);
 
@@ -163,9 +366,10 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        url: urlData?.signedUrl,
+        file_url: signedUrlData?.signedUrl,
+        public_url: urlData.publicUrl,
         fileName,
-        slideCount: slides.length,
+        slideCount: (operations?.length || 0) + 2,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -180,142 +384,3 @@ Deno.serve(async (req) => {
     );
   }
 });
-
-function generatePPTHTML(slides: any[]): string {
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Campaign Proof of Performance</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #f0f0f0; }
-    .slide { 
-      width: 1024px; 
-      height: 768px; 
-      margin: 20px auto; 
-      background: white; 
-      padding: 40px; 
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      page-break-after: always;
-    }
-    .title-slide { 
-      display: flex; 
-      flex-direction: column; 
-      justify-content: center; 
-      align-items: center; 
-      text-align: center;
-      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-      color: white;
-    }
-    .title-slide h1 { font-size: 48px; margin-bottom: 20px; }
-    .title-slide h2 { font-size: 32px; margin-bottom: 40px; opacity: 0.9; }
-    .asset-slide h2 { font-size: 32px; margin-bottom: 20px; color: #1e40af; }
-    .asset-slide .info { font-size: 18px; color: #666; margin-bottom: 30px; }
-    .photos { 
-      display: grid; 
-      grid-template-columns: 1fr 1fr; 
-      gap: 20px; 
-      margin-top: 20px;
-    }
-    .photo { text-align: center; }
-    .photo img { 
-      width: 100%; 
-      height: 300px; 
-      object-fit: cover; 
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .photo-label { 
-      margin-top: 10px; 
-      font-size: 14px; 
-      font-weight: bold; 
-      color: #333;
-    }
-    .summary-slide { 
-      display: flex; 
-      flex-direction: column; 
-      justify-content: center;
-    }
-    .summary-slide h2 { font-size: 40px; margin-bottom: 40px; color: #1e40af; }
-    .stat { 
-      display: flex; 
-      justify-content: space-between; 
-      padding: 20px; 
-      margin: 10px 0;
-      background: #f8fafc;
-      border-left: 4px solid #1e40af;
-      border-radius: 4px;
-    }
-    .stat-label { font-size: 20px; color: #666; }
-    .stat-value { font-size: 28px; font-weight: bold; color: #1e40af; }
-    @media print {
-      .slide { 
-        page-break-after: always; 
-        margin: 0;
-        box-shadow: none;
-      }
-    }
-  </style>
-</head>
-<body>
-  ${slides.map(slide => {
-    if (slide.type === 'title') {
-      return `
-        <div class="slide title-slide">
-          ${slide.companyLogo ? `<img src="${slide.companyLogo}" style="max-width: 200px; margin-bottom: 40px;">` : ''}
-          <h1>${slide.title}</h1>
-          <h2>${slide.subtitle.replace(/\n/g, '<br>')}</h2>
-          <p style="font-size: 18px; opacity: 0.8;">${slide.date}</p>
-        </div>
-      `;
-    } else if (slide.type === 'asset') {
-      return `
-        <div class="slide asset-slide">
-          <h2>${slide.location}</h2>
-          <div class="info">
-            <strong>${slide.city}</strong>, ${slide.area} • ${slide.mediaType}
-            <span style="float: right; padding: 4px 12px; background: #10b981; color: white; border-radius: 4px; font-size: 14px;">
-              ${slide.status}
-            </span>
-          </div>
-          <div class="photos">
-            ${slide.photos.map((photo: any) => `
-              <div class="photo">
-                <img src="${photo.url}" alt="${photo.type}">
-                <div class="photo-label">${photo.type}</div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `;
-    } else if (slide.type === 'summary') {
-      return `
-        <div class="slide summary-slide">
-          <h2>${slide.title}</h2>
-          <div class="stat">
-            <span class="stat-label">Total Assets</span>
-            <span class="stat-value">${slide.stats.totalAssets}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Verified Assets</span>
-            <span class="stat-value">${slide.stats.verifiedAssets}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Completion Rate</span>
-            <span class="stat-value">${slide.stats.completionRate}%</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Campaign Period</span>
-            <span class="stat-value">${slide.stats.startDate} - ${slide.stats.endDate}</span>
-          </div>
-        </div>
-      `;
-    }
-    return '';
-  }).join('')}
-</body>
-</html>
-  `.trim();
-}

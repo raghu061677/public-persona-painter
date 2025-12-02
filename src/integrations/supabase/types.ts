@@ -5615,6 +5615,10 @@ export type Database = {
       }
       delete_user_account: { Args: never; Returns: undefined }
       extract_state_code: { Args: { client_id: string }; Returns: string }
+      generate_asset_qr_code: {
+        Args: { asset_id_param: string }
+        Returns: string
+      }
       generate_campaign_id:
         | { Args: never; Returns: string }
         | { Args: { p_user_id?: string }; Returns: string }

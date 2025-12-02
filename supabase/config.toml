@@ -199,3 +199,14 @@ verify_jwt = true
 
 [functions.clear-demo-data]
 verify_jwt = true
+
+# Operations & Exports
+[functions.export-assets-excel]
+verify_jwt = true
+
+[functions.upload-operation-photo]
+verify_jwt = true
+
+[functions.generate-proof-ppt]
+verify_jwt = true
+

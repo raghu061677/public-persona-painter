@@ -136,9 +136,7 @@ serve(async (req) => {
         longitude,
         illumination_type,
         direction,
-        total_sqft,
-        municipal_authority,
-        municipal_id
+        total_sqft
       `)
       .eq("plan_id", planId);
 
@@ -270,8 +268,6 @@ serve(async (req) => {
       illumination_type: item.illumination_type || "",
       latitude: item.latitude || null,
       longitude: item.longitude || null,
-      municipal_authority: item.municipal_authority || "",
-      municipal_id: item.municipal_id || "",
       // Booking dates
       booking_start_date: plan.start_date,
       booking_end_date: plan.end_date,

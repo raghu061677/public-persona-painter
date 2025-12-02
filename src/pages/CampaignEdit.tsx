@@ -76,9 +76,34 @@ export default function CampaignEdit() {
     setCampaignName(campaign.campaign_name || "");
     setClientId(campaign.client_id || "");
     setClientName(campaign.client_name || "");
-    setStartDate(campaign.start_date ? new Date(campaign.start_date) : undefined);
-    setEndDate(campaign.end_date ? new Date(campaign.end_date) : undefined);
-    setStatus(campaign.status || "Planned");
+    
+    const campaignStartDate = campaign.start_date ? new Date(campaign.start_date) : undefined;
+    const campaignEndDate = campaign.end_date ? new Date(campaign.end_date) : undefined;
+    setStartDate(campaignStartDate);
+    setEndDate(campaignEndDate);
+    
+    // Auto-detect correct status based on dates
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    let correctStatus = campaign.status || "Draft";
+    
+    if (campaignStartDate && campaignEndDate) {
+      const start = new Date(campaignStartDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(campaignEndDate);
+      end.setHours(0, 0, 0, 0);
+      
+      if (end < today) {
+        correctStatus = "Completed";
+      } else if (start <= today && end >= today) {
+        correctStatus = "Running";
+      } else if (start > today) {
+        correctStatus = "Upcoming";
+      }
+    }
+    
+    setStatus(correctStatus);
     setNotes(campaign.notes || "");
     setGstPercent(campaign.gst_percent || 18);
 

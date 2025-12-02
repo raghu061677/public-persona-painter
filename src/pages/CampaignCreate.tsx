@@ -11,8 +11,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { ArrowLeft, Plus, Trash2, Save, Send } from 'lucide-react';
+import { ArrowLeft, Trash2, Save, Send } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { AssetSelectionTable } from '@/components/plans/AssetSelectionTable';
+import { formatCurrency } from '@/utils/mediaAssets';
 
 interface AssetItem {
   asset_id: string;
@@ -34,8 +36,9 @@ export default function CampaignCreate() {
   
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
-  const [assets, setAssets] = useState<any[]>([]);
-  const [selectedAssets, setSelectedAssets] = useState<AssetItem[]>([]);
+  const [availableAssets, setAvailableAssets] = useState<any[]>([]);
+  const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
+  const [assetPricing, setAssetPricing] = useState<Record<string, any>>({});
   
   const [formData, setFormData] = useState({
     campaign_name: '',
@@ -47,7 +50,7 @@ export default function CampaignCreate() {
 
   useEffect(() => {
     fetchClients();
-    fetchAssets();
+    fetchAvailableAssets();
   }, [company]);
 
   const fetchClients = async () => {
@@ -81,136 +84,78 @@ export default function CampaignCreate() {
     setClients(data || []);
   };
 
-  const fetchAssets = async () => {
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) {
-        console.error('No authenticated user');
-        return;
-      }
-
-      const { data: companyUserData, error: companyError } = await supabase
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', userData.user.id)
-        .eq('status', 'active')
-        .maybeSingle();
-
-      if (companyError) {
-        console.error('Error fetching company user:', companyError);
-        toast({
-          title: 'Error',
-          description: 'Failed to fetch company information',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      if (!companyUserData) {
-        console.error('No company association found');
-        toast({
-          title: 'Error',
-          description: 'No company association found',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      console.log('Fetching assets for company:', companyUserData.company_id);
-
-      const { data, error } = await supabase
-        .from('media_assets')
-        .select(`
-          id, 
-          location, 
-          city, 
-          area, 
-          media_type, 
-          card_rate, 
-          printing_charge, 
-          mounting_charge,
-          status,
-          dimensions,
-          total_sqft
-        `)
-        .eq('company_id', companyUserData.company_id)
-        .eq('status', 'Available')
-        .order('city', { ascending: true });
-
-      if (error) {
-        console.error('Error fetching assets:', error);
-        toast({
-          title: 'Error',
-          description: `Failed to fetch assets: ${error.message}`,
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      console.log('Fetched assets:', data?.length || 0);
-      setAssets(data || []);
-
-      if (!data || data.length === 0) {
-        toast({
-          title: 'No Assets Available',
-          description: 'No available assets found. Please add assets or check their status.',
-          variant: 'default',
-        });
-      }
-    } catch (error) {
-      console.error('Unexpected error fetching assets:', error);
-      toast({
-        title: 'Error',
-        description: 'An unexpected error occurred while fetching assets',
-        variant: 'destructive',
-      });
-    }
+  const fetchAvailableAssets = async () => {
+    const { data } = await supabase
+      .from('media_assets')
+      .select('*')
+      .order('city', { ascending: true });
+    setAvailableAssets(data || []);
   };
 
-  const handleAddAsset = (assetId: string) => {
-    const asset = assets.find(a => a.id === assetId);
-    if (!asset) return;
-
-    // Check if asset is already added
-    if (selectedAssets.find(sa => sa.asset_id === assetId)) {
-      toast({
-        title: 'Asset Already Added',
-        description: 'This asset is already in your campaign',
-        variant: 'destructive',
-      });
-      return;
+  const toggleAssetSelection = (assetId: string, asset: any) => {
+    const newSelected = new Set(selectedAssets);
+    if (newSelected.has(assetId)) {
+      newSelected.delete(assetId);
+      const newPricing = { ...assetPricing };
+      delete newPricing[assetId];
+      setAssetPricing(newPricing);
+    } else {
+      newSelected.add(assetId);
+      const monthlyCardRate = asset.card_rate || 0;
+      
+      setAssetPricing(prev => ({
+        ...prev,
+        [assetId]: {
+          negotiated_price: monthlyCardRate,
+          printing_charges: asset.printing_charge || 0,
+          mounting_charges: asset.mounting_charge || 0,
+        }
+      }));
     }
+    setSelectedAssets(newSelected);
+  };
 
-    const newAsset: AssetItem = {
-      asset_id: asset.id,
-      asset_name: asset.location,
-      city: asset.city,
-      area: asset.area,
-      media_type: asset.media_type,
-      display_from: formData.start_date || '',
-      display_to: formData.end_date || '',
-      sales_price: asset.card_rate || 0,
-      printing_cost: asset.printing_charge || 0,
-      mounting_cost: asset.mounting_charge || 0,
-      negotiated_price: asset.card_rate || 0,
-    };
+  const handleMultiSelect = (assetIds: string[], assets: any[]) => {
+    const newSelected = new Set(selectedAssets);
+    const newPricing = { ...assetPricing };
 
-    setSelectedAssets([...selectedAssets, newAsset]);
-    
+    assets.forEach(asset => {
+      newSelected.add(asset.id);
+      const monthlyCardRate = asset.card_rate || 0;
+      
+      newPricing[asset.id] = {
+        negotiated_price: monthlyCardRate,
+        printing_charges: asset.printing_charge || 0,
+        mounting_charges: asset.mounting_charge || 0,
+      };
+    });
+
+    setSelectedAssets(newSelected);
+    setAssetPricing(newPricing);
+
     toast({
-      title: 'Asset Added',
-      description: `${asset.location} added to campaign`,
+      title: "Success",
+      description: `Added ${assets.length} asset${assets.length > 1 ? 's' : ''} to campaign`,
     });
   };
 
-  const handleRemoveAsset = (index: number) => {
-    setSelectedAssets(selectedAssets.filter((_, i) => i !== index));
+  const removeAsset = (assetId: string) => {
+    const newSelected = new Set(selectedAssets);
+    newSelected.delete(assetId);
+    const newPricing = { ...assetPricing };
+    delete newPricing[assetId];
+    setSelectedAssets(newSelected);
+    setAssetPricing(newPricing);
   };
 
-  const handleAssetChange = (index: number, field: keyof AssetItem, value: any) => {
-    const updated = [...selectedAssets];
-    updated[index] = { ...updated[index], [field]: value };
-    setSelectedAssets(updated);
+  const updateAssetPricing = (assetId: string, field: string, value: number) => {
+    setAssetPricing(prev => ({
+      ...prev,
+      [assetId]: {
+        ...prev[assetId],
+        [field]: value,
+      }
+    }));
   };
 
   const calculateTotals = () => {
@@ -218,10 +163,13 @@ export default function CampaignCreate() {
     let printingTotal = 0;
     let mountingTotal = 0;
 
-    selectedAssets.forEach(asset => {
-      subtotal += asset.negotiated_price;
-      printingTotal += asset.printing_cost;
-      mountingTotal += asset.mounting_cost;
+    selectedAssets.forEach(assetId => {
+      const pricing = assetPricing[assetId];
+      if (pricing) {
+        subtotal += pricing.negotiated_price || 0;
+        printingTotal += pricing.printing_charges || 0;
+        mountingTotal += pricing.mounting_charges || 0;
+      }
     });
 
     const totalAmount = subtotal + printingTotal + mountingTotal;
@@ -241,7 +189,7 @@ export default function CampaignCreate() {
       return;
     }
 
-    if (selectedAssets.length === 0) {
+    if (selectedAssets.size === 0) {
       toast({
         title: 'Error',
         description: 'Please add at least one asset to the campaign',
@@ -273,15 +221,18 @@ export default function CampaignCreate() {
           start_date: formData.start_date,
           end_date: formData.end_date,
           notes: formData.notes,
-          assets: selectedAssets.map(asset => ({
-            asset_id: asset.asset_id,
-            display_from: asset.display_from,
-            display_to: asset.display_to,
-            sales_price: asset.sales_price,
-            printing_cost: asset.printing_cost,
-            mounting_cost: asset.mounting_cost,
-            negotiated_price: asset.negotiated_price,
-          })),
+          assets: Array.from(selectedAssets).map(assetId => {
+            const pricing = assetPricing[assetId];
+            return {
+              asset_id: assetId,
+              display_from: formData.start_date,
+              display_to: formData.end_date,
+              sales_price: pricing.negotiated_price || 0,
+              printing_cost: pricing.printing_charges || 0,
+              mounting_cost: pricing.mounting_charges || 0,
+              negotiated_price: pricing.negotiated_price || 0,
+            };
+          }),
           created_by: userData.user.id,
           auto_assign: autoAssign,
         },
@@ -393,122 +344,84 @@ export default function CampaignCreate() {
           <Card>
             <CardHeader>
               <CardTitle>Select Assets</CardTitle>
-              <CardDescription>Add media assets to this campaign</CardDescription>
+              <CardDescription>Choose media assets for this campaign</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Add Asset to Campaign</Label>
-                <Select 
-                  onValueChange={handleAddAsset}
-                  disabled={!formData.start_date || !formData.end_date}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={
-                      !formData.start_date || !formData.end_date 
-                        ? "Set campaign dates first" 
-                        : `Select from ${assets.filter(a => !selectedAssets.find(sa => sa.asset_id === a.id)).length} available assets`
-                    } />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    {assets
-                      .filter(a => !selectedAssets.find(sa => sa.asset_id === a.id))
-                      .length === 0 ? (
-                      <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-                        {assets.length === 0 
-                          ? "No available assets found" 
-                          : "All available assets have been added"}
-                      </div>
-                    ) : (
-                      assets
-                        .filter(a => !selectedAssets.find(sa => sa.asset_id === a.id))
-                        .map((asset) => (
-                          <SelectItem key={asset.id} value={asset.id}>
-                            <div className="flex flex-col">
-                              <span className="font-medium">{asset.location}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {asset.city}, {asset.area} • {asset.media_type} • ₹{asset.card_rate?.toLocaleString('en-IN') || 0}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))
-                    )}
-                  </SelectContent>
-                </Select>
-                {!formData.start_date || !formData.end_date ? (
-                  <p className="text-xs text-muted-foreground">
-                    Please set campaign start and end dates before adding assets
-                  </p>
-                ) : null}
-              </div>
-
-              <Separator />
-
-              {selectedAssets.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No assets added yet. Select assets from the dropdown above.
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  {selectedAssets.map((asset, index) => (
-                    <Card key={index}>
-                      <CardContent className="pt-6">
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <p className="font-medium">{asset.asset_name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {asset.city}, {asset.area} • {asset.media_type}
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveAsset(index)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <div>
-                            <Label className="text-xs">Sales Price</Label>
-                            <Input
-                              type="number"
-                              value={asset.sales_price}
-                              onChange={(e) => handleAssetChange(index, 'sales_price', parseFloat(e.target.value) || 0)}
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Negotiated Price</Label>
-                            <Input
-                              type="number"
-                              value={asset.negotiated_price}
-                              onChange={(e) => handleAssetChange(index, 'negotiated_price', parseFloat(e.target.value) || 0)}
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Printing Cost</Label>
-                            <Input
-                              type="number"
-                              value={asset.printing_cost}
-                              onChange={(e) => handleAssetChange(index, 'printing_cost', parseFloat(e.target.value) || 0)}
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Mounting Cost</Label>
-                            <Input
-                              type="number"
-                              value={asset.mounting_cost}
-                              onChange={(e) => handleAssetChange(index, 'mounting_cost', parseFloat(e.target.value) || 0)}
-                            />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
+            <CardContent>
+              <AssetSelectionTable
+                assets={availableAssets}
+                selectedIds={selectedAssets}
+                onSelect={toggleAssetSelection}
+                onMultiSelect={handleMultiSelect}
+              />
             </CardContent>
           </Card>
+
+          {selectedAssets.size > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Selected Assets ({selectedAssets.size})</CardTitle>
+                <CardDescription>Configure pricing for each asset</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {Array.from(selectedAssets).map(assetId => {
+                    const asset = availableAssets.find(a => a.id === assetId);
+                    const pricing = assetPricing[assetId];
+                    if (!asset || !pricing) return null;
+
+                    return (
+                      <Card key={assetId}>
+                        <CardContent className="pt-6">
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <p className="font-medium">{asset.location}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {asset.city}, {asset.area} • {asset.media_type}
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeAsset(assetId)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-4">
+                            <div>
+                              <Label className="text-xs">Negotiated Price</Label>
+                              <Input
+                                type="number"
+                                value={pricing.negotiated_price}
+                                onChange={(e) => updateAssetPricing(assetId, 'negotiated_price', parseFloat(e.target.value) || 0)}
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Printing Charges</Label>
+                              <Input
+                                type="number"
+                                value={pricing.printing_charges}
+                                onChange={(e) => updateAssetPricing(assetId, 'printing_charges', parseFloat(e.target.value) || 0)}
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Mounting Charges</Label>
+                              <Input
+                                type="number"
+                                value={pricing.mounting_charges}
+                                onChange={(e) => updateAssetPricing(assetId, 'mounting_charges', parseFloat(e.target.value) || 0)}
+                              />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -519,7 +432,7 @@ export default function CampaignCreate() {
             <CardContent className="space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Total Assets:</span>
-                <span className="font-medium">{selectedAssets.length}</span>
+                <span className="font-medium">{selectedAssets.size}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal:</span>

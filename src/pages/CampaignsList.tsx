@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Eye, Trash2, FileText, Plus, Pencil } from "lucide-react";
+import { Eye, Trash2, FileText, Plus, Pencil, CheckCircle2 } from "lucide-react";
 import { CreateCampaignFromPlanDialog } from "@/components/campaigns/CreateCampaignFromPlanDialog";
 import { CampaignTemplatesDialog } from "@/components/campaigns/CampaignTemplatesDialog";
 import { BulkStatusUpdateDialog } from "@/components/campaigns/BulkStatusUpdateDialog";
@@ -218,6 +218,45 @@ export default function CampaignsList() {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Campaigns");
       XLSX.writeFile(wb, "campaigns-export.xlsx");
+    } else if (actionId === "auto-complete-past") {
+      const today = new Date();
+      const selectedData = filteredCampaigns.filter(c => 
+        selectedIds.includes(c.id) && 
+        new Date(c.end_date) < today &&
+        c.status !== 'Completed'
+      );
+
+      if (selectedData.length === 0) {
+        toast({
+          title: "No campaigns to complete",
+          description: "Selected campaigns are either not ended yet or already completed",
+        });
+        return;
+      }
+
+      if (!confirm(`Auto-complete ${selectedData.length} past campaign(s)? This will mark them as Completed.`)) {
+        return;
+      }
+
+      const { error } = await supabase
+        .from("campaigns")
+        .update({ status: 'Completed' })
+        .in("id", selectedData.map(c => c.id));
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to auto-complete campaigns",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: `${selectedData.length} campaign(s) marked as completed`,
+        });
+        fetchCampaigns();
+        setSelectedCampaigns(new Set());
+      }
     }
   };
 
@@ -311,6 +350,12 @@ export default function CampaignsList() {
                 selectedCount={selectedCampaigns.size}
                 actions={[
                   { ...commonBulkActions.export, id: "export", label: "Export Selected" },
+                  ...(isAdmin ? [{
+                    id: "auto-complete-past",
+                    label: "Auto-Complete Past",
+                    icon: CheckCircle2,
+                    variant: "default" as const,
+                  }] : []),
                   commonBulkActions.delete,
                 ]}
                 onAction={handleBulkAction}

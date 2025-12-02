@@ -38,6 +38,7 @@ import { AutoAssignMountersButton } from "@/components/campaigns/AutoAssignMount
 import { ShareTrackingLinkDialog } from "@/components/campaigns/ShareTrackingLinkDialog";
 import { GenerateProofPPTButtonNew } from "@/components/campaigns/GenerateProofPPTButtonNew";
 import { useCompany } from "@/contexts/CompanyContext";
+import { CampaignTimelineView } from "@/components/campaigns/CampaignTimelineView";
 
 export default function CampaignDetail() {
   const { id } = useParams();
@@ -567,11 +568,12 @@ export default function CampaignDetail() {
         {/* Tabs - Enhanced with border */}
         <Card className="border-2">
           <Tabs defaultValue="assets" className="p-4">
-            <TabsList className="grid grid-cols-4 w-full max-w-2xl">
+            <TabsList className="grid grid-cols-5 w-full max-w-3xl">
               <TabsTrigger value="assets">Assets ({campaignAssets.length})</TabsTrigger>
               <TabsTrigger value="creatives">Creatives</TabsTrigger>
               <TabsTrigger value="operations">Operations</TabsTrigger>
               <TabsTrigger value="proof">Proof Gallery</TabsTrigger>
+              <TabsTrigger value="timeline">Timeline</TabsTrigger>
             </TabsList>
 
             <TabsContent value="assets" className="mt-4">
@@ -644,6 +646,10 @@ export default function CampaignDetail() {
                   <ProofGallery assets={campaignAssets} onUpdate={refreshData} />
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="timeline" className="mt-4">
+              <CampaignTimelineView campaignId={campaign.id} />
             </TabsContent>
           </Tabs>
         </Card>

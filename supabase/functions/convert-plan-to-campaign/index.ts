@@ -331,7 +331,25 @@ serve(async (req) => {
 
     console.log("[v9.0] Plan marked as Converted");
 
-    // 12) Success response
+    // 12) Log timeline event
+    try {
+      await supabase.functions.invoke('add-timeline-event', {
+        body: {
+          campaign_id: campaignId,
+          company_id: companyId,
+          event_type: 'draft_created',
+          event_title: 'Campaign Created from Plan',
+          event_description: `Converted from plan ${plan.plan_name}`,
+          created_by: user.id,
+          metadata: { plan_id: planId },
+        },
+      });
+    } catch (timelineError) {
+      console.error('[v9.0] Error logging timeline event:', timelineError);
+      // Non-fatal
+    }
+
+    // 13) Success response
     return new Response(
       JSON.stringify({
         success: true,

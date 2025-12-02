@@ -40,9 +40,20 @@ export default function CampaignEdit() {
   useEffect(() => {
     fetchClients();
     if (id) {
-      fetchCampaign();
+      // Trigger status update first, then fetch
+      updateCampaignStatuses().then(() => {
+        fetchCampaign();
+      });
     }
   }, [id]);
+
+  const updateCampaignStatuses = async () => {
+    try {
+      await supabase.rpc('auto_update_campaign_status');
+    } catch (error) {
+      console.error('Error updating campaign statuses:', error);
+    }
+  };
 
   const fetchClients = async () => {
     const { data } = await supabase

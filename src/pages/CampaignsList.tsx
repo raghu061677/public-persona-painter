@@ -70,6 +70,8 @@ export default function CampaignsList() {
   useEffect(() => {
     checkAdminStatus();
     fetchCampaigns();
+    // Trigger status update on mount
+    updateCampaignStatuses();
     
     const channel = supabase
       .channel('campaigns-changes')
@@ -90,6 +92,14 @@ export default function CampaignsList() {
       supabase.removeChannel(channel);
     };
   }, [company]);
+
+  const updateCampaignStatuses = async () => {
+    try {
+      await supabase.rpc('auto_update_campaign_status');
+    } catch (error) {
+      console.error('Error updating campaign statuses:', error);
+    }
+  };
 
   const checkAdminStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();

@@ -83,6 +83,9 @@ serve(async (req) => {
         end_date,
         duration_days,
         total_amount,
+        subtotal,
+        printing_total,
+        mounting_total,
         gst_percent,
         gst_amount,
         grand_total,
@@ -136,7 +139,9 @@ serve(async (req) => {
         longitude,
         illumination_type,
         direction,
-        total_sqft
+        total_sqft,
+        municipal_authority,
+        municipal_id
       `)
       .eq("plan_id", planId);
 
@@ -193,6 +198,9 @@ serve(async (req) => {
       end_date: plan.end_date,
       total_assets: planItems.length,
       total_amount: plan.total_amount,
+      subtotal: plan.subtotal || 0,
+      printing_total: plan.printing_total || 0,
+      mounting_total: plan.mounting_total || 0,
       gst_percent: plan.gst_percent,
       gst_amount: plan.gst_amount,
       grand_total: plan.grand_total,
@@ -249,15 +257,31 @@ serve(async (req) => {
     const campaignAssetsPayload = planItems.map((item) => ({
       campaign_id: campaignId,
       asset_id: item.asset_id,
+      // Pricing snapshot
+      card_rate: item.card_rate || 0,
+      negotiated_rate: item.sales_price || 0,
+      printing_charges: item.printing_charges || 0,
+      mounting_charges: item.mounting_charges || 0,
+      total_price: item.total_with_gst || 0,
+      // Media snapshot
       media_type: item.media_type || "Unknown",
+      state: item.state || "",
+      district: item.district || "",
       city: item.city || "",
       area: item.area || "",
       location: item.location || "",
+      direction: item.direction || "",
+      dimensions: item.dimensions || "",
+      total_sqft: item.total_sqft || null,
+      illumination_type: item.illumination_type || "",
       latitude: item.latitude || null,
       longitude: item.longitude || null,
-      card_rate: item.card_rate || 0,
-      printing_charges: item.printing_charges || 0,
-      mounting_charges: item.mounting_charges || 0,
+      municipal_authority: item.municipal_authority || "",
+      municipal_id: item.municipal_id || "",
+      // Booking dates
+      booking_start_date: plan.start_date,
+      booking_end_date: plan.end_date,
+      // Status
       status: "Pending" as const,
     }));
 

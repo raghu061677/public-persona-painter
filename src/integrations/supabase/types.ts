@@ -925,7 +925,11 @@ export type Database = {
           city: string
           completed_at: string | null
           created_at: string | null
+          dimensions: string | null
+          direction: string | null
+          district: string | null
           id: string
+          illumination_type: string | null
           installation_status: string | null
           latitude: number | null
           location: string
@@ -933,9 +937,15 @@ export type Database = {
           media_type: string
           mounter_name: string | null
           mounting_charges: number | null
+          municipal_authority: string | null
+          municipal_id: string | null
+          negotiated_rate: number | null
           photos: Json | null
           printing_charges: number | null
+          state: string | null
           status: Database["public"]["Enums"]["asset_installation_status"]
+          total_price: number | null
+          total_sqft: number | null
         }
         Insert: {
           area: string
@@ -949,7 +959,11 @@ export type Database = {
           city: string
           completed_at?: string | null
           created_at?: string | null
+          dimensions?: string | null
+          direction?: string | null
+          district?: string | null
           id?: string
+          illumination_type?: string | null
           installation_status?: string | null
           latitude?: number | null
           location: string
@@ -957,9 +971,15 @@ export type Database = {
           media_type: string
           mounter_name?: string | null
           mounting_charges?: number | null
+          municipal_authority?: string | null
+          municipal_id?: string | null
+          negotiated_rate?: number | null
           photos?: Json | null
           printing_charges?: number | null
+          state?: string | null
           status?: Database["public"]["Enums"]["asset_installation_status"]
+          total_price?: number | null
+          total_sqft?: number | null
         }
         Update: {
           area?: string
@@ -973,7 +993,11 @@ export type Database = {
           city?: string
           completed_at?: string | null
           created_at?: string | null
+          dimensions?: string | null
+          direction?: string | null
+          district?: string | null
           id?: string
+          illumination_type?: string | null
           installation_status?: string | null
           latitude?: number | null
           location?: string
@@ -981,9 +1005,15 @@ export type Database = {
           media_type?: string
           mounter_name?: string | null
           mounting_charges?: number | null
+          municipal_authority?: string | null
+          municipal_id?: string | null
+          negotiated_rate?: number | null
           photos?: Json | null
           printing_charges?: number | null
+          state?: string | null
           status?: Database["public"]["Enums"]["asset_installation_status"]
+          total_price?: number | null
+          total_sqft?: number | null
         }
         Relationships: [
           {

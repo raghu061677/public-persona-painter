@@ -184,6 +184,8 @@ const OperationsDashboard = lazy(() => import("./pages/OperationsDashboard"));
 const PublicCampaignTracking = lazy(() => import("./pages/PublicCampaignTracking"));
 const MounterTasks = lazy(() => import("./pages/MounterTasks"));
 const OperationDetail = lazy(() => import("./pages/OperationDetail"));
+const InventoryUtilization = lazy(() => import("./pages/InventoryUtilization"));
+const RevenueForecast = lazy(() => import("./pages/RevenueForecast"));
 
 // Optimized Query Client with caching
 const queryClient = new QueryClient({
@@ -344,6 +346,8 @@ const App = () => (
             <Route path="/admin/assistant" element={<ModernAppLayout><AIAssistant /></ModernAppLayout>} />
             <Route path="/admin/tenant-analytics" element={<ModernAppLayout><TenantAnalytics /></ModernAppLayout>} />
             <Route path="/admin/analytics-dashboard" element={<ModernAppLayout><AnalyticsDashboard /></ModernAppLayout>} />
+            <Route path="/admin/analytics/inventory" element={<ProtectedRoute requireAuth><ModernAppLayout><InventoryUtilization /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/analytics/revenue-forecast" element={<ProtectedRoute requireAuth><ModernAppLayout><RevenueForecast /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/proformas" element={<ModernAppLayout><ProformasList /></ModernAppLayout>} />
             <Route path="/admin/proformas/:id" element={<ModernAppLayout><ProformaDetail /></ModernAppLayout>} />
             <Route path="/admin/estimations" element={<ModernAppLayout><EstimationsList /></ModernAppLayout>} />

@@ -917,12 +917,14 @@ export type Database = {
           area: string
           asset_id: string
           assigned_at: string | null
+          assigned_mounter_id: string | null
           campaign_id: string
           card_rate: number
           city: string
           completed_at: string | null
           created_at: string | null
           id: string
+          installation_status: string | null
           latitude: number | null
           location: string
           longitude: number | null
@@ -937,12 +939,14 @@ export type Database = {
           area: string
           asset_id: string
           assigned_at?: string | null
+          assigned_mounter_id?: string | null
           campaign_id: string
           card_rate: number
           city: string
           completed_at?: string | null
           created_at?: string | null
           id?: string
+          installation_status?: string | null
           latitude?: number | null
           location: string
           longitude?: number | null
@@ -957,12 +961,14 @@ export type Database = {
           area?: string
           asset_id?: string
           assigned_at?: string | null
+          assigned_mounter_id?: string | null
           campaign_id?: string
           card_rate?: number
           city?: string
           completed_at?: string | null
           created_at?: string | null
           id?: string
+          installation_status?: string | null
           latitude?: number | null
           location?: string
           longitude?: number | null
@@ -986,6 +992,13 @@ export type Database = {
             columns: ["asset_id"]
             isOneToOne: false
             referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_assigned_mounter_id_fkey"
+            columns: ["assigned_mounter_id"]
+            isOneToOne: false
+            referencedRelation: "mounters"
             referencedColumns: ["id"]
           },
           {
@@ -2931,6 +2944,7 @@ export type Database = {
           state: string | null
           status: Database["public"]["Enums"]["media_asset_status"]
           structure_ownership: string | null
+          sub_zone: string | null
           tags: string[] | null
           target_audience: string[] | null
           total_sqft: number | null
@@ -2939,6 +2953,7 @@ export type Database = {
           updated_at: string | null
           vendor_details: Json | null
           visibility_score: number | null
+          zone: string | null
         }
         Insert: {
           ad_tax?: number | null
@@ -2998,6 +3013,7 @@ export type Database = {
           state?: string | null
           status?: Database["public"]["Enums"]["media_asset_status"]
           structure_ownership?: string | null
+          sub_zone?: string | null
           tags?: string[] | null
           target_audience?: string[] | null
           total_sqft?: number | null
@@ -3006,6 +3022,7 @@ export type Database = {
           updated_at?: string | null
           vendor_details?: Json | null
           visibility_score?: number | null
+          zone?: string | null
         }
         Update: {
           ad_tax?: number | null
@@ -3065,6 +3082,7 @@ export type Database = {
           state?: string | null
           status?: Database["public"]["Enums"]["media_asset_status"]
           structure_ownership?: string | null
+          sub_zone?: string | null
           tags?: string[] | null
           target_audience?: string[] | null
           total_sqft?: number | null
@@ -3073,6 +3091,7 @@ export type Database = {
           updated_at?: string | null
           vendor_details?: Json | null
           visibility_score?: number | null
+          zone?: string | null
         }
         Relationships: [
           {
@@ -3149,6 +3168,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "media_photos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mounters: {
+        Row: {
+          active: boolean | null
+          area: string | null
+          capacity_per_day: number | null
+          company_id: string
+          created_at: string | null
+          id: string
+          name: string
+          phone: string | null
+          sub_zone: string | null
+          user_id: string | null
+          zone: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          area?: string | null
+          capacity_per_day?: number | null
+          company_id: string
+          created_at?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          sub_zone?: string | null
+          user_id?: string | null
+          zone?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          area?: string | null
+          capacity_per_day?: number | null
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          sub_zone?: string | null
+          user_id?: string | null
+          zone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mounters_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -3276,6 +3345,113 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      operation_photos: {
+        Row: {
+          file_path: string
+          id: string
+          operation_id: string
+          photo_type: string | null
+          uploaded_at: string | null
+        }
+        Insert: {
+          file_path: string
+          id?: string
+          operation_id: string
+          photo_type?: string | null
+          uploaded_at?: string | null
+        }
+        Update: {
+          file_path?: string
+          id?: string
+          operation_id?: string
+          photo_type?: string | null
+          uploaded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operation_photos_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "operations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      operations: {
+        Row: {
+          asset_id: string
+          assigned_at: string | null
+          assigned_by: string | null
+          campaign_id: string
+          company_id: string
+          created_at: string | null
+          deadline: string | null
+          id: string
+          mounter_id: string | null
+          status: string | null
+        }
+        Insert: {
+          asset_id: string
+          assigned_at?: string | null
+          assigned_by?: string | null
+          campaign_id: string
+          company_id: string
+          created_at?: string | null
+          deadline?: string | null
+          id?: string
+          mounter_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          asset_id?: string
+          assigned_at?: string | null
+          assigned_by?: string | null
+          campaign_id?: string
+          company_id?: string
+          created_at?: string | null
+          deadline?: string | null
+          id?: string
+          mounter_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operations_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operations_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operations_mounter_id_fkey"
+            columns: ["mounter_id"]
+            isOneToOne: false
+            referencedRelation: "mounters"
             referencedColumns: ["id"]
           },
         ]
@@ -5527,6 +5703,7 @@ export type Database = {
           state: string | null
           status: Database["public"]["Enums"]["media_asset_status"]
           structure_ownership: string | null
+          sub_zone: string | null
           tags: string[] | null
           target_audience: string[] | null
           total_sqft: number | null
@@ -5535,6 +5712,7 @@ export type Database = {
           updated_at: string | null
           vendor_details: Json | null
           visibility_score: number | null
+          zone: string | null
         }[]
         SetofOptions: {
           from: "*"
@@ -5557,6 +5735,13 @@ export type Database = {
       get_current_user_company_id: { Args: never; Returns: string }
       get_enum_values: { Args: { enum_name: string }; Returns: Json }
       get_financial_year: { Args: never; Returns: string }
+      get_mounter_workload: {
+        Args: { p_company_id: string }
+        Returns: {
+          count: number
+          mounter_id: string
+        }[]
+      }
       get_next_client_number: {
         Args: { p_company_id: string; p_state_code: string }
         Returns: number

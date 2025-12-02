@@ -34,6 +34,8 @@ import { GenerateProofPPTButton } from "@/components/campaigns/GenerateProofPPTB
 import { checkAndAutoGeneratePPT } from "@/lib/operations/autoGenerateProofPPT";
 import { CreativeUploadSection } from "@/components/campaigns/CreativeUploadSection";
 import { useCampaignWorkflows } from "@/hooks/useCampaignWorkflows";
+import { AutoAssignMountersButton } from "@/components/campaigns/AutoAssignMountersButton";
+import { useCompany } from "@/contexts/CompanyContext";
 
 export default function CampaignDetail() {
   const { id } = useParams();
@@ -42,6 +44,7 @@ export default function CampaignDetail() {
   const [campaignAssets, setCampaignAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { company } = useCompany();
 
   // Enable automated workflows
   useCampaignWorkflows(id);
@@ -251,6 +254,14 @@ export default function CampaignDetail() {
                 </div>
               </div>
               <div className="flex gap-2 flex-wrap">
+                {isAdmin && company && (
+                  <AutoAssignMountersButton
+                    campaignId={campaign.id}
+                    companyId={company.id}
+                    currentUserId={campaign.created_by}
+                    onSuccess={refreshData}
+                  />
+                )}
                 <GenerateProofPPTButton 
                   campaignId={campaign.id}
                   campaignName={campaign.campaign_name}

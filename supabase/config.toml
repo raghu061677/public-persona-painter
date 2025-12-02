@@ -219,3 +219,6 @@ verify_jwt = true
 [functions.revenue-forecast-ai]
 verify_jwt = true
 
+[functions.check-conflicts]
+verify_jwt = true
+

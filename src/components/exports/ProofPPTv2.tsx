@@ -398,7 +398,7 @@ export function ProofPPTv2({
       });
 
       // Save the Presentation
-      pptx.writeFile({ filename: `${pptData.campaign.name}-Proof.pptx` });
+      pptx.writeFile({ fileName: `${pptData.campaign.name}-Proof.pptx` });
 
       toast({
         title: 'PPT Generated',

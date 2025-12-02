@@ -15,6 +15,8 @@ import { ArrowLeft, Trash2, Save, Send } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { AssetSelectionTable } from '@/components/plans/AssetSelectionTable';
 import { formatCurrency } from '@/utils/mediaAssets';
+import { useAssetConflictCheck } from '@/hooks/useAssetConflictCheck';
+import { ConflictWarning } from '@/components/campaigns/ConflictWarning';
 
 interface AssetItem {
   asset_id: string;
@@ -33,12 +35,14 @@ interface AssetItem {
 export default function CampaignCreate() {
   const navigate = useNavigate();
   const { company } = useCompany();
+  const { checkConflict, checking } = useAssetConflictCheck();
   
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
   const [availableAssets, setAvailableAssets] = useState<any[]>([]);
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [assetPricing, setAssetPricing] = useState<Record<string, any>>({});
+  const [assetConflicts, setAssetConflicts] = useState<Record<string, any>>({});
   
   const [formData, setFormData] = useState({
     campaign_name: '',
@@ -92,13 +96,16 @@ export default function CampaignCreate() {
     setAvailableAssets(data || []);
   };
 
-  const toggleAssetSelection = (assetId: string, asset: any) => {
+  const toggleAssetSelection = async (assetId: string, asset: any) => {
     const newSelected = new Set(selectedAssets);
     if (newSelected.has(assetId)) {
       newSelected.delete(assetId);
       const newPricing = { ...assetPricing };
       delete newPricing[assetId];
       setAssetPricing(newPricing);
+      const newConflicts = { ...assetConflicts };
+      delete newConflicts[assetId];
+      setAssetConflicts(newConflicts);
     } else {
       newSelected.add(assetId);
       const monthlyCardRate = asset.card_rate || 0;
@@ -111,6 +118,21 @@ export default function CampaignCreate() {
           mounting_charges: asset.mounting_charge || 0,
         }
       }));
+
+      // Check for conflicts when dates are set
+      if (formData.start_date && formData.end_date) {
+        const conflictResult = await checkConflict(
+          assetId,
+          formData.start_date,
+          formData.end_date
+        );
+        if (conflictResult.has_conflict) {
+          setAssetConflicts(prev => ({
+            ...prev,
+            [assetId]: conflictResult.conflicting_campaigns,
+          }));
+        }
+      }
     }
     setSelectedAssets(newSelected);
   };
@@ -367,11 +389,15 @@ export default function CampaignCreate() {
                   {Array.from(selectedAssets).map(assetId => {
                     const asset = availableAssets.find(a => a.id === assetId);
                     const pricing = assetPricing[assetId];
+                    const conflicts = assetConflicts[assetId];
                     if (!asset || !pricing) return null;
 
                     return (
                       <Card key={assetId}>
                         <CardContent className="pt-6">
+                          {conflicts && conflicts.length > 0 && (
+                            <ConflictWarning conflicts={conflicts} />
+                          )}
                           <div className="flex justify-between items-start mb-4">
                             <div>
                               <p className="font-medium">{asset.location}</p>

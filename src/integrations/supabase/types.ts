@@ -2968,6 +2968,41 @@ export type Database = {
           },
         ]
       }
+      lead_followups: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          followup_date: string | null
+          id: string
+          lead_id: string
+          note: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          followup_date?: string | null
+          id?: string
+          lead_id: string
+          note: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          followup_date?: string | null
+          id?: string
+          lead_id?: string
+          note?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_followups_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           assigned_to: string | null

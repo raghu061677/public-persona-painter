@@ -295,6 +295,8 @@ const App = () => (
             <Route path="/admin/campaigns/:id" element={<ProtectedRoute requiredModule="campaigns" requiredAction="view"><ModernAppLayout><CampaignDetail /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/campaigns/:id/budget" element={<ProtectedRoute requiredModule="campaigns" requiredAction="view"><ModernAppLayout><CampaignBudget /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/operations" element={<ModernAppLayout><Operations /></ModernAppLayout>} />
+            <Route path="/admin/operations/:campaignId" element={<Navigate to="/admin/campaigns/:campaignId" replace />} />
+            <Route path="/admin/operations/:campaignId/assets/:assetId" element={<ModernAppLayout><CampaignAssetProofs /></ModernAppLayout>} />
             <Route path="/admin/operations/creatives" element={<ModernAppLayout><OperationsCreatives /></ModernAppLayout>} />
             <Route path="/admin/operations/printing" element={<ModernAppLayout><OperationsPrinting /></ModernAppLayout>} />
             <Route path="/admin/operations/proof-uploads" element={<ModernAppLayout><OperationsProofUploads /></ModernAppLayout>} />
@@ -399,7 +401,6 @@ const App = () => (
             <Route path="/admin/custom-dashboard" element={<ModernAppLayout><CustomDashboard /></ModernAppLayout>} />
             
             {/* Operations Photo Upload */}
-            <Route path="/admin/operations/:campaignId/assets/:assetId" element={<ModernAppLayout><CampaignAssetProofs /></ModernAppLayout>} />
             <Route path="/admin/ui-showcase" element={<ModernAppLayout><ComponentShowcase /></ModernAppLayout>} />
             <Route path="/admin/dashboard-builder" element={<ModernAppLayout><DashboardBuilder /></ModernAppLayout>} />
             

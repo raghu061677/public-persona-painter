@@ -918,6 +918,8 @@ export type Database = {
           asset_id: string
           assigned_at: string | null
           assigned_mounter_id: string | null
+          booking_end_date: string | null
+          booking_start_date: string | null
           campaign_id: string
           card_rate: number
           city: string
@@ -940,6 +942,8 @@ export type Database = {
           asset_id: string
           assigned_at?: string | null
           assigned_mounter_id?: string | null
+          booking_end_date?: string | null
+          booking_start_date?: string | null
           campaign_id: string
           card_rate: number
           city: string
@@ -962,6 +966,8 @@ export type Database = {
           asset_id?: string
           assigned_at?: string | null
           assigned_mounter_id?: string | null
+          booking_end_date?: string | null
+          booking_start_date?: string | null
           campaign_id?: string
           card_rate?: number
           city?: string
@@ -1203,6 +1209,44 @@ export type Database = {
             columns: ["plan_item_id"]
             isOneToOne: false
             referencedRelation: "plan_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_status_history: {
+        Row: {
+          campaign_id: string
+          changed_at: string | null
+          changed_by: string | null
+          id: string
+          new_status: Database["public"]["Enums"]["campaign_status"]
+          notes: string | null
+          old_status: Database["public"]["Enums"]["campaign_status"] | null
+        }
+        Insert: {
+          campaign_id: string
+          changed_at?: string | null
+          changed_by?: string | null
+          id?: string
+          new_status: Database["public"]["Enums"]["campaign_status"]
+          notes?: string | null
+          old_status?: Database["public"]["Enums"]["campaign_status"] | null
+        }
+        Update: {
+          campaign_id?: string
+          changed_at?: string | null
+          changed_by?: string | null
+          id?: string
+          new_status?: Database["public"]["Enums"]["campaign_status"]
+          notes?: string | null
+          old_status?: Database["public"]["Enums"]["campaign_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_status_history_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
         ]
@@ -5594,6 +5638,7 @@ export type Database = {
         }
         Returns: Json
       }
+      auto_update_campaign_status: { Args: never; Returns: undefined }
       calculate_subscription_usage: {
         Args: { p_company_id: string }
         Returns: Json
@@ -5924,6 +5969,11 @@ export type Database = {
         | "Mounted"
         | "PhotoUploaded"
         | "Verified"
+        | "In Progress"
+        | "Installed"
+        | "QA Pending"
+        | "Completed"
+        | "Failed"
       booking_status:
         | "pending"
         | "approved"
@@ -5938,6 +5988,10 @@ export type Database = {
         | "Verified"
         | "Completed"
         | "Cancelled"
+        | "Draft"
+        | "Upcoming"
+        | "Running"
+        | "Archived"
       client_type:
         | "Agency"
         | "Direct"
@@ -5966,7 +6020,13 @@ export type Database = {
         | "Electricity"
         | "Other"
       invoice_status: "Draft" | "Sent" | "Paid" | "Overdue" | "Cancelled"
-      media_asset_status: "Available" | "Booked" | "Blocked" | "Maintenance"
+      media_asset_status:
+        | "Available"
+        | "Booked"
+        | "Blocked"
+        | "Maintenance"
+        | "Under Maintenance"
+        | "Expired"
       media_category: "OOH" | "DOOH" | "Transit"
       ownership_type: "own" | "rented"
       payment_status: "Pending" | "Paid"
@@ -6132,6 +6192,11 @@ export const Constants = {
         "Mounted",
         "PhotoUploaded",
         "Verified",
+        "In Progress",
+        "Installed",
+        "QA Pending",
+        "Completed",
+        "Failed",
       ],
       booking_status: [
         "pending",
@@ -6148,6 +6213,10 @@ export const Constants = {
         "Verified",
         "Completed",
         "Cancelled",
+        "Draft",
+        "Upcoming",
+        "Running",
+        "Archived",
       ],
       client_type: [
         "Agency",
@@ -6180,7 +6249,14 @@ export const Constants = {
         "Other",
       ],
       invoice_status: ["Draft", "Sent", "Paid", "Overdue", "Cancelled"],
-      media_asset_status: ["Available", "Booked", "Blocked", "Maintenance"],
+      media_asset_status: [
+        "Available",
+        "Booked",
+        "Blocked",
+        "Maintenance",
+        "Under Maintenance",
+        "Expired",
+      ],
       media_category: ["OOH", "DOOH", "Transit"],
       ownership_type: ["own", "rented"],
       payment_status: ["Pending", "Paid"],

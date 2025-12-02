@@ -757,35 +757,25 @@ function VacantMediaCard({ asset }: { asset: any }) {
   );
 }
 
-// Mobile Operations Upload Component
+// Mobile Operations Upload Component - redirects to desktop upload page
 function MobileOperationsUpload() {
   const { campaignId, assetId } = useParams<{ campaignId?: string; assetId?: string }>();
   const navigate = useNavigate();
 
-  // If both campaignId and assetId are provided, redirect to the full upload page
   useEffect(() => {
     if (campaignId && assetId) {
+      // Redirect to the operations upload page
       navigate(`/admin/operations/${campaignId}/assets/${assetId}`, { replace: true });
+    } else {
+      // No params, go to operations board
+      navigate('/admin/operations', { replace: true });
     }
   }, [campaignId, assetId, navigate]);
 
-  // Show placeholder if no task selected
+  // Show loading while redirecting
   return (
-    <div className="min-h-screen bg-background pb-24 p-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Operations Upload</CardTitle>
-          <CardDescription>
-            Upload proof photos for campaign operations
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <Camera className="h-16 w-16 mx-auto mb-4" />
-            <p>Select a task from Field App to upload photos</p>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
     </div>
   );
 }

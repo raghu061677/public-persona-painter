@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, Routes, Route, useLocation, useParams } from "react-router-dom";
 import { db, auth } from "@/lib/supabase-wrapper";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +29,7 @@ import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
-type TaskStatus = 'Pending' | 'Assigned' | 'Mounted' | 'PhotoUploaded' | 'Verified';
+type TaskStatus = Database['public']['Enums']['asset_installation_status'];
 
 interface CampaignAsset {
   id: string;

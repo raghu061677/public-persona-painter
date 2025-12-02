@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,7 +30,7 @@ export default function CampaignEdit() {
   const [clientName, setClientName] = useState("");
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
-  const [status, setStatus] = useState<"Planned" | "Assigned" | "InProgress" | "PhotoUploaded" | "Verified" | "Completed" | "Cancelled">("Planned");
+  const [status, setStatus] = useState<Database['public']['Enums']['campaign_status']>("Draft");
   const [notes, setNotes] = useState("");
   const [gstPercent, setGstPercent] = useState(18);
   
@@ -402,12 +403,12 @@ export default function CampaignEdit() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Planned">Planned</SelectItem>
-                    <SelectItem value="Assigned">Assigned</SelectItem>
-                    <SelectItem value="InProgress">In Progress</SelectItem>
-                    <SelectItem value="PhotoUploaded">Photo Uploaded</SelectItem>
-                    <SelectItem value="Verified">Verified</SelectItem>
+                    <SelectItem value="Draft">Draft</SelectItem>
+                    <SelectItem value="Upcoming">Upcoming</SelectItem>
+                    <SelectItem value="Running">Running</SelectItem>
                     <SelectItem value="Completed">Completed</SelectItem>
+                    <SelectItem value="Cancelled">Cancelled</SelectItem>
+                    <SelectItem value="Archived">Archived</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -207,6 +207,6 @@ verify_jwt = true
 [functions.upload-operation-photo]
 verify_jwt = true
 
-[functions.generate-proof-ppt]
+[functions.batch-generate-qr-codes]
 verify_jwt = true
 

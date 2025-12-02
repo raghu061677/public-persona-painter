@@ -179,6 +179,10 @@ const ManageCompanies = lazy(() => import("./pages/platform/ManageCompanies"));
 const SubscriptionManagement = lazy(() => import("./pages/SubscriptionManagement"));
 const MigrateToMatrix = lazy(() => import("./pages/MigrateToMatrix"));
 const FixStreetViewLinks = lazy(() => import("./pages/admin/FixStreetViewLinks"));
+const OperationsDashboard = lazy(() => import("./pages/OperationsDashboard"));
+const PublicCampaignTracking = lazy(() => import("./pages/PublicCampaignTracking"));
+const MounterTasks = lazy(() => import("./pages/MounterTasks"));
+const OperationDetail = lazy(() => import("./pages/OperationDetail"));
 
 // Optimized Query Client with caching
 const queryClient = new QueryClient({
@@ -231,6 +235,8 @@ const App = () => (
             <Route path="/marketplace" element={<PublicLayout><Marketplace /></PublicLayout>} />
             <Route path="/marketplace/asset/:id" element={<PublicLayout><MarketplaceAssetDetail /></PublicLayout>} />
             <Route path="/admin/plans/:id/share/:shareToken" element={<PlanShare />} />
+            <Route path="/campaign-track/:token" element={<PublicLayout><PublicCampaignTracking /></PublicLayout>} />
+            <Route path="/mounter/tasks" element={<ProtectedRoute requireAuth><PublicLayout><MounterTasks /></PublicLayout></ProtectedRoute>} />
             <Route path="/mobile/*" element={<MobilePage />} />
             
             {/* Redirect /admin to /admin/dashboard */}
@@ -294,8 +300,8 @@ const App = () => (
             <Route path="/admin/campaigns/edit/:id" element={<ProtectedRoute requiredModule="campaigns" requiredAction="update"><ModernAppLayout><CampaignEdit /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/campaigns/:id" element={<ProtectedRoute requiredModule="campaigns" requiredAction="view"><ModernAppLayout><CampaignDetail /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/campaigns/:id/budget" element={<ProtectedRoute requiredModule="campaigns" requiredAction="view"><ModernAppLayout><CampaignBudget /></ModernAppLayout></ProtectedRoute>} />
-            <Route path="/admin/operations" element={<ModernAppLayout><Operations /></ModernAppLayout>} />
-            <Route path="/admin/operations/:campaignId" element={<Navigate to="/admin/campaigns/:campaignId" replace />} />
+            <Route path="/admin/operations" element={<ModernAppLayout><OperationsDashboard /></ModernAppLayout>} />
+            <Route path="/admin/operations/:id" element={<ModernAppLayout><OperationDetail /></ModernAppLayout>} />
             <Route path="/admin/operations/:campaignId/assets/:assetId" element={<ModernAppLayout><CampaignAssetProofs /></ModernAppLayout>} />
             <Route path="/admin/operations/creatives" element={<ModernAppLayout><OperationsCreatives /></ModernAppLayout>} />
             <Route path="/admin/operations/printing" element={<ModernAppLayout><OperationsPrinting /></ModernAppLayout>} />

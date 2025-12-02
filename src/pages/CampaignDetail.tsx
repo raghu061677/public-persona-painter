@@ -35,6 +35,8 @@ import { checkAndAutoGeneratePPT } from "@/lib/operations/autoGenerateProofPPT";
 import { CreativeUploadSection } from "@/components/campaigns/CreativeUploadSection";
 import { useCampaignWorkflows } from "@/hooks/useCampaignWorkflows";
 import { AutoAssignMountersButton } from "@/components/campaigns/AutoAssignMountersButton";
+import { ShareTrackingLinkDialog } from "@/components/campaigns/ShareTrackingLinkDialog";
+import { GenerateProofPPTButtonNew } from "@/components/campaigns/GenerateProofPPTButtonNew";
 import { useCompany } from "@/contexts/CompanyContext";
 
 export default function CampaignDetail() {
@@ -255,12 +257,25 @@ export default function CampaignDetail() {
               </div>
               <div className="flex gap-2 flex-wrap">
                 {isAdmin && company && (
-                  <AutoAssignMountersButton
-                    campaignId={campaign.id}
-                    companyId={company.id}
-                    currentUserId={campaign.created_by}
-                    onSuccess={refreshData}
-                  />
+                  <>
+                    <AutoAssignMountersButton
+                      campaignId={campaign.id}
+                      companyId={company.id}
+                      currentUserId={campaign.created_by}
+                      onSuccess={refreshData}
+                    />
+                    <GenerateProofPPTButtonNew
+                      campaignId={campaign.id}
+                      companyId={company.id}
+                      onSuccess={refreshData}
+                    />
+                    <ShareTrackingLinkDialog
+                      campaignId={campaign.id}
+                      publicToken={campaign.public_tracking_token}
+                      isEnabled={campaign.public_share_enabled}
+                      onUpdate={refreshData}
+                    />
+                  </>
                 )}
                 <GenerateProofPPTButton 
                   campaignId={campaign.id}

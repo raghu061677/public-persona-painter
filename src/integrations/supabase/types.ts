@@ -1269,6 +1269,8 @@ export type Database = {
           notes: string | null
           notification_settings: Json | null
           plan_id: string | null
+          public_share_enabled: boolean | null
+          public_tracking_token: string | null
           start_date: string
           status: Database["public"]["Enums"]["campaign_status"]
           total_amount: number
@@ -1291,6 +1293,8 @@ export type Database = {
           notes?: string | null
           notification_settings?: Json | null
           plan_id?: string | null
+          public_share_enabled?: boolean | null
+          public_tracking_token?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["campaign_status"]
           total_amount: number
@@ -1313,6 +1317,8 @@ export type Database = {
           notes?: string | null
           notification_settings?: Json | null
           plan_id?: string | null
+          public_share_enabled?: boolean | null
+          public_tracking_token?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["campaign_status"]
           total_amount?: number
@@ -5855,6 +5861,7 @@ export type Database = {
         Args: { p_asset_id: string; p_campaign_id: string }
         Returns: Json
       }
+      match_campaign_token: { Args: { p_token: string }; Returns: string }
       process_plan_approval: {
         Args: {
           p_approval_id: string

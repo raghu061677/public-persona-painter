@@ -61,6 +61,7 @@ const ApprovalsQueue = lazy(() => import("./pages/approvals/ApprovalsQueue"));
 const ApprovalHistory = lazy(() => import("./pages/approvals/ApprovalHistory"));
 const ApprovalRulesSettings = lazy(() => import("./pages/approvals/ApprovalRulesSettings"));
 const CampaignsList = lazy(() => import("./pages/CampaignsList"));
+const CampaignCreate = lazy(() => import("./pages/CampaignCreate"));
 const CampaignDetail = lazy(() => import("./pages/CampaignDetail"));
 const CampaignEdit = lazy(() => import("./pages/CampaignEdit"));
 const CampaignBudget = lazy(() => import("./pages/CampaignBudget"));
@@ -297,6 +298,7 @@ const App = () => (
             {/* Plan Templates routes removed */}
             <Route path="/admin/plans-compare" element={<ProtectedRoute requiredModule="plans" requiredAction="view"><ModernAppLayout><PlanComparison /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/campaigns" element={<ProtectedRoute requiredModule="campaigns" requiredAction="view"><ModernAppLayout><CampaignsList /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/campaigns/create" element={<ProtectedRoute requiredModule="campaigns" requiredAction="create"><ModernAppLayout><CampaignCreate /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/campaigns/edit/:id" element={<ProtectedRoute requiredModule="campaigns" requiredAction="update"><ModernAppLayout><CampaignEdit /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/campaigns/:id" element={<ProtectedRoute requiredModule="campaigns" requiredAction="view"><ModernAppLayout><CampaignDetail /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/campaigns/:id/budget" element={<ProtectedRoute requiredModule="campaigns" requiredAction="view"><ModernAppLayout><CampaignBudget /></ModernAppLayout></ProtectedRoute>} />

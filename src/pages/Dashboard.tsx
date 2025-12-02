@@ -326,13 +326,15 @@ const Dashboard = () => {
                 description="This month"
                 borderColor="border-l-orange-500"
               />
-              <StatCard
-                title="Pending Tasks"
-                value={metrics.pendingTasks}
-                icon={FileText}
-                description="Require attention"
-                borderColor="border-l-red-500"
-              />
+              <div onClick={() => navigate('/admin/operations')} className="cursor-pointer">
+                <StatCard
+                  title="Pending Tasks"
+                  value={metrics.pendingTasks}
+                  icon={FileText}
+                  description="Require attention"
+                  borderColor="border-l-red-500"
+                />
+              </div>
             </div>
           )}
 

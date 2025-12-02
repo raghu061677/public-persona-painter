@@ -142,6 +142,49 @@ export default function CampaignDetail() {
     }
   };
 
+  const handleAutoComplete = async () => {
+    const today = new Date();
+    const endDate = new Date(campaign.end_date);
+    
+    if (endDate >= today) {
+      toast({
+        title: "Cannot Auto-Complete",
+        description: "Campaign end date must be in the past",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (campaign.status === 'Completed') {
+      toast({
+        title: "Already Completed",
+        description: "This campaign is already marked as completed",
+      });
+      return;
+    }
+
+    if (!confirm(`Auto-complete campaign "${campaign.campaign_name}"? This will mark it as Completed.`)) return;
+
+    const { error } = await supabase
+      .from('campaigns')
+      .update({ status: 'Completed' })
+      .eq('id', id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to auto-complete campaign",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Campaign marked as completed",
+      });
+      refreshData();
+    }
+  };
+
   if (loading || !campaign) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -241,6 +284,16 @@ export default function CampaignDetail() {
                 </Button>
                 {isAdmin && (
                   <>
+                    {campaign.status !== 'Completed' && new Date(campaign.end_date) < new Date() && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleAutoComplete}
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Auto-Complete
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"

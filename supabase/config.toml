@@ -213,3 +213,9 @@ verify_jwt = true
 [functions.create-direct-campaign]
 verify_jwt = true
 
+[functions.forecast-media-availability]
+verify_jwt = true
+
+[functions.revenue-forecast-ai]
+verify_jwt = true
+

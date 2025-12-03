@@ -29,9 +29,9 @@ export function CampaignPerformanceChart({ campaignId }: CampaignPerformanceChar
       const stats = {
         total: data.length,
         pending: data.filter((a) => a.status === "Pending" || a.status === "Assigned").length,
-        installed: data.filter((a) => a.status === "Mounted" || a.status === "PhotoUploaded").length,
-        verified: data.filter((a) => a.status === "Verified").length,
-        rejected: 0, // Not in current schema, keeping for future use
+        installed: data.filter((a) => a.status === "Installed" || a.status === "In Progress" || a.status === "QA Pending").length,
+        verified: data.filter((a) => a.status === "Completed" || a.status === "Verified").length,
+        rejected: data.filter((a) => a.status === "Failed").length,
       };
       setChartData(stats);
     }

@@ -97,31 +97,17 @@ Deno.serve(async (req) => {
       `)
       .eq('campaign_id', campaign_id);
 
-    // Fetch operation photos for each asset
-    const assetIds = campaignAssets?.map(a => a.asset_id) || [];
-    const { data: operationPhotos } = await supabase
-      .from('operation_photos')
-      .select('*')
-      .in('asset_id', assetIds)
-      .order('created_at', { ascending: false });
-
-    // Group photos by asset
-    const photosByAsset = new Map();
-    operationPhotos?.forEach((photo: any) => {
-      if (!photosByAsset.has(photo.asset_id)) {
-        photosByAsset.set(photo.asset_id, []);
-      }
-      photosByAsset.get(photo.asset_id).push(photo);
-    });
+    console.log('Found campaign assets:', campaignAssets?.length || 0);
 
     // Build JSON response with all data
     const assetsData = campaignAssets?.map(asset => {
-      const photos = photosByAsset.get(asset.asset_id) || [];
+      // Get photos from campaign_assets.photos jsonb field
+      const photosObj = (asset.photos || {}) as Record<string, string>;
       const photoMap = {
-        newspaper: photos.find((p: any) => p.photo_type === 'newspaper')?.file_path || null,
-        geo: photos.find((p: any) => p.photo_type === 'geo')?.file_path || null,
-        traffic_left: photos.find((p: any) => p.photo_type === 'traffic1')?.file_path || null,
-        traffic_right: photos.find((p: any) => p.photo_type === 'traffic2')?.file_path || null,
+        newspaper: photosObj.newspaper || null,
+        geo: photosObj.geo || null,
+        traffic_left: photosObj.traffic1 || null,
+        traffic_right: photosObj.traffic2 || null,
       };
 
       const googleStreetViewUrl = asset.media_assets?.google_street_view_url || null;

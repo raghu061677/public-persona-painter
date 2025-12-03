@@ -96,21 +96,7 @@ Deno.serve(async (req) => {
 
     const assetMap = new Map(mediaAssets?.map(a => [a.id, a]) || []);
 
-    // Fetch operation photos if operations exist
-    const { data: operations } = await supabase
-      .from('operations')
-      .select(`
-        id,
-        asset_id,
-        status,
-        mounter_id,
-        verified_at,
-        mounters(name),
-        operation_photos(id, photo_type, file_path)
-      `)
-      .eq('campaign_id', campaign_id);
-
-    const operationsByAsset = new Map(operations?.map(op => [op.asset_id, op]) || []);
+    console.log('Media assets mapped:', assetIds.length);
 
     // Create PowerPoint
     const pptx = new pptxgen();
@@ -181,13 +167,10 @@ Deno.serve(async (req) => {
     let slidesWithPhotos = 0;
     for (const campaignAsset of campaignAssets || []) {
       const asset = assetMap.get(campaignAsset.asset_id);
-      const operation = operationsByAsset.get(campaignAsset.asset_id);
       
-      // Get photos from operation_photos or campaign_assets.photos jsonb
-      let photos: any[] = operation?.operation_photos || [];
-      
-      // If no operation photos, try to get from campaign_assets.photos jsonb
-      if (photos.length === 0 && campaignAsset.photos) {
+      // Get photos from campaign_assets.photos jsonb
+      let photos: any[] = [];
+      if (campaignAsset.photos && typeof campaignAsset.photos === 'object') {
         const photosObj = campaignAsset.photos as Record<string, string>;
         photos = Object.entries(photosObj)
           .filter(([_, url]) => url)
@@ -305,8 +288,8 @@ Deno.serve(async (req) => {
       }
 
       // Footer with mounter info
-      const mounterName = campaignAsset.mounter_name || (operation?.mounters as any)?.name || 'N/A';
-      const completedDate = campaignAsset.completed_at || operation?.verified_at;
+      const mounterName = campaignAsset.mounter_name || 'N/A';
+      const completedDate = campaignAsset.completed_at;
       slide.addText(`Installed by: ${mounterName} | Completed: ${completedDate ? new Date(completedDate).toLocaleDateString('en-IN') : 'Pending'}`, {
         x: 0.5,
         y: 6.8,

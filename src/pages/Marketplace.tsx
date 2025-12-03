@@ -120,13 +120,31 @@ export default function Marketplace() {
 
       if (error) throw error;
 
-      // Map company data to flat structure
+      // Get asset IDs to fetch photos
+      const assetIds = (data || []).map(a => a.id);
+      
+      // Fetch photos for all assets
+      const { data: photosData } = await supabase
+        .from('media_photos')
+        .select('asset_id, photo_url')
+        .in('asset_id', assetIds);
+      
+      // Create a map of asset_id to first photo
+      const photoMap = new Map<string, string>();
+      (photosData || []).forEach(p => {
+        if (!photoMap.has(p.asset_id) && p.photo_url) {
+          photoMap.set(p.asset_id, p.photo_url);
+        }
+      });
+
+      // Map company data to flat structure and get first photo
       const mappedAssets = (data || []).map(asset => ({
         ...asset,
-        company_name: asset.companies?.name || '',
-        company_city: asset.companies?.city || null,
-        company_phone: asset.companies?.phone || null,
-        company_email: asset.companies?.email || null,
+        primary_photo_url: asset.primary_photo_url || photoMap.get(asset.id) || null,
+        company_name: (asset.companies as any)?.name || '',
+        company_city: (asset.companies as any)?.city || null,
+        company_phone: (asset.companies as any)?.phone || null,
+        company_email: (asset.companies as any)?.email || null,
       }));
 
       setAssets(mappedAssets);

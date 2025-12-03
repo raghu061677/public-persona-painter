@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch campaign with operations and photos
+    // Fetch campaign with client info
     const { data: campaign, error: campaignError } = await supabase
       .from('campaigns')
       .select(`
@@ -64,18 +64,21 @@ Deno.serve(async (req) => {
       .single();
 
     if (campaignError || !campaign) {
+      console.error('Campaign error:', campaignError);
       throw new Error('Campaign not found');
     }
 
-    // Fetch operations with photos
-    const { data: operations } = await supabase
-      .from('operations')
-      .select(`
-        *,
-        mounters(name),
-        operation_photos(*)
-      `)
+    // Fetch campaign_assets (the actual data source for campaign media)
+    const { data: campaignAssets, error: assetsError } = await supabase
+      .from('campaign_assets')
+      .select('*')
       .eq('campaign_id', campaign_id);
+
+    if (assetsError) {
+      console.error('Campaign assets error:', assetsError);
+    }
+
+    console.log('Found campaign assets:', campaignAssets?.length || 0);
 
     // Fetch company details
     const { data: company } = await supabase
@@ -84,14 +87,30 @@ Deno.serve(async (req) => {
       .eq('id', company_id)
       .single();
 
-    // Fetch media assets for additional info
-    const assetIds = operations?.map(op => op.asset_id).filter(Boolean) || [];
-    const { data: assets } = await supabase
+    // Fetch media assets for additional info (qr_code_url, etc.)
+    const assetIds = campaignAssets?.map(ca => ca.asset_id).filter(Boolean) || [];
+    const { data: mediaAssets } = await supabase
       .from('media_assets')
-      .select('id, location, city, area, media_type, dimension, qr_code_url, latitude, longitude')
+      .select('id, location, city, area, media_type, dimension, qr_code_url, latitude, longitude, primary_photo_url')
       .in('id', assetIds);
 
-    const assetMap = new Map(assets?.map(a => [a.id, a]) || []);
+    const assetMap = new Map(mediaAssets?.map(a => [a.id, a]) || []);
+
+    // Fetch operation photos if operations exist
+    const { data: operations } = await supabase
+      .from('operations')
+      .select(`
+        id,
+        asset_id,
+        status,
+        mounter_id,
+        verified_at,
+        mounters(name),
+        operation_photos(id, photo_type, file_path)
+      `)
+      .eq('campaign_id', campaign_id);
+
+    const operationsByAsset = new Map(operations?.map(op => [op.asset_id, op]) || []);
 
     // Create PowerPoint
     const pptx = new pptxgen();
@@ -104,13 +123,17 @@ Deno.serve(async (req) => {
     titleSlide.background = { color: '1E40AF' };
     
     if (company?.logo_url) {
-      titleSlide.addImage({ 
-        path: company.logo_url, 
-        x: 4.0, 
-        y: 1.0, 
-        w: 2.0, 
-        h: 0.8 
-      });
+      try {
+        titleSlide.addImage({ 
+          path: company.logo_url, 
+          x: 4.0, 
+          y: 1.0, 
+          w: 2.0, 
+          h: 0.8 
+        });
+      } catch (e) {
+        console.log('Could not add logo:', e);
+      }
     }
 
     titleSlide.addText('PROOF OF PERFORMANCE', {
@@ -134,7 +157,7 @@ Deno.serve(async (req) => {
       align: 'center',
     });
 
-    titleSlide.addText(`Client: ${campaign.clients.name}`, {
+    titleSlide.addText(`Client: ${campaign.clients?.name || campaign.client_name}`, {
       x: 1.0,
       y: 4.4,
       w: 8.0,
@@ -154,18 +177,31 @@ Deno.serve(async (req) => {
       align: 'center',
     });
 
-    // Add asset slides with photos
-    for (const operation of operations || []) {
-      const asset = assetMap.get(operation.asset_id);
-      if (!asset) continue;
+    // Add asset slides from campaign_assets
+    let slidesWithPhotos = 0;
+    for (const campaignAsset of campaignAssets || []) {
+      const asset = assetMap.get(campaignAsset.asset_id);
+      const operation = operationsByAsset.get(campaignAsset.asset_id);
+      
+      // Get photos from operation_photos or campaign_assets.photos jsonb
+      let photos: any[] = operation?.operation_photos || [];
+      
+      // If no operation photos, try to get from campaign_assets.photos jsonb
+      if (photos.length === 0 && campaignAsset.photos) {
+        const photosObj = campaignAsset.photos as Record<string, string>;
+        photos = Object.entries(photosObj)
+          .filter(([_, url]) => url)
+          .map(([type, url]) => ({ photo_type: type, file_path: url }));
+      }
 
-      const photos = operation.operation_photos || [];
+      // Skip assets without photos
       if (photos.length === 0) continue;
+      slidesWithPhotos++;
 
       const slide = pptx.addSlide();
 
       // Header with asset info
-      slide.addText(asset.location, {
+      slide.addText(campaignAsset.location || asset?.location || 'Unknown Location', {
         x: 0.5,
         y: 0.3,
         w: 9.0,
@@ -175,7 +211,7 @@ Deno.serve(async (req) => {
         color: '1E40AF',
       });
 
-      slide.addText(`${asset.city}, ${asset.area} • ${asset.media_type} • ${asset.dimension || 'N/A'}`, {
+      slide.addText(`${campaignAsset.city || asset?.city}, ${campaignAsset.area || asset?.area} • ${campaignAsset.media_type || asset?.media_type} • ${campaignAsset.dimensions || asset?.dimension || 'N/A'}`, {
         x: 0.5,
         y: 0.8,
         w: 6.5,
@@ -185,15 +221,16 @@ Deno.serve(async (req) => {
       });
 
       // Status badge
+      const statusColor = campaignAsset.status === 'Verified' || campaignAsset.status === 'Completed' ? '10B981' : 'F59E0B';
       slide.addShape(pptx.ShapeType.roundRect, {
         x: 7.5,
         y: 0.75,
         w: 1.5,
         h: 0.35,
-        fill: { color: '10B981' },
+        fill: { color: statusColor },
       });
 
-      slide.addText(operation.status, {
+      slide.addText(campaignAsset.status || 'Pending', {
         x: 7.5,
         y: 0.8,
         w: 1.5,
@@ -205,23 +242,27 @@ Deno.serve(async (req) => {
       });
 
       // Add QR code if available
-      if (asset.qr_code_url) {
-        slide.addImage({
-          path: asset.qr_code_url,
-          x: 7.8,
-          y: 1.5,
-          w: 1.2,
-          h: 1.2,
-        });
-        slide.addText('QR Code', {
-          x: 7.8,
-          y: 2.8,
-          w: 1.2,
-          h: 0.2,
-          fontSize: 8,
-          color: '666666',
-          align: 'center',
-        });
+      if (asset?.qr_code_url) {
+        try {
+          slide.addImage({
+            path: asset.qr_code_url,
+            x: 7.8,
+            y: 1.5,
+            w: 1.2,
+            h: 1.2,
+          });
+          slide.addText('QR Code', {
+            x: 7.8,
+            y: 2.8,
+            w: 1.2,
+            h: 0.2,
+            fontSize: 8,
+            color: '666666',
+            align: 'center',
+          });
+        } catch (e) {
+          console.log('Could not add QR code:', e);
+        }
       }
 
       // Add photos in 2x2 grid
@@ -237,30 +278,36 @@ Deno.serve(async (req) => {
         const x = 0.5 + (col * 3.5);
         const y = 1.5 + (row * 2.5);
 
-        // Photo image
-        slide.addImage({
-          path: photo.file_path,
-          x,
-          y,
-          w: 3.2,
-          h: 2.0,
-        });
+        try {
+          // Photo image
+          slide.addImage({
+            path: photo.file_path,
+            x,
+            y,
+            w: 3.2,
+            h: 2.0,
+          });
 
-        // Photo label
-        slide.addText(photoLabels[i], {
-          x,
-          y: y + 2.05,
-          w: 3.2,
-          h: 0.25,
-          fontSize: 10,
-          bold: true,
-          color: '333333',
-          align: 'center',
-        });
+          // Photo label
+          slide.addText(photoLabels[i] || photo.photo_type || `Photo ${i + 1}`, {
+            x,
+            y: y + 2.05,
+            w: 3.2,
+            h: 0.25,
+            fontSize: 10,
+            bold: true,
+            color: '333333',
+            align: 'center',
+          });
+        } catch (e) {
+          console.log('Could not add photo:', e);
+        }
       }
 
       // Footer with mounter info
-      slide.addText(`Installed by: ${operation.mounters?.name || 'N/A'} | Completed: ${operation.verified_at ? new Date(operation.verified_at).toLocaleDateString('en-IN') : 'Pending'}`, {
+      const mounterName = campaignAsset.mounter_name || (operation?.mounters as any)?.name || 'N/A';
+      const completedDate = campaignAsset.completed_at || operation?.verified_at;
+      slide.addText(`Installed by: ${mounterName} | Completed: ${completedDate ? new Date(completedDate).toLocaleDateString('en-IN') : 'Pending'}`, {
         x: 0.5,
         y: 6.8,
         w: 9.0,
@@ -268,6 +315,30 @@ Deno.serve(async (req) => {
         fontSize: 10,
         color: '999999',
         italic: true,
+      });
+    }
+
+    // If no slides with photos, add a placeholder slide
+    if (slidesWithPhotos === 0) {
+      const noDataSlide = pptx.addSlide();
+      noDataSlide.addText('No Proof Photos Available', {
+        x: 1.0,
+        y: 2.5,
+        w: 8.0,
+        h: 1.0,
+        fontSize: 32,
+        bold: true,
+        color: '666666',
+        align: 'center',
+      });
+      noDataSlide.addText('Photos will appear here once field operations upload proof images.', {
+        x: 1.0,
+        y: 3.5,
+        w: 8.0,
+        h: 0.5,
+        fontSize: 16,
+        color: '999999',
+        align: 'center',
       });
     }
 
@@ -283,8 +354,8 @@ Deno.serve(async (req) => {
       color: '1E40AF',
     });
 
-    const totalAssets = operations?.length || 0;
-    const completedAssets = operations?.filter(op => op.status === 'Verified').length || 0;
+    const totalAssets = campaignAssets?.length || 0;
+    const completedAssets = campaignAssets?.filter(ca => ca.status === 'Verified' || ca.status === 'Completed').length || 0;
     const completionRate = totalAssets > 0 ? Math.round((completedAssets / totalAssets) * 100) : 0;
 
     const stats = [
@@ -340,6 +411,7 @@ Deno.serve(async (req) => {
       });
 
     if (uploadError) {
+      console.error('Upload error:', uploadError);
       throw uploadError;
     }
 
@@ -361,7 +433,7 @@ Deno.serve(async (req) => {
       .from('client-documents')
       .createSignedUrl(fileName, 3600);
 
-    console.log('Proof PPT generated successfully:', fileName);
+    console.log('Proof PPT generated successfully:', fileName, 'Slides with photos:', slidesWithPhotos);
 
     return new Response(
       JSON.stringify({
@@ -369,7 +441,8 @@ Deno.serve(async (req) => {
         file_url: signedUrlData?.signedUrl,
         public_url: urlData.publicUrl,
         fileName,
-        slideCount: (operations?.length || 0) + 2,
+        slideCount: slidesWithPhotos + 2,
+        totalAssets,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

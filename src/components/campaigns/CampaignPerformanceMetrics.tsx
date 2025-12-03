@@ -16,8 +16,8 @@ export function CampaignPerformanceMetrics({ campaign, campaignAssets }: Campaig
   const verifiedAssets = campaignAssets.filter(a => a.status === 'Verified').length;
   const completionRate = totalAssets > 0 ? (verifiedAssets / totalAssets) * 100 : 0;
 
-  // Cost per asset
-  const costPerAsset = totalAssets > 0 ? campaign.grand_total / totalAssets : 0;
+  // Cost per asset (use total_amount which is the base amount without GST)
+  const costPerAsset = totalAssets > 0 ? campaign.total_amount / totalAssets : 0;
 
   // Average verification time (in days)
   const verificationTimes = campaignAssets

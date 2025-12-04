@@ -33,20 +33,26 @@ export const generateProformaPDF = (data: ProformaInvoiceData): Blob => {
     days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
   }
 
-  // Build line items
+  // Build line items with dimension, sqft, illumination type
   const items = data.items.map((item: any) => ({
-    description: item.display_name || `${item.area || ''} - ${item.location || ''}`,
+    description: item.display_name || item.location || `${item.area || ''} - ${item.media_type || ''}`,
+    dimension: item.dimensions || item.dimension || '',
+    sqft: item.total_sqft || item.sqft || 0,
+    illuminationType: item.illumination_type === 'Lit' ? 'Lit' : 'Non-Lit',
     startDate: data.campaign_start_date ? formatDateToDDMonYY(data.campaign_start_date) : '',
     endDate: data.campaign_end_date ? formatDateToDDMonYY(data.campaign_end_date) : '',
     days: days,
-    monthlyRate: item.negotiated_rate || 0,
-    cost: item.line_total || 0,
+    monthlyRate: item.negotiated_rate || item.card_rate || 0,
+    cost: item.line_total || item.total_price || 0,
   }));
 
   // Add printing row if exists
   if (data.printing_total > 0) {
     items.push({
       description: 'Printing Charges',
+      dimension: '',
+      sqft: 0,
+      illuminationType: '',
       startDate: '',
       endDate: '',
       days: 0,
@@ -59,6 +65,9 @@ export const generateProformaPDF = (data: ProformaInvoiceData): Blob => {
   if (data.mounting_total > 0) {
     items.push({
       description: 'Installation Charges',
+      dimension: '',
+      sqft: 0,
+      illuminationType: '',
       startDate: '',
       endDate: '',
       days: 0,

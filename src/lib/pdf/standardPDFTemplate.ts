@@ -33,8 +33,11 @@ interface PDFDocumentData {
 
 interface PDFLineItem {
   description: string;
-  startDate: string; // Format: 15Aug25
-  endDate: string;   // Format: 15Aug25
+  dimension?: string;      // e.g., "10x20 ft"
+  sqft?: number;           // Total sqft
+  illuminationType?: string; // Lit/Non-Lit
+  startDate: string;       // Format: 15Aug25
+  endDate: string;         // Format: 15Aug25
   days: number;
   monthlyRate: number;
   cost: number;
@@ -142,39 +145,51 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
   yPos += 10;
 
   // ========== SUMMARY OF CHARGES TABLE ==========
+  // Helper function to format currency with proper rupee symbol
+  const formatCurrency = (amount: number): string => {
+    if (amount === 0) return '-';
+    return `Rs. ${amount.toLocaleString('en-IN')}`;
+  };
+
   const tableData = data.items.map(item => [
     item.description,
-    item.startDate,
-    item.endDate,
-    item.days.toString(),
-    `₹${item.monthlyRate.toLocaleString('en-IN')}`,
-    `₹${item.cost.toLocaleString('en-IN')}`
+    item.dimension || '-',
+    item.sqft ? item.sqft.toString() : '-',
+    item.illuminationType || '-',
+    item.startDate || '-',
+    item.endDate || '-',
+    item.days > 0 ? item.days.toString() : '-',
+    item.monthlyRate > 0 ? formatCurrency(item.monthlyRate) : '-',
+    formatCurrency(item.cost)
   ]);
 
   autoTable(doc, {
     startY: yPos,
-    head: [['Description', 'Start Date', 'End Date', 'Days', 'Monthly Rate', 'Cost']],
+    head: [['Description', 'Size', 'Sqft', 'Type', 'Start', 'End', 'Days', 'Rate/Month', 'Cost']],
     body: tableData,
     theme: 'plain',
     headStyles: {
-      fillColor: [255, 255, 255],
+      fillColor: [240, 240, 240],
       textColor: [0, 0, 0],
       fontStyle: 'bold',
-      fontSize: 9,
+      fontSize: 8,
       lineWidth: 0.1,
       lineColor: [200, 200, 200],
     },
     bodyStyles: {
-      fontSize: 9,
+      fontSize: 8,
       textColor: [0, 0, 0],
     },
     columnStyles: {
-      0: { cellWidth: 70 },
-      1: { cellWidth: 25, halign: 'center' },
-      2: { cellWidth: 25, halign: 'center' },
-      3: { cellWidth: 15, halign: 'center' },
-      4: { cellWidth: 28, halign: 'right' },
-      5: { cellWidth: 28, halign: 'right' },
+      0: { cellWidth: 45 }, // Description
+      1: { cellWidth: 18, halign: 'center' }, // Size
+      2: { cellWidth: 14, halign: 'center' }, // Sqft
+      3: { cellWidth: 14, halign: 'center' }, // Type
+      4: { cellWidth: 18, halign: 'center' }, // Start
+      5: { cellWidth: 18, halign: 'center' }, // End
+      6: { cellWidth: 12, halign: 'center' }, // Days
+      7: { cellWidth: 24, halign: 'right' },  // Rate
+      8: { cellWidth: 24, halign: 'right' },  // Cost
     },
     didDrawCell: (data) => {
       // Draw subtle lines
@@ -183,7 +198,7 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
         doc.setLineWidth(0.1);
       }
     },
-    margin: { left: 15, right: 15 },
+    margin: { left: 10, right: 10 },
   });
 
   // @ts-ignore
@@ -192,24 +207,27 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
   // ========== TOTALS (RIGHT ALIGNED) ==========
   const totalsX = pageWidth - 15;
   
+  // Helper for currency formatting in totals
+  const fmtTotal = (amount: number): string => `Rs. ${amount.toLocaleString('en-IN')}`;
+
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.text(`Display Cost :`, totalsX - 50, yPos);
-  doc.text(`₹${data.displayCost.toLocaleString('en-IN')}`, totalsX, yPos, { align: 'right' });
+  doc.text(fmtTotal(data.displayCost), totalsX, yPos, { align: 'right' });
   
   yPos += 6;
   doc.text(`Installation Cost :`, totalsX - 50, yPos);
-  doc.text(`₹${data.installationCost.toLocaleString('en-IN')}`, totalsX, yPos, { align: 'right' });
+  doc.text(fmtTotal(data.installationCost), totalsX, yPos, { align: 'right' });
   
   yPos += 6;
   doc.text(`GST (18%) :`, totalsX - 50, yPos);
-  doc.text(`₹${data.gst.toLocaleString('en-IN')}`, totalsX, yPos, { align: 'right' });
+  doc.text(fmtTotal(data.gst), totalsX, yPos, { align: 'right' });
   
   yPos += 8;
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text(`Total in INR :`, totalsX - 50, yPos);
-  doc.text(`₹${data.totalInr.toLocaleString('en-IN')}`, totalsX, yPos, { align: 'right' });
+  doc.text(fmtTotal(data.totalInr), totalsX, yPos, { align: 'right' });
 
   yPos += 15;
 

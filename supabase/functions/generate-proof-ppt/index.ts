@@ -173,13 +173,14 @@ Deno.serve(async (req) => {
       if (campaignAsset.photos && typeof campaignAsset.photos === 'object') {
         const photosObj = campaignAsset.photos as Record<string, string>;
         photos = Object.entries(photosObj)
-          .filter(([_, url]) => url)
+          .filter(([_, url]) => url && url.trim() !== '')
           .map(([type, url]) => ({ photo_type: type, file_path: url }));
       }
 
-      // Skip assets without photos
-      if (photos.length === 0) continue;
-      slidesWithPhotos++;
+      // Always create slide for verified/completed assets even without photos
+      const hasPhotos = photos.length > 0;
+      const isCompleted = campaignAsset.status === 'Verified' || campaignAsset.status === 'Completed';
+      if (hasPhotos) slidesWithPhotos++;
 
       const slide = pptx.addSlide();
 
@@ -248,43 +249,64 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Add photos in 2x2 grid
+      // Add photos in 2x2 grid (show placeholders if missing)
       const photoTypes = ['geo', 'newspaper', 'traffic1', 'traffic2'];
       const photoLabels = ['Geo-tagged Photo', 'Newspaper Ad', 'Traffic View 1', 'Traffic View 2'];
       
-      for (let i = 0; i < Math.min(4, photos.length); i++) {
-        const photo = photos.find((p: any) => p.photo_type === photoTypes[i]) || photos[i];
-        if (!photo?.file_path) continue;
-
+      for (let i = 0; i < 4; i++) {
+        const photo = photos.find((p: any) => p.photo_type === photoTypes[i]);
         const col = i % 2;
         const row = Math.floor(i / 2);
         const x = 0.5 + (col * 3.5);
         const y = 1.5 + (row * 2.5);
 
-        try {
-          // Photo image
-          slide.addImage({
-            path: photo.file_path,
-            x,
-            y,
-            w: 3.2,
-            h: 2.0,
+        if (photo?.file_path) {
+          try {
+            // Photo image
+            slide.addImage({
+              path: photo.file_path,
+              x,
+              y,
+              w: 3.2,
+              h: 2.0,
+            });
+          } catch (e) {
+            console.log('Could not add photo:', e);
+            // Add placeholder box on error
+            slide.addShape(pptx.ShapeType.roundRect, {
+              x, y, w: 3.2, h: 2.0,
+              fill: { color: 'F8FAFC' },
+              line: { color: 'E2E8F0', width: 1 },
+            });
+            slide.addText('Photo unavailable', {
+              x, y: y + 0.8, w: 3.2, h: 0.4,
+              fontSize: 12, color: '94A3B8', align: 'center',
+            });
+          }
+        } else {
+          // Add placeholder for missing photo
+          slide.addShape(pptx.ShapeType.roundRect, {
+            x, y, w: 3.2, h: 2.0,
+            fill: { color: 'FEF3C7' },
+            line: { color: 'F59E0B', width: 1, dashType: 'dash' },
           });
-
-          // Photo label
-          slide.addText(photoLabels[i] || photo.photo_type || `Photo ${i + 1}`, {
-            x,
-            y: y + 2.05,
-            w: 3.2,
-            h: 0.25,
-            fontSize: 10,
-            bold: true,
-            color: '333333',
-            align: 'center',
+          slide.addText('Photo pending', {
+            x, y: y + 0.8, w: 3.2, h: 0.4,
+            fontSize: 12, color: 'D97706', align: 'center',
           });
-        } catch (e) {
-          console.log('Could not add photo:', e);
         }
+
+        // Photo label
+        slide.addText(photoLabels[i], {
+          x,
+          y: y + 2.05,
+          w: 3.2,
+          h: 0.25,
+          fontSize: 10,
+          bold: true,
+          color: '333333',
+          align: 'center',
+        });
       }
 
       // Footer with mounter info

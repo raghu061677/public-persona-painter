@@ -33,7 +33,7 @@ export function LatestPhotosSection({ assetId, asset }: LatestPhotosSectionProps
 
   useEffect(() => {
     loadLatestPhotos();
-  }, [assetId, asset]);
+  }, [assetId]);
 
   const loadLatestPhotos = async () => {
     setLoading(true);
@@ -156,7 +156,7 @@ export function LatestPhotosSection({ assetId, asset }: LatestPhotosSectionProps
           <UnifiedPhotoGallery
             photos={photos}
             onPhotoDeleted={loadLatestPhotos}
-            canDelete={false}
+            canDelete={true}
             bucket="media-assets"
             title=""
             assetData={assetInfo ? {

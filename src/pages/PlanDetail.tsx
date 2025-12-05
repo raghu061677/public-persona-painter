@@ -205,14 +205,22 @@ export default function PlanDetail() {
   const fetchPlanItems = async () => {
     const { data } = await supabase
       .from('plan_items')
-      .select('*')
+      .select(`
+        *,
+        media_assets!plan_items_asset_id_fkey (
+          id,
+          media_asset_code
+        )
+      `)
       .eq('plan_id', id)
       .order('created_at');
     
-    // Plan items already contain all necessary fields as snapshots
+    // Plan items with asset display code
     const items = (data || []).map(item => ({
       ...item,
-      plan_item_id: item.id // Store plan_items.id for updates
+      plan_item_id: item.id,
+      // Use media_asset_code, then media_assets.id, then fallback to asset_id
+      display_asset_id: item.media_assets?.media_asset_code || item.media_assets?.id || item.asset_id
     }));
     
     setPlanItems(items);
@@ -1489,7 +1497,7 @@ export default function PlanDetail() {
                           </Button>
                         </TableCell>
                       )}
-                      <TableCell className="font-medium">{item.asset_id}</TableCell>
+                      <TableCell className="font-medium font-mono">{item.display_asset_id || item.asset_id}</TableCell>
                       <TableCell>{item.location}</TableCell>
                       <TableCell>{item.city}</TableCell>
                       <TableCell className="text-right">{formatCurrency(item.card_rate)}</TableCell>

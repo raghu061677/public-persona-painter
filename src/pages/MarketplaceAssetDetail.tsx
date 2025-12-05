@@ -22,6 +22,7 @@ import {
 
 interface PublicAssetDetail {
   id: string;
+  media_asset_code: string | null;
   city: string;
   area: string;
   location: string;
@@ -76,9 +77,17 @@ export default function MarketplaceAssetDetail() {
         return;
       }
 
+      // Fetch media_asset_code from media_assets table
+      const { data: assetData } = await supabase
+        .from('media_assets')
+        .select('media_asset_code')
+        .eq('id', assetId)
+        .single();
+
       // Map company data
-      const mappedData = {
+      const mappedData: PublicAssetDetail = {
         ...data,
+        media_asset_code: assetData?.media_asset_code || null,
         company_name: data.companies?.name || '',
       };
       
@@ -136,7 +145,7 @@ export default function MarketplaceAssetDetail() {
         </Button>
         <div className="flex-1">
           <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            {asset.id}
+            {asset.media_asset_code || asset.id}
           </h1>
           <p className="text-lg text-muted-foreground mt-2 font-medium">
             {asset.media_type} • {asset.company_name}
@@ -164,7 +173,7 @@ export default function MarketplaceAssetDetail() {
                         <div className="relative aspect-video bg-muted rounded-xl overflow-hidden shadow-md">
                           <img
                             src={url}
-                            alt={`${asset.id} - Image ${index + 1}`}
+                            alt={`${asset.media_asset_code || asset.id} - Image ${index + 1}`}
                             className="w-full h-full object-cover"
                           />
                         </div>

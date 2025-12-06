@@ -145,10 +145,12 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
   yPos += 10;
 
   // ========== SUMMARY OF CHARGES TABLE ==========
-  // Helper function to format currency with proper rupee symbol
+  // Helper function to format currency - use Rs. prefix for PDF compatibility
   const formatCurrency = (amount: number): string => {
     if (amount === 0) return '-';
-    return `Rs. ${amount.toLocaleString('en-IN')}`;
+    // Format with Indian number system and Rs. prefix (avoids font issues with rupee symbol)
+    const formatted = Math.round(amount).toLocaleString('en-IN');
+    return `Rs.${formatted}`;
   };
 
   const tableData = data.items.map(item => [
@@ -207,8 +209,8 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
   // ========== TOTALS (RIGHT ALIGNED) ==========
   const totalsX = pageWidth - 15;
   
-  // Helper for currency formatting in totals
-  const fmtTotal = (amount: number): string => `Rs. ${amount.toLocaleString('en-IN')}`;
+  // Helper for currency formatting in totals - consistent with table
+  const fmtTotal = (amount: number): string => `Rs.${Math.round(amount).toLocaleString('en-IN')}`;
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');

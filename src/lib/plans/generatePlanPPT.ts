@@ -57,26 +57,35 @@ export async function generatePlanPPT(
   // Background gradient
   coverSlide.background = { fill: brandColor };
 
-  // Title
-  coverSlide.addText('MEDIA PLAN PROPOSAL', {
-    x: 0.5,
-    y: 2.0,
-    w: 9,
-    h: 1.5,
-    fontSize: 44,
+  // Header bar
+  coverSlide.addShape(prs.ShapeType.rect, {
+    x: 0,
+    y: 0,
+    w: 10,
+    h: 0.8,
+    fill: { color: 'FFFFFF', transparency: 90 },
+  });
+
+  coverSlide.addText('MEDIA ASSET PROPOSAL', {
+    x: 0.3,
+    y: 0.2,
+    w: 9.4,
+    h: 0.5,
+    fontSize: 16,
     bold: true,
     color: 'FFFFFF',
-    align: 'center',
+    align: 'left',
     fontFace: 'Arial',
   });
 
-  // Plan name
-  coverSlide.addText(plan.plan_name, {
+  // Title - Asset count
+  coverSlide.addText(`${plan.assets.length} Premium OOH Media Assets`, {
     x: 0.5,
-    y: 3.7,
+    y: 2.5,
     w: 9,
-    h: 0.8,
-    fontSize: 28,
+    h: 1.2,
+    fontSize: 42,
+    bold: true,
     color: 'FFFFFF',
     align: 'center',
     fontFace: 'Arial',
@@ -85,11 +94,23 @@ export async function generatePlanPPT(
   // Client name
   coverSlide.addText(`Prepared for: ${plan.client_name}`, {
     x: 0.5,
-    y: 4.7,
+    y: 4.0,
+    w: 9,
+    h: 0.6,
+    fontSize: 22,
+    color: 'E5E7EB',
+    align: 'center',
+    fontFace: 'Arial',
+  });
+
+  // Plan name
+  coverSlide.addText(plan.plan_name, {
+    x: 0.5,
+    y: 4.8,
     w: 9,
     h: 0.5,
-    fontSize: 20,
-    color: 'E5E7EB',
+    fontSize: 18,
+    color: 'FFFFFF',
     align: 'center',
     fontFace: 'Arial',
   });
@@ -97,9 +118,9 @@ export async function generatePlanPPT(
   // Footer box
   coverSlide.addShape(prs.ShapeType.rect, {
     x: 0,
-    y: 6.8,
+    y: 6.7,
     w: 10,
-    h: 0.7,
+    h: 0.8,
     fill: { color: '000000', transparency: 50 },
   });
 
@@ -107,7 +128,7 @@ export async function generatePlanPPT(
     `${format(new Date(), 'dd MMMM yyyy')} | ${orgSettings.organization_name || 'Go-Ads 360°'}`,
     {
       x: 0.5,
-      y: 6.9,
+      y: 6.85,
       w: 9,
       h: 0.5,
       fontSize: 14,
@@ -116,6 +137,55 @@ export async function generatePlanPPT(
       fontFace: 'Arial',
     }
   );
+
+  // ===== SUMMARY SLIDE =====
+  const summarySlide = prs.addSlide();
+  summarySlide.background = { color: 'FFFFFF' };
+
+  // Header bar
+  summarySlide.addShape(prs.ShapeType.rect, {
+    x: 0,
+    y: 0,
+    w: 10,
+    h: 0.7,
+    fill: { color: brandColor },
+  });
+
+  summarySlide.addText('Campaign Summary', {
+    x: 0.3,
+    y: 0.15,
+    w: 9.4,
+    h: 0.5,
+    fontSize: 22,
+    bold: true,
+    color: 'FFFFFF',
+    align: 'left',
+    fontFace: 'Arial',
+  });
+
+  // Summary table
+  const summaryData = [
+    [{ text: 'Plan ID' }, { text: plan.id }],
+    [{ text: 'Company' }, { text: orgSettings.organization_name || 'Go-Ads 360°' }],
+    [{ text: 'Client' }, { text: plan.client_name }],
+    [{ text: 'Duration' }, { text: `${Math.ceil((new Date(plan.end_date).getTime() - new Date(plan.start_date).getTime()) / (1000 * 60 * 60 * 24))} days` }],
+    [{ text: 'Start Date' }, { text: format(new Date(plan.start_date), 'dd/MM/yyyy') }],
+    [{ text: 'End Date' }, { text: format(new Date(plan.end_date), 'dd/MM/yyyy') }],
+    [{ text: 'Total Assets' }, { text: `${plan.assets.length} sites` }],
+  ];
+
+  summarySlide.addTable(summaryData, {
+    x: 0.5,
+    y: 1.2,
+    w: 9,
+    colW: [3, 6],
+    border: { type: 'solid', color: 'E5E7EB', pt: 0.5 },
+    fontFace: 'Arial',
+    fontSize: 14,
+    valign: 'middle',
+    rowH: 0.5,
+    fill: { color: 'F9FAFB' },
+  });
 
   // ===== ASSET SLIDES =====
   for (const asset of plan.assets) {
@@ -139,24 +209,37 @@ export async function generatePlanPPT(
 
     // Border frame
     slide1.addShape(prs.ShapeType.rect, {
-      x: 0.2,
-      y: 0.2,
-      w: 9.6,
-      h: 7.1,
+      x: 0.15,
+      y: 0.15,
+      w: 9.7,
+      h: 7.2,
       fill: { color: 'FFFFFF' },
-      line: { color: brandColor, width: 8 },
+      line: { color: brandColor, width: 6 },
     });
 
-    // Header
-    slide1.addText(`${asset.asset_id} – ${asset.area} – ${asset.location}`, {
-      x: 0.5,
-      y: 0.5,
-      w: 9,
-      h: 0.6,
-      fontSize: 30,
+    // Asset ID header
+    slide1.addText(asset.asset_id, {
+      x: 0.3,
+      y: 0.4,
+      w: 9.4,
+      h: 0.4,
+      fontSize: 14,
+      bold: true,
+      color: '6B7280',
+      align: 'left',
+      fontFace: 'Arial',
+    });
+
+    // Location header
+    slide1.addText(`${asset.area} · ${asset.location}`, {
+      x: 0.3,
+      y: 0.75,
+      w: 9.4,
+      h: 0.5,
+      fontSize: 24,
       bold: true,
       color: brandColor,
-      align: 'center',
+      align: 'left',
       fontFace: 'Arial',
     });
 
@@ -164,11 +247,11 @@ export async function generatePlanPPT(
     try {
       slide1.addImage({
         path: photo1,
-        x: 0.5,
-        y: 1.8,
+        x: 0.4,
+        y: 1.5,
         w: 4.5,
-        h: 3.5,
-        sizing: { type: 'contain', w: 4.5, h: 3.5 },
+        h: 3.8,
+        sizing: { type: 'contain', w: 4.5, h: 3.8 },
       });
     } catch (error) {
       console.error('Failed to add image 1:', error);
@@ -178,31 +261,31 @@ export async function generatePlanPPT(
     try {
       slide1.addImage({
         path: photo2,
-        x: 5.2,
-        y: 1.8,
+        x: 5.1,
+        y: 1.5,
         w: 4.5,
-        h: 3.5,
-        sizing: { type: 'contain', w: 4.5, h: 3.5 },
+        h: 3.8,
+        sizing: { type: 'contain', w: 4.5, h: 3.8 },
       });
     } catch (error) {
       console.error('Failed to add image 2:', error);
     }
 
-    // Footer
+    // Footer bar
     slide1.addShape(prs.ShapeType.rect, {
-      x: 0.2,
-      y: 6.8,
-      w: 9.6,
+      x: 0.15,
+      y: 6.85,
+      w: 9.7,
       h: 0.5,
       fill: { color: brandColor },
     });
 
-    slide1.addText(`${plan.plan_name} | ${plan.client_name} | ${orgSettings.organization_name || 'Go-Ads 360°'} Media Proposal`, {
-      x: 0.5,
-      y: 6.9,
-      w: 9,
-      h: 0.3,
-      fontSize: 14,
+    slide1.addText(`${plan.plan_name} | ${plan.client_name} | ${orgSettings.organization_name || 'Go-Ads 360°'}`, {
+      x: 0.3,
+      y: 6.95,
+      w: 9.4,
+      h: 0.35,
+      fontSize: 12,
       color: 'FFFFFF',
       align: 'center',
       fontFace: 'Arial',
@@ -213,21 +296,34 @@ export async function generatePlanPPT(
 
     // Border frame
     slide2.addShape(prs.ShapeType.rect, {
-      x: 0.2,
-      y: 0.2,
-      w: 9.6,
-      h: 7.1,
+      x: 0.15,
+      y: 0.15,
+      w: 9.7,
+      h: 7.2,
       fill: { color: 'FFFFFF' },
-      line: { color: brandColor, width: 8 },
+      line: { color: brandColor, width: 6 },
     });
 
-    // Header
-    slide2.addText(`Asset Details – ${asset.asset_id}`, {
-      x: 0.5,
-      y: 0.5,
-      w: 9,
-      h: 0.6,
-      fontSize: 28,
+    // Header title
+    slide2.addText('Asset Specifications', {
+      x: 0.3,
+      y: 0.4,
+      w: 9.4,
+      h: 0.5,
+      fontSize: 22,
+      bold: true,
+      color: '6B7280',
+      align: 'left',
+      fontFace: 'Arial',
+    });
+
+    // Asset ID badge
+    slide2.addText(asset.asset_id, {
+      x: 0.3,
+      y: 0.85,
+      w: 9.4,
+      h: 0.5,
+      fontSize: 26,
       bold: true,
       color: brandColor,
       align: 'left',
@@ -247,10 +343,10 @@ export async function generatePlanPPT(
         
         slide2.addImage({
           data: qrBase64,
-          x: 9.2,
-          y: 0.4,
-          w: 1.2,
-          h: 1.2,
+          x: 8.8,
+          y: 0.35,
+          w: 1.3,
+          h: 1.3,
         });
       } catch (error) {
         console.error('Failed to add QR code:', error);
@@ -261,61 +357,50 @@ export async function generatePlanPPT(
     try {
       slide2.addImage({
         path: photo1,
-        x: 0.5,
-        y: 1.8,
-        w: 2.2,
-        h: 2.2,
-        sizing: { type: 'cover', w: 2.2, h: 2.2 },
+        x: 0.4,
+        y: 1.6,
+        w: 2.5,
+        h: 2.5,
+        sizing: { type: 'cover', w: 2.5, h: 2.5 },
       });
     } catch (error) {
       console.error('Failed to add thumbnail:', error);
     }
 
-    // Details box
-    const detailsData = [
-      { label: 'Area:', value: asset.area },
-      { label: 'Location:', value: asset.location },
-      { label: 'Direction:', value: asset.direction || 'N/A' },
-      { label: 'Dimensions:', value: width && height ? `${width} ft × ${height} ft` : asset.dimensions || 'N/A' },
-      { label: 'Total Sqft:', value: asset.total_sqft?.toString() || 'N/A' },
-      { label: 'Illumination:', value: asset.illumination_type || 'Non-lit' },
-      { label: 'Media Type:', value: asset.media_type },
-      { label: 'Card Rate:', value: `₹${asset.card_rate.toLocaleString('en-IN')}` },
-      {
-        label: 'Campaign Period:',
-        value: `${format(new Date(plan.start_date), 'dd MMM yyyy')} → ${format(new Date(plan.end_date), 'dd MMM yyyy')}`,
-      },
+    // Details table data - use object format for table cells
+    const detailsTableData = [
+      [{ text: 'City', options: { bold: true } }, { text: 'Hyderabad' }],
+      [{ text: 'Area', options: { bold: true } }, { text: asset.area }],
+      [{ text: 'Location', options: { bold: true } }, { text: asset.location }],
+      [{ text: 'Direction', options: { bold: true } }, { text: asset.direction || 'N/A' }],
+      [{ text: 'Dimensions', options: { bold: true } }, { text: width && height ? `${width}X${height}` : asset.dimensions || 'N/A' }],
+      [{ text: 'Total Sqft', options: { bold: true } }, { text: asset.total_sqft?.toString() || 'N/A' }],
+      [{ text: 'Illumination', options: { bold: true } }, { text: asset.illumination_type || 'Non-lit' }],
     ];
 
-    let detailY = 1.8;
-    const labelWidth = 2.5;
-    const valueX = 3.2 + labelWidth;
+    // Add details table
+    slide2.addTable(detailsTableData, {
+      x: 3.2,
+      y: 1.6,
+      w: 6.3,
+      colW: [2, 4.3],
+      border: { type: 'solid', color: 'E5E7EB', pt: 0.5 },
+      fontFace: 'Arial',
+      fontSize: 12,
+      valign: 'middle',
+      rowH: 0.4,
+      fill: { color: 'FFFFFF' },
+    });
 
-    detailsData.forEach((detail) => {
-      // Label
-      slide2.addText(detail.label, {
-        x: 3.2,
-        y: detailY,
-        w: labelWidth,
-        h: 0.35,
-        fontSize: 16,
-        bold: true,
-        color: '4B5563',
-        fontFace: 'Arial',
-      });
-
-      // Value
-      slide2.addText(detail.value, {
-        x: valueX,
-        y: detailY,
-        w: 6.5 - valueX,
-        h: 0.35,
-        fontSize: 16,
-        color: '1F2937',
-        fontFace: 'Arial',
-      });
-
-      detailY += 0.45;
+    // Campaign period below
+    slide2.addText(`Campaign: ${format(new Date(plan.start_date), 'dd MMM yyyy')} - ${format(new Date(plan.end_date), 'dd MMM yyyy')}`, {
+      x: 3.2,
+      y: 4.6,
+      w: 6.3,
+      h: 0.35,
+      fontSize: 12,
+      color: '6B7280',
+      fontFace: 'Arial',
     });
 
     // Street View Link - Auto-fix if needed
@@ -328,10 +413,10 @@ export async function generatePlanPPT(
     if (streetViewUrl) {
       slide2.addText('View on Google Street View', {
         x: 3.2,
-        y: detailY + 0.2,
-        w: 6,
-        h: 0.4,
-        fontSize: 14,
+        y: 5.0,
+        w: 6.3,
+        h: 0.35,
+        fontSize: 12,
         color: '2563EB',
         underline: { color: '2563EB' },
         hyperlink: { url: streetViewUrl },
@@ -339,14 +424,14 @@ export async function generatePlanPPT(
       });
     }
 
-    // GPS Coordinates
+    // GPS Coordinates below thumbnail
     if (asset.latitude && asset.longitude) {
       slide2.addText(`GPS: ${asset.latitude.toFixed(6)}, ${asset.longitude.toFixed(6)}`, {
-        x: 0.5,
+        x: 0.4,
         y: 4.2,
-        w: 2.2,
+        w: 2.5,
         h: 0.3,
-        fontSize: 10,
+        fontSize: 9,
         color: '6B7280',
         align: 'center',
         fontFace: 'Arial',
@@ -355,19 +440,19 @@ export async function generatePlanPPT(
 
     // Footer
     slide2.addShape(prs.ShapeType.rect, {
-      x: 0.2,
-      y: 6.8,
-      w: 9.6,
+      x: 0.15,
+      y: 6.85,
+      w: 9.7,
       h: 0.5,
       fill: { color: '6B7280' },
     });
 
     slide2.addText(`${orgSettings.organization_name || 'Go-Ads 360°'} Proposal – Confidential`, {
-      x: 0.5,
-      y: 6.9,
-      w: 9,
-      h: 0.3,
-      fontSize: 14,
+      x: 0.3,
+      y: 6.95,
+      w: 9.4,
+      h: 0.35,
+      fontSize: 12,
       color: 'FFFFFF',
       align: 'center',
       fontFace: 'Arial',

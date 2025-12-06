@@ -25,6 +25,7 @@ import { format } from "date-fns";
 
 interface MarketplaceAsset {
   id: string;
+  media_asset_code: string | null;
   city: string;
   area: string;
   location: string;
@@ -140,6 +141,7 @@ export default function Marketplace() {
       // Map company data to flat structure and get first photo
       const mappedAssets = (data || []).map(asset => ({
         ...asset,
+        media_asset_code: (asset as any).media_asset_code || null,
         primary_photo_url: asset.primary_photo_url || photoMap.get(asset.id) || null,
         company_name: (asset.companies as any)?.name || '',
         company_city: (asset.companies as any)?.city || null,
@@ -591,7 +593,7 @@ export default function Marketplace() {
               <CardContent className="p-3 space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-bold text-base leading-tight truncate">{asset.id}</h3>
+                    <h3 className="font-bold text-base leading-tight truncate">{asset.media_asset_code || asset.id}</h3>
                     <p className="text-xs text-muted-foreground font-medium truncate">{asset.media_type}</p>
                   </div>
                   <Badge variant={asset.status === 'Available' ? 'default' : 'secondary'} className="text-xs flex-shrink-0">

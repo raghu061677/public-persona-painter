@@ -180,7 +180,7 @@ serve(async (req) => {
     const campaignId = campaignIdData as string;
     console.log("[v9.0] Generated campaign ID:", campaignId);
 
-    // 7) Insert Campaign - Let database default handle status
+    // 7) Insert Campaign - Use 'Draft' status, trigger will auto-update based on dates
     const campaignInsertPayload = {
       id: campaignId,
       plan_id: plan.id,
@@ -188,7 +188,7 @@ serve(async (req) => {
       client_id: plan.client_id,
       client_name: plan.client_name,
       campaign_name: plan.plan_name,
-      // status: omitted, will use database default 'Planned'
+      status: 'Draft', // Will be auto-updated by trg_auto_set_campaign_status trigger
       start_date: plan.start_date,
       end_date: plan.end_date,
       total_assets: planItems.length,
@@ -198,6 +198,7 @@ serve(async (req) => {
       grand_total: plan.grand_total,
       notes: plan.notes || "",
       created_by: user.id,
+      created_from: 'plan',
     };
 
     console.log("[v9.0] Campaign insert payload:", JSON.stringify(campaignInsertPayload, null, 2));
@@ -339,7 +340,22 @@ serve(async (req) => {
       // Non-fatal
     }
 
-    // 13) Success response
+    // 13) Call auto_update_campaign_status to set correct status based on dates
+    try {
+      await supabase.rpc('auto_update_campaign_status');
+    } catch (statusError) {
+      console.error('[v9.0] Error updating campaign status:', statusError);
+      // Non-fatal - trigger should have already set correct status
+    }
+
+    // Get the actual status after insert
+    const { data: createdCampaign } = await supabase
+      .from('campaigns')
+      .select('status')
+      .eq('id', campaignId)
+      .single();
+
+    // 14) Success response
     return new Response(
       JSON.stringify({
         success: true,
@@ -348,7 +364,7 @@ serve(async (req) => {
         campaign_code: campaignId,
         plan_id: plan.id,
         total_items: planItems.length,
-        status: "Planned",
+        status: createdCampaign?.status || 'Draft',
       }),
       {
         status: 200,

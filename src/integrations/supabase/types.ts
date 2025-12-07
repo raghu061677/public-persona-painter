@@ -6161,34 +6161,22 @@ export type Database = {
       }
       finance_eligible_campaigns: {
         Row: {
-          assigned_to: string | null
           campaign_name: string | null
-          client_display_name: string | null
+          client_email: string | null
           client_gst: string | null
           client_id: string | null
           client_name: string | null
+          client_phone: string | null
           company_id: string | null
           created_at: string | null
-          created_by: string | null
-          created_from: string | null
           end_date: string | null
           grand_total: number | null
           gst_amount: number | null
-          gst_percent: number | null
           id: string | null
-          mounting_total: number | null
-          notes: string | null
-          notification_settings: Json | null
           plan_id: string | null
-          printing_total: number | null
-          public_share_enabled: boolean | null
-          public_tracking_token: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["campaign_status"] | null
-          subtotal: number | null
           total_amount: number | null
-          total_assets: number | null
-          updated_at: string | null
         }
         Relationships: [
           {

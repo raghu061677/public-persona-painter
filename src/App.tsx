@@ -92,6 +92,7 @@ const PlatformReportMediaInventory = lazy(() => import("./pages/PlatformReportMe
 const PlatformRoles = lazy(() => import("./pages/PlatformRoles"));
 const ReportsDashboard = lazy(() => import("./pages/ReportsDashboard"));
 const VacantMediaReport = lazy(() => import("./pages/VacantMediaReport"));
+const MediaAvailabilityReport = lazy(() => import("./pages/admin/reports/MediaAvailabilityReport"));
 const PhotoGallery = lazy(() => import("./pages/PhotoGallery"));
 const ImportData = lazy(() => import("./pages/ImportData"));
 const ExportData = lazy(() => import("./pages/ExportData"));
@@ -339,8 +340,9 @@ const App = () => (
             <Route path="/admin/expenses" element={<ModernAppLayout><ExpensesList /></ModernAppLayout>} />
             <Route path="/finance/expenses" element={<ModernAppLayout><ExpensesList /></ModernAppLayout>} />
             <Route path="/reports" element={<ModernAppLayout><ReportsDashboard /></ModernAppLayout>} />
-            <Route path="/reports/vacant-media" element={<ModernAppLayout><VacantMediaReport /></ModernAppLayout>} />
-            <Route path="/admin/reports/vacant-media" element={<ModernAppLayout><VacantMediaReport /></ModernAppLayout>} />
+            <Route path="/reports/vacant-media" element={<ModernAppLayout><MediaAvailabilityReport /></ModernAppLayout>} />
+            <Route path="/admin/reports/vacant-media" element={<ModernAppLayout><MediaAvailabilityReport /></ModernAppLayout>} />
+            <Route path="/admin/reports/availability" element={<ModernAppLayout><MediaAvailabilityReport /></ModernAppLayout>} />
             <Route path="/admin/approvals" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalsQueue /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/approval-history" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalHistory /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/approvals/rules" element={<RoleGuard requireCompanyRole="company_admin"><ModernAppLayout><ApprovalRulesSettings /></ModernAppLayout></RoleGuard>} />

@@ -192,7 +192,7 @@ Deno.serve(async (req) => {
 
     const assetMap = new Map(assetDetails?.map(a => [a.id, a]) || []);
 
-    // Insert campaign assets
+    // Insert campaign assets with booking dates
     const campaignAssets = assets.map(asset => {
       const assetDetail = assetMap.get(asset.asset_id);
       if (!assetDetail) {
@@ -207,10 +207,14 @@ Deno.serve(async (req) => {
         area: assetDetail.area,
         media_type: assetDetail.media_type,
         card_rate: asset.sales_price,
+        negotiated_rate: asset.negotiated_price || asset.sales_price,
         printing_charges: asset.printing_cost,
         mounting_charges: asset.mounting_cost,
+        total_price: (asset.negotiated_price || asset.sales_price) + asset.printing_cost + asset.mounting_cost,
         latitude: assetDetail.latitude,
         longitude: assetDetail.longitude,
+        booking_start_date: start_date,
+        booking_end_date: end_date,
         status: 'Pending',
       };
     });

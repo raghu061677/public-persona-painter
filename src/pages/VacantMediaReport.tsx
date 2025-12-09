@@ -3,7 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -12,70 +14,208 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, MapPin } from "lucide-react";
-import { formatCurrency } from "@/utils/mediaAssets";
-import { getStatusColor } from "@/utils/mediaAssets";
-import { toast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { 
+  Search, 
+  MapPin, 
+  CheckCircle2, 
+  XCircle, 
+  Clock, 
+  AlertTriangle,
+  RefreshCw,
+  Calendar
+} from "lucide-react";
+import { formatCurrency, getStatusColor } from "@/utils/mediaAssets";
+import { useToast } from "@/hooks/use-toast";
+import { format, addMonths } from "date-fns";
+
+interface BookingInfo {
+  campaign_id: string;
+  campaign_name: string;
+  client_name: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+}
+
+interface AvailableAsset {
+  id: string;
+  media_asset_code: string | null;
+  city: string;
+  area: string;
+  location: string;
+  media_type: string;
+  dimensions: string | null;
+  card_rate: number;
+  total_sqft: number | null;
+  status: string;
+  availability_status: 'available' | 'available_soon';
+  next_available_from: string | null;
+}
+
+interface BookedAsset {
+  id: string;
+  media_asset_code: string | null;
+  city: string;
+  area: string;
+  location: string;
+  media_type: string;
+  dimensions: string | null;
+  card_rate: number;
+  total_sqft: number | null;
+  status: string;
+  availability_status: 'booked' | 'conflict';
+  current_booking: BookingInfo | null;
+  all_bookings: BookingInfo[];
+  available_from: string | null;
+}
+
+interface AvailabilitySummary {
+  total_assets: number;
+  available_count: number;
+  booked_count: number;
+  available_soon_count: number;
+  conflict_count: number;
+  total_sqft_available: number;
+  potential_revenue: number;
+}
 
 export default function VacantMediaReport() {
   const { company } = useCompany();
-  const [assets, setAssets] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [stats, setStats] = useState({
-    totalVacant: 0,
-    avgCardRate: 0,
-    totalValue: 0,
-  });
+  const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(addMonths(new Date(), 1), 'yyyy-MM-dd'));
+  const [selectedCity, setSelectedCity] = useState<string>("all");
+  const [selectedMediaType, setSelectedMediaType] = useState<string>("all");
+  
+  const [availableAssets, setAvailableAssets] = useState<AvailableAsset[]>([]);
+  const [bookedAssets, setBookedAssets] = useState<BookedAsset[]>([]);
+  const [availableSoonAssets, setAvailableSoonAssets] = useState<BookedAsset[]>([]);
+  const [summary, setSummary] = useState<AvailabilitySummary | null>(null);
+  
+  const [cities, setCities] = useState<string[]>([]);
+  const [mediaTypes, setMediaTypes] = useState<string[]>([]);
 
   useEffect(() => {
     if (company?.id) {
-      fetchVacantAssets();
+      loadFilters();
     }
   }, [company]);
 
-  const fetchVacantAssets = async () => {
+  const loadFilters = async () => {
+    if (!company?.id) return;
+    
+    try {
+      const { data } = await supabase
+        .from('media_assets')
+        .select('city, media_type')
+        .eq('company_id', company.id);
+      
+      if (data) {
+        const uniqueCities = [...new Set(data.map(a => a.city).filter(Boolean))] as string[];
+        const uniqueTypes = [...new Set(data.map(a => a.media_type).filter(Boolean))] as string[];
+        setCities(uniqueCities);
+        setMediaTypes(uniqueTypes);
+      }
+    } catch (err) {
+      console.error('Error loading filters:', err);
+    }
+  };
+
+  const fetchAvailability = async () => {
     if (!company?.id) return;
     
     setLoading(true);
-    const { data, error } = await supabase
-      .from('media_assets')
-      .select('*')
-      .eq('company_id', company.id)
-      .eq('status', 'Available')
-      .order('city', { ascending: true });
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('get-media-availability', {
+        body: {
+          company_id: company.id,
+          start_date: startDate,
+          end_date: endDate,
+          city: selectedCity,
+          media_type: selectedMediaType,
+        }
+      });
 
-    if (error) {
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Failed to fetch availability');
+      }
+
+      // Handle null-safe responses
+      setAvailableAssets(data?.available_assets || []);
+      setBookedAssets(data?.booked_assets || []);
+      setAvailableSoonAssets(data?.available_soon_assets || []);
+      setSummary(data?.summary || {
+        total_assets: 0,
+        available_count: 0,
+        booked_count: 0,
+        available_soon_count: 0,
+        conflict_count: 0,
+        total_sqft_available: 0,
+        potential_revenue: 0,
+      });
+
+      toast({
+        title: "Report Updated",
+        description: `Found ${data?.summary?.available_count || 0} available assets`,
+      });
+    } catch (error) {
+      console.error('Error loading availability:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch vacant media",
+        description: error instanceof Error ? error.message : "Failed to load availability report",
         variant: "destructive",
       });
-    } else {
-      const vacantAssets = data || [];
-      const totalValue = vacantAssets.reduce((sum, asset) => sum + Number(asset.card_rate || 0), 0);
-      const avgRate = vacantAssets.length > 0 ? totalValue / vacantAssets.length : 0;
-
-      setAssets(vacantAssets);
-      setStats({
-        totalVacant: vacantAssets.length,
-        avgCardRate: avgRate,
-        totalValue,
+      // Set default empty state on error
+      setAvailableAssets([]);
+      setBookedAssets([]);
+      setAvailableSoonAssets([]);
+      setSummary({
+        total_assets: 0,
+        available_count: 0,
+        booked_count: 0,
+        available_soon_count: 0,
+        conflict_count: 0,
+        total_sqft_available: 0,
+        potential_revenue: 0,
       });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  const filteredAssets = assets.filter(asset => {
-    if (!searchTerm) return true;
+  const filterAssets = <T extends { id: string; media_asset_code?: string | null; city?: string; area?: string; location?: string; media_type?: string }>(assets: T[]): T[] => {
+    if (!searchTerm) return assets;
     const term = searchTerm.toLowerCase();
-    return (
-      asset.id?.toLowerCase().includes(term) ||
-      asset.location?.toLowerCase().includes(term) ||
-      asset.city?.toLowerCase().includes(term) ||
-      asset.media_type?.toLowerCase().includes(term)
+    return assets.filter(a => 
+      a.id?.toLowerCase().includes(term) ||
+      a.media_asset_code?.toLowerCase().includes(term) ||
+      a.city?.toLowerCase().includes(term) ||
+      a.area?.toLowerCase().includes(term) ||
+      a.location?.toLowerCase().includes(term) ||
+      a.media_type?.toLowerCase().includes(term)
     );
-  });
+  };
+
+  const filteredAvailable = filterAssets(availableAssets);
+  const filteredBooked = filterAssets(bookedAssets);
+  const filteredAvailableSoon = filterAssets(availableSoonAssets);
+
+  const getAssetDisplayId = (asset: AvailableAsset | BookedAsset) => {
+    return asset.media_asset_code || asset.id;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -83,34 +223,141 @@ export default function VacantMediaReport() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold">Vacant Media Report</h1>
           <p className="text-muted-foreground mt-1">
-            Available inventory across all locations
+            Check asset availability for specific date ranges
           </p>
         </div>
 
+        {/* Filters */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Search Criteria
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+              <div className="space-y-2">
+                <Label>Start Date</Label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>End Date</Label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>City</Label>
+                <Select value={selectedCity} onValueChange={setSelectedCity}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Cities" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Cities</SelectItem>
+                    {cities.map((city) => (
+                      <SelectItem key={city} value={city}>{city}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Media Type</Label>
+                <Select value={selectedMediaType} onValueChange={setSelectedMediaType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    {mediaTypes.map((type) => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>&nbsp;</Label>
+                <Button 
+                  onClick={fetchAvailability} 
+                  disabled={loading}
+                  className="w-full"
+                >
+                  {loading ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Checking...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="h-4 w-4 mr-2" />
+                      Check Availability
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-sm text-muted-foreground">Total Vacant</div>
-              <div className="text-3xl font-bold mt-2">{stats.totalVacant}</div>
-              <div className="text-xs text-muted-foreground mt-1">Assets available</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-sm text-muted-foreground">Average Card Rate</div>
-              <div className="text-3xl font-bold mt-2">{formatCurrency(stats.avgCardRate)}</div>
-              <div className="text-xs text-muted-foreground mt-1">Per month</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-sm text-muted-foreground">Total Potential Value</div>
-              <div className="text-3xl font-bold mt-2">{formatCurrency(stats.totalValue)}</div>
-              <div className="text-xs text-muted-foreground mt-1">Monthly revenue potential</div>
-            </CardContent>
-          </Card>
-        </div>
+        {summary && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <div className="text-sm text-muted-foreground">Available</div>
+                </div>
+                <div className="text-3xl font-bold mt-2 text-green-600">{summary.available_count}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {formatCurrency(summary.potential_revenue)} potential
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <XCircle className="h-5 w-5 text-red-600" />
+                  <div className="text-sm text-muted-foreground">Booked</div>
+                </div>
+                <div className="text-3xl font-bold mt-2 text-red-600">{summary.booked_count}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  During selected period
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-yellow-600" />
+                  <div className="text-sm text-muted-foreground">Available Soon</div>
+                </div>
+                <div className="text-3xl font-bold mt-2 text-yellow-600">{summary.available_soon_count}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Becomes free during period
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-orange-600" />
+                  <div className="text-sm text-muted-foreground">Conflicts</div>
+                </div>
+                <div className="text-3xl font-bold mt-2 text-orange-600">{summary.conflict_count}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Multiple bookings overlap
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Search */}
         <div className="mb-6">
@@ -125,71 +372,231 @@ export default function VacantMediaReport() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="bg-card rounded-lg border">
-          <div className="w-full overflow-x-auto">
-            <div className="inline-block min-w-full align-middle">
-              <div className="overflow-hidden border-t">
-                <Table className="min-w-max w-full table-auto whitespace-nowrap">
-                  <TableHeader className="bg-muted sticky top-0 z-20">
-                    <TableRow>
-                      <TableHead className="sticky left-0 z-30 bg-muted px-4 py-3 text-left font-semibold border-r">Asset ID</TableHead>
-                      <TableHead className="px-4 py-3 text-left font-semibold">Media Type</TableHead>
-                      <TableHead className="px-4 py-3 text-left font-semibold">Location</TableHead>
-                      <TableHead className="px-4 py-3 text-left font-semibold">City</TableHead>
-                      <TableHead className="px-4 py-3 text-left font-semibold">Dimensions</TableHead>
-                      <TableHead className="px-4 py-3 text-left font-semibold">Status</TableHead>
-                      <TableHead className="px-4 py-3 text-right font-semibold">Card Rate</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {loading ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8">
-                          Loading...
-                        </TableCell>
-                      </TableRow>
-                    ) : filteredAssets.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8">
-                          No vacant assets found
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredAssets.map((asset, index) => (
-                        <TableRow 
-                          key={asset.id}
-                          className={`transition-all duration-150 hover:bg-muted/80 ${
-                            index % 2 === 0 ? 'bg-background' : 'bg-muted/30'
-                          }`}
-                        >
-                          <TableCell className="sticky left-0 z-10 bg-inherit px-4 py-3 font-medium border-r">{asset.id}</TableCell>
-                          <TableCell className="px-4 py-3">{asset.media_type}</TableCell>
-                          <TableCell className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4 text-muted-foreground" />
-                              {asset.location}
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-4 py-3">{asset.city}</TableCell>
-                          <TableCell className="px-4 py-3">{asset.dimensions}</TableCell>
-                          <TableCell className="px-4 py-3">
-                            <Badge className={getStatusColor(asset.status)}>
-                              {asset.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-right font-medium">
-                            {formatCurrency(asset.card_rate)}
-                          </TableCell>
+        {/* Tabs */}
+        <Tabs defaultValue="available" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="available" className="gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              Available ({filteredAvailable.length})
+            </TabsTrigger>
+            <TabsTrigger value="booked" className="gap-2">
+              <XCircle className="h-4 w-4" />
+              Booked ({filteredBooked.length})
+            </TabsTrigger>
+            <TabsTrigger value="soon" className="gap-2">
+              <Clock className="h-4 w-4" />
+              Available Soon ({filteredAvailableSoon.length})
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Available Tab */}
+          <TabsContent value="available">
+            <Card>
+              <CardContent className="pt-6">
+                {filteredAvailable.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {summary ? "No available assets for selected period" : "Click 'Check Availability' to load results"}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Asset ID</TableHead>
+                          <TableHead>Media Type</TableHead>
+                          <TableHead>Location</TableHead>
+                          <TableHead>City</TableHead>
+                          <TableHead>Dimensions</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Card Rate</TableHead>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          </div>
-        </div>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredAvailable.map((asset, index) => (
+                          <TableRow 
+                            key={asset.id}
+                            className={index % 2 === 0 ? 'bg-background' : 'bg-muted/30'}
+                          >
+                            <TableCell className="font-mono text-sm font-medium">
+                              {getAssetDisplayId(asset)}
+                            </TableCell>
+                            <TableCell>{asset.media_type}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4 text-muted-foreground" />
+                                {asset.location || asset.area}
+                              </div>
+                            </TableCell>
+                            <TableCell>{asset.city}</TableCell>
+                            <TableCell>{asset.dimensions || '-'}</TableCell>
+                            <TableCell>
+                              <Badge className="bg-green-100 text-green-800 border-green-200">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Available
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatCurrency(asset.card_rate)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Booked Tab */}
+          <TabsContent value="booked">
+            <Card>
+              <CardContent className="pt-6">
+                {filteredBooked.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {summary ? "No booked assets for selected period" : "Click 'Check Availability' to load results"}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Asset ID</TableHead>
+                          <TableHead>Media Type</TableHead>
+                          <TableHead>Location</TableHead>
+                          <TableHead>City</TableHead>
+                          <TableHead>Booked For</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Available From</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredBooked.map((asset, index) => (
+                          <TableRow 
+                            key={asset.id}
+                            className={index % 2 === 0 ? 'bg-background' : 'bg-muted/30'}
+                          >
+                            <TableCell className="font-mono text-sm font-medium">
+                              {getAssetDisplayId(asset)}
+                            </TableCell>
+                            <TableCell>{asset.media_type}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4 text-muted-foreground" />
+                                {asset.location || asset.area}
+                              </div>
+                            </TableCell>
+                            <TableCell>{asset.city}</TableCell>
+                            <TableCell>
+                              {asset.current_booking ? (
+                                <div className="text-sm">
+                                  <div className="font-medium">{asset.current_booking.campaign_name}</div>
+                                  <div className="text-muted-foreground">
+                                    {asset.current_booking.client_name}
+                                  </div>
+                                </div>
+                              ) : '-'}
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={
+                                asset.availability_status === 'conflict' 
+                                  ? "bg-orange-100 text-orange-800 border-orange-200"
+                                  : "bg-red-100 text-red-800 border-red-200"
+                              }>
+                                {asset.availability_status === 'conflict' ? (
+                                  <><AlertTriangle className="h-3 w-3 mr-1" />Conflict</>
+                                ) : (
+                                  <><XCircle className="h-3 w-3 mr-1" />Booked</>
+                                )}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {asset.available_from ? (
+                                <span className="text-sm text-muted-foreground">
+                                  {format(new Date(asset.available_from), 'MMM dd, yyyy')}
+                                </span>
+                              ) : '-'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Available Soon Tab */}
+          <TabsContent value="soon">
+            <Card>
+              <CardContent className="pt-6">
+                {filteredAvailableSoon.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {summary ? "No assets becoming available during selected period" : "Click 'Check Availability' to load results"}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Asset ID</TableHead>
+                          <TableHead>Media Type</TableHead>
+                          <TableHead>Location</TableHead>
+                          <TableHead>City</TableHead>
+                          <TableHead>Current Booking</TableHead>
+                          <TableHead>Available From</TableHead>
+                          <TableHead className="text-right">Card Rate</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredAvailableSoon.map((asset, index) => (
+                          <TableRow 
+                            key={asset.id}
+                            className={index % 2 === 0 ? 'bg-background' : 'bg-muted/30'}
+                          >
+                            <TableCell className="font-mono text-sm font-medium">
+                              {getAssetDisplayId(asset)}
+                            </TableCell>
+                            <TableCell>{asset.media_type}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4 text-muted-foreground" />
+                                {asset.location || asset.area}
+                              </div>
+                            </TableCell>
+                            <TableCell>{asset.city}</TableCell>
+                            <TableCell>
+                              {asset.current_booking ? (
+                                <div className="text-sm">
+                                  <div className="font-medium">{asset.current_booking.campaign_name}</div>
+                                  <div className="text-muted-foreground">
+                                    Until: {format(new Date(asset.current_booking.end_date), 'MMM dd, yyyy')}
+                                  </div>
+                                </div>
+                              ) : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {asset.available_from ? (
+                                <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  {format(new Date(asset.available_from), 'MMM dd, yyyy')}
+                                </Badge>
+                              ) : '-'}
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatCurrency(asset.card_rate)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

@@ -34,6 +34,14 @@ const MEDIA_TYPE_CODES = [
   { label: "Billboard", value: "BB", fullName: "Billboard" },
   { label: "Unipole", value: "UNP", fullName: "Unipole" },
   { label: "Cantilever", value: "CNT", fullName: "Cantilever" },
+  { label: "Gantry", value: "GTY", fullName: "Gantry" },
+  { label: "Hoarding", value: "HRD", fullName: "Hoarding" },
+  { label: "LED Screen", value: "LED", fullName: "LED Screen" },
+  { label: "Pole Kiosk", value: "PLK", fullName: "Pole Kiosk" },
+  { label: "Wall Wrap", value: "WAL", fullName: "Wall Wrap" },
+  { label: "Public Utility", value: "PUB", fullName: "Public Utility" },
+  { label: "Transit Shelter", value: "TSH", fullName: "Transit Shelter" },
+  { label: "Sky Walk", value: "SKY", fullName: "Sky Walk" },
 ];
 
 export default function MediaAssetNew() {
@@ -48,6 +56,8 @@ export default function MediaAssetNew() {
   }>>([]);
   const [isAssetCreated, setIsAssetCreated] = useState(false);
   const [createdAssetId, setCreatedAssetId] = useState<string | null>(null);
+  const [showCustomMediaType, setShowCustomMediaType] = useState(false);
+  const [customMediaType, setCustomMediaType] = useState("");
   
   const [formData, setFormData] = useState({
     city: "",
@@ -333,16 +343,55 @@ export default function MediaAssetNew() {
               </div>
               <div>
                 <Label>Media Type *</Label>
-                <Select value={formData.media_type} onValueChange={(v) => updateField('media_type', v)} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MEDIA_TYPE_CODES.map(m => (
-                      <SelectItem key={m.value} value={m.fullName}>{m.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {showCustomMediaType ? (
+                  <div className="flex gap-2">
+                    <Input 
+                      value={customMediaType} 
+                      onChange={(e) => {
+                        setCustomMediaType(e.target.value);
+                        updateField('media_type', e.target.value);
+                      }} 
+                      placeholder="Enter custom media type..."
+                      className="flex-1"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setShowCustomMediaType(false);
+                        setCustomMediaType("");
+                        updateField('media_type', '');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Select 
+                    value={formData.media_type} 
+                    onValueChange={(v) => {
+                      if (v === '__custom__') {
+                        setShowCustomMediaType(true);
+                      } else {
+                        updateField('media_type', v);
+                      }
+                    }} 
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MEDIA_TYPE_CODES.map(m => (
+                        <SelectItem key={m.value} value={m.fullName}>{m.label}</SelectItem>
+                      ))}
+                      <SelectItem value="__custom__" className="text-primary font-medium">
+                        + Add Custom Type
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div>
                 <Label>Municipal Ref. ID</Label>

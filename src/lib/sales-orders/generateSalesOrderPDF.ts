@@ -1,12 +1,14 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '@/integrations/supabase/client';
-import { formatINR } from '@/utils/finance';
+import { formatCurrencyForPDF, getPrimaryContactName } from '@/lib/pdf/pdfHelpers';
 
 interface SalesOrderData {
   salesOrder: any;
   client: any;
+  company: any;
   items: any[];
+  contacts: any[];
   orgSettings?: any;
 }
 
@@ -21,6 +23,13 @@ export async function generateSalesOrderPDF(salesOrderId: string): Promise<Blob>
 
   if (planError || !plan) throw new Error('Sales Order not found');
 
+  // Fetch company details (SELLER - for footer and header)
+  const { data: companyData } = await supabase
+    .from('companies')
+    .select('*')
+    .eq('id', plan.company_id)
+    .single();
+
   // Fetch client details
   const { data: client, error: clientError } = await supabase
     .from('clients')
@@ -29,6 +38,13 @@ export async function generateSalesOrderPDF(salesOrderId: string): Promise<Blob>
     .single();
 
   if (clientError || !client) throw new Error('Client not found');
+
+  // Fetch client contacts for point of contact
+  const { data: clientContacts } = await supabase
+    .from('client_contacts')
+    .select('*')
+    .eq('client_id', plan.client_id)
+    .order('is_primary', { ascending: false });
 
   // Fetch plan items with asset details
   const { data: planItems, error: itemsError } = await supabase
@@ -47,12 +63,17 @@ export async function generateSalesOrderPDF(salesOrderId: string): Promise<Blob>
   const data: SalesOrderData = {
     salesOrder: plan,
     client,
+    company: companyData,
     items: planItems || [],
+    contacts: clientContacts || [],
     orgSettings,
   };
 
   return createSalesOrderPDF(data);
 }
+
+// Currency formatter for PDF (uses Rs. instead of ₹ symbol to avoid font issues)
+const formatINR = (amount: number): string => formatCurrencyForPDF(amount);
 
 function createSalesOrderPDF(data: SalesOrderData): Blob {
   const doc = new jsPDF();
@@ -69,21 +90,25 @@ function createSalesOrderPDF(data: SalesOrderData): Blob {
     }
   }
 
-  // Company Details (Left Side)
+  // Company/Seller Details (Left Side) - from companies table
+  const companyName = data.company?.name || data.orgSettings?.company_name || 'Matrix Network Solutions';
+  const companyGSTIN = data.company?.gstin || data.orgSettings?.gstin || '36AATFM4107H2Z3';
+  const companyPAN = data.company?.pan || data.orgSettings?.pan || 'AATFM4107H';
+  
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('Matrix Network Solutions', 15, yPos + 30);
+  doc.text(companyName, 15, yPos + 30);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   const companyDetails = [
-    'H.No: 7-1-19/5/201, Jyothi Bhopal Apartments,',
+    data.company?.address || 'H.No: 7-1-19/5/201, Jyothi Bhopal Apartments,',
     'Near Begumpet Metro Station, Opp Country Club,',
-    'Begumpet, Hyderabad – 500016',
-    'GSTIN: 36AATFM4107H2Z3  |  PAN: AATFM4107H',
-    'Phone: +91-4042625757',
-    'Email: raghu@matrix-networksolutions.com',
-    'Website: www.matrixnetworksolutions.com',
+    `${data.company?.city || 'Begumpet, Hyderabad'} – ${data.company?.pincode || '500016'}`,
+    `GSTIN: ${companyGSTIN}  |  PAN: ${companyPAN}`,
+    `Phone: ${data.company?.phone || '+91-4042625757'}`,
+    `Email: ${data.company?.email || 'raghu@matrix-networksolutions.com'}`,
+    `Website: ${data.company?.website || 'www.matrixnetworksolutions.com'}`,
   ];
 
   yPos += 35;
@@ -390,11 +415,14 @@ function createSalesOrderPDF(data: SalesOrderData): Blob {
 
   yPos += 15;
 
-  // ========== SIGNATURE BLOCK ==========
+  // ========== SIGNATURE BLOCK (SELLER ONLY) ==========
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text('For Matrix Network Solutions', 15, yPos);
-  yPos += 15;
+  doc.text(`For ${companyName}`, 15, yPos);
+  yPos += 6;
+  doc.setFontSize(9);
+  doc.text(`GSTIN: ${companyGSTIN}`, 15, yPos);
+  yPos += 12;
   doc.text('_______________________', 15, yPos);
   yPos += 6;
   doc.text('Authorized Signatory', 15, yPos);

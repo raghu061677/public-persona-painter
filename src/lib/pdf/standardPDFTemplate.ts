@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { formatCurrencyForPDF } from './pdfHelpers';
 
 interface PDFDocumentData {
   documentType: 'WORK ORDER' | 'ESTIMATE' | 'QUOTATION' | 'PROFORMA INVOICE';
@@ -8,7 +9,7 @@ interface PDFDocumentData {
   displayName: string;
   pointOfContact: string;
   
-  // Client details
+  // Client details (TO section)
   clientName: string;
   clientAddress: string;
   clientCity: string;
@@ -16,7 +17,7 @@ interface PDFDocumentData {
   clientPincode: string;
   clientGSTIN?: string;
   
-  // Company details
+  // Company/Seller details (FOR section - footer)
   companyName: string;
   companyGSTIN: string;
   companyPAN: string;
@@ -45,12 +46,18 @@ interface PDFLineItem {
 
 // Format date to DDMonYY (e.g., "15Aug25")
 export function formatDateToDDMonYY(dateString: string): string {
-  const date = new Date(dateString);
-  const day = date.getDate().toString().padStart(2, '0');
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const month = months[date.getMonth()];
-  const year = date.getFullYear().toString().slice(-2);
-  return `${day}${month}${year}`;
+  if (!dateString) return '-';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '-';
+    const day = date.getDate().toString().padStart(2, '0');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = months[date.getMonth()];
+    const year = date.getFullYear().toString().slice(-2);
+    return `${day}${month}${year}`;
+  } catch {
+    return '-';
+  }
 }
 
 export function generateStandardizedPDF(data: PDFDocumentData): Blob {
@@ -145,12 +152,9 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
   yPos += 10;
 
   // ========== SUMMARY OF CHARGES TABLE ==========
-  // Helper function to format currency - use Rs. prefix for PDF compatibility
+  // Use consistent currency formatting from pdfHelpers
   const formatCurrency = (amount: number): string => {
-    if (amount === 0) return '-';
-    // Format with Indian number system and Rs. prefix (avoids font issues with rupee symbol)
-    const formatted = Math.round(amount).toLocaleString('en-IN');
-    return `Rs.${formatted}`;
+    return formatCurrencyForPDF(amount);
   };
 
   const tableData = data.items.map(item => [
@@ -209,8 +213,8 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
   // ========== TOTALS (RIGHT ALIGNED) ==========
   const totalsX = pageWidth - 15;
   
-  // Helper for currency formatting in totals - consistent with table
-  const fmtTotal = (amount: number): string => `Rs.${Math.round(amount).toLocaleString('en-IN')}`;
+  // Use the same currency formatter for totals
+  const fmtTotal = (amount: number): string => formatCurrencyForPDF(amount);
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
@@ -267,7 +271,7 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
     yPos += 4.5;
   });
 
-  // ========== FOOTER ==========
+  // ========== FOOTER (SELLER/COMPANY ONLY) ==========
   yPos = doc.internal.pageSize.getHeight() - 30;
   
   doc.setFontSize(10);
@@ -280,7 +284,8 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
   
   yPos += 5;
   doc.setFont('helvetica', 'normal');
-  doc.text(data.companyGSTIN, 15, yPos);
+  // Always show GSTIN: prefix in footer for seller
+  doc.text(`GSTIN: ${data.companyGSTIN}`, 15, yPos);
 
   return doc.output('blob');
 }

@@ -1,6 +1,8 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrencyForPDF } from './pdfHelpers';
+import { renderLogoHeader } from './sections/logoHeader';
+import { renderSellerFooterWithSignatory } from './sections/authorizedSignatory';
 
 interface PDFDocumentData {
   documentType: 'WORK ORDER' | 'ESTIMATE' | 'QUOTATION' | 'PROFORMA INVOICE';
@@ -21,6 +23,7 @@ interface PDFDocumentData {
   companyName: string;
   companyGSTIN: string;
   companyPAN: string;
+  companyLogoBase64?: string; // Optional logo as base64
   
   // Line items
   items: PDFLineItem[];
@@ -63,18 +66,18 @@ export function formatDateToDDMonYY(dateString: string): string {
 export function generateStandardizedPDF(data: PDFDocumentData): Blob {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
-  let yPos = 15;
 
-  // ========== HEADER SECTION (LEFT SIDE) ==========
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('ADVERTISING SERVICES', 15, yPos);
-  
-  yPos += 6;
-  doc.setFontSize(12);
-  doc.text(data.documentType, 15, yPos);
-  
-  yPos += 8;
+  // ========== LOGO HEADER SECTION ==========
+  let yPos = renderLogoHeader(
+    doc,
+    { name: data.companyName, gstin: data.companyGSTIN, pan: data.companyPAN },
+    data.documentType,
+    data.companyLogoBase64
+  );
+
+  yPos += 5;
+
+  // ========== CLIENT DETAILS (LEFT SIDE) ==========
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.text('To,', 15, yPos);
@@ -94,9 +97,9 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
   }
   doc.text(`${data.clientCity}, ${data.clientState}, ${data.clientPincode}`, 15, yPos);
 
-  // ========== HEADER SECTION (RIGHT SIDE) ==========
+  // ========== DOCUMENT DETAILS (RIGHT SIDE) ==========
   const rightX = pageWidth - 15;
-  let rightY = 15;
+  let rightY = 45;
   
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -152,7 +155,6 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
   yPos += 10;
 
   // ========== SUMMARY OF CHARGES TABLE ==========
-  // Use consistent currency formatting from pdfHelpers
   const formatCurrency = (amount: number): string => {
     return formatCurrencyForPDF(amount);
   };
@@ -198,7 +200,6 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
       8: { cellWidth: 24, halign: 'right' },  // Cost
     },
     didDrawCell: (data) => {
-      // Draw subtle lines
       if (data.section === 'head' || data.section === 'body') {
         doc.setDrawColor(220, 220, 220);
         doc.setLineWidth(0.1);
@@ -213,7 +214,6 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
   // ========== TOTALS (RIGHT ALIGNED) ==========
   const totalsX = pageWidth - 15;
   
-  // Use the same currency formatter for totals
   const fmtTotal = (amount: number): string => formatCurrencyForPDF(amount);
 
   doc.setFontSize(10);
@@ -271,21 +271,21 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
     yPos += 4.5;
   });
 
-  // ========== FOOTER (SELLER/COMPANY ONLY) ==========
-  yPos = doc.internal.pageSize.getHeight() - 30;
-  
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text('For,', 15, yPos);
-  
-  yPos += 5;
-  doc.setFont('helvetica', 'bold');
-  doc.text(data.companyName, 15, yPos);
-  
-  yPos += 5;
-  doc.setFont('helvetica', 'normal');
-  // Always show GSTIN: prefix in footer for seller
-  doc.text(`GSTIN: ${data.companyGSTIN}`, 15, yPos);
+  yPos += 10;
+
+  // ========== FOOTER: SELLER INFO (LEFT) + AUTHORIZED SIGNATORY (RIGHT) ==========
+  // Check if we need a new page
+  const pageHeight = doc.internal.pageSize.getHeight();
+  if (yPos + 40 > pageHeight - 20) {
+    doc.addPage();
+    yPos = 30;
+  }
+
+  renderSellerFooterWithSignatory(
+    doc,
+    { name: data.companyName, gstin: data.companyGSTIN },
+    yPos
+  );
 
   return doc.output('blob');
 }

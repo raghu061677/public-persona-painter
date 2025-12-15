@@ -2,6 +2,8 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '@/integrations/supabase/client';
 import { formatINR } from '@/utils/finance';
+import { renderLogoHeader } from '@/lib/pdf/sections/logoHeader';
+import { renderSellerFooterWithSignatory } from '@/lib/pdf/sections/authorizedSignatory';
 
 interface InvoiceData {
   invoice: any;
@@ -55,55 +57,44 @@ export async function generateInvoicePDF(invoiceId: string): Promise<Blob> {
 function createInvoicePDF(data: InvoiceData): Blob {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
-  let yPos = 20;
 
-  // ========== HEADER SECTION ==========
-  // Company Logo
-  if (data.orgSettings?.logo_url) {
-    try {
-      doc.addImage(data.orgSettings.logo_url, 'PNG', 15, yPos, 40, 20);
-    } catch (e) {
-      console.log('Logo loading skipped');
-    }
-  }
+  // Company info for header
+  const companyName = data.orgSettings?.name || 'Matrix Network Solutions';
+  const companyGSTIN = data.orgSettings?.gstin || '36AATFM4107H2Z3';
+  const companyPAN = data.orgSettings?.pan || 'AATFM4107H';
 
-  // Company Details (Left Side)
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.text(data.orgSettings?.name || 'Matrix Network Solutions', 15, yPos + 30);
+  // ========== LOGO HEADER SECTION ==========
+  let yPos = renderLogoHeader(
+    doc,
+    { name: companyName, gstin: companyGSTIN, pan: companyPAN },
+    'TAX INVOICE'
+  );
 
+  yPos += 5;
+
+  // ========== COMPANY DETAILS (LEFT SIDE) ==========
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   const companyDetails = [
     data.orgSettings?.address_line1 || 'H.No: 7-1-19/5/201, Jyothi Bhopal Apartments,',
     data.orgSettings?.address_line2 || 'Near Begumpet Metro Station, Opp Country Club,',
     `${data.orgSettings?.city || 'Hyderabad'}, ${data.orgSettings?.state || ''} - ${data.orgSettings?.pincode || '500016'}`,
-    `GSTIN: ${data.orgSettings?.gstin || '36AATFM4107H2Z3'}  |  PAN: ${data.orgSettings?.pan || 'AATFM4107H'}`,
+    `GSTIN: ${companyGSTIN}  |  PAN: ${companyPAN}`,
     `Phone: ${data.orgSettings?.phone || '+91-4042625757'}`,
     `Email: ${data.orgSettings?.email || 'raghu@matrix-networksolutions.com'}`,
-    data.orgSettings?.website ? `Website: ${data.orgSettings.website}` : '',
   ].filter(Boolean);
 
-  yPos += 35;
   companyDetails.forEach((line) => {
     doc.text(line, 15, yPos);
     yPos += 5;
   });
 
-  // INVOICE Title and Details (Right Side)
+  // ========== INVOICE DETAILS (RIGHT SIDE) ==========
   const rightX = pageWidth - 15;
-  yPos = 20;
-
-  doc.setFontSize(24);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(30, 58, 138); // Dark blue
-  doc.text('TAX INVOICE', rightX, yPos, { align: 'right' });
+  let rightY = 45;
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(0, 0, 0);
-  yPos += 10;
-
   const invoiceDetails = [
     `Invoice No: ${data.invoice.id}`,
     `Invoice Date: ${new Date(data.invoice.invoice_date).toLocaleDateString('en-IN')}`,
@@ -113,11 +104,11 @@ function createInvoicePDF(data: InvoiceData): Blob {
   ].filter(Boolean);
 
   invoiceDetails.forEach((line) => {
-    doc.text(line, rightX, yPos, { align: 'right' });
-    yPos += 6;
+    doc.text(line, rightX, rightY, { align: 'right' });
+    rightY += 6;
   });
 
-  yPos = Math.max(yPos, 75);
+  yPos = Math.max(yPos + 5, rightY + 5);
 
   // ========== BILL TO SECTION ==========
   doc.setFillColor(245, 245, 245);
@@ -209,7 +200,6 @@ function createInvoicePDF(data: InvoiceData): Blob {
   // ========== TOTALS SUMMARY BOX ==========
   const summaryX = pageWidth - 90;
 
-  // Draw box around summary
   doc.setDrawColor(229, 231, 235);
   doc.setLineWidth(0.5);
   doc.rect(summaryX - 5, yPos - 5, 80, 50);
@@ -289,7 +279,7 @@ function createInvoicePDF(data: InvoiceData): Blob {
     '1. Payment terms as per agreed schedule.',
     '2. Interest @ 18% per annum will be charged on delayed payments.',
     '3. All disputes subject to Hyderabad jurisdiction only.',
-    '4. This is a computer-generated invoice and does not require a signature.',
+    '4. This is a computer-generated invoice.',
   ];
 
   terms.forEach((term) => {
@@ -299,16 +289,20 @@ function createInvoicePDF(data: InvoiceData): Blob {
 
   yPos += 15;
 
-  // ========== SIGNATURE BLOCK ==========
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`For ${data.orgSettings?.name || 'Matrix Network Solutions'}`, 15, yPos);
-  yPos += 15;
-  doc.text('_______________________', 15, yPos);
-  yPos += 6;
-  doc.text('Authorized Signatory', 15, yPos);
+  // ========== FOOTER: SELLER INFO (LEFT) + AUTHORIZED SIGNATORY (RIGHT) ==========
+  const pageHeight = doc.internal.pageSize.getHeight();
+  if (yPos + 40 > pageHeight - 20) {
+    doc.addPage();
+    yPos = 30;
+  }
 
-  // ========== FOOTER ==========
+  renderSellerFooterWithSignatory(
+    doc,
+    { name: companyName, gstin: companyGSTIN },
+    yPos
+  );
+
+  // ========== DOCUMENT FOOTER ==========
   const footerY = doc.internal.pageSize.getHeight() - 15;
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');

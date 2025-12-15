@@ -2,6 +2,8 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrencyForPDF, getPrimaryContactName } from '@/lib/pdf/pdfHelpers';
+import { renderLogoHeader } from '@/lib/pdf/sections/logoHeader';
+import { renderSellerFooterWithSignatory } from '@/lib/pdf/sections/authorizedSignatory';
 
 interface SalesOrderData {
   salesOrder: any;
@@ -13,8 +15,6 @@ interface SalesOrderData {
 }
 
 export async function generateSalesOrderPDF(salesOrderId: string): Promise<Blob> {
-  // For now, fetch from plans table as sales orders reference plans
-  // This can be updated when dedicated sales_orders table is created
   const { data: plan, error: planError } = await supabase
     .from('plans')
     .select('*')
@@ -23,14 +23,12 @@ export async function generateSalesOrderPDF(salesOrderId: string): Promise<Blob>
 
   if (planError || !plan) throw new Error('Sales Order not found');
 
-  // Fetch company details (SELLER - for footer and header)
   const { data: companyData } = await supabase
     .from('companies')
     .select('*')
     .eq('id', plan.company_id)
     .single();
 
-  // Fetch client details
   const { data: client, error: clientError } = await supabase
     .from('clients')
     .select('*')
@@ -39,14 +37,12 @@ export async function generateSalesOrderPDF(salesOrderId: string): Promise<Blob>
 
   if (clientError || !client) throw new Error('Client not found');
 
-  // Fetch client contacts for point of contact
   const { data: clientContacts } = await supabase
     .from('client_contacts')
     .select('*')
     .eq('client_id', plan.client_id)
     .order('is_primary', { ascending: false });
 
-  // Fetch plan items with asset details
   const { data: planItems, error: itemsError } = await supabase
     .from('plan_items')
     .select('*, media_assets(*)')
@@ -54,7 +50,6 @@ export async function generateSalesOrderPDF(salesOrderId: string): Promise<Blob>
 
   if (itemsError) throw new Error('Failed to fetch sales order items');
 
-  // Fetch organization settings
   const { data: orgSettings } = await supabase
     .from('organization_settings')
     .select('*')
@@ -72,33 +67,27 @@ export async function generateSalesOrderPDF(salesOrderId: string): Promise<Blob>
   return createSalesOrderPDF(data);
 }
 
-// Currency formatter for PDF (uses Rs. instead of ₹ symbol to avoid font issues)
 const formatINR = (amount: number): string => formatCurrencyForPDF(amount);
 
 function createSalesOrderPDF(data: SalesOrderData): Blob {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
-  let yPos = 20;
 
-  // ========== HEADER SECTION ==========
-  // Company Logo
-  if (data.orgSettings?.logo_url) {
-    try {
-      doc.addImage(data.orgSettings.logo_url, 'PNG', 15, yPos, 40, 20);
-    } catch (e) {
-      console.log('Logo loading skipped');
-    }
-  }
-
-  // Company/Seller Details (Left Side) - from companies table
+  // Company info
   const companyName = data.company?.name || data.orgSettings?.company_name || 'Matrix Network Solutions';
   const companyGSTIN = data.company?.gstin || data.orgSettings?.gstin || '36AATFM4107H2Z3';
   const companyPAN = data.company?.pan || data.orgSettings?.pan || 'AATFM4107H';
-  
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.text(companyName, 15, yPos + 30);
 
+  // ========== LOGO HEADER SECTION ==========
+  let yPos = renderLogoHeader(
+    doc,
+    { name: companyName, gstin: companyGSTIN, pan: companyPAN },
+    'SALES ORDER'
+  );
+
+  yPos += 5;
+
+  // ========== COMPANY DETAILS (LEFT SIDE) ==========
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   const companyDetails = [
@@ -108,29 +97,19 @@ function createSalesOrderPDF(data: SalesOrderData): Blob {
     `GSTIN: ${companyGSTIN}  |  PAN: ${companyPAN}`,
     `Phone: ${data.company?.phone || '+91-4042625757'}`,
     `Email: ${data.company?.email || 'raghu@matrix-networksolutions.com'}`,
-    `Website: ${data.company?.website || 'www.matrixnetworksolutions.com'}`,
   ];
 
-  yPos += 35;
   companyDetails.forEach((line) => {
     doc.text(line, 15, yPos);
     yPos += 5;
   });
 
-  // SALES ORDER Title and Details (Right Side)
+  // ========== SALES ORDER DETAILS (RIGHT SIDE) ==========
   const rightX = pageWidth - 15;
-  yPos = 20;
-
-  doc.setFontSize(24);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(30, 58, 138); // Dark blue
-  doc.text('SALES ORDER', rightX, yPos, { align: 'right' });
+  let rightY = 45;
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(0, 0, 0);
-  yPos += 10;
-
   const salesOrderDetails = [
     `Sales Order No: SO-${data.salesOrder.id}`,
     `Sales Order Date: ${new Date().toLocaleDateString('en-IN')}`,
@@ -139,11 +118,11 @@ function createSalesOrderPDF(data: SalesOrderData): Blob {
   ];
 
   salesOrderDetails.forEach((line) => {
-    doc.text(line, rightX, yPos, { align: 'right' });
-    yPos += 6;
+    doc.text(line, rightX, rightY, { align: 'right' });
+    rightY += 6;
   });
 
-  yPos = Math.max(yPos, 75);
+  yPos = Math.max(yPos + 5, rightY + 5);
 
   // ========== BILL TO / SHIP TO SECTION ==========
   doc.setFillColor(245, 245, 245);
@@ -308,7 +287,6 @@ function createSalesOrderPDF(data: SalesOrderData): Blob {
   // ========== TOTALS SUMMARY BOX ==========
   const summaryX = pageWidth - 90;
 
-  // Draw box around summary
   doc.setDrawColor(229, 231, 235);
   doc.setLineWidth(0.5);
   doc.rect(summaryX - 5, yPos - 5, 80, 65);
@@ -415,19 +393,20 @@ function createSalesOrderPDF(data: SalesOrderData): Blob {
 
   yPos += 15;
 
-  // ========== SIGNATURE BLOCK (SELLER ONLY) ==========
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`For ${companyName}`, 15, yPos);
-  yPos += 6;
-  doc.setFontSize(9);
-  doc.text(`GSTIN: ${companyGSTIN}`, 15, yPos);
-  yPos += 12;
-  doc.text('_______________________', 15, yPos);
-  yPos += 6;
-  doc.text('Authorized Signatory', 15, yPos);
+  // ========== FOOTER: SELLER INFO (LEFT) + AUTHORIZED SIGNATORY (RIGHT) ==========
+  const pageHeight = doc.internal.pageSize.getHeight();
+  if (yPos + 40 > pageHeight - 20) {
+    doc.addPage();
+    yPos = 30;
+  }
 
-  // ========== FOOTER ==========
+  renderSellerFooterWithSignatory(
+    doc,
+    { name: companyName, gstin: companyGSTIN },
+    yPos
+  );
+
+  // ========== DOCUMENT FOOTER ==========
   const footerY = doc.internal.pageSize.getHeight() - 15;
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');

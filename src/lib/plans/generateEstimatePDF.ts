@@ -1,5 +1,13 @@
 import { supabase } from '@/integrations/supabase/client';
 import { generateStandardizedPDF, formatDateToDDMonYY } from '@/lib/pdf/standardPDFTemplate';
+import { 
+  getPrimaryContactName, 
+  getClientDisplayName, 
+  getClientAddress, 
+  getClientCity, 
+  getClientState, 
+  getClientPincode 
+} from '@/lib/pdf/pdfHelpers';
 
 export async function generateEstimatePDF(planId: string): Promise<Blob> {
   // Fetch plan details
@@ -11,7 +19,7 @@ export async function generateEstimatePDF(planId: string): Promise<Blob> {
 
   if (planError || !plan) throw new Error('Plan not found');
 
-  // Fetch company details
+  // Fetch company details (SELLER - for footer)
   const { data: companyData } = await supabase
     .from('companies')
     .select('*')
@@ -27,6 +35,23 @@ export async function generateEstimatePDF(planId: string): Promise<Blob> {
 
   if (clientError || !client) throw new Error('Client not found');
 
+  // Fetch client contacts for point of contact
+  const { data: clientContacts } = await supabase
+    .from('client_contacts')
+    .select('*')
+    .eq('client_id', plan.client_id)
+    .order('is_primary', { ascending: false });
+
+  // Merge contacts into client object for helper function
+  const clientWithContacts = {
+    ...client,
+    contacts: clientContacts?.map(c => ({
+      name: c.first_name ? `${c.first_name} ${c.last_name || ''}`.trim() : null,
+      first_name: c.first_name,
+      last_name: c.last_name
+    })) || []
+  };
+
   // Fetch plan items with asset details
   const { data: planItems, error: itemsError } = await supabase
     .from('plan_items')
@@ -35,9 +60,8 @@ export async function generateEstimatePDF(planId: string): Promise<Blob> {
 
   if (itemsError) throw new Error('Failed to fetch plan items');
 
-  // Get current user for point of contact
-  const { data: { user } } = await supabase.auth.getUser();
-  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Sales Team';
+  // Get Point of Contact from client contacts (NOT current user)
+  const pointOfContact = getPrimaryContactName(clientWithContacts);
 
   // Calculate days between plan dates
   const startDate = new Date(plan.start_date);
@@ -100,15 +124,17 @@ export async function generateEstimatePDF(planId: string): Promise<Blob> {
     documentNumber: `EST-${planId}`,
     documentDate: new Date().toLocaleDateString('en-IN'),
     displayName: plan.plan_name || planId,
-    pointOfContact: userName,
+    pointOfContact: pointOfContact,
     
-    clientName: client.name || client.company || '',
-    clientAddress: client.billing_address_line1 || client.address || '',
-    clientCity: client.billing_city || client.city || '',
-    clientState: client.billing_state || client.state || '',
-    clientPincode: client.billing_pincode || '',
+    // Client details (TO section)
+    clientName: getClientDisplayName(client),
+    clientAddress: getClientAddress(client),
+    clientCity: getClientCity(client),
+    clientState: getClientState(client),
+    clientPincode: getClientPincode(client),
     clientGSTIN: client.gst_number,
     
+    // Company/Seller details (FOR section - footer)
     companyName: companyData?.name || 'Matrix Network Solutions',
     companyGSTIN: companyData?.gstin || '36AATFM4107H2Z3',
     companyPAN: companyData?.pan || 'AATFM4107H',

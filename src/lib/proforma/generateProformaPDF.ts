@@ -24,7 +24,7 @@ interface ProformaInvoiceData {
   grand_total: number;
 }
 
-export const generateProformaPDF = (data: ProformaInvoiceData): Blob => {
+export const generateProformaPDF = async (data: ProformaInvoiceData): Promise<Blob> => {
   // Calculate days if campaign dates exist
   let days = 30; // default
   if (data.campaign_start_date && data.campaign_end_date) {
@@ -79,24 +79,24 @@ export const generateProformaPDF = (data: ProformaInvoiceData): Blob => {
   const displayCost = data.subtotal;
   const gst = data.cgst_amount + data.sgst_amount;
 
-  return generateStandardizedPDF({
+  return await generateStandardizedPDF({
     documentType: 'PROFORMA INVOICE',
     documentNumber: data.proforma_number,
     documentDate: new Date(data.proforma_date).toLocaleDateString('en-IN'),
     displayName: data.plan_name || data.reference_plan_id || 'Campaign',
     pointOfContact: 'Sales Team',
-    
+
     clientName: data.client_name,
     clientAddress: data.client_address || '',
     clientCity: data.client_city || '',
     clientState: data.client_state || '',
     clientPincode: data.client_pincode || '',
     clientGSTIN: data.client_gstin,
-    
+
     companyName: 'Matrix Network Solutions',
     companyGSTIN: '36AATFM4107H2Z3',
     companyPAN: 'AATFM4107H',
-    
+
     items,
     displayCost,
     installationCost: data.mounting_total,

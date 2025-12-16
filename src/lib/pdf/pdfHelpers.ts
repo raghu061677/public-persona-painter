@@ -3,23 +3,21 @@
  */
 
 /**
- * Format currency in Indian Rupees using Rs. prefix
- * Note: We use Rs. instead of ₹ symbol to avoid font encoding issues in jsPDF
- * This is the standard practice for PDF generation without custom Unicode fonts
+ * Format currency in Indian Rupees using Intl (₹)
+ * NOTE: Requires Unicode font (NotoSans) to be embedded in jsPDF output.
  */
 export const formatINR = (value: number = 0): string => {
-  if (value === 0) return '-';
-  const formatted = Math.round(value).toLocaleString('en-IN');
-  return `Rs.${formatted}`;
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(value || 0);
 };
 
 /**
- * Format currency with explicit "Rs." prefix for clarity
+ * Alias used across PDF generators
  */
-export const formatCurrencyForPDF = (amount: number): string => {
-  if (amount === 0) return '-';
-  return `Rs.${Math.round(amount).toLocaleString('en-IN')}`;
-};
+export const formatCurrencyForPDF = (amount: number): string => formatINR(amount);
 
 /**
  * Get primary contact name from client data

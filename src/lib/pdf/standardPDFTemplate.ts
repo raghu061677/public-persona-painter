@@ -1,8 +1,9 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrencyForPDF } from './pdfHelpers';
-import { renderLogoHeader } from './sections/logoHeader';
+import { renderLogoHeader, createPageHeaderRenderer } from './sections/logoHeader';
 import { renderSellerFooterWithSignatory } from './sections/authorizedSignatory';
+import { ensurePdfUnicodeFont } from './fontLoader';
 
 interface PDFDocumentData {
   documentType: 'WORK ORDER' | 'ESTIMATE' | 'QUOTATION' | 'PROFORMA INVOICE';
@@ -10,7 +11,7 @@ interface PDFDocumentData {
   documentDate: string;
   displayName: string;
   pointOfContact: string;
-  
+
   // Client details (TO section)
   clientName: string;
   clientAddress: string;
@@ -18,30 +19,33 @@ interface PDFDocumentData {
   clientState: string;
   clientPincode: string;
   clientGSTIN?: string;
-  
+
   // Company/Seller details (FOR section - footer)
   companyName: string;
   companyGSTIN: string;
   companyPAN: string;
   companyLogoBase64?: string; // Optional logo as base64
-  
+
   // Line items
   items: PDFLineItem[];
-  
+
   // Totals
   displayCost: number;
   installationCost: number;
   gst: number;
   totalInr: number;
+
+  // Optional overrides
+  terms?: string[];
 }
 
 interface PDFLineItem {
   description: string;
-  dimension?: string;      // e.g., "10x20 ft"
-  sqft?: number;           // Total sqft
+  dimension?: string; // e.g., "10x20 ft"
+  sqft?: number; // Total sqft
   illuminationType?: string; // Lit/Non-Lit
-  startDate: string;       // Format: 15Aug25
-  endDate: string;         // Format: 15Aug25
+  startDate: string; // Format: 15Aug25
+  endDate: string; // Format: 15Aug25
   days: number;
   monthlyRate: number;
   cost: number;
@@ -63,9 +67,19 @@ export function formatDateToDDMonYY(dateString: string): string {
   }
 }
 
-export function generateStandardizedPDF(data: PDFDocumentData): Blob {
+export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Blob> {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
+
+  // Ensure ₹ is supported
+  await ensurePdfUnicodeFont(doc);
+
+  // Re-usable page header (for multipage tables)
+  const headerRenderer = createPageHeaderRenderer(
+    { name: data.companyName, gstin: data.companyGSTIN, pan: data.companyPAN },
+    data.documentType,
+    data.companyLogoBase64
+  );
 
   // ========== LOGO HEADER SECTION ==========
   let yPos = renderLogoHeader(
@@ -79,35 +93,33 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
 
   // ========== CLIENT DETAILS (LEFT SIDE) ==========
   doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('NotoSans', 'normal');
   doc.text('To,', 15, yPos);
-  
+
   yPos += 5;
-  doc.setFont('helvetica', 'bold');
   doc.text(data.clientName, 15, yPos);
-  
+
   yPos += 5;
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.clientAddress, 15, yPos);
-  
+  doc.text(data.clientAddress || '-', 15, yPos);
+
   yPos += 5;
   if (data.clientGSTIN) {
     doc.text(`GSTIN: ${data.clientGSTIN}`, 15, yPos);
     yPos += 5;
   }
-  doc.text(`${data.clientCity}, ${data.clientState}, ${data.clientPincode}`, 15, yPos);
+  doc.text(`${data.clientCity || ''}, ${data.clientState || ''}, ${data.clientPincode || ''}`.trim(), 15, yPos);
 
   // ========== DOCUMENT DETAILS (RIGHT SIDE) ==========
   const rightX = pageWidth - 15;
   let rightY = 45;
-  
+
   doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('NotoSans', 'normal');
   doc.text(`Display Name : ${data.displayName}`, rightX, rightY, { align: 'right' });
-  
+
   rightY += 5;
   let docLabel = '';
-  switch(data.documentType) {
+  switch (data.documentType) {
     case 'WORK ORDER':
       docLabel = 'WO No';
       break;
@@ -122,10 +134,10 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
       break;
   }
   doc.text(`${docLabel} : ${data.documentNumber}`, rightX, rightY, { align: 'right' });
-  
+
   rightY += 5;
   let dateLabel = '';
-  switch(data.documentType) {
+  switch (data.documentType) {
     case 'WORK ORDER':
       dateLabel = 'WO Date';
       break;
@@ -140,14 +152,14 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
       break;
   }
   doc.text(`${dateLabel} : ${data.documentDate}`, rightX, rightY, { align: 'right' });
-  
+
   rightY += 5;
-  doc.text(`Point of Contact : ${data.pointOfContact}`, rightX, rightY, { align: 'right' });
+  doc.text(`Point of Contact : ${data.pointOfContact || 'N/A'}`, rightX, rightY, { align: 'right' });
 
   // Company GSTIN and PAN (below client section on left)
   yPos += 10;
   doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('NotoSans', 'normal');
   doc.text(`GSTIN: ${data.companyGSTIN}`, 15, yPos);
   yPos += 5;
   doc.text(`PAN: ${data.companyPAN}`, 15, yPos);
@@ -155,11 +167,7 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
   yPos += 10;
 
   // ========== SUMMARY OF CHARGES TABLE ==========
-  const formatCurrency = (amount: number): string => {
-    return formatCurrencyForPDF(amount);
-  };
-
-  const tableData = data.items.map(item => [
+  const tableData = data.items.map((item) => [
     item.description,
     item.dimension || '-',
     item.sqft ? item.sqft.toString() : '-',
@@ -167,8 +175,8 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
     item.startDate || '-',
     item.endDate || '-',
     item.days > 0 ? item.days.toString() : '-',
-    item.monthlyRate > 0 ? formatCurrency(item.monthlyRate) : '-',
-    formatCurrency(item.cost)
+    item.monthlyRate > 0 ? formatCurrencyForPDF(item.monthlyRate) : '-',
+    formatCurrencyForPDF(item.cost),
   ]);
 
   autoTable(doc, {
@@ -176,36 +184,35 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
     head: [['Description', 'Size', 'Sqft', 'Type', 'Start', 'End', 'Days', 'Rate/Month', 'Cost']],
     body: tableData,
     theme: 'plain',
+    styles: {
+      font: 'NotoSans',
+      fontSize: 8,
+      textColor: [0, 0, 0],
+    },
     headStyles: {
       fillColor: [240, 240, 240],
       textColor: [0, 0, 0],
-      fontStyle: 'bold',
+      fontStyle: 'normal',
       fontSize: 8,
       lineWidth: 0.1,
       lineColor: [200, 200, 200],
     },
-    bodyStyles: {
-      fontSize: 8,
-      textColor: [0, 0, 0],
-    },
     columnStyles: {
-      0: { cellWidth: 45 }, // Description
-      1: { cellWidth: 18, halign: 'center' }, // Size
-      2: { cellWidth: 14, halign: 'center' }, // Sqft
-      3: { cellWidth: 14, halign: 'center' }, // Type
-      4: { cellWidth: 18, halign: 'center' }, // Start
-      5: { cellWidth: 18, halign: 'center' }, // End
-      6: { cellWidth: 12, halign: 'center' }, // Days
-      7: { cellWidth: 24, halign: 'right' },  // Rate
-      8: { cellWidth: 24, halign: 'right' },  // Cost
+      0: { cellWidth: 45 },
+      1: { cellWidth: 18, halign: 'center' },
+      2: { cellWidth: 14, halign: 'center' },
+      3: { cellWidth: 14, halign: 'center' },
+      4: { cellWidth: 18, halign: 'center' },
+      5: { cellWidth: 18, halign: 'center' },
+      6: { cellWidth: 12, halign: 'center' },
+      7: { cellWidth: 24, halign: 'right' },
+      8: { cellWidth: 24, halign: 'right' },
     },
-    didDrawCell: (data) => {
-      if (data.section === 'head' || data.section === 'body') {
-        doc.setDrawColor(220, 220, 220);
-        doc.setLineWidth(0.1);
-      }
+    margin: { left: 10, right: 10, top: 10 },
+    didDrawPage: () => {
+      // Keep header on every page
+      headerRenderer(doc);
     },
-    margin: { left: 10, right: 10 },
   });
 
   // @ts-ignore
@@ -213,79 +220,87 @@ export function generateStandardizedPDF(data: PDFDocumentData): Blob {
 
   // ========== TOTALS (RIGHT ALIGNED) ==========
   const totalsX = pageWidth - 15;
-  
-  const fmtTotal = (amount: number): string => formatCurrencyForPDF(amount);
 
   doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('NotoSans', 'normal');
   doc.text(`Display Cost :`, totalsX - 50, yPos);
-  doc.text(fmtTotal(data.displayCost), totalsX, yPos, { align: 'right' });
-  
+  doc.text(formatCurrencyForPDF(data.displayCost), totalsX, yPos, { align: 'right' });
+
   yPos += 6;
   doc.text(`Installation Cost :`, totalsX - 50, yPos);
-  doc.text(fmtTotal(data.installationCost), totalsX, yPos, { align: 'right' });
-  
+  doc.text(formatCurrencyForPDF(data.installationCost), totalsX, yPos, { align: 'right' });
+
   yPos += 6;
   doc.text(`GST (18%) :`, totalsX - 50, yPos);
-  doc.text(fmtTotal(data.gst), totalsX, yPos, { align: 'right' });
-  
+  doc.text(formatCurrencyForPDF(data.gst), totalsX, yPos, { align: 'right' });
+
   yPos += 8;
   doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
   doc.text(`Total in INR :`, totalsX - 50, yPos);
-  doc.text(fmtTotal(data.totalInr), totalsX, yPos, { align: 'right' });
+  doc.text(formatCurrencyForPDF(data.totalInr), totalsX, yPos, { align: 'right' });
 
   yPos += 15;
 
   // ========== TERMS & CONDITIONS ==========
+  const terms = data.terms?.length
+    ? data.terms.map((t, idx) => `${idx + 1}. ${t}`)
+    : [
+        '1. Advance Payment & Purchase Order is Mandatory to start the campaign.',
+        '2. Printing & Mounting will be extra & GST @ 18% will be applicable extra.',
+        '3. Site available date may change in case of present display Renewal.',
+        '4. Site Availability changes every minute, please double check site available dates when you confirm the sites.',
+        '5. Campaign Execution takes 2 days in city and 4 days in upcountry. Please plan your campaign accordingly.',
+        '6. Kindly ensure that your artwork is ready before confirming the sites. In case Design or Flex is undelivered',
+        '   within 5 days of confirmation, we will release the site.',
+        '7. In case flex/vinyl/display material is damaged, torn or vandalised, it will be your responsibility to provide',
+        '   new flex.',
+        '8. Renewal of site will only be entertained before 10 days of site expiry. Last moment renewal is not possible.',
+      ];
+
   doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('NotoSans', 'normal');
   doc.text('Terms and Conditions -', 15, yPos);
-  
+
   yPos += 6;
   doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  
-  const terms = [
-    '1. Advance Payment & Purchase Order is Mandatory to start the campaign.',
-    '2. Printing & Mounting will be extra & GST @ 18% will be applicable extra.',
-    '3. Site available date may change in case of present display Renewal.',
-    '4. Site Availability changes every minute, please double check site available dates when you confirm the sites.',
-    '5. Campaign Execution takes 2 days in city and 4 days in upcountry. Please plan your campaign accordingly.',
-    '6. Kindly ensure that your artwork is ready before confirming the sites. In case Design or Flex is undelivered',
-    '   within 5 days of confirmation, we will release the site.',
-    '7. In case flex/vinyl/display material is damaged, torn or vandalised, it will be your responsibility to provide',
-    '   new flex.',
-    '8. Renewal of site will only be entertained before 10 days of site expiry. Last moment renewal is not possible.',
-  ];
-  
+
   // Draw box around terms
-  const termsStartY = yPos - 3;
-  const termsHeight = terms.length * 4.5 + 6;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const boxPadding = 3;
+
+  // paginate terms if needed
+  let termY = yPos;
+  const startX = 15;
+  const maxWidth = pageWidth - 30;
+
+  // Box (first page box only; subsequent pages still show header via didDrawPage)
+  const estimatedLineCount = terms.length;
+  const estimatedHeight = estimatedLineCount * 4.5 + 6;
   doc.setDrawColor(200, 200, 200);
   doc.setLineWidth(0.3);
-  doc.rect(15, termsStartY, pageWidth - 30, termsHeight);
-  
+  doc.rect(startX, termY - boxPadding, maxWidth, estimatedHeight);
+
   terms.forEach((term) => {
-    doc.text(term, 18, yPos);
-    yPos += 4.5;
+    if (termY + 6 > pageHeight - 30) {
+      doc.addPage();
+      headerRenderer(doc);
+      termY = 45;
+    }
+    const lines = doc.splitTextToSize(term, maxWidth - 6);
+    doc.text(lines, startX + 3, termY);
+    termY += lines.length * 4.5;
   });
 
-  yPos += 10;
+  yPos = termY + 10;
 
   // ========== FOOTER: SELLER INFO (LEFT) + AUTHORIZED SIGNATORY (RIGHT) ==========
-  // Check if we need a new page
-  const pageHeight = doc.internal.pageSize.getHeight();
   if (yPos + 40 > pageHeight - 20) {
     doc.addPage();
-    yPos = 30;
+    headerRenderer(doc);
+    yPos = 45;
   }
 
-  renderSellerFooterWithSignatory(
-    doc,
-    { name: data.companyName, gstin: data.companyGSTIN },
-    yPos
-  );
+  renderSellerFooterWithSignatory(doc, { name: data.companyName, gstin: data.companyGSTIN }, yPos);
 
   return doc.output('blob');
 }

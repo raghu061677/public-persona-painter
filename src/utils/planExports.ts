@@ -789,6 +789,7 @@ export async function exportPlanToExcel(
 
 /**
  * Export plan to PDF (Work Order, Quotation, etc.)
+ * Uses the standardized finance PDF template (consistent header/footer + ₹).
  */
 export async function exportPlanToPDF(
   plan: any,
@@ -799,232 +800,166 @@ export async function exportPlanToPDF(
   uploadToCloud: boolean = false
 ) {
   try {
-    // Fetch company details
+    const { generateStandardizedPDF, formatDateToDDMonYY } = await import('@/lib/pdf/standardPDFTemplate');
+    const { getPrimaryContactName } = await import('@/lib/pdf/pdfHelpers');
+
+    // Fetch company (seller) details
     const { data: companyData } = await supabase
       .from('companies')
       .select('*')
       .eq('id', plan.company_id)
       .single();
 
-    // Fetch client details
+    // Fetch client (buyer) details
     const { data: clientData } = await supabase
       .from('clients')
       .select('*')
       .eq('id', plan.client_id)
       .single();
-    
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    let yPos = 20;
 
-    // Header - Company Logo
-    if (companyData?.logo_url) {
-      try {
-        doc.addImage(companyData.logo_url, 'PNG', 14, yPos, 40, 20);
-      } catch (e) {
-        console.log('Logo loading skipped');
-      }
-    }
+    // Fetch client contacts for POC
+    const { data: clientContacts } = await supabase
+      .from('client_contacts')
+      .select('*')
+      .eq('client_id', plan.client_id)
+      .order('is_primary', { ascending: false });
 
-    // Company info (Left)
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text(companyData?.name || orgSettings?.organization_name || "Go-Ads 360°", 14, yPos + 25);
-    
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    yPos += 30;
-    if (companyData?.address_line1) {
-      doc.text(companyData.address_line1, 14, yPos);
-      yPos += 4;
-    }
-    if (companyData?.address_line2) {
-      doc.text(companyData.address_line2, 14, yPos);
-      yPos += 4;
-    }
-    if (companyData?.city || companyData?.state) {
-      doc.text(`${companyData?.city || ""}, ${companyData?.state || ""} ${companyData?.pincode || ""}`, 14, yPos);
-      yPos += 4;
-    }
-    if (companyData?.gstin || orgSettings?.gstin) {
-      doc.text(`GSTIN: ${companyData?.gstin || orgSettings?.gstin}`, 14, yPos);
-      yPos += 4;
-    }
-    if (companyData?.phone) {
-      doc.text(`Phone: ${companyData.phone}`, 14, yPos);
-      yPos += 4;
-    }
-    if (companyData?.email) {
-      doc.text(`Email: ${companyData.email}`, 14, yPos);
-      yPos += 4;
-    }
+    const clientWithContacts = {
+      ...clientData,
+      contacts:
+        clientContacts?.map((c) => ({
+          name: c.first_name ? `${c.first_name} ${c.last_name || ''}`.trim() : c.name,
+          first_name: c.first_name,
+          last_name: c.last_name,
+        })) || [],
+    };
 
-    // Document Title (Right)
-    const rightX = pageWidth - 14;
-    const titleYPos = 20;
-    doc.setFontSize(20);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(30, 64, 175);
-    const docTitle = docType === "work_order" ? "WORK ORDER" :
-                     docType === "estimate" ? "ESTIMATE" :
-                     docType === "proforma_invoice" ? "PROFORMA INVOICE" :
-                     "QUOTATION";
-    doc.text(docTitle, rightX, titleYPos, { align: "right" });
-    
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(0, 0, 0);
-    yPos = Math.max(yPos, titleYPos + 10);
+    const pointOfContact = getPrimaryContactName(clientWithContacts);
 
-    // Client details
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text("Bill To:", 14, yPos);
-    yPos += 7;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text(plan.client_name, 14, yPos);
-    yPos += 5;
-    if (clientData?.gst_number) {
-      doc.text(`GSTIN: ${clientData.gst_number}`, 14, yPos);
-      yPos += 5;
-    }
-    if (clientData?.billing_address_line1 || clientData?.address) {
-      const address = clientData?.billing_address_line1 || clientData?.address;
-      const addressLines = doc.splitTextToSize(address, 80);
-      doc.text(addressLines, 14, yPos);
-      yPos += addressLines.length * 5;
-    }
-    if (clientData?.billing_city || clientData?.city) {
-      const cityState = `${clientData?.billing_city || clientData?.city || ""}, ${clientData?.billing_state || clientData?.state || ""} ${clientData?.billing_pincode || ""}`;
-      doc.text(cityState, 14, yPos);
-      yPos += 5;
-    }
-    yPos += 5;
+    // Days
+    const startDate = new Date(plan.start_date);
+    const endDate = new Date(plan.end_date);
+    const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
-    // Plan details (Right)
-    doc.text(`Plan Name: ${plan.plan_name}`, rightX, yPos - 5, { align: "right" });
-    doc.text(`${docTitle} No: ${plan.id}`, rightX, yPos + 2, { align: "right" });
-    doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, rightX, yPos + 9, { align: "right" });
-    yPos += 15;
+    // Build line items
+    const items = (planItems || []).map((item: any) => {
+      const desc = item.location
+        ? item.location
+        : `${item.media_type || 'Display'} - ${item.area || ''} - ${item.city || ''}`;
 
-    // Summary of charges
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("SUMMARY OF CHARGES", 14, yPos);
-    yPos += 10;
+      const monthlyRate = item.sales_price || item.card_rate || 0;
+      const cost = monthlyRate - (item.discount_amount || 0);
 
-    // Assets table
-    const tableData = planItems.map(item => [
-      item.asset_id,
-      item.location,
-      new Date(plan.start_date).toLocaleDateString(),
-      new Date(plan.end_date).toLocaleDateString(),
-      plan.duration_days.toString(),
-      item.sales_price.toLocaleString(),
-      item.sales_price.toLocaleString(),
-    ]);
-
-    // @ts-ignore - jspdf-autotable types issue
-    autoTable(doc, {
-      startY: yPos,
-      head: [["Asset ID", "Location", "Start Date", "End Date", "Days", "Monthly Rate", "Cost"]],
-      body: tableData as any,
-      theme: "grid",
-      headStyles: { fillColor: [30, 64, 175], textColor: 255 },
-      styles: { fontSize: 9 },
+      return {
+        description: desc,
+        dimension: item.dimensions || '',
+        sqft: item.total_sqft || undefined,
+        illuminationType: item.illumination_type || undefined,
+        startDate: formatDateToDDMonYY(plan.start_date),
+        endDate: formatDateToDDMonYY(plan.end_date),
+        days,
+        monthlyRate,
+        cost,
+      };
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 10;
+    const totalPrinting = (planItems || []).reduce((sum, i: any) => sum + (i.printing_charges || 0), 0);
+    const totalInstallation = (planItems || []).reduce((sum, i: any) => sum + (i.mounting_charges || 0), 0);
 
-    // Financial summary (in box)
-    const summaryX = pageWidth - 75;
-    doc.setDrawColor(229, 231, 235);
-    doc.setLineWidth(0.5);
-    doc.rect(summaryX - 5, yPos - 5, 65, 50);
-
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    
-    doc.text(`Display Cost:`, summaryX, yPos);
-    doc.text(`₹${plan.total_amount.toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
-    yPos += 6;
-
-    const printingTotal = planItems.reduce((sum, item) => sum + (item.printing_charges || 0), 0);
-    const mountingTotal = planItems.reduce((sum, item) => sum + (item.mounting_charges || 0), 0);
-
-    if (printingTotal > 0) {
-      doc.text(`Printing Cost:`, summaryX, yPos);
-      doc.text(`₹${printingTotal.toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
-      yPos += 6;
+    if (totalPrinting > 0) {
+      items.push({
+        description: 'Printing Charges',
+        startDate: '',
+        endDate: '',
+        days: 0,
+        monthlyRate: 0,
+        cost: totalPrinting,
+      } as any);
     }
 
-    if (mountingTotal > 0) {
-      doc.text(`Installation Cost:`, summaryX, yPos);
-      doc.text(`₹${mountingTotal.toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
-      yPos += 6;
+    if (totalInstallation > 0) {
+      items.push({
+        description: 'Installation Charges',
+        startDate: '',
+        endDate: '',
+        days: 0,
+        monthlyRate: 0,
+        cost: totalInstallation,
+      } as any);
     }
 
-    doc.setFont("helvetica", "bold");
-    doc.text(`Subtotal:`, summaryX, yPos);
-    doc.text(`₹${(plan.total_amount + printingTotal + mountingTotal).toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
-    yPos += 6;
+    // Totals (keep existing plan totals)
+    const displayCost = Number(plan.total_amount || 0);
+    const gst = Number(plan.gst_amount || 0);
+    const totalInr = Number(plan.grand_total || 0);
 
-    doc.setFont("helvetica", "normal");
-    doc.text(`CGST @ ${plan.gst_percent/2}%:`, summaryX, yPos);
-    doc.text(`₹${(plan.gst_amount/2).toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
-    yPos += 6;
+    const docTitle =
+      docType === 'work_order'
+        ? 'WORK ORDER'
+        : docType === 'estimate'
+          ? 'ESTIMATE'
+          : docType === 'proforma_invoice'
+            ? 'PROFORMA INVOICE'
+            : 'QUOTATION';
 
-    doc.text(`SGST @ ${plan.gst_percent/2}%:`, summaryX, yPos);
-    doc.text(`₹${(plan.gst_amount/2).toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
-    yPos += 8;
+    // Logo: use companyData.logo_url if it is already a data URL; otherwise skip (no breaking)
+    const logoBase64 = typeof companyData?.logo_url === 'string' && companyData.logo_url.startsWith('data:')
+      ? companyData.logo_url
+      : undefined;
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text(`Grand Total:`, summaryX, yPos);
-    doc.text(`₹${plan.grand_total.toLocaleString('en-IN')}`, pageWidth - 14, yPos, { align: "right" });
-    yPos += 15;
+    const pdfBlob = await generateStandardizedPDF({
+      documentType: docTitle as any,
+      documentNumber: plan.id,
+      documentDate: new Date().toLocaleDateString('en-IN'),
+      displayName: plan.plan_name || plan.id,
+      pointOfContact,
 
-    // Terms and conditions
-    const terms = termsAndConditions || await getTermsAndConditions();
-    if (terms && terms.length > 0) {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.text("Terms and Conditions -", 14, yPos);
-      yPos += 7;
+      // To (Client)
+      clientName: plan.client_name || clientData?.name || 'Client',
+      clientAddress: clientData?.billing_address_line1 || clientData?.address || '',
+      clientCity: clientData?.billing_city || clientData?.city || '',
+      clientState: clientData?.billing_state || clientData?.state || '',
+      clientPincode: clientData?.billing_pincode || '',
+      clientGSTIN: clientData?.gst_number || undefined,
 
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-      terms.forEach((term, index) => {
-        if (yPos > 270) {
-          doc.addPage();
-          yPos = 20;
-        }
-        const lines = doc.splitTextToSize(`${index + 1}. ${term}`, pageWidth - 28);
-        doc.text(lines, 14, yPos);
-        yPos += lines.length * 5;
-      });
-    }
+      // For (Seller)
+      companyName: companyData?.name || orgSettings?.organization_name || 'Matrix Network Solutions',
+      companyGSTIN: companyData?.gstin || orgSettings?.gstin || '36AATFM4107H2Z3',
+      companyPAN: companyData?.pan || orgSettings?.pan || 'AATFM4107H',
+      companyLogoBase64: logoBase64,
 
-    // Save file
+      items,
+      displayCost,
+      installationCost: totalInstallation,
+      gst,
+      totalInr,
+      terms: termsAndConditions,
+    });
+
     if (uploadToCloud) {
-      const pdfBlob = doc.output('blob');
       const fileName = `plan_${plan.id}_${docType}_${Date.now()}.pdf`;
       const storagePath = `exports/plans/${plan.id}/${fileName}`;
-      
+
       const publicUrl = await uploadToStorage(pdfBlob, 'client-documents', storagePath);
       if (publicUrl) {
         await updatePlanExportLinks(plan.id, { pdf_url: publicUrl });
       }
-      
-      doc.save(`${plan.id}_${docType}.pdf`);
       return publicUrl;
-    } else {
-      doc.save(`${plan.id}_${docType}.pdf`);
-      return true;
     }
+
+    // download
+    const url = URL.createObjectURL(pdfBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${plan.id}_${docType}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    return true;
   } catch (error) {
-    console.error("PDF export error:", error);
+    console.error('PDF export error:', error);
     throw error;
   }
 }

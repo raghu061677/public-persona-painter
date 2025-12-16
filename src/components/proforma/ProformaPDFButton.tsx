@@ -52,7 +52,7 @@ export const ProformaPDFButton = ({
       }
 
       // Generate PDF
-      const pdfBlob = generateProformaPDF({
+      const pdfBlob = await generateProformaPDF({
         ...(proformaData as unknown as ProformaInvoice),
         items: itemsData as unknown as ProformaInvoiceItem[]
       });

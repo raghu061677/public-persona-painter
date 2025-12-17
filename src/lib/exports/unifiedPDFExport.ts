@@ -58,41 +58,179 @@ function getDocDateLabel(optionType: string): string {
 export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
   const { plan, planItems, options } = data;
 
-  // Fetch client details
+  // If user selected the photo-rich format, keep the legacy generator (it has QR + images).
+  if (options.format === 'with_photos') {
+    // Fetch client details
+    const { data: clientData } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('id', plan.client_id)
+      .single();
+
+    // Fetch user details for POC
+    const { data: userData } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', plan.created_by)
+      .single();
+
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    await generateWithPhotosPDF(doc, plan, planItems, clientData, userData, options, pageWidth, pageHeight);
+    return doc.output('blob');
+  }
+
+  // For Quotation / Estimate / Work Order / Proforma, use the standardized finance template
+  // (logo header + authorized signatory + unicode-safe currency + consistent layout).
+  const { generateStandardizedPDF, formatDateToDDMonYY } = await import('@/lib/pdf/standardPDFTemplate');
+  const { getPrimaryContactName } = await import('@/lib/pdf/pdfHelpers');
+
+  const fetchAsDataUrl = async (url?: string | null): Promise<string | undefined> => {
+    try {
+      if (!url) return undefined;
+      if (url.startsWith('data:')) return url;
+      const res = await fetch(url, { mode: 'cors' });
+      if (!res.ok) return undefined;
+      const blob = await res.blob();
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return undefined;
+    }
+  };
+
+  // Fetch client + contacts (for Point of Contact)
   const { data: clientData } = await supabase
     .from('clients')
     .select('*')
     .eq('id', plan.client_id)
     .single();
 
-  // Fetch user details for POC
-  const { data: userData } = await supabase
-    .from('profiles')
-    .select('full_name')
-    .eq('id', plan.created_by)
+  const { data: clientContacts } = await supabase
+    .from('client_contacts')
+    .select('*')
+    .eq('client_id', plan.client_id)
+    .order('is_primary', { ascending: false });
+
+  const clientWithContacts = {
+    ...clientData,
+    contacts:
+      clientContacts?.map((c: any) => ({
+        name: c.first_name ? `${c.first_name} ${c.last_name || ''}`.trim() : c.name,
+        first_name: c.first_name,
+        last_name: c.last_name,
+      })) || [],
+  };
+
+  // Fetch company details (for logo + seller footer)
+  const { data: companyData } = await supabase
+    .from('companies')
+    .select('name,gstin,pan,logo_url')
+    .eq('id', plan.company_id)
     .single();
 
-  const doc = new jsPDF('p', 'mm', 'a4');
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
+  // Fallback: organization branding (some tenants store logo here)
+  const { data: orgSettings } = await supabase
+    .from('organization_settings')
+    .select('logo_url,organization_name')
+    .limit(1)
+    .maybeSingle();
 
-  // Select format-specific generator
-  switch (options.format) {
-    case 'full_detail':
-      generateFullDetailPDF(doc, plan, planItems, clientData, userData, options, pageWidth, pageHeight);
-      break;
-    case 'compact':
-      generateCompactPDF(doc, plan, planItems, clientData, userData, options, pageWidth, pageHeight);
-      break;
-    case 'summary_only':
-      generateSummaryOnlyPDF(doc, plan, planItems, clientData, userData, options, pageWidth, pageHeight);
-      break;
-    case 'with_photos':
-      await generateWithPhotosPDF(doc, plan, planItems, clientData, userData, options, pageWidth, pageHeight);
-      break;
+  const companyName = companyData?.name || (orgSettings as any)?.organization_name || options.companyName || 'Company';
+  const companyGSTIN = companyData?.gstin || options.gstin || '';
+  const companyPAN = companyData?.pan || '';
+
+  const logoBase64 = await fetchAsDataUrl(companyData?.logo_url || (orgSettings as any)?.logo_url);
+
+  const pointOfContact = getPrimaryContactName(clientWithContacts);
+
+  const start = plan.start_date;
+  const end = plan.end_date;
+  const days = plan.duration_days || Math.max(1, Math.ceil((new Date(end).getTime() - new Date(start).getTime()) / (1000 * 60 * 60 * 24)));
+
+  const items = (planItems || []).map((item: any) => {
+    const monthlyRate = Number(item.sales_price || item.card_rate || 0);
+    const prorataCost = Math.round((monthlyRate / 30) * days);
+
+    return {
+      description: item.location || item.asset_id || 'Display',
+      dimension: item.dimensions || undefined,
+      sqft: item.total_sqft || undefined,
+      illuminationType: item.illumination_type || undefined,
+      startDate: formatDateToDDMonYY(item.start_date || start),
+      endDate: formatDateToDDMonYY(item.end_date || end),
+      days,
+      monthlyRate,
+      cost: prorataCost,
+    };
+  });
+
+  const totalPrinting = (planItems || []).reduce((sum: number, i: any) => sum + Number(i.printing_charges || 0), 0);
+  const totalMounting = (planItems || []).reduce((sum: number, i: any) => sum + Number(i.mounting_charges || 0), 0);
+  const installationCost = totalPrinting + totalMounting;
+
+  if (totalPrinting > 0) {
+    items.push({
+      description: 'Printing Charges',
+      startDate: '',
+      endDate: '',
+      days: 0,
+      monthlyRate: 0,
+      cost: totalPrinting,
+    } as any);
   }
 
-  return doc.output('blob');
+  if (totalMounting > 0) {
+    items.push({
+      description: 'Mounting Charges',
+      startDate: '',
+      endDate: '',
+      days: 0,
+      monthlyRate: 0,
+      cost: totalMounting,
+    } as any);
+  }
+
+  const docTitle = getDocumentHeading(options.optionType) as any;
+
+  // Keep the current plan totals as source-of-truth
+  const gst = Number(plan.gst_amount || 0);
+  const totalInr = Number(plan.grand_total || 0);
+  const baseBeforeGst = Math.max(0, totalInr - gst);
+  const displayCost = Math.max(0, baseBeforeGst - installationCost);
+
+  return generateStandardizedPDF({
+    documentType: docTitle,
+    documentNumber: plan.id,
+    documentDate: formatDateToDDMonYY(plan.created_at || new Date().toISOString()),
+    displayName: plan.plan_name || plan.id,
+    pointOfContact,
+
+    clientName: clientData?.name || plan.client_name || 'Client',
+    clientAddress: clientData?.billing_address_line1 || clientData?.address || '-',
+    clientCity: clientData?.billing_city || clientData?.city || '',
+    clientState: clientData?.billing_state || clientData?.state || '',
+    clientPincode: clientData?.billing_pincode || '',
+    clientGSTIN: clientData?.gst_number || undefined,
+
+    companyName,
+    companyGSTIN,
+    companyPAN,
+    companyLogoBase64: logoBase64,
+
+    items,
+    displayCost,
+    installationCost,
+    gst,
+    totalInr,
+    terms: options.termsAndConditions,
+  });
 }
 
 // ============ FULL DETAIL FORMAT ============

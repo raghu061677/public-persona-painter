@@ -803,6 +803,24 @@ export async function exportPlanToPDF(
     const { generateStandardizedPDF, formatDateToDDMonYY } = await import('@/lib/pdf/standardPDFTemplate');
     const { getPrimaryContactName } = await import('@/lib/pdf/pdfHelpers');
 
+    const fetchAsDataUrl = async (url: string): Promise<string | undefined> => {
+      try {
+        if (!url) return undefined;
+        if (url.startsWith('data:')) return url;
+        const res = await fetch(url, { mode: 'cors' });
+        if (!res.ok) return undefined;
+        const blob = await res.blob();
+        return await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch {
+        return undefined;
+      }
+    };
+
     // Fetch company (seller) details
     const { data: companyData } = await supabase
       .from('companies')
@@ -902,9 +920,9 @@ export async function exportPlanToPDF(
             ? 'PROFORMA INVOICE'
             : 'QUOTATION';
 
-    // Logo: use companyData.logo_url if it is already a data URL; otherwise skip (no breaking)
-    const logoBase64 = typeof companyData?.logo_url === 'string' && companyData.logo_url.startsWith('data:')
-      ? companyData.logo_url
+    // Logo: support both data URLs and normal URLs (convert to base64)
+    const logoBase64 = typeof companyData?.logo_url === 'string'
+      ? await fetchAsDataUrl(companyData.logo_url)
       : undefined;
 
     const pdfBlob = await generateStandardizedPDF({

@@ -188,6 +188,7 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
       font: 'NotoSans',
       fontSize: 8,
       textColor: [0, 0, 0],
+      cellPadding: 1, // keep widths within page (prevents "could not fit page" error)
     },
     headStyles: {
       fillColor: [240, 240, 240],
@@ -196,17 +197,19 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
       fontSize: 8,
       lineWidth: 0.1,
       lineColor: [200, 200, 200],
+      cellPadding: 1,
     },
     columnStyles: {
-      0: { cellWidth: 45 },
-      1: { cellWidth: 18, halign: 'center' },
-      2: { cellWidth: 14, halign: 'center' },
-      3: { cellWidth: 14, halign: 'center' },
-      4: { cellWidth: 18, halign: 'center' },
-      5: { cellWidth: 18, halign: 'center' },
-      6: { cellWidth: 12, halign: 'center' },
-      7: { cellWidth: 24, halign: 'right' },
-      8: { cellWidth: 24, halign: 'right' },
+      // Total widths tuned to fit A4 with margins + padding
+      0: { cellWidth: 42 },
+      1: { cellWidth: 16, halign: 'center' },
+      2: { cellWidth: 12, halign: 'center' },
+      3: { cellWidth: 12, halign: 'center' },
+      4: { cellWidth: 16, halign: 'center' },
+      5: { cellWidth: 16, halign: 'center' },
+      6: { cellWidth: 10, halign: 'center' },
+      7: { cellWidth: 23, halign: 'right' },
+      8: { cellWidth: 23, halign: 'right' },
     },
     margin: { left: 10, right: 10, top: 10 },
     didDrawPage: () => {

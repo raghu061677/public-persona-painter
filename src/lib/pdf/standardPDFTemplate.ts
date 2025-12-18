@@ -82,6 +82,7 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   );
 
   // ========== LOGO HEADER SECTION ==========
+  // Header now has: logo LEFT, company name + address + GSTIN RIGHT, title CENTERED below
   let yPos = renderLogoHeader(
     doc,
     { name: data.companyName, gstin: data.companyGSTIN, pan: data.companyPAN },
@@ -91,7 +92,8 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
 
   yPos += 5;
 
-  // ========== CLIENT DETAILS (LEFT SIDE) ==========
+  // ========== CLIENT DETAILS "To" SECTION (LEFT SIDE) ==========
+  // Per spec: Client name, address, Client GSTIN only - NO seller GST here
   doc.setFontSize(10);
   doc.setFont('NotoSans', 'normal');
   doc.text('To,', 15, yPos);
@@ -100,18 +102,27 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   doc.text(data.clientName, 15, yPos);
 
   yPos += 5;
-  doc.text(data.clientAddress || '-', 15, yPos);
+  if (data.clientAddress) {
+    doc.text(data.clientAddress, 15, yPos);
+    yPos += 5;
+  }
 
-  yPos += 5;
+  // City, State, Pincode
+  const locationLine = `${data.clientCity || ''}, ${data.clientState || ''} ${data.clientPincode || ''}`.trim();
+  if (locationLine && locationLine !== ',') {
+    doc.text(locationLine, 15, yPos);
+    yPos += 5;
+  }
+
+  // Client GSTIN only
   if (data.clientGSTIN) {
     doc.text(`GSTIN: ${data.clientGSTIN}`, 15, yPos);
     yPos += 5;
   }
-  doc.text(`${data.clientCity || ''}, ${data.clientState || ''}, ${data.clientPincode || ''}`.trim(), 15, yPos);
 
   // ========== DOCUMENT DETAILS (RIGHT SIDE) ==========
   const rightX = pageWidth - 15;
-  let rightY = 45;
+  let rightY = yPos - 15; // Align with "To" section
 
   doc.setFontSize(9);
   doc.setFont('NotoSans', 'normal');
@@ -156,15 +167,8 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   rightY += 5;
   doc.text(`Point of Contact : ${data.pointOfContact || 'N/A'}`, rightX, rightY, { align: 'right' });
 
-  // Company GSTIN and PAN (below client section on left)
-  yPos += 10;
-  doc.setFontSize(9);
-  doc.setFont('NotoSans', 'normal');
-  doc.text(`GSTIN: ${data.companyGSTIN}`, 15, yPos);
-  yPos += 5;
-  doc.text(`PAN: ${data.companyPAN}`, 15, yPos);
-
-  yPos += 10;
+  // NO seller GST/PAN in body per spec - it's already in header
+  yPos = Math.max(yPos, rightY) + 10;
 
   // ========== SUMMARY OF CHARGES TABLE ==========
   const tableData = data.items.map((item) => [

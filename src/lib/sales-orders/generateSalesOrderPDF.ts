@@ -79,6 +79,7 @@ function createSalesOrderPDF(data: SalesOrderData): Blob {
   const companyPAN = data.company?.pan || data.orgSettings?.pan || 'AATFM4107H';
 
   // ========== LOGO HEADER SECTION ==========
+  // Per spec: Logo LEFT, Company name + address + GSTIN RIGHT, Title CENTERED below
   let yPos = renderLogoHeader(
     doc,
     { name: companyName, gstin: companyGSTIN, pan: companyPAN },
@@ -87,26 +88,9 @@ function createSalesOrderPDF(data: SalesOrderData): Blob {
 
   yPos += 5;
 
-  // ========== COMPANY DETAILS (LEFT SIDE) ==========
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  const companyDetails = [
-    data.company?.address || 'H.No: 7-1-19/5/201, Jyothi Bhopal Apartments,',
-    'Near Begumpet Metro Station, Opp Country Club,',
-    `${data.company?.city || 'Begumpet, Hyderabad'} – ${data.company?.pincode || '500016'}`,
-    `GSTIN: ${companyGSTIN}  |  PAN: ${companyPAN}`,
-    `Phone: ${data.company?.phone || '+91-4042625757'}`,
-    `Email: ${data.company?.email || 'raghu@matrix-networksolutions.com'}`,
-  ];
-
-  companyDetails.forEach((line) => {
-    doc.text(line, 15, yPos);
-    yPos += 5;
-  });
-
   // ========== SALES ORDER DETAILS (RIGHT SIDE) ==========
   const rightX = pageWidth - 15;
-  let rightY = 45;
+  let rightY = yPos;
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
@@ -122,40 +106,38 @@ function createSalesOrderPDF(data: SalesOrderData): Blob {
     rightY += 6;
   });
 
-  yPos = Math.max(yPos + 5, rightY + 5);
+  yPos = rightY + 5;
 
   // ========== BILL TO / SHIP TO SECTION ==========
+  // Per spec: "To" section contains Client name, address, Client GSTIN only - NO seller GST
   doc.setFillColor(245, 245, 245);
-  doc.rect(15, yPos, (pageWidth - 30) / 2 - 2, 45, 'F');
-  doc.rect((pageWidth - 30) / 2 + 17, yPos, (pageWidth - 30) / 2 - 2, 45, 'F');
+  doc.rect(15, yPos, (pageWidth - 30) / 2 - 2, 40, 'F');
+  doc.rect((pageWidth - 30) / 2 + 17, yPos, (pageWidth - 30) / 2 - 2, 40, 'F');
   doc.setDrawColor(229, 231, 235);
-  doc.rect(15, yPos, (pageWidth - 30) / 2 - 2, 45, 'S');
-  doc.rect((pageWidth - 30) / 2 + 17, yPos, (pageWidth - 30) / 2 - 2, 45, 'S');
+  doc.rect(15, yPos, (pageWidth - 30) / 2 - 2, 40, 'S');
+  doc.rect((pageWidth - 30) / 2 + 17, yPos, (pageWidth - 30) / 2 - 2, 40, 'S');
 
   yPos += 8;
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text('BILL TO:', 20, yPos);
-  doc.text('SHIP TO:', (pageWidth - 30) / 2 + 22, yPos);
+  doc.text('To,', 20, yPos);
+  doc.text('Ship To:', (pageWidth - 30) / 2 + 22, yPos);
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   yPos += 6;
 
+  // Bill To: Client name, address, GSTIN only
   const billToLines = [
     data.client.name || data.client.company,
     data.client.billing_address_line1 || data.client.address,
-    data.client.billing_address_line2,
     `${data.client.billing_city || data.client.city}, ${data.client.billing_state || data.client.state}`,
     `GSTIN: ${data.client.gst_number || 'N/A'}`,
-    `Phone: ${data.client.phone || 'N/A'}`,
-    `Email: ${data.client.email || 'N/A'}`,
   ].filter(Boolean);
 
   const shipToLines = [
     data.client.name || data.client.company,
     data.client.shipping_address_line1 || data.client.billing_address_line1 || data.client.address,
-    data.client.shipping_address_line2 || data.client.billing_address_line2,
     `${data.client.shipping_city || data.client.billing_city || data.client.city}, ${data.client.shipping_state || data.client.billing_state || data.client.state}`,
   ].filter(Boolean);
 
@@ -175,7 +157,7 @@ function createSalesOrderPDF(data: SalesOrderData): Blob {
     }
   });
 
-  yPos += 50;
+  yPos += 45;
 
   // ========== SUBJECT LINE ==========
   doc.setFontSize(11);
@@ -393,7 +375,8 @@ function createSalesOrderPDF(data: SalesOrderData): Blob {
 
   yPos += 15;
 
-  // ========== FOOTER: SELLER INFO (LEFT) + AUTHORIZED SIGNATORY (RIGHT) ==========
+  // ========== FOOTER: AUTHORIZED SIGNATORY ONLY (RIGHT) ==========
+  // Per spec: Footer = "For, Company Name, Authorized Signatory" - NO GSTIN/PAN
   const pageHeight = doc.internal.pageSize.getHeight();
   if (yPos + 40 > pageHeight - 20) {
     doc.addPage();
@@ -402,7 +385,7 @@ function createSalesOrderPDF(data: SalesOrderData): Blob {
 
   renderSellerFooterWithSignatory(
     doc,
-    { name: companyName, gstin: companyGSTIN },
+    { name: companyName },
     yPos
   );
 

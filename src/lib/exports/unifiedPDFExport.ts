@@ -154,12 +154,18 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
   const end = plan.end_date;
   const days = plan.duration_days || Math.max(1, Math.ceil((new Date(end).getTime() - new Date(start).getTime()) / (1000 * 60 * 60 * 24)));
 
-  const items = (planItems || []).map((item: any) => {
+  const items = (planItems || []).map((item: any, index: number) => {
     const monthlyRate = Number(item.sales_price || item.card_rate || 0);
     const prorataCost = Math.round((monthlyRate / 30) * days);
 
+    // Clean description - single line only
+    const description = (item.location || item.asset_id || 'Display').replace(/\n/g, ' ').trim();
+
     return {
-      description: item.location || item.asset_id || 'Display',
+      sno: index + 1,
+      area: item.area || item.city || '-',
+      description,
+      mediaType: item.media_type || '-',
       dimension: item.dimensions || undefined,
       sqft: item.total_sqft || undefined,
       illuminationType: item.illumination_type || undefined,
@@ -175,11 +181,17 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
   const totalMounting = (planItems || []).reduce((sum: number, i: any) => sum + Number(i.mounting_charges || 0), 0);
   const installationCost = totalPrinting + totalMounting;
 
+  let snoCounter = items.length;
+
   if (totalPrinting > 0) {
+    snoCounter++;
     items.push({
+      sno: snoCounter,
+      area: '-',
       description: 'Printing Charges',
-      startDate: '',
-      endDate: '',
+      mediaType: '-',
+      startDate: '-',
+      endDate: '-',
       days: 0,
       monthlyRate: 0,
       cost: totalPrinting,
@@ -187,10 +199,14 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
   }
 
   if (totalMounting > 0) {
+    snoCounter++;
     items.push({
+      sno: snoCounter,
+      area: '-',
       description: 'Mounting Charges',
-      startDate: '',
-      endDate: '',
+      mediaType: '-',
+      startDate: '-',
+      endDate: '-',
       days: 0,
       monthlyRate: 0,
       cost: totalMounting,

@@ -7,9 +7,11 @@ interface CompanyInfo {
 
 /**
  * Renders the Authorized Signatory block (bottom-right aligned)
+ * Per Matrix GST Placement spec:
  * - "For," + company name
  * - Signature line
  * - "Authorized Signatory" label
+ * - NO GSTIN or PAN in footer
  */
 export function renderAuthorizedSignatory(
   doc: jsPDF,
@@ -42,27 +44,16 @@ export function renderAuthorizedSignatory(
 }
 
 /**
- * Renders seller footer (left side) + authorized signatory (right side)
- * Use this for balanced footer layout
+ * Renders ONLY the authorized signatory block (right side)
+ * Per Matrix GST Placement spec - footer must NOT contain seller GST/PAN
+ * Use this for the standardized footer layout
  */
 export function renderSellerFooterWithSignatory(
   doc: jsPDF,
   company: CompanyInfo,
   yPos: number
 ): void {
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(0, 0, 0);
-  
-  // Left side: Seller info
-  doc.text('For,', 15, yPos);
-  doc.setFont('helvetica', 'bold');
-  doc.text(company.name, 15, yPos + 6);
-  doc.setFont('helvetica', 'normal');
-  if (company.gstin) {
-    doc.text(`GSTIN: ${company.gstin}`, 15, yPos + 12);
-  }
-  
-  // Right side: Authorized Signatory
+  // Only render the authorized signatory block on the right
+  // NO seller info with GSTIN on the left per spec
   renderAuthorizedSignatory(doc, company, yPos);
 }

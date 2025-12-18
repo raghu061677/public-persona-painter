@@ -64,6 +64,7 @@ function createInvoicePDF(data: InvoiceData): Blob {
   const companyPAN = data.orgSettings?.pan || 'AATFM4107H';
 
   // ========== LOGO HEADER SECTION ==========
+  // Per spec: Logo LEFT, Company name + address + GSTIN RIGHT, Title CENTERED below
   let yPos = renderLogoHeader(
     doc,
     { name: companyName, gstin: companyGSTIN, pan: companyPAN },
@@ -72,26 +73,9 @@ function createInvoicePDF(data: InvoiceData): Blob {
 
   yPos += 5;
 
-  // ========== COMPANY DETAILS (LEFT SIDE) ==========
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  const companyDetails = [
-    data.orgSettings?.address_line1 || 'H.No: 7-1-19/5/201, Jyothi Bhopal Apartments,',
-    data.orgSettings?.address_line2 || 'Near Begumpet Metro Station, Opp Country Club,',
-    `${data.orgSettings?.city || 'Hyderabad'}, ${data.orgSettings?.state || ''} - ${data.orgSettings?.pincode || '500016'}`,
-    `GSTIN: ${companyGSTIN}  |  PAN: ${companyPAN}`,
-    `Phone: ${data.orgSettings?.phone || '+91-4042625757'}`,
-    `Email: ${data.orgSettings?.email || 'raghu@matrix-networksolutions.com'}`,
-  ].filter(Boolean);
-
-  companyDetails.forEach((line) => {
-    doc.text(line, 15, yPos);
-    yPos += 5;
-  });
-
   // ========== INVOICE DETAILS (RIGHT SIDE) ==========
   const rightX = pageWidth - 15;
-  let rightY = 45;
+  let rightY = yPos;
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
@@ -108,42 +92,45 @@ function createInvoicePDF(data: InvoiceData): Blob {
     rightY += 6;
   });
 
-  yPos = Math.max(yPos + 5, rightY + 5);
+  yPos = rightY + 5;
 
   // ========== BILL TO SECTION ==========
+  // Per spec: "To" section contains Client name, address, Client GSTIN only - NO seller GST
   doc.setFillColor(245, 245, 245);
-  doc.rect(15, yPos, pageWidth - 30, 40, 'F');
+  doc.rect(15, yPos, pageWidth - 30, 35, 'F');
   doc.setDrawColor(229, 231, 235);
-  doc.rect(15, yPos, pageWidth - 30, 40, 'S');
+  doc.rect(15, yPos, pageWidth - 30, 35, 'S');
 
   yPos += 8;
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text('BILL TO:', 20, yPos);
+  doc.text('To,', 20, yPos);
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   yPos += 6;
 
-  const billToLines = [
-    data.client.name || data.client.company,
-    data.client.billing_address_line1 || data.client.address,
-    data.client.billing_address_line2,
-    `${data.client.billing_city || data.client.city}, ${data.client.billing_state || data.client.state}`,
-    `GSTIN: ${data.client.gst_number || 'N/A'}`,
-    `Contact: ${data.client.contact_person || data.client.name}`,
-    `Phone: ${data.client.phone || 'N/A'}`,
-    `Email: ${data.client.email || 'N/A'}`,
-  ].filter(Boolean);
+  // Client name
+  doc.text(data.client.name || data.client.company || '', 20, yPos);
+  yPos += 5;
 
-  billToLines.forEach((line) => {
-    if (line) {
-      doc.text(line, 20, yPos);
-      yPos += 5;
-    }
-  });
+  // Client address
+  const clientAddress = data.client.billing_address_line1 || data.client.address || '';
+  if (clientAddress) {
+    doc.text(clientAddress, 20, yPos);
+    yPos += 5;
+  }
+  
+  // City, State
+  const cityState = `${data.client.billing_city || data.client.city || ''}, ${data.client.billing_state || data.client.state || ''}`.trim();
+  if (cityState && cityState !== ',') {
+    doc.text(cityState, 20, yPos);
+    yPos += 5;
+  }
 
-  yPos += 15;
+  // Client GSTIN only
+  doc.text(`GSTIN: ${data.client.gst_number || 'N/A'}`, 20, yPos);
+  yPos += 10;
 
   // ========== SUBJECT LINE ==========
   doc.setFontSize(11);
@@ -289,7 +276,8 @@ function createInvoicePDF(data: InvoiceData): Blob {
 
   yPos += 15;
 
-  // ========== FOOTER: SELLER INFO (LEFT) + AUTHORIZED SIGNATORY (RIGHT) ==========
+  // ========== FOOTER: AUTHORIZED SIGNATORY ONLY (RIGHT) ==========
+  // Per spec: Footer = "For, Company Name, Authorized Signatory" - NO GSTIN/PAN
   const pageHeight = doc.internal.pageSize.getHeight();
   if (yPos + 40 > pageHeight - 20) {
     doc.addPage();
@@ -298,7 +286,7 @@ function createInvoicePDF(data: InvoiceData): Blob {
 
   renderSellerFooterWithSignatory(
     doc,
-    { name: companyName, gstin: companyGSTIN },
+    { name: companyName },
     yPos
   );
 

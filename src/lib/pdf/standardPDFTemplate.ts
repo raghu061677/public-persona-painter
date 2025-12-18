@@ -40,10 +40,13 @@ interface PDFDocumentData {
 }
 
 interface PDFLineItem {
-  description: string;
+  sno?: number; // Serial number (auto-generated if not provided)
+  area?: string; // Area name (e.g., Kukatpally, Jubilee Hills)
+  description: string; // Single-line location description
+  mediaType?: string; // Bus Shelter, Hoarding, Unipole, LED, etc.
   dimension?: string; // e.g., "10x20 ft"
   sqft?: number; // Total sqft
-  illuminationType?: string; // Lit/Non-Lit
+  illuminationType?: string; // Backlit, Frontlit, Non-Lit, LED
   startDate: string; // Format: 15Aug25
   endDate: string; // Format: 15Aug25
   days: number;
@@ -171,51 +174,67 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   yPos = Math.max(yPos, rightY) + 10;
 
   // ========== SUMMARY OF CHARGES TABLE ==========
-  const tableData = data.items.map((item) => [
-    item.description,
-    item.dimension || '-',
-    item.sqft ? item.sqft.toString() : '-',
-    item.illuminationType || '-',
-    item.startDate || '-',
-    item.endDate || '-',
-    item.days > 0 ? item.days.toString() : '-',
-    item.monthlyRate > 0 ? formatCurrencyForPDF(item.monthlyRate) : '-',
-    formatCurrencyForPDF(item.cost),
-  ]);
+  // Column order: S.No | Area | Description | Media Type | Size | Sqft | Illumination | Start | End | Days | Rate/Month | Cost
+  const tableData = data.items.map((item, index) => {
+    // Clean description - remove line breaks, keep single line
+    const cleanDescription = (item.description || '-').replace(/\n/g, ' ').trim();
+    
+    return [
+      (item.sno || index + 1).toString(), // S.No
+      item.area || '-', // Area
+      cleanDescription, // Description (single-line)
+      item.mediaType || '-', // Media Type
+      item.dimension || '-', // Size
+      item.sqft ? item.sqft.toString() : '-', // Sqft
+      item.illuminationType || '-', // Illumination
+      item.startDate || '-', // Start
+      item.endDate || '-', // End
+      item.days > 0 ? item.days.toString() : '-', // Days
+      item.monthlyRate > 0 ? formatCurrencyForPDF(item.monthlyRate) : '-', // Rate/Month
+      formatCurrencyForPDF(item.cost), // Cost
+    ];
+  });
 
   autoTable(doc, {
     startY: yPos,
-    head: [['Description', 'Size', 'Sqft', 'Type', 'Start', 'End', 'Days', 'Rate/Month', 'Cost']],
+    head: [['S.No', 'Area', 'Description', 'Media Type', 'Size', 'Sqft', 'Illumination', 'Start', 'End', 'Days', 'Rate/Month', 'Cost']],
     body: tableData,
-    theme: 'plain',
+    theme: 'grid',
     styles: {
       font: 'NotoSans',
-      fontSize: 8,
+      fontSize: 7,
       textColor: [0, 0, 0],
-      cellPadding: 1, // keep widths within page (prevents "could not fit page" error)
+      cellPadding: 1.5,
+      overflow: 'linebreak',
+      lineWidth: 0.1,
+      lineColor: [200, 200, 200],
     },
     headStyles: {
       fillColor: [240, 240, 240],
       textColor: [0, 0, 0],
-      fontStyle: 'normal',
-      fontSize: 8,
+      fontStyle: 'bold',
+      fontSize: 7,
       lineWidth: 0.1,
-      lineColor: [200, 200, 200],
-      cellPadding: 1,
+      lineColor: [180, 180, 180],
+      cellPadding: 1.5,
+      halign: 'center',
     },
     columnStyles: {
-      // Total widths tuned to fit A4 with margins + padding
-      0: { cellWidth: 42 },
-      1: { cellWidth: 16, halign: 'center' },
-      2: { cellWidth: 12, halign: 'center' },
-      3: { cellWidth: 12, halign: 'center' },
-      4: { cellWidth: 16, halign: 'center' },
-      5: { cellWidth: 16, halign: 'center' },
-      6: { cellWidth: 10, halign: 'center' },
-      7: { cellWidth: 23, halign: 'right' },
-      8: { cellWidth: 23, halign: 'right' },
+      // Fixed widths for proper alignment on A4 (210mm - 20mm margins = 190mm usable)
+      0: { cellWidth: 10, halign: 'center' }, // S.No
+      1: { cellWidth: 18, halign: 'center' }, // Area
+      2: { cellWidth: 32 }, // Description
+      3: { cellWidth: 18, halign: 'center' }, // Media Type
+      4: { cellWidth: 14, halign: 'center' }, // Size
+      5: { cellWidth: 12, halign: 'center' }, // Sqft
+      6: { cellWidth: 16, halign: 'center' }, // Illumination
+      7: { cellWidth: 14, halign: 'center' }, // Start
+      8: { cellWidth: 14, halign: 'center' }, // End
+      9: { cellWidth: 10, halign: 'center' }, // Days
+      10: { cellWidth: 18, halign: 'right' }, // Rate/Month
+      11: { cellWidth: 18, halign: 'right' }, // Cost
     },
-    margin: { left: 10, right: 10, top: 10 },
+    margin: { left: 8, right: 8, top: 10 },
     didDrawPage: () => {
       // Keep header on every page
       headerRenderer(doc);

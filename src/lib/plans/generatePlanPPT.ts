@@ -243,29 +243,48 @@ export async function generatePlanPPT(
       fontFace: 'Arial',
     });
 
-    // Image 1
+    // Image 1 (fixed frame, cover to keep exact positioning)
     try {
+      // Frame (helps visually + ensures consistent crop)
+      slide1.addShape(prs.ShapeType.rect, {
+        x: 0.4,
+        y: 1.5,
+        w: 4.5,
+        h: 3.8,
+        fill: { color: 'FFFFFF' },
+        line: { color: 'E5E7EB', width: 1 },
+      });
+
       slide1.addImage({
         path: photo1,
         x: 0.4,
         y: 1.5,
         w: 4.5,
         h: 3.8,
-        sizing: { type: 'contain', w: 4.5, h: 3.8 },
+        sizing: { type: 'cover', w: 4.5, h: 3.8 },
       });
     } catch (error) {
       console.error('Failed to add image 1:', error);
     }
 
-    // Image 2
+    // Image 2 (fixed frame, cover to keep exact positioning)
     try {
+      slide1.addShape(prs.ShapeType.rect, {
+        x: 5.1,
+        y: 1.5,
+        w: 4.5,
+        h: 3.8,
+        fill: { color: 'FFFFFF' },
+        line: { color: 'E5E7EB', width: 1 },
+      });
+
       slide1.addImage({
         path: photo2,
         x: 5.1,
         y: 1.5,
         w: 4.5,
         h: 3.8,
-        sizing: { type: 'contain', w: 4.5, h: 3.8 },
+        sizing: { type: 'cover', w: 4.5, h: 3.8 },
       });
     } catch (error) {
       console.error('Failed to add image 2:', error);

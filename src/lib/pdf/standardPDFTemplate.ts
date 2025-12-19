@@ -202,37 +202,39 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
     theme: 'grid',
     styles: {
       font: 'NotoSans',
-      fontSize: 7,
+      fontSize: 6.5,
       textColor: [0, 0, 0],
-      cellPadding: 1.5,
-      overflow: 'linebreak',
+      cellPadding: { top: 1.1, right: 1.1, bottom: 1.1, left: 1.1 },
+      overflow: 'ellipsize', // single-line, no chaotic wraps
       lineWidth: 0.1,
       lineColor: [200, 200, 200],
+      valign: 'middle',
     },
     headStyles: {
       fillColor: [240, 240, 240],
       textColor: [0, 0, 0],
       fontStyle: 'bold',
-      fontSize: 7,
+      fontSize: 6.5,
       lineWidth: 0.1,
       lineColor: [180, 180, 180],
-      cellPadding: 1.5,
+      cellPadding: { top: 1.1, right: 1.1, bottom: 1.1, left: 1.1 },
       halign: 'center',
+      valign: 'middle',
     },
     columnStyles: {
-      // Fixed widths for proper alignment on A4 (210mm - 20mm margins = 190mm usable)
-      0: { cellWidth: 10, halign: 'center' }, // S.No
+      // Available width = 210 - (8+8) = 194mm
+      0: { cellWidth: 8, halign: 'center' }, // S.No
       1: { cellWidth: 18, halign: 'center' }, // Area
-      2: { cellWidth: 32 }, // Description
+      2: { cellWidth: 30, halign: 'left' }, // Description (single-line)
       3: { cellWidth: 18, halign: 'center' }, // Media Type
-      4: { cellWidth: 14, halign: 'center' }, // Size
-      5: { cellWidth: 12, halign: 'center' }, // Sqft
+      4: { cellWidth: 18, halign: 'center' }, // Size
+      5: { cellWidth: 10, halign: 'center' }, // Sqft
       6: { cellWidth: 16, halign: 'center' }, // Illumination
       7: { cellWidth: 14, halign: 'center' }, // Start
       8: { cellWidth: 14, halign: 'center' }, // End
       9: { cellWidth: 10, halign: 'center' }, // Days
       10: { cellWidth: 18, halign: 'right' }, // Rate/Month
-      11: { cellWidth: 18, halign: 'right' }, // Cost
+      11: { cellWidth: 20, halign: 'right' }, // Cost
     },
     margin: { left: 8, right: 8, top: 10 },
     didDrawPage: () => {

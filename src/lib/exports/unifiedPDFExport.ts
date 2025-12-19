@@ -159,14 +159,17 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
     const prorataCost = Math.round((monthlyRate / 30) * days);
 
     // Clean description - single line only
-    const description = (item.location || item.asset_id || 'Display').replace(/\n/g, ' ').trim();
+    const description = (item.location || item.asset_id || 'Display').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+
+    // Keep size single-token so it doesn't wrap in the fixed-width column
+    const dimension = (item.dimensions || '').toString().replace(/\s+/g, '').trim() || undefined;
 
     return {
       sno: index + 1,
       area: item.area || item.city || '-',
       description,
       mediaType: item.media_type || '-',
-      dimension: item.dimensions || undefined,
+      dimension,
       sqft: item.total_sqft || undefined,
       illuminationType: item.illumination_type || undefined,
       startDate: formatDateToDDMonYY(item.start_date || start),

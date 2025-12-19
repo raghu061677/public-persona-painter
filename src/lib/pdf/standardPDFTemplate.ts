@@ -24,34 +24,58 @@ interface PDFDocumentData {
   companyName: string;
   companyGSTIN: string;
   companyPAN: string;
-  companyLogoBase64?: string; // Optional logo as base64
+  companyLogoBase64?: string;
 
-  // Line items
+  // Line items (098-style)
   items: PDFLineItem[];
 
   // Totals
-  displayCost: number;
-  installationCost: number;
-  gst: number;
+  untaxedAmount: number;
+  cgst: number;
+  sgst: number;
   totalInr: number;
 
   // Optional overrides
   terms?: string[];
+  paymentTerms?: string;
 }
 
 interface PDFLineItem {
-  sno?: number; // Serial number (auto-generated if not provided)
-  area?: string; // Area name (e.g., Kukatpally, Jubilee Hills)
-  description: string; // Single-line location description
-  mediaType?: string; // Bus Shelter, Hoarding, Unipole, LED, etc.
-  dimension?: string; // e.g., "10x20 ft"
-  sqft?: number; // Total sqft
-  illuminationType?: string; // Backlit, Frontlit, Non-Lit, LED
-  startDate: string; // Format: 15Aug25
-  endDate: string; // Format: 15Aug25
-  days: number;
-  monthlyRate: number;
-  cost: number;
+  sno: number;
+  // LOCATION & DESCRIPTION column content
+  locationCode: string;    // e.g., "[A4-36] Abids beside Chermas"
+  area: string;            // e.g., "Abids" (Zone/Area)
+  mediaType: string;       // e.g., "Bus Shelter"
+  route: string;           // e.g., "Towards GPO" (direction)
+  illumination: string;    // e.g., "BackLit"
+  
+  // SIZE column
+  dimension: string;       // e.g., "20X5-9.5X3"
+  totalSqft: number;       // e.g., 161
+  
+  // BOOKING column
+  fromDate: string;        // e.g., "27/09/2025"
+  toDate: string;          // e.g., "26/10/2025"
+  duration: string;        // e.g., "1 Month" or "30 Days"
+  
+  // Pricing
+  unitPrice: number;       // Monthly rate
+  subtotal: number;        // Final amount for this item
+}
+
+// Format date to DD/MM/YYYY
+export function formatDateToDDMMYYYY(dateString: string): string {
+  if (!dateString) return '-';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '-';
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch {
+    return '-';
+  }
 }
 
 // Format date to DDMonYY (e.g., "15Aug25")
@@ -70,9 +94,67 @@ export function formatDateToDDMonYY(dateString: string): string {
   }
 }
 
+// Convert number to words (Indian style)
+function numberToWords(num: number): string {
+  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+    'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  if (num === 0) return 'Zero';
+  if (num < 0) return 'Minus ' + numberToWords(Math.abs(num));
+
+  let words = '';
+  const crore = Math.floor(num / 10000000);
+  num %= 10000000;
+  const lakh = Math.floor(num / 100000);
+  num %= 100000;
+  const thousand = Math.floor(num / 1000);
+  num %= 1000;
+  const hundred = Math.floor(num / 100);
+  num %= 100;
+
+  if (crore > 0) words += numberToWords(crore) + ' Crore ';
+  if (lakh > 0) words += numberToWords(lakh) + ' Lakh ';
+  if (thousand > 0) words += numberToWords(thousand) + ' Thousand ';
+  if (hundred > 0) words += ones[hundred] + ' Hundred ';
+  
+  if (num > 0) {
+    if (words !== '') words += 'And ';
+    if (num < 20) {
+      words += ones[num];
+    } else {
+      words += tens[Math.floor(num / 10)];
+      if (num % 10 > 0) words += '-' + ones[num % 10];
+    }
+  }
+
+  return words.trim();
+}
+
+function amountToWords(amount: number): string {
+  const rupees = Math.floor(amount);
+  const paise = Math.round((amount - rupees) * 100);
+  
+  let words = numberToWords(rupees) + ' Rupees';
+  if (paise > 0) {
+    words += ' And ' + numberToWords(paise) + ' Paise';
+  }
+  return words + ' Only';
+}
+
+// Bank details constant
+const BANK_DETAILS = {
+  bankName: 'HDFC Bank Limited',
+  branch: 'KARKHANA ROAD, SECUNDERABAD 500009',
+  accountNo: '50200010727301',
+  ifsc: 'HDFC0001555',
+  micr: '500240026',
+};
+
 export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Blob> {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
 
   // Ensure ₹ is supported
   await ensurePdfUnicodeFont(doc);
@@ -85,7 +167,6 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   );
 
   // ========== LOGO HEADER SECTION ==========
-  // Header now has: logo LEFT, company name + address + GSTIN RIGHT, title CENTERED below
   let yPos = renderLogoHeader(
     doc,
     { name: data.companyName, gstin: data.companyGSTIN, pan: data.companyPAN },
@@ -93,239 +174,291 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
     data.companyLogoBase64
   );
 
-  yPos += 5;
+  yPos += 3;
 
-  // ========== CLIENT DETAILS "To" SECTION (LEFT SIDE) ==========
-  // Per spec: Client name, address, Client GSTIN only - NO seller GST here
+  // ========== TWO-COLUMN SECTION: BILL TO (Left) | DOC DETAILS (Right) ==========
+  const leftX = 14;
+  const rightX = pageWidth - 14;
+  const colMidX = pageWidth / 2;
+
+  // Bill To Section (Left)
   doc.setFontSize(10);
+  doc.setFont('NotoSans', 'bold');
+  doc.text('Bill To', leftX, yPos);
+  
+  let billToY = yPos + 5;
   doc.setFont('NotoSans', 'normal');
-  doc.text('To,', 15, yPos);
-
-  yPos += 5;
-  doc.text(data.clientName, 15, yPos);
-
-  yPos += 5;
-  if (data.clientAddress) {
-    doc.text(data.clientAddress, 15, yPos);
-    yPos += 5;
-  }
-
-  // City, State, Pincode
-  const locationLine = `${data.clientCity || ''}, ${data.clientState || ''} ${data.clientPincode || ''}`.trim();
-  if (locationLine && locationLine !== ',') {
-    doc.text(locationLine, 15, yPos);
-    yPos += 5;
-  }
-
-  // Client GSTIN only
-  if (data.clientGSTIN) {
-    doc.text(`GSTIN: ${data.clientGSTIN}`, 15, yPos);
-    yPos += 5;
-  }
-
-  // ========== DOCUMENT DETAILS (RIGHT SIDE) ==========
-  const rightX = pageWidth - 15;
-  let rightY = yPos - 15; // Align with "To" section
-
   doc.setFontSize(9);
-  doc.setFont('NotoSans', 'normal');
-  doc.text(`Display Name : ${data.displayName}`, rightX, rightY, { align: 'right' });
+  
+  doc.text(data.clientName, leftX, billToY);
+  billToY += 4;
+  
+  if (data.clientAddress) {
+    const addressLines = doc.splitTextToSize(data.clientAddress, colMidX - leftX - 10);
+    addressLines.forEach((line: string) => {
+      doc.text(line, leftX, billToY);
+      billToY += 4;
+    });
+  }
+  
+  const cityStatePin = [data.clientCity, data.clientState, data.clientPincode]
+    .filter(Boolean)
+    .join(', ');
+  if (cityStatePin) {
+    doc.text(cityStatePin, leftX, billToY);
+    billToY += 4;
+  }
+  
+  if (data.clientGSTIN) {
+    doc.setFont('NotoSans', 'bold');
+    doc.text(`GSTIN: ${data.clientGSTIN}`, leftX, billToY);
+    billToY += 4;
+  }
 
-  rightY += 5;
+  // Document Details Section (Right)
+  let detailsY = yPos;
+  doc.setFont('NotoSans', 'bold');
+  doc.setFontSize(10);
+  doc.text('Invoice Details', colMidX + 10, detailsY);
+  
+  detailsY += 5;
+  doc.setFont('NotoSans', 'normal');
+  doc.setFontSize(9);
+
+  // Document Number Label
   let docLabel = '';
   switch (data.documentType) {
-    case 'WORK ORDER':
-      docLabel = 'WO No';
-      break;
-    case 'ESTIMATE':
-      docLabel = 'Estimate No';
-      break;
-    case 'QUOTATION':
-      docLabel = 'Quotation No';
-      break;
-    case 'PROFORMA INVOICE':
-      docLabel = 'PI No';
-      break;
+    case 'WORK ORDER': docLabel = 'WO No'; break;
+    case 'ESTIMATE': docLabel = 'Estimate No'; break;
+    case 'QUOTATION': docLabel = 'Quotation No'; break;
+    case 'PROFORMA INVOICE': docLabel = 'PI No'; break;
   }
-  doc.text(`${docLabel} : ${data.documentNumber}`, rightX, rightY, { align: 'right' });
+  doc.text(`${docLabel}: ${data.documentNumber}`, colMidX + 10, detailsY);
+  detailsY += 4;
 
-  rightY += 5;
+  // Date Label
   let dateLabel = '';
   switch (data.documentType) {
-    case 'WORK ORDER':
-      dateLabel = 'WO Date';
-      break;
-    case 'ESTIMATE':
-      dateLabel = 'Estimate Date';
-      break;
-    case 'QUOTATION':
-      dateLabel = 'Quotation Date';
-      break;
-    case 'PROFORMA INVOICE':
-      dateLabel = 'PI Date';
-      break;
+    case 'WORK ORDER': dateLabel = 'WO Date'; break;
+    case 'ESTIMATE': dateLabel = 'Estimate Date'; break;
+    case 'QUOTATION': dateLabel = 'Quotation Date'; break;
+    case 'PROFORMA INVOICE': dateLabel = 'PI Date'; break;
   }
-  doc.text(`${dateLabel} : ${data.documentDate}`, rightX, rightY, { align: 'right' });
+  doc.text(`${dateLabel}: ${data.documentDate}`, colMidX + 10, detailsY);
+  detailsY += 4;
 
-  rightY += 5;
-  doc.text(`Point of Contact : ${data.pointOfContact || 'N/A'}`, rightX, rightY, { align: 'right' });
+  doc.text(`Campaign: ${data.displayName}`, colMidX + 10, detailsY);
+  detailsY += 4;
+  
+  if (data.pointOfContact && data.pointOfContact !== 'N/A') {
+    doc.text(`Point of Contact: ${data.pointOfContact}`, colMidX + 10, detailsY);
+    detailsY += 4;
+  }
 
-  // NO seller GST/PAN in body per spec - it's already in header
-  yPos = Math.max(yPos, rightY) + 10;
+  yPos = Math.max(billToY, detailsY) + 8;
 
-  // ========== SUMMARY OF CHARGES TABLE ==========
-  // Column order: S.No | Area | Description | Media Type | Size | Sqft | Illumination | Start | End | Days | Rate/Month | Cost
-  const tableData = data.items.map((item, index) => {
-    // Clean description - remove line breaks, keep single line
-    const cleanDescription = (item.description || '-').replace(/\n/g, ' ').trim();
-    
+  // ========== 098-STYLE TABLE ==========
+  // Columns: # | LOCATION & DESCRIPTION | SIZE | BOOKING | UNIT PRICE | SUBTOTAL
+  const tableBody = data.items.map((item) => {
+    // LOCATION & DESCRIPTION cell (multi-line)
+    const locationDesc = [
+      item.locationCode,
+      `Area: ${item.area}`,
+      `Media: ${item.mediaType}`,
+      `Route: ${item.route}`,
+      `Lit: ${item.illumination}`,
+    ].filter(Boolean).join('\n');
+
+    // SIZE cell
+    const sizeCell = `${item.dimension}\nArea(Sft): ${item.totalSqft}`;
+
+    // BOOKING cell
+    const bookingCell = `From: ${item.fromDate}\nTo: ${item.toDate}\n${item.duration}`;
+
     return [
-      (item.sno || index + 1).toString(), // S.No
-      item.area || '-', // Area
-      cleanDescription, // Description (single-line)
-      item.mediaType || '-', // Media Type
-      item.dimension || '-', // Size
-      item.sqft ? item.sqft.toString() : '-', // Sqft
-      item.illuminationType || '-', // Illumination
-      item.startDate || '-', // Start
-      item.endDate || '-', // End
-      item.days > 0 ? item.days.toString() : '-', // Days
-      item.monthlyRate > 0 ? formatCurrencyForPDF(item.monthlyRate) : '-', // Rate/Month
-      formatCurrencyForPDF(item.cost), // Cost
+      item.sno.toString(),
+      locationDesc,
+      sizeCell,
+      bookingCell,
+      formatCurrencyForPDF(item.unitPrice).replace('₹', ''),
+      formatCurrencyForPDF(item.subtotal).replace('₹', ''),
     ];
   });
 
   autoTable(doc, {
     startY: yPos,
-    head: [['S.No', 'Area', 'Description', 'Media Type', 'Size', 'Sqft', 'Illumination', 'Start', 'End', 'Days', 'Rate/Month', 'Cost']],
-    body: tableData,
+    head: [['#', 'LOCATION & DESCRIPTION', 'SIZE', 'BOOKING', 'UNIT PRICE', 'SUBTOTAL']],
+    body: tableBody,
     theme: 'grid',
     styles: {
       font: 'NotoSans',
-      fontSize: 6.5,
+      fontSize: 8,
       textColor: [0, 0, 0],
-      cellPadding: { top: 1.1, right: 1.1, bottom: 1.1, left: 1.1 },
-      overflow: 'ellipsize', // single-line, no chaotic wraps
-      lineWidth: 0.1,
-      lineColor: [200, 200, 200],
-      valign: 'middle',
+      cellPadding: 2,
+      overflow: 'linebreak',
+      lineWidth: 0.2,
+      lineColor: [180, 180, 180],
+      valign: 'top',
     },
     headStyles: {
       fillColor: [240, 240, 240],
       textColor: [0, 0, 0],
       fontStyle: 'bold',
-      fontSize: 6.5,
-      lineWidth: 0.1,
-      lineColor: [180, 180, 180],
-      cellPadding: { top: 1.1, right: 1.1, bottom: 1.1, left: 1.1 },
+      fontSize: 8,
       halign: 'center',
       valign: 'middle',
     },
     columnStyles: {
-      // Available width = 210 - (8+8) = 194mm
-      0: { cellWidth: 8, halign: 'center' }, // S.No
-      1: { cellWidth: 18, halign: 'center' }, // Area
-      2: { cellWidth: 30, halign: 'left' }, // Description (single-line)
-      3: { cellWidth: 18, halign: 'center' }, // Media Type
-      4: { cellWidth: 18, halign: 'center' }, // Size
-      5: { cellWidth: 10, halign: 'center' }, // Sqft
-      6: { cellWidth: 16, halign: 'center' }, // Illumination
-      7: { cellWidth: 14, halign: 'center' }, // Start
-      8: { cellWidth: 14, halign: 'center' }, // End
-      9: { cellWidth: 10, halign: 'center' }, // Days
-      10: { cellWidth: 18, halign: 'right' }, // Rate/Month
-      11: { cellWidth: 20, halign: 'right' }, // Cost
+      0: { cellWidth: 10, halign: 'center', valign: 'middle' },
+      1: { cellWidth: 70 },
+      2: { cellWidth: 28, halign: 'center' },
+      3: { cellWidth: 35, halign: 'left' },
+      4: { cellWidth: 25, halign: 'right' },
+      5: { cellWidth: 25, halign: 'right' },
     },
-    margin: { left: 8, right: 8, top: 10 },
+    margin: { left: 8, right: 8 },
     didDrawPage: () => {
-      // Keep header on every page
       headerRenderer(doc);
     },
   });
 
   // @ts-ignore
-  yPos = doc.lastAutoTable.finalY + 5;
+  yPos = doc.lastAutoTable.finalY + 8;
 
-  // ========== TOTALS (RIGHT ALIGNED) ==========
-  const totalsX = pageWidth - 15;
+  // ========== PAYMENT TERMS & SUMMARY (two columns) ==========
+  // Check if we need a new page
+  if (yPos + 80 > pageHeight - 40) {
+    doc.addPage();
+    headerRenderer(doc);
+    yPos = 50;
+  }
+
+  // Payment terms (left side)
+  doc.setFontSize(9);
+  doc.setFont('NotoSans', 'normal');
+  doc.text(`Payment terms: ${data.paymentTerms || '30 Net Days'}`, leftX, yPos);
+  doc.text('Looking forward for your business.', leftX, yPos + 5);
+
+  // ========== SUMMARY (right side) ==========
+  const summaryX = pageWidth - 80;
+  let summaryY = yPos;
 
   doc.setFontSize(10);
+  doc.setFont('NotoSans', 'bold');
+  doc.text('Summary:', summaryX, summaryY);
+  
+  summaryY += 6;
   doc.setFont('NotoSans', 'normal');
-  doc.text(`Display Cost :`, totalsX - 50, yPos);
-  doc.text(formatCurrencyForPDF(data.displayCost), totalsX, yPos, { align: 'right' });
+  doc.setFontSize(9);
+  
+  doc.text('Untaxed Amount:', summaryX, summaryY);
+  doc.text(formatCurrencyForPDF(data.untaxedAmount), rightX, summaryY, { align: 'right' });
+  
+  summaryY += 5;
+  doc.text('CGST @ 9%:', summaryX, summaryY);
+  doc.text(formatCurrencyForPDF(data.cgst), rightX, summaryY, { align: 'right' });
+  
+  summaryY += 5;
+  doc.text('SGST @ 9%:', summaryX, summaryY);
+  doc.text(formatCurrencyForPDF(data.sgst), rightX, summaryY, { align: 'right' });
+  
+  summaryY += 2;
+  doc.setDrawColor(180, 180, 180);
+  doc.line(summaryX, summaryY, rightX, summaryY);
+  
+  summaryY += 5;
+  doc.setFont('NotoSans', 'bold');
+  doc.setFontSize(10);
+  doc.text('Total:', summaryX, summaryY);
+  doc.text(formatCurrencyForPDF(data.totalInr), rightX, summaryY, { align: 'right' });
+  
+  summaryY += 6;
+  doc.setFont('NotoSans', 'normal');
+  doc.setFontSize(8);
+  const totalWords = amountToWords(data.totalInr);
+  const wordsLines = doc.splitTextToSize(`Total (In Words): ${totalWords}`, rightX - summaryX + 5);
+  wordsLines.forEach((line: string) => {
+    doc.text(line, summaryX, summaryY);
+    summaryY += 4;
+  });
 
-  yPos += 6;
-  doc.text(`Installation Cost :`, totalsX - 50, yPos);
-  doc.text(formatCurrencyForPDF(data.installationCost), totalsX, yPos, { align: 'right' });
+  yPos = Math.max(yPos + 25, summaryY) + 10;
 
-  yPos += 6;
-  doc.text(`GST (18%) :`, totalsX - 50, yPos);
-  doc.text(formatCurrencyForPDF(data.gst), totalsX, yPos, { align: 'right' });
+  // ========== BANK DETAILS ==========
+  if (yPos + 40 > pageHeight - 50) {
+    doc.addPage();
+    headerRenderer(doc);
+    yPos = 50;
+  }
 
-  yPos += 8;
-  doc.setFontSize(12);
-  doc.text(`Total in INR :`, totalsX - 50, yPos);
-  doc.text(formatCurrencyForPDF(data.totalInr), totalsX, yPos, { align: 'right' });
+  doc.setFontSize(10);
+  doc.setFont('NotoSans', 'bold');
+  doc.text('Bankers Information:', leftX, yPos);
+  
+  yPos += 5;
+  doc.setFont('NotoSans', 'normal');
+  doc.setFontSize(9);
+  
+  doc.text(BANK_DETAILS.bankName, leftX, yPos);
+  yPos += 4;
+  doc.text(`Account Branch: ${BANK_DETAILS.branch}`, leftX, yPos);
+  yPos += 4;
+  doc.text(`Account No: ${BANK_DETAILS.accountNo}`, leftX, yPos);
+  yPos += 4;
+  doc.text(`RTGS/NEFT IFSC: ${BANK_DETAILS.ifsc}`, leftX, yPos);
+  yPos += 4;
+  doc.text(`MICR: ${BANK_DETAILS.micr}`, leftX, yPos);
 
   yPos += 15;
 
   // ========== TERMS & CONDITIONS ==========
-  const terms = data.terms?.length
-    ? data.terms.map((t, idx) => `${idx + 1}. ${t}`)
-    : [
-        '1. Advance Payment & Purchase Order is Mandatory to start the campaign.',
-        '2. Printing & Mounting will be extra & GST @ 18% will be applicable extra.',
-        '3. Site available date may change in case of present display Renewal.',
-        '4. Site Availability changes every minute, please double check site available dates when you confirm the sites.',
-        '5. Campaign Execution takes 2 days in city and 4 days in upcountry. Please plan your campaign accordingly.',
-        '6. Kindly ensure that your artwork is ready before confirming the sites. In case Design or Flex is undelivered',
-        '   within 5 days of confirmation, we will release the site.',
-        '7. In case flex/vinyl/display material is damaged, torn or vandalised, it will be your responsibility to provide',
-        '   new flex.',
-        '8. Renewal of site will only be entertained before 10 days of site expiry. Last moment renewal is not possible.',
-      ];
-
-  doc.setFontSize(10);
-  doc.setFont('NotoSans', 'normal');
-  doc.text('Terms and Conditions -', 15, yPos);
-
-  yPos += 6;
-  doc.setFontSize(9);
-
-  // Draw box around terms
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const boxPadding = 3;
-
-  // paginate terms if needed
-  let termY = yPos;
-  const startX = 15;
-  const maxWidth = pageWidth - 30;
-
-  // Box (first page box only; subsequent pages still show header via didDrawPage)
-  const estimatedLineCount = terms.length;
-  const estimatedHeight = estimatedLineCount * 4.5 + 6;
-  doc.setDrawColor(200, 200, 200);
-  doc.setLineWidth(0.3);
-  doc.rect(startX, termY - boxPadding, maxWidth, estimatedHeight);
-
-  terms.forEach((term) => {
-    if (termY + 6 > pageHeight - 30) {
-      doc.addPage();
-      headerRenderer(doc);
-      termY = 45;
-    }
-    const lines = doc.splitTextToSize(term, maxWidth - 6);
-    doc.text(lines, startX + 3, termY);
-    termY += lines.length * 4.5;
-  });
-
-  yPos = termY + 10;
-
-  // ========== FOOTER: SELLER INFO (LEFT) + AUTHORIZED SIGNATORY (RIGHT) ==========
-  if (yPos + 40 > pageHeight - 20) {
+  if (yPos + 50 > pageHeight - 40) {
     doc.addPage();
     headerRenderer(doc);
-    yPos = 45;
+    yPos = 50;
+  }
+
+  const terms = data.terms?.length
+    ? data.terms
+    : [
+        'Blocking of media stands for 24 hrs, post which it becomes subject to availability.',
+        'Advance Payment & Purchase Order is Mandatory to start the campaign.',
+        'Printing & Mounting will be extra & GST @ 18% will be applicable extra.',
+        'Site available date may change in case of present display Renewal.',
+        'Campaign Execution takes 2 days in city and 4 days in upcountry.',
+        'In case flex/vinyl/display material is damaged, torn or vandalised, it will be your responsibility.',
+        'Renewal of site will only be entertained before 10 days of site expiry.',
+      ];
+
+  doc.setFontSize(9);
+  doc.setFont('NotoSans', 'bold');
+  doc.text('Terms & Conditions:', leftX, yPos);
+  
+  yPos += 5;
+  doc.setFont('NotoSans', 'normal');
+  doc.setFontSize(8);
+  
+  terms.forEach((term, idx) => {
+    if (yPos + 8 > pageHeight - 40) {
+      doc.addPage();
+      headerRenderer(doc);
+      yPos = 50;
+    }
+    const termText = `${String.fromCharCode(105 + idx)}) ${term}`;
+    const lines = doc.splitTextToSize(termText, pageWidth - 28);
+    lines.forEach((line: string) => {
+      doc.text(line, leftX, yPos);
+      yPos += 4;
+    });
+  });
+
+  yPos += 10;
+
+  // ========== FOOTER: AUTHORIZED SIGNATORY (RIGHT) ==========
+  if (yPos + 35 > pageHeight - 10) {
+    doc.addPage();
+    headerRenderer(doc);
+    yPos = 50;
   }
 
   renderSellerFooterWithSignatory(doc, { name: data.companyName, gstin: data.companyGSTIN }, yPos);

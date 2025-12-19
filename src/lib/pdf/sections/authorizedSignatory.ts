@@ -9,7 +9,8 @@ interface CompanyInfo {
  * Renders the Authorized Signatory block (bottom-right aligned)
  * Per Matrix GST Placement spec:
  * - "For," + company name
- * - Signature line
+ * - Signature placeholder
+ * - Signatory name
  * - "Authorized Signatory" label
  * - NO GSTIN or PAN in footer
  */
@@ -22,31 +23,34 @@ export function renderAuthorizedSignatory(
   const x = pageWidth - 70; // Right-aligned position
 
   doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('NotoSans', 'normal');
   doc.setTextColor(0, 0, 0);
   
   // "For," text
   doc.text('For,', x, yPos);
   
   // Company name (bold)
-  doc.setFont('helvetica', 'bold');
-  doc.text(company.name, x, yPos + 6);
+  doc.setFont('NotoSans', 'bold');
+  doc.text(company.name, x, yPos + 5);
   
-  // Signature line
-  doc.setFont('helvetica', 'normal');
+  // Signature line/space
+  doc.setFont('NotoSans', 'normal');
   doc.setDrawColor(100, 100, 100);
   doc.setLineWidth(0.3);
-  doc.line(x, yPos + 20, x + 50, yPos + 20);
+  doc.line(x, yPos + 18, x + 50, yPos + 18);
   
-  // "Authorized Signatory" label
+  // Signatory name
   doc.setFontSize(9);
-  doc.text('Authorized Signatory', x, yPos + 26);
+  doc.text('Raghu Gajula', x, yPos + 23);
+  
+  // "Authorized Signature" label
+  doc.setFontSize(8);
+  doc.text('Authorized Signature', x, yPos + 28);
 }
 
 /**
  * Renders ONLY the authorized signatory block (right side)
  * Per Matrix GST Placement spec - footer must NOT contain seller GST/PAN
- * Use this for the standardized footer layout
  */
 export function renderSellerFooterWithSignatory(
   doc: jsPDF,

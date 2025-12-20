@@ -859,56 +859,64 @@ export async function exportPlanToPDF(
     const endDate = new Date(plan.end_date);
     const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
-    // Build line items
-    const items = (planItems || []).map((item: any) => {
-      const desc = item.location
-        ? item.location
-        : `${item.media_type || 'Display'} - ${item.area || ''} - ${item.city || ''}`;
+    // Helper for duration display
+    const getDurationDisplay = (d: number): string => {
+      if (d <= 0) return '-';
+      if (d >= 28 && d <= 31) return '1 Month';
+      if (d > 31) {
+        const months = Math.round(d / 30);
+        return `${months} Month${months > 1 ? 's' : ''}`;
+      }
+      return `${d} Days`;
+    };
 
+    // Format date helper
+    const formatDateToDDMMYYYY = (dateString: string): string => {
+      if (!dateString) return '-';
+      try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '-';
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      } catch {
+        return '-';
+      }
+    };
+
+    // Build line items with new 098-style structure
+    const items = (planItems || []).map((item: any, index: number) => {
       const monthlyRate = item.sales_price || item.card_rate || 0;
-      const cost = monthlyRate - (item.discount_amount || 0);
+      const subtotal = monthlyRate - (item.discount_amount || 0);
+
+      // Build location code from asset_id or location
+      const locationCode = item.asset_id 
+        ? `[${item.asset_id}] ${item.location || ''}`.trim()
+        : item.location || 'Display';
 
       return {
-        description: desc,
-        dimension: item.dimensions || '',
-        sqft: item.total_sqft || undefined,
-        illuminationType: item.illumination_type || undefined,
-        startDate: formatDateToDDMonYY(plan.start_date),
-        endDate: formatDateToDDMonYY(plan.end_date),
-        days,
-        monthlyRate,
-        cost,
+        sno: index + 1,
+        locationCode: locationCode.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim(),
+        area: item.area || item.city || '-',
+        mediaType: item.media_type || 'OOH Media',
+        route: item.direction || '-',
+        illumination: item.illumination_type || 'NonLit',
+        dimension: (item.dimensions || '-').toString().replace(/\s+/g, ' ').trim(),
+        totalSqft: item.total_sqft || 0,
+        fromDate: formatDateToDDMMYYYY(plan.start_date),
+        toDate: formatDateToDDMMYYYY(plan.end_date),
+        duration: getDurationDisplay(days),
+        unitPrice: monthlyRate,
+        subtotal,
       };
     });
 
-    const totalPrinting = (planItems || []).reduce((sum, i: any) => sum + (i.printing_charges || 0), 0);
-    const totalInstallation = (planItems || []).reduce((sum, i: any) => sum + (i.mounting_charges || 0), 0);
-
-    if (totalPrinting > 0) {
-      items.push({
-        description: 'Printing Charges',
-        startDate: '',
-        endDate: '',
-        days: 0,
-        monthlyRate: 0,
-        cost: totalPrinting,
-      } as any);
-    }
-
-    if (totalInstallation > 0) {
-      items.push({
-        description: 'Installation Charges',
-        startDate: '',
-        endDate: '',
-        days: 0,
-        monthlyRate: 0,
-        cost: totalInstallation,
-      } as any);
-    }
-
     // Totals (keep existing plan totals)
-    const displayCost = Number(plan.total_amount || 0);
-    const gst = Number(plan.gst_amount || 0);
+    const untaxedAmount = Number(plan.total_amount || 0);
+    const gstTotal = Number(plan.gst_amount || 0);
+    const cgst = Math.round(gstTotal / 2);
+    const sgst = gstTotal - cgst;
     const totalInr = Number(plan.grand_total || 0);
 
     const docTitle =
@@ -947,9 +955,9 @@ export async function exportPlanToPDF(
       companyLogoBase64: logoBase64,
 
       items,
-      displayCost,
-      installationCost: totalInstallation,
-      gst,
+      untaxedAmount,
+      cgst,
+      sgst,
       totalInr,
       terms: termsAndConditions,
     });

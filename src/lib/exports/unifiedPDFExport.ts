@@ -424,9 +424,18 @@ async function generateWithPhotosPDF(
     if (item.photos && Array.isArray(item.photos) && item.photos.length > 0) {
       const photoUrl = item.photos[0];
       try {
-        const signedUrl = await getSignedUrl(photoUrl);
-        if (signedUrl) {
-          const imageData = await loadImageAsDataUrl(signedUrl);
+        // Handle both signed URLs and storage paths
+        let imageUrl = photoUrl;
+        if (photoUrl && !photoUrl.startsWith('http') && !photoUrl.startsWith('data:')) {
+          // Extract bucket and path from storage path (e.g., "media-assets/asset-id/photo.jpg")
+          const parts = photoUrl.split('/');
+          const bucket = parts[0] || 'media-assets';
+          const path = parts.slice(1).join('/') || photoUrl;
+          const signedUrl = await getSignedUrl(bucket, path);
+          imageUrl = signedUrl || photoUrl;
+        }
+        if (imageUrl) {
+          const imageData = await loadImageAsDataUrl(imageUrl);
           if (imageData) {
             const watermarked = await addWatermarkToImage(imageData, item.location || 'Asset');
             doc.addImage(watermarked, 'JPEG', 15, yPos, 60, 45);

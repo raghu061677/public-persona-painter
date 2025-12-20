@@ -1,5 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
-import { generateStandardizedPDF, formatDateToDDMonYY } from '@/lib/pdf/standardPDFTemplate';
+import { generateStandardizedPDF, formatDateToDDMMYYYY } from '@/lib/pdf/standardPDFTemplate';
 
 interface ProformaInvoiceData {
   proforma_number: string;
@@ -24,6 +23,17 @@ interface ProformaInvoiceData {
   grand_total: number;
 }
 
+// Calculate duration display
+function getDurationDisplay(days: number): string {
+  if (days <= 0) return '-';
+  if (days >= 28 && days <= 31) return '1 Month';
+  if (days > 31) {
+    const months = Math.round(days / 30);
+    return `${months} Month${months > 1 ? 's' : ''}`;
+  }
+  return `${days} Days`;
+}
+
 export const generateProformaPDF = async (data: ProformaInvoiceData): Promise<Blob> => {
   // Calculate days if campaign dates exist
   let days = 30; // default
@@ -33,51 +43,26 @@ export const generateProformaPDF = async (data: ProformaInvoiceData): Promise<Bl
     days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
   }
 
-  // Build line items with dimension, sqft, illumination type
-  const items = data.items.map((item: any) => ({
-    description: item.display_name || item.location || `${item.area || ''} - ${item.media_type || ''}`,
-    dimension: item.dimensions || item.dimension || '',
-    sqft: item.total_sqft || item.sqft || 0,
-    illuminationType: item.illumination_type === 'Lit' ? 'Lit' : 'Non-Lit',
-    startDate: data.campaign_start_date ? formatDateToDDMonYY(data.campaign_start_date) : '',
-    endDate: data.campaign_end_date ? formatDateToDDMonYY(data.campaign_end_date) : '',
-    days: days,
-    monthlyRate: item.negotiated_rate || item.card_rate || 0,
-    cost: item.line_total || item.total_price || 0,
+  // Build line items with 098-style structure
+  const items = data.items.map((item: any, index: number) => ({
+    sno: index + 1,
+    locationCode: item.asset_id || item.display_name || '-',
+    area: item.area || '-',
+    mediaType: item.media_type || 'Display',
+    route: item.direction || item.route || '-',
+    illumination: item.illumination_type === 'Lit' ? 'BackLit' : 'Non-Lit',
+    dimension: item.dimensions || item.dimension || '-',
+    totalSqft: item.total_sqft || item.sqft || 0,
+    fromDate: data.campaign_start_date ? formatDateToDDMMYYYY(data.campaign_start_date) : '-',
+    toDate: data.campaign_end_date ? formatDateToDDMMYYYY(data.campaign_end_date) : '-',
+    duration: getDurationDisplay(days),
+    unitPrice: item.negotiated_rate || item.card_rate || 0,
+    subtotal: item.line_total || item.total_price || 0,
   }));
 
-  // Add printing row if exists
-  if (data.printing_total > 0) {
-    items.push({
-      description: 'Printing Charges',
-      dimension: '',
-      sqft: 0,
-      illuminationType: '',
-      startDate: '',
-      endDate: '',
-      days: 0,
-      monthlyRate: 0,
-      cost: data.printing_total,
-    });
-  }
-
-  // Add mounting row if exists
-  if (data.mounting_total > 0) {
-    items.push({
-      description: 'Installation Charges',
-      dimension: '',
-      sqft: 0,
-      illuminationType: '',
-      startDate: '',
-      endDate: '',
-      days: 0,
-      monthlyRate: 0,
-      cost: data.mounting_total,
-    });
-  }
-
-  const displayCost = data.subtotal;
-  const gst = data.cgst_amount + data.sgst_amount;
+  const untaxedAmount = data.taxable_amount;
+  const cgst = data.cgst_amount;
+  const sgst = data.sgst_amount;
 
   return await generateStandardizedPDF({
     documentType: 'PROFORMA INVOICE',
@@ -98,9 +83,9 @@ export const generateProformaPDF = async (data: ProformaInvoiceData): Promise<Bl
     companyPAN: 'AATFM4107H',
 
     items,
-    displayCost,
-    installationCost: data.mounting_total,
-    gst,
+    untaxedAmount,
+    cgst,
+    sgst,
     totalInr: data.grand_total,
   });
 };

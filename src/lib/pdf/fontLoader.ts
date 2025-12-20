@@ -12,7 +12,7 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 
 /**
  * Ensures Noto Sans (Unicode) is available in jsPDF so ₹ renders correctly.
- * Loads the font once from /fonts/NotoSans-Regular.ttf.
+ * Loads the font once from /fonts/NotoSans-Regular.ttf and /fonts/NotoSans-Bold.ttf.
  */
 export async function ensurePdfUnicodeFont(doc: any): Promise<void> {
   if (notoSansLoaded) {
@@ -24,15 +24,25 @@ export async function ensurePdfUnicodeFont(doc: any): Promise<void> {
     return;
   }
 
-  const res = await fetch('/fonts/NotoSans-Regular.ttf');
-  if (!res.ok) throw new Error('Failed to load PDF font');
+  const [regularRes, boldRes] = await Promise.all([
+    fetch('/fonts/NotoSans-Regular.ttf'),
+    fetch('/fonts/NotoSans-Bold.ttf'),
+  ]);
 
-  const buffer = await res.arrayBuffer();
-  const base64 = arrayBufferToBase64(buffer);
+  if (!regularRes.ok) throw new Error('Failed to load PDF font (NotoSans Regular)');
+  if (!boldRes.ok) throw new Error('Failed to load PDF font (NotoSans Bold)');
 
-  doc.addFileToVFS('NotoSans-Regular.ttf', base64);
+  const [regularBuffer, boldBuffer] = await Promise.all([
+    regularRes.arrayBuffer(),
+    boldRes.arrayBuffer(),
+  ]);
+
+  doc.addFileToVFS('NotoSans-Regular.ttf', arrayBufferToBase64(regularBuffer));
   doc.addFont('NotoSans-Regular.ttf', 'NotoSans', 'normal');
-  doc.setFont('NotoSans', 'normal');
 
+  doc.addFileToVFS('NotoSans-Bold.ttf', arrayBufferToBase64(boldBuffer));
+  doc.addFont('NotoSans-Bold.ttf', 'NotoSans', 'bold');
+
+  doc.setFont('NotoSans', 'normal');
   notoSansLoaded = true;
 }

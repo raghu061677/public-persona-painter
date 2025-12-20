@@ -39,11 +39,11 @@ const DEFAULT_ADDRESS = {
 };
 
 /**
- * Renders the Zoho-style header with exact layout:
+ * Renders the Zoho-style FULL header (Page 1):
  * - Logo + Company address on LEFT (grouped together)
- * - Document title on RIGHT (uppercase, dominant)
+ * - Document title BELOW the address block, right-aligned, just above divider
  * - Divider line
- * Returns the Y position after the header
+ * Returns the Y position after the divider
  */
 export function renderLogoHeader(
   doc: jsPDF,
@@ -54,50 +54,48 @@ export function renderLogoHeader(
   const pageWidth = doc.internal.pageSize.getWidth();
   const leftMargin = 14;
   const rightMargin = 14;
-  let yPos = 20;
+  const topMargin = 20;
 
-  // ========== LEFT SIDE: Logo + Company Info (Zoho Style) ==========
+  let yPos = topMargin;
+
+  // ========== LEFT SIDE: Logo + Company Info ==========
   let logoEndX = leftMargin;
-  
-  // Draw logo
+
   if (logoBase64) {
     try {
       doc.addImage(logoBase64, 'PNG', leftMargin, yPos - 5, 25, 18);
-      logoEndX = leftMargin + 28; // Logo width + small gap
+      logoEndX = leftMargin + 28;
     } catch (e) {
       console.log('Logo rendering skipped:', e);
       logoEndX = leftMargin;
     }
   }
 
-  // Company details immediately right of logo
   let companyY = yPos - 2;
-  
-  // Company Name (bold, dark blue)
+
+  // Company Name
   doc.setFontSize(12);
   doc.setFont('NotoSans', 'bold');
-  doc.setTextColor(30, 58, 138); // Dark blue
+  doc.setTextColor(30, 58, 138);
   doc.text(company.name, logoEndX, companyY);
-  
+
+  // Address + contact
   companyY += 4.5;
   doc.setFontSize(7);
   doc.setFont('NotoSans', 'normal');
   doc.setTextColor(60, 60, 60);
-  
-  // Address lines
+
   doc.text(DEFAULT_ADDRESS.line1, logoEndX, companyY);
   companyY += 3;
   doc.text(DEFAULT_ADDRESS.line2, logoEndX, companyY);
   companyY += 3;
   doc.text(`${DEFAULT_ADDRESS.cityLine}, ${DEFAULT_ADDRESS.stateLine}`, logoEndX, companyY);
-  
-  // Contact info
+
   companyY += 3;
   doc.text(`Phone: ${DEFAULT_ADDRESS.phone}  |  Email: ${DEFAULT_ADDRESS.email}`, logoEndX, companyY);
   companyY += 3;
   doc.text(`Web: ${DEFAULT_ADDRESS.website}`, logoEndX, companyY);
-  
-  // GSTIN (on its own line, bold)
+
   if (company.gstin) {
     companyY += 3.5;
     doc.setFont('NotoSans', 'bold');
@@ -105,27 +103,74 @@ export function renderLogoHeader(
     doc.text(`GSTIN: ${company.gstin}`, logoEndX, companyY);
   }
 
-  // ========== RIGHT SIDE: Document Title (uppercase, dominant) ==========
+  // Compute divider Y (based on whichever is lower: logo block or text block)
+  const logoBottom = yPos + 18;
+  const contentBottom = Math.max(logoBottom, companyY + 2);
+
+  // ========== TITLE: below address block, right-aligned, above divider ==========
   const rightX = pageWidth - rightMargin;
-  
+  const titleY = contentBottom + 6; // just below address block
+
   doc.setFontSize(16);
   doc.setFont('NotoSans', 'bold');
-  doc.setTextColor(30, 58, 138); // Dark blue to match company name
-  doc.text(title.toUpperCase(), rightX, yPos + 5, { align: 'right' });
+  doc.setTextColor(30, 58, 138);
+  doc.text(title.toUpperCase(), rightX, titleY, { align: 'right' });
 
-  // ========== DIVIDER LINE ==========
-  const headerBottom = Math.max(yPos + 20, companyY + 5);
-  
+  // Divider line just below title
+  const dividerY = titleY + 4;
   doc.setDrawColor(180, 180, 180);
   doc.setLineWidth(0.4);
-  doc.line(leftMargin, headerBottom, pageWidth - rightMargin, headerBottom);
+  doc.line(leftMargin, dividerY, pageWidth - rightMargin, dividerY);
 
-  // Reset font
+  // Reset
   doc.setFontSize(10);
   doc.setFont('NotoSans', 'normal');
   doc.setTextColor(0, 0, 0);
 
-  return headerBottom + 5;
+  return dividerY + 5;
+}
+
+/**
+ * Renders the COMPACT header (Page 2+): logo + company name + divider only.
+ * No address, no GST, no document title.
+ */
+export function renderCompactHeader(
+  doc: jsPDF,
+  company: CompanyInfo,
+  logoBase64?: string
+): number {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const leftMargin = 14;
+  const rightMargin = 14;
+  const topMargin = 20;
+
+  let yPos = topMargin;
+  let logoEndX = leftMargin;
+
+  if (logoBase64) {
+    try {
+      doc.addImage(logoBase64, 'PNG', leftMargin, yPos - 5, 18, 13);
+      logoEndX = leftMargin + 21;
+    } catch {
+      logoEndX = leftMargin;
+    }
+  }
+
+  doc.setFontSize(11);
+  doc.setFont('NotoSans', 'bold');
+  doc.setTextColor(30, 58, 138);
+  doc.text(company.name, logoEndX, yPos + 2);
+
+  const dividerY = yPos + 10;
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.4);
+  doc.line(leftMargin, dividerY, pageWidth - rightMargin, dividerY);
+
+  doc.setFontSize(10);
+  doc.setFont('NotoSans', 'normal');
+  doc.setTextColor(0, 0, 0);
+
+  return dividerY + 5;
 }
 
 /**
@@ -323,14 +368,18 @@ export function renderDetailsGrid(
 }
 
 /**
- * Creates a page header renderer for multi-page documents
+ * Creates a header renderer for multi-page documents.
+ * For Zoho-style PDFs:
+ * - Page 1 uses full header (logo + address + title)
+ * - Page 2+ uses compact header (logo + company name + divider)
  */
 export function createPageHeaderRenderer(
   company: CompanyInfo,
   title: string,
   logoBase64?: string
 ) {
-  return (doc: jsPDF): number => {
-    return renderLogoHeader(doc, company, title, logoBase64);
+  return {
+    full: (doc: jsPDF): number => renderLogoHeader(doc, company, title, logoBase64),
+    compact: (doc: jsPDF): number => renderCompactHeader(doc, company, logoBase64),
   };
 }

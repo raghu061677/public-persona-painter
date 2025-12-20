@@ -1,18 +1,25 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrencyForPDF } from './pdfHelpers';
-import { renderLogoHeader, createPageHeaderRenderer } from './sections/logoHeader';
+import { 
+  renderLogoHeader, 
+  renderBillShipGrid, 
+  renderDetailsGrid,
+  createPageHeaderRenderer 
+} from './sections/logoHeader';
 import { renderSellerFooterWithSignatory } from './sections/authorizedSignatory';
 import { ensurePdfUnicodeFont } from './fontLoader';
 
-interface PDFDocumentData {
+// ============= INTERFACES =============
+
+export interface PDFDocumentData {
   documentType: 'WORK ORDER' | 'ESTIMATE' | 'QUOTATION' | 'PROFORMA INVOICE';
   documentNumber: string;
   documentDate: string;
   displayName: string;
   pointOfContact: string;
 
-  // Client details (TO section)
+  // Client details (Bill To / Ship To)
   clientName: string;
   clientAddress: string;
   clientCity: string;
@@ -20,11 +27,17 @@ interface PDFDocumentData {
   clientPincode: string;
   clientGSTIN?: string;
 
-  // Company/Seller details (FOR section - footer)
+  // Company/Seller details
   companyName: string;
   companyGSTIN: string;
   companyPAN: string;
   companyLogoBase64?: string;
+
+  // Other details (Zoho style)
+  placeOfSupply?: string;
+  stateCode?: string;
+  salesPerson?: string;
+  validity?: string;
 
   // Line items (098-style)
   items: PDFLineItem[];
@@ -40,7 +53,7 @@ interface PDFDocumentData {
   paymentTerms?: string;
 }
 
-interface PDFLineItem {
+export interface PDFLineItem {
   sno: number;
   // LOCATION & DESCRIPTION column content
   locationCode: string;    // e.g., "[A4-36] Abids beside Chermas"
@@ -62,6 +75,8 @@ interface PDFLineItem {
   unitPrice: number;       // Monthly rate
   subtotal: number;        // Final amount for this item
 }
+
+// ============= UTILITY FUNCTIONS =============
 
 // Format date to DD/MM/YYYY
 export function formatDateToDDMMYYYY(dateString: string): string {
@@ -142,31 +157,43 @@ function amountToWords(amount: number): string {
   return words + ' Only';
 }
 
-// Bank details constant
+// ============= CONSTANTS =============
+
 const BANK_DETAILS = {
   bankName: 'HDFC Bank Limited',
-  branch: 'KARKHANA ROAD, SECUNDERABAD 500009',
+  branch: 'Karkhana Road, Secunderabad – 500009',
   accountNo: '50200010727301',
   ifsc: 'HDFC0001555',
   micr: '500240026',
 };
 
+const PAGE_MARGINS = {
+  top: 20,
+  left: 14,
+  right: 14,
+  bottom: 20,
+};
+
+// ============= MAIN PDF GENERATOR =============
+
 export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Blob> {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
+  const leftMargin = PAGE_MARGINS.left;
+  const rightMargin = PAGE_MARGINS.right;
 
   // Ensure ₹ is supported
   await ensurePdfUnicodeFont(doc);
 
-  // Re-usable page header (for multipage tables)
+  // Create reusable page header renderer
   const headerRenderer = createPageHeaderRenderer(
     { name: data.companyName, gstin: data.companyGSTIN, pan: data.companyPAN },
     data.documentType,
     data.companyLogoBase64
   );
 
-  // ========== LOGO HEADER SECTION ==========
+  // ========== 1. LOGO HEADER (Zoho Style) ==========
   let yPos = renderLogoHeader(
     doc,
     { name: data.companyName, gstin: data.companyGSTIN, pan: data.companyPAN },
@@ -174,114 +201,66 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
     data.companyLogoBase64
   );
 
-  yPos += 3;
+  yPos += 2;
 
-  // ========== TWO-COLUMN SECTION: BILL TO (Left) | DOC DETAILS (Right) ==========
-  const leftX = 14;
-  const rightX = pageWidth - 14;
-  const colMidX = pageWidth / 2;
+  // ========== 2. BILL TO / SHIP TO GRID ==========
+  yPos = renderBillShipGrid(
+    doc,
+    {
+      name: data.clientName,
+      address: data.clientAddress,
+      city: data.clientCity,
+      state: data.clientState,
+      pincode: data.clientPincode,
+      gstin: data.clientGSTIN,
+    },
+    yPos
+  );
 
-  // Bill To Section (Left)
-  doc.setFontSize(10);
-  doc.setFont('NotoSans', 'bold');
-  doc.text('Bill To', leftX, yPos);
-  
-  let billToY = yPos + 5;
-  doc.setFont('NotoSans', 'normal');
-  doc.setFontSize(9);
-  
-  doc.text(data.clientName, leftX, billToY);
-  billToY += 4;
-  
-  if (data.clientAddress) {
-    const addressLines = doc.splitTextToSize(data.clientAddress, colMidX - leftX - 10);
-    addressLines.forEach((line: string) => {
-      doc.text(line, leftX, billToY);
-      billToY += 4;
-    });
-  }
-  
-  const cityStatePin = [data.clientCity, data.clientState, data.clientPincode]
-    .filter(Boolean)
-    .join(', ');
-  if (cityStatePin) {
-    doc.text(cityStatePin, leftX, billToY);
-    billToY += 4;
-  }
-  
-  if (data.clientGSTIN) {
-    doc.setFont('NotoSans', 'bold');
-    doc.text(`GSTIN: ${data.clientGSTIN}`, leftX, billToY);
-    billToY += 4;
-  }
+  yPos += 2;
 
-  // Document Details Section (Right)
-  let detailsY = yPos;
-  doc.setFont('NotoSans', 'bold');
-  doc.setFontSize(10);
-  doc.text('Invoice Details', colMidX + 10, detailsY);
-  
-  detailsY += 5;
-  doc.setFont('NotoSans', 'normal');
-  doc.setFontSize(9);
+  // ========== 3. DOCUMENT DETAILS / OTHER DETAILS GRID ==========
+  yPos = renderDetailsGrid(
+    doc,
+    {
+      documentType: data.documentType,
+      documentNumber: data.documentNumber,
+      documentDate: data.documentDate,
+      displayName: data.displayName,
+      placeOfSupply: data.placeOfSupply || data.clientState,
+      stateCode: data.stateCode || getStateCode(data.clientState),
+      salesPerson: data.salesPerson || data.pointOfContact,
+      validity: data.validity || (data.documentType === 'ESTIMATE' || data.documentType === 'QUOTATION' ? '15 Days' : undefined),
+    },
+    yPos
+  );
 
-  // Document Number Label
-  let docLabel = '';
-  switch (data.documentType) {
-    case 'WORK ORDER': docLabel = 'WO No'; break;
-    case 'ESTIMATE': docLabel = 'Estimate No'; break;
-    case 'QUOTATION': docLabel = 'Quotation No'; break;
-    case 'PROFORMA INVOICE': docLabel = 'PI No'; break;
-  }
-  doc.text(`${docLabel}: ${data.documentNumber}`, colMidX + 10, detailsY);
-  detailsY += 4;
+  yPos += 5;
 
-  // Date Label
-  let dateLabel = '';
-  switch (data.documentType) {
-    case 'WORK ORDER': dateLabel = 'WO Date'; break;
-    case 'ESTIMATE': dateLabel = 'Estimate Date'; break;
-    case 'QUOTATION': dateLabel = 'Quotation Date'; break;
-    case 'PROFORMA INVOICE': dateLabel = 'PI Date'; break;
-  }
-  doc.text(`${dateLabel}: ${data.documentDate}`, colMidX + 10, detailsY);
-  detailsY += 4;
-
-  doc.text(`Campaign: ${data.displayName}`, colMidX + 10, detailsY);
-  detailsY += 4;
-  
-  if (data.pointOfContact && data.pointOfContact !== 'N/A') {
-    doc.text(`Point of Contact: ${data.pointOfContact}`, colMidX + 10, detailsY);
-    detailsY += 4;
-  }
-
-  yPos = Math.max(billToY, detailsY) + 8;
-
-  // ========== 098-STYLE TABLE ==========
-  // Columns: # | LOCATION & DESCRIPTION | SIZE | BOOKING | UNIT PRICE | SUBTOTAL
+  // ========== 4. OOH LINE ITEMS TABLE (098 Style) ==========
   const tableBody = data.items.map((item) => {
     // LOCATION & DESCRIPTION cell (multi-line)
     const locationDesc = [
       item.locationCode,
       `Area: ${item.area}`,
       `Media: ${item.mediaType}`,
-      `Route: ${item.route}`,
-      `Lit: ${item.illumination}`,
+      item.route ? `Route: ${item.route}` : null,
+      item.illumination ? `Lit: ${item.illumination}` : null,
     ].filter(Boolean).join('\n');
 
     // SIZE cell
-    const sizeCell = `${item.dimension}\nArea(Sft): ${item.totalSqft}`;
+    const sizeCell = `Dimension: ${item.dimension}\nTotal Sqft: ${item.totalSqft}`;
 
     // BOOKING cell
-    const bookingCell = `From: ${item.fromDate}\nTo: ${item.toDate}\n${item.duration}`;
+    const bookingCell = `From: ${item.fromDate}\nTo: ${item.toDate}\nDuration: ${item.duration}`;
 
     return [
       item.sno.toString(),
       locationDesc,
       sizeCell,
       bookingCell,
-      formatCurrencyForPDF(item.unitPrice).replace('₹', ''),
-      formatCurrencyForPDF(item.subtotal).replace('₹', ''),
+      formatCurrencyForPDF(item.unitPrice).replace('₹', '₹ '),
+      formatCurrencyForPDF(item.subtotal).replace('₹', '₹ '),
     ];
   });
 
@@ -294,10 +273,10 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
       font: 'NotoSans',
       fontSize: 8,
       textColor: [0, 0, 0],
-      cellPadding: 2,
+      cellPadding: 2.5,
       overflow: 'linebreak',
       lineWidth: 0.2,
-      lineColor: [180, 180, 180],
+      lineColor: [200, 200, 200],
       valign: 'top',
     },
     headStyles: {
@@ -310,112 +289,119 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
     },
     columnStyles: {
       0: { cellWidth: 10, halign: 'center', valign: 'middle' },
-      1: { cellWidth: 70 },
-      2: { cellWidth: 28, halign: 'center' },
+      1: { cellWidth: 65 },
+      2: { cellWidth: 30, halign: 'left' },
       3: { cellWidth: 35, halign: 'left' },
       4: { cellWidth: 25, halign: 'right' },
       5: { cellWidth: 25, halign: 'right' },
     },
-    margin: { left: 8, right: 8 },
-    didDrawPage: () => {
-      headerRenderer(doc);
+    margin: { left: leftMargin, right: rightMargin },
+    tableWidth: pageWidth - leftMargin - rightMargin,
+    didDrawPage: (hookData) => {
+      // Add header on subsequent pages
+      if (hookData.pageNumber > 1) {
+        headerRenderer(doc);
+      }
     },
   });
 
-  // @ts-ignore
-  yPos = doc.lastAutoTable.finalY + 8;
+  // @ts-ignore - jspdf-autotable adds lastAutoTable
+  yPos = doc.lastAutoTable.finalY + 10;
 
-  // ========== PAYMENT TERMS & SUMMARY (two columns) ==========
+  // ========== 5. SUMMARY & BANK DETAILS (Side by Side, Zoho Style) ==========
   // Check if we need a new page
-  if (yPos + 80 > pageHeight - 40) {
+  if (yPos + 70 > pageHeight - PAGE_MARGINS.bottom - 40) {
     doc.addPage();
-    headerRenderer(doc);
-    yPos = 50;
+    yPos = headerRenderer(doc) + 10;
   }
 
-  // Payment terms (left side)
-  doc.setFontSize(9);
-  doc.setFont('NotoSans', 'normal');
-  doc.text(`Payment terms: ${data.paymentTerms || '30 Net Days'}`, leftX, yPos);
-  doc.text('Looking forward for your business.', leftX, yPos + 5);
+  const contentWidth = pageWidth - leftMargin - rightMargin;
+  const leftColWidth = contentWidth * 0.55;
+  const rightColWidth = contentWidth * 0.45;
+  const summaryStartX = leftMargin + leftColWidth + 5;
 
-  // ========== SUMMARY (right side) ==========
-  const summaryX = pageWidth - 80;
-  let summaryY = yPos;
-
+  // ----- LEFT SIDE: Bank Details -----
+  let bankY = yPos;
+  
   doc.setFontSize(10);
   doc.setFont('NotoSans', 'bold');
-  doc.text('Summary:', summaryX, summaryY);
+  doc.setTextColor(0, 0, 0);
+  doc.text('Bank Details', leftMargin, bankY);
   
-  summaryY += 6;
+  bankY += 6;
   doc.setFont('NotoSans', 'normal');
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   
-  doc.text('Untaxed Amount:', summaryX, summaryY);
-  doc.text(formatCurrencyForPDF(data.untaxedAmount), rightX, summaryY, { align: 'right' });
-  
-  summaryY += 5;
-  doc.text('CGST @ 9%:', summaryX, summaryY);
-  doc.text(formatCurrencyForPDF(data.cgst), rightX, summaryY, { align: 'right' });
-  
-  summaryY += 5;
-  doc.text('SGST @ 9%:', summaryX, summaryY);
-  doc.text(formatCurrencyForPDF(data.sgst), rightX, summaryY, { align: 'right' });
-  
-  summaryY += 2;
-  doc.setDrawColor(180, 180, 180);
-  doc.line(summaryX, summaryY, rightX, summaryY);
-  
-  summaryY += 5;
   doc.setFont('NotoSans', 'bold');
-  doc.setFontSize(10);
-  doc.text('Total:', summaryX, summaryY);
-  doc.text(formatCurrencyForPDF(data.totalInr), rightX, summaryY, { align: 'right' });
+  doc.text(BANK_DETAILS.bankName, leftMargin, bankY);
+  bankY += 4;
   
-  summaryY += 6;
+  doc.setFont('NotoSans', 'normal');
+  doc.text(`Branch: ${BANK_DETAILS.branch}`, leftMargin, bankY);
+  bankY += 4;
+  doc.text(`Account No: ${BANK_DETAILS.accountNo}`, leftMargin, bankY);
+  bankY += 4;
+  doc.text(`IFSC Code: ${BANK_DETAILS.ifsc}`, leftMargin, bankY);
+  bankY += 4;
+  doc.text(`MICR: ${BANK_DETAILS.micr}`, leftMargin, bankY);
+
+  // ----- RIGHT SIDE: Summary Table -----
+  const summaryData = [
+    ['Sub Total', formatCurrencyForPDF(data.untaxedAmount)],
+    ['CGST @ 9%', formatCurrencyForPDF(data.cgst)],
+    ['SGST @ 9%', formatCurrencyForPDF(data.sgst)],
+  ];
+
+  autoTable(doc, {
+    startY: yPos,
+    body: summaryData,
+    theme: 'plain',
+    styles: {
+      font: 'NotoSans',
+      fontSize: 9,
+      cellPadding: 2,
+    },
+    columnStyles: {
+      0: { cellWidth: 35, halign: 'left' },
+      1: { cellWidth: 35, halign: 'right' },
+    },
+    margin: { left: summaryStartX },
+    tableWidth: rightColWidth - 5,
+  });
+
+  // @ts-ignore
+  let summaryEndY = doc.lastAutoTable.finalY;
+
+  // Total row (emphasized)
+  doc.setDrawColor(100, 100, 100);
+  doc.setLineWidth(0.5);
+  doc.line(summaryStartX, summaryEndY + 1, pageWidth - rightMargin, summaryEndY + 1);
+  
+  summaryEndY += 6;
+  doc.setFont('NotoSans', 'bold');
+  doc.setFontSize(11);
+  doc.text('Total', summaryStartX, summaryEndY);
+  doc.text(formatCurrencyForPDF(data.totalInr), pageWidth - rightMargin, summaryEndY, { align: 'right' });
+
+  // Total in words
+  summaryEndY += 6;
   doc.setFont('NotoSans', 'normal');
   doc.setFontSize(8);
   const totalWords = amountToWords(data.totalInr);
-  const wordsLines = doc.splitTextToSize(`Total (In Words): ${totalWords}`, rightX - summaryX + 5);
-  wordsLines.forEach((line: string) => {
-    doc.text(line, summaryX, summaryY);
-    summaryY += 4;
-  });
+  doc.text(`Total (In Words): ${totalWords}`, summaryStartX, summaryEndY);
 
-  yPos = Math.max(yPos + 25, summaryY) + 10;
+  yPos = Math.max(bankY, summaryEndY) + 12;
 
-  // ========== BANK DETAILS ==========
-  if (yPos + 40 > pageHeight - 50) {
-    doc.addPage();
-    headerRenderer(doc);
-    yPos = 50;
-  }
-
-  doc.setFontSize(10);
-  doc.setFont('NotoSans', 'bold');
-  doc.text('Bankers Information:', leftX, yPos);
-  
-  yPos += 5;
-  doc.setFont('NotoSans', 'normal');
+  // ========== 6. PAYMENT TERMS ==========
   doc.setFontSize(9);
-  
-  doc.text(BANK_DETAILS.bankName, leftX, yPos);
-  yPos += 4;
-  doc.text(`Account Branch: ${BANK_DETAILS.branch}`, leftX, yPos);
-  yPos += 4;
-  doc.text(`Account No: ${BANK_DETAILS.accountNo}`, leftX, yPos);
-  yPos += 4;
-  doc.text(`RTGS/NEFT IFSC: ${BANK_DETAILS.ifsc}`, leftX, yPos);
-  yPos += 4;
-  doc.text(`MICR: ${BANK_DETAILS.micr}`, leftX, yPos);
+  doc.setFont('NotoSans', 'normal');
+  doc.text(`Payment Terms: ${data.paymentTerms || '30 Net Days'}`, leftMargin, yPos);
+  yPos += 10;
 
-  yPos += 15;
-
-  // ========== TERMS & CONDITIONS ==========
-  if (yPos + 50 > pageHeight - 40) {
+  // ========== 7. TERMS & CONDITIONS ==========
+  if (yPos + 50 > pageHeight - PAGE_MARGINS.bottom - 40) {
     doc.addPage();
-    headerRenderer(doc);
-    yPos = 50;
+    yPos = headerRenderer(doc) + 10;
   }
 
   const terms = data.terms?.length
@@ -432,36 +418,72 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
 
   doc.setFontSize(9);
   doc.setFont('NotoSans', 'bold');
-  doc.text('Terms & Conditions:', leftX, yPos);
+  doc.text('Terms & Conditions:', leftMargin, yPos);
   
   yPos += 5;
   doc.setFont('NotoSans', 'normal');
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   
   terms.forEach((term, idx) => {
-    if (yPos + 8 > pageHeight - 40) {
+    if (yPos + 8 > pageHeight - PAGE_MARGINS.bottom - 35) {
       doc.addPage();
-      headerRenderer(doc);
-      yPos = 50;
+      yPos = headerRenderer(doc) + 10;
     }
-    const termText = `${String.fromCharCode(105 + idx)}) ${term}`;
-    const lines = doc.splitTextToSize(termText, pageWidth - 28);
+    const termText = `${idx + 1}. ${term}`;
+    const lines = doc.splitTextToSize(termText, pageWidth - leftMargin - rightMargin);
     lines.forEach((line: string) => {
-      doc.text(line, leftX, yPos);
-      yPos += 4;
+      doc.text(line, leftMargin, yPos);
+      yPos += 3.5;
     });
+    yPos += 1;
   });
 
-  yPos += 10;
+  yPos += 8;
 
-  // ========== FOOTER: AUTHORIZED SIGNATORY (RIGHT) ==========
-  if (yPos + 35 > pageHeight - 10) {
+  // ========== 8. FOOTER: AUTHORIZED SIGNATORY (RIGHT) ==========
+  if (yPos + 30 > pageHeight - 10) {
     doc.addPage();
-    headerRenderer(doc);
-    yPos = 50;
+    yPos = headerRenderer(doc) + 10;
   }
 
   renderSellerFooterWithSignatory(doc, { name: data.companyName, gstin: data.companyGSTIN }, yPos);
 
   return doc.output('blob');
+}
+
+// ============= HELPER FUNCTIONS =============
+
+// Get state code from state name (for Place of Supply)
+function getStateCode(state?: string): string {
+  if (!state) return '';
+  
+  const stateCodes: Record<string, string> = {
+    'Andhra Pradesh': '37',
+    'Telangana': '36',
+    'Karnataka': '29',
+    'Tamil Nadu': '33',
+    'Maharashtra': '27',
+    'Gujarat': '24',
+    'Delhi': '07',
+    'Uttar Pradesh': '09',
+    'West Bengal': '19',
+    'Rajasthan': '08',
+    'Kerala': '32',
+    'Odisha': '21',
+    'Bihar': '10',
+    'Punjab': '03',
+    'Haryana': '06',
+    'Madhya Pradesh': '23',
+    'Jharkhand': '20',
+    'Chhattisgarh': '22',
+    'Assam': '18',
+    'Goa': '30',
+    'Himachal Pradesh': '02',
+    'Uttarakhand': '05',
+    'Jammu and Kashmir': '01',
+    'Chandigarh': '04',
+    'Puducherry': '34',
+  };
+  
+  return stateCodes[state] || '';
 }

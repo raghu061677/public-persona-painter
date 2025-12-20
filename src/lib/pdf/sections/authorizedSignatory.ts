@@ -7,10 +7,9 @@ interface CompanyInfo {
 
 /**
  * Renders the Authorized Signatory block (bottom-right aligned)
- * Per Matrix GST Placement spec:
+ * Per Zoho style spec:
  * - "For," + company name
- * - Signature placeholder
- * - Signatory name
+ * - Signature placeholder line
  * - "Authorized Signatory" label
  * - NO GSTIN or PAN in footer
  */
@@ -20,7 +19,8 @@ export function renderAuthorizedSignatory(
   yPos: number
 ): void {
   const pageWidth = doc.internal.pageSize.getWidth();
-  const x = pageWidth - 70; // Right-aligned position
+  const rightMargin = 14;
+  const x = pageWidth - rightMargin - 50; // Right-aligned position
 
   doc.setFontSize(10);
   doc.setFont('NotoSans', 'normal');
@@ -37,20 +37,16 @@ export function renderAuthorizedSignatory(
   doc.setFont('NotoSans', 'normal');
   doc.setDrawColor(100, 100, 100);
   doc.setLineWidth(0.3);
-  doc.line(x, yPos + 18, x + 50, yPos + 18);
+  doc.line(x, yPos + 20, x + 50, yPos + 20);
   
-  // Signatory name
-  doc.setFontSize(9);
-  doc.text('Raghu Gajula', x, yPos + 23);
-  
-  // "Authorized Signature" label
+  // "Authorized Signatory" label
   doc.setFontSize(8);
-  doc.text('Authorized Signature', x, yPos + 28);
+  doc.text('Authorized Signatory', x, yPos + 25);
 }
 
 /**
  * Renders ONLY the authorized signatory block (right side)
- * Per Matrix GST Placement spec - footer must NOT contain seller GST/PAN
+ * Footer must NOT contain seller GST/PAN
  */
 export function renderSellerFooterWithSignatory(
   doc: jsPDF,

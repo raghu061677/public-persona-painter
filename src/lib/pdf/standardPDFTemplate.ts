@@ -186,20 +186,15 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   // Ensure ₹ is supported
   await ensurePdfUnicodeFont(doc);
 
-  // Create reusable page header renderer
-  const headerRenderer = createPageHeaderRenderer(
+  // Create reusable page header renderers (full for page 1, compact for page 2+)
+  const headerRenderers = createPageHeaderRenderer(
     { name: data.companyName, gstin: data.companyGSTIN, pan: data.companyPAN },
     data.documentType,
     data.companyLogoBase64
   );
 
-  // ========== 1. LOGO HEADER (Zoho Style) ==========
-  let yPos = renderLogoHeader(
-    doc,
-    { name: data.companyName, gstin: data.companyGSTIN, pan: data.companyPAN },
-    data.documentType,
-    data.companyLogoBase64
-  );
+  // ========== 1. LOGO HEADER (Zoho Style, Page 1) ==========
+  let yPos = headerRenderers.full(doc);
 
   yPos += 2;
 
@@ -238,6 +233,9 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   yPos += 5;
 
   // ========== 4. OOH LINE ITEMS TABLE (098 Style) ==========
+  // Table must always start below the header area.
+  const tableStartY = Math.max(yPos, 90);
+
   const tableBody = data.items.map((item) => {
     // LOCATION & DESCRIPTION cell (multi-line)
     const locationDesc = [
@@ -265,7 +263,7 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   });
 
   autoTable(doc, {
-    startY: yPos,
+    startY: tableStartY,
     head: [['#', 'LOCATION & DESCRIPTION', 'SIZE', 'BOOKING', 'UNIT PRICE', 'SUBTOTAL']],
     body: tableBody,
     theme: 'grid',
@@ -295,12 +293,13 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
       4: { cellWidth: 25, halign: 'right' },
       5: { cellWidth: 25, halign: 'right' },
     },
-    margin: { left: leftMargin, right: rightMargin },
+    // Reserve a safe header area on every page so table never overlaps header.
+    margin: { top: 90, left: leftMargin, right: rightMargin, bottom: PAGE_MARGINS.bottom },
     tableWidth: pageWidth - leftMargin - rightMargin,
     didDrawPage: (hookData) => {
-      // Add header on subsequent pages
+      // Page 2+ should ONLY have compact header (no title/address/GST)
       if (hookData.pageNumber > 1) {
-        headerRenderer(doc);
+        headerRenderers.compact(doc);
       }
     },
   });
@@ -312,7 +311,8 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   // Check if we need a new page
   if (yPos + 70 > pageHeight - PAGE_MARGINS.bottom - 40) {
     doc.addPage();
-    yPos = headerRenderer(doc) + 10;
+    // Page 2+ should use compact header only
+    yPos = headerRenderers.compact(doc) + 10;
   }
 
   const contentWidth = pageWidth - leftMargin - rightMargin;
@@ -401,7 +401,8 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   // ========== 7. TERMS & CONDITIONS ==========
   if (yPos + 50 > pageHeight - PAGE_MARGINS.bottom - 40) {
     doc.addPage();
-    yPos = headerRenderer(doc) + 10;
+    // Page 2+ should use compact header only
+    yPos = headerRenderers.compact(doc) + 10;
   }
 
   const terms = data.terms?.length
@@ -427,7 +428,8 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   terms.forEach((term, idx) => {
     if (yPos + 8 > pageHeight - PAGE_MARGINS.bottom - 35) {
       doc.addPage();
-      yPos = headerRenderer(doc) + 10;
+      // Page 2+ should use compact header only
+      yPos = headerRenderers.compact(doc) + 10;
     }
     const termText = `${idx + 1}. ${term}`;
     const lines = doc.splitTextToSize(termText, pageWidth - leftMargin - rightMargin);
@@ -443,7 +445,8 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   // ========== 8. FOOTER: AUTHORIZED SIGNATORY (RIGHT) ==========
   if (yPos + 30 > pageHeight - 10) {
     doc.addPage();
-    yPos = headerRenderer(doc) + 10;
+    // Page 2+ should use compact header only
+    yPos = headerRenderers.compact(doc) + 10;
   }
 
   renderSellerFooterWithSignatory(doc, { name: data.companyName, gstin: data.companyGSTIN }, yPos);

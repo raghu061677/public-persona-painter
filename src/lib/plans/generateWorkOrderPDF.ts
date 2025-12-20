@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { generateStandardizedPDF, formatDateToDDMonYY } from '@/lib/pdf/standardPDFTemplate';
+import { generateStandardizedPDF, formatDateToDDMMYYYY } from '@/lib/pdf/standardPDFTemplate';
 import { 
   getPrimaryContactName, 
   getClientDisplayName, 
@@ -8,6 +8,17 @@ import {
   getClientState, 
   getClientPincode 
 } from '@/lib/pdf/pdfHelpers';
+
+// Calculate duration display
+function getDurationDisplay(days: number): string {
+  if (days <= 0) return '-';
+  if (days >= 28 && days <= 31) return '1 Month';
+  if (days > 31) {
+    const months = Math.round(days / 30);
+    return `${months} Month${months > 1 ? 's' : ''}`;
+  }
+  return `${days} Days`;
+}
 
 export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
   // Fetch plan details
@@ -68,46 +79,28 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
   const endDate = new Date(plan.end_date);
   const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
-  // Build line items
-  const items = planItems?.map((item: any) => {
+  // Build line items with new 098-style structure
+  const items = planItems?.map((item: any, index: number) => {
     const asset = item.media_assets;
-    const displayCost = (item.sales_price || item.card_rate || asset?.card_rate || 0) - (item.discount_amount || 0);
+    const unitPrice = item.sales_price || item.card_rate || asset?.card_rate || 0;
+    const subtotal = unitPrice - (item.discount_amount || 0);
     
     return {
-      description: `${asset?.media_type || 'Display'} - ${asset?.area || ''} - ${asset?.location || ''}`,
-      startDate: formatDateToDDMonYY(plan.start_date),
-      endDate: formatDateToDDMonYY(plan.end_date),
-      days: days,
-      monthlyRate: item.sales_price || item.card_rate || asset?.card_rate || 0,
-      cost: displayCost,
+      sno: index + 1,
+      locationCode: asset?.id || item.asset_id || '-',
+      area: asset?.area || '-',
+      mediaType: asset?.media_type || 'Display',
+      route: asset?.direction || asset?.route || '-',
+      illumination: asset?.illumination_type || 'Non-Lit',
+      dimension: asset?.dimensions || asset?.dimension || '-',
+      totalSqft: asset?.total_sqft || 0,
+      fromDate: formatDateToDDMMYYYY(plan.start_date),
+      toDate: formatDateToDDMMYYYY(plan.end_date),
+      duration: getDurationDisplay(days),
+      unitPrice,
+      subtotal,
     };
   }) || [];
-
-  // Add printing row if exists
-  const totalPrinting = planItems?.reduce((sum, item) => sum + (item.printing_charges || item.printing_cost || 0), 0) || 0;
-  if (totalPrinting > 0) {
-    items.push({
-      description: 'Printing Charges',
-      startDate: '',
-      endDate: '',
-      days: 0,
-      monthlyRate: 0,
-      cost: totalPrinting,
-    });
-  }
-
-  // Add installation row if exists
-  const totalInstallation = planItems?.reduce((sum, item) => sum + (item.mounting_charges || item.installation_cost || 0), 0) || 0;
-  if (totalInstallation > 0) {
-    items.push({
-      description: 'Installation Charges',
-      startDate: '',
-      endDate: '',
-      days: 0,
-      monthlyRate: 0,
-      cost: totalInstallation,
-    });
-  }
 
   // Calculate totals
   const displayCost = planItems?.reduce((sum, item) => {
@@ -115,9 +108,13 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
     return sum + cost;
   }, 0) || 0;
 
-  const subtotal = displayCost + totalPrinting + totalInstallation;
-  const gst = subtotal * 0.18;
-  const totalInr = subtotal + gst;
+  const totalPrinting = planItems?.reduce((sum, item) => sum + (item.printing_charges || item.printing_cost || 0), 0) || 0;
+  const totalInstallation = planItems?.reduce((sum, item) => sum + (item.mounting_charges || item.installation_cost || 0), 0) || 0;
+
+  const untaxedAmount = displayCost + totalPrinting + totalInstallation;
+  const cgst = untaxedAmount * 0.09;
+  const sgst = untaxedAmount * 0.09;
+  const totalInr = untaxedAmount + cgst + sgst;
 
   return generateStandardizedPDF({
     documentType: 'WORK ORDER',
@@ -140,9 +137,9 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
     companyPAN: companyData?.pan || 'AATFM4107H',
     
     items,
-    displayCost,
-    installationCost: totalInstallation,
-    gst,
+    untaxedAmount,
+    cgst,
+    sgst,
     totalInr,
   });
 }

@@ -262,6 +262,9 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
     ];
   });
 
+  // Track page count for header rendering
+  let currentPageCount = 1;
+  
   autoTable(doc, {
     startY: tableStartY,
     head: [['#', 'LOCATION & DESCRIPTION', 'SIZE', 'BOOKING', 'UNIT PRICE', 'SUBTOTAL']],
@@ -293,14 +296,24 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
       4: { cellWidth: 25, halign: 'right' },
       5: { cellWidth: 25, halign: 'right' },
     },
-    // Reserve a safe header area on every page so table never overlaps header.
-    margin: { top: 90, left: leftMargin, right: rightMargin, bottom: PAGE_MARGINS.bottom },
+    // CRITICAL: Reserve safe header area on EVERY page (35mm for compact header)
+    // Page 1 already has header rendered, but page 2+ needs margin.top to leave room
+    margin: { top: 35, left: leftMargin, right: rightMargin, bottom: PAGE_MARGINS.bottom },
     tableWidth: pageWidth - leftMargin - rightMargin,
+    // CRITICAL: Prevent row splitting across pages
+    rowPageBreak: 'avoid',
+    // Handle page breaks properly
     didDrawPage: (hookData) => {
       // Page 2+ should ONLY have compact header (no title/address/GST)
+      // Render compact header at fixed position, BEFORE table content
       if (hookData.pageNumber > 1) {
+        // Clear the header area first to prevent any overlap
+        doc.setFillColor(255, 255, 255);
+        doc.rect(0, 0, pageWidth, 34, 'F');
+        // Render compact header
         headerRenderers.compact(doc);
       }
+      currentPageCount = hookData.pageNumber;
     },
   });
 
@@ -308,10 +321,16 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   yPos = doc.lastAutoTable.finalY + 10;
 
   // ========== 5. SUMMARY & BANK DETAILS (Side by Side, Zoho Style) ==========
-  // Check if we need a new page
-  if (yPos + 70 > pageHeight - PAGE_MARGINS.bottom - 40) {
+  // Calculate required space for summary + bank + terms + signatory
+  const requiredSpace = 120; // Bank details + summary + terms + signatory
+  const availableSpace = pageHeight - yPos - PAGE_MARGINS.bottom;
+  
+  // Check if we need a new page for summary section
+  if (availableSpace < requiredSpace) {
     doc.addPage();
-    // Page 2+ should use compact header only
+    // Clear header area and render compact header
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, pageWidth, 34, 'F');
     yPos = headerRenderers.compact(doc) + 10;
   }
 
@@ -401,7 +420,9 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   // ========== 7. TERMS & CONDITIONS ==========
   if (yPos + 50 > pageHeight - PAGE_MARGINS.bottom - 40) {
     doc.addPage();
-    // Page 2+ should use compact header only
+    // Clear header area and render compact header
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, pageWidth, 34, 'F');
     yPos = headerRenderers.compact(doc) + 10;
   }
 
@@ -428,7 +449,9 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   terms.forEach((term, idx) => {
     if (yPos + 8 > pageHeight - PAGE_MARGINS.bottom - 35) {
       doc.addPage();
-      // Page 2+ should use compact header only
+      // Clear header area and render compact header
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, 0, pageWidth, 34, 'F');
       yPos = headerRenderers.compact(doc) + 10;
     }
     const termText = `${idx + 1}. ${term}`;
@@ -445,7 +468,9 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   // ========== 8. FOOTER: AUTHORIZED SIGNATORY (RIGHT) ==========
   if (yPos + 30 > pageHeight - 10) {
     doc.addPage();
-    // Page 2+ should use compact header only
+    // Clear header area and render compact header
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, pageWidth, 34, 'F');
     yPos = headerRenderers.compact(doc) + 10;
   }
 

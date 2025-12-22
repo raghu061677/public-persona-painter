@@ -44,21 +44,27 @@ export const generateProformaPDF = async (data: ProformaInvoiceData): Promise<Bl
   }
 
   // Build line items with 098-style structure
-  const items = data.items.map((item: any, index: number) => ({
-    sno: index + 1,
-    locationCode: item.asset_id || item.display_name || '-',
-    area: item.area || '-',
-    mediaType: item.media_type || 'Display',
-    route: item.direction || item.route || '-',
-    illumination: item.illumination_type === 'Lit' ? 'BackLit' : 'Non-Lit',
-    dimension: item.dimensions || item.dimension || '-',
-    totalSqft: item.total_sqft || item.sqft || 0,
-    fromDate: data.campaign_start_date ? formatDateToDDMMYYYY(data.campaign_start_date) : '-',
-    toDate: data.campaign_end_date ? formatDateToDDMMYYYY(data.campaign_end_date) : '-',
-    duration: getDurationDisplay(days),
-    unitPrice: item.negotiated_rate || item.card_rate || 0,
-    subtotal: item.line_total || item.total_price || 0,
-  }));
+  // CRITICAL: Use media_code or display_name, NEVER raw UUIDs
+  const items = data.items.map((item: any, index: number) => {
+    // Determine readable location code - prioritize media_code, then display_name, then location
+    const readableCode = item.media_code || item.display_name || item.location || item.asset_name || `Site ${index + 1}`;
+    
+    return {
+      sno: index + 1,
+      locationCode: readableCode,
+      area: item.area || '-',
+      mediaType: item.media_type || 'Display',
+      route: item.direction || item.route || '-',
+      illumination: item.illumination_type === 'Lit' ? 'BackLit' : (item.illumination_type === 'Non-Lit' ? 'Non-Lit' : (item.illumination_type || 'Non-Lit')),
+      dimension: item.dimensions || item.dimension || '-',
+      totalSqft: item.total_sqft || item.sqft || 0,
+      fromDate: data.campaign_start_date ? formatDateToDDMMYYYY(data.campaign_start_date) : '-',
+      toDate: data.campaign_end_date ? formatDateToDDMMYYYY(data.campaign_end_date) : '-',
+      duration: getDurationDisplay(days),
+      unitPrice: item.negotiated_rate || item.card_rate || 0,
+      subtotal: item.line_total || item.total_price || 0,
+    };
+  });
 
   const untaxedAmount = data.taxable_amount;
   const cgst = data.cgst_amount;

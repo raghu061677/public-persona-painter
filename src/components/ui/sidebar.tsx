@@ -116,7 +116,7 @@ const SidebarProvider = React.forwardRef<
               ...style,
             } as React.CSSProperties
           }
-          className={cn("group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar", className)}
+          className={cn("group/sidebar-wrapper flex min-h-[100dvh] w-full has-[[data-variant=inset]]:bg-sidebar", className)}
           ref={ref}
           {...props}
         >
@@ -156,7 +156,7 @@ const Sidebar = React.forwardRef<
         <SheetContent
           data-sidebar="sidebar"
           data-mobile="true"
-          className="w-[--sidebar-width] bg-sidebar/95 backdrop-blur-2xl p-0 text-sidebar-foreground [&>button]:hidden border-r border-border/50 shadow-[0_8px_32px_rgba(0,0,0,0.12)]"
+          className="w-[--sidebar-width] bg-sidebar backdrop-blur-2xl p-0 text-sidebar-foreground [&>button]:hidden border-r border-border/50 shadow-[0_8px_32px_rgba(0,0,0,0.12)] z-[9999] touch-manipulation"
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -164,7 +164,7 @@ const Sidebar = React.forwardRef<
           }
           side={side}
         >
-          <div className="flex h-full w-full flex-col">{children}</div>
+          <div className="flex h-full w-full flex-col overflow-y-auto overscroll-contain">{children}</div>
         </SheetContent>
       </Sheet>
     );
@@ -220,20 +220,27 @@ const SidebarTrigger = React.forwardRef<React.ElementRef<typeof Button>, React.C
   ({ className, onClick, ...props }, ref) => {
     const { toggleSidebar } = useSidebar();
 
+    const handleInteraction = (event: React.MouseEvent<HTMLButtonElement> | React.TouchEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if ('onClick' in event) {
+        onClick?.(event as React.MouseEvent<HTMLButtonElement>);
+      }
+      toggleSidebar();
+    };
+
     return (
       <Button
         ref={ref}
         data-sidebar="trigger"
         variant="ghost"
         size="icon"
-        className={cn("h-7 w-7", className)}
-        onClick={(event) => {
-          onClick?.(event);
-          toggleSidebar();
-        }}
+        className={cn("h-9 w-9 touch-manipulation z-[9999]", className)}
+        onClick={handleInteraction}
+        onTouchStart={handleInteraction}
         {...props}
       >
-        <PanelLeft />
+        <PanelLeft className="h-5 w-5" />
         <span className="sr-only">Toggle Sidebar</span>
       </Button>
     );

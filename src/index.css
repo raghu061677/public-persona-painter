@@ -814,3 +814,36 @@ input[type="number"] {
   }
 }
 
+/* Mobile Touch Fixes */
+@layer utilities {
+  /* Fix for mobile viewport height */
+  .min-h-dvh {
+    min-height: 100dvh;
+  }
+  
+  /* Touch optimization for interactive elements */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Prevent scroll lock issues on mobile */
+  .overscroll-contain {
+    overscroll-behavior: contain;
+  }
+  
+  /* Mobile sidebar overlay - ensure taps work */
+  [data-radix-dialog-overlay] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Mobile menu trigger - larger touch target */
+  [data-sidebar="trigger"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+

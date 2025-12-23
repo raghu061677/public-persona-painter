@@ -32,7 +32,7 @@ export function ModernAppLayout({ children }: { children: React.ReactNode }) {
       <OnboardingGate>
         <BreadcrumbProvider>
           <SidebarProvider defaultOpen={true}>
-            <div className="flex min-h-screen w-full bg-background transition-colors duration-300">
+            <div className="flex min-h-[100dvh] w-full bg-background transition-colors duration-300">
               {/* Responsive Sidebar */}
               <ResponsiveSidebar />
 

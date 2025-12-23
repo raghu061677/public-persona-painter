@@ -6,7 +6,7 @@ import { AssetDetails } from "@/components/media-assets/asset-details";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/navigation/PageHeader";
 import { MediaAssetQrSection } from "@/components/media-assets/MediaAssetQrSection";
-import { AssetCalendarHeatmap } from "@/components/analytics/AssetCalendarHeatmap";
+
 import { ROUTES } from "@/config/routes";
 
 export default function MediaAssetDetail() {
@@ -150,7 +150,7 @@ export default function MediaAssetDetail() {
       
       <AssetDetails asset={asset} isAdmin={isAdmin} onQRGenerated={handleQRGenerated} />
       
-      <AssetCalendarHeatmap assetId={asset.id} monthsAhead={12} />
+      
       
       <MediaAssetQrSection
         assetId={asset.id}

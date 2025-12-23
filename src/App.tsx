@@ -188,6 +188,7 @@ const MounterTasks = lazy(() => import("./pages/MounterTasks"));
 const OperationDetail = lazy(() => import("./pages/OperationDetail"));
 const InventoryUtilization = lazy(() => import("./pages/InventoryUtilization"));
 const RevenueForecast = lazy(() => import("./pages/RevenueForecast"));
+const MediaAssetDuplicates = lazy(() => import("./pages/admin/MediaAssetDuplicates"));
 
 // Optimized Query Client with caching
 const queryClient = new QueryClient({
@@ -289,6 +290,7 @@ const App = () => (
             <Route path="/admin/media-assets/new" element={<ProtectedRoute requiredModule="media_assets" requiredAction="create"><ModernAppLayout><MediaAssetNew /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets/import" element={<ProtectedRoute requiredModule="media_assets" requiredAction="create"><ModernAppLayout><MediaAssetsImport /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets/validate" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetsValidation /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/media-assets/duplicates" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetDuplicates /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets-validation" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetsValidation /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/media-assets-health" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetsHealthReport /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/clients/import" element={<ProtectedRoute requiredModule="clients" requiredAction="create"><ModernAppLayout><ClientsImport /></ModernAppLayout></ProtectedRoute>} />

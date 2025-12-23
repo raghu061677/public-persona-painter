@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Search, Grid3x3, Table2, Map, Sparkles, Sun, Moon, Palette } from "lucide-react";
+import { Search, Grid3x3, Table2, Map, Sparkles, Sun, Moon, Palette, Copy } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -79,6 +80,14 @@ export function HeaderBar({
       >
         <Sparkles className="h-4 w-4" />
         AI Filters
+      </Button>
+
+      {/* Duplicates Link */}
+      <Button variant="outline" size="sm" asChild className="gap-2">
+        <Link to="/admin/media-assets/duplicates">
+          <Copy className="h-4 w-4" />
+          Duplicates
+        </Link>
       </Button>
 
       {/* God Mode Toggle */}

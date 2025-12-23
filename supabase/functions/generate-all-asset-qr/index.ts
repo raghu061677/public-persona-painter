@@ -67,16 +67,18 @@ serve(async (req) => {
           targetUrl = `https://go-ads-ldbl1.web.app/asset/${asset.id}`;
         }
 
-        // Generate QR code as PNG buffer
-        const qrBuffer = await QRCode.toBuffer(targetUrl, {
+        // Generate QR code as PNG data URL (Deno runtime doesn't support QRCode.toBuffer)
+        const qrDataUrl = await QRCode.toDataURL(targetUrl, {
           errorCorrectionLevel: 'M',
-          type: 'png',
           margin: 2,
           width: 512,
         });
 
-        // Convert buffer to Uint8Array for upload
-        const qrData = new Uint8Array(qrBuffer);
+        const base64 = qrDataUrl.split(',')[1] || '';
+        if (!base64) throw new Error('Failed to generate QR (empty data)');
+
+        const binary = atob(base64);
+        const qrData = Uint8Array.from(binary, (c) => c.charCodeAt(0));
 
         // Upload to storage
         const filePath = `${asset.id}.png`;

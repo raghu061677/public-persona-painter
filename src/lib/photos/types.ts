@@ -41,7 +41,7 @@ export interface PhotoUploadResult {
 }
 
 export interface UploadProgress {
-  stage: 'analyzing' | 'compressing' | 'uploading' | 'validating' | 'saving' | 'complete';
+  stage: 'analyzing' | 'compressing' | 'watermarking' | 'uploading' | 'validating' | 'saving' | 'complete';
   progress: number; // 0-100
   message?: string;
 }

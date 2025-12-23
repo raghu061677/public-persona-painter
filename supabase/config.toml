@@ -222,3 +222,39 @@ verify_jwt = true
 [functions.check-conflicts]
 verify_jwt = true
 
+[functions.apply-qr-watermark-existing]
+verify_jwt = true
+
+[functions.check-duplicate-asset-codes]
+verify_jwt = true
+
+[functions.check-unassigned-records]
+verify_jwt = true
+
+[functions.fix-asset-issues]
+verify_jwt = true
+
+[functions.generate-proof-ppt-v2]
+verify_jwt = true
+
+[functions.generate-streetview-url]
+verify_jwt = true
+
+[functions.get-media-availability]
+verify_jwt = true
+
+[functions.auto-assign-operations]
+verify_jwt = true
+
+[functions.verify-qr-scan]
+verify_jwt = false
+
+[functions.update-campaign-statuses]
+verify_jwt = true
+
+[functions.migrate-company-data]
+verify_jwt = true
+
+[functions.audit-media-assets]
+verify_jwt = true
+

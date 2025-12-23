@@ -3,6 +3,7 @@ import { Image, decode } from 'https://deno.land/x/imagescript@1.3.0/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
 };
 

@@ -3396,6 +3396,7 @@ export type Database = {
           direction: string | null
           display_title: string | null
           district: string | null
+          duplicate_group_id: string | null
           electricity: number | null
           ero: string | null
           faces: Json | null
@@ -3425,6 +3426,7 @@ export type Database = {
           primary_photo_url: string | null
           printing_rate_default: number | null
           qr_code_url: string | null
+          remarks: string | null
           search_tokens: string[] | null
           section_name: string | null
           seo_description: string | null
@@ -3465,6 +3467,7 @@ export type Database = {
           direction?: string | null
           display_title?: string | null
           district?: string | null
+          duplicate_group_id?: string | null
           electricity?: number | null
           ero?: string | null
           faces?: Json | null
@@ -3494,6 +3497,7 @@ export type Database = {
           primary_photo_url?: string | null
           printing_rate_default?: number | null
           qr_code_url?: string | null
+          remarks?: string | null
           search_tokens?: string[] | null
           section_name?: string | null
           seo_description?: string | null
@@ -3534,6 +3538,7 @@ export type Database = {
           direction?: string | null
           display_title?: string | null
           district?: string | null
+          duplicate_group_id?: string | null
           electricity?: number | null
           ero?: string | null
           faces?: Json | null
@@ -3563,6 +3568,7 @@ export type Database = {
           primary_photo_url?: string | null
           printing_rate_default?: number | null
           qr_code_url?: string | null
+          remarks?: string | null
           search_tokens?: string[] | null
           section_name?: string | null
           seo_description?: string | null
@@ -6400,6 +6406,26 @@ export type Database = {
         }
         Returns: Json
       }
+      check_media_asset_duplicate: {
+        Args: {
+          p_area: string
+          p_city: string
+          p_company_id: string
+          p_dimensions: string
+          p_direction: string
+          p_exclude_id?: string
+          p_latitude: number
+          p_location: string
+          p_longitude: number
+          p_media_type: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          location: string
+          media_asset_code: string
+        }[]
+      }
       check_subscription_user_limit: {
         Args: { p_company_id: string }
         Returns: boolean
@@ -6419,6 +6445,18 @@ export type Database = {
         Returns: Json
       }
       delete_user_account: { Args: never; Returns: undefined }
+      detect_media_asset_duplicates: {
+        Args: never
+        Returns: {
+          area: string
+          asset_ids: string[]
+          city: string
+          duplicate_count: number
+          group_id: string
+          location: string
+          media_type: string
+        }[]
+      }
       extract_state_code: { Args: { client_id: string }; Returns: string }
       generate_asset_qr_code: {
         Args: { asset_id_param: string }
@@ -6481,6 +6519,7 @@ export type Database = {
           direction: string | null
           display_title: string | null
           district: string | null
+          duplicate_group_id: string | null
           electricity: number | null
           ero: string | null
           faces: Json | null
@@ -6510,6 +6549,7 @@ export type Database = {
           primary_photo_url: string | null
           printing_rate_default: number | null
           qr_code_url: string | null
+          remarks: string | null
           search_tokens: string[] | null
           section_name: string | null
           seo_description: string | null

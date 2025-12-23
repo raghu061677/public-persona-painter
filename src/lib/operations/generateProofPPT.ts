@@ -1,6 +1,8 @@
 import PptxGenJS from "pptxgenjs";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { fetchImageAsBase64 } from "@/lib/qrWatermark";
+import { buildStreetViewUrl } from "@/lib/streetview";
 
 interface CampaignData {
   id: string;
@@ -17,6 +19,9 @@ interface AssetData {
   location: string;
   direction?: string;
   media_id?: string;
+  qr_code_url?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface PhotoData {
@@ -33,6 +38,33 @@ interface GroupedPhotos {
     asset: AssetData;
     photos: PhotoData[];
   };
+}
+
+// QR cache
+const qrCache = new Map<string, { base64: string; streetViewUrl: string }>();
+
+async function getCachedQR(asset: AssetData): Promise<{ base64: string; streetViewUrl: string } | null> {
+  if (!asset.qr_code_url) return null;
+  
+  if (qrCache.has(asset.id)) {
+    return qrCache.get(asset.id)!;
+  }
+
+  try {
+    const streetViewUrl = asset.latitude && asset.longitude 
+      ? buildStreetViewUrl(asset.latitude, asset.longitude)
+      : null;
+    
+    if (!streetViewUrl) return null;
+
+    const base64 = await fetchImageAsBase64(asset.qr_code_url);
+    const result = { base64, streetViewUrl };
+    qrCache.set(asset.id, result);
+    return result;
+  } catch (error) {
+    console.warn(`Failed to fetch QR for asset ${asset.id}:`, error);
+    return null;
+  }
 }
 
 export async function generateProofOfDisplayPPT(campaignId: string): Promise<void> {
@@ -85,10 +117,10 @@ export async function generateProofOfDisplayPPT(campaignId: string): Promise<voi
     // Get unique asset IDs
     const assetIds = [...new Set(photos.map(p => p.asset_id))];
 
-    // Fetch asset details with company filter
+    // Fetch asset details with company filter - include QR code data
     const { data: assets, error: assetsError } = await supabase
       .from("media_assets")
-      .select("*")
+      .select("id, area, location, direction, media_asset_code, qr_code_url, latitude, longitude")
       .eq("company_id", campaign.company_id)
       .in("id", assetIds);
 
@@ -101,10 +133,15 @@ export async function generateProofOfDisplayPPT(campaignId: string): Promise<voi
       if (!grouped[photo.asset_id]) {
         const asset = assets?.find(a => a.id === photo.asset_id);
         grouped[photo.asset_id] = {
-          asset: asset || {
+          asset: {
             id: photo.asset_id,
-            area: "Unknown",
-            location: "Unknown",
+            area: asset?.area || "Unknown",
+            location: asset?.location || "Unknown",
+            direction: asset?.direction ?? undefined,
+            media_id: asset?.media_asset_code ?? undefined,
+            qr_code_url: asset?.qr_code_url ?? undefined,
+            latitude: asset?.latitude ?? undefined,
+            longitude: asset?.longitude ?? undefined,
           },
           photos: [],
         };
@@ -125,9 +162,9 @@ export async function generateProofOfDisplayPPT(campaignId: string): Promise<voi
     await addTitleSlide(pptx, campaign, assetIds.length, photos.length);
 
     // Add asset slides
-    Object.entries(grouped).forEach(([assetId, data]) => {
-      addAssetSlides(pptx, data.asset, data.photos);
-    });
+    for (const [assetId, data] of Object.entries(grouped)) {
+      await addAssetSlides(pptx, data.asset, data.photos);
+    }
 
     // Generate and download
     const fileName = `Proof_${campaign.campaign_name.replace(/[^a-z0-9]/gi, '_')}_${format(new Date(), 'yyyyMMdd')}.pptx`;
@@ -218,27 +255,42 @@ async function addTitleSlide(
   });
 }
 
-function addAssetSlides(
+async function addAssetSlides(
   pptx: PptxGenJS,
   asset: AssetData,
   photos: PhotoData[]
-): void {
+): Promise<void> {
+  // Get QR data for this asset
+  const qrData = await getCachedQR(asset);
+
   // Process photos in batches of 2
   for (let i = 0; i < photos.length; i += 2) {
     const slide = pptx.addSlide();
     slide.background = { color: "FFFFFF" };
 
     // Asset title
-    const title = `Asset: ${asset.id} – ${asset.location}`;
+    const title = `Asset: ${asset.media_id || asset.id} – ${asset.location}`;
     slide.addText(title, {
       x: 0.5,
       y: 0.3,
-      w: 9,
+      w: 8.5,
       h: 0.5,
       fontSize: 20,
       bold: true,
       color: "1E40AF",
     });
+
+    // Add clickable QR in header area
+    if (qrData) {
+      slide.addImage({
+        data: qrData.base64,
+        x: 9.0,
+        y: 0.2,
+        w: 0.8,
+        h: 0.8,
+        hyperlink: { url: qrData.streetViewUrl },
+      });
+    }
 
     // Asset details
     const details = [];
@@ -258,14 +310,14 @@ function addAssetSlides(
       });
     }
 
-    // Add first photo
+    // Add first photo with QR watermark
     const photo1 = photos[i];
-    addPhotoToSlide(slide, photo1, 0.5, 1.5, 4.5, 4.5);
+    addPhotoToSlide(slide, photo1, 0.5, 1.5, 4.5, 4.5, qrData);
 
     // Add second photo if exists
     if (i + 1 < photos.length) {
       const photo2 = photos[i + 1];
-      addPhotoToSlide(slide, photo2, 5.0, 1.5, 4.5, 4.5);
+      addPhotoToSlide(slide, photo2, 5.0, 1.5, 4.5, 4.5, qrData);
     }
 
     // Footer
@@ -287,7 +339,8 @@ function addPhotoToSlide(
   x: number,
   y: number,
   w: number,
-  h: number
+  h: number,
+  qrData?: { base64: string; streetViewUrl: string } | null
 ): void {
   // Add photo
   slide.addImage({
@@ -298,6 +351,20 @@ function addPhotoToSlide(
     h,
     sizing: { type: "contain", w, h },
   });
+
+  // Add clickable QR watermark at bottom-right of photo
+  if (qrData) {
+    const qrSize = 0.7;
+    const qrPadding = 0.12;
+    slide.addImage({
+      data: qrData.base64,
+      x: x + w - qrSize - qrPadding,
+      y: y + h - qrSize - qrPadding,
+      w: qrSize,
+      h: qrSize,
+      hyperlink: { url: qrData.streetViewUrl },
+    });
+  }
 
   // Add tag badge
   const tagColors: { [key: string]: string } = {

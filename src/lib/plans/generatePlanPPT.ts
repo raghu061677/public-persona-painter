@@ -1,6 +1,7 @@
 import pptxgen from 'pptxgenjs';
 import { format } from 'date-fns';
-import { validateAndFixStreetViewUrl } from '../streetview';
+import { validateAndFixStreetViewUrl, buildStreetViewUrl } from '../streetview';
+import { fetchImageAsBase64 } from '../qrWatermark';
 
 interface PlanAsset {
   asset_id: string;
@@ -32,6 +33,38 @@ interface OrganizationSettings {
   organization_name?: string;
   logo_url?: string;
   primary_color?: string;
+}
+
+// QR cache to avoid refetching
+const qrCache = new Map<string, { base64: string; streetViewUrl: string }>();
+
+async function getCachedQR(
+  assetId: string,
+  qrCodeUrl: string | undefined,
+  latitude: number | undefined,
+  longitude: number | undefined
+): Promise<{ base64: string; streetViewUrl: string } | null> {
+  if (!qrCodeUrl) return null;
+  
+  if (qrCache.has(assetId)) {
+    return qrCache.get(assetId)!;
+  }
+
+  try {
+    const streetViewUrl = latitude && longitude 
+      ? buildStreetViewUrl(latitude, longitude)
+      : null;
+    
+    if (!streetViewUrl) return null;
+
+    const base64 = await fetchImageAsBase64(qrCodeUrl);
+    const result = { base64, streetViewUrl };
+    qrCache.set(assetId, result);
+    return result;
+  } catch (error) {
+    console.warn(`Failed to fetch QR for asset ${assetId}:`, error);
+    return null;
+  }
 }
 
 const DEFAULT_PLACEHOLDER = 'https://via.placeholder.com/800x600/f3f4f6/6b7280?text=No+Image+Available';
@@ -243,6 +276,14 @@ export async function generatePlanPPT(
       fontFace: 'Arial',
     });
 
+    // Get QR data for this asset (cached)
+    const qrData = await getCachedQR(
+      asset.asset_id,
+      asset.qr_code_url,
+      asset.latitude,
+      asset.longitude
+    );
+
     // Image 1 (fixed frame, cover to keep exact positioning)
     try {
       // Frame (helps visually + ensures consistent crop)
@@ -263,6 +304,20 @@ export async function generatePlanPPT(
         h: 3.8,
         sizing: { type: 'cover', w: 4.5, h: 3.8 },
       });
+
+      // Add clickable QR overlay on image 1 (bottom-right corner)
+      if (qrData) {
+        const qrSize = 0.7; // ~70px in inches
+        const qrPadding = 0.12; // ~12px
+        slide1.addImage({
+          data: qrData.base64,
+          x: 0.4 + 4.5 - qrSize - qrPadding,
+          y: 1.5 + 3.8 - qrSize - qrPadding,
+          w: qrSize,
+          h: qrSize,
+          hyperlink: { url: qrData.streetViewUrl },
+        });
+      }
     } catch (error) {
       console.error('Failed to add image 1:', error);
     }
@@ -286,6 +341,20 @@ export async function generatePlanPPT(
         h: 3.8,
         sizing: { type: 'cover', w: 4.5, h: 3.8 },
       });
+
+      // Add clickable QR overlay on image 2 (bottom-right corner)
+      if (qrData) {
+        const qrSize = 0.7;
+        const qrPadding = 0.12;
+        slide1.addImage({
+          data: qrData.base64,
+          x: 5.1 + 4.5 - qrSize - qrPadding,
+          y: 1.5 + 3.8 - qrSize - qrPadding,
+          w: qrSize,
+          h: qrSize,
+          hyperlink: { url: qrData.streetViewUrl },
+        });
+      }
     } catch (error) {
       console.error('Failed to add image 2:', error);
     }
@@ -349,23 +418,16 @@ export async function generatePlanPPT(
       fontFace: 'Arial',
     });
 
-    // Add QR Code if available (top-right corner)
-    if (asset.qr_code_url) {
+    // Add QR Code if available (top-right corner) - with clickable hyperlink
+    if (qrData) {
       try {
-        const qrResponse = await fetch(asset.qr_code_url);
-        const qrBlob = await qrResponse.blob();
-        const qrBase64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(qrBlob);
-        });
-        
         slide2.addImage({
-          data: qrBase64,
+          data: qrData.base64,
           x: 8.8,
           y: 0.35,
           w: 1.3,
           h: 1.3,
+          hyperlink: { url: qrData.streetViewUrl },
         });
       } catch (error) {
         console.error('Failed to add QR code:', error);

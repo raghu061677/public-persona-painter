@@ -23,6 +23,7 @@ import {
   Play,
   Calendar
 } from "lucide-react";
+import { BulkQRWatermarkButton } from "@/components/gallery/BulkQRWatermarkButton";
 import { PhotoExportDialog } from "@/components/gallery/PhotoExportDialog";
 import { PhotoApprovalDialog } from "@/components/gallery/PhotoApprovalDialog";
 import { PhotoSlideshow } from "@/components/media-assets/PhotoSlideshow";
@@ -439,6 +440,7 @@ export default function PhotoGallery() {
             <Button variant="outline" size="sm" onClick={clearFilters}>
               Clear Filters
             </Button>
+            <BulkQRWatermarkButton />
             <Button
               variant="outline"
               size="sm"

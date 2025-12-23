@@ -67,27 +67,26 @@ serve(async (req) => {
           targetUrl = `https://go-ads-ldbl1.web.app/asset/${asset.id}`;
         }
 
-        // Generate QR code as PNG data URL (Deno runtime doesn't support QRCode.toBuffer)
-        const qrDataUrl = await QRCode.toDataURL(targetUrl, {
+        // Generate QR code as SVG (works in Deno; PNG generation requires a Canvas implementation)
+        const qrSvg = await QRCode.toString(targetUrl, {
+          type: 'svg',
           errorCorrectionLevel: 'M',
           margin: 2,
           width: 512,
         });
 
-        const base64 = qrDataUrl.split(',')[1] || '';
-        if (!base64) throw new Error('Failed to generate QR (empty data)');
+        const qrData = new TextEncoder().encode(qrSvg);
 
-        const binary = atob(base64);
-        const qrData = Uint8Array.from(binary, (c) => c.charCodeAt(0));
 
         // Upload to storage
-        const filePath = `${asset.id}.png`;
+        const filePath = `${asset.id}.svg`;
         const { error: uploadError } = await supabase.storage
           .from('asset-qrcodes')
           .upload(filePath, qrData, {
-            contentType: 'image/png',
+            contentType: 'image/svg+xml',
             upsert: true,
           });
+
 
         if (uploadError) {
           throw new Error(`Upload failed: ${uploadError.message}`);

@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import QRCode from "https://esm.sh/qrcode@1.5.3";
+import { qrcode } from "https://deno.land/x/qrcode/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -67,26 +67,27 @@ serve(async (req) => {
           targetUrl = `https://go-ads-ldbl1.web.app/asset/${asset.id}`;
         }
 
-        // Generate QR code as SVG (works in Deno; PNG generation requires a Canvas implementation)
-        const qrSvg = await QRCode.toString(targetUrl, {
-          type: 'svg',
-          errorCorrectionLevel: 'M',
-          margin: 2,
-          width: 512,
-        });
+        // Generate QR code as base64 GIF image using Deno-native library
+        // Returns: data:image/gif;base64,...
+        const qrBase64Image = await qrcode(targetUrl, { size: 512 }) as unknown as string;
+        
+        if (!qrBase64Image || typeof qrBase64Image !== 'string') {
+          throw new Error('Failed to generate QR code');
+        }
 
-        const qrData = new TextEncoder().encode(qrSvg);
+        // Extract the base64 portion and decode it
+        const base64Data = qrBase64Image.replace(/^data:image\/\w+;base64,/, '');
+        const binaryString = atob(base64Data);
+        const qrData = Uint8Array.from(binaryString, (c) => c.charCodeAt(0));
 
-
-        // Upload to storage
-        const filePath = `${asset.id}.svg`;
+        // Upload to storage as GIF
+        const filePath = `${asset.id}.gif`;
         const { error: uploadError } = await supabase.storage
           .from('asset-qrcodes')
           .upload(filePath, qrData, {
-            contentType: 'image/svg+xml',
+            contentType: 'image/gif',
             upsert: true,
           });
-
 
         if (uploadError) {
           throw new Error(`Upload failed: ${uploadError.message}`);

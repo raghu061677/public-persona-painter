@@ -22,7 +22,7 @@ export function BulkQRGenerationButton() {
     setIsGenerating(true);
     
     try {
-      const { data, error } = await supabase.functions.invoke('generate-all-asset-qr');
+      const { data, error } = await supabase.functions.invoke('generate-all-asset-qr', { body: {} });
 
       if (error) {
         throw error;

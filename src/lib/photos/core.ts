@@ -17,6 +17,128 @@ import type {
 } from "./types";
 
 /**
+ * Fetch QR code URL and coordinates for an asset
+ * Used for applying QR watermark at upload time
+ */
+async function fetchAssetQRInfo(assetId: string): Promise<{
+  qrCodeUrl: string | null;
+  latitude: number | null;
+  longitude: number | null;
+} | null> {
+  try {
+    const { data, error } = await supabase
+      .from('media_assets')
+      .select('qr_code_url, latitude, longitude')
+      .eq('id', assetId)
+      .single();
+
+    if (error || !data) {
+      console.warn('Could not fetch QR info for asset:', assetId);
+      return null;
+    }
+
+    return {
+      qrCodeUrl: data.qr_code_url,
+      latitude: data.latitude,
+      longitude: data.longitude,
+    };
+  } catch (error) {
+    console.warn('Error fetching asset QR info:', error);
+    return null;
+  }
+}
+
+/**
+ * Apply QR code watermark to a file
+ * Returns a new File with the QR watermark applied
+ */
+async function applyQRWatermarkToFile(
+  file: File,
+  qrCodeUrl: string
+): Promise<File> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      // Create object URL for the file
+      const fileUrl = URL.createObjectURL(file);
+      
+      // Create main image
+      const mainImage = new Image();
+      mainImage.crossOrigin = 'anonymous';
+      
+      // Create QR image
+      const qrImage = new Image();
+      qrImage.crossOrigin = 'anonymous';
+
+      const loadImage = (img: HTMLImageElement, src: string): Promise<void> => {
+        return new Promise((res, rej) => {
+          img.onload = () => res();
+          img.onerror = () => rej(new Error(`Failed to load image: ${src}`));
+          img.src = src;
+        });
+      };
+
+      // Load both images in parallel
+      await Promise.all([
+        loadImage(mainImage, fileUrl),
+        loadImage(qrImage, qrCodeUrl),
+      ]);
+
+      // Clean up object URL
+      URL.revokeObjectURL(fileUrl);
+
+      // Create canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = mainImage.naturalWidth;
+      canvas.height = mainImage.naturalHeight;
+      
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Failed to get canvas context');
+
+      // Draw main image
+      ctx.drawImage(mainImage, 0, 0);
+
+      // QR watermark settings
+      const qrSize = 80;
+      const padding = 12;
+      const opacity = 0.9;
+
+      // Calculate QR position (bottom-right with padding)
+      const qrX = canvas.width - qrSize - padding;
+      const qrY = canvas.height - qrSize - padding;
+
+      // Draw white background for QR (for better scanning)
+      ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+      ctx.fillRect(qrX - 4, qrY - 4, qrSize + 8, qrSize + 8);
+
+      // Draw QR code
+      ctx.globalAlpha = opacity;
+      ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
+      ctx.globalAlpha = 1;
+
+      // Convert canvas to blob
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error('Failed to create blob from canvas'));
+          return;
+        }
+
+        // Create new file with watermark
+        const watermarkedFile = new File([blob], file.name, {
+          type: 'image/jpeg',
+          lastModified: Date.now(),
+        });
+
+        resolve(watermarkedFile);
+      }, 'image/jpeg', 0.92);
+    } catch (error) {
+      console.warn('QR watermark failed, using original file:', error);
+      // Return original file if watermarking fails
+      resolve(file);
+    }
+  });
+}
+
+/**
  * Detect photo tag from filename and EXIF data
  */
 export async function detectPhotoTag(file: File): Promise<{
@@ -76,6 +198,7 @@ export async function detectPhotoTag(file: File): Promise<{
 /**
  * Unified photo upload function
  * Used by both asset proofs and operations proofs
+ * Now applies QR watermark at upload time
  */
 export async function uploadPhoto(
   config: PhotoUploadConfig,
@@ -95,7 +218,7 @@ export async function uploadPhoto(
     let fileToUpload: File = file;
     if (config.enableCompression) {
       if (onProgress) {
-        onProgress({ stage: 'compressing', progress: 25, message: 'Compressing image...' });
+        onProgress({ stage: 'compressing', progress: 20, message: 'Compressing image...' });
       }
       
       try {
@@ -107,14 +230,34 @@ export async function uploadPhoto(
       }
     }
 
-    // Stage 3: Generate unique filename and upload with company isolation
+    // Stage 3: Apply QR watermark if asset_id is provided
+    if (metadata.asset_id) {
+      if (onProgress) {
+        onProgress({ stage: 'watermarking', progress: 30, message: 'Adding QR watermark...' });
+      }
+      
+      try {
+        const qrInfo = await fetchAssetQRInfo(metadata.asset_id);
+        if (qrInfo?.qrCodeUrl) {
+          fileToUpload = await applyQRWatermarkToFile(fileToUpload, qrInfo.qrCodeUrl);
+          console.log('QR watermark applied successfully');
+        } else {
+          console.log('No QR code found for asset, skipping watermark');
+        }
+      } catch (error) {
+        console.warn('QR watermark failed, continuing without watermark:', error);
+        // Continue without watermark if it fails
+      }
+    }
+
+    // Stage 4: Generate unique filename and upload with company isolation
     if (onProgress) {
-      onProgress({ stage: 'uploading', progress: 40, message: 'Uploading to storage...' });
+      onProgress({ stage: 'uploading', progress: 45, message: 'Uploading to storage...' });
     }
 
     const timestamp = Date.now();
     const sanitizedTag = tag.toLowerCase().replace(/\s+/g, '_');
-    const extension = file.name.split('.').pop() || 'jpg';
+    const extension = 'jpg'; // Always save as JPEG since watermarking converts to JPEG
     const fileName = `${sanitizedTag}_${timestamp}.${extension}`;
     // Include company_id in storage path for proper multi-tenant isolation
     const filePath = `${metadata.company_id}/${config.basePath}/${fileName}`;
@@ -125,7 +268,6 @@ export async function uploadPhoto(
         cacheControl: '3600',
         upsert: false,
       });
-
     if (uploadError) {
       throw new Error(`Upload failed: ${uploadError.message}`);
     }
@@ -143,7 +285,7 @@ export async function uploadPhoto(
       onProgress({ stage: 'uploading', progress: 60, message: 'Upload complete' });
     }
 
-    // Stage 4: Validate photo quality using AI
+    // Stage 5: Validate photo quality using AI
     let validation: PhotoValidationResult | undefined;
     if (config.enableValidation) {
       try {
@@ -162,7 +304,7 @@ export async function uploadPhoto(
       onProgress({ stage: 'saving', progress: 85, message: 'Saving to database...' });
     }
 
-    // Stage 5: Save to database
+    // Stage 6: Save to database
     // Map PhotoTag to category (media_photos expects: Mounting, Display, Proof, Monitoring, General)
     const categoryMap: Record<PhotoTag, string> = {
       'Traffic': 'Proof',

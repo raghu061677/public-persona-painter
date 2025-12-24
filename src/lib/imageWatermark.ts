@@ -1,10 +1,17 @@
+export interface WatermarkOptions {
+  logoUrl?: string;
+  organizationName?: string;
+  qrCodeUrl?: string;
+}
+
 /**
- * Add watermark with company logo and timestamp to an image
+ * Add watermark with company logo, timestamp, and QR code to an image
  */
 export async function addWatermark(
   imageFile: File,
   logoUrl?: string,
-  organizationName?: string
+  organizationName?: string,
+  qrCodeUrl?: string
 ): Promise<File> {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
@@ -95,10 +102,44 @@ export async function addWatermark(
       ctx.font = `${fontSize * 0.8}px Arial`;
       ctx.fillText(timestamp, textX, timestampY);
 
-      // Add "PROOF OF INSTALLATION" text on the right
+      // Draw QR code on the right side if provided
+      let qrWidth = 0;
+      if (qrCodeUrl) {
+        try {
+          const qrImg = new Image();
+          qrImg.crossOrigin = 'anonymous';
+          
+          await new Promise<void>((resolveLoad, rejectLoad) => {
+            qrImg.onload = () => resolveLoad();
+            qrImg.onerror = () => rejectLoad(new Error('Failed to load QR code'));
+            qrImg.src = qrCodeUrl;
+          });
+
+          // QR code size - make it fit nicely in the watermark bar
+          const qrSize = watermarkHeight * 0.9;
+          qrWidth = qrSize + padding * 2;
+          
+          // Draw white background for QR code
+          const qrX = img.width - qrSize - padding * 2;
+          const qrY = watermarkY + (watermarkHeight - qrSize) / 2;
+          
+          ctx.fillStyle = 'white';
+          ctx.fillRect(qrX - 4, qrY - 4, qrSize + 8, qrSize + 8);
+          
+          // Draw QR code
+          ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+        } catch (error) {
+          console.warn('Could not load QR code for watermark:', error);
+          qrWidth = 0;
+        }
+      }
+
+      // Add "PROOF OF INSTALLATION" text (positioned before QR code if present)
       ctx.font = `bold ${fontSize * 0.7}px Arial`;
+      ctx.fillStyle = 'white';
       ctx.textAlign = 'right';
-      ctx.fillText('PROOF OF INSTALLATION', img.width - padding * 2, watermarkY + watermarkHeight / 2);
+      const proofTextX = qrWidth > 0 ? img.width - qrWidth - padding : img.width - padding * 2;
+      ctx.fillText('PROOF OF INSTALLATION', proofTextX, watermarkY + watermarkHeight / 2);
 
       // Convert canvas to blob
       canvas.toBlob(
@@ -134,7 +175,8 @@ export async function addWatermarkBatch(
   files: File[],
   logoUrl?: string,
   organizationName?: string,
-  onProgress?: (index: number, progress: number) => void
+  onProgress?: (index: number, progress: number) => void,
+  qrCodeUrl?: string
 ): Promise<File[]> {
   const watermarkedFiles: File[] = [];
 
@@ -142,7 +184,7 @@ export async function addWatermarkBatch(
     if (onProgress) onProgress(i, 0);
     
     try {
-      const watermarkedFile = await addWatermark(files[i], logoUrl, organizationName);
+      const watermarkedFile = await addWatermark(files[i], logoUrl, organizationName, qrCodeUrl);
       watermarkedFiles.push(watermarkedFile);
       
       if (onProgress) onProgress(i, 100);

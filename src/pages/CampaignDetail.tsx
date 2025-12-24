@@ -201,33 +201,29 @@ export default function CampaignDetail() {
   }
 
   const verifiedAssets = campaignAssets.filter(a => a.status === 'Verified').length;
+  const installedAssets = campaignAssets.filter(a => a.status === 'Installed' || a.status === 'Mounted').length;
   const progress = calculateProgress(campaign.total_assets, verifiedAssets);
 
   // Calculate campaign duration
   const startDate = new Date(campaign.start_date);
   const endDate = new Date(campaign.end_date);
-  const durationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
+  const durationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   const durationMonths = Math.round(durationDays / 30);
 
-  // Calculate detailed financials with pro-rata
-  const pricePerSqft = 15; // ₹15 per sqft for printing
-  const mountingCostPerAsset = 1500; // ₹1500 per asset
-  
-  // Display cost (pro-rated based on campaign duration)
+  // Use campaign_assets pricing which is locked from Plan
+  // Display cost from negotiated_rate (final price)
   const displayCost = campaignAssets.reduce((sum, a) => {
-    const monthlyRate = a.card_rate || 0;
-    const proRatedCost = (monthlyRate / 30) * durationDays;
-    return sum + proRatedCost;
+    return sum + (a.negotiated_rate || a.card_rate || 0);
   }, 0);
   
-  // Printing cost based on total sqft
+  // Printing and mounting from campaign_assets
   const printingTotal = campaignAssets.reduce((sum, a) => {
-    const sqft = a.total_sqft || 0;
-    return sum + (sqft * pricePerSqft);
+    return sum + (a.printing_charges || 0);
   }, 0);
   
-  // Mounting cost - ₹1500 per asset
-  const mountingTotal = campaignAssets.length * mountingCostPerAsset;
+  const mountingTotal = campaignAssets.reduce((sum, a) => {
+    return sum + (a.mounting_charges || 0);
+  }, 0);
   
   const subtotal = displayCost + printingTotal + mountingTotal;
   const discount = subtotal > campaign.total_amount ? subtotal - campaign.total_amount : 0;
@@ -356,9 +352,10 @@ export default function CampaignDetail() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-semibold">Campaign Progress</span>
-              <span className="text-xs text-muted-foreground">
-                {verifiedAssets} / {campaign.total_assets} assets verified
-              </span>
+              <div className="flex gap-4 text-xs text-muted-foreground">
+                <span>{installedAssets} installed</span>
+                <span>{verifiedAssets} / {campaign.total_assets} verified</span>
+              </div>
             </div>
             <Progress value={progress} className="h-3" />
           </CardContent>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -37,12 +37,30 @@ export function GenerateInvoiceDialog({
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isGstApplicable, setIsGstApplicable] = useState(true);
   const [dueDate, setDueDate] = useState(() => {
     const date = new Date();
     date.setDate(date.getDate() + 30); // Default 30 days from today
     return date.toISOString().split('T')[0];
   });
   const [notes, setNotes] = useState("");
+
+  // Fetch client GST applicability
+  useEffect(() => {
+    if (open && campaign.client_id) {
+      fetchClientGstStatus();
+    }
+  }, [open, campaign.client_id]);
+
+  const fetchClientGstStatus = async () => {
+    const { data: client } = await supabase
+      .from('clients')
+      .select('is_gst_applicable')
+      .eq('id', campaign.client_id)
+      .single();
+    
+    setIsGstApplicable(client?.is_gst_applicable !== false);
+  };
 
   const handleGenerateInvoice = async () => {
     try {
@@ -57,31 +75,35 @@ export function GenerateInvoiceDialog({
       // Generate invoice ID
       const invoiceId = await generateInvoiceId(supabase);
 
-      // Prepare invoice items - one line per asset
+      // Prepare invoice items - use campaign_assets pricing (locked from Plan)
       const items = campaignAssets.map((asset, index) => {
-        const assetDisplayCost = (asset.card_rate / 30) * campaign.duration_days;
-        const assetPrintingCost = (asset.total_sqft || 0) * 15;
-        const assetMountingCost = 1500;
+        // Use negotiated_rate (final price) from campaign_assets, not card_rate
+        const assetDisplayCost = asset.negotiated_rate || asset.card_rate || 0;
+        const assetPrintingCost = asset.printing_charges || 0;
+        const assetMountingCost = asset.mounting_charges || 0;
         const assetSubtotal = assetDisplayCost + assetPrintingCost + assetMountingCost;
         
         return {
           sno: index + 1,
           description: `${asset.media_type} - ${asset.location}, ${asset.area}, ${asset.city}`,
           asset_id: asset.asset_id,
-          dimensions: campaignAssets[0]?.dimensions || asset.dimensions || 'N/A',
+          dimensions: asset.dimensions || 'N/A',
           quantity: 1,
-          duration_days: campaign.duration_days,
+          rate: assetDisplayCost,
           display_rate: assetDisplayCost,
           printing_cost: assetPrintingCost,
           mounting_cost: assetMountingCost,
+          amount: assetSubtotal,
           subtotal: assetSubtotal,
         };
       });
 
-      // Calculate totals
+      // Calculate totals using campaign_assets pricing
       const sub_total = displayCost + printingTotal + mountingTotal - discount;
-      const gst_amount = campaign.gst_amount;
-      const total_amount = campaign.grand_total;
+      // Use correct GST based on client setting
+      const effectiveGstPercent = isGstApplicable ? (campaign.gst_percent || 18) : 0;
+      const gst_amount = isGstApplicable ? campaign.gst_amount : 0;
+      const total_amount = sub_total + gst_amount;
       const balance_due = total_amount;
 
       // Get current user
@@ -95,16 +117,17 @@ export function GenerateInvoiceDialog({
           id: invoiceId,
           client_id: campaign.client_id,
           client_name: campaign.client_name,
+          campaign_id: campaign.id,
           invoice_date: new Date().toISOString().split('T')[0],
           due_date: dueDate,
           sub_total,
-          gst_percent: campaign.gst_percent,
+          gst_percent: effectiveGstPercent,
           gst_amount,
           total_amount,
           balance_due,
           status: 'Draft' as const,
           items,
-          notes: notes || `Invoice for campaign: ${campaign.campaign_name}`,
+          notes: notes || `Tax Invoice for campaign: ${campaign.campaign_name}`,
           created_by: user.id,
         })
         .select()

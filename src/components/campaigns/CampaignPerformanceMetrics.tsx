@@ -32,10 +32,11 @@ export function CampaignPerformanceMetrics({ campaign, campaignAssets }: Campaig
     ? verificationTimes.reduce((sum, time) => sum + time, 0) / verificationTimes.length
     : 0;
 
-  // Status distribution
+  // Status distribution - include "Installed" status
   const statusData = [
     { name: 'Verified', value: campaignAssets.filter(a => a.status === 'Verified').length, color: '#10b981' },
     { name: 'Photo Uploaded', value: campaignAssets.filter(a => a.status === 'PhotoUploaded').length, color: '#8b5cf6' },
+    { name: 'Installed', value: campaignAssets.filter(a => a.status === 'Installed').length, color: '#22c55e' },
     { name: 'Mounted', value: campaignAssets.filter(a => a.status === 'Mounted').length, color: '#f59e0b' },
     { name: 'Assigned', value: campaignAssets.filter(a => a.status === 'Assigned').length, color: '#3b82f6' },
     { name: 'Pending', value: campaignAssets.filter(a => a.status === 'Pending').length, color: '#64748b' },

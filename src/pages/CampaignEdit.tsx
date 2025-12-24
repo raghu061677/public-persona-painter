@@ -33,6 +33,7 @@ export default function CampaignEdit() {
   const [status, setStatus] = useState<Database['public']['Enums']['campaign_status']>("Draft");
   const [notes, setNotes] = useState("");
   const [gstPercent, setGstPercent] = useState(18);
+  const [isGstApplicable, setIsGstApplicable] = useState(true);
   
   // Campaign Items (source of truth for pricing)
   interface CampaignItem {
@@ -74,7 +75,7 @@ export default function CampaignEdit() {
   const fetchClients = async () => {
     const { data } = await supabase
       .from('clients')
-      .select('id, name, company')
+      .select('id, name, company, is_gst_applicable')
       .order('name');
     setClients(data || []);
   };
@@ -104,6 +105,16 @@ export default function CampaignEdit() {
     setClientId(campaign.client_id || "");
     setClientName(campaign.client_name || "");
     
+    // Fetch client to get GST applicability
+    const { data: clientData } = await supabase
+      .from('clients')
+      .select('is_gst_applicable')
+      .eq('id', campaign.client_id)
+      .single();
+    
+    const gstApplicable = clientData?.is_gst_applicable !== false;
+    setIsGstApplicable(gstApplicable);
+    
     const campaignStartDate = campaign.start_date ? new Date(campaign.start_date) : undefined;
     const campaignEndDate = campaign.end_date ? new Date(campaign.end_date) : undefined;
     setStartDate(campaignStartDate);
@@ -132,7 +143,8 @@ export default function CampaignEdit() {
     
     setStatus(correctStatus);
     setNotes(campaign.notes || "");
-    setGstPercent(campaign.gst_percent || 18);
+    // Use stored GST percent if client is GST applicable, otherwise 0
+    setGstPercent(gstApplicable ? (campaign.gst_percent || 18) : 0);
 
     // Fetch campaign_items (source of truth for pricing) with media_assets for display info
     const { data: items } = await supabase
@@ -197,6 +209,10 @@ export default function CampaignEdit() {
     const client = clients.find(c => c.id === value);
     if (client) {
       setClientName(client.name || client.company || "");
+      // Update GST applicability based on client setting
+      const gstApplicable = client.is_gst_applicable !== false;
+      setIsGstApplicable(gstApplicable);
+      setGstPercent(gstApplicable ? 18 : 0);
     }
   };
 
@@ -227,10 +243,12 @@ export default function CampaignEdit() {
       return sum + item.total_amount;
     }, 0);
 
-    const gstAmount = (totalAmount * gstPercent) / 100;
+    // GST calculation based on client's is_gst_applicable flag
+    const effectiveGstPercent = isGstApplicable ? gstPercent : 0;
+    const gstAmount = (totalAmount * effectiveGstPercent) / 100;
     const grandTotal = totalAmount + gstAmount;
 
-    return { totalAmount, gstAmount, grandTotal };
+    return { totalAmount, gstAmount, grandTotal, effectiveGstPercent };
   };
 
   const handleSave = async () => {
@@ -336,7 +354,7 @@ export default function CampaignEdit() {
     );
   }
 
-  const { totalAmount, gstAmount, grandTotal } = calculateTotals();
+  const { totalAmount, gstAmount, grandTotal, effectiveGstPercent } = calculateTotals();
 
   return (
     <div className="min-h-screen bg-background">
@@ -528,20 +546,27 @@ export default function CampaignEdit() {
                 <span className="font-medium">{formatCurrency(totalAmount)}</span>
               </div>
               
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted-foreground">GST</span>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    value={gstPercent}
-                    onChange={(e) => setGstPercent(Number(e.target.value))}
-                    className="w-16 h-8 text-right"
-                    min="0"
-                    max="100"
-                  />
-                  <span className="text-xs">%</span>
+              {!isGstApplicable ? (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">GST</span>
+                  <span className="text-amber-600 font-medium">Not Applicable</span>
                 </div>
-              </div>
+              ) : (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">GST</span>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={gstPercent}
+                      onChange={(e) => setGstPercent(Number(e.target.value))}
+                      className="w-16 h-8 text-right"
+                      min="0"
+                      max="100"
+                    />
+                    <span className="text-xs">%</span>
+                  </div>
+                </div>
+              )}
               
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">GST Amount</span>
@@ -554,7 +579,10 @@ export default function CampaignEdit() {
               </div>
 
               <div className="pt-3 border-t text-xs text-muted-foreground">
-                <p>Pro-rata calculation based on campaign duration</p>
+                <p>Prices locked from approved Plan</p>
+                {!isGstApplicable && (
+                  <p className="mt-1 text-amber-600">Client is not GST applicable</p>
+                )}
                 <p className="mt-1">
                   {startDate && endDate && (
                     <>Duration: {Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1} days</>
@@ -652,6 +680,7 @@ export default function CampaignEdit() {
                             <SelectContent>
                               <SelectItem value="Pending">Pending</SelectItem>
                               <SelectItem value="Assigned">Assigned</SelectItem>
+                              <SelectItem value="Installed">Installed</SelectItem>
                               <SelectItem value="Mounted">Mounted</SelectItem>
                               <SelectItem value="PhotoUploaded">Photo Uploaded</SelectItem>
                               <SelectItem value="Verified">Verified</SelectItem>
@@ -684,7 +713,9 @@ export default function CampaignEdit() {
                     <span className="ml-2 font-medium">{formatCurrency(totalAmount)}</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-muted-foreground">GST ({gstPercent}%):</span>
+                    <span className="text-muted-foreground">
+                      GST ({isGstApplicable ? `${effectiveGstPercent}%` : 'N/A'}):
+                    </span>
                     <span className="ml-2 font-medium">{formatCurrency(gstAmount)}</span>
                   </div>
                   <div className="text-right">

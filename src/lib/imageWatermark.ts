@@ -142,10 +142,10 @@ export async function addWatermark(
       const proofTextX = qrWidth > 0 ? img.width - qrWidth - padding : img.width - padding * 2;
       ctx.fillText('PROOF OF INSTALLATION', proofTextX, watermarkY + watermarkHeight / 2);
 
-      // Add "Powered by Go-Ads 360 — OOH Media Platform" footer
-      const footerFontSize = Math.max(fontSize * 0.5, 10);
+      // Add "Powered by Go-Ads 360 — OOH Media Platform" footer - bigger font
+      const footerFontSize = Math.max(fontSize * 0.9, 14);
       ctx.font = `${footerFontSize}px Arial`;
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
       ctx.textAlign = 'center';
       const footerY = img.height - footerHeight / 2 - padding / 2;
       ctx.fillText('Powered by Go-Ads 360 — OOH Media Platform', img.width / 2, footerY);

@@ -13,6 +13,13 @@ interface Company {
   theme_color?: string;
   secondary_color?: string;
   status: 'pending' | 'active' | 'suspended' | 'cancelled';
+  city?: string;
+  state?: string;
+  address_line1?: string;
+  address_line2?: string;
+  pincode?: string;
+  phone?: string;
+  email?: string;
 }
 
 interface CompanyUser {

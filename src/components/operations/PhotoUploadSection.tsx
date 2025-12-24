@@ -50,9 +50,17 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
   const [orgName, setOrgName] = useState<string>();
   const [qrCodeUrl, setQrCodeUrl] = useState<string>();
 
-  // Load organization settings for watermark and asset QR code
+  // Load company branding for watermark (use company from context, fallback to organization_settings)
   useEffect(() => {
-    const loadOrgSettings = async () => {
+    const loadWatermarkBranding = async () => {
+      // First try to use company context
+      if (company?.logo_url) {
+        setLogoUrl(company.logo_url);
+        setOrgName(company.name);
+        return;
+      }
+      
+      // Fallback to organization_settings
       const { data } = await supabase
         .from('organization_settings')
         .select('logo_url, organization_name')
@@ -63,8 +71,8 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
         setOrgName(data.organization_name || undefined);
       }
     };
-    loadOrgSettings();
-  }, []);
+    loadWatermarkBranding();
+  }, [company]);
 
   // Load asset QR code URL
   useEffect(() => {

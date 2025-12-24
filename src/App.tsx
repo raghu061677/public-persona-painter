@@ -73,6 +73,7 @@ const FinanceDashboard = lazy(() => import("./pages/FinanceDashboard"));
 const EstimationsList = lazy(() => import("./pages/EstimationsList"));
 const InvoicesList = lazy(() => import("./pages/InvoicesList"));
 const InvoiceDetail = lazy(() => import("./pages/InvoiceDetail"));
+const InvoiceCreate = lazy(() => import("./pages/InvoiceCreate"));
 const Invoices = lazy(() => import("./pages/Invoices"));
 const ExpensesList = lazy(() => import("./pages/ExpensesList"));
 const SalesOrders = lazy(() => import("./pages/SalesOrders"));
@@ -337,6 +338,7 @@ const App = () => (
             <Route path="/finance/proformas" element={<ModernAppLayout><ProformasList /></ModernAppLayout>} />
             <Route path="/finance/proformas/:id" element={<ModernAppLayout><ProformaDetail /></ModernAppLayout>} />
             <Route path="/finance/invoices" element={<ModernAppLayout><InvoicesList /></ModernAppLayout>} />
+            <Route path="/finance/invoices/new" element={<ModernAppLayout><InvoiceCreate /></ModernAppLayout>} />
             <Route path="/finance/invoices/:id" element={<ModernAppLayout><InvoiceDetail /></ModernAppLayout>} />
             <Route path="/admin/invoices" element={<ModernAppLayout><Invoices /></ModernAppLayout>} />
             <Route path="/admin/invoices/:id" element={<ModernAppLayout><InvoiceDetail /></ModernAppLayout>} />

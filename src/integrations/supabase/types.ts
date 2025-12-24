@@ -2062,6 +2062,7 @@ export type Database = {
           email: string | null
           gst_number: string | null
           id: string
+          is_gst_applicable: boolean | null
           name: string
           notes: string | null
           phone: string | null
@@ -2092,6 +2093,7 @@ export type Database = {
           email?: string | null
           gst_number?: string | null
           id: string
+          is_gst_applicable?: boolean | null
           name: string
           notes?: string | null
           phone?: string | null
@@ -2122,6 +2124,7 @@ export type Database = {
           email?: string | null
           gst_number?: string | null
           id?: string
+          is_gst_applicable?: boolean | null
           name?: string
           notes?: string | null
           phone?: string | null

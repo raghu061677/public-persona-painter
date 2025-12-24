@@ -85,17 +85,22 @@ Deno.serve(async (req) => {
       .order('created_at', { ascending: true });
 
     // Fetch campaign assets with all required snapshot fields
-    const { data: campaignAssets } = await supabase
+    // Use LEFT JOIN to get media_assets data for QR codes, but prefer campaign_assets snapshot data
+    const { data: campaignAssets, error: assetsError } = await supabase
       .from('campaign_assets')
       .select(`
         *,
-        media_assets!inner(
+        media_assets(
           id,
           google_street_view_url,
           qr_code_url
         )
       `)
       .eq('campaign_id', campaign_id);
+
+    if (assetsError) {
+      console.error('Error fetching campaign assets:', assetsError);
+    }
 
     console.log('Found campaign assets:', campaignAssets?.length || 0);
 
@@ -110,6 +115,8 @@ Deno.serve(async (req) => {
         traffic_right: photosObj.traffic2 || null,
       };
 
+      // Use campaign_assets snapshot data (single source of truth)
+      // Only fall back to media_assets for QR codes
       const googleStreetViewUrl = asset.media_assets?.google_street_view_url || null;
       const googleStreetViewQrUrl = googleStreetViewUrl 
         ? `https://api.qrserver.com/v1/create-qr-code/?size=512x512&data=${encodeURIComponent(googleStreetViewUrl)}`
@@ -117,33 +124,43 @@ Deno.serve(async (req) => {
 
       return {
         asset_id: asset.asset_id,
-        asset_code: asset.asset_id,
-        media_type: asset.media_type,
-        direction: asset.direction,
-        illumination_type: asset.illumination_type,
-        dimensions: asset.dimensions,
-        total_sqft: asset.total_sqft,
-        area: asset.area,
-        city: asset.city,
-        location: asset.location,
-        latitude: asset.latitude,
-        longitude: asset.longitude,
+        asset_code: asset.asset_id, // Use asset_id as code (snapshot from campaign)
+        media_type: asset.media_type || 'Unknown',
+        direction: asset.direction || 'N/A',
+        illumination_type: asset.illumination_type || 'N/A',
+        dimensions: asset.dimensions || 'N/A',
+        total_sqft: asset.total_sqft || 0,
+        area: asset.area || 'Unknown',
+        city: asset.city || 'Unknown',
+        location: asset.location || 'Unknown',
+        latitude: asset.latitude || null,
+        longitude: asset.longitude || null,
         google_street_view_url: googleStreetViewUrl,
         google_street_view_qr_url: googleStreetViewQrUrl,
         qr_code_url: asset.media_assets?.qr_code_url || null,
         photos: photoMap,
-        installed_at: asset.completed_at,
-        installation_status: asset.installation_status,
-        mounter_name: asset.mounter_name,
+        installed_at: asset.completed_at || asset.assigned_at,
+        installation_status: asset.installation_status || asset.status || 'Pending',
+        mounter_name: asset.mounter_name || 'Not Assigned',
+        status: asset.status || 'Pending',
         map_thumbnail_url: asset.latitude && asset.longitude
           ? `https://maps.googleapis.com/maps/api/staticmap?center=${asset.latitude},${asset.longitude}&zoom=17&size=400x300&markers=color:red%7C${asset.latitude},${asset.longitude}&key=YOUR_GOOGLE_MAPS_API_KEY`
           : null,
       };
     }) || [];
 
-    // Calculate summary
+    // Calculate summary - use both status and installation_status
     const totalAssets = assetsData.length;
-    const completedAssets = assetsData.filter(a => a.installation_status === 'Completed').length;
+    const completedAssets = assetsData.filter(a => 
+      a.status === 'Verified' || 
+      a.status === 'Completed' || 
+      a.installation_status === 'Completed' ||
+      a.installation_status === 'Verified'
+    ).length;
+    const installedAssets = assetsData.filter(a => 
+      a.status === 'Installed' || 
+      a.installation_status === 'Installed'
+    ).length;
     const totalPhotos = assetsData.reduce((sum, a) => {
       return sum + Object.values(a.photos).filter(p => p !== null).length;
     }, 0);

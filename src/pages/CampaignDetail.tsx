@@ -200,14 +200,21 @@ export default function CampaignDetail() {
     );
   }
 
-  const verifiedAssets = campaignAssets.filter(a => a.status === 'Verified').length;
-  const installedAssets = campaignAssets.filter(a => 
-    a.installation_status === 'Installed' || 
-    a.installation_status === 'Completed' || 
-    a.status === 'Installed' || 
-    a.status === 'Mounted'
+  // Calculate status counts from campaign_assets (single source of truth)
+  const pendingAssets = campaignAssets.filter(a => 
+    a.status === 'Pending' || a.status === 'Assigned' || !a.status
   ).length;
-  const progress = calculateProgress(campaign.total_assets, verifiedAssets);
+  const installedAssets = campaignAssets.filter(a => 
+    a.status === 'Installed' || 
+    a.status === 'Mounted' ||
+    a.installation_status === 'Installed' || 
+    a.installation_status === 'Completed'
+  ).length;
+  const verifiedAssets = campaignAssets.filter(a => 
+    a.status === 'Verified' || a.status === 'Completed'
+  ).length;
+  const totalAssets = campaignAssets.length || campaign.total_assets || 0;
+  const progress = calculateProgress(totalAssets, verifiedAssets);
 
   // Calculate campaign duration
   const startDate = new Date(campaign.start_date);
@@ -358,8 +365,9 @@ export default function CampaignDetail() {
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-semibold">Campaign Progress</span>
               <div className="flex gap-4 text-xs text-muted-foreground">
-                <span>{installedAssets} installed</span>
-                <span>{verifiedAssets} / {campaign.total_assets} verified</span>
+                <span className="text-amber-600">{pendingAssets} pending</span>
+                <span className="text-blue-600">{installedAssets} installed</span>
+                <span className="text-green-600">{verifiedAssets} / {totalAssets} verified</span>
               </div>
             </div>
             <Progress value={progress} className="h-3" />

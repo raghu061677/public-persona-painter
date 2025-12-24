@@ -32,10 +32,15 @@ export default function CampaignAssetProofs() {
   useEffect(() => {
     if (campaignId && assetId) {
       fetchAssetDetails();
-      fetchPhotos();
       checkAdminRole();
     }
   }, [campaignId, assetId]);
+
+  useEffect(() => {
+    if (asset?.asset_id) {
+      fetchPhotos();
+    }
+  }, [asset?.asset_id]);
 
   const checkAdminRole = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -55,17 +60,18 @@ export default function CampaignAssetProofs() {
     if (!campaignId || !assetId) return;
 
     try {
+      // assetId from URL params is the campaign_assets.id (UUID), not asset_id
       const { data, error } = await supabase
         .from('campaign_assets')
         .select('*')
         .eq('campaign_id', campaignId)
-        .eq('asset_id', assetId)
+        .eq('id', assetId)
         .single();
 
       if (error) throw error;
       setAsset(data);
     } catch (error: any) {
-      console.error('Error fetching asset:', error);
+      console.error('Error fetching asset:', error?.message || error);
       toast({
         title: "Error",
         description: "Failed to load asset details",
@@ -75,23 +81,22 @@ export default function CampaignAssetProofs() {
   };
 
   const fetchPhotos = async () => {
-    if (!campaignId || !assetId) return;
+    if (!campaignId || !asset?.asset_id) return;
 
     try {
       setLoading(true);
-      // Query for photos with campaign_id and asset_id
-      // Note: photo_type is stored in metadata JSONB, not as a column
+      // Use the actual asset_id field from the fetched asset
       const { data, error } = await supabase
         .from('media_photos')
         .select('*')
         .eq('campaign_id', campaignId)
-        .eq('asset_id', assetId)
+        .eq('asset_id', asset.asset_id)
         .order('uploaded_at', { ascending: false });
 
       if (error) throw error;
       setPhotos(data || []);
     } catch (error: any) {
-      console.error('Error fetching photos:', error);
+      console.error('Error fetching photos:', error?.message || error);
       toast({
         title: "Error",
         description: "Failed to load photos",

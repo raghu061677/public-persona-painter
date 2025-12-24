@@ -441,55 +441,43 @@ function createInvoicePDF(data: InvoiceData): Blob {
     doc.text(line, leftMargin, yPos + 5 + (i * 4));
   });
 
-  // ========== TOTALS SECTION - Right aligned box ==========
-  const totalsBoxX = pageWidth - rightMargin - 75;
-  const totalsBoxWidth = 75;
+  // ========== TOTALS SECTION - Right aligned plain text ==========
+  const totalsX = pageWidth - rightMargin - 80;
+  const amountsX = pageWidth - rightMargin;
   
-  doc.setDrawColor(30, 64, 130);
-  doc.setLineWidth(0.5);
-  
-  // Untaxed Amount row
-  doc.setFillColor(30, 64, 130);
-  doc.rect(totalsBoxX, yPos, totalsBoxWidth, 8, 'F');
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(255, 255, 255);
-  doc.text('Untaxed Amount:', totalsBoxX + 4, yPos + 5.5);
-  doc.text(formatCurrency(subtotal), totalsBoxX + totalsBoxWidth - 4, yPos + 5.5, { align: 'right' });
-
-  // CGST row
-  yPos += 8;
-  doc.setFillColor(255, 255, 255);
-  doc.setDrawColor(200, 200, 200);
-  doc.rect(totalsBoxX, yPos, totalsBoxWidth, 7, 'FD');
+  doc.setFontSize(10);
   doc.setTextColor(0, 0, 0);
+  
+  // Sub Total row
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.text('CGST Sale 9%', totalsBoxX + 4, yPos + 5);
-  doc.text(formatCurrency(cgst), totalsBoxX + totalsBoxWidth - 4, yPos + 5, { align: 'right' });
+  doc.text('Sub Total', totalsX, yPos, { align: 'left' });
+  doc.text(formatCurrency(subtotal), amountsX, yPos, { align: 'right' });
 
-  // SGST row
-  yPos += 7;
-  doc.rect(totalsBoxX, yPos, totalsBoxWidth, 7, 'FD');
-  doc.text('SGST Sale 9%', totalsBoxX + 4, yPos + 5);
-  doc.text(formatCurrency(sgst), totalsBoxX + totalsBoxWidth - 4, yPos + 5, { align: 'right' });
-
-  // Taxes row
-  yPos += 7;
-  doc.setFillColor(245, 247, 250);
-  doc.rect(totalsBoxX, yPos, totalsBoxWidth, 7, 'FD');
+  // CGST9 (9%) row
+  yPos += 6;
   doc.setFont('helvetica', 'bold');
-  doc.text('Taxes:', totalsBoxX + 4, yPos + 5);
-  doc.text(formatCurrency(cgst + sgst), totalsBoxX + totalsBoxWidth - 4, yPos + 5, { align: 'right' });
+  doc.text('CGST9 (9%)', totalsX, yPos, { align: 'left' });
+  doc.setFont('helvetica', 'normal');
+  doc.text(formatCurrency(cgst), amountsX, yPos, { align: 'right' });
+
+  // SGST9 (9%) row
+  yPos += 6;
+  doc.setFont('helvetica', 'bold');
+  doc.text('SGST9 (9%)', totalsX, yPos, { align: 'left' });
+  doc.setFont('helvetica', 'normal');
+  doc.text(formatCurrency(sgst), amountsX, yPos, { align: 'right' });
 
   // Total row
-  yPos += 7;
-  doc.setFillColor(30, 64, 130);
-  doc.rect(totalsBoxX, yPos, totalsBoxWidth, 8, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(9);
-  doc.text('Total:', totalsBoxX + 4, yPos + 5.5);
-  doc.text(formatCurrency(grandTotal), totalsBoxX + totalsBoxWidth - 4, yPos + 5.5, { align: 'right' });
+  yPos += 8;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Total', totalsX, yPos, { align: 'left' });
+  doc.text('Rs.' + grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), amountsX, yPos, { align: 'right' });
+
+  // Balance Due row
+  yPos += 6;
+  const balanceDue = parseFloat(data.invoice.balance_due) || grandTotal;
+  doc.text('Balance Due', totalsX, yPos, { align: 'left' });
+  doc.text('Rs.' + balanceDue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), amountsX, yPos, { align: 'right' });
 
   yPos += 15;
 

@@ -38,7 +38,7 @@ export function BulkQRWatermarkButton() {
   const [open, setOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [dryRun, setDryRun] = useState(true);
-  const [batchSize, setBatchSize] = useState(5);
+  const [batchSize, setBatchSize] = useState(2);
   const [imageType, setImageType] = useState<"both" | "media_photos" | "campaign_assets">("both");
   const [forceReprocess, setForceReprocess] = useState(false);
   const [result, setResult] = useState<WatermarkResult | null>(null);

@@ -1,7 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-// Avoid imagescript deno.land WASM fetch (intermittent WORKER_ERROR). Use jsdelivr ESM and grab Image from module exports.
-import * as ImageScript from 'https://cdn.jsdelivr.net/npm/imagescript@1.3.0/+esm';
-const Image = (ImageScript as any).Image ?? (ImageScript as any).default?.Image;
+// Use the original deno.land import - it works but can fail on cold starts due to WASM fetch
+// Added retry logic and graceful error handling to mitigate
+import { Image, decode } from 'https://deno.land/x/imagescript@1.3.0/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,6 +35,21 @@ function isAlreadyWatermarked(metadata: any, url?: string): boolean {
   if (metadata?.qr_watermarked === true) return true;
   if (url?.includes('_qr_wm')) return true;
   return false;
+}
+
+// Helper to fetch with retry
+async function fetchWithRetry(url: string, retries = 2): Promise<Response> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return res;
+      if (i === retries) return res; // Return last response even if not ok
+    } catch (err) {
+      if (i === retries) throw err;
+      await new Promise(r => setTimeout(r, 500 * (i + 1))); // Backoff
+    }
+  }
+  throw new Error('Fetch failed after retries');
 }
 
 Deno.serve(async (req) => {
@@ -71,7 +86,8 @@ Deno.serve(async (req) => {
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const { batch_size = 5, offset = 0, image_type = 'both', force_reprocess = false, dry_run = false } = await req.json() as RequestBody;
+    // Reduce default batch size to 2 to minimize memory/CPU pressure
+    const { batch_size = 2, offset = 0, image_type = 'both', force_reprocess = false, dry_run = false } = await req.json() as RequestBody;
 
     console.log('Starting QR watermark processing', { batch_size, offset, image_type, force_reprocess, dry_run });
 
@@ -92,8 +108,14 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Error:', error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Failed', ...result }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    // Return partial results even on error so client can continue
+    return new Response(JSON.stringify({ 
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed', 
+      ...result,
+      // If we processed anything, provide next_offset so client can continue
+      next_offset: result.total_images_scanned > 0 ? (result.next_offset ?? null) : null
+    }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
 
@@ -155,20 +177,32 @@ async function processCampaignAssets(supabase: any, result: ProcessingResult, ba
 
 async function applyQRWatermark(supabase: any, imageUrl: string, qrCodeUrl: string, bucket: string): Promise<{ success: boolean; newUrl?: string; error?: string }> {
   try {
-    if (!Image || typeof (Image as any).decode !== 'function') {
-      return { success: false, error: 'Image processing library failed to load' };
-    }
-
-    const [imageRes, qrRes] = await Promise.all([fetch(imageUrl), fetch(qrCodeUrl)]);
+    // Fetch images with retry logic
+    const [imageRes, qrRes] = await Promise.all([
+      fetchWithRetry(imageUrl),
+      fetchWithRetry(qrCodeUrl)
+    ]);
     if (!imageRes.ok || !qrRes.ok) return { success: false, error: 'Failed to fetch images' };
 
     const imageData = new Uint8Array(await imageRes.arrayBuffer());
     const qrData = new Uint8Array(await qrRes.arrayBuffer());
 
-    const mainImage = await Image.decode(imageData);
+    // Decode with explicit error handling
+    let mainImage, qrImage;
+    try {
+      const decoded = await decode(imageData);
+      mainImage = decoded instanceof Image ? decoded : null;
+    } catch (decodeErr) {
+      return { success: false, error: `Main image decode failed: ${decodeErr}` };
+    }
     if (!mainImage) return { success: false, error: 'Could not decode main image' };
 
-    const qrImage = await Image.decode(qrData);
+    try {
+      const qrDecoded = await decode(qrData);
+      qrImage = qrDecoded instanceof Image ? qrDecoded : null;
+    } catch (decodeErr) {
+      return { success: false, error: `QR decode failed: ${decodeErr}` };
+    }
     if (!qrImage) return { success: false, error: 'Could not decode QR image' };
 
     const qrResized = qrImage.resize(QR_SIZE, QR_SIZE);

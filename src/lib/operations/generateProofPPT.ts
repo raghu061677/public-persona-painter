@@ -24,6 +24,9 @@ interface AssetData {
   qr_code_url?: string;
   latitude?: number;
   longitude?: number;
+  dimensions?: string;
+  total_sqft?: number | string;
+  illumination_type?: string;
 }
 
 interface PhotoData {
@@ -111,26 +114,33 @@ export async function generateProofOfDisplayPPT(campaignId: string): Promise<voi
         media_type,
         latitude,
         longitude,
-        media_assets(qr_code_url)
+        dimensions,
+        total_sqft,
+        illumination_type,
+        media_assets(qr_code_url, area, city, location, direction, media_type, dimensions, total_sqft, illumination_type)
       `)
       .eq("campaign_id", campaignId);
 
     if (campaignAssetsError) throw campaignAssetsError;
 
-    // Create mapping from campaign_assets.id to asset data
+    // Create mapping from campaign_assets.id to asset data with merged info from master
     const campaignAssetMap = new Map<string, AssetData>();
     campaignAssets?.forEach(ca => {
+      const master = (ca.media_assets as any) || {};
       campaignAssetMap.set(ca.id, {
         id: ca.id,
         asset_code: ca.asset_id, // This is the actual asset code like HYD-BQS-0057
-        area: ca.area || "Unknown",
-        city: ca.city || "Unknown",
-        location: ca.location || "Unknown",
-        direction: ca.direction ?? undefined,
-        media_type: ca.media_type ?? undefined,
+        area: ca.area || master.area || "Unknown",
+        city: ca.city || master.city || "Unknown",
+        location: ca.location || master.location || "Unknown",
+        direction: ca.direction || master.direction || undefined,
+        media_type: ca.media_type || master.media_type || undefined,
         latitude: ca.latitude ?? undefined,
         longitude: ca.longitude ?? undefined,
-        qr_code_url: (ca.media_assets as any)?.qr_code_url ?? undefined,
+        qr_code_url: master.qr_code_url ?? undefined,
+        dimensions: (ca as any).dimensions || master.dimensions || undefined,
+        total_sqft: (ca as any).total_sqft || master.total_sqft || undefined,
+        illumination_type: (ca as any).illumination_type || master.illumination_type || undefined,
       });
     });
 
@@ -296,8 +306,8 @@ async function addAssetSlides(
     const slide = pptx.addSlide();
     slide.background = { color: "FFFFFF" };
 
-    // Asset title - use asset_code (like HYD-BQS-0057) and location
-    const title = `Asset: ${asset.asset_code} – ${asset.location}`;
+    // Header Line 1: Asset: HYD-BQS-0059 – City, Area, Location
+    const title = `Asset: ${asset.asset_code} – ${asset.city}, ${asset.area}, ${asset.location}`;
     slide.addText(title, {
       x: 0.5,
       y: 0.3,
@@ -320,16 +330,16 @@ async function addAssetSlides(
       });
     }
 
-    // Asset details - show Area, City, Location, Media Type
-    const details = [];
-    if (asset.area && asset.area !== "Unknown") details.push(`Area: ${asset.area}`);
-    if (asset.city && asset.city !== "Unknown") details.push(`City: ${asset.city}`);
-    if (asset.location && asset.location !== "Unknown") details.push(`Location: ${asset.location}`);
-    if (asset.direction) details.push(`Direction: ${asset.direction}`);
-    if (asset.media_type) details.push(`Type: ${asset.media_type}`);
+    // Header Line 2: Location, Direction, Dimension, Total SQFT, Illumination Type
+    const detailParts = [];
+    if (asset.location && asset.location !== "Unknown") detailParts.push(`Location: ${asset.location}`);
+    if (asset.direction) detailParts.push(`Direction: ${asset.direction}`);
+    if (asset.dimensions) detailParts.push(`Dimension: ${asset.dimensions}`);
+    if (asset.total_sqft) detailParts.push(`Total SQFT: ${asset.total_sqft}`);
+    if (asset.illumination_type) detailParts.push(`Illumination: ${asset.illumination_type}`);
 
-    if (details.length > 0) {
-      slide.addText(details.join(" | "), {
+    if (detailParts.length > 0) {
+      slide.addText(detailParts.join(" | "), {
         x: 0.5,
         y: 0.9,
         w: 9,

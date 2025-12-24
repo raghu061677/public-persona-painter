@@ -110,10 +110,10 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
   const handleExportPPT = async () => {
     setExporting(true);
     try {
-      // Fetch snapshot assets + uploaded photos.
+      // Fetch snapshot assets with master asset details for complete info
       const { data: campaignAssets, error: assetsError } = await supabase
         .from("campaign_assets")
-        .select("id, asset_id, city, area, location, media_type, status")
+        .select("id, asset_id, city, area, location, media_type, status, direction, dimensions, total_sqft, illumination_type")
         .eq("campaign_id", campaignId)
         .order("created_at");
 
@@ -121,6 +121,35 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
       if (!campaignAssets || campaignAssets.length === 0) {
         throw new Error("No assets found for this campaign");
       }
+
+      // Fetch complete asset details from media_assets table for missing info
+      const assetIds = campaignAssets.map((a) => a.asset_id).filter(Boolean);
+      const { data: masterAssets, error: masterError } = await supabase
+        .from("media_assets")
+        .select("id, area, city, location, direction, media_type, dimensions, total_sqft, illumination_type")
+        .in("id", assetIds);
+
+      if (masterError) throw masterError;
+
+      // Create lookup map for master asset data
+      const masterAssetMap = new Map<string, any>();
+      (masterAssets || []).forEach((ma) => masterAssetMap.set(ma.id, ma));
+
+      // Merge campaign asset data with master asset data for complete info
+      const enrichedAssets = campaignAssets.map((ca) => {
+        const master = masterAssetMap.get(ca.asset_id) || {};
+        return {
+          ...ca,
+          area: ca.area || master.area || "Unknown",
+          city: ca.city || master.city || "Unknown",
+          location: ca.location || master.location || "Unknown",
+          direction: ca.direction || master.direction || "",
+          media_type: ca.media_type || master.media_type || "Media Asset",
+          dimensions: ca.dimensions || master.dimensions || "",
+          total_sqft: ca.total_sqft || master.total_sqft || "",
+          illumination_type: ca.illumination_type || master.illumination_type || "",
+        };
+      });
 
       const campaignAssetIds = campaignAssets.map((a) => a.id);
 
@@ -246,12 +275,21 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
       });
 
       // ========== ASSET SLIDES: Each asset with 2 photos per slide ==========
-      for (const asset of campaignAssets) {
+      for (const asset of enrichedAssets) {
         const assetPhotos = photosByAsset[asset.id] || [];
         const assetCode = asset.asset_id || asset.id;
-        const headerLine1 = `${assetCode} - ${asset.location || ""}`.trim();
-        const headerLine2 = [asset.area, asset.city].filter(Boolean).join(", ");
-        const mediaType = asset.media_type || "Media Asset";
+        
+        // Header Line 1: Asset: HYD-BQS-0059 – City, Area, Location
+        const headerLine1 = `Asset: ${assetCode} – ${asset.city}, ${asset.area}, ${asset.location}`;
+        
+        // Header Line 2: Location, Direction, Dimension, Total SQFT, Illumination Type
+        const detailParts = [];
+        if (asset.location) detailParts.push(`Location: ${asset.location}`);
+        if (asset.direction) detailParts.push(`Direction: ${asset.direction}`);
+        if (asset.dimensions) detailParts.push(`Dimension: ${asset.dimensions}`);
+        if (asset.total_sqft) detailParts.push(`Total SQFT: ${asset.total_sqft}`);
+        if (asset.illumination_type) detailParts.push(`Illumination: ${asset.illumination_type}`);
+        const headerLine2 = detailParts.join(" | ");
 
         if (assetPhotos.length === 0) {
           // Create 1 slide for asset with no photos
@@ -267,7 +305,7 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
             bold: true,
             color: "1E40AF",
           });
-          slide.addText(`${mediaType} | ${headerLine2}`, {
+          slide.addText(headerLine2, {
             x: 0.5,
             y: 0.85,
             w: 12.3,
@@ -321,7 +359,7 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
               bold: true,
               color: "1E40AF",
             });
-            slide.addText(`${mediaType} | ${headerLine2}`, {
+            slide.addText(headerLine2, {
               x: 0.5,
               y: 0.85,
               w: 12.3,

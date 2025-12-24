@@ -8,6 +8,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name, x-supabase-api-version',
 };
 
+type RequestBody = {
+  batch_size?: number;
+  start_after_id?: string | null;
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -17,21 +22,33 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
-        persistSession: false
-      }
+        persistSession: false,
+      },
     });
 
-    console.log('Starting bulk QR code generation...');
+    const body = (await req.json().catch(() => ({}))) as RequestBody;
+    const batchSize = Math.min(Math.max(body.batch_size ?? 15, 1), 50);
+    const startAfterId = body.start_after_id ?? null;
 
-    // Fetch all assets without QR codes
-    const { data: assets, error: fetchError } = await supabase
+    console.log('Starting bulk QR code generation batch...', { batchSize, startAfterId });
+
+    // Fetch a *batch* of assets without QR codes (avoid CPU timeouts)
+    let query = supabase
       .from('media_assets')
       .select('id, latitude, longitude')
-      .is('qr_code_url', null);
+      .is('qr_code_url', null)
+      .order('id', { ascending: true })
+      .limit(batchSize);
+
+    if (startAfterId) {
+      query = query.gt('id', startAfterId);
+    }
+
+    const { data: assets, error: fetchError } = await query;
 
     if (fetchError) {
       throw new Error(`Failed to fetch assets: ${fetchError.message}`);
@@ -39,27 +56,31 @@ serve(async (req) => {
 
     if (!assets || assets.length === 0) {
       return new Response(
-        JSON.stringify({ 
-          success: true, 
+        JSON.stringify({
+          success: true,
           message: 'No assets need QR code generation',
-          count: 0 
+          total: 0,
+          succeeded: 0,
+          failed: 0,
+          has_more: false,
+          last_processed_id: startAfterId,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Found ${assets.length} assets without QR codes`);
+    console.log(`Batch fetched: ${assets.length} assets without QR codes`);
 
     let successCount = 0;
     let failureCount = 0;
     const errors: string[] = [];
 
-    // Process each asset
+    // Process each asset in the batch
     for (const asset of assets) {
       try {
         // Determine the URL to encode in QR
         let targetUrl: string;
-        
+
         if (asset.latitude && asset.longitude) {
           targetUrl = `https://www.google.com/maps?q=${asset.latitude},${asset.longitude}`;
         } else {
@@ -69,8 +90,8 @@ serve(async (req) => {
 
         // Generate QR code as base64 GIF image using Deno-native library
         // Returns: data:image/gif;base64,...
-        const qrBase64Image = await qrcode(targetUrl, { size: 512 }) as unknown as string;
-        
+        const qrBase64Image = (await qrcode(targetUrl, { size: 512 })) as unknown as string;
+
         if (!qrBase64Image || typeof qrBase64Image !== 'string') {
           throw new Error('Failed to generate QR code');
         }
@@ -94,9 +115,9 @@ serve(async (req) => {
         }
 
         // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('asset-qrcodes')
-          .getPublicUrl(filePath);
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from('asset-qrcodes').getPublicUrl(filePath);
 
         // Update database
         const { error: updateError } = await supabase
@@ -110,7 +131,6 @@ serve(async (req) => {
 
         successCount++;
         console.log(`✓ Generated QR for asset: ${asset.id}`);
-
       } catch (error) {
         failureCount++;
         const errorMsg = `Failed for ${asset.id}: ${error instanceof Error ? error.message : String(error)}`;
@@ -120,7 +140,15 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Completed: ${successCount} succeeded, ${failureCount} failed`);
+    const lastProcessedId = assets[assets.length - 1]?.id ?? startAfterId;
+
+    // If we filled the batch, assume there may be more remaining
+    const hasMore = assets.length === batchSize;
+
+    console.log(`Batch completed: ${successCount} succeeded, ${failureCount} failed`, {
+      lastProcessedId,
+      hasMore,
+    });
 
     return new Response(
       JSON.stringify({
@@ -129,22 +157,24 @@ serve(async (req) => {
         succeeded: successCount,
         failed: failureCount,
         errors: errors.length > 0 ? errors : undefined,
-        message: `Generated ${successCount} QR codes successfully${failureCount > 0 ? `, ${failureCount} failed` : ''}`
+        message: `Generated ${successCount} QR codes successfully${failureCount > 0 ? `, ${failureCount} failed` : ''}`,
+        has_more: hasMore,
+        last_processed_id: lastProcessedId,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error) {
     console.error('Edge function error:', error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : String(error)
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
       }),
-      { 
+      {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   }
 });
+

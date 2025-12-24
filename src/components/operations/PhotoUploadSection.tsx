@@ -49,6 +49,7 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
   const [logoUrl, setLogoUrl] = useState<string>();
   const [orgName, setOrgName] = useState<string>();
   const [qrCodeUrl, setQrCodeUrl] = useState<string>();
+  const [resolvedMediaAssetId, setResolvedMediaAssetId] = useState<string | null>(null);
 
   // Load company branding for watermark (use company from context, fallback to organization_settings)
   useEffect(() => {
@@ -74,21 +75,28 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
     loadWatermarkBranding();
   }, [company]);
 
-  // Load asset QR code URL
+  // Load asset QR code URL and resolve the actual media_asset_id from campaign_assets
   useEffect(() => {
-    const loadAssetQrCode = async () => {
+    const loadAssetInfo = async () => {
       if (!assetId) return;
       
-      // First get the media asset_id from campaign_assets
+      // Get the media asset_id from campaign_assets (assetId here is campaign_assets.id)
       const { data: campaignAsset } = await supabase
         .from('campaign_assets')
         .select('asset_id')
         .eq('id', assetId)
         .single();
       
-      if (!campaignAsset?.asset_id) return;
+      if (!campaignAsset?.asset_id) {
+        // If no campaign_asset found, assetId might already be a media_asset_id
+        setResolvedMediaAssetId(assetId);
+        return;
+      }
       
-      // Then get the QR code URL from media_assets
+      // Store the resolved media asset ID for use in uploads
+      setResolvedMediaAssetId(campaignAsset.asset_id);
+      
+      // Get the QR code URL from media_assets
       const { data: mediaAsset } = await supabase
         .from('media_assets')
         .select('qr_code_url')
@@ -99,7 +107,7 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
         setQrCodeUrl(mediaAsset.qr_code_url);
       }
     };
-    loadAssetQrCode();
+    loadAssetInfo();
   }, [assetId]);
 
   // Cleanup preview URLs on unmount
@@ -164,7 +172,7 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
   };
 
   const handleConfirmUpload = async () => {
-    if (DEBUG) console.log('Starting upload with:', { company, campaignId, assetId });
+    if (DEBUG) console.log('Starting upload with:', { company, campaignId, assetId, resolvedMediaAssetId });
     
     if (!company?.id) {
       console.error('No company ID available');
@@ -175,6 +183,9 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
       });
       return;
     }
+
+    // Use the resolved media asset ID for storing in database
+    const uploadAssetId = resolvedMediaAssetId || assetId;
 
     const files = previewFiles.map(p => p.file);
     if (DEBUG) console.log(`Processing ${files.length} files for upload`);
@@ -219,7 +230,7 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
       const results = await uploadOperationsProofBatch(
         company.id,
         campaignId,
-        assetId,
+        uploadAssetId,
         watermarkedFiles,
         (fileIndex, progress) => {
           if (DEBUG) console.log(`File ${fileIndex} progress:`, progress);
@@ -269,9 +280,9 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
           await logActivity(
             'upload',
             'operation_photo',
-            assetId,
+            uploadAssetId,
             `Proof photo: ${results[i].tag}`,
-            { tag: results[i].tag, assetId, campaignId }
+            { tag: results[i].tag, assetId: uploadAssetId, campaignId }
           );
         }
       }

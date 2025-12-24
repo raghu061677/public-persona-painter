@@ -133,29 +133,25 @@ export function ResponsiveSidebar() {
     children: React.ReactNode 
   }) => {
     if (collapsed) {
-      return <>{children}</>;
+      return <SidebarMenu>{children}</SidebarMenu>;
     }
 
     return (
       <Collapsible defaultOpen className="group/collapsible">
-        <SidebarGroup>
-          <CollapsibleTrigger asChild>
-            <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md px-2 py-1.5 transition-colors">
-              <div className="flex items-center gap-2">
-                <Icon className="h-4 w-4" />
-                <span>{label}</span>
-              </div>
-              <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
-            </SidebarGroupLabel>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <SidebarGroupContent>
-              <SidebarMenu className="ml-3 mt-1 space-y-1">
-                {children}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </CollapsibleContent>
-        </SidebarGroup>
+        <CollapsibleTrigger asChild>
+          <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md px-2 py-1.5 transition-colors text-xs font-medium text-sidebar-foreground/70 mt-2">
+            <div className="flex items-center gap-2">
+              <Icon className="h-4 w-4" />
+              <span>{label}</span>
+            </div>
+            <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenu className="ml-3 mt-1 space-y-0.5">
+            {children}
+          </SidebarMenu>
+        </CollapsibleContent>
       </Collapsible>
     );
   };

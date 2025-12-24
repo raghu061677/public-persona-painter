@@ -1,7 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-// Use the original deno.land import - it works but can fail on cold starts due to WASM fetch
-// Added retry logic and graceful error handling to mitigate
-import { Image, decode } from 'https://deno.land/x/imagescript@1.3.0/mod.ts';
+// Use pngs library - pure TypeScript, no WASM, very lightweight
+import * as pngs from 'https://deno.land/x/pngs@0.1.1/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,13 +42,69 @@ async function fetchWithRetry(url: string, retries = 2): Promise<Response> {
     try {
       const res = await fetch(url);
       if (res.ok) return res;
-      if (i === retries) return res; // Return last response even if not ok
+      if (i === retries) return res;
     } catch (err) {
       if (i === retries) throw err;
-      await new Promise(r => setTimeout(r, 500 * (i + 1))); // Backoff
+      await new Promise(r => setTimeout(r, 500 * (i + 1)));
     }
   }
   throw new Error('Fetch failed after retries');
+}
+
+// Simple image compositing using raw pixel manipulation
+async function compositeImages(
+  mainData: Uint8Array, 
+  qrData: Uint8Array, 
+  qrSize: number, 
+  padding: number
+): Promise<Uint8Array> {
+  // Decode PNG images
+  const mainImage = pngs.decode(mainData);
+  const qrImage = pngs.decode(qrData);
+  
+  // Calculate position (bottom-right corner)
+  const posX = mainImage.width - qrSize - padding;
+  const posY = mainImage.height - qrSize - padding;
+  
+  // Simple nearest-neighbor resize of QR code
+  const qrPixels = new Uint8Array(qrSize * qrSize * 4);
+  const scaleX = qrImage.width / qrSize;
+  const scaleY = qrImage.height / qrSize;
+  
+  for (let y = 0; y < qrSize; y++) {
+    for (let x = 0; x < qrSize; x++) {
+      const srcX = Math.floor(x * scaleX);
+      const srcY = Math.floor(y * scaleY);
+      const srcIdx = (srcY * qrImage.width + srcX) * 4;
+      const dstIdx = (y * qrSize + x) * 4;
+      qrPixels[dstIdx] = qrImage.image[srcIdx];
+      qrPixels[dstIdx + 1] = qrImage.image[srcIdx + 1];
+      qrPixels[dstIdx + 2] = qrImage.image[srcIdx + 2];
+      qrPixels[dstIdx + 3] = qrImage.image[srcIdx + 3];
+    }
+  }
+  
+  // Composite QR onto main image
+  const resultPixels = new Uint8Array(mainImage.image);
+  for (let y = 0; y < qrSize; y++) {
+    for (let x = 0; x < qrSize; x++) {
+      const mainX = posX + x;
+      const mainY = posY + y;
+      if (mainX < 0 || mainX >= mainImage.width || mainY < 0 || mainY >= mainImage.height) continue;
+      
+      const qrIdx = (y * qrSize + x) * 4;
+      const mainIdx = (mainY * mainImage.width + mainX) * 4;
+      const alpha = qrPixels[qrIdx + 3] / 255;
+      
+      resultPixels[mainIdx] = Math.round(qrPixels[qrIdx] * alpha + resultPixels[mainIdx] * (1 - alpha));
+      resultPixels[mainIdx + 1] = Math.round(qrPixels[qrIdx + 1] * alpha + resultPixels[mainIdx + 1] * (1 - alpha));
+      resultPixels[mainIdx + 2] = Math.round(qrPixels[qrIdx + 2] * alpha + resultPixels[mainIdx + 2] * (1 - alpha));
+      resultPixels[mainIdx + 3] = 255;
+    }
+  }
+  
+  // Encode result - pngs.encode takes (data, width, height, options?)
+  return pngs.encode(resultPixels, mainImage.width, mainImage.height);
 }
 
 Deno.serve(async (req) => {
@@ -86,7 +141,6 @@ Deno.serve(async (req) => {
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Reduce default batch size to 2 to minimize memory/CPU pressure
     const { batch_size = 2, offset = 0, image_type = 'both', force_reprocess = false, dry_run = false } = await req.json() as RequestBody;
 
     console.log('Starting QR watermark processing', { batch_size, offset, image_type, force_reprocess, dry_run });
@@ -108,12 +162,10 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Error:', error);
-    // Return partial results even on error so client can continue
     return new Response(JSON.stringify({ 
       success: false,
       error: error instanceof Error ? error.message : 'Failed', 
       ...result,
-      // If we processed anything, provide next_offset so client can continue
       next_offset: result.total_images_scanned > 0 ? (result.next_offset ?? null) : null
     }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
@@ -177,7 +229,6 @@ async function processCampaignAssets(supabase: any, result: ProcessingResult, ba
 
 async function applyQRWatermark(supabase: any, imageUrl: string, qrCodeUrl: string, bucket: string): Promise<{ success: boolean; newUrl?: string; error?: string }> {
   try {
-    // Fetch images with retry logic
     const [imageRes, qrRes] = await Promise.all([
       fetchWithRetry(imageUrl),
       fetchWithRetry(qrCodeUrl)
@@ -187,30 +238,8 @@ async function applyQRWatermark(supabase: any, imageUrl: string, qrCodeUrl: stri
     const imageData = new Uint8Array(await imageRes.arrayBuffer());
     const qrData = new Uint8Array(await qrRes.arrayBuffer());
 
-    // Decode with explicit error handling
-    let mainImage, qrImage;
-    try {
-      const decoded = await decode(imageData);
-      mainImage = decoded instanceof Image ? decoded : null;
-    } catch (decodeErr) {
-      return { success: false, error: `Main image decode failed: ${decodeErr}` };
-    }
-    if (!mainImage) return { success: false, error: 'Could not decode main image' };
-
-    try {
-      const qrDecoded = await decode(qrData);
-      qrImage = qrDecoded instanceof Image ? qrDecoded : null;
-    } catch (decodeErr) {
-      return { success: false, error: `QR decode failed: ${decodeErr}` };
-    }
-    if (!qrImage) return { success: false, error: 'Could not decode QR image' };
-
-    const qrResized = qrImage.resize(QR_SIZE, QR_SIZE);
-    const posX = mainImage.width - QR_SIZE - QR_PADDING;
-    const posY = mainImage.height - QR_SIZE - QR_PADDING;
-    mainImage.composite(qrResized, posX, posY);
-
-    const watermarkedData = await mainImage.encode();
+    // Use pure-TS compositing
+    const watermarkedData = await compositeImages(imageData, qrData, QR_SIZE, QR_PADDING);
 
     const storagePath = extractStoragePath(imageUrl);
     if (!storagePath) return { success: false, error: 'Could not extract path' };

@@ -359,18 +359,80 @@ export default function CampaignDetail() {
           <CampaignPerformanceChart campaignId={campaign.id} />
         </div>
 
-        {/* Progress */}
+        {/* Installation Progress - Segmented Bar */}
         <Card className="mb-6 border">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-semibold">Campaign Progress</span>
-              <div className="flex gap-4 text-xs text-muted-foreground">
-                <span className="text-amber-600">{pendingAssets} pending</span>
-                <span className="text-blue-600">{installedAssets} installed</span>
-                <span className="text-green-600">{verifiedAssets} / {totalAssets} verified</span>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-sm font-semibold">Installation Progress</span>
+              <span className="text-sm text-muted-foreground">
+                {totalAssets} Total Assets
+              </span>
+            </div>
+            
+            {/* Segmented Progress Bar */}
+            <div className="relative h-8 bg-muted rounded-lg overflow-hidden flex">
+              {totalAssets > 0 ? (
+                <>
+                  {/* Verified Segment (Green) */}
+                  {verifiedAssets > 0 && (
+                    <div 
+                      className="h-full bg-green-500 flex items-center justify-center text-white text-xs font-medium transition-all duration-500"
+                      style={{ width: `${(verifiedAssets / totalAssets) * 100}%` }}
+                    >
+                      {verifiedAssets > 0 && `${verifiedAssets}`}
+                    </div>
+                  )}
+                  {/* Installed Segment (Blue) */}
+                  {installedAssets > 0 && (
+                    <div 
+                      className="h-full bg-blue-500 flex items-center justify-center text-white text-xs font-medium transition-all duration-500"
+                      style={{ width: `${(installedAssets / totalAssets) * 100}%` }}
+                    >
+                      {installedAssets > 0 && `${installedAssets}`}
+                    </div>
+                  )}
+                  {/* Pending Segment (Amber) */}
+                  {pendingAssets > 0 && (
+                    <div 
+                      className="h-full bg-amber-400 flex items-center justify-center text-amber-900 text-xs font-medium transition-all duration-500"
+                      style={{ width: `${(pendingAssets / totalAssets) * 100}%` }}
+                    >
+                      {pendingAssets > 0 && `${pendingAssets}`}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="h-full w-full flex items-center justify-center text-muted-foreground text-xs">
+                  No assets in campaign
+                </div>
+              )}
+            </div>
+            
+            {/* Legend */}
+            <div className="flex items-center justify-center gap-6 mt-4 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+                <span>Pending ({pendingAssets})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                <span>Installed ({installedAssets})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <span>Verified ({verifiedAssets})</span>
               </div>
             </div>
-            <Progress value={progress} className="h-3" />
+            
+            {/* Completion Percentage */}
+            {totalAssets > 0 && (
+              <div className="mt-3 text-center">
+                <span className="text-lg font-bold text-green-600">
+                  {Math.round((verifiedAssets / totalAssets) * 100)}%
+                </span>
+                <span className="text-sm text-muted-foreground ml-2">Complete</span>
+              </div>
+            )}
           </CardContent>
         </Card>
 

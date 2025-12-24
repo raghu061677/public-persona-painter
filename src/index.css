@@ -814,7 +814,74 @@ input[type="number"] {
   }
 }
 
-/* Mobile Touch Fixes */
+/* ==================== */
+/* MOBILE TOUCH FIXES   */
+/* ==================== */
+
+/* Fix iOS Safari tap delay & touch bug globally */
+* {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Ensure header/navbar is always above background layers */
+header,
+.navbar,
+.mobile-navbar,
+nav[role="navigation"] {
+  position: relative;
+  z-index: 10000 !important;
+  pointer-events: auto !important;
+}
+
+/* Prevent background/decorative layers from blocking touches */
+.hero-bg,
+.hero-overlay,
+.hero-video,
+.hero-canvas,
+.background-layer,
+.gradient-overlay,
+.slider-bg,
+.decorative-layer {
+  pointer-events: none !important;
+}
+
+/* Ensure menu buttons receive taps */
+.menu-button,
+.hamburger,
+.mobile-menu-button,
+[data-sidebar="trigger"],
+button[aria-label*="menu"],
+button[aria-label*="Menu"] {
+  pointer-events: auto !important;
+  z-index: 11000 !important;
+  position: relative;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Fix menu overlay & drawer interaction */
+.mobile-menu,
+.drawer,
+.nav-drawer,
+[data-radix-dialog-overlay],
+[data-radix-dialog-content],
+[data-state="open"] {
+  position: fixed;
+  z-index: 12000;
+  pointer-events: auto !important;
+}
+
+/* Mobile menu backdrop */
+.mobile-menu-backdrop,
+[data-radix-dialog-overlay] {
+  position: fixed;
+  inset: 0;
+  z-index: 11999;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+}
+
 @layer utilities {
   /* Fix for mobile viewport height */
   .min-h-dvh {
@@ -832,18 +899,26 @@ input[type="number"] {
     overscroll-behavior: contain;
   }
   
-  /* Mobile sidebar overlay - ensure taps work */
-  [data-radix-dialog-overlay] {
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
+  /* Pointer events utilities */
+  .pointer-events-auto {
+    pointer-events: auto !important;
   }
   
-  /* Mobile menu trigger - larger touch target */
-  [data-sidebar="trigger"] {
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-    min-width: 44px;
-    min-height: 44px;
+  .pointer-events-none {
+    pointer-events: none !important;
+  }
+  
+  /* High z-index utilities for mobile */
+  .z-header {
+    z-index: 10000;
+  }
+  
+  .z-menu-button {
+    z-index: 11000;
+  }
+  
+  .z-overlay {
+    z-index: 12000;
   }
 }
 

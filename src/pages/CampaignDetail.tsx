@@ -201,7 +201,12 @@ export default function CampaignDetail() {
   }
 
   const verifiedAssets = campaignAssets.filter(a => a.status === 'Verified').length;
-  const installedAssets = campaignAssets.filter(a => a.status === 'Installed' || a.status === 'Mounted').length;
+  const installedAssets = campaignAssets.filter(a => 
+    a.installation_status === 'Installed' || 
+    a.installation_status === 'Completed' || 
+    a.status === 'Installed' || 
+    a.status === 'Mounted'
+  ).length;
   const progress = calculateProgress(campaign.total_assets, verifiedAssets);
 
   // Calculate campaign duration

@@ -202,13 +202,15 @@ export function ResponsiveSidebar() {
 
       {/* Main Content */}
       <SidebarContent>
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 px-2">
           {/* Platform Administration */}
           {isPlatformAdmin && company?.type === 'platform_admin' && (
-            <>
-              {!collapsed && <SidebarGroupLabel className="px-4">Platform Administration</SidebarGroupLabel>}
-              <SidebarMenu>
-                <MenuItem icon={LayoutDashboard} label="Platform Dashboard" href="/admin/platform" />
+            <SidebarGroup>
+              {!collapsed && <SidebarGroupLabel>Platform Administration</SidebarGroupLabel>}
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <MenuItem icon={LayoutDashboard} label="Platform Dashboard" href="/admin/platform" />
+                </SidebarMenu>
                 
                 <MenuGroup icon={Building2} label="Companies">
                   <MenuItem icon={Building2} label="All Companies" href="/admin/company-management" />
@@ -220,8 +222,10 @@ export function ResponsiveSidebar() {
                   <MenuItem icon={Shield} label="Roles & Permissions" href="/admin/platform-roles" />
                 </MenuGroup>
 
-                <MenuItem icon={DollarSign} label="Billing & Subscriptions" href="/admin/platform-reports/billing" />
-                <MenuItem icon={FileCheck} label="Onboarding & QA" href="/admin/onboarding" />
+                <SidebarMenu>
+                  <MenuItem icon={DollarSign} label="Billing & Subscriptions" href="/admin/platform-reports/billing" />
+                  <MenuItem icon={FileCheck} label="Onboarding & QA" href="/admin/onboarding" />
+                </SidebarMenu>
                 
                 <MenuGroup icon={BarChart3} label="Platform Reports">
                   <MenuItem icon={BarChart3} label="Multi-Tenant Reports" href="/admin/analytics-dashboard" />
@@ -230,89 +234,94 @@ export function ResponsiveSidebar() {
                   <MenuItem icon={Map} label="Global Inventory" href="/admin/platform-reports/media-inventory" />
                 </MenuGroup>
 
-                <MenuItem icon={FileText} label="Audit Logs" href="/admin/audit-logs" />
-                <MenuItem icon={Settings} label="Platform Settings" href="/admin/platform-admin-setup" />
-              </SidebarMenu>
-              <Separator className="my-2" />
-            </>
+                <SidebarMenu>
+                  <MenuItem icon={FileText} label="Audit Logs" href="/admin/audit-logs" />
+                  <MenuItem icon={Settings} label="Platform Settings" href="/admin/platform-admin-setup" />
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
           )}
 
           {/* Company Workspace */}
           {company && company.type !== 'platform_admin' && (
             <>
-              {!collapsed && <SidebarGroupLabel className="px-4">Company Workspace</SidebarGroupLabel>}
-              <SidebarMenu>
-                <MenuItem icon={LayoutDashboard} label="Dashboard" href="/admin/dashboard" />
-                
-                <MenuItem icon={Map} label="Media Assets" href="/admin/media-assets" />
-                
-                <MenuItem icon={UserPlus} label="Leads" href="/admin/leads" />
-                
-                <MenuItem icon={Users} label="Clients" href="/admin/clients" />
-                
-                <MenuItem icon={Layers} label="Plans" href="/admin/plans" />
+              <SidebarGroup>
+                {!collapsed && <SidebarGroupLabel>Company Workspace</SidebarGroupLabel>}
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <MenuItem icon={LayoutDashboard} label="Dashboard" href="/admin/dashboard" />
+                    <MenuItem icon={Map} label="Media Assets" href="/admin/media-assets" />
+                    <MenuItem icon={UserPlus} label="Leads" href="/admin/leads" />
+                    <MenuItem icon={Users} label="Clients" href="/admin/clients" />
+                    <MenuItem icon={Layers} label="Plans" href="/admin/plans" />
+                  </SidebarMenu>
 
-                <MenuGroup icon={CheckCircle2} label="Approvals">
-                  <MenuItem icon={ListChecks} label="Pending Approvals" href="/admin/approvals" badge={pendingApprovalsCount} />
-                  <MenuItem icon={History} label="Approval History" href="/admin/approval-history" />
-                  {(isCompanyAdmin || isPlatformAdmin) && (
-                    <MenuItem icon={Settings} label="Approval Rules" href="/admin/approvals/rules" />
+                  <MenuGroup icon={CheckCircle2} label="Approvals">
+                    <MenuItem icon={ListChecks} label="Pending Approvals" href="/admin/approvals" badge={pendingApprovalsCount} />
+                    <MenuItem icon={History} label="Approval History" href="/admin/approval-history" />
+                    {(isCompanyAdmin || isPlatformAdmin) && (
+                      <MenuItem icon={Settings} label="Approval Rules" href="/admin/approvals/rules" />
+                    )}
+                  </MenuGroup>
+                  
+                  <SidebarMenu>
+                    <MenuItem icon={Briefcase} label="Campaigns" href="/admin/campaigns" />
+                  </SidebarMenu>
+
+                  {rbac.canViewModule('operations') && (
+                    <MenuGroup icon={TrendingUp} label="Operations">
+                      <MenuItem icon={Image} label="Creative Received" href="/admin/operations/creatives" />
+                      <MenuItem icon={FileCheck} label="Printing Status" href="/admin/operations/printing" />
+                      <MenuItem icon={TrendingUp} label="Mounting Assignment" href="/admin/operations" />
+                      <MenuItem icon={Image} label="Proof Uploads" href="/admin/operations/proof-uploads" />
+                    </MenuGroup>
                   )}
-                </MenuGroup>
-                
-                <MenuItem icon={Briefcase} label="Campaigns" href="/admin/campaigns" />
 
-                {rbac.canViewModule('operations') && (
-                  <MenuGroup icon={TrendingUp} label="Operations">
-                    <MenuItem icon={Image} label="Creative Received" href="/admin/operations/creatives" />
-                    <MenuItem icon={FileCheck} label="Printing Status" href="/admin/operations/printing" />
-                    <MenuItem icon={TrendingUp} label="Mounting Assignment" href="/admin/operations" />
-                    <MenuItem icon={Image} label="Proof Uploads" href="/admin/operations/proof-uploads" />
-                  </MenuGroup>
-                )}
+                  {rbac.canViewModule('finance') && (
+                    <MenuGroup icon={DollarSign} label="Finance">
+                      <MenuItem icon={FileSpreadsheet} label="Quotations" href="/admin/estimations" />
+                      <MenuItem icon={FileText} label="Sales Orders" href="/admin/sales-orders" />
+                      <MenuItem icon={FileCheck} label="Purchase Orders" href="/admin/purchase-orders" />
+                      <MenuItem icon={FileCheck} label="Proforma Invoice" href="/admin/proformas" />
+                      <MenuItem icon={Receipt} label="Invoices" href="/admin/invoices" />
+                      <MenuItem icon={CreditCard} label="Payments" href="/admin/payments" />
+                      <MenuItem icon={DollarSign} label="Expenses" href="/admin/expenses" />
+                      <MenuItem icon={Zap} label="Power Bills" href="/admin/power-bills" />
+                    </MenuGroup>
+                  )}
 
-                {rbac.canViewModule('finance') && (
-                  <MenuGroup icon={DollarSign} label="Finance">
-                    <MenuItem icon={FileSpreadsheet} label="Quotations" href="/admin/estimations" />
-                    <MenuItem icon={FileText} label="Sales Orders" href="/admin/sales-orders" />
-                    <MenuItem icon={FileCheck} label="Purchase Orders" href="/admin/purchase-orders" />
-                    <MenuItem icon={FileCheck} label="Proforma Invoice" href="/admin/proformas" />
-                    <MenuItem icon={Receipt} label="Invoices" href="/admin/invoices" />
-                    <MenuItem icon={CreditCard} label="Payments" href="/admin/payments" />
-                    <MenuItem icon={DollarSign} label="Expenses" href="/admin/expenses" />
-                    <MenuItem icon={Zap} label="Power Bills" href="/admin/power-bills" />
-                  </MenuGroup>
-                )}
-
-                {rbac.canViewModule('reports') && (
-                  <MenuGroup icon={BarChart3} label="Reports">
-                    <MenuItem icon={Map} label="Media Availability" href="/admin/reports/vacant-media" />
-                    <MenuItem icon={Users} label="Client Bookings" href="/admin/reports/clients" />
-                    <MenuItem icon={Briefcase} label="Campaign Bookings" href="/admin/reports/campaigns" />
-                    <MenuItem icon={TrendingUp} label="Asset Revenue" href="/admin/reports/revenue" />
-                    <MenuItem icon={DollarSign} label="Financial Summary" href="/admin/reports/financial" />
-                    <MenuItem icon={Image} label="Proof Execution" href="/admin/reports/proof-execution" />
-                  </MenuGroup>
-                )}
-              </SidebarMenu>
-              <Separator className="my-2" />
+                  {rbac.canViewModule('reports') && (
+                    <MenuGroup icon={BarChart3} label="Reports">
+                      <MenuItem icon={Map} label="Media Availability" href="/admin/reports/vacant-media" />
+                      <MenuItem icon={Users} label="Client Bookings" href="/admin/reports/clients" />
+                      <MenuItem icon={Briefcase} label="Campaign Bookings" href="/admin/reports/campaigns" />
+                      <MenuItem icon={TrendingUp} label="Asset Revenue" href="/admin/reports/revenue" />
+                      <MenuItem icon={DollarSign} label="Financial Summary" href="/admin/reports/financial" />
+                      <MenuItem icon={Image} label="Proof Execution" href="/admin/reports/proof-execution" />
+                    </MenuGroup>
+                  )}
+                </SidebarGroupContent>
+              </SidebarGroup>
 
               {/* Tools */}
-              {!collapsed && <SidebarGroupLabel className="px-4">Tools</SidebarGroupLabel>}
-              <SidebarMenu>
-                <MenuItem icon={Sparkles} label="AI Assistant" href="/admin/ai-assistant" />
-                <MenuItem icon={Smartphone} label="Mobile Field App" href="/mobile" />
-                <MenuItem icon={Image} label="Photo Library" href="/admin/photo-library" />
-                <MenuItem icon={Globe} label="Marketplace" href="/marketplace" />
-                <MenuItem icon={ShoppingBag} label="Booking Requests" href="/admin/booking-requests" />
-              </SidebarMenu>
-              <Separator className="my-2" />
+              <SidebarGroup>
+                {!collapsed && <SidebarGroupLabel>Tools</SidebarGroupLabel>}
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <MenuItem icon={Sparkles} label="AI Assistant" href="/admin/ai-assistant" />
+                    <MenuItem icon={Smartphone} label="Mobile Field App" href="/mobile" />
+                    <MenuItem icon={Image} label="Photo Library" href="/admin/photo-library" />
+                    <MenuItem icon={Globe} label="Marketplace" href="/marketplace" />
+                    <MenuItem icon={ShoppingBag} label="Booking Requests" href="/admin/booking-requests" />
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
 
               {/* Company Settings */}
               {(isCompanyAdmin || isPlatformAdmin) && (
-                <>
-                  {!collapsed && <SidebarGroupLabel className="px-4">Settings</SidebarGroupLabel>}
-                  <SidebarMenu>
+                <SidebarGroup>
+                  {!collapsed && <SidebarGroupLabel>Settings</SidebarGroupLabel>}
+                  <SidebarGroupContent>
                     <MenuGroup icon={Building2} label="Organization">
                       <MenuItem icon={Building2} label="Profile" href="/admin/company-settings/profile" />
                       <MenuItem icon={Palette} label="Branding" href="/admin/company-settings/branding" />
@@ -327,8 +336,8 @@ export function ResponsiveSidebar() {
                     <MenuGroup icon={Settings} label="Data Management">
                       <MenuItem icon={FileCheck} label="Asset Validation" href="/admin/media-assets-validation" />
                     </MenuGroup>
-                  </SidebarMenu>
-                </>
+                  </SidebarGroupContent>
+                </SidebarGroup>
               )}
             </>
           )}

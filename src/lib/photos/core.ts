@@ -344,6 +344,33 @@ export async function uploadPhoto(
       throw new Error(`Database save failed: ${dbError.message}`);
     }
 
+    // Add timeline entry for campaign photo uploads
+    if (metadata.campaign_id && metadata.company_id) {
+      try {
+        await supabase
+          .from('campaign_timeline')
+          .insert({
+            campaign_id: metadata.campaign_id,
+            company_id: metadata.company_id,
+            event_type: 'photo_uploaded',
+            event_title: `Photo Uploaded: ${tag}`,
+            event_description: `Proof photo uploaded for asset ${metadata.asset_id}`,
+            event_time: new Date().toISOString(),
+            created_by: (await supabase.auth.getUser()).data.user?.id,
+            metadata: {
+              asset_id: metadata.asset_id,
+              photo_tag: tag,
+              photo_url: urlData.publicUrl,
+              latitude,
+              longitude
+            }
+          });
+      } catch (timelineError) {
+        console.warn('Failed to create timeline entry:', timelineError);
+        // Don't fail the upload if timeline entry fails
+      }
+    }
+
     if (onProgress) {
       onProgress({ stage: 'complete', progress: 100, message: 'Upload complete!' });
     }

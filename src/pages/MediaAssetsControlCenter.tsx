@@ -103,7 +103,7 @@ export default function MediaAssetsControlCenter() {
 
     let query = supabase
       .from('media_assets')
-      .select('id, media_asset_code, city, area, location, media_type, status, card_rate, dimensions, latitude, longitude, illumination_type, created_at, primary_photo_url, company_id');
+      .select('id, media_asset_code, city, area, location, media_type, status, card_rate, dimensions, latitude, longitude, illumination_type, created_at, primary_photo_url, company_id, total_sqft, is_public, ownership, qr_code_url');
 
     // Filter by company_id unless platform admin viewing all
     if (companyUserData?.company_id) {

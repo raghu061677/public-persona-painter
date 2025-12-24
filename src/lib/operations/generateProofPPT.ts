@@ -102,7 +102,6 @@ export async function generateProofOfDisplayPPT(campaignId: string): Promise<voi
       .select("*")
       .eq("campaign_id", campaignId)
       .eq("company_id", campaign.company_id)
-      .eq("photo_type", "operations_proof")
       .order("asset_id", { ascending: true })
       .order("uploaded_at", { ascending: true });
     

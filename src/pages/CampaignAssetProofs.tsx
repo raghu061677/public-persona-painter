@@ -9,6 +9,7 @@ import { PhotoUploadSection } from "@/components/operations/PhotoUploadSection";
 import { UnifiedPhotoGallery } from "@/components/common/UnifiedPhotoGallery";
 import { NotificationSettings } from "@/components/operations/NotificationSettings";
 import { Badge } from "@/components/ui/badge";
+import { useBreadcrumb } from "@/contexts/BreadcrumbContext";
 
 interface CampaignAsset {
   id: string;
@@ -24,6 +25,7 @@ interface CampaignAsset {
 export default function CampaignAssetProofs() {
   const { campaignId, assetId } = useParams<{ campaignId: string; assetId: string }>();
   const navigate = useNavigate();
+  const { setBreadcrumbs } = useBreadcrumb();
   const [asset, setAsset] = useState<CampaignAsset | null>(null);
   const [photos, setPhotos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +37,23 @@ export default function CampaignAssetProofs() {
       checkAdminRole();
     }
   }, [campaignId, assetId]);
+
+  // Set custom breadcrumbs when asset is loaded
+  useEffect(() => {
+    if (asset) {
+      setBreadcrumbs([
+        { title: 'Home', href: '/admin/dashboard' },
+        { title: 'Admin', href: '/admin' },
+        { title: 'Operations', href: '/admin/operations' },
+        { title: campaignId || 'Campaign', href: `/admin/operations/${campaignId}` },
+        { title: 'Assets', href: `/admin/operations/${campaignId}` },
+        { title: asset.asset_id || asset.location || 'Asset' }
+      ]);
+    }
+    
+    // Clear breadcrumbs when unmounting
+    return () => setBreadcrumbs(null);
+  }, [asset, campaignId, setBreadcrumbs]);
 
   useEffect(() => {
     if (asset?.asset_id) {

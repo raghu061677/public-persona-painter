@@ -1,5 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import { Image, decode } from 'https://deno.land/x/imagescript@1.3.0/mod.ts';
+// Avoid imagescript deno.land WASM fetch (intermittent WORKER_ERROR). Use jsdelivr ESM and grab Image from module exports.
+import * as ImageScript from 'https://cdn.jsdelivr.net/npm/imagescript@1.3.0/+esm';
+const Image = (ImageScript as any).Image ?? (ImageScript as any).default?.Image;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -153,18 +155,20 @@ async function processCampaignAssets(supabase: any, result: ProcessingResult, ba
 
 async function applyQRWatermark(supabase: any, imageUrl: string, qrCodeUrl: string, bucket: string): Promise<{ success: boolean; newUrl?: string; error?: string }> {
   try {
+    if (!Image || typeof (Image as any).decode !== 'function') {
+      return { success: false, error: 'Image processing library failed to load' };
+    }
+
     const [imageRes, qrRes] = await Promise.all([fetch(imageUrl), fetch(qrCodeUrl)]);
     if (!imageRes.ok || !qrRes.ok) return { success: false, error: 'Failed to fetch images' };
 
     const imageData = new Uint8Array(await imageRes.arrayBuffer());
     const qrData = new Uint8Array(await qrRes.arrayBuffer());
 
-    const decoded = await decode(imageData);
-    const mainImage = decoded instanceof Image ? decoded : null;
+    const mainImage = await Image.decode(imageData);
     if (!mainImage) return { success: false, error: 'Could not decode main image' };
 
-    const qrDecoded = await decode(qrData);
-    const qrImage = qrDecoded instanceof Image ? qrDecoded : null;
+    const qrImage = await Image.decode(qrData);
     if (!qrImage) return { success: false, error: 'Could not decode QR image' };
 
     const qrResized = qrImage.resize(QR_SIZE, QR_SIZE);

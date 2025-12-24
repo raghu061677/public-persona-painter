@@ -123,58 +123,65 @@ function createInvoicePDF(data: InvoiceData): Blob {
   const companyName = data.company?.name || data.orgSettings?.organization_name || 'Matrix Network Solutions';
   const companyGSTIN = data.company?.gstin || data.orgSettings?.gstin || '36AATFM4107H2Z3';
   
-  let yPos = 18;
+  let yPos = 15;
 
   // ========== HEADER SECTION ==========
+  const logoWidth = 45;
+  const logoHeight = 35;
   let logoEndX = leftMargin;
 
-  // Try to add logo
+  // Try to add logo - larger size to match company address height
   if (data.logoBase64) {
     try {
-      doc.addImage(data.logoBase64, 'PNG', leftMargin, yPos - 6, 22, 16);
-      logoEndX = leftMargin + 25;
+      doc.addImage(data.logoBase64, 'PNG', leftMargin, yPos, logoWidth, logoHeight);
+      logoEndX = leftMargin + logoWidth + 8;
     } catch (e) {
       console.log('Logo rendering error:', e);
     }
   }
 
-  // Company Name - Bold, Blue
-  doc.setFontSize(13);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(30, 64, 175); // Deep blue
-  doc.text(companyName, logoEndX, yPos);
-
-  // Company Address lines
-  yPos += 5;
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(75, 85, 99); // Gray
-  doc.text(COMPANY_ADDRESS.line1, logoEndX, yPos);
-  yPos += 3.5;
-  doc.text(COMPANY_ADDRESS.line2, logoEndX, yPos);
-  yPos += 3.5;
-  doc.text(`${COMPANY_ADDRESS.cityLine}, ${COMPANY_ADDRESS.country}`, logoEndX, yPos);
-
-  // Contact info
-  yPos += 4;
-  doc.setFontSize(7.5);
-  doc.text(`Phone: ${COMPANY_ADDRESS.phone}  |  Email: ${COMPANY_ADDRESS.email}`, logoEndX, yPos);
-  yPos += 3.5;
-  doc.text(`Web: ${COMPANY_ADDRESS.website}`, logoEndX, yPos);
-
-  // GSTIN below company info
-  yPos += 4;
+  // Company Name - Bold, Black (matching reference)
+  let textY = yPos + 5;
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
-  doc.text(`GSTIN: ${companyGSTIN}`, logoEndX, yPos);
+  doc.text(companyName, logoEndX, textY);
+
+  // Company Name repeated in normal (as shown in reference)
+  textY += 5;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(60, 60, 60);
+  doc.text(companyName, logoEndX, textY);
+
+  // Company Address lines
+  textY += 4.5;
+  doc.text(COMPANY_ADDRESS.line1, logoEndX, textY);
+  textY += 4;
+  doc.text(COMPANY_ADDRESS.line2, logoEndX, textY);
+  textY += 4;
+  doc.text(`${COMPANY_ADDRESS.cityLine} ${COMPANY_ADDRESS.country}`, logoEndX, textY);
+
+  // Contact info
+  textY += 4.5;
+  doc.text(`Phone : ${COMPANY_ADDRESS.phone}`, logoEndX, textY);
+  textY += 4;
+  doc.text(COMPANY_ADDRESS.email, logoEndX, textY);
+  textY += 4;
+  doc.text(COMPANY_ADDRESS.website, logoEndX, textY);
+
+  // GSTIN
+  textY += 4;
+  doc.setFont('helvetica', 'normal');
+  doc.text(`GSTIN : ${companyGSTIN}`, logoEndX, textY);
 
   // TAX INVOICE title - Right side, aligned with header
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(30, 64, 175);
-  doc.text('TAX INVOICE', pageWidth - rightMargin, 22, { align: 'right' });
+  doc.setFontSize(24);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0, 0, 0);
+  doc.text('TAX INVOICE', pageWidth - rightMargin, yPos + logoHeight - 5, { align: 'right' });
 
-  yPos = Math.max(yPos + 6, 48);
+  yPos = yPos + logoHeight + 8;
 
   // Horizontal divider
   doc.setDrawColor(200, 200, 200);

@@ -115,7 +115,7 @@ export default function InvoiceCreate() {
         .select('*, media_assets(location, area, city, media_type, dimensions)')
         .eq('campaign_id', selectedCampaignId);
 
-      // Build line items from campaign items
+      // Build line items from campaign items with all required data
       const items = (campaignItems || []).map((item, index) => ({
         sno: index + 1,
         asset_id: item.asset_id,
@@ -128,6 +128,11 @@ export default function InvoiceCreate() {
         display_rate: item.negotiated_rate || item.card_rate,
         mounting_cost: item.mounting_charge || 0,
         printing_cost: item.printing_charge || 0,
+        start_date: item.start_date,
+        end_date: item.end_date,
+        booking_period: item.start_date && item.end_date 
+          ? `${new Date(item.start_date).toLocaleDateString('en-IN')} - ${new Date(item.end_date).toLocaleDateString('en-IN')}`
+          : '',
         amount: item.final_price || (item.negotiated_rate || item.card_rate) * (item.quantity || 1),
       }));
 

@@ -51,9 +51,8 @@ export async function addWatermark(
         hour12: true,
       });
 
-      // Configure text style
-      const fontSize = Math.max(watermarkHeight * 0.4, 14);
-      ctx.font = `bold ${fontSize}px Arial`;
+      // Configure text style - SMALLER fonts
+      const fontSize = Math.max(watermarkHeight * 0.22, 10); // Reduced from 0.4 to 0.22
       ctx.fillStyle = 'white';
       ctx.textBaseline = 'middle';
 
@@ -90,17 +89,18 @@ export async function addWatermark(
         }
       }
 
-      // Draw organization name if provided
+      // Draw organization name if provided - smaller font
       if (organizationName) {
+        ctx.font = `bold ${fontSize}px Arial`;
         ctx.fillText(organizationName, textX, watermarkY + watermarkHeight / 3);
       }
 
-      // Draw timestamp
+      // Draw timestamp - smaller font
       const timestampY = organizationName 
         ? watermarkY + (watermarkHeight * 2) / 3 
         : watermarkY + watermarkHeight / 2;
       
-      ctx.font = `${fontSize * 0.8}px Arial`;
+      ctx.font = `${fontSize * 0.9}px Arial`;
       ctx.fillText(timestamp, textX, timestampY);
 
       // Draw QR code on the right side if provided - BIGGER SIZE
@@ -135,8 +135,8 @@ export async function addWatermark(
         }
       }
 
-      // Add "PROOF OF INSTALLATION" text (positioned before QR code if present)
-      ctx.font = `bold ${fontSize * 0.7}px Arial`;
+      // Add "PROOF OF INSTALLATION" text - smaller font
+      ctx.font = `bold ${fontSize * 0.85}px Arial`;
       ctx.fillStyle = 'white';
       ctx.textAlign = 'right';
       const proofTextX = qrWidth > 0 ? img.width - qrWidth - padding : img.width - padding * 2;

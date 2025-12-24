@@ -341,11 +341,11 @@ function createInvoicePDF(data: InvoiceData): Blob {
     ].filter(Boolean).join('\n');
     
     // Size with dimensions and area
-    const dimensions = item.dimensions || item.size || '';
-    const totalSqft = item.total_sqft || item.area_sqft || '';
-    const sizeDisplay = dimensions 
+    const dimensions = item.dimensions || item.size || 'N/A';
+    const totalSqft = item.total_sqft || item.area_sqft || item.sqft || '';
+    const sizeDisplay = dimensions && dimensions !== 'N/A'
       ? `${dimensions}${totalSqft ? `\nArea(Sft):${totalSqft}` : ''}`
-      : '-';
+      : 'N/A';
     
     // Booking dates with month calculation
     const startDate = item.start_date || data.campaign?.start_date;

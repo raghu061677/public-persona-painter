@@ -14,12 +14,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, Search, Eye, Trash2, AlertCircle, FileText, DollarSign, Clock } from "lucide-react";
 import { getInvoiceStatusColor, formatINR, getDaysOverdue } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
 import { toast } from "@/hooks/use-toast";
 import { PageCustomization, PageCustomizationOption } from "@/components/ui/page-customization";
 import { useLayoutSettings } from "@/hooks/use-layout-settings";
+
+const INVOICE_STATUSES = ['Draft', 'Sent', 'Pending', 'Paid', 'Overdue', 'Cancelled'];
 
 export default function InvoicesList() {
   const navigate = useNavigate();
@@ -100,6 +109,34 @@ export default function InvoicesList() {
       toast({
         title: "Success",
         description: "Invoice deleted successfully",
+      });
+      fetchInvoices();
+    }
+  };
+
+  const handleStatusChange = async (invoiceId: string, newStatus: string) => {
+    const updateData: any = { status: newStatus };
+    
+    // If status is Paid, set balance_due to 0
+    if (newStatus === 'Paid') {
+      updateData.balance_due = 0;
+    }
+    
+    const { error } = await supabase
+      .from('invoices')
+      .update(updateData)
+      .eq('id', invoiceId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update invoice status",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: `Invoice status updated to ${newStatus}`,
       });
       fetchInvoices();
     }
@@ -311,9 +348,21 @@ export default function InvoicesList() {
                       <TableCell className="px-4 py-3">{formatDate(invoice.invoice_date)}</TableCell>
                       <TableCell className="px-4 py-3">{formatDate(invoice.due_date)}</TableCell>
                       <TableCell className="px-4 py-3">
-                        <Badge className={getInvoiceStatusColor(invoice.status)}>
-                          {invoice.status}
-                        </Badge>
+                        <Select
+                          value={invoice.status}
+                          onValueChange={(value) => handleStatusChange(invoice.id, value)}
+                        >
+                          <SelectTrigger className={`w-[120px] h-8 text-xs ${getInvoiceStatusColor(invoice.status)}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {INVOICE_STATUSES.map((status) => (
+                              <SelectItem key={status} value={status}>
+                                {status}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell className="px-4 py-3 text-right">
                         {formatINR(invoice.total_amount)}

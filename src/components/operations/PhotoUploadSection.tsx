@@ -287,6 +287,37 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
         }
       }
 
+      // Auto-update campaign_assets status to 'Installed' when photos are uploaded
+      // Find the campaign_asset by assetId (which is campaign_assets.id)
+      try {
+        const { error: updateError } = await supabase
+          .from('campaign_assets')
+          .update({
+            status: 'Installed',
+            installation_status: 'Installed',
+            photos: results.reduce((acc: Record<string, string>, r, i) => {
+              if (r.url) {
+                const photoType = r.tag?.toLowerCase().includes('newspaper') ? 'newspaper' :
+                  r.tag?.toLowerCase().includes('geo') ? 'geo' :
+                  r.tag?.toLowerCase().includes('traffic1') || r.tag?.toLowerCase().includes('left') ? 'traffic1' :
+                  r.tag?.toLowerCase().includes('traffic2') || r.tag?.toLowerCase().includes('right') ? 'traffic2' :
+                  `photo_${i + 1}`;
+                acc[photoType] = r.url;
+              }
+              return acc;
+            }, {})
+          })
+          .eq('id', assetId);
+
+        if (updateError) {
+          console.error('Failed to update campaign_asset status:', updateError);
+        } else {
+          console.log('Campaign asset status auto-updated to Installed');
+        }
+      } catch (statusError) {
+        console.error('Error updating asset status:', statusError);
+      }
+
       // Update with tags
       setUploadingFiles(prev => 
         prev.map((uf, i) => ({
@@ -298,7 +329,7 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
 
       toast({
         title: "Upload Complete",
-        description: `Successfully uploaded ${watermarkedFiles.length} watermarked proof photo${watermarkedFiles.length !== 1 ? 's' : ''}`,
+        description: `Successfully uploaded ${watermarkedFiles.length} watermarked proof photo${watermarkedFiles.length !== 1 ? 's' : ''}. Asset status updated to Installed.`,
       });
 
       // Cleanup preview URLs

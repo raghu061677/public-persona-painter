@@ -56,10 +56,10 @@ export default function CampaignAssetProofs() {
   }, [asset, campaignId, setBreadcrumbs]);
 
   useEffect(() => {
-    if (asset?.asset_id) {
+    if (campaignId && assetId) {
       fetchPhotos();
     }
-  }, [asset?.asset_id]);
+  }, [campaignId, assetId]);
 
   const checkAdminRole = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -100,16 +100,16 @@ export default function CampaignAssetProofs() {
   };
 
   const fetchPhotos = async () => {
-    if (!campaignId || !asset?.asset_id) return;
+    if (!campaignId || !assetId) return;
 
     try {
       setLoading(true);
-      // Use the actual asset_id field from the fetched asset
+      // Photos are saved with the campaign_assets.id (assetId from URL), not the media asset_id
       const { data, error } = await supabase
         .from('media_photos')
         .select('*')
         .eq('campaign_id', campaignId)
-        .eq('asset_id', asset.asset_id)
+        .eq('asset_id', assetId)
         .order('uploaded_at', { ascending: false });
 
       if (error) throw error;

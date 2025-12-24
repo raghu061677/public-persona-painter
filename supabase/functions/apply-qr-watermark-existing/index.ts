@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const { batch_size = 25, offset = 0, image_type = 'both', force_reprocess = false, dry_run = false } = await req.json() as RequestBody;
+    const { batch_size = 5, offset = 0, image_type = 'both', force_reprocess = false, dry_run = false } = await req.json() as RequestBody;
 
     console.log('Starting QR watermark processing', { batch_size, offset, image_type, force_reprocess, dry_run });
 

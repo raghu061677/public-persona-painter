@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { PageContainer } from '@/components/ui/page-container';
 import { PageHeader } from '@/components/navigation/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -11,12 +12,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { ArrowLeft, Trash2, Save, Send } from 'lucide-react';
+import { ArrowLeft, Trash2, Save, Send, History, ShieldAlert, Calendar } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { AssetSelectionTable } from '@/components/plans/AssetSelectionTable';
 import { formatCurrency } from '@/utils/mediaAssets';
 import { useAssetConflictCheck } from '@/hooks/useAssetConflictCheck';
 import { ConflictWarning } from '@/components/campaigns/ConflictWarning';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface AssetItem {
   asset_id: string;
@@ -35,6 +39,7 @@ interface AssetItem {
 export default function CampaignCreate() {
   const navigate = useNavigate();
   const { company } = useCompany();
+  const { isAdmin } = useAuth();
   const { checkConflict, checking } = useAssetConflictCheck();
   
   const [loading, setLoading] = useState(false);
@@ -43,6 +48,7 @@ export default function CampaignCreate() {
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [assetPricing, setAssetPricing] = useState<Record<string, any>>({});
   const [assetConflicts, setAssetConflicts] = useState<Record<string, any>>({});
+  const [isHistoricalEntry, setIsHistoricalEntry] = useState(false);
   
   const [formData, setFormData] = useState({
     campaign_name: '',
@@ -50,6 +56,7 @@ export default function CampaignCreate() {
     start_date: '',
     end_date: '',
     notes: '',
+    status: 'Planned' as string,
   });
 
   useEffect(() => {
@@ -243,6 +250,8 @@ export default function CampaignCreate() {
           start_date: formData.start_date,
           end_date: formData.end_date,
           notes: formData.notes,
+          status: isHistoricalEntry ? formData.status : 'Planned',
+          is_historical_entry: isHistoricalEntry,
           assets: Array.from(selectedAssets).map(assetId => {
             const pricing = assetPricing[assetId];
             return {
@@ -282,18 +291,91 @@ export default function CampaignCreate() {
 
   const totals = calculateTotals();
 
+  // Admin-only check
+  if (!isAdmin) {
+    return (
+      <PageContainer>
+        <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+          <ShieldAlert className="h-16 w-16 text-destructive mb-4" />
+          <h2 className="text-2xl font-bold mb-2">Admin Access Required</h2>
+          <p className="text-muted-foreground mb-4">
+            Direct campaign creation is only available to administrators.
+            <br />
+            Please use the Plan → Campaign workflow instead.
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate('/admin/campaigns')}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Campaigns
+            </Button>
+            <Button onClick={() => navigate('/admin/plans/new')}>
+              Create Plan Instead
+            </Button>
+          </div>
+        </div>
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer>
       <PageHeader
-        title="Create Direct Campaign"
-        description="Create a new campaign without a plan"
+        title={isHistoricalEntry ? "Enter Historical Campaign" : "Create Direct Campaign"}
+        description={isHistoricalEntry 
+          ? "Record a past campaign for FY 2025-26 (Admin Only)" 
+          : "Create a new campaign without a plan (Admin Only)"
+        }
         actions={
-          <Button variant="outline" onClick={() => navigate('/admin/campaigns')}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Campaigns
-          </Button>
+          <div className="flex gap-2">
+            <Badge variant="outline" className="flex items-center gap-1">
+              <ShieldAlert className="h-3 w-3" />
+              Admin Only
+            </Badge>
+            <Button variant="outline" onClick={() => navigate('/admin/campaigns')}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Campaigns
+            </Button>
+          </div>
         }
       />
+      
+      {/* Historical Entry Toggle */}
+      <Card className="mt-6">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <History className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <Label className="text-base font-medium">Historical Campaign Entry</Label>
+                <p className="text-sm text-muted-foreground">
+                  Enable to record past campaigns (FY 2025-26) for backfilling revenue and expenses
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={isHistoricalEntry}
+              onCheckedChange={(checked) => {
+                setIsHistoricalEntry(checked);
+                if (checked) {
+                  setFormData(prev => ({ ...prev, status: 'Completed' }));
+                } else {
+                  setFormData(prev => ({ ...prev, status: 'Planned' }));
+                }
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {isHistoricalEntry && (
+        <Alert className="mt-4 border-amber-200 bg-amber-50">
+          <Calendar className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800">
+            <strong>Historical Entry Mode:</strong> Asset conflict checks are bypassed for past dates. 
+            Make sure dates are correct before saving. This entry will be flagged as historical in reports.
+          </AlertDescription>
+        </Alert>
+      )}
       
       <div className="grid gap-6 lg:grid-cols-3 mt-6">
         <div className="lg:col-span-2 space-y-6">
@@ -350,13 +432,33 @@ export default function CampaignCreate() {
                 </div>
               </div>
 
+              {/* Status selector for historical entries */}
+              {isHistoricalEntry && (
+                <div>
+                  <Label htmlFor="status">Campaign Status *</Label>
+                  <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Completed">Completed</SelectItem>
+                      <SelectItem value="Running">Running</SelectItem>
+                      <SelectItem value="Cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div>
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea
                   id="notes"
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Add any additional notes"
+                  placeholder={isHistoricalEntry 
+                    ? "Add notes about this historical entry (e.g., invoice references, actual revenue)"
+                    : "Add any additional notes"
+                  }
                   rows={3}
                 />
               </div>

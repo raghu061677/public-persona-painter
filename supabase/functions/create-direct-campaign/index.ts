@@ -22,6 +22,8 @@ interface RequestBody {
   start_date: string;
   end_date: string;
   notes?: string;
+  status?: string;
+  is_historical_entry?: boolean;
   assets: AssetItem[];
   created_by: string;
   auto_assign?: boolean;
@@ -56,14 +58,16 @@ Deno.serve(async (req) => {
       start_date,
       end_date,
       notes,
+      status = 'Draft',
+      is_historical_entry = false,
       assets,
       created_by,
       auto_assign = false,
     } = await req.json() as RequestBody;
 
-    console.log('Creating direct campaign:', campaign_name);
+    console.log('Creating direct campaign:', campaign_name, 'Historical:', is_historical_entry);
 
-    // Verify user access to company
+    // Verify user access to company AND check admin role
     const { data: companyUser } = await supabase
       .from('company_users')
       .select('company_id, role')
@@ -77,6 +81,24 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'Unauthorized - No access to this company' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // ADMIN ONLY: Direct campaign creation requires admin role
+    if (companyUser.role !== 'admin') {
+      // Check if platform admin
+      const { data: platformAdmin } = await supabase
+        .from('platform_admins')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .maybeSingle();
+      
+      if (!platformAdmin) {
+        return new Response(
+          JSON.stringify({ error: 'Direct campaign creation requires admin privileges' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Validate required fields
@@ -99,6 +121,28 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'Client not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Check for asset conflicts (skip for historical entries)
+    if (!is_historical_entry) {
+      for (const asset of assets) {
+        const { data: conflicts } = await supabase.rpc('check_asset_conflict', {
+          p_asset_id: asset.asset_id,
+          p_start_date: start_date,
+          p_end_date: end_date,
+          p_exclude_campaign_id: null,
+        });
+
+        if (conflicts && conflicts.has_conflict) {
+          return new Response(
+            JSON.stringify({ 
+              error: `Asset ${asset.asset_id} already booked in ${conflicts.conflicting_campaigns?.[0]?.campaign_id || 'another campaign'} for overlapping period`,
+              conflict_details: conflicts.conflicting_campaigns,
+            }),
+            { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
     }
 
     // Generate campaign code
@@ -127,6 +171,12 @@ Deno.serve(async (req) => {
     const gst_amount = total_amount * (gst_percent / 100);
     const grand_total = total_amount + gst_amount;
 
+    // Determine campaign status
+    let campaign_status = status;
+    if (is_historical_entry && status === 'Draft') {
+      campaign_status = 'Completed'; // Default historical entries to Completed
+    }
+
     // Insert campaign
     const { data: campaign, error: campaignError } = await supabase
       .from('campaigns')
@@ -139,7 +189,8 @@ Deno.serve(async (req) => {
         start_date,
         end_date,
         notes,
-        status: 'Draft',
+        status: campaign_status,
+        is_historical_entry,
         total_assets: assets.length,
         total_amount,
         gst_percent,
@@ -148,7 +199,7 @@ Deno.serve(async (req) => {
         subtotal,
         printing_total,
         mounting_total,
-        created_from: 'direct',
+        created_from: is_historical_entry ? 'historical' : 'direct',
         plan_id: null,
         created_by: created_by || user.id,
         public_share_enabled: true,
@@ -163,20 +214,44 @@ Deno.serve(async (req) => {
 
     console.log('Campaign created:', campaign.id);
 
+    // Log to activity_logs for audit trail
+    await supabase.from('activity_logs').insert({
+      user_id: user.id,
+      user_name: user.email,
+      action: is_historical_entry ? 'create_historical_campaign' : 'create_direct_campaign',
+      resource_type: 'campaign',
+      resource_id: campaign.id,
+      resource_name: campaign_name,
+      details: {
+        client_id,
+        client_name: client.name,
+        start_date,
+        end_date,
+        total_assets: assets.length,
+        grand_total,
+        is_historical_entry,
+        status: campaign_status,
+      },
+    });
+
     // Add timeline event for direct campaign creation
     await supabase.functions.invoke('add-timeline-event', {
       body: {
         campaign_id: campaign.id,
         company_id,
         event_type: 'draft_created',
-        event_title: 'Campaign Created (Direct)',
-        event_description: 'Created directly from the Campaigns module',
+        event_title: is_historical_entry ? 'Historical Campaign Recorded' : 'Campaign Created (Direct)',
+        event_description: is_historical_entry 
+          ? 'Backfilled historical campaign for FY 2025-26'
+          : 'Created directly from the Campaigns module',
         created_by: user.id,
       },
     });
 
-    // Auto-update campaign status based on dates
-    await supabase.rpc('auto_update_campaign_status');
+    // Auto-update campaign status based on dates (only for non-historical)
+    if (!is_historical_entry) {
+      await supabase.rpc('auto_update_campaign_status');
+    }
 
     // Fetch full asset details for campaign_assets
     const assetIds = assets.map(a => a.asset_id);
@@ -191,6 +266,9 @@ Deno.serve(async (req) => {
     }
 
     const assetMap = new Map(assetDetails?.map(a => [a.id, a]) || []);
+
+    // Determine asset status based on historical or current
+    const assetStatus = is_historical_entry ? 'Verified' : 'Pending';
 
     // Insert campaign assets with booking dates
     const campaignAssets = assets.map(asset => {
@@ -215,7 +293,7 @@ Deno.serve(async (req) => {
         longitude: assetDetail.longitude,
         booking_start_date: start_date,
         booking_end_date: end_date,
-        status: 'Pending',
+        status: assetStatus,
       };
     });
 
@@ -230,8 +308,8 @@ Deno.serve(async (req) => {
 
     console.log(`Inserted ${campaignAssets.length} campaign assets`);
 
-    // Auto-assign operations if requested
-    if (auto_assign) {
+    // Auto-assign operations if requested (skip for historical)
+    if (auto_assign && !is_historical_entry) {
       console.log('Auto-assigning operations...');
       
       const { error: assignError } = await supabase.functions.invoke('auto-assign-operations', {
@@ -257,7 +335,8 @@ Deno.serve(async (req) => {
         campaign_code,
         total_assets: assets.length,
         grand_total,
-        auto_assigned: auto_assign,
+        auto_assigned: auto_assign && !is_historical_entry,
+        is_historical_entry,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

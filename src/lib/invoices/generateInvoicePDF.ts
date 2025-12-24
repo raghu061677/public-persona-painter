@@ -93,6 +93,33 @@ export async function generateInvoicePDF(invoiceId: string): Promise<Blob> {
     .select('*')
     .single();
 
+  // Enrich invoice items with asset dimensions from media_assets
+  let enrichedItems = Array.isArray(invoice.items) ? [...invoice.items] : [];
+  if (enrichedItems.length > 0) {
+    const assetIds = enrichedItems.map((item: any) => item.asset_id).filter(Boolean);
+    if (assetIds.length > 0) {
+      const { data: assetsData } = await supabase
+        .from('media_assets')
+        .select('id, dimensions, total_sqft')
+        .in('id', assetIds);
+      
+      if (assetsData) {
+        const assetMap = new Map(assetsData.map(a => [a.id, a]));
+        enrichedItems = enrichedItems.map((item: any) => {
+          const asset = assetMap.get(item.asset_id);
+          if (asset) {
+            return {
+              ...item,
+              dimensions: item.dimensions || asset.dimensions,
+              total_sqft: item.total_sqft || asset.total_sqft,
+            };
+          }
+          return item;
+        });
+      }
+    }
+  }
+
   // Load logo
   let logoBase64: string | null = null;
   const logoUrl = companyData?.logo_url || orgSettings?.logo_url;
@@ -106,7 +133,7 @@ export async function generateInvoicePDF(invoiceId: string): Promise<Blob> {
     invoice,
     client,
     campaign,
-    items: Array.isArray(invoice.items) ? invoice.items : [],
+    items: enrichedItems,
     company: companyData,
     orgSettings: orgSettings,
     logoBase64: logoBase64 || undefined,
@@ -309,16 +336,33 @@ function createInvoicePDF(data: InvoiceData): Blob {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 64, 175);
-    doc.text(`Campaign: ${data.campaign.campaign_name}`, leftMargin, yPos);
     
-    // Campaign dates
+    // Build campaign header with dotted line: "Campaign: Name .......... Campaign Duration: (dates)"
+    const campaignLabel = `Campaign: ${data.campaign.campaign_name}`;
+    let campaignDuration = '';
+    
     if (data.campaign.start_date && data.campaign.end_date) {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(80, 80, 80);
-      const campaignPeriod = `(${formatDate(data.campaign.start_date)} to ${formatDate(data.campaign.end_date)})`;
-      doc.text(campaignPeriod, pageWidth - rightMargin, yPos, { align: 'right' });
+      campaignDuration = `Campaign Duration: (${formatDate(data.campaign.start_date)} to ${formatDate(data.campaign.end_date)})`;
     }
+    
+    // Calculate widths for dotted fill
+    const labelWidth = doc.getTextWidth(campaignLabel);
+    const durationWidth = doc.getTextWidth(campaignDuration);
+    const availableWidth = contentWidth - labelWidth - durationWidth - 10;
+    const dotsCount = Math.max(3, Math.floor(availableWidth / 2));
+    const dots = '.'.repeat(dotsCount);
+    
+    // Draw campaign name
+    doc.text(campaignLabel, leftMargin, yPos);
+    
+    // Draw dots
+    doc.setFont('helvetica', 'normal');
+    doc.text(dots, leftMargin + labelWidth + 3, yPos);
+    
+    // Draw duration at right
+    doc.setFont('helvetica', 'bold');
+    doc.text(campaignDuration, pageWidth - rightMargin, yPos, { align: 'right' });
+    
     yPos += 8;
   }
 

@@ -46,6 +46,9 @@ interface PhotoData {
   rejection_reason: string | null;
   tags?: string[];
   isFavorite?: boolean;
+  // Enriched asset info
+  asset_code?: string;
+  asset_location?: string;
 }
 
 export default function PhotoGallery() {
@@ -168,20 +171,102 @@ export default function PhotoGallery() {
 
       if (error) throw error;
       
-      const photosWithFavorites = (data || []).map(photo => ({
-        ...photo,
-        isFavorite: favorites.has(photo.id)
-      }));
+      // Collect unique asset IDs to fetch their details
+      const assetIds = new Set<string>();
+      const potentialCampaignAssetIds = new Set<string>(); // UUIDs that might be campaign_assets.id
       
-      setPhotos(photosWithFavorites);
+      (data || []).forEach(photo => {
+        if (photo.asset_id) {
+          assetIds.add(photo.asset_id);
+          // Check if it looks like a UUID (campaign_assets.id) vs a code like "HYD-BQS-0001"
+          if (photo.asset_id.includes('-') && photo.asset_id.length === 36) {
+            potentialCampaignAssetIds.add(photo.asset_id);
+          }
+        }
+      });
+      
+      // Fetch media asset details for all unique asset IDs
+      let assetDetailsMap: Record<string, { media_asset_code: string; location: string; actual_asset_id: string }> = {};
+      
+      if (assetIds.size > 0) {
+        // First try to find in media_assets directly
+        const { data: assetsData } = await supabase
+          .from("media_assets")
+          .select("id, media_asset_code, location")
+          .in("id", Array.from(assetIds));
+        
+        if (assetsData) {
+          assetsData.forEach(asset => {
+            assetDetailsMap[asset.id] = {
+              media_asset_code: asset.media_asset_code || asset.id,
+              location: asset.location || '',
+              actual_asset_id: asset.id
+            };
+          });
+        }
+      }
+      
+      // For UUIDs that weren't found in media_assets, check campaign_assets table
+      const missingUuids = Array.from(potentialCampaignAssetIds).filter(id => !assetDetailsMap[id]);
+      if (missingUuids.length > 0) {
+        const { data: campaignAssetsData } = await supabase
+          .from("campaign_assets")
+          .select("id, asset_id, location")
+          .in("id", missingUuids);
+        
+        if (campaignAssetsData && campaignAssetsData.length > 0) {
+          // Get the actual media asset details for these
+          const mediaAssetIds = campaignAssetsData.map(ca => ca.asset_id);
+          const { data: mediaAssetsData } = await supabase
+            .from("media_assets")
+            .select("id, media_asset_code, location")
+            .in("id", mediaAssetIds);
+          
+          const mediaAssetLookup: Record<string, { media_asset_code: string; location: string }> = {};
+          if (mediaAssetsData) {
+            mediaAssetsData.forEach(ma => {
+              mediaAssetLookup[ma.id] = {
+                media_asset_code: ma.media_asset_code || ma.id,
+                location: ma.location || ''
+              };
+            });
+          }
+          
+          // Map campaign_assets.id to their actual media asset details
+          campaignAssetsData.forEach(ca => {
+            const mediaDetails = mediaAssetLookup[ca.asset_id];
+            assetDetailsMap[ca.id] = {
+              media_asset_code: mediaDetails?.media_asset_code || ca.asset_id,
+              location: mediaDetails?.location || ca.location || '',
+              actual_asset_id: ca.asset_id
+            };
+          });
+        }
+      }
+      
+      const photosWithDetails = (data || []).map(photo => {
+        const assetDetails = assetDetailsMap[photo.asset_id];
+        return {
+          ...photo,
+          isFavorite: favorites.has(photo.id),
+          // Use asset_code from media_assets, or fallback to asset_id if it looks like a code
+          asset_code: assetDetails?.media_asset_code || photo.asset_id,
+          asset_location: assetDetails?.location || '',
+          // Store the actual media asset ID for navigation
+          asset_id: assetDetails?.actual_asset_id || photo.asset_id
+        };
+      });
+      
+      setPhotos(photosWithDetails);
 
-      // Extract unique values
+      // Extract unique values - use the readable asset codes for display
       const assets = new Set<string>();
       const campaigns = new Set<string>();
       const categories = new Set<string>();
 
-      photosWithFavorites.forEach((photo) => {
-        assets.add(photo.asset_id);
+      photosWithDetails.forEach((photo) => {
+        // Use asset_code for filters if available
+        assets.add(photo.asset_code || photo.asset_id);
         if (photo.campaign_id) campaigns.add(photo.campaign_id);
         categories.add(photo.category);
       });
@@ -203,19 +288,23 @@ export default function PhotoGallery() {
   const filterPhotosData = () => {
     let result = photos;
 
-    // Search filter
+    // Search filter - search both asset_code and asset_id
     if (searchQuery) {
       result = result.filter(
         (photo) =>
+          (photo.asset_code || photo.asset_id).toLowerCase().includes(searchQuery.toLowerCase()) ||
           photo.asset_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
           photo.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          photo.campaign_id?.toLowerCase().includes(searchQuery.toLowerCase())
+          photo.campaign_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          photo.asset_location?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    // Asset filter
+    // Asset filter - match by asset_code or asset_id
     if (filterAsset && filterAsset !== "__all__") {
-      result = result.filter((photo) => photo.asset_id === filterAsset);
+      result = result.filter((photo) => 
+        (photo.asset_code === filterAsset) || (photo.asset_id === filterAsset)
+      );
     }
 
     // Campaign filter
@@ -571,8 +660,13 @@ export default function PhotoGallery() {
                         className="font-medium text-primary hover:underline cursor-pointer"
                         onClick={() => navigate(`/admin/media-assets/${photo.asset_id}`)}
                       >
-                        {photo.asset_id}
+                        {photo.asset_code || photo.asset_id}
                       </div>
+                      {photo.asset_location && (
+                        <div className="text-muted-foreground text-xs truncate" title={photo.asset_location}>
+                          {photo.asset_location}
+                        </div>
+                      )}
                       {photo.campaign_id && (
                         <div className="text-muted-foreground text-xs">
                           Campaign: {photo.campaign_id}
@@ -621,11 +715,16 @@ export default function PhotoGallery() {
                         className="font-medium text-primary hover:underline cursor-pointer"
                         onClick={() => navigate(`/admin/media-assets/${photo.asset_id}`)}
                       >
-                        {photo.asset_id}
+                        {photo.asset_code || photo.asset_id}
                       </span>
                       <Badge variant="outline" className="text-xs">{photo.category}</Badge>
                       {getStatusBadge(photo.approval_status)}
                     </div>
+                    {photo.asset_location && (
+                      <div className="text-sm text-muted-foreground truncate" title={photo.asset_location}>
+                        {photo.asset_location}
+                      </div>
+                    )}
                     {photo.campaign_id && (
                       <div className="text-sm text-muted-foreground">
                         Campaign: {photo.campaign_id}

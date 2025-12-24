@@ -11,6 +11,9 @@ import { NotificationSettings } from "@/components/operations/NotificationSettin
 import { Badge } from "@/components/ui/badge";
 import { useBreadcrumb } from "@/contexts/BreadcrumbContext";
 import { useCompany } from "@/contexts/CompanyContext";
+import { BackToCampaignButton } from "@/components/campaigns/BackToCampaignButton";
+import { CampaignBreadcrumbs } from "@/components/campaigns/CampaignBreadcrumbs";
+import { CampaignContextHeader } from "@/components/campaigns/CampaignContextHeader";
 
 interface CampaignAsset {
   id: string;
@@ -170,58 +173,59 @@ export default function CampaignAssetProofs() {
   }
 
   return (
-    <div className="flex-1 space-y-4 p-4 sm:p-8 pt-6">
-      {/* Company Branding Header */}
-      <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
-        <CardContent className="py-4">
-          <div className="flex items-center gap-4">
-            {company?.logo_url ? (
-              <img 
-                src={company.logo_url} 
-                alt={company.name}
-                className="h-14 w-auto max-w-[180px] object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-            ) : (
-              <div className="h-14 flex items-center">
-                <span className="text-2xl font-bold text-primary">{company?.name || 'Company'}</span>
-              </div>
-            )}
-            <div className="flex-1">
-              <h1 className="text-xl font-semibold text-foreground">{company?.name}</h1>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                {company?.city && company?.state && (
-                  <span>{company.city}, {company.state}</span>
-                )}
-                {company?.gstin && (
-                  <span>GSTIN: {company.gstin}</span>
-                )}
+    <div className="flex-1 flex flex-col">
+      {/* Sticky Campaign Context Header */}
+      <CampaignContextHeader />
+      
+      <div className="flex-1 space-y-4 p-4 sm:p-8 pt-6">
+        {/* Breadcrumbs */}
+        <CampaignBreadcrumbs additionalItems={[{ label: 'Asset Proof' }]} />
+        
+        {/* Company Branding Header */}
+        <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-4">
+              {company?.logo_url ? (
+                <img 
+                  src={company.logo_url} 
+                  alt={company.name}
+                  className="h-14 w-auto max-w-[180px] object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="h-14 flex items-center">
+                  <span className="text-2xl font-bold text-primary">{company?.name || 'Company'}</span>
+                </div>
+              )}
+              <div className="flex-1">
+                <h1 className="text-xl font-semibold text-foreground">{company?.name}</h1>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                  {company?.city && company?.state && (
+                    <span>{company.city}, {company.state}</span>
+                  )}
+                  {company?.gstin && (
+                    <span>GSTIN: {company.gstin}</span>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Navigation Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(`/admin/campaigns/${campaignId}`)}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">Proof of Installation</h2>
-            <p className="text-muted-foreground">
-              {asset?.location} - {asset?.city}
-            </p>
+        {/* Navigation Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BackToCampaignButton variant="ghost" size="icon" />
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight">Proof of Installation</h2>
+              <p className="text-muted-foreground">
+                {asset?.location} - {asset?.city}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
       {/* Asset Info Card with QR Code */}
       {asset && (
@@ -298,6 +302,7 @@ export default function CampaignAssetProofs() {
           Powered by Go-Ads 360 — OOH Media Platform
         </p>
       </footer>
+      </div>
     </div>
   );
 }

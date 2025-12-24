@@ -7,9 +7,12 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, QrCode, Clock, User } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { formatDate } from '@/utils/plans';
+import { BackToCampaignButton } from '@/components/campaigns/BackToCampaignButton';
+import { CampaignBreadcrumbs } from '@/components/campaigns/CampaignBreadcrumbs';
+import { CampaignContextHeader } from '@/components/campaigns/CampaignContextHeader';
 
 export default function OperationDetail() {
-  const { id } = useParams();
+  const { id, campaignId } = useParams();
   const navigate = useNavigate();
   const [operation, setOperation] = useState<any>(null);
   const [photos, setPhotos] = useState<any[]>([]);
@@ -30,7 +33,7 @@ export default function OperationDetail() {
         *,
         mounters (name, phone),
         media_assets (id, location, city, area, qr_code_url, latitude, longitude),
-        campaigns (campaign_name, client_name)
+        campaigns (id, campaign_name, client_name)
       `
       )
       .eq('id', id)
@@ -42,7 +45,13 @@ export default function OperationDetail() {
         description: 'Failed to fetch operation details',
         variant: 'destructive',
       });
-      navigate('/admin/operations');
+      // Navigate back to campaign if we have campaignId, otherwise campaigns list
+      const targetCampaignId = campaignId || opData?.campaigns?.id;
+      if (targetCampaignId) {
+        navigate(`/admin/campaigns/${targetCampaignId}`);
+      } else {
+        navigate('/admin/campaigns');
+      }
       return;
     }
 
@@ -57,6 +66,17 @@ export default function OperationDetail() {
 
     setPhotos(photosData || []);
     setLoading(false);
+  };
+
+  // Resolve the campaign ID from operation data or route params
+  const resolvedCampaignId = campaignId || operation?.campaigns?.id || operation?.campaign_id;
+
+  const handleBackClick = () => {
+    if (resolvedCampaignId) {
+      navigate(`/admin/campaigns/${resolvedCampaignId}`);
+    } else {
+      navigate('/admin/campaigns');
+    }
   };
 
   if (loading) {
@@ -90,14 +110,20 @@ export default function OperationDetail() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Sticky Campaign Context Header */}
+      <CampaignContextHeader />
+      
       <div className="container mx-auto px-4 py-6 max-w-5xl">
+        {/* Breadcrumbs */}
+        <CampaignBreadcrumbs additionalItems={[{ label: 'Operation Detail' }]} />
+        
         <Button
           variant="ghost"
-          onClick={() => navigate('/admin/operations')}
+          onClick={handleBackClick}
           className="mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Operations
+          Back to Campaign
         </Button>
 
         {/* Operation Header */}

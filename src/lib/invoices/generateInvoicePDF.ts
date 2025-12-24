@@ -305,48 +305,69 @@ function createInvoicePDF(data: InvoiceData): Blob {
   }
 
   // ========== ITEMS TABLE ==========
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.text('Invoice Items', leftMargin, yPos);
-  yPos += 4;
-
-  // Prepare table data with all required columns
+  // Prepare table data with detailed format matching reference
   const tableData = data.items.map((item: any, index: number) => {
-    const description = item.description || item.location || 'Media Display Service';
-    const dimensions = item.dimensions || item.size || '-';
+    // Build detailed location description with Zone, Media, Route, Lit
+    const assetId = item.asset_id || item.id || '';
+    const locationName = item.location || item.description || 'Media Display';
+    const zone = item.area || item.zone || '';
+    const mediaType = item.media_type || 'Bus Shelter';
+    const direction = item.direction || item.route || '';
+    const illumination = item.illumination_type || item.lit || 'NonLit';
     
-    // Booking dates from item or campaign
+    // Format multi-line description
+    const descriptionLines = [
+      `[${assetId}] ${locationName}`,
+      zone ? `Zone:${zone}` : '',
+      `Media:${mediaType}`,
+      direction ? `Route:${direction}` : '',
+      `Lit:${illumination}`
+    ].filter(Boolean).join('\n');
+    
+    // Size with dimensions and area
+    const dimensions = item.dimensions || item.size || '';
+    const totalSqft = item.total_sqft || item.area_sqft || '';
+    const sizeDisplay = dimensions 
+      ? `${dimensions}${totalSqft ? `\nArea(Sft):${totalSqft}` : ''}`
+      : '-';
+    
+    // Booking dates with month calculation
     const startDate = item.start_date || data.campaign?.start_date;
     const endDate = item.end_date || data.campaign?.end_date;
-    const bookingPeriod = startDate && endDate 
-      ? `${formatDate(startDate)} - ${formatDate(endDate)}`
-      : item.booking_period || '-';
+    let bookingDisplay = '-';
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const months = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+      bookingDisplay = `From:${formatDate(startDate)}\nTo:${formatDate(endDate)}\nMonth:${months}`;
+    }
     
-    const unitPrice = item.rate || item.unit_price || item.display_rate || 0;
+    // Pricing
+    const unitPrice = item.rate || item.unit_price || item.display_rate || item.negotiated_rate || item.card_rate || 0;
     const printingCost = item.printing_cost || item.printing_charge || 0;
     const mountingCost = item.mounting_cost || item.mounting_charge || item.installation_cost || 0;
-    const amount = item.amount || item.final_price || unitPrice;
+    
+    // Calculate subtotal (unit price + printing + mounting)
+    const subtotal = unitPrice + printingCost + mountingCost;
+    const amount = item.amount || item.final_price || subtotal;
 
     return [
       (index + 1).toString(),
-      description,
-      dimensions,
-      bookingPeriod,
+      descriptionLines,
+      sizeDisplay,
+      bookingDisplay,
       formatINR(unitPrice),
-      formatINR(printingCost),
-      formatINR(mountingCost),
       formatINR(amount),
     ];
   });
 
   autoTable(doc, {
     startY: yPos,
-    head: [['#', 'Item & Description', 'Size', 'Booking Period', 'Unit Price', 'Printing', 'Mounting', 'Amount']],
+    head: [['#', 'LOCATION & DESCRIPTION', 'SIZE', 'BOOKING', 'UNIT PRICE', 'SUBTOTAL']],
     body: tableData,
     theme: 'grid',
     headStyles: {
-      fillColor: [30, 64, 175],
+      fillColor: [30, 64, 130],
       textColor: 255,
       fontStyle: 'bold',
       fontSize: 8,
@@ -356,24 +377,29 @@ function createInvoicePDF(data: InvoiceData): Blob {
     bodyStyles: {
       fontSize: 7.5,
       textColor: [30, 30, 30],
-      valign: 'middle',
-      cellPadding: 2.5,
-    },
-    alternateRowStyles: {
-      fillColor: [249, 250, 251],
+      valign: 'top',
+      cellPadding: 3,
     },
     columnStyles: {
-      0: { cellWidth: 8, halign: 'center' },
-      1: { cellWidth: 50, halign: 'left' },
-      2: { cellWidth: 22, halign: 'center' },
-      3: { cellWidth: 28, halign: 'center', fontSize: 6.5 },
-      4: { cellWidth: 22, halign: 'right' },
-      5: { cellWidth: 18, halign: 'right' },
-      6: { cellWidth: 18, halign: 'right' },
-      7: { cellWidth: 22, halign: 'right' },
+      0: { cellWidth: 10, halign: 'center', valign: 'top' },
+      1: { cellWidth: 70, halign: 'left' },
+      2: { cellWidth: 28, halign: 'center' },
+      3: { cellWidth: 30, halign: 'center', fontSize: 7 },
+      4: { cellWidth: 25, halign: 'right' },
+      5: { cellWidth: 25, halign: 'right' },
     },
     margin: { left: leftMargin, right: rightMargin },
     tableWidth: 'auto',
+    didParseCell: function(data) {
+      // Add line height for multi-line cells
+      if (data.section === 'body') {
+        const text = data.cell.text.join('\n');
+        const lines = text.split('\n').length;
+        if (lines > 1) {
+          data.cell.styles.cellPadding = { top: 3, right: 3, bottom: 3, left: 3 };
+        }
+      }
+    },
   });
 
   // @ts-ignore
@@ -399,51 +425,57 @@ function createInvoicePDF(data: InvoiceData): Blob {
     doc.text(line, leftMargin, yPos + 5 + (i * 4));
   });
 
-  // Totals box on right
-  const totalsBoxX = pageWidth - rightMargin - 70;
-  const totalsBoxWidth = 70;
+  // ========== TOTALS SECTION - Right aligned box ==========
+  const totalsBoxX = pageWidth - rightMargin - 75;
+  const totalsBoxWidth = 75;
   
-  doc.setDrawColor(200, 200, 200);
-  doc.setFillColor(250, 251, 252);
-  doc.rect(totalsBoxX, yPos - 3, totalsBoxWidth, 38, 'FD');
-
-  let totalY = yPos + 3;
-  doc.setFontSize(8);
+  doc.setDrawColor(30, 64, 130);
+  doc.setLineWidth(0.5);
   
-  // Sub Total
-  doc.setFont('helvetica', 'normal');
-  doc.text('Sub Total:', totalsBoxX + 4, totalY);
-  doc.text(formatINR(subtotal), totalsBoxX + totalsBoxWidth - 4, totalY, { align: 'right' });
-
-  // CGST
-  totalY += 7;
-  doc.text('CGST @ 9%:', totalsBoxX + 4, totalY);
-  doc.text(formatINR(cgst), totalsBoxX + totalsBoxWidth - 4, totalY, { align: 'right' });
-
-  // SGST
-  totalY += 7;
-  doc.text('SGST @ 9%:', totalsBoxX + 4, totalY);
-  doc.text(formatINR(sgst), totalsBoxX + totalsBoxWidth - 4, totalY, { align: 'right' });
-
-  // Total line
-  totalY += 3;
-  doc.setDrawColor(180, 180, 180);
-  doc.line(totalsBoxX + 3, totalY, totalsBoxX + totalsBoxWidth - 3, totalY);
-
-  // Grand Total
-  totalY += 6;
-  doc.setFont('helvetica', 'bold');
+  // Untaxed Amount row
+  doc.setFillColor(30, 64, 130);
+  doc.rect(totalsBoxX, yPos, totalsBoxWidth, 8, 'F');
   doc.setFontSize(9);
-  doc.text('Total:', totalsBoxX + 4, totalY);
-  doc.text(formatINR(grandTotal), totalsBoxX + totalsBoxWidth - 4, totalY, { align: 'right' });
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text('Untaxed Amount:', totalsBoxX + 4, yPos + 5.5);
+  doc.text(`${formatINR(subtotal)} ₹`, totalsBoxX + totalsBoxWidth - 4, yPos + 5.5, { align: 'right' });
 
-  // Balance Due
-  totalY += 7;
-  doc.setTextColor(220, 38, 38);
-  doc.text('Balance Due:', totalsBoxX + 4, totalY);
-  doc.text(formatINR(grandTotal), totalsBoxX + totalsBoxWidth - 4, totalY, { align: 'right' });
+  // CGST row
+  yPos += 8;
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(200, 200, 200);
+  doc.rect(totalsBoxX, yPos, totalsBoxWidth, 7, 'FD');
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text('CGST Sale 9%', totalsBoxX + 4, yPos + 5);
+  doc.text(formatINR(cgst), totalsBoxX + totalsBoxWidth - 4, yPos + 5, { align: 'right' });
 
-  yPos = totalY + 15;
+  // SGST row
+  yPos += 7;
+  doc.rect(totalsBoxX, yPos, totalsBoxWidth, 7, 'FD');
+  doc.text('SGST Sale 9%', totalsBoxX + 4, yPos + 5);
+  doc.text(formatINR(sgst), totalsBoxX + totalsBoxWidth - 4, yPos + 5, { align: 'right' });
+
+  // Taxes row
+  yPos += 7;
+  doc.setFillColor(245, 247, 250);
+  doc.rect(totalsBoxX, yPos, totalsBoxWidth, 7, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.text('Taxes:', totalsBoxX + 4, yPos + 5);
+  doc.text(`${formatINR(cgst + sgst)} ₹`, totalsBoxX + totalsBoxWidth - 4, yPos + 5, { align: 'right' });
+
+  // Total row
+  yPos += 7;
+  doc.setFillColor(30, 64, 130);
+  doc.rect(totalsBoxX, yPos, totalsBoxWidth, 8, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(9);
+  doc.text('Total:', totalsBoxX + 4, yPos + 5.5);
+  doc.text(`${formatINR(grandTotal)} ₹`, totalsBoxX + totalsBoxWidth - 4, yPos + 5.5, { align: 'right' });
+
+  yPos += 15;
 
   // Check if we need a new page
   if (yPos > pageHeight - 80) {

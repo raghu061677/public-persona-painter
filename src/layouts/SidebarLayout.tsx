@@ -282,7 +282,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                       <SidebarItem
                         icon={Receipt}
                         label="Invoices"
-                        href="/admin/invoices"
+                        href="/finance/invoices"
                         collapsed={collapsed}
                       />
                       <SidebarItem

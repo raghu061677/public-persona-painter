@@ -95,7 +95,7 @@ export function CompanyWorkspaceSidebar({ collapsed, activeModules }: CompanyWor
           <SidebarItem 
             icon={DollarSign} 
             label="Invoices" 
-            href="/admin/invoices" 
+            href="/finance/invoices" 
             collapsed={collapsed}
           />
           <SidebarItem 

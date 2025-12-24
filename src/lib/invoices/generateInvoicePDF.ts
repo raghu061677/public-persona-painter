@@ -184,13 +184,15 @@ function createInvoicePDF(data: InvoiceData): Blob {
   doc.setFont('helvetica', 'normal');
   doc.text(`GSTIN : ${companyGSTIN}`, logoEndX, textY);
 
-  // TAX INVOICE title - Right side, aligned with header
-  doc.setFontSize(24);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(0, 0, 0);
-  doc.text('TAX INVOICE', pageWidth - rightMargin, yPos + logoHeight - 5, { align: 'right' });
+  yPos = yPos + logoHeight + 3;
 
-  yPos = yPos + logoHeight + 8;
+  // TAX INVOICE title - Right side, bottom of header, above the line
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
+  doc.text('TAX INVOICE', pageWidth - rightMargin, yPos, { align: 'right' });
+
+  yPos += 5;
 
   // Horizontal divider
   doc.setDrawColor(200, 200, 200);

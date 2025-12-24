@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { QrCode, MapPin, Eye, Clock } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { formatDate } from '@/utils/plans';
+import { OperationsMapView } from '@/components/operations/OperationsMapView';
 
 export default function OperationsDashboard() {
   const navigate = useNavigate();
@@ -288,14 +289,10 @@ export default function OperationsDashboard() {
           <TabsContent value="map" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Map View</CardTitle>
+                <CardTitle>Operations Map View</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[600px] bg-muted rounded-lg flex items-center justify-center">
-                  <p className="text-muted-foreground">
-                    Map view coming soon - Will display all operations on an interactive map
-                  </p>
-                </div>
+                <OperationsMapView />
               </CardContent>
             </Card>
           </TabsContent>

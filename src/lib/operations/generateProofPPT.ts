@@ -15,10 +15,12 @@ interface CampaignData {
 
 interface AssetData {
   id: string;
+  asset_code: string;
   area: string;
+  city: string;
   location: string;
   direction?: string;
-  media_id?: string;
+  media_type?: string;
   qr_code_url?: string;
   latitude?: number;
   longitude?: number;
@@ -31,10 +33,11 @@ interface PhotoData {
   longitude?: number;
   uploaded_at: string;
   asset_id: string;
+  campaign_asset_id: string;
 }
 
 interface GroupedPhotos {
-  [assetId: string]: {
+  [campaignAssetId: string]: {
     asset: AssetData;
     photos: PhotoData[];
   };
@@ -95,57 +98,80 @@ export async function generateProofOfDisplayPPT(campaignId: string): Promise<voi
       throw new Error("You don't have access to this campaign");
     }
 
-    // Fetch all photos for this campaign with company filter
-    // @ts-ignore - Complex Supabase type inference issue
-    const photoQuery = await supabase
+    // Fetch campaign_assets with snapshot data (area, city, location from campaign_assets)
+    const { data: campaignAssets, error: campaignAssetsError } = await supabase
+      .from("campaign_assets")
+      .select(`
+        id,
+        asset_id,
+        area,
+        city,
+        location,
+        direction,
+        media_type,
+        latitude,
+        longitude,
+        media_assets(qr_code_url)
+      `)
+      .eq("campaign_id", campaignId);
+
+    if (campaignAssetsError) throw campaignAssetsError;
+
+    // Create mapping from campaign_assets.id to asset data
+    const campaignAssetMap = new Map<string, AssetData>();
+    campaignAssets?.forEach(ca => {
+      campaignAssetMap.set(ca.id, {
+        id: ca.id,
+        asset_code: ca.asset_id, // This is the actual asset code like HYD-BQS-0057
+        area: ca.area || "Unknown",
+        city: ca.city || "Unknown",
+        location: ca.location || "Unknown",
+        direction: ca.direction ?? undefined,
+        media_type: ca.media_type ?? undefined,
+        latitude: ca.latitude ?? undefined,
+        longitude: ca.longitude ?? undefined,
+        qr_code_url: (ca.media_assets as any)?.qr_code_url ?? undefined,
+      });
+    });
+
+    // Fetch all photos for this campaign
+    // media_photos.asset_id stores campaign_assets.id (UUID), not media_assets.id
+    const { data: photos, error: photosError } = await supabase
       .from("media_photos")
       .select("*")
       .eq("campaign_id", campaignId)
       .eq("company_id", campaign.company_id)
       .order("asset_id", { ascending: true })
       .order("uploaded_at", { ascending: true });
-    
-    const photos = (photoQuery?.data || []) as any[];
-    const photosError = photoQuery?.error;
 
     if (photosError) throw photosError;
     if (!photos || photos.length === 0) {
       throw new Error("No photos available for this campaign");
     }
 
-    // Get unique asset IDs
-    const assetIds = [...new Set(photos.map(p => p.asset_id))];
-
-    // Fetch asset details with company filter - include QR code data
-    const { data: assets, error: assetsError } = await supabase
-      .from("media_assets")
-      .select("id, area, location, direction, media_asset_code, qr_code_url, latitude, longitude")
-      .eq("company_id", campaign.company_id)
-      .in("id", assetIds);
-
-    if (assetsError) throw assetsError;
-
-    // Group photos by asset
+    // Group photos by campaign_assets.id
     const grouped: GroupedPhotos = {};
     
-    photos.forEach((photo) => {
-      if (!grouped[photo.asset_id]) {
-        const asset = assets?.find(a => a.id === photo.asset_id);
-        grouped[photo.asset_id] = {
-          asset: {
-            id: photo.asset_id,
-            area: asset?.area || "Unknown",
-            location: asset?.location || "Unknown",
-            direction: asset?.direction ?? undefined,
-            media_id: asset?.media_asset_code ?? undefined,
-            qr_code_url: asset?.qr_code_url ?? undefined,
-            latitude: asset?.latitude ?? undefined,
-            longitude: asset?.longitude ?? undefined,
+    photos.forEach((photo: any) => {
+      const campaignAssetId = photo.asset_id; // This is campaign_assets.id
+      const assetData = campaignAssetMap.get(campaignAssetId);
+      
+      if (!grouped[campaignAssetId]) {
+        grouped[campaignAssetId] = {
+          asset: assetData || {
+            id: campaignAssetId,
+            asset_code: campaignAssetId,
+            area: "Unknown",
+            city: "Unknown",
+            location: "Unknown",
           },
           photos: [],
         };
       }
-      grouped[photo.asset_id].photos.push(photo);
+      grouped[campaignAssetId].photos.push({
+        ...photo,
+        campaign_asset_id: campaignAssetId,
+      });
     });
 
     // Generate PPT
@@ -157,11 +183,14 @@ export async function generateProofOfDisplayPPT(campaignId: string): Promise<voi
     pptx.title = `Proof of Display - ${campaign.campaign_name}`;
     pptx.subject = "Campaign Proof of Installation";
 
+    // Count unique assets with photos
+    const assetsWithPhotos = Object.keys(grouped).length;
+
     // Add title slide
-    await addTitleSlide(pptx, campaign, assetIds.length, photos.length);
+    await addTitleSlide(pptx, campaign, assetsWithPhotos, photos.length);
 
     // Add asset slides
-    for (const [assetId, data] of Object.entries(grouped)) {
+    for (const [campaignAssetId, data] of Object.entries(grouped)) {
       await addAssetSlides(pptx, data.asset, data.photos);
     }
 
@@ -267,8 +296,8 @@ async function addAssetSlides(
     const slide = pptx.addSlide();
     slide.background = { color: "FFFFFF" };
 
-    // Asset title
-    const title = `Asset: ${asset.media_id || asset.id} – ${asset.location}`;
+    // Asset title - use asset_code (like HYD-BQS-0057) and location
+    const title = `Asset: ${asset.asset_code} – ${asset.location}`;
     slide.addText(title, {
       x: 0.5,
       y: 0.3,
@@ -291,12 +320,13 @@ async function addAssetSlides(
       });
     }
 
-    // Asset details
+    // Asset details - show Area, City, Location, Media Type
     const details = [];
-    if (asset.area) details.push(`Area: ${asset.area}`);
-    if (asset.location) details.push(`Location: ${asset.location}`);
+    if (asset.area && asset.area !== "Unknown") details.push(`Area: ${asset.area}`);
+    if (asset.city && asset.city !== "Unknown") details.push(`City: ${asset.city}`);
+    if (asset.location && asset.location !== "Unknown") details.push(`Location: ${asset.location}`);
     if (asset.direction) details.push(`Direction: ${asset.direction}`);
-    if (asset.media_id) details.push(`Media ID: ${asset.media_id}`);
+    if (asset.media_type) details.push(`Type: ${asset.media_type}`);
 
     if (details.length > 0) {
       slide.addText(details.join(" | "), {
@@ -319,8 +349,8 @@ async function addAssetSlides(
       addPhotoToSlide(slide, photo2, 5.0, 1.5, 4.5, 4.5, qrData);
     }
 
-    // Footer
-    slide.addText("Go-Ads 360° - Proof of Display", {
+    // Footer with page indicator
+    slide.addText("Powered by Go-Ads 360° — OOH Media Platform", {
       x: 0.5,
       y: 7,
       w: 9,

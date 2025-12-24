@@ -18,6 +18,7 @@ import { CreateCampaignFromPlanDialog } from "@/components/campaigns/CreateCampa
 import { CampaignTemplatesDialog } from "@/components/campaigns/CampaignTemplatesDialog";
 import { BulkStatusUpdateDialog } from "@/components/campaigns/BulkStatusUpdateDialog";
 import { CampaignHealthAlerts } from "@/components/campaigns/CampaignHealthAlerts";
+import { DeleteCampaignDialog } from "@/components/campaigns/DeleteCampaignDialog";
 import { getCampaignStatusConfig } from "@/utils/statusBadges";
 import { getCampaignStatusColor } from "@/utils/campaigns";
 import { formatDate as formatPlanDate } from "@/utils/plans";
@@ -46,6 +47,10 @@ export default function CampaignsList() {
   const [selectedCampaigns, setSelectedCampaigns] = useState<Set<string>>(new Set());
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; campaign: any | null }>({
+    open: false,
+    campaign: null,
+  });
 
   const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("campaigns");
   const { 
@@ -146,10 +151,12 @@ export default function CampaignsList() {
     const selectedCompanyId = localStorage.getItem('selected_company_id') || companyUserData.company_id;
 
     // CRITICAL: Filter by company_id for multi-tenant isolation
+    // Also filter out soft-deleted campaigns
     const { data, error } = await supabase
       .from('campaigns')
       .select('*')
       .eq('company_id', selectedCompanyId)
+      .or('is_deleted.is.null,is_deleted.eq.false')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -185,27 +192,8 @@ export default function CampaignsList() {
   
   const uniqueStatuses = Array.from(new Set(campaigns.map(c => c.status).filter(Boolean)));
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this campaign?")) return;
-
-    const { error } = await supabase
-      .from('campaigns')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete campaign",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "Campaign deleted successfully",
-      });
-      fetchCampaigns();
-    }
+  const handleOpenDeleteDialog = (campaign: any) => {
+    setDeleteDialog({ open: true, campaign });
   };
 
   const handleBulkAction = async (actionId: string) => {
@@ -588,7 +576,7 @@ export default function CampaignsList() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleDelete(campaign.id)}
+                              onClick={() => handleOpenDeleteDialog(campaign)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -615,6 +603,17 @@ export default function CampaignsList() {
             navigate('/admin/campaigns');
           }}
         />
+        
+        {/* Delete Campaign Dialog */}
+        {deleteDialog.campaign && (
+          <DeleteCampaignDialog
+            open={deleteDialog.open}
+            onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}
+            campaignId={deleteDialog.campaign.id}
+            campaignName={deleteDialog.campaign.campaign_name}
+            onDeleted={fetchCampaigns}
+          />
+        )}
       </PageContainer>
     </div>
   );

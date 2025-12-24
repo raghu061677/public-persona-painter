@@ -458,6 +458,20 @@ export type Database = {
             foreignKeyName: "asset_bookings_asset_id_fkey"
             columns: ["asset_id"]
             isOneToOne: false
+            referencedRelation: "asset_profitability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_bookings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_revenue_summary"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_bookings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
             referencedRelation: "asset_utilization"
             referencedColumns: ["asset_id"]
           },
@@ -573,6 +587,20 @@ export type Database = {
             foreignKeyName: "asset_expenses_asset_id_fkey"
             columns: ["asset_id"]
             isOneToOne: false
+            referencedRelation: "asset_profitability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_revenue_summary"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
             referencedRelation: "asset_utilization"
             referencedColumns: ["asset_id"]
           },
@@ -653,6 +681,20 @@ export type Database = {
           vendor_name?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "asset_maintenance_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_profitability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_maintenance_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_revenue_summary"
+            referencedColumns: ["asset_id"]
+          },
           {
             foreignKeyName: "asset_maintenance_asset_id_fkey"
             columns: ["asset_id"]
@@ -834,6 +876,20 @@ export type Database = {
             foreignKeyName: "asset_power_bills_asset_id_fkey"
             columns: ["asset_id"]
             isOneToOne: false
+            referencedRelation: "asset_profitability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_power_bills_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_revenue_summary"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_power_bills_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
             referencedRelation: "asset_utilization"
             referencedColumns: ["asset_id"]
           },
@@ -980,6 +1036,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "booking_requests_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_profitability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "booking_requests_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_revenue_summary"
+            referencedColumns: ["asset_id"]
+          },
           {
             foreignKeyName: "booking_requests_asset_id_fkey"
             columns: ["asset_id"]
@@ -1139,6 +1209,20 @@ export type Database = {
             foreignKeyName: "campaign_assets_asset_id_fkey"
             columns: ["asset_id"]
             isOneToOne: false
+            referencedRelation: "asset_profitability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_revenue_summary"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
             referencedRelation: "asset_utilization"
             referencedColumns: ["asset_id"]
           },
@@ -1267,6 +1351,42 @@ export type Database = {
           },
         ]
       }
+      campaign_deletions: {
+        Row: {
+          assets_released: number | null
+          campaign_data: Json | null
+          campaign_id: string
+          campaign_name: string | null
+          client_name: string | null
+          deleted_at: string | null
+          deleted_by: string
+          deletion_reason: string
+          id: string
+        }
+        Insert: {
+          assets_released?: number | null
+          campaign_data?: Json | null
+          campaign_id: string
+          campaign_name?: string | null
+          client_name?: string | null
+          deleted_at?: string | null
+          deleted_by: string
+          deletion_reason: string
+          id?: string
+        }
+        Update: {
+          assets_released?: number | null
+          campaign_data?: Json | null
+          campaign_id?: string
+          campaign_name?: string | null
+          client_name?: string | null
+          deleted_at?: string | null
+          deleted_by?: string
+          deletion_reason?: string
+          id?: string
+        }
+        Relationships: []
+      }
       campaign_item_faces: {
         Row: {
           asset_id: string
@@ -1308,6 +1428,20 @@ export type Database = {
           width?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "campaign_item_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_profitability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "campaign_item_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_revenue_summary"
+            referencedColumns: ["asset_id"]
+          },
           {
             foreignKeyName: "campaign_item_faces_asset_id_fkey"
             columns: ["asset_id"]
@@ -1402,6 +1536,20 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "campaign_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_profitability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "campaign_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_revenue_summary"
+            referencedColumns: ["asset_id"]
+          },
           {
             foreignKeyName: "campaign_items_asset_id_fkey"
             columns: ["asset_id"]
@@ -1642,11 +1790,16 @@ export type Database = {
           created_at: string | null
           created_by: string
           created_from: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          deletion_reason: string | null
           end_date: string
           grand_total: number
           gst_amount: number
           gst_percent: number
           id: string
+          is_deleted: boolean | null
+          is_historical_entry: boolean | null
           mounting_total: number | null
           notes: string | null
           notification_settings: Json | null
@@ -1670,11 +1823,16 @@ export type Database = {
           created_at?: string | null
           created_by: string
           created_from?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          deletion_reason?: string | null
           end_date: string
           grand_total: number
           gst_amount: number
           gst_percent: number
           id: string
+          is_deleted?: boolean | null
+          is_historical_entry?: boolean | null
           mounting_total?: number | null
           notes?: string | null
           notification_settings?: Json | null
@@ -1698,11 +1856,16 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           created_from?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          deletion_reason?: string | null
           end_date?: string
           grand_total?: number
           gst_amount?: number
           gst_percent?: number
           id?: string
+          is_deleted?: boolean | null
+          is_historical_entry?: boolean | null
           mounting_total?: number | null
           notes?: string | null
           notification_settings?: Json | null
@@ -2942,6 +3105,7 @@ export type Database = {
       invoices: {
         Row: {
           balance_due: number
+          campaign_id: string | null
           client_id: string
           client_name: string
           company_id: string | null
@@ -2953,8 +3117,12 @@ export type Database = {
           gst_percent: number
           id: string
           invoice_date: string
+          invoice_period_end: string | null
+          invoice_period_start: string | null
+          is_monthly_split: boolean | null
           items: Json | null
           notes: string | null
+          parent_invoice_id: string | null
           payments: Json | null
           status: Database["public"]["Enums"]["invoice_status"]
           sub_total: number
@@ -2963,6 +3131,7 @@ export type Database = {
         }
         Insert: {
           balance_due: number
+          campaign_id?: string | null
           client_id: string
           client_name: string
           company_id?: string | null
@@ -2974,8 +3143,12 @@ export type Database = {
           gst_percent?: number
           id: string
           invoice_date: string
+          invoice_period_end?: string | null
+          invoice_period_start?: string | null
+          is_monthly_split?: boolean | null
           items?: Json | null
           notes?: string | null
+          parent_invoice_id?: string | null
           payments?: Json | null
           status?: Database["public"]["Enums"]["invoice_status"]
           sub_total: number
@@ -2984,6 +3157,7 @@ export type Database = {
         }
         Update: {
           balance_due?: number
+          campaign_id?: string | null
           client_id?: string
           client_name?: string
           company_id?: string | null
@@ -2995,8 +3169,12 @@ export type Database = {
           gst_percent?: number
           id?: string
           invoice_date?: string
+          invoice_period_end?: string | null
+          invoice_period_start?: string | null
+          is_monthly_split?: boolean | null
           items?: Json | null
           notes?: string | null
+          parent_invoice_id?: string | null
           payments?: Json | null
           status?: Database["public"]["Enums"]["invoice_status"]
           sub_total?: number
@@ -3004,6 +3182,27 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "invoices_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_forecast"
+            referencedColumns: ["campaign_id"]
+          },
           {
             foreignKeyName: "invoices_company_id_fkey"
             columns: ["company_id"]
@@ -3229,6 +3428,20 @@ export type Database = {
             foreignKeyName: "marketplace_inquiry_assets_asset_id_fkey"
             columns: ["asset_id"]
             isOneToOne: false
+            referencedRelation: "asset_profitability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "marketplace_inquiry_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_revenue_summary"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "marketplace_inquiry_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
             referencedRelation: "asset_utilization"
             referencedColumns: ["asset_id"]
           },
@@ -3313,6 +3526,20 @@ export type Database = {
           width?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "media_asset_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_profitability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "media_asset_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_revenue_summary"
+            referencedColumns: ["asset_id"]
+          },
           {
             foreignKeyName: "media_asset_faces_asset_id_fkey"
             columns: ["asset_id"]
@@ -3943,6 +4170,20 @@ export type Database = {
           status?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "operations_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_profitability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "operations_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_revenue_summary"
+            referencedColumns: ["asset_id"]
+          },
           {
             foreignKeyName: "operations_asset_id_fkey"
             columns: ["asset_id"]
@@ -4583,6 +4824,20 @@ export type Database = {
             foreignKeyName: "plan_item_faces_asset_id_fkey"
             columns: ["asset_id"]
             isOneToOne: false
+            referencedRelation: "asset_profitability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "plan_item_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_revenue_summary"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "plan_item_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
             referencedRelation: "asset_utilization"
             referencedColumns: ["asset_id"]
           },
@@ -4734,6 +4989,20 @@ export type Database = {
             foreignKeyName: "plan_items_asset_id_fkey"
             columns: ["asset_id"]
             isOneToOne: false
+            referencedRelation: "asset_profitability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "plan_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_revenue_summary"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "plan_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
             referencedRelation: "asset_utilization"
             referencedColumns: ["asset_id"]
           },
@@ -4809,6 +5078,20 @@ export type Database = {
           template_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "plan_template_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_profitability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "plan_template_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_revenue_summary"
+            referencedColumns: ["asset_id"]
+          },
           {
             foreignKeyName: "plan_template_items_asset_id_fkey"
             columns: ["asset_id"]
@@ -6067,6 +6350,131 @@ export type Database = {
       }
     }
     Views: {
+      asset_expense_summary: {
+        Row: {
+          area: string | null
+          asset_id: string | null
+          city: string | null
+          company_id: string | null
+          expenses_by_category: Json | null
+          fy_expenses: number | null
+          location: string | null
+          media_asset_code: string | null
+          total_expense_records: number | null
+          total_expenses: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_profitability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_revenue_summary"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_utilization"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_forecast"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_calendar_heatmap"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_assets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_profitability: {
+        Row: {
+          area: string | null
+          asset_id: string | null
+          city: string | null
+          company_id: string | null
+          fy_campaigns: number | null
+          fy_expenses: number | null
+          fy_net_profit: number | null
+          fy_revenue: number | null
+          location: string | null
+          media_asset_code: string | null
+          media_type: string | null
+          net_profit: number | null
+          profit_margin_percent: number | null
+          total_campaigns: number | null
+          total_expenses: number | null
+          total_revenue: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_assets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_revenue_summary: {
+        Row: {
+          area: string | null
+          asset_id: string | null
+          city: string | null
+          company_id: string | null
+          fy_campaigns: number | null
+          fy_revenue: number | null
+          location: string | null
+          media_asset_code: string | null
+          media_type: string | null
+          total_campaigns: number | null
+          total_revenue: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_assets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_utilization: {
         Row: {
           area: string | null
@@ -6481,6 +6889,10 @@ export type Database = {
         Args: { p_city: string; p_media_type: string }
         Returns: string
       }
+      generate_monthly_invoices: {
+        Args: { p_campaign_id: string; p_created_by: string }
+        Returns: Json
+      }
       generate_new_media_asset_code: {
         Args: { p_area: string; p_city: string; p_media_type: string }
         Returns: string
@@ -6729,6 +7141,14 @@ export type Database = {
       seed_demo_companies: { Args: never; Returns: Json }
       setup_platform_admin: {
         Args: { p_company_name?: string; p_user_email: string }
+        Returns: Json
+      }
+      soft_delete_campaign: {
+        Args: {
+          p_campaign_id: string
+          p_deleted_by: string
+          p_deletion_reason: string
+        }
         Returns: Json
       }
       test_company_rls_isolation: {

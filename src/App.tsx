@@ -186,6 +186,7 @@ const OperationsDashboard = lazy(() => import("./pages/OperationsDashboard"));
 const PublicCampaignTracking = lazy(() => import("./pages/PublicCampaignTracking"));
 const MounterTasks = lazy(() => import("./pages/MounterTasks"));
 const OperationDetail = lazy(() => import("./pages/OperationDetail"));
+const CampaignAssetsRedirect = lazy(() => import("./pages/CampaignAssetsRedirect"));
 const InventoryUtilization = lazy(() => import("./pages/InventoryUtilization"));
 const RevenueForecast = lazy(() => import("./pages/RevenueForecast"));
 const MediaAssetDuplicates = lazy(() => import("./pages/admin/MediaAssetDuplicates"));
@@ -312,6 +313,7 @@ const App = () => (
             <Route path="/admin/operations" element={<ModernAppLayout><OperationsDashboard /></ModernAppLayout>} />
             <Route path="/admin/operations/:id" element={<ModernAppLayout><OperationDetail /></ModernAppLayout>} />
             <Route path="/admin/operations/:campaignId/assets/:assetId" element={<ModernAppLayout><CampaignAssetProofs /></ModernAppLayout>} />
+            <Route path="/admin/operations/:campaignId/assets" element={<ModernAppLayout><CampaignAssetsRedirect /></ModernAppLayout>} />
             <Route path="/admin/operations/creatives" element={<ModernAppLayout><OperationsCreatives /></ModernAppLayout>} />
             <Route path="/admin/operations/printing" element={<ModernAppLayout><OperationsPrinting /></ModernAppLayout>} />
             <Route path="/admin/operations/proof-uploads" element={<ModernAppLayout><OperationsProofUploads /></ModernAppLayout>} />

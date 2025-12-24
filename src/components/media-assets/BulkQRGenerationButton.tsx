@@ -20,36 +20,53 @@ export function BulkQRGenerationButton() {
 
   const handleBulkGenerate = async () => {
     setIsGenerating(true);
-    
+
     try {
-      const { data, error } = await supabase.functions.invoke('generate-all-asset-qr', { body: {} });
+      let startAfterId: string | null = null;
+      let totalSucceeded = 0;
+      let totalFailed = 0;
+      let loops = 0;
 
-      if (error) {
-        throw error;
-      }
+      // Process in safe batches to avoid backend CPU timeouts
+      while (loops < 25) {
+        loops++;
 
-      const result = data as {
-        success: boolean;
-        total: number;
-        succeeded: number;
-        failed: number;
-        message: string;
-        errors?: string[];
-      };
-
-      if (result.success) {
-        toast({
-          title: 'QR Codes Generated',
-          description: `${result.succeeded} QR codes generated successfully${result.failed > 0 ? `. ${result.failed} failed.` : ''}`,
-          variant: result.failed > 0 ? 'default' : 'default',
+        const { data, error } = await supabase.functions.invoke('generate-all-asset-qr', {
+          body: {
+            batch_size: 15,
+            start_after_id: startAfterId,
+          },
         });
 
-        if (result.errors && result.errors.length > 0) {
-          console.error('QR generation errors:', result.errors);
+        if (error) throw error;
+
+        const result = data as {
+          success: boolean;
+          total: number;
+          succeeded: number;
+          failed: number;
+          message: string;
+          errors?: string[];
+          has_more?: boolean;
+          last_processed_id?: string | null;
+        };
+
+        if (!result.success) {
+          throw new Error('Generation failed');
         }
-      } else {
-        throw new Error('Generation failed');
+
+        totalSucceeded += result.succeeded ?? 0;
+        totalFailed += result.failed ?? 0;
+        startAfterId = result.last_processed_id ?? startAfterId;
+
+        // Stop if there are no more assets
+        if (!result.has_more || (result.total ?? 0) === 0) break;
       }
+
+      toast({
+        title: 'QR Code Generation Completed',
+        description: `${totalSucceeded} generated successfully${totalFailed > 0 ? `, ${totalFailed} failed.` : '.'}`,
+      });
     } catch (error) {
       console.error('Bulk QR generation error:', error);
       toast({

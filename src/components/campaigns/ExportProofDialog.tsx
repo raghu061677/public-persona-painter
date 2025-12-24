@@ -113,13 +113,16 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
       // Fetch snapshot assets + uploaded photos.
       const { data: campaignAssets, error: assetsError } = await supabase
         .from("campaign_assets")
-        .select("id, asset_id, city, area, location")
+        .select("id, asset_id, city, area, location, media_type, status")
         .eq("campaign_id", campaignId)
         .order("created_at");
 
       if (assetsError) throw assetsError;
+      if (!campaignAssets || campaignAssets.length === 0) {
+        throw new Error("No assets found for this campaign");
+      }
 
-      const campaignAssetIds = (campaignAssets || []).map((a) => a.id);
+      const campaignAssetIds = campaignAssets.map((a) => a.id);
 
       const { data: photos, error: photosError } = await supabase
         .from("media_photos")
@@ -131,25 +134,11 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
 
       if (photosError) throw photosError;
 
-      const assetById = new Map<string, any>();
-      (campaignAssets || []).forEach((a) => assetById.set(a.id, a));
-
-      const grouped = (photos || []).reduce((acc, p) => {
+      // Group photos by campaign_assets.id
+      const photosByAsset = (photos || []).reduce((acc, p) => {
         (acc[p.asset_id] ||= []).push(p);
         return acc;
       }, {} as Record<string, any[]>);
-
-      const assetsWithPhotos = Object.entries(grouped)
-        .map(([campaignAssetId, assetPhotos]) => ({
-          campaignAssetId,
-          asset: assetById.get(campaignAssetId),
-          photos: assetPhotos,
-        }))
-        .filter((x) => x.photos.length > 0);
-
-      if (assetsWithPhotos.length === 0) {
-        throw new Error("No proof photos found for this campaign");
-      }
 
       const pptx = new PptxGenJS();
       pptx.layout = "LAYOUT_16x9";
@@ -157,17 +146,118 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
       pptx.company = "Go-Ads";
       pptx.title = `${campaignName} - Proof of Performance`;
 
-      // IMPORTANT: User requested 2 images per slide and total slides based on assets.
-      // So we generate ONLY proof slides (no cover/summary) to match expected slide count.
-      for (const entry of assetsWithPhotos) {
-        const assetCode = entry.asset?.asset_id || entry.campaignAssetId;
-        const headerLine1 = `${assetCode} - ${entry.asset?.location || ""}`.trim();
-        const headerLine2 = [entry.asset?.area, entry.asset?.city].filter(Boolean).join(", ");
+      // ========== SLIDE 1: Title/Cover ==========
+      const titleSlide = pptx.addSlide();
+      titleSlide.background = { color: "1E40AF" };
+      titleSlide.addText(campaignName, {
+        x: 0.5,
+        y: 2.0,
+        w: 12.3,
+        h: 1.2,
+        fontSize: 44,
+        bold: true,
+        color: "FFFFFF",
+        align: "center",
+      });
+      titleSlide.addText("Proof of Performance Report", {
+        x: 0.5,
+        y: 3.3,
+        w: 12.3,
+        h: 0.6,
+        fontSize: 24,
+        color: "E0E7FF",
+        align: "center",
+      });
+      titleSlide.addText(`Total Assets: ${campaignAssets.length}`, {
+        x: 0.5,
+        y: 4.2,
+        w: 12.3,
+        h: 0.5,
+        fontSize: 18,
+        color: "E0E7FF",
+        align: "center",
+      });
+      titleSlide.addText("Powered by Go-Ads 360° — OOH Media Platform", {
+        x: 0.5,
+        y: 7.0,
+        w: 12.3,
+        h: 0.4,
+        fontSize: 12,
+        color: "94A3B8",
+        align: "center",
+      });
 
-        // 2 images per slide
-        for (let i = 0; i < entry.photos.length; i += 2) {
+      // ========== SLIDE 2: Campaign Summary ==========
+      const summarySlide = pptx.addSlide();
+      summarySlide.addText("Campaign Summary", {
+        x: 0.5,
+        y: 0.5,
+        w: 12.3,
+        h: 0.8,
+        fontSize: 32,
+        bold: true,
+        color: "1E40AF",
+      });
+
+      const verifiedCount = campaignAssets.filter((a) => a.status === "Verified" || a.status === "Completed").length;
+      const installedCount = campaignAssets.filter((a) => a.status === "Installed").length;
+      const totalPhotos = photos?.length || 0;
+      const assetsWithPhotos = Object.keys(photosByAsset).length;
+
+      const summaryData = [
+        ["Metric", "Value"],
+        ["Total Assets", campaignAssets.length.toString()],
+        ["Assets with Photos", assetsWithPhotos.toString()],
+        ["Total Photos Uploaded", totalPhotos.toString()],
+        ["Verified Assets", verifiedCount.toString()],
+        ["Installed Assets", installedCount.toString()],
+        ["Completion Rate", `${Math.round((verifiedCount / campaignAssets.length) * 100)}%`],
+      ];
+
+      summarySlide.addTable(
+        summaryData.map((row, idx) =>
+          row.map((cell) => ({
+            text: cell,
+            options: {
+              bold: idx === 0,
+              fill: { color: idx === 0 ? "1E40AF" : "F8FAFC" },
+              color: idx === 0 ? "FFFFFF" : "333333",
+            },
+          }))
+        ),
+        {
+          x: 1.5,
+          y: 1.8,
+          w: 10.3,
+          rowH: 0.6,
+          fontSize: 16,
+          border: { pt: 1, color: "DDDDDD" },
+        }
+      );
+
+      summarySlide.addText("Powered by Go-Ads 360° — OOH Media Platform", {
+        x: 0.5,
+        y: 7.0,
+        w: 12.3,
+        h: 0.4,
+        fontSize: 12,
+        color: "94A3B8",
+        align: "center",
+      });
+
+      // ========== ASSET SLIDES: Each asset with 2 photos per slide ==========
+      for (const asset of campaignAssets) {
+        const assetPhotos = photosByAsset[asset.id] || [];
+        const assetCode = asset.asset_id || asset.id;
+        const headerLine1 = `${assetCode} - ${asset.location || ""}`.trim();
+        const headerLine2 = [asset.area, asset.city].filter(Boolean).join(", ");
+        const mediaType = asset.media_type || "Media Asset";
+
+        if (assetPhotos.length === 0) {
+          // Create 1 slide for asset with no photos
           const slide = pptx.addSlide();
-
+          
+          // Header
           slide.addText(headerLine1, {
             x: 0.5,
             y: 0.3,
@@ -177,73 +267,135 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
             bold: true,
             color: "1E40AF",
           });
+          slide.addText(`${mediaType} | ${headerLine2}`, {
+            x: 0.5,
+            y: 0.85,
+            w: 12.3,
+            h: 0.35,
+            fontSize: 14,
+            color: "666666",
+          });
 
-          if (headerLine2) {
-            slide.addText(headerLine2, {
-              x: 0.5,
-              y: 0.8,
-              w: 12.3,
-              h: 0.3,
-              fontSize: 14,
-              color: "666666",
-            });
-          }
-
-          const photoWidth = 5.9;
-          const photoHeight = 5.4;
-          const positions = [
-            { x: 0.5, y: 1.4 },
-            { x: 6.8, y: 1.4 },
-          ];
-
-          const batch = entry.photos.slice(i, i + 2);
-          batch.forEach((p: any, index: number) => {
-            const pos = positions[index];
-            if (!pos) return;
-
-            try {
-              slide.addImage({
-                path: p.photo_url,
-                x: pos.x,
-                y: pos.y,
-                w: photoWidth,
-                h: photoHeight,
-                sizing: { type: "contain", w: photoWidth, h: photoHeight },
-              });
-            } catch (e) {
-              console.warn("Could not add photo:", e);
-              slide.addText("Photo Missing", {
-                x: pos.x,
-                y: pos.y,
-                w: photoWidth,
-                h: photoHeight,
-                align: "center",
-                valign: "middle",
-              });
-            }
-
-            // Label
-            slide.addText(p.category || "Photo", {
-              x: pos.x,
-              y: pos.y + photoHeight + 0.1,
-              w: photoWidth,
-              h: 0.3,
-              fontSize: 10,
-              align: "center",
-              color: "666666",
-            });
+          // No photos message
+          slide.addShape(pptx.ShapeType.rect, {
+            x: 2.0,
+            y: 2.5,
+            w: 9.3,
+            h: 3.0,
+            fill: { color: "FEF3C7" },
+            line: { color: "F59E0B", width: 2 },
+          });
+          slide.addText("No proof photos uploaded for this asset", {
+            x: 2.0,
+            y: 3.5,
+            w: 9.3,
+            h: 0.8,
+            fontSize: 18,
+            color: "92400E",
+            align: "center",
+            valign: "middle",
           });
 
           // Footer
           slide.addText("Powered by Go-Ads 360° — OOH Media Platform", {
             x: 0.5,
-            y: 7.1,
+            y: 7.0,
             w: 12.3,
-            h: 0.3,
-            fontSize: 10,
+            h: 0.4,
+            fontSize: 12,
             color: "94A3B8",
             align: "center",
           });
+        } else {
+          // 2 images per slide
+          for (let i = 0; i < assetPhotos.length; i += 2) {
+            const slide = pptx.addSlide();
+
+            // Header
+            slide.addText(headerLine1, {
+              x: 0.5,
+              y: 0.3,
+              w: 12.3,
+              h: 0.5,
+              fontSize: 20,
+              bold: true,
+              color: "1E40AF",
+            });
+            slide.addText(`${mediaType} | ${headerLine2}`, {
+              x: 0.5,
+              y: 0.85,
+              w: 12.3,
+              h: 0.35,
+              fontSize: 14,
+              color: "666666",
+            });
+
+            const photoWidth = 5.8;
+            const photoHeight = 4.8;
+            const positions = [
+              { x: 0.5, y: 1.5 },
+              { x: 6.8, y: 1.5 },
+            ];
+
+            const batch = assetPhotos.slice(i, i + 2);
+            batch.forEach((p: any, index: number) => {
+              const pos = positions[index];
+              if (!pos) return;
+
+              try {
+                slide.addImage({
+                  path: p.photo_url,
+                  x: pos.x,
+                  y: pos.y,
+                  w: photoWidth,
+                  h: photoHeight,
+                  sizing: { type: "contain", w: photoWidth, h: photoHeight },
+                });
+              } catch (e) {
+                console.warn("Could not add photo:", e);
+                slide.addShape(pptx.ShapeType.rect, {
+                  x: pos.x,
+                  y: pos.y,
+                  w: photoWidth,
+                  h: photoHeight,
+                  fill: { color: "F1F5F9" },
+                  line: { color: "CBD5E1" },
+                });
+                slide.addText("Photo failed to load", {
+                  x: pos.x,
+                  y: pos.y + photoHeight / 2 - 0.2,
+                  w: photoWidth,
+                  h: 0.4,
+                  fontSize: 12,
+                  color: "64748B",
+                  align: "center",
+                });
+              }
+
+              // Label below photo
+              slide.addText(p.category || "Photo", {
+                x: pos.x,
+                y: pos.y + photoHeight + 0.1,
+                w: photoWidth,
+                h: 0.35,
+                fontSize: 11,
+                align: "center",
+                color: "666666",
+                bold: true,
+              });
+            });
+
+            // Footer
+            slide.addText("Powered by Go-Ads 360° — OOH Media Platform", {
+              x: 0.5,
+              y: 7.0,
+              w: 12.3,
+              h: 0.4,
+              fontSize: 12,
+              color: "94A3B8",
+              align: "center",
+            });
+          }
         }
       }
 
@@ -251,7 +403,7 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
 
       toast({
         title: "Exported",
-        description: "PowerPoint generated with all uploaded proof photos (2 per slide).",
+        description: `PPT generated with ${campaignAssets.length} assets (${Object.keys(photosByAsset).length} with photos).`,
       });
     } catch (error: any) {
       toast({

@@ -48,8 +48,9 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
   const [isProcessing, setIsProcessing] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string>();
   const [orgName, setOrgName] = useState<string>();
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>();
 
-  // Load organization settings for watermark
+  // Load organization settings for watermark and asset QR code
   useEffect(() => {
     const loadOrgSettings = async () => {
       const { data } = await supabase
@@ -64,6 +65,34 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
     };
     loadOrgSettings();
   }, []);
+
+  // Load asset QR code URL
+  useEffect(() => {
+    const loadAssetQrCode = async () => {
+      if (!assetId) return;
+      
+      // First get the media asset_id from campaign_assets
+      const { data: campaignAsset } = await supabase
+        .from('campaign_assets')
+        .select('asset_id')
+        .eq('id', assetId)
+        .single();
+      
+      if (!campaignAsset?.asset_id) return;
+      
+      // Then get the QR code URL from media_assets
+      const { data: mediaAsset } = await supabase
+        .from('media_assets')
+        .select('qr_code_url')
+        .eq('id', campaignAsset.asset_id)
+        .single();
+      
+      if (mediaAsset?.qr_code_url) {
+        setQrCodeUrl(mediaAsset.qr_code_url);
+      }
+    };
+    loadAssetQrCode();
+  }, [assetId]);
 
   // Cleanup preview URLs on unmount
   useEffect(() => {
@@ -161,7 +190,8 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
         orgName,
         (index, progress) => {
           // Optional: show watermarking progress
-        }
+        },
+        qrCodeUrl
       );
 
       // Step 2: Initialize upload state
@@ -383,7 +413,7 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
             <Alert>
               <Zap className="h-4 w-4" />
               <AlertDescription className="text-xs">
-                Photos will be watermarked with your company logo, timestamp, and "PROOF OF INSTALLATION" text.
+                Photos will be watermarked with your company logo, timestamp, "PROOF OF INSTALLATION" text, and asset QR code.
               </AlertDescription>
             </Alert>
           </CardContent>
@@ -405,7 +435,7 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
         <Alert>
           <Zap className="h-4 w-4" />
           <AlertDescription>
-            Photos will be auto-compressed, watermarked with company branding, and tagged based on GPS data or filename.
+            Photos will be auto-compressed, watermarked with company branding, asset QR code, and tagged based on GPS data or filename.
           </AlertDescription>
         </Alert>
 

@@ -110,7 +110,7 @@ export function GenerateInvoiceDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Create invoice
+      // Create invoice - include company_id for RLS
       const { data: invoice, error } = await supabase
         .from('invoices')
         .insert({
@@ -118,6 +118,7 @@ export function GenerateInvoiceDialog({
           client_id: campaign.client_id,
           client_name: campaign.client_name,
           campaign_id: campaign.id,
+          company_id: campaign.company_id,
           invoice_date: new Date().toISOString().split('T')[0],
           due_date: dueDate,
           sub_total,

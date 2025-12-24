@@ -31,39 +31,70 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
   const handleExportZIP = async () => {
     setExporting(true);
     try {
+      // Always fetch fresh proof data (do not rely on campaignAssets shape)
+      const { data: campaignAssets, error: assetsError } = await supabase
+        .from("campaign_assets")
+        .select("id, asset_id, city, area, location")
+        .eq("campaign_id", campaignId)
+        .order("created_at");
+
+      if (assetsError) throw assetsError;
+
+      const campaignAssetIds = (campaignAssets || []).map((a) => a.id);
+
+      const { data: photos, error: photosError } = await supabase
+        .from("media_photos")
+        .select("asset_id, category, photo_url, uploaded_at")
+        .eq("campaign_id", campaignId)
+        .in("asset_id", campaignAssetIds)
+        .order("asset_id", { ascending: true })
+        .order("uploaded_at", { ascending: true });
+
+      if (photosError) throw photosError;
+
+      const assetById = new Map<string, any>();
+      (campaignAssets || []).forEach((a) => assetById.set(a.id, a));
+
+      const grouped = (photos || []).reduce((acc, p) => {
+        (acc[p.asset_id] ||= []).push(p);
+        return acc;
+      }, {} as Record<string, any[]>);
+
       const zip = new JSZip();
       const folder = zip.folder(campaignName);
 
-      for (const asset of assets) {
-        const photos = asset.photos || {};
-        const assetFolder = folder!.folder(asset.asset_id);
+      const missingAssets = (campaignAssets || []).filter((a) => !(grouped[a.id]?.length > 0));
 
-        const photoTypes = ['newspaperPhoto', 'geoTaggedPhoto', 'trafficPhoto1', 'trafficPhoto2'];
-        
-        for (const photoType of photoTypes) {
-          if (photos[photoType]?.url) {
-            try {
-              const blob = await downloadImage(photos[photoType].url);
-              const ext = photos[photoType].url.split('.').pop()?.split('?')[0] || 'jpg';
-              assetFolder!.file(`${photoType}.${ext}`, blob);
-            } catch (error) {
-              console.error(`Failed to download ${photoType} for ${asset.asset_id}`, error);
-            }
+      for (const [campaignAssetId, assetPhotos] of Object.entries(grouped)) {
+        const asset = assetById.get(campaignAssetId);
+        const safeFolderName = asset?.asset_id || campaignAssetId;
+        const assetFolder = folder!.folder(safeFolderName);
+
+        for (const p of assetPhotos) {
+          try {
+            const blob = await downloadImage(p.photo_url);
+            const ext = p.photo_url.split(".").pop()?.split("?")[0] || "jpg";
+            const safeCategory = String(p.category || "photo").replace(/[^a-z0-9_-]/gi, "_");
+            assetFolder!.file(`${safeCategory}_${new Date(p.uploaded_at).getTime()}.${ext}`, blob);
+          } catch (error) {
+            console.error(`Failed to download photo for ${safeFolderName}`, error);
           }
         }
       }
 
       const content = await zip.generateAsync({ type: "blob" });
       const url = URL.createObjectURL(content);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = `${campaignName}-Proofs.zip`;
       a.click();
       URL.revokeObjectURL(url);
 
       toast({
-        title: "Success",
-        description: "Proof photos exported as ZIP",
+        title: "Exported",
+        description: missingAssets.length
+          ? `ZIP created. Missing photos for ${missingAssets.length} asset(s).`
+          : "Proof photos exported as ZIP",
       });
     } catch (error: any) {
       toast({
@@ -79,93 +110,120 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
   const handleExportPPT = async () => {
     setExporting(true);
     try {
+      // Fetch snapshot assets + uploaded photos.
+      const { data: campaignAssets, error: assetsError } = await supabase
+        .from("campaign_assets")
+        .select("id, asset_id, city, area, location")
+        .eq("campaign_id", campaignId)
+        .order("created_at");
+
+      if (assetsError) throw assetsError;
+
+      const campaignAssetIds = (campaignAssets || []).map((a) => a.id);
+
+      const { data: photos, error: photosError } = await supabase
+        .from("media_photos")
+        .select("asset_id, category, photo_url, uploaded_at")
+        .eq("campaign_id", campaignId)
+        .in("asset_id", campaignAssetIds)
+        .order("asset_id", { ascending: true })
+        .order("uploaded_at", { ascending: true });
+
+      if (photosError) throw photosError;
+
+      const assetById = new Map<string, any>();
+      (campaignAssets || []).forEach((a) => assetById.set(a.id, a));
+
+      const grouped = (photos || []).reduce((acc, p) => {
+        (acc[p.asset_id] ||= []).push(p);
+        return acc;
+      }, {} as Record<string, any[]>);
+
+      const assetsWithPhotos = Object.entries(grouped)
+        .map(([campaignAssetId, assetPhotos]) => ({
+          campaignAssetId,
+          asset: assetById.get(campaignAssetId),
+          photos: assetPhotos,
+        }))
+        .filter((x) => x.photos.length > 0);
+
+      if (assetsWithPhotos.length === 0) {
+        throw new Error("No proof photos found for this campaign");
+      }
+
       const pptx = new PptxGenJS();
       pptx.layout = "LAYOUT_16x9";
       pptx.author = "Go-Ads 360°";
       pptx.company = "Go-Ads";
       pptx.title = `${campaignName} - Proof of Performance`;
 
-      // Title Slide
-      const titleSlide = pptx.addSlide();
-      titleSlide.background = { color: "1E40AF" };
-      titleSlide.addText(campaignName, {
-        x: 0.5,
-        y: 2.5,
-        w: "90%",
-        h: 1,
-        fontSize: 44,
-        bold: true,
-        color: "FFFFFF",
-        align: "center",
-      });
-      titleSlide.addText("Proof of Performance Report", {
-        x: 0.5,
-        y: 3.5,
-        w: "90%",
-        h: 0.5,
-        fontSize: 24,
-        color: "FFFFFF",
-        align: "center",
-      });
+      // IMPORTANT: User requested 2 images per slide and total slides based on assets.
+      // So we generate ONLY proof slides (no cover/summary) to match expected slide count.
+      for (const entry of assetsWithPhotos) {
+        const assetCode = entry.asset?.asset_id || entry.campaignAssetId;
+        const headerLine1 = `${assetCode} - ${entry.asset?.location || ""}`.trim();
+        const headerLine2 = [entry.asset?.area, entry.asset?.city].filter(Boolean).join(", ");
 
-      // Asset slides
-      for (const asset of assets) {
-        const photos = asset.photos || {};
-        const photoTypes = [
-          { key: 'newspaperPhoto', label: 'Newspaper Photo' },
-          { key: 'geoTaggedPhoto', label: 'Geo-Tagged Photo' },
-          { key: 'trafficPhoto1', label: 'Traffic View 1' },
-          { key: 'trafficPhoto2', label: 'Traffic View 2' },
-        ];
-
-        const availablePhotos = photoTypes.filter(pt => photos[pt.key]?.url);
-        
-        if (availablePhotos.length > 0) {
+        // 2 images per slide
+        for (let i = 0; i < entry.photos.length; i += 2) {
           const slide = pptx.addSlide();
-          
-          // Asset header
-          slide.addText(`${asset.asset_id} - ${asset.location}`, {
+
+          slide.addText(headerLine1, {
             x: 0.5,
             y: 0.3,
-            w: "90%",
+            w: 12.3,
             h: 0.5,
             fontSize: 20,
             bold: true,
             color: "1E40AF",
           });
-          
-          slide.addText(`${asset.area}, ${asset.city}`, {
-            x: 0.5,
-            y: 0.8,
-            w: "90%",
-            h: 0.3,
-            fontSize: 14,
-            color: "666666",
-          });
 
-          // Photos grid (2x2)
-          const photoWidth = 4.2;
-          const photoHeight = 2.8;
+          if (headerLine2) {
+            slide.addText(headerLine2, {
+              x: 0.5,
+              y: 0.8,
+              w: 12.3,
+              h: 0.3,
+              fontSize: 14,
+              color: "666666",
+            });
+          }
+
+          const photoWidth = 5.9;
+          const photoHeight = 5.4;
           const positions = [
-            { x: 0.5, y: 1.5 },
-            { x: 5.3, y: 1.5 },
-            { x: 0.5, y: 4.7 },
-            { x: 5.3, y: 4.7 },
+            { x: 0.5, y: 1.4 },
+            { x: 6.8, y: 1.4 },
           ];
 
-          availablePhotos.slice(0, 4).forEach((photoType, index) => {
+          const batch = entry.photos.slice(i, i + 2);
+          batch.forEach((p: any, index: number) => {
             const pos = positions[index];
-            slide.addImage({
-              path: photos[photoType.key].url,
-              x: pos.x,
-              y: pos.y,
-              w: photoWidth,
-              h: photoHeight,
-              sizing: { type: "contain", w: photoWidth, h: photoHeight },
-            });
-            
+            if (!pos) return;
+
+            try {
+              slide.addImage({
+                path: p.photo_url,
+                x: pos.x,
+                y: pos.y,
+                w: photoWidth,
+                h: photoHeight,
+                sizing: { type: "contain", w: photoWidth, h: photoHeight },
+              });
+            } catch (e) {
+              console.warn("Could not add photo:", e);
+              slide.addText("Photo Missing", {
+                x: pos.x,
+                y: pos.y,
+                w: photoWidth,
+                h: photoHeight,
+                align: "center",
+                valign: "middle",
+              });
+            }
+
             // Label
-            slide.addText(photoType.label, {
+            slide.addText(p.category || "Photo", {
               x: pos.x,
               y: pos.y + photoHeight + 0.1,
               w: photoWidth,
@@ -175,46 +233,25 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
               color: "666666",
             });
           });
+
+          // Footer
+          slide.addText("Powered by Go-Ads 360° — OOH Media Platform", {
+            x: 0.5,
+            y: 7.1,
+            w: 12.3,
+            h: 0.3,
+            fontSize: 10,
+            color: "94A3B8",
+            align: "center",
+          });
         }
       }
-
-      // Summary slide
-      const summarySlide = pptx.addSlide();
-      summarySlide.addText("Campaign Summary", {
-        x: 0.5,
-        y: 0.5,
-        w: "90%",
-        h: 0.7,
-        fontSize: 32,
-        bold: true,
-        color: "1E40AF",
-      });
-
-      const verifiedCount = assets.filter(a => a.status === 'Verified').length;
-      const summaryData = [
-        ["Total Assets", assets.length.toString()],
-        ["Verified Assets", verifiedCount.toString()],
-        ["Completion Rate", `${Math.round((verifiedCount / assets.length) * 100)}%`],
-      ];
-
-      summarySlide.addTable(
-        summaryData.map(row => row.map(cell => ({ text: cell }))),
-        {
-          x: 2,
-          y: 2,
-          w: 6,
-          rowH: 0.7,
-          fontSize: 18,
-          border: { pt: 1, color: "DDDDDD" },
-          fill: { color: "F8FAFC" },
-        }
-      );
 
       await pptx.writeFile({ fileName: `${campaignName}-Proof-Report.pptx` });
 
       toast({
-        title: "Success",
-        description: "Proof presentation exported successfully",
+        title: "Exported",
+        description: "PowerPoint generated with all uploaded proof photos (2 per slide).",
       });
     } catch (error: any) {
       toast({

@@ -253,14 +253,14 @@ export default function CampaignAssetProofs() {
 
               {/* QR Code - Larger and more prominent */}
               {qrCodeUrl && (
-                <div className="flex flex-col items-center gap-2 p-4 border rounded-lg bg-muted/30">
+                <div className="flex flex-col items-center gap-3 p-5 border rounded-lg bg-muted/30">
                   <img 
                     src={qrCodeUrl} 
                     alt="Asset QR Code"
-                    className="w-32 h-32 object-contain bg-white p-2 rounded-md shadow-sm"
+                    className="w-44 h-44 object-contain bg-white p-3 rounded-md shadow-md"
                   />
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <QrCode className="h-4 w-4" />
+                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <QrCode className="h-5 w-5" />
                     <span>Scan to verify location</span>
                   </div>
                 </div>

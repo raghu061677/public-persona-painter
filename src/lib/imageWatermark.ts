@@ -32,11 +32,12 @@ export async function addWatermark(
 
       // Calculate watermark dimensions and position
       const padding = Math.min(img.width, img.height) * 0.03; // 3% padding
-      const watermarkHeight = Math.min(img.height * 0.08, 80); // 8% of height, max 80px
-      const watermarkY = img.height - watermarkHeight - padding;
+      const watermarkHeight = Math.min(img.height * 0.12, 120); // 12% of height, max 120px (increased for bigger QR)
+      const footerHeight = Math.min(img.height * 0.03, 30); // Footer for attribution
+      const watermarkY = img.height - watermarkHeight - footerHeight - padding;
 
-      // Draw semi-transparent background for watermark
-      const bgHeight = watermarkHeight + padding;
+      // Draw semi-transparent background for watermark (main bar + footer)
+      const bgHeight = watermarkHeight + footerHeight + padding;
       ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
       ctx.fillRect(0, img.height - bgHeight, img.width, bgHeight);
 
@@ -102,7 +103,7 @@ export async function addWatermark(
       ctx.font = `${fontSize * 0.8}px Arial`;
       ctx.fillText(timestamp, textX, timestampY);
 
-      // Draw QR code on the right side if provided
+      // Draw QR code on the right side if provided - BIGGER SIZE
       let qrWidth = 0;
       if (qrCodeUrl) {
         try {
@@ -115,8 +116,8 @@ export async function addWatermark(
             qrImg.src = qrCodeUrl;
           });
 
-          // QR code size - make it fit nicely in the watermark bar
-          const qrSize = watermarkHeight * 0.9;
+          // QR code size - increased by ~40% for better scanability
+          const qrSize = watermarkHeight * 0.95;
           qrWidth = qrSize + padding * 2;
           
           // Draw white background for QR code
@@ -124,7 +125,7 @@ export async function addWatermark(
           const qrY = watermarkY + (watermarkHeight - qrSize) / 2;
           
           ctx.fillStyle = 'white';
-          ctx.fillRect(qrX - 4, qrY - 4, qrSize + 8, qrSize + 8);
+          ctx.fillRect(qrX - 6, qrY - 6, qrSize + 12, qrSize + 12);
           
           // Draw QR code
           ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
@@ -140,6 +141,14 @@ export async function addWatermark(
       ctx.textAlign = 'right';
       const proofTextX = qrWidth > 0 ? img.width - qrWidth - padding : img.width - padding * 2;
       ctx.fillText('PROOF OF INSTALLATION', proofTextX, watermarkY + watermarkHeight / 2);
+
+      // Add "Powered by Go-Ads 360 — OOH Media Platform" footer
+      const footerFontSize = Math.max(fontSize * 0.5, 10);
+      ctx.font = `${footerFontSize}px Arial`;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.textAlign = 'center';
+      const footerY = img.height - footerHeight / 2 - padding / 2;
+      ctx.fillText('Powered by Go-Ads 360 — OOH Media Platform', img.width / 2, footerY);
 
       // Convert canvas to blob
       canvas.toBlob(

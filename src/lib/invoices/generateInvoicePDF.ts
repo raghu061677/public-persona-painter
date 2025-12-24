@@ -1,7 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '@/integrations/supabase/client';
-import { formatINR } from '@/utils/finance';
 
 interface InvoiceData {
   invoice: any;
@@ -11,6 +10,16 @@ interface InvoiceData {
   company: any;
   orgSettings?: any;
   logoBase64?: string;
+}
+
+// PDF-safe currency formatter (avoids Unicode issues with jsPDF)
+function formatCurrency(amount: number | null | undefined): string {
+  if (amount == null || isNaN(amount)) return 'Rs. 0';
+  const formatted = new Intl.NumberFormat('en-IN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(amount);
+  return `Rs. ${formatted}`;
 }
 
 // Default company address
@@ -363,8 +372,8 @@ function createInvoicePDF(data: InvoiceData): Blob {
       descriptionLines,
       sizeDisplay,
       bookingDisplay,
-      formatINR(unitPrice),
-      formatINR(amount),
+      formatCurrency(unitPrice),
+      formatCurrency(amount),
     ];
   });
 
@@ -446,7 +455,7 @@ function createInvoicePDF(data: InvoiceData): Blob {
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
   doc.text('Untaxed Amount:', totalsBoxX + 4, yPos + 5.5);
-  doc.text(`${formatINR(subtotal)} ₹`, totalsBoxX + totalsBoxWidth - 4, yPos + 5.5, { align: 'right' });
+  doc.text(formatCurrency(subtotal), totalsBoxX + totalsBoxWidth - 4, yPos + 5.5, { align: 'right' });
 
   // CGST row
   yPos += 8;
@@ -457,13 +466,13 @@ function createInvoicePDF(data: InvoiceData): Blob {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.text('CGST Sale 9%', totalsBoxX + 4, yPos + 5);
-  doc.text(formatINR(cgst), totalsBoxX + totalsBoxWidth - 4, yPos + 5, { align: 'right' });
+  doc.text(formatCurrency(cgst), totalsBoxX + totalsBoxWidth - 4, yPos + 5, { align: 'right' });
 
   // SGST row
   yPos += 7;
   doc.rect(totalsBoxX, yPos, totalsBoxWidth, 7, 'FD');
   doc.text('SGST Sale 9%', totalsBoxX + 4, yPos + 5);
-  doc.text(formatINR(sgst), totalsBoxX + totalsBoxWidth - 4, yPos + 5, { align: 'right' });
+  doc.text(formatCurrency(sgst), totalsBoxX + totalsBoxWidth - 4, yPos + 5, { align: 'right' });
 
   // Taxes row
   yPos += 7;
@@ -471,7 +480,7 @@ function createInvoicePDF(data: InvoiceData): Blob {
   doc.rect(totalsBoxX, yPos, totalsBoxWidth, 7, 'FD');
   doc.setFont('helvetica', 'bold');
   doc.text('Taxes:', totalsBoxX + 4, yPos + 5);
-  doc.text(`${formatINR(cgst + sgst)} ₹`, totalsBoxX + totalsBoxWidth - 4, yPos + 5, { align: 'right' });
+  doc.text(formatCurrency(cgst + sgst), totalsBoxX + totalsBoxWidth - 4, yPos + 5, { align: 'right' });
 
   // Total row
   yPos += 7;
@@ -480,7 +489,7 @@ function createInvoicePDF(data: InvoiceData): Blob {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
   doc.text('Total:', totalsBoxX + 4, yPos + 5.5);
-  doc.text(`${formatINR(grandTotal)} ₹`, totalsBoxX + totalsBoxWidth - 4, yPos + 5.5, { align: 'right' });
+  doc.text(formatCurrency(grandTotal), totalsBoxX + totalsBoxWidth - 4, yPos + 5.5, { align: 'right' });
 
   yPos += 15;
 
@@ -596,9 +605,9 @@ function createInvoicePDF(data: InvoiceData): Blob {
     startY: yPos,
     head: [['HSN/SAC', 'Taxable Amount', 'CGST Rate', 'CGST Amount', 'SGST Rate', 'SGST Amount', 'Total Tax']],
     body: [
-      [hsnCode, formatINR(subtotal), '9%', formatINR(cgst), '9%', formatINR(sgst), formatINR(cgst + sgst)],
+      [hsnCode, formatCurrency(subtotal), '9%', formatCurrency(cgst), '9%', formatCurrency(sgst), formatCurrency(cgst + sgst)],
     ],
-    foot: [['Total', formatINR(subtotal), '', formatINR(cgst), '', formatINR(sgst), formatINR(cgst + sgst)]],
+    foot: [['Total', formatCurrency(subtotal), '', formatCurrency(cgst), '', formatCurrency(sgst), formatCurrency(cgst + sgst)]],
     theme: 'grid',
     headStyles: {
       fillColor: [245, 247, 250],

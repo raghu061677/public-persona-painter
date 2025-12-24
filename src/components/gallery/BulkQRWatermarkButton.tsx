@@ -38,7 +38,7 @@ export function BulkQRWatermarkButton() {
   const [open, setOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [dryRun, setDryRun] = useState(true);
-  const [batchSize, setBatchSize] = useState(25);
+  const [batchSize, setBatchSize] = useState(5);
   const [imageType, setImageType] = useState<"both" | "media_photos" | "campaign_assets">("both");
   const [forceReprocess, setForceReprocess] = useState(false);
   const [result, setResult] = useState<WatermarkResult | null>(null);
@@ -49,35 +49,78 @@ export function BulkQRWatermarkButton() {
     setResult(null);
     setProgress(0);
 
+    // Aggregate results across batches
+    const aggregated: WatermarkResult = {
+      total_images_scanned: 0,
+      watermarked_count: 0,
+      skipped_already_done: 0,
+      skipped_missing_qr: 0,
+      skipped_missing_image: 0,
+      failed_count: 0,
+      errors: [],
+      next_offset: null,
+    };
+
     try {
-      const { data, error } = await supabase.functions.invoke('apply-qr-watermark-existing', {
-        body: {
-          batch_size: batchSize,
-          offset: 0,
-          image_type: imageType,
-          force_reprocess: forceReprocess,
-          dry_run: dryRun
+      let currentOffset = 0;
+      let loopCount = 0;
+      const maxLoops = 100; // safety cap
+
+      while (loopCount < maxLoops) {
+        loopCount++;
+
+        const { data, error } = await supabase.functions.invoke('apply-qr-watermark-existing', {
+          body: {
+            batch_size: batchSize,
+            offset: currentOffset,
+            image_type: imageType,
+            force_reprocess: forceReprocess,
+            dry_run: dryRun
+          }
+        });
+
+        if (error) throw error;
+
+        const batchResult = data as WatermarkResult;
+
+        // Aggregate
+        aggregated.total_images_scanned += batchResult.total_images_scanned;
+        aggregated.watermarked_count += batchResult.watermarked_count;
+        aggregated.skipped_already_done += batchResult.skipped_already_done;
+        aggregated.skipped_missing_qr += batchResult.skipped_missing_qr;
+        aggregated.skipped_missing_image += batchResult.skipped_missing_image;
+        aggregated.failed_count += batchResult.failed_count;
+        if (batchResult.errors?.length) {
+          aggregated.errors = [...aggregated.errors, ...batchResult.errors];
         }
-      });
 
-      if (error) throw error;
+        setResult({ ...aggregated, next_offset: batchResult.next_offset });
+        setProgress(Math.min(loopCount * 10, 95));
 
-      setResult(data);
+        // Stop if no more to process
+        if (!batchResult.next_offset || batchResult.total_images_scanned === 0) {
+          break;
+        }
+
+        currentOffset = batchResult.next_offset;
+      }
+
       setProgress(100);
 
       if (dryRun) {
         toast({
           title: "Dry Run Complete",
-          description: `Would watermark ${data.watermarked_count} images. Run again with dry run disabled to apply.`,
+          description: `Would watermark ${aggregated.watermarked_count} images. Run again with dry run disabled to apply.`,
         });
       } else {
         toast({
           title: "Watermarking Complete",
-          description: `Successfully watermarked ${data.watermarked_count} images.`,
+          description: `Successfully watermarked ${aggregated.watermarked_count} images.`,
         });
       }
     } catch (error: any) {
       console.error('Watermark error:', error);
+      setResult(aggregated);
       toast({
         title: "Error",
         description: error.message || "Failed to run watermark process",

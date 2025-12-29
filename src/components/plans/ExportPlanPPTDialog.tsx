@@ -114,6 +114,7 @@ export function ExportPlanPPTDialog({ planId, planName }: ExportPlanPPTDialogPro
         longitude: item.asset.longitude,
         google_street_view_url: item.asset.google_street_view_url,
         primary_photo_url: item.asset.primary_photo_url,
+        qr_code_url: item.asset.qr_code_url,
       }));
 
       // Generate PPT

@@ -3,6 +3,7 @@ import pptxgen from "pptxgenjs";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 import { compressImage } from "@/lib/imageCompression";
+import { getCachedQRData } from "@/lib/qrWatermark";
 
 // @ts-ignore
 import autoTable from "jspdf-autotable";
@@ -34,6 +35,9 @@ interface AssetDetails {
   illumination_type: string | null;
   total_sqft: number | null;
   primary_photo_url: string | null;
+  qr_code_url: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 /**
@@ -42,7 +46,7 @@ interface AssetDetails {
 async function fetchAssetDetails(assetIds: string[]): Promise<Map<string, AssetDetails>> {
   const { data } = await supabase
     .from('media_assets')
-    .select('id, location, area, city, media_type, dimensions, direction, illumination_type, total_sqft, primary_photo_url')
+    .select('id, location, area, city, media_type, dimensions, direction, illumination_type, total_sqft, primary_photo_url, qr_code_url, latitude, longitude')
     .in('id', assetIds);
 
   const assetMap = new Map<string, AssetDetails>();
@@ -372,25 +376,55 @@ export async function exportPlanToPPT(
         fontFace: "Arial"
       });
 
+      // Get QR code data for this asset
+      const qrData = await getCachedQRData(
+        item.asset_id,
+        assetDetail.qr_code_url || '',
+        assetDetail.latitude,
+        assetDetail.longitude
+      );
+
       // Display 2 high-quality images with subtle shadow
       const imagesToShow = allImages.slice(0, 2);
+      const img1Width = imagesToShow.length === 1 ? 9.3 : 4.55;
+      const img1X = 0.35;
+      const img1Y = 1;
+      const imgHeight = 5.3;
+
       if (imagesToShow.length > 0) {
         try {
           const img1Base64 = await imageToBase64(imagesToShow[0]);
           if (img1Base64) {
             imageSlide.addImage({
               data: img1Base64,
-              x: 0.35,
-              y: 1,
-              w: imagesToShow.length === 1 ? 9.3 : 4.55,
-              h: 5.3,
-              sizing: { type: "cover", w: imagesToShow.length === 1 ? 9.3 : 4.55, h: 5.3 }
+              x: img1X,
+              y: img1Y,
+              w: img1Width,
+              h: imgHeight,
+              sizing: { type: "cover", w: img1Width, h: imgHeight }
             });
+
+            // Add QR code watermark on image 1 (bottom-right corner)
+            if (qrData) {
+              const qrSize = 0.7;
+              const qrPadding = 0.12;
+              imageSlide.addImage({
+                data: qrData.qrBase64,
+                x: img1X + img1Width - qrSize - qrPadding,
+                y: img1Y + imgHeight - qrSize - qrPadding,
+                w: qrSize,
+                h: qrSize,
+                hyperlink: { url: qrData.streetViewUrl },
+              });
+            }
           }
         } catch (err) {
           console.warn("Failed to add first image:", err);
         }
       }
+
+      const img2X = 5.1;
+      const img2Width = 4.55;
 
       if (imagesToShow.length > 1) {
         try {
@@ -398,12 +432,26 @@ export async function exportPlanToPPT(
           if (img2Base64) {
             imageSlide.addImage({
               data: img2Base64,
-              x: 5.1,
-              y: 1,
-              w: 4.55,
-              h: 5.3,
-              sizing: { type: "cover", w: 4.55, h: 5.3 }
+              x: img2X,
+              y: img1Y,
+              w: img2Width,
+              h: imgHeight,
+              sizing: { type: "cover", w: img2Width, h: imgHeight }
             });
+
+            // Add QR code watermark on image 2 (bottom-right corner)
+            if (qrData) {
+              const qrSize = 0.7;
+              const qrPadding = 0.12;
+              imageSlide.addImage({
+                data: qrData.qrBase64,
+                x: img2X + img2Width - qrSize - qrPadding,
+                y: img1Y + imgHeight - qrSize - qrPadding,
+                w: qrSize,
+                h: qrSize,
+                hyperlink: { url: qrData.streetViewUrl },
+              });
+            }
           }
         } catch (err) {
           console.warn("Failed to add second image:", err);
@@ -497,18 +545,37 @@ export async function exportPlanToPPT(
       });
 
       // High-quality image on the right with border
+      const detailImgX = 5.25;
+      const detailImgY = 1.05;
+      const detailImgW = 4.4;
+      const detailImgH = 5.25;
+      
       if (imagesToShow.length > 0) {
         try {
           const imgBase64 = await imageToBase64(imagesToShow[0]);
           if (imgBase64) {
             detailSlide.addImage({
               data: imgBase64,
-              x: 5.25,
-              y: 1.05,
-              w: 4.4,
-              h: 5.25,
-              sizing: { type: "cover", w: 4.4, h: 5.25 }
+              x: detailImgX,
+              y: detailImgY,
+              w: detailImgW,
+              h: detailImgH,
+              sizing: { type: "cover", w: detailImgW, h: detailImgH }
             });
+
+            // Add QR code watermark on detail image (bottom-right corner)
+            if (qrData) {
+              const qrSize = 0.7;
+              const qrPadding = 0.12;
+              detailSlide.addImage({
+                data: qrData.qrBase64,
+                x: detailImgX + detailImgW - qrSize - qrPadding,
+                y: detailImgY + detailImgH - qrSize - qrPadding,
+                w: qrSize,
+                h: qrSize,
+                hyperlink: { url: qrData.streetViewUrl },
+              });
+            }
           }
         } catch (err) {
           console.warn("Failed to add detail image:", err);

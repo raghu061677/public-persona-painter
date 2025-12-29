@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Menu } from "lucide-react";
+import { Menu, X } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { AnnouncementBanner } from "@/components/landing/AnnouncementBanner";
 import { HeroCosmicMode } from "@/components/landing/cosmic/HeroCosmicMode";
 import { WhyGoAdsExists } from "@/components/landing/cosmic/WhyGoAdsExists";
@@ -20,6 +22,12 @@ import { MobileStickyCTA } from "@/components/landing/cosmic/MobileStickyCTA";
 
 const Landing = () => {
   const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleNavigation = (path: string) => {
+    setMobileMenuOpen(false);
+    navigate(path);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -43,6 +51,7 @@ const Landing = () => {
               />
             </div>
             
+            {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
               <button 
                 onClick={() => navigate("/")} 
@@ -80,11 +89,65 @@ const Landing = () => {
               </Button>
             </div>
 
+            {/* Mobile Navigation */}
             <div className="md:hidden flex items-center gap-2">
               <DarkModeToggle />
-              <button className="p-2">
-                <Menu className="h-6 w-6" />
-              </button>
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <button className="p-2 hover:bg-muted rounded-lg transition-colors">
+                    <Menu className="h-6 w-6" />
+                  </button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[280px] sm:w-[320px] p-0">
+                  <div className="flex flex-col h-full">
+                    {/* Mobile Menu Header */}
+                    <div className="flex items-center justify-between p-4 border-b">
+                      <img 
+                        src="/logo.png" 
+                        alt="Go-Ads 360°" 
+                        className="h-8 w-auto"
+                      />
+                    </div>
+                    
+                    {/* Mobile Menu Links */}
+                    <div className="flex-1 py-6 px-4 space-y-2">
+                      <button
+                        onClick={() => handleNavigation("/")}
+                        className="w-full text-left px-4 py-3 text-lg font-medium text-foreground hover:bg-muted rounded-lg transition-colors"
+                      >
+                        Home
+                      </button>
+                      <button
+                        onClick={() => handleNavigation("/marketplace")}
+                        className="w-full text-left px-4 py-3 text-lg font-medium text-foreground hover:bg-muted rounded-lg transition-colors"
+                      >
+                        Explore Media
+                      </button>
+                    </div>
+                    
+                    {/* Mobile Menu Footer */}
+                    <div className="p-4 border-t space-y-3">
+                      <Button
+                        onClick={() => handleNavigation("/auth")}
+                        variant="outline"
+                        className="w-full font-medium rounded-xl py-6"
+                      >
+                        Sign In
+                      </Button>
+                      <Button
+                        onClick={() => handleNavigation("/auth")}
+                        className="w-full font-bold rounded-xl py-6"
+                        style={{
+                          background: "linear-gradient(135deg, #0061FF, #00A3FF)",
+                          boxShadow: "0 4px 12px rgba(0, 97, 255, 0.25)",
+                        }}
+                      >
+                        Get Started
+                      </Button>
+                    </div>
+                  </div>
+                </SheetContent>
+              </Sheet>
             </div>
           </div>
         </div>

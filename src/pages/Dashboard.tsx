@@ -139,7 +139,8 @@ const Dashboard = () => {
         .from("campaigns")
         .select("*", { count: "exact", head: true })
         .eq("company_id", selectedCompanyId)
-        .in("status", ["InProgress", "Planned"]);
+        .eq("is_deleted", false)
+        .in("status", ["Running", "Planned", "InProgress"]);
 
       // Fetch leads count for this month
       const startOfMonth = new Date();

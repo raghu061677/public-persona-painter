@@ -169,102 +169,114 @@ export function InvoiceTemplateZoho({ invoiceId, readOnly = false }: InvoiceTemp
 
   return (
     <div className="bg-white text-black p-6 space-y-4 max-w-4xl mx-auto print:p-0 font-sans text-sm">
-      {/* Header Section - Company Info Left, Title Right */}
-      <div className="flex justify-between items-start border-b-2 border-primary pb-4">
-        {/* Company Logo & Details */}
-        <div className="flex gap-4">
-          {company?.logo_url && (
-            <img 
-              src={company.logo_url} 
-              alt={company.name} 
-              className="w-20 h-20 object-contain"
-            />
-          )}
-          <div className="text-xs">
+      {/* ========== HEADER SECTION - Zoho Style: Logo LEFT | Company CENTER | Title RIGHT ========== */}
+      <div className="border border-border">
+        <div className="flex items-start p-4">
+          {/* LEFT: Company Logo */}
+          <div className="flex-shrink-0 w-24">
+            {company?.logo_url && (
+              <img 
+                src={company.logo_url} 
+                alt={company.name} 
+                className="w-20 h-20 object-contain"
+              />
+            )}
+          </div>
+
+          {/* CENTER: Company Details */}
+          <div className="flex-1 text-center text-xs px-4">
             <h1 className="text-lg font-bold text-primary mb-1">{company?.name || 'Matrix Network Solutions'}</h1>
+            <p className="text-muted-foreground">{company?.name || 'Matrix Network Solutions'}</p>
             <p>{company?.address_line1 || 'H.No: 7-1-19/5/201, Jyothi Bhopal Apartments,'}</p>
             <p>{company?.address_line2 || 'Near Begumpet Metro Station, Opp Country Club, Begumpet,'}</p>
             <p>{company?.city || 'HYDERABAD'} {company?.pincode || '500016'}, {company?.state || 'Telangana'} India</p>
-            <p>Phone: {company?.phone || '+91 9666 444 888'}   Email: {company?.email || 'info@matrix-networksolutions.com'}</p>
-            <p>Web: {company?.website || 'www.matrixnetworksolutions.in'}</p>
+            <p>Phone: {company?.phone || '+91 9666 444 888'}</p>
+            <p>{company?.email || 'info@matrix-networksolutions.com'}</p>
+            <p>{company?.website || 'www.matrixnetworksolutions.in'}</p>
             <p className="font-semibold mt-1">GSTIN: {company?.gstin || '36AATFM4107H2Z3'}</p>
           </div>
-        </div>
 
-        {/* Document Title - Right aligned at GSTIN level */}
-        <div className="text-right self-end">
-          <h2 className="text-2xl font-bold text-primary tracking-wide">
-            {getDocumentTitle(invoiceType)}
-          </h2>
+          {/* RIGHT: Document Title - aligned with GSTIN level */}
+          <div className="flex-shrink-0 w-40 text-right flex flex-col justify-end h-full">
+            <h2 className="text-xl font-bold text-primary tracking-wide mt-auto">
+              {getDocumentTitle(invoiceType)}
+            </h2>
+          </div>
         </div>
       </div>
 
-      {/* Bill To / Ship To + Invoice Details Grid */}
+      {/* ========== INVOICE DETAILS ROW ========== */}
       <div className="grid grid-cols-2 gap-4 text-xs">
-        {/* Left Side - Bill To & Ship To */}
-        <div className="space-y-3">
-          {/* Bill To */}
-          <div className="border border-border p-3">
-            <h3 className="font-bold text-primary mb-1">Bill To</h3>
-            <p className="font-bold">{clientName}</p>
-            <p className="whitespace-pre-line">{clientAddress}</p>
-            {clientGstin && <p className="mt-1">GSTIN: {clientGstin}</p>}
+        {/* Left Column */}
+        <div className="space-y-1">
+          <div className="flex">
+            <span className="w-24">{invoiceType === 'PROFORMA' ? 'Proforma No' : 'Invoice No'}</span>
+            <span className="font-bold">: {invoice.invoice_no || invoice.id}</span>
           </div>
-          
-          {/* Ship To */}
-          <div className="border border-border p-3">
-            <h3 className="font-bold text-primary mb-1">Ship To</h3>
-            <p className="font-bold">{clientName}</p>
-            <p className="whitespace-pre-line">{clientAddress}</p>
-            {clientGstin && <p className="mt-1">GSTIN: {clientGstin}</p>}
+          <div className="flex">
+            <span className="w-24">Invoice Date</span>
+            <span className="font-bold">: {formatDate(invoice.invoice_date)}</span>
+          </div>
+          <div className="flex">
+            <span className="w-24">Terms</span>
+            <span className="font-bold">: {termsLabel}</span>
+          </div>
+          <div className="flex">
+            <span className="w-24">Due Date</span>
+            <span className="font-bold">: {formatDate(invoice.due_date || invoice.invoice_date)}</span>
+          </div>
+          <div className="flex">
+            <span className="w-24">HSN/SAC Code</span>
+            <span className="font-bold">: 998361</span>
           </div>
         </div>
-
-        {/* Right Side - Invoice Details & Other Details */}
-        <div className="space-y-3">
-          {/* Invoice Details */}
-          <div className="border border-border p-3">
-            <h3 className="font-bold text-primary mb-1">
-              {invoiceType === 'PROFORMA' ? 'Proforma Invoice Details' : 'Invoice Details'}
-            </h3>
-            <table className="w-full text-xs">
-              <tbody>
-                <tr>
-                  <td className="py-0.5">{invoiceType === 'PROFORMA' ? 'Proforma #:' : 'Invoice No:'}</td>
-                  <td className="py-0.5 font-bold text-right">{invoice.invoice_no || invoice.id}</td>
-                </tr>
-                <tr>
-                  <td className="py-0.5">Date:</td>
-                  <td className="py-0.5 text-right">{formatDate(invoice.invoice_date)}</td>
-                </tr>
-                {campaign && (
-                  <tr>
-                    <td className="py-0.5">Campaign:</td>
-                    <td className="py-0.5 text-right">{campaign.campaign_name}</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+        
+        {/* Right Column */}
+        <div className="space-y-1">
+          <div className="flex">
+            <span className="w-28">Place Of Supply</span>
+            <span className="font-bold">: {invoice.place_of_supply || client?.billing_state || 'Telangana'} (36)</span>
           </div>
-          
-          {/* Other Details */}
-          <div className="border border-border p-3">
-            <h3 className="font-bold text-primary mb-1">Other Details</h3>
-            <table className="w-full text-xs">
-              <tbody>
-                <tr>
-                  <td className="py-0.5">Place of Supply:</td>
-                  <td className="py-0.5 text-right">{invoice.place_of_supply || client?.billing_state || 'Telangana'} (36)</td>
-                </tr>
-                <tr>
-                  <td className="py-0.5">Sales Person:</td>
-                  <td className="py-0.5 text-right">{invoice.sales_person || 'N/A'}</td>
-                </tr>
-              </tbody>
-            </table>
+          <div className="flex">
+            <span className="w-28">Sales person</span>
+            <span className="font-bold">: {invoice.sales_person || 'Raghunath Gajula'}</span>
           </div>
         </div>
       </div>
+
+      {/* ========== BILL TO / SHIP TO SECTION ========== */}
+      <div className="grid grid-cols-2 gap-4 text-xs">
+        {/* Bill To */}
+        <div className="border border-border">
+          <div className="bg-primary text-primary-foreground px-3 py-1.5 font-bold">Bill To</div>
+          <div className="p-3">
+            <p className="font-bold">{clientName}</p>
+            <p className="whitespace-pre-line text-muted-foreground">{clientAddress}</p>
+            <p>India</p>
+            {clientGstin && <p className="font-semibold mt-1">GSTIN: {clientGstin}</p>}
+          </div>
+        </div>
+        
+        {/* Ship To */}
+        <div className="border border-border">
+          <div className="bg-primary text-primary-foreground px-3 py-1.5 font-bold">Ship To</div>
+          <div className="p-3">
+            <p className="font-bold">{clientName}</p>
+            <p className="whitespace-pre-line text-muted-foreground">{clientAddress}</p>
+            <p>India</p>
+            {clientGstin && <p className="font-semibold mt-1">GSTIN: {clientGstin}</p>}
+          </div>
+        </div>
+      </div>
+
+      {/* Campaign Header if exists */}
+      {campaign && (
+        <div className="text-xs font-bold text-primary flex items-center gap-2">
+          <span>Campaign: {campaign.campaign_name}</span>
+          <span className="flex-1 border-b border-dotted border-muted-foreground mx-2" />
+          <span>Campaign Duration: ({formatDate(campaign.start_date)} to {formatDate(campaign.end_date)})</span>
+        </div>
+      )}
 
       {/* Line Items Table */}
       <div className="border border-border">

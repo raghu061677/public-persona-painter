@@ -292,6 +292,14 @@ function createInvoicePDF(data: InvoiceData): Blob {
   doc.setFont('helvetica', 'bold');
   doc.text(`: ${formatDate(data.invoice.due_date)}`, leftColX + labelColWidth, detailRowY);
 
+  detailRowY += 5;
+
+  // Row 5: HSN/SAC Code
+  doc.setFont('helvetica', 'normal');
+  doc.text('HSN/SAC Code', leftColX, detailRowY);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`: 998361`, leftColX + labelColWidth, detailRowY);
+
   yPos = detailRowY + 5;
 
   // ========== BILL TO / SHIP TO ROW ==========

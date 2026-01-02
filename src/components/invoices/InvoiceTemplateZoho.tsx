@@ -1,8 +1,5 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { formatINR } from '@/utils/finance';
 import { formatDate } from '@/utils/plans';
 
@@ -33,6 +30,48 @@ function getTermsLabel(termsMode: string, termsDays: number): string {
 // Helper to get document title
 function getDocumentTitle(invoiceType: string): string {
   return invoiceType === 'PROFORMA' ? 'PROFORMA INVOICE' : 'TAX INVOICE';
+}
+
+// Convert number to words for Indian currency
+function numberToWords(num: number): string {
+  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+    'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  if (num === 0) return 'Zero';
+
+  const crore = Math.floor(num / 10000000);
+  num %= 10000000;
+  const lakh = Math.floor(num / 100000);
+  num %= 100000;
+  const thousand = Math.floor(num / 1000);
+  num %= 1000;
+  const hundred = Math.floor(num / 100);
+  num %= 100;
+  const ten = Math.floor(num / 10);
+  const one = num % 10;
+
+  let words = '';
+
+  if (crore > 0) {
+    words += (crore < 20 ? ones[crore] : tens[Math.floor(crore / 10)] + ' ' + ones[crore % 10]).trim() + ' Crore ';
+  }
+  if (lakh > 0) {
+    words += (lakh < 20 ? ones[lakh] : tens[Math.floor(lakh / 10)] + ' ' + ones[lakh % 10]).trim() + ' Lakh ';
+  }
+  if (thousand > 0) {
+    words += (thousand < 20 ? ones[thousand] : tens[Math.floor(thousand / 10)] + ' ' + ones[thousand % 10]).trim() + ' Thousand ';
+  }
+  if (hundred > 0) {
+    words += ones[hundred] + ' Hundred ';
+  }
+  if (ten > 1) {
+    words += tens[ten] + ' ' + ones[one];
+  } else if (ten === 1 || one > 0) {
+    words += ones[ten * 10 + one];
+  }
+
+  return words.trim() + ' Rupees Only';
 }
 
 export function InvoiceTemplateZoho({ invoiceId, readOnly = false }: InvoiceTemplateZohoProps) {
@@ -121,225 +160,256 @@ export function InvoiceTemplateZoho({ invoiceId, readOnly = false }: InvoiceTemp
   const grandTotal = parseFloat(invoice.total_amount) || (subtotal + cgst + sgst + igst);
   const balanceDue = parseFloat(invoice.balance_due) || grandTotal;
 
+  const clientName = client?.name || client?.company || 'Client';
+  const clientAddress = [
+    client?.billing_address_line1 || client?.address || '',
+    [client?.billing_city || client?.city, client?.billing_state || client?.state].filter(Boolean).join(', '),
+  ].filter(Boolean).join('\n');
+  const clientGstin = client?.gstin || client?.gst_number || '';
+
   return (
-    <div className="bg-background p-6 space-y-6 max-w-4xl mx-auto print:p-0">
-      {/* Header with Company Info and Document Title */}
-      <div className="flex justify-between items-start">
+    <div className="bg-white text-black p-6 space-y-4 max-w-4xl mx-auto print:p-0 font-sans text-sm">
+      {/* Header Section - Company Info Left, Title Right */}
+      <div className="flex justify-between items-start border-b-2 border-primary pb-4">
         {/* Company Logo & Details */}
         <div className="flex gap-4">
           {company?.logo_url && (
             <img 
               src={company.logo_url} 
               alt={company.name} 
-              className="w-16 h-16 object-contain"
+              className="w-20 h-20 object-contain"
             />
           )}
-          <div>
-            <h1 className="text-xl font-bold text-foreground">{company?.name || 'Matrix Network Solutions'}</h1>
-            <p className="text-sm text-muted-foreground">
-              {company?.address_line1 || 'H.No: 7-1-19/5/201, Jyothi Bhopal Apartments,'}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {company?.city || 'Hyderabad'}, {company?.state || 'Telangana'} {company?.pincode || '500016'}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              GSTIN: {company?.gstin || '36AATFM4107H2Z3'}
-            </p>
+          <div className="text-xs">
+            <h1 className="text-lg font-bold text-primary mb-1">{company?.name || 'Matrix Network Solutions'}</h1>
+            <p>{company?.address_line1 || 'H.No: 7-1-19/5/201, Jyothi Bhopal Apartments,'}</p>
+            <p>{company?.address_line2 || 'Near Begumpet Metro Station, Opp Country Club, Begumpet,'}</p>
+            <p>{company?.city || 'HYDERABAD'} {company?.pincode || '500016'}, {company?.state || 'Telangana'} India</p>
+            <p>Phone: {company?.phone || '+91 9666 444 888'}   Email: {company?.email || 'info@matrix-networksolutions.com'}</p>
+            <p>Web: {company?.website || 'www.matrixnetworksolutions.in'}</p>
+            <p className="font-semibold mt-1">GSTIN: {company?.gstin || '36AATFM4107H2Z3'}</p>
           </div>
         </div>
 
-        {/* Document Title */}
-        <div className="text-right">
-          <h2 className="text-2xl font-bold text-primary">
+        {/* Document Title - Right aligned at GSTIN level */}
+        <div className="text-right self-end">
+          <h2 className="text-2xl font-bold text-primary tracking-wide">
             {getDocumentTitle(invoiceType)}
           </h2>
-          <Badge variant={invoiceType === 'PROFORMA' ? 'secondary' : 'default'}>
-            {invoiceType.replace('_', ' ')}
-          </Badge>
         </div>
       </div>
 
-      <Separator />
-
-      {/* Bill To / Invoice Details Grid */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Bill To */}
-        <Card className="p-4">
-          <h3 className="font-semibold text-sm mb-2 text-muted-foreground">Bill To</h3>
-          <p className="font-bold">{client?.name || client?.company || 'Client'}</p>
-          <p className="text-sm text-muted-foreground">
-            {client?.billing_address_line1 || client?.address || ''}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {[client?.billing_city || client?.city, client?.billing_state || client?.state, client?.billing_pincode || client?.pincode].filter(Boolean).join(', ')}
-          </p>
-          {client?.gst_number && (
-            <p className="text-sm font-medium mt-2">GSTIN: {client.gst_number}</p>
-          )}
-        </Card>
-
-        {/* Invoice Details */}
-        <Card className="p-4">
-          <h3 className="font-semibold text-sm mb-2 text-muted-foreground">
-            {invoiceType === 'PROFORMA' ? 'Proforma Invoice Details' : 'Invoice Details'}
-          </h3>
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">
-                {invoiceType === 'PROFORMA' ? 'Proforma #:' : 'Invoice No:'}
-              </span>
-              <span className="font-bold">{invoice.invoice_no || invoice.id}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Date:</span>
-              <span>{formatDate(invoice.invoice_date)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Due Date:</span>
-              <span>{formatDate(invoice.due_date)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Payment Terms:</span>
-              <span className="font-medium">{termsLabel}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Place of Supply:</span>
-              <span>{invoice.place_of_supply || client?.billing_state || 'Telangana'} (36)</span>
-            </div>
-            {invoice.sales_person && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Sales Person:</span>
-                <span>{invoice.sales_person}</span>
-              </div>
-            )}
+      {/* Bill To / Ship To + Invoice Details Grid */}
+      <div className="grid grid-cols-2 gap-4 text-xs">
+        {/* Left Side - Bill To & Ship To */}
+        <div className="space-y-3">
+          {/* Bill To */}
+          <div className="border border-border p-3">
+            <h3 className="font-bold text-primary mb-1">Bill To</h3>
+            <p className="font-bold">{clientName}</p>
+            <p className="whitespace-pre-line">{clientAddress}</p>
+            {clientGstin && <p className="mt-1">GSTIN: {clientGstin}</p>}
           </div>
-        </Card>
-      </div>
-
-      {/* Campaign Info */}
-      {campaign && (
-        <div className="bg-muted/30 p-3 rounded-md">
-          <span className="font-semibold text-primary">Campaign: </span>
-          <span>{campaign.campaign_name}</span>
-          {campaign.start_date && campaign.end_date && (
-            <span className="text-muted-foreground ml-4">
-              ({formatDate(campaign.start_date)} to {formatDate(campaign.end_date)})
-            </span>
-          )}
+          
+          {/* Ship To */}
+          <div className="border border-border p-3">
+            <h3 className="font-bold text-primary mb-1">Ship To</h3>
+            <p className="font-bold">{clientName}</p>
+            <p className="whitespace-pre-line">{clientAddress}</p>
+            {clientGstin && <p className="mt-1">GSTIN: {clientGstin}</p>}
+          </div>
         </div>
-      )}
+
+        {/* Right Side - Invoice Details & Other Details */}
+        <div className="space-y-3">
+          {/* Invoice Details */}
+          <div className="border border-border p-3">
+            <h3 className="font-bold text-primary mb-1">
+              {invoiceType === 'PROFORMA' ? 'Proforma Invoice Details' : 'Invoice Details'}
+            </h3>
+            <table className="w-full text-xs">
+              <tbody>
+                <tr>
+                  <td className="py-0.5">{invoiceType === 'PROFORMA' ? 'Proforma #:' : 'Invoice No:'}</td>
+                  <td className="py-0.5 font-bold text-right">{invoice.invoice_no || invoice.id}</td>
+                </tr>
+                <tr>
+                  <td className="py-0.5">Date:</td>
+                  <td className="py-0.5 text-right">{formatDate(invoice.invoice_date)}</td>
+                </tr>
+                {campaign && (
+                  <tr>
+                    <td className="py-0.5">Campaign:</td>
+                    <td className="py-0.5 text-right">{campaign.campaign_name}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Other Details */}
+          <div className="border border-border p-3">
+            <h3 className="font-bold text-primary mb-1">Other Details</h3>
+            <table className="w-full text-xs">
+              <tbody>
+                <tr>
+                  <td className="py-0.5">Place of Supply:</td>
+                  <td className="py-0.5 text-right">{invoice.place_of_supply || client?.billing_state || 'Telangana'} (36)</td>
+                </tr>
+                <tr>
+                  <td className="py-0.5">Sales Person:</td>
+                  <td className="py-0.5 text-right">{invoice.sales_person || 'N/A'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
 
       {/* Line Items Table */}
-      <div className="border rounded-md overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="border border-border">
+        <table className="w-full text-xs">
           <thead className="bg-primary text-primary-foreground">
             <tr>
-              <th className="p-2 text-left w-10">#</th>
-              <th className="p-2 text-left">LOCATION & DESCRIPTION</th>
-              <th className="p-2 text-center">SIZE</th>
-              <th className="p-2 text-center">BOOKING</th>
-              <th className="p-2 text-right">UNIT PRICE</th>
-              <th className="p-2 text-right">SUBTOTAL</th>
+              <th className="p-2 text-left w-8 border-r border-primary-foreground/30">#</th>
+              <th className="p-2 text-left border-r border-primary-foreground/30">LOCATION & DESCRIPTION</th>
+              <th className="p-2 text-center w-28 border-r border-primary-foreground/30">SIZE</th>
+              <th className="p-2 text-center w-32 border-r border-primary-foreground/30">BOOKING</th>
+              <th className="p-2 text-right w-24 border-r border-primary-foreground/30">UNIT PRICE</th>
+              <th className="p-2 text-right w-24">SUBTOTAL</th>
             </tr>
           </thead>
           <tbody>
-            {items.map((item: any, index: number) => (
-              <tr key={index} className="border-b last:border-b-0">
-                <td className="p-2 align-top">{index + 1}</td>
-                <td className="p-2 align-top">
-                  <div className="font-medium">[{item.asset_id}] {item.location || item.description}</div>
-                  <div className="text-muted-foreground text-xs">
-                    {item.area && <span>Area: {item.area} </span>}
-                    {item.media_type && <span>Media: {item.media_type} </span>}
-                    {item.direction && <span>Route: {item.direction}</span>}
-                  </div>
-                </td>
-                <td className="p-2 text-center align-top">
-                  <div>{item.dimensions || 'N/A'}</div>
-                  {item.total_sqft && <div className="text-xs text-muted-foreground">Sqft: {item.total_sqft}</div>}
-                </td>
-                <td className="p-2 text-center align-top text-xs">
-                  {item.start_date && (
-                    <div>From: {formatDate(item.start_date)}</div>
-                  )}
-                  {item.end_date && (
-                    <div>To: {formatDate(item.end_date)}</div>
-                  )}
-                </td>
-                <td className="p-2 text-right align-top">
-                  {formatINR(item.rate || item.unit_price || item.negotiated_rate || item.card_rate || 0)}
-                </td>
-                <td className="p-2 text-right align-top font-medium">
-                  {formatINR(item.amount || item.final_price || item.subtotal || 0)}
-                </td>
-              </tr>
-            ))}
+            {items.map((item: any, index: number) => {
+              const litType = item.illumination_type || item.lit_type || 'N/A';
+              return (
+                <tr key={index} className="border-t border-border">
+                  <td className="p-2 align-top border-r border-border">{index + 1}</td>
+                  <td className="p-2 align-top border-r border-border">
+                    <div className="font-medium">[{item.asset_id}] {item.location || item.description}</div>
+                    <div className="text-muted-foreground">
+                      {item.area && <span>Area: {item.area} </span>}
+                      {item.media_type && <span>Media: {item.media_type} </span>}
+                      {item.direction && <span>Route: {item.direction} </span>}
+                      <span>Lit: {litType}</span>
+                    </div>
+                    <div className="text-muted-foreground">HSN/SAC Code: 998361</div>
+                  </td>
+                  <td className="p-2 text-center align-top border-r border-border">
+                    <div>Dimension: {item.dimensions || 'N/A'}</div>
+                    {item.total_sqft && <div>Total Sqft: {item.total_sqft}</div>}
+                  </td>
+                  <td className="p-2 text-center align-top border-r border-border">
+                    {item.start_date && <div>From: {formatDate(item.start_date)}</div>}
+                    {item.end_date && <div>To: {formatDate(item.end_date)}</div>}
+                    <div>Duration: 1 Month</div>
+                  </td>
+                  <td className="p-2 text-right align-top border-r border-border">
+                    {formatINR(item.rate || item.unit_price || item.negotiated_rate || item.card_rate || 0)}
+                  </td>
+                  <td className="p-2 text-right align-top font-medium">
+                    {formatINR(item.amount || item.final_price || item.subtotal || 0)}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
-      {/* Totals Section */}
-      <div className="grid grid-cols-2 gap-6">
+      {/* Bank Details & Totals Section */}
+      <div className="grid grid-cols-2 gap-4 text-xs">
         {/* Bank Details */}
-        <Card className="p-4">
-          <h3 className="font-semibold mb-2">Bank Details</h3>
-          <div className="text-sm space-y-1">
-            <p className="font-medium">HDFC Bank Limited</p>
-            <p className="text-muted-foreground">Branch: Karkhana Road, Secunderabad – 500009</p>
-            <p className="text-muted-foreground">Account No: 50200010727301</p>
-            <p className="text-muted-foreground">IFSC Code: HDFC0001555</p>
-            <p className="text-muted-foreground">MICR: 500240026</p>
-          </div>
-        </Card>
+        <div className="border border-border p-3">
+          <h3 className="font-bold text-primary mb-2">Bank Details</h3>
+          <table className="w-full">
+            <tbody>
+              <tr><td colSpan={2} className="font-semibold">HDFC Bank Limited</td></tr>
+              <tr><td colSpan={2}>Branch: Karkhana Road, Secunderabad – 500009</td></tr>
+              <tr><td colSpan={2}>Account No: 50200010727301</td></tr>
+              <tr><td colSpan={2}>IFSC Code: HDFC0001555</td></tr>
+              <tr><td colSpan={2}>MICR: 500240026</td></tr>
+            </tbody>
+          </table>
+        </div>
 
-        {/* Summary */}
-        <Card className="p-4">
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>Sub Total</span>
-              <span>{formatINR(subtotal)}</span>
-            </div>
-            {igst > 0 ? (
-              <div className="flex justify-between">
-                <span>IGST @ 18%</span>
-                <span>{formatINR(igst)}</span>
-              </div>
-            ) : (
-              <>
-                <div className="flex justify-between">
-                  <span>CGST @ 9%</span>
-                  <span>{formatINR(cgst)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>SGST @ 9%</span>
-                  <span>{formatINR(sgst)}</span>
-                </div>
-              </>
-            )}
-            <Separator />
-            <div className="flex justify-between font-bold text-lg">
-              <span>Total</span>
-              <span>{formatINR(grandTotal)}</span>
-            </div>
-            {invoiceType === 'TAX_INVOICE' && (
-              <div className="flex justify-between font-bold text-orange-600">
-                <span>Balance Due</span>
-                <span>{formatINR(balanceDue)}</span>
-              </div>
-            )}
-          </div>
-        </Card>
+        {/* Summary Totals */}
+        <div className="border border-border p-3">
+          <table className="w-full">
+            <tbody>
+              <tr>
+                <td className="py-1">Sub Total</td>
+                <td className="py-1 text-right font-medium">{formatINR(subtotal)}</td>
+              </tr>
+              {igst > 0 ? (
+                <tr>
+                  <td className="py-1">IGST @ 18%</td>
+                  <td className="py-1 text-right">{formatINR(igst)}</td>
+                </tr>
+              ) : (
+                <>
+                  <tr>
+                    <td className="py-1">CGST @ 9%</td>
+                    <td className="py-1 text-right">{formatINR(cgst)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1">SGST @ 9%</td>
+                    <td className="py-1 text-right">{formatINR(sgst)}</td>
+                  </tr>
+                </>
+              )}
+              <tr className="border-t border-border">
+                <td className="py-2 font-bold">Total</td>
+                <td className="py-2 text-right font-bold text-lg">{formatINR(grandTotal)}</td>
+              </tr>
+              {invoiceType === 'TAX_INVOICE' && (
+                <tr className="border-t border-border">
+                  <td className="py-1 font-bold text-orange-600">Balance Due</td>
+                  <td className="py-1 text-right font-bold text-orange-600">{formatINR(balanceDue)}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Total in Words */}
+      <div className="text-xs border-t border-border pt-2">
+        <span className="font-semibold">Total (In Words): </span>
+        <span>{numberToWords(Math.round(grandTotal))}</span>
       </div>
 
       {/* Payment Terms */}
-      <div className="text-sm">
-        <span className="font-semibold">Payment Terms: </span>
-        <span>{termsLabel}</span>
+      <div className="border-t border-border pt-3">
+        <h3 className="font-bold text-primary mb-1">Payment Terms</h3>
+        <p className="text-xs">{termsLabel}</p>
+      </div>
+
+      {/* Terms & Conditions */}
+      <div className="border-t border-border pt-3">
+        <h3 className="font-bold text-primary mb-2">Terms & Conditions:</h3>
+        <ol className="text-xs list-decimal pl-4 space-y-1">
+          <li>Advance Payment & Purchase Order is Mandatory to start the campaign.</li>
+          <li>Printing & Mounting will be extra & GST @ 18% will be applicable extra.</li>
+          <li>Site available date may change in case of present display Renewal.</li>
+          <li>Site Availability changes every minute, please double check site available dates when you confirm the sites.</li>
+          <li>Campaign Execution takes 2 days in city and 4 days in upcountry. Please plan your campaign accordingly.</li>
+          <li>Kindly ensure that your artwork is ready before confirming the sites.</li>
+          <li>In case flex / vinyl / display material is damaged, torn or vandalised, it will be your responsibility to provide us with new flex.</li>
+          <li>Renewal of site will only be entertained before 10 days of site expiry.</li>
+        </ol>
+      </div>
+
+      {/* Signature */}
+      <div className="pt-6 text-right text-xs">
+        <p className="mb-8">For,</p>
+        <p className="font-bold">{company?.name || 'Matrix Network Solutions'}</p>
+        <p className="border-t border-border inline-block pt-1 px-4 mt-4">Authorized Signatory</p>
       </div>
 
       {/* Notes */}
       {invoice.notes && (
-        <div className="text-sm">
+        <div className="text-xs border-t border-border pt-2">
           <span className="font-semibold">Notes: </span>
           <span className="text-muted-foreground">{invoice.notes}</span>
         </div>

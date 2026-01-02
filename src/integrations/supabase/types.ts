@@ -3446,17 +3446,22 @@ export type Database = {
           invoice_no: string | null
           invoice_period_end: string | null
           invoice_period_start: string | null
+          invoice_type: string
           is_monthly_split: boolean | null
           items: Json | null
           notes: string | null
           parent_invoice_id: string | null
           payments: Json | null
           place_of_supply: string | null
+          reference_plan_id: string | null
           sales_person: string | null
           sgst_amount: number | null
           sgst_percent: number | null
           status: Database["public"]["Enums"]["invoice_status"]
           sub_total: number
+          template_style: string
+          terms_days: number
+          terms_mode: string
           total_amount: number
           updated_at: string | null
         }
@@ -3482,17 +3487,22 @@ export type Database = {
           invoice_no?: string | null
           invoice_period_end?: string | null
           invoice_period_start?: string | null
+          invoice_type?: string
           is_monthly_split?: boolean | null
           items?: Json | null
           notes?: string | null
           parent_invoice_id?: string | null
           payments?: Json | null
           place_of_supply?: string | null
+          reference_plan_id?: string | null
           sales_person?: string | null
           sgst_amount?: number | null
           sgst_percent?: number | null
           status?: Database["public"]["Enums"]["invoice_status"]
           sub_total: number
+          template_style?: string
+          terms_days?: number
+          terms_mode?: string
           total_amount: number
           updated_at?: string | null
         }
@@ -3518,17 +3528,22 @@ export type Database = {
           invoice_no?: string | null
           invoice_period_end?: string | null
           invoice_period_start?: string | null
+          invoice_type?: string
           is_monthly_split?: boolean | null
           items?: Json | null
           notes?: string | null
           parent_invoice_id?: string | null
           payments?: Json | null
           place_of_supply?: string | null
+          reference_plan_id?: string | null
           sales_person?: string | null
           sgst_amount?: number | null
           sgst_percent?: number | null
           status?: Database["public"]["Enums"]["invoice_status"]
           sub_total?: number
+          template_style?: string
+          terms_days?: number
+          terms_mode?: string
           total_amount?: number
           updated_at?: string | null
         }
@@ -7254,6 +7269,10 @@ export type Database = {
         Args: { p_company_id: string; p_invoice_date?: string }
         Returns: string
       }
+      generate_invoice_number_zoho: {
+        Args: { p_company_id: string; p_invoice_date: string }
+        Returns: string
+      }
       generate_mns_code: {
         Args: { p_city: string; p_media_type: string }
         Returns: string
@@ -7378,6 +7397,10 @@ export type Database = {
       get_current_user_company_id: { Args: never; Returns: string }
       get_enum_values: { Args: { enum_name: string }; Returns: Json }
       get_financial_year: { Args: never; Returns: string }
+      get_invoice_terms_label: {
+        Args: { p_terms_days: number; p_terms_mode: string }
+        Returns: string
+      }
       get_mounter_workload: {
         Args: { p_company_id: string }
         Returns: {
@@ -7505,6 +7528,10 @@ export type Database = {
           p_comments?: string
           p_status: Database["public"]["Enums"]["approval_status"]
         }
+        Returns: Json
+      }
+      recalculate_invoice_due_date: {
+        Args: { p_invoice_id: string }
         Returns: Json
       }
       remove_user_from_company: {

@@ -7167,6 +7167,13 @@ export type Database = {
         Args: { p_today: string }
         Returns: undefined
       }
+      user_has_role: {
+        Args: {
+          p_required_role: Database["public"]["Enums"]["app_role"]
+          p_user_id: string
+        }
+        Returns: boolean
+      }
       user_in_company: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean

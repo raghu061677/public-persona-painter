@@ -4,12 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, FileText, Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatINR, getInvoiceStatusColor } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
 import { InvoicePDFExport } from "@/components/invoices/InvoicePDFExport";
 import { PaymentTracking } from "@/components/invoices/PaymentTracking";
+import { PaymentTermsEditor } from "@/components/invoices/PaymentTermsEditor";
+import { InvoiceTypeSelector } from "@/components/invoices/InvoiceTypeSelector";
+import { InvoiceTemplateZoho } from "@/components/invoices/InvoiceTemplateZoho";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function InvoiceDetail() {
   const { id } = useParams();
@@ -105,9 +109,9 @@ export default function InvoiceDetail() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-3xl font-bold">{invoice.id}</h1>
+              <h1 className="text-3xl font-bold">{invoice.invoice_no || invoice.id}</h1>
               <p className="text-muted-foreground mt-1">
-                Invoice for {invoice.client_name}
+                {invoice.invoice_type === 'PROFORMA' ? 'Proforma Invoice' : 'Tax Invoice'} for {invoice.client_name}
               </p>
             </div>
           </div>
@@ -125,100 +129,61 @@ export default function InvoiceDetail() {
           </div>
         </div>
 
-        {/* Invoice Details */}
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Invoice Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Invoice Date:</span>
-                <span className="font-medium">{formatDate(invoice.invoice_date)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Due Date:</span>
-                <span className="font-medium">{formatDate(invoice.due_date)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Campaign:</span>
-                <span className="font-medium">{(invoice as any).campaign_id || "N/A"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Estimation:</span>
-                <span className="font-medium">{invoice.estimation_id || "N/A"}</span>
-              </div>
-            </CardContent>
-          </Card>
+        <Tabs defaultValue="preview" className="w-full">
+          <TabsList>
+            <TabsTrigger value="preview">Preview</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="payments">Payments</TabsTrigger>
+          </TabsList>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Financial Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Subtotal:</span>
-                <span className="font-medium">{formatINR(invoice.sub_total)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">GST ({invoice.gst_percent}%):</span>
-                <span className="font-medium">{formatINR(invoice.gst_amount)}</span>
-              </div>
-              <div className="flex justify-between text-lg font-bold border-t pt-2">
-                <span>Total Amount:</span>
-                <span>{formatINR(invoice.total_amount)}</span>
-              </div>
-              <div className="flex justify-between text-lg font-bold text-orange-600">
-                <span>Balance Due:</span>
-                <span>{formatINR(invoice.balance_due)}</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+          <TabsContent value="preview" className="mt-6">
+            <Card>
+              <CardContent className="p-0">
+                <InvoiceTemplateZoho invoiceId={invoice.id} readOnly />
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        {/* Line Items */}
-        {(invoice as any).line_items && (invoice as any).line_items.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Line Items</CardTitle>
-              <CardDescription>Detailed breakdown of invoice items</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {(invoice as any).line_items.map((item: any, index: number) => (
-                  <div key={index} className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                    <div className="flex-1">
-                      <p className="font-medium">{item.description}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Qty: {item.quantity} × {formatINR(item.rate)}
-                      </p>
-                    </div>
-                    <span className="font-bold">{formatINR(item.amount)}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+          <TabsContent value="settings" className="mt-6 space-y-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              <InvoiceTypeSelector
+                invoiceId={invoice.id}
+                currentType={invoice.invoice_type || 'TAX_INVOICE'}
+                onUpdate={() => fetchInvoice()}
+                readOnly={!isAdmin}
+              />
+              <PaymentTermsEditor
+                invoiceId={invoice.id}
+                currentTermsMode={invoice.terms_mode || 'DUE_ON_RECEIPT'}
+                currentTermsDays={invoice.terms_days || 0}
+                invoiceDate={invoice.invoice_date}
+                dueDate={invoice.due_date}
+                invoiceType={invoice.invoice_type || 'TAX_INVOICE'}
+                onUpdate={() => fetchInvoice()}
+                readOnly={!isAdmin}
+              />
+            </div>
 
-        {/* Payment Tracking */}
-        <PaymentTracking 
-          invoiceId={invoice.id} 
-          totalAmount={invoice.total_amount}
-          onPaymentAdded={fetchInvoice}
-        />
+            {invoice.notes && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Notes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">{invoice.notes}</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
 
-        {/* Notes */}
-        {invoice.notes && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Notes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">{invoice.notes}</p>
-            </CardContent>
-          </Card>
-        )}
+          <TabsContent value="payments" className="mt-6">
+            <PaymentTracking 
+              invoiceId={invoice.id} 
+              totalAmount={invoice.total_amount}
+              onPaymentAdded={fetchInvoice}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

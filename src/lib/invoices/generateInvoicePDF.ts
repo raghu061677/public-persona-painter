@@ -213,11 +213,13 @@ function createInvoicePDF(data: InvoiceData): Blob {
 
   yPos = yPos + logoHeight + 3;
 
-  // TAX INVOICE title - Right side, bottom of header, above the line
+  // Document title - Right side, bottom of header, above the line
+  const invoiceType = data.invoice.invoice_type || 'TAX_INVOICE';
+  const docTitle = invoiceType === 'PROFORMA' ? 'PROFORMA INVOICE' : 'TAX INVOICE';
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
-  doc.text('TAX INVOICE', pageWidth - rightMargin, yPos, { align: 'right' });
+  doc.text(docTitle, pageWidth - rightMargin, yPos, { align: 'right' });
 
   yPos += 5;
 
@@ -309,13 +311,24 @@ function createInvoicePDF(data: InvoiceData): Blob {
   let detailY = contentBoxY + 6;
   doc.setFontSize(8);
 
+  // Calculate terms label based on terms_mode
+  const termsMode = data.invoice.terms_mode || 'DUE_ON_RECEIPT';
+  const termsDays = data.invoice.terms_days || 0;
+  const termsLabel = termsMode === 'DUE_ON_RECEIPT' ? 'Due on Receipt' :
+    termsMode === 'NET_30' ? '30 Net Days' :
+    termsMode === 'NET_45' ? '45 Net Days' :
+    termsMode === 'CUSTOM' ? `${termsDays} Net Days` : 'Due on Receipt';
+
+  const invoiceType = data.invoice.invoice_type || 'TAX_INVOICE';
+  const invoiceNoLabel = invoiceType === 'PROFORMA' ? 'Proforma #:' : 'Invoice No:';
+
   const invoiceDetails = [
-    { label: 'Invoice No:', value: data.invoice.id, bold: true },
+    { label: invoiceNoLabel, value: data.invoice.invoice_no || data.invoice.id, bold: true },
     { label: 'Invoice Date:', value: formatDate(data.invoice.invoice_date) },
     { label: 'Due Date:', value: formatDate(data.invoice.due_date) },
-    { label: 'Place of Supply:', value: 'Telangana (36)' },
-    { label: 'Terms:', value: 'Due on Receipt' },
-    { label: 'Sales Person:', value: data.company?.owner_name || data.orgSettings?.primary_contact || 'Raghunath Gajula' },
+    { label: 'Place of Supply:', value: data.invoice.place_of_supply || 'Telangana (36)' },
+    { label: 'Payment Terms:', value: termsLabel },
+    { label: 'Sales Person:', value: data.invoice.sales_person || data.company?.owner_name || data.orgSettings?.primary_contact || 'Raghunath Gajula' },
   ];
 
   invoiceDetails.forEach(({ label, value, bold }) => {

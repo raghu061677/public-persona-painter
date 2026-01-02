@@ -159,9 +159,13 @@ function createInvoicePDF(data: InvoiceData): Blob {
   const companyName = data.company?.name || data.orgSettings?.organization_name || 'Matrix Network Solutions';
   const companyGSTIN = data.company?.gstin || data.orgSettings?.gstin || '36AATFM4107H2Z3';
   
+  // Invoice type - declare once at the top
+  const invoiceType = data.invoice.invoice_type || 'TAX_INVOICE';
+  const docTitle = invoiceType === 'PROFORMA' ? 'PROFORMA INVOICE' : 'TAX INVOICE';
+  
   let yPos = 15;
 
-  // ========== HEADER SECTION ==========
+  // ========== HEADER SECTION - MATCHING SCREENSHOT EXACTLY ==========
   const logoWidth = 45;
   const logoHeight = 35;
   let logoEndX = leftMargin;
@@ -176,7 +180,7 @@ function createInvoicePDF(data: InvoiceData): Blob {
     }
   }
 
-  // Company Name - Bold, Black (matching reference)
+  // Company Name - Bold, Black (matching reference screenshot)
   let textY = yPos + 5;
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
@@ -190,7 +194,7 @@ function createInvoicePDF(data: InvoiceData): Blob {
   doc.setTextColor(60, 60, 60);
   doc.text(companyName, logoEndX, textY);
 
-  // Company Address lines
+  // Company Address lines - matching screenshot format
   textY += 4.5;
   doc.text(COMPANY_ADDRESS.line1, logoEndX, textY);
   textY += 4;
@@ -211,65 +215,122 @@ function createInvoicePDF(data: InvoiceData): Blob {
   doc.setFont('helvetica', 'normal');
   doc.text(`GSTIN : ${companyGSTIN}`, logoEndX, textY);
 
-  yPos = yPos + logoHeight + 3;
-
-  // Document title - Right side, bottom of header, above the line
-  const invoiceType = data.invoice.invoice_type || 'TAX_INVOICE';
-  const docTitle = invoiceType === 'PROFORMA' ? 'PROFORMA INVOICE' : 'TAX INVOICE';
-  doc.setFontSize(12);
+  // Document title - Right side, aligned with GSTIN level (matching screenshot)
+  doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
-  doc.text(docTitle, pageWidth - rightMargin, yPos, { align: 'right' });
+  doc.text(docTitle, pageWidth - rightMargin, textY, { align: 'right' });
 
-  yPos += 5;
+  yPos = yPos + logoHeight + 8;
 
   // Horizontal divider
   doc.setDrawColor(200, 200, 200);
   doc.setLineWidth(0.4);
   doc.line(leftMargin, yPos, pageWidth - rightMargin, yPos);
 
-  yPos += 8;
+  yPos += 3;
 
-  // ========== TWO COLUMN LAYOUT: Bill To + Invoice Details ==========
+  // ========== INVOICE DETAILS ROW (MATCHING SCREENSHOT LAYOUT) ==========
+  // Left side: Invoice No, Invoice Date, Terms, Due Date
+  // Right side: Place of Supply, Sales Person
+  
+  const leftColX = leftMargin;
+  const rightColX = pageWidth / 2 + 10;
+  const labelColWidth = 28;
+  
+  // Calculate terms label based on terms_mode
+  const termsMode = data.invoice.terms_mode || 'DUE_ON_RECEIPT';
+  const termsDays = data.invoice.terms_days || 0;
+  const termsLabel = termsMode === 'DUE_ON_RECEIPT' ? 'Due on Receipt' :
+    termsMode === 'NET_30' ? '30 Net Days' :
+    termsMode === 'NET_45' ? '45 Net Days' :
+    termsMode === 'CUSTOM' ? `${termsDays} Net Days` : 'Due on Receipt';
+
+  const invoiceNoLabel = invoiceType === 'PROFORMA' ? 'Proforma No' : 'Invoice No';
+
+  doc.setFontSize(9);
+  let detailRowY = yPos + 5;
+
+  // Row 1: Invoice No | Place of Supply
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0, 0, 0);
+  doc.text(invoiceNoLabel, leftColX, detailRowY);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`: ${data.invoice.invoice_no || data.invoice.id}`, leftColX + labelColWidth, detailRowY);
+  
+  doc.setFont('helvetica', 'normal');
+  doc.text('Place Of Supply', rightColX, detailRowY);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`: ${data.invoice.place_of_supply || 'Telangana (36)'}`, rightColX + 32, detailRowY);
+  
+  detailRowY += 5;
+
+  // Row 2: Invoice Date | Sales Person
+  doc.setFont('helvetica', 'normal');
+  doc.text('Invoice Date', leftColX, detailRowY);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`: ${formatDate(data.invoice.invoice_date)}`, leftColX + labelColWidth, detailRowY);
+  
+  doc.setFont('helvetica', 'normal');
+  doc.text('Sales person', rightColX, detailRowY);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`: ${data.invoice.sales_person || data.company?.owner_name || data.orgSettings?.primary_contact || 'Raghunath Gajula'}`, rightColX + 32, detailRowY);
+  
+  detailRowY += 5;
+
+  // Row 3: Terms
+  doc.setFont('helvetica', 'normal');
+  doc.text('Terms', leftColX, detailRowY);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`: ${termsLabel}`, leftColX + labelColWidth, detailRowY);
+  
+  detailRowY += 5;
+
+  // Row 4: Due Date
+  doc.setFont('helvetica', 'normal');
+  doc.text('Due Date', leftColX, detailRowY);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`: ${formatDate(data.invoice.due_date)}`, leftColX + labelColWidth, detailRowY);
+
+  yPos = detailRowY + 5;
+
+  // ========== BILL TO / SHIP TO ROW ==========
   const colMidX = pageWidth / 2;
   const leftColWidth = colMidX - leftMargin - 5;
   const rightColWidth = pageWidth - rightMargin - colMidX - 3;
 
   // Bill To Section Header
-  doc.setFillColor(245, 247, 250);
-  doc.rect(leftMargin, yPos, leftColWidth, 7, 'F');
-  doc.setDrawColor(220, 220, 220);
-  doc.rect(leftMargin, yPos, leftColWidth, 7, 'S');
+  doc.setFillColor(30, 64, 130);
+  doc.rect(leftMargin, yPos, leftColWidth, 6, 'F');
   
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.text('Bill To', leftMargin + 4, yPos + 5);
+  doc.setTextColor(255, 255, 255);
+  doc.text('Bill To', leftMargin + 4, yPos + 4.5);
 
-  // Invoice Details Section Header
-  doc.setFillColor(245, 247, 250);
-  doc.rect(colMidX + 3, yPos, rightColWidth, 7, 'F');
-  doc.rect(colMidX + 3, yPos, rightColWidth, 7, 'S');
-  doc.text('Invoice Details', colMidX + 7, yPos + 5);
+  // Ship To Section Header
+  doc.setFillColor(30, 64, 130);
+  doc.rect(colMidX + 3, yPos, rightColWidth, 6, 'F');
+  doc.text('Ship To', colMidX + 7, yPos + 4.5);
 
-  yPos += 7;
+  yPos += 6;
   const contentBoxY = yPos;
-  const boxHeight = 42;
+  const boxHeight = 32;
 
   // Bill To Content Box
   doc.setDrawColor(220, 220, 220);
   doc.rect(leftMargin, contentBoxY, leftColWidth, boxHeight, 'S');
 
-  // Invoice Details Content Box
+  // Ship To Content Box
   doc.rect(colMidX + 3, contentBoxY, rightColWidth, boxHeight, 'S');
 
   // Bill To Content
-  let billY = contentBoxY + 6;
+  let billY = contentBoxY + 5;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
   doc.text(data.client.name || data.client.company || 'Client', leftMargin + 4, billY);
-  billY += 5;
+  billY += 4.5;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
@@ -281,7 +342,7 @@ function createInvoicePDF(data: InvoiceData): Blob {
     const addressLines = doc.splitTextToSize(clientAddress, leftColWidth - 10);
     addressLines.slice(0, 2).forEach((line: string) => {
       doc.text(line, leftMargin + 4, billY);
-      billY += 4;
+      billY += 3.5;
     });
   }
 
@@ -294,53 +355,51 @@ function createInvoicePDF(data: InvoiceData): Blob {
   
   if (cityStatePin) {
     doc.text(cityStatePin, leftMargin + 4, billY);
-    billY += 4;
+    billY += 3.5;
   }
 
   doc.text('India', leftMargin + 4, billY);
-  billY += 5;
+  billY += 4;
 
-  // Client GSTIN - Important!
+  // Client GSTIN
   if (data.client.gst_number) {
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
     doc.text(`GSTIN: ${data.client.gst_number}`, leftMargin + 4, billY);
   }
 
-  // Invoice Details Content
-  let detailY = contentBoxY + 6;
+  // Ship To Content (same as Bill To for now)
+  let shipY = contentBoxY + 5;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
+  doc.text(data.client.name || data.client.company || 'Client', colMidX + 7, shipY);
+  shipY += 4.5;
+
+  doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
+  doc.setTextColor(60, 60, 60);
+  
+  const shipAddress = data.client.shipping_address_line1 || data.client.billing_address_line1 || data.client.address || '';
+  if (shipAddress) {
+    const shipAddressLines = doc.splitTextToSize(shipAddress, rightColWidth - 10);
+    shipAddressLines.slice(0, 2).forEach((line: string) => {
+      doc.text(line, colMidX + 7, shipY);
+      shipY += 3.5;
+    });
+  }
 
-  // Calculate terms label based on terms_mode
-  const termsMode = data.invoice.terms_mode || 'DUE_ON_RECEIPT';
-  const termsDays = data.invoice.terms_days || 0;
-  const termsLabel = termsMode === 'DUE_ON_RECEIPT' ? 'Due on Receipt' :
-    termsMode === 'NET_30' ? '30 Net Days' :
-    termsMode === 'NET_45' ? '45 Net Days' :
-    termsMode === 'CUSTOM' ? `${termsDays} Net Days` : 'Due on Receipt';
-
-  const invoiceType = data.invoice.invoice_type || 'TAX_INVOICE';
-  const invoiceNoLabel = invoiceType === 'PROFORMA' ? 'Proforma #:' : 'Invoice No:';
-
-  const invoiceDetails = [
-    { label: invoiceNoLabel, value: data.invoice.invoice_no || data.invoice.id, bold: true },
-    { label: 'Invoice Date:', value: formatDate(data.invoice.invoice_date) },
-    { label: 'Due Date:', value: formatDate(data.invoice.due_date) },
-    { label: 'Place of Supply:', value: data.invoice.place_of_supply || 'Telangana (36)' },
-    { label: 'Payment Terms:', value: termsLabel },
-    { label: 'Sales Person:', value: data.invoice.sales_person || data.company?.owner_name || data.orgSettings?.primary_contact || 'Raghunath Gajula' },
-  ];
-
-  invoiceDetails.forEach(({ label, value, bold }) => {
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(80, 80, 80);
-    doc.text(label, colMidX + 7, detailY);
-    
-    doc.setFont('helvetica', bold ? 'bold' : 'normal');
-    doc.setTextColor(0, 0, 0);
-    doc.text(value || '-', colMidX + 35, detailY);
-    detailY += 5.5;
-  });
+  const shipCityStatePin = [
+    data.client.shipping_city || data.client.billing_city || data.client.city,
+    data.client.shipping_state || data.client.billing_state || data.client.state,
+    data.client.shipping_pincode || data.client.billing_pincode || data.client.pincode
+  ].filter(Boolean).join(', ');
+  
+  if (shipCityStatePin) {
+    doc.text(shipCityStatePin, colMidX + 7, shipY);
+    shipY += 3.5;
+  }
+  doc.text('India', colMidX + 7, shipY);
 
   yPos = contentBoxY + boxHeight + 8;
 
@@ -381,8 +440,10 @@ function createInvoicePDF(data: InvoiceData): Blob {
 
   // ========== ITEMS TABLE ==========
   // Prepare table data with detailed format matching reference
+  const HSN_SAC_CODE = '998361'; // HSN/SAC code for advertising services
+  
   const tableData = data.items.map((item: any, index: number) => {
-    // Build detailed location description with Zone, Media, Route, Lit
+    // Build detailed location description with Zone, Media, Route, Lit, HSN/SAC
     const assetId = item.asset_id || item.id || '';
     const locationName = item.location || item.description || 'Media Display';
     const zone = item.area || item.zone || '';
@@ -390,13 +451,14 @@ function createInvoicePDF(data: InvoiceData): Blob {
     const direction = item.direction || item.route || '';
     const illumination = item.illumination_type || item.lit || 'NonLit';
     
-    // Format multi-line description
+    // Format multi-line description with HSN/SAC code after Lit type
     const descriptionLines = [
       `[${assetId}] ${locationName}`,
       zone ? `Zone:${zone}` : '',
       `Media:${mediaType}`,
       direction ? `Route:${direction}` : '',
-      `Lit:${illumination}`
+      `Lit:${illumination}`,
+      `HSN/SAC: ${HSN_SAC_CODE}`
     ].filter(Boolean).join('\n');
     
     // Size with dimensions and area

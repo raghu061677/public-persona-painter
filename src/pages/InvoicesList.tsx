@@ -211,7 +211,7 @@ export default function InvoicesList() {
             <PageCustomization options={customizationOptions} />
             {isAdmin && (
               <Button
-                onClick={() => navigate('/finance/invoices/new')}
+                onClick={() => navigate('/admin/invoices/new')}
                 size="default"
                 className="gap-2"
               >
@@ -375,7 +375,7 @@ export default function InvoicesList() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => navigate(`/finance/invoices/${invoice.id}`)}
+                            onClick={() => navigate(`/admin/invoices/${invoice.id}`)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>

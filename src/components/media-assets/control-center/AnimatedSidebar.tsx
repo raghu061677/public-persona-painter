@@ -26,7 +26,7 @@ const menuItems = [
   { icon: Layers, label: "Media Assets", path: "/media-assets" },
   { icon: FileText, label: "Plans", path: "/plans" },
   { icon: Camera, label: "Campaigns", path: "/campaigns" },
-  { icon: DollarSign, label: "Finance", path: "/finance/invoices" },
+  { icon: DollarSign, label: "Finance", path: "/admin/invoices" },
   { icon: BarChart3, label: "Reports", path: "/reports/vacant-media" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];

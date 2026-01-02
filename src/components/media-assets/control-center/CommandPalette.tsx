@@ -45,7 +45,7 @@ export function CommandPalette({
         { icon: Layers, label: "Go to Media Assets", action: () => navigate("/media-assets") },
         { icon: FileText, label: "Go to Plans", action: () => navigate("/plans") },
         { icon: Camera, label: "Go to Campaigns", action: () => navigate("/campaigns") },
-        { icon: DollarSign, label: "Go to Finance", action: () => navigate("/finance/invoices") },
+        { icon: DollarSign, label: "Go to Finance", action: () => navigate("/admin/invoices") },
         { icon: BarChart3, label: "Go to Reports", action: () => navigate("/reports/vacant-media") },
         { icon: Settings, label: "Go to Settings", action: () => navigate("/settings") },
       ],

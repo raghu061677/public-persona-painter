@@ -186,7 +186,7 @@ export default function FinanceDashboard() {
                 <p className="text-muted-foreground mb-4">
                   Track invoices, payments, and outstanding amounts
                 </p>
-                <Button variant="gradient" onClick={() => navigate('/finance/invoices')}>
+                <Button variant="gradient" onClick={() => navigate('/admin/invoices')}>
                   View All Invoices
                 </Button>
               </CardContent>

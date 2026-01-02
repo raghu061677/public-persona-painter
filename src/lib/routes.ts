@@ -52,6 +52,7 @@ export const ROUTES = {
   // Finance
   ESTIMATIONS: "/admin/estimations",
   INVOICES: "/admin/invoices",
+  INVOICES_NEW: "/admin/invoices/new",
   INVOICES_DETAIL: (id: string) => `/admin/invoices/${id}`,
   EXPENSES: "/admin/expenses",
   FINANCE_DASHBOARD: "/admin/finance",

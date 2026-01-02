@@ -337,12 +337,14 @@ const App = () => (
             <Route path="/admin/platform-roles" element={<ModernAppLayout><PlatformRoles /></ModernAppLayout>} />
             <Route path="/finance/proformas" element={<ModernAppLayout><ProformasList /></ModernAppLayout>} />
             <Route path="/finance/proformas/:id" element={<ModernAppLayout><ProformaDetail /></ModernAppLayout>} />
-            <Route path="/finance/invoices" element={<ModernAppLayout><InvoicesList /></ModernAppLayout>} />
-            <Route path="/finance/invoices/new" element={<ModernAppLayout><InvoiceCreate /></ModernAppLayout>} />
+            <Route path="/finance/invoices" element={<Navigate to="/admin/invoices" replace />} />
+            <Route path="/finance/invoices/new" element={<Navigate to="/admin/invoices/new" replace />} />
             <Route path="/finance/invoices/:id" element={<ModernAppLayout><InvoiceDetail /></ModernAppLayout>} />
-            <Route path="/admin/invoices" element={<ModernAppLayout><Invoices /></ModernAppLayout>} />
+            <Route path="/admin/invoices" element={<ModernAppLayout><InvoicesList /></ModernAppLayout>} />
+            <Route path="/admin/invoices/new" element={<ModernAppLayout><InvoiceCreate /></ModernAppLayout>} />
             <Route path="/admin/invoices/:id" element={<ModernAppLayout><InvoiceDetail /></ModernAppLayout>} />
             <Route path="/admin/invoices-import" element={<ModernAppLayout><ImportInvoices /></ModernAppLayout>} />
+            <Route path="/admin/payment-reminders" element={<ModernAppLayout><Invoices /></ModernAppLayout>} />
             <Route path="/admin/expenses" element={<ModernAppLayout><ExpensesList /></ModernAppLayout>} />
             <Route path="/finance/expenses" element={<ModernAppLayout><ExpensesList /></ModernAppLayout>} />
             <Route path="/reports" element={<ModernAppLayout><ReportsDashboard /></ModernAppLayout>} />

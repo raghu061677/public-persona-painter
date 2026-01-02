@@ -15,6 +15,8 @@ import {
   Receipt,
   Copy,
   GanttChartSquare,
+  CheckCircle,
+  Calendar,
 } from "lucide-react";
 import { LoadingState } from "@/components/ui/loading-state";
 import { StatCard } from "@/components/ui/stat-card";
@@ -65,6 +67,8 @@ const Dashboard = () => {
 
   const [metrics, setMetrics] = useState({
     totalAssets: 0,
+    bookedAssets: 0,
+    availableAssets: 0,
     activeCampaigns: 0,
     leadsThisMonth: 0,
     revenueThisMonth: 0,
@@ -180,8 +184,16 @@ const Dashboard = () => {
         .eq("company_id", selectedCompanyId);
 
       const statusCounts: Record<string, number> = {};
+      let bookedCount = 0;
+      let availableCount = 0;
+      
       assetsByStatus?.forEach((asset) => {
         statusCounts[asset.status] = (statusCounts[asset.status] || 0) + 1;
+        if (asset.status === 'Booked') {
+          bookedCount++;
+        } else if (asset.status === 'Available') {
+          availableCount++;
+        }
       });
 
       setAssetStatusData(
@@ -222,6 +234,8 @@ const Dashboard = () => {
 
       setMetrics({
         totalAssets: assetsCount || 0,
+        bookedAssets: bookedCount,
+        availableAssets: availableCount,
         activeCampaigns: campaignsCount || 0,
         leadsThisMonth: leadsCount || 0,
         revenueThisMonth: totalRevenue,
@@ -298,7 +312,7 @@ const Dashboard = () => {
         <div className="space-y-6 animate-fade-in">
           {/* Metric Cards */}
           {shouldShowWidget('revenue') && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4" data-tour="dashboard">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4" data-tour="dashboard">
               <StatCard
                 title="Total Assets"
                 value={metrics.totalAssets}
@@ -306,6 +320,24 @@ const Dashboard = () => {
                 description="Total inventory"
                 borderColor="border-l-blue-500"
               />
+              <div onClick={() => navigate('/admin/media-assets?status=Available')} className="cursor-pointer">
+                <StatCard
+                  title="Available Assets"
+                  value={metrics.availableAssets}
+                  icon={CheckCircle}
+                  description="Ready to book"
+                  borderColor="border-l-emerald-500"
+                />
+              </div>
+              <div onClick={() => navigate('/admin/media-assets?status=Booked')} className="cursor-pointer">
+                <StatCard
+                  title="Booked Assets"
+                  value={metrics.bookedAssets}
+                  icon={Calendar}
+                  description="Currently occupied"
+                  borderColor="border-l-amber-500"
+                />
+              </div>
               <StatCard
                 title="Active Campaigns"
                 value={metrics.activeCampaigns}

@@ -518,7 +518,7 @@ const Dashboard = () => {
               <Button onClick={() => navigate('/admin/plans/new')}>
                 <PlusCircle className="mr-2" /> Create New Plan
               </Button>
-              <Button onClick={() => navigate('/finance/invoices')}>
+              <Button onClick={() => navigate('/admin/invoices')}>
                 <PlusCircle className="mr-2" /> Create New Invoice
               </Button>
             </CardContent>

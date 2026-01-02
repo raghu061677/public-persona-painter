@@ -1101,12 +1101,98 @@ export type Database = {
           },
         ]
       }
+      campaign_asset_creative_changes: {
+        Row: {
+          campaign_asset_id: string
+          campaign_id: string
+          change_date: string
+          company_id: string
+          created_at: string | null
+          creative_id: string
+          id: string
+          mounting_cost_override: number | null
+          printing_cost_override: number | null
+          remount_required: boolean
+          reprint_required: boolean
+        }
+        Insert: {
+          campaign_asset_id: string
+          campaign_id: string
+          change_date: string
+          company_id: string
+          created_at?: string | null
+          creative_id: string
+          id?: string
+          mounting_cost_override?: number | null
+          printing_cost_override?: number | null
+          remount_required?: boolean
+          reprint_required?: boolean
+        }
+        Update: {
+          campaign_asset_id?: string
+          campaign_id?: string
+          change_date?: string
+          company_id?: string
+          created_at?: string | null
+          creative_id?: string
+          id?: string
+          mounting_cost_override?: number | null
+          printing_cost_override?: number | null
+          remount_required?: boolean
+          reprint_required?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_asset_creative_changes_campaign_asset_id_fkey"
+            columns: ["campaign_asset_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_asset_creative_changes_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_asset_creative_changes_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_asset_creative_changes_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_forecast"
+            referencedColumns: ["campaign_id"]
+          },
+          {
+            foreignKeyName: "campaign_asset_creative_changes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_asset_creative_changes_creative_id_fkey"
+            columns: ["creative_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_creatives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_assets: {
         Row: {
           area: string
           asset_id: string
           assigned_at: string | null
           assigned_mounter_id: string | null
+          base_rate_monthly: number | null
           booking_end_date: string | null
           booking_start_date: string | null
           campaign_id: string
@@ -1126,13 +1212,16 @@ export type Database = {
           media_type: string
           mounter_name: string | null
           mounting_charges: number | null
+          mounting_cost_default: number | null
           municipal_authority: string | null
           municipal_id: string | null
           negotiated_rate: number | null
           photos: Json | null
           printing_charges: number | null
+          printing_cost_default: number | null
           state: string | null
           status: Database["public"]["Enums"]["asset_installation_status"]
+          tax_percent: number | null
           total_price: number | null
           total_sqft: number | null
         }
@@ -1141,6 +1230,7 @@ export type Database = {
           asset_id: string
           assigned_at?: string | null
           assigned_mounter_id?: string | null
+          base_rate_monthly?: number | null
           booking_end_date?: string | null
           booking_start_date?: string | null
           campaign_id: string
@@ -1160,13 +1250,16 @@ export type Database = {
           media_type: string
           mounter_name?: string | null
           mounting_charges?: number | null
+          mounting_cost_default?: number | null
           municipal_authority?: string | null
           municipal_id?: string | null
           negotiated_rate?: number | null
           photos?: Json | null
           printing_charges?: number | null
+          printing_cost_default?: number | null
           state?: string | null
           status?: Database["public"]["Enums"]["asset_installation_status"]
+          tax_percent?: number | null
           total_price?: number | null
           total_sqft?: number | null
         }
@@ -1175,6 +1268,7 @@ export type Database = {
           asset_id?: string
           assigned_at?: string | null
           assigned_mounter_id?: string | null
+          base_rate_monthly?: number | null
           booking_end_date?: string | null
           booking_start_date?: string | null
           campaign_id?: string
@@ -1194,13 +1288,16 @@ export type Database = {
           media_type?: string
           mounter_name?: string | null
           mounting_charges?: number | null
+          mounting_cost_default?: number | null
           municipal_authority?: string | null
           municipal_id?: string | null
           negotiated_rate?: number | null
           photos?: Json | null
           printing_charges?: number | null
+          printing_cost_default?: number | null
           state?: string | null
           status?: Database["public"]["Enums"]["asset_installation_status"]
+          tax_percent?: number | null
           total_price?: number | null
           total_sqft?: number | null
         }
@@ -1284,12 +1381,80 @@ export type Database = {
           },
         ]
       }
+      campaign_billing_periods: {
+        Row: {
+          campaign_id: string
+          company_id: string
+          created_at: string | null
+          id: string
+          month_key: string
+          period_end: string
+          period_start: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          campaign_id: string
+          company_id: string
+          created_at?: string | null
+          id?: string
+          month_key: string
+          period_end: string
+          period_start: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          month_key?: string
+          period_end?: string
+          period_start?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_billing_periods_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_billing_periods_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_billing_periods_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_forecast"
+            referencedColumns: ["campaign_id"]
+          },
+          {
+            foreignKeyName: "campaign_billing_periods_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_creatives: {
         Row: {
           approved_at: string | null
           approved_by: string | null
           campaign_id: string
           created_at: string | null
+          creative_version: number | null
+          effective_from: string | null
+          effective_to: string | null
           file_name: string
           file_size: number | null
           file_type: string
@@ -1304,6 +1469,9 @@ export type Database = {
           approved_by?: string | null
           campaign_id: string
           created_at?: string | null
+          creative_version?: number | null
+          effective_from?: string | null
+          effective_to?: string | null
           file_name: string
           file_size?: number | null
           file_type: string
@@ -1318,6 +1486,9 @@ export type Database = {
           approved_by?: string | null
           campaign_id?: string
           created_at?: string | null
+          creative_version?: number | null
+          effective_from?: string | null
+          effective_to?: string | null
           file_name?: string
           file_size?: number | null
           file_type?: string
@@ -1783,6 +1954,7 @@ export type Database = {
       campaigns: {
         Row: {
           assigned_to: string | null
+          billing_cycle: string | null
           campaign_name: string
           client_id: string
           client_name: string
@@ -1800,6 +1972,7 @@ export type Database = {
           id: string
           is_deleted: boolean | null
           is_historical_entry: boolean | null
+          is_recurring: boolean | null
           mounting_total: number | null
           notes: string | null
           notification_settings: Json | null
@@ -1816,6 +1989,7 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          billing_cycle?: string | null
           campaign_name: string
           client_id: string
           client_name: string
@@ -1833,6 +2007,7 @@ export type Database = {
           id: string
           is_deleted?: boolean | null
           is_historical_entry?: boolean | null
+          is_recurring?: boolean | null
           mounting_total?: number | null
           notes?: string | null
           notification_settings?: Json | null
@@ -1849,6 +2024,7 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          billing_cycle?: string | null
           campaign_name?: string
           client_id?: string
           client_name?: string
@@ -1866,6 +2042,7 @@ export type Database = {
           id?: string
           is_deleted?: boolean | null
           is_historical_entry?: boolean | null
+          is_recurring?: boolean | null
           mounting_total?: number | null
           notes?: string | null
           notification_settings?: Json | null
@@ -3102,10 +3279,157 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_line_items: {
+        Row: {
+          amount: number
+          campaign_asset_id: string | null
+          created_at: string | null
+          description: string
+          hsn_sac_code: string | null
+          id: string
+          invoice_id: string
+          line_type: string
+          media_asset_id: string | null
+          qty: number
+          rate: number
+        }
+        Insert: {
+          amount?: number
+          campaign_asset_id?: string | null
+          created_at?: string | null
+          description: string
+          hsn_sac_code?: string | null
+          id?: string
+          invoice_id: string
+          line_type: string
+          media_asset_id?: string | null
+          qty?: number
+          rate?: number
+        }
+        Update: {
+          amount?: number
+          campaign_asset_id?: string | null
+          created_at?: string | null
+          description?: string
+          hsn_sac_code?: string | null
+          id?: string
+          invoice_id?: string
+          line_type?: string
+          media_asset_id?: string | null
+          qty?: number
+          rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_line_items_campaign_asset_id_fkey"
+            columns: ["campaign_asset_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_profitability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_revenue_summary"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_utilization"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_forecast"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_calendar_heatmap"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_sequences: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          fy_key: string
+          id: string
+          next_number: number
+          prefix: string
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          fy_key: string
+          id?: string
+          next_number?: number
+          prefix?: string
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          fy_key?: string
+          id?: string
+          next_number?: number
+          prefix?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_sequences_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           balance_due: number
+          billing_period_id: string | null
           campaign_id: string | null
+          cgst_amount: number | null
+          cgst_percent: number | null
           client_id: string
           client_name: string
           company_id: string | null
@@ -3116,7 +3440,10 @@ export type Database = {
           gst_amount: number
           gst_percent: number
           id: string
+          igst_amount: number | null
+          igst_percent: number | null
           invoice_date: string
+          invoice_no: string | null
           invoice_period_end: string | null
           invoice_period_start: string | null
           is_monthly_split: boolean | null
@@ -3124,6 +3451,10 @@ export type Database = {
           notes: string | null
           parent_invoice_id: string | null
           payments: Json | null
+          place_of_supply: string | null
+          sales_person: string | null
+          sgst_amount: number | null
+          sgst_percent: number | null
           status: Database["public"]["Enums"]["invoice_status"]
           sub_total: number
           total_amount: number
@@ -3131,7 +3462,10 @@ export type Database = {
         }
         Insert: {
           balance_due: number
+          billing_period_id?: string | null
           campaign_id?: string | null
+          cgst_amount?: number | null
+          cgst_percent?: number | null
           client_id: string
           client_name: string
           company_id?: string | null
@@ -3142,7 +3476,10 @@ export type Database = {
           gst_amount: number
           gst_percent?: number
           id: string
+          igst_amount?: number | null
+          igst_percent?: number | null
           invoice_date: string
+          invoice_no?: string | null
           invoice_period_end?: string | null
           invoice_period_start?: string | null
           is_monthly_split?: boolean | null
@@ -3150,6 +3487,10 @@ export type Database = {
           notes?: string | null
           parent_invoice_id?: string | null
           payments?: Json | null
+          place_of_supply?: string | null
+          sales_person?: string | null
+          sgst_amount?: number | null
+          sgst_percent?: number | null
           status?: Database["public"]["Enums"]["invoice_status"]
           sub_total: number
           total_amount: number
@@ -3157,7 +3498,10 @@ export type Database = {
         }
         Update: {
           balance_due?: number
+          billing_period_id?: string | null
           campaign_id?: string | null
+          cgst_amount?: number | null
+          cgst_percent?: number | null
           client_id?: string
           client_name?: string
           company_id?: string | null
@@ -3168,7 +3512,10 @@ export type Database = {
           gst_amount?: number
           gst_percent?: number
           id?: string
+          igst_amount?: number | null
+          igst_percent?: number | null
           invoice_date?: string
+          invoice_no?: string | null
           invoice_period_end?: string | null
           invoice_period_start?: string | null
           is_monthly_split?: boolean | null
@@ -3176,6 +3523,10 @@ export type Database = {
           notes?: string | null
           parent_invoice_id?: string | null
           payments?: Json | null
+          place_of_supply?: string | null
+          sales_person?: string | null
+          sgst_amount?: number | null
+          sgst_percent?: number | null
           status?: Database["public"]["Enums"]["invoice_status"]
           sub_total?: number
           total_amount?: number
@@ -6785,6 +7136,16 @@ export type Database = {
       }
     }
     Functions: {
+      add_creative_version: {
+        Args: {
+          p_affected_assets?: Json
+          p_campaign_id: string
+          p_effective_from: string
+          p_name: string
+          p_notes?: string
+        }
+        Returns: Json
+      }
       assign_user_to_company: {
         Args: {
           p_company_id: string
@@ -6842,6 +7203,10 @@ export type Database = {
         Returns: boolean
       }
       cleanup_security_tables: { Args: never; Returns: undefined }
+      create_billing_period_and_invoice: {
+        Args: { p_campaign_id: string; p_month_key: string }
+        Returns: Json
+      }
       create_plan_approval_workflow: {
         Args: { p_plan_id: string }
         Returns: undefined
@@ -6885,6 +7250,10 @@ export type Database = {
       generate_estimation_id: { Args: never; Returns: string }
       generate_expense_id: { Args: never; Returns: string }
       generate_invoice_id: { Args: never; Returns: string }
+      generate_invoice_number: {
+        Args: { p_company_id: string; p_invoice_date?: string }
+        Returns: string
+      }
       generate_mns_code: {
         Args: { p_city: string; p_media_type: string }
         Returns: string
@@ -6994,6 +7363,10 @@ export type Database = {
       get_asset_code_health: { Args: never; Returns: Json }
       get_asset_face_count: { Args: { p_asset_id: string }; Returns: number }
       get_asset_total_sqft: { Args: { p_asset_id: string }; Returns: number }
+      get_campaign_billing_summary: {
+        Args: { p_campaign_id: string }
+        Returns: Json
+      }
       get_company_active_modules: {
         Args: { p_company_id: string }
         Returns: Json

@@ -53,17 +53,33 @@ export default function MarketplaceAssetDetail() {
   }, [id]);
 
 
-  const fetchAssetDetail = async (assetId: string) => {
+  const fetchAssetDetail = async (code: string) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Try to fetch by media_asset_code first (for MNS codes like MNS-HYD-PUB-0001)
+      let { data, error } = await supabase
         .from('public_media_assets_safe')
         .select(`
           *,
           companies!inner(name)
         `)
-        .eq('id', assetId)
-        .single();
+        .eq('media_asset_code', code)
+        .maybeSingle();
+
+      // If not found by media_asset_code, try by id (UUID) for backwards compatibility
+      if (!data && !error) {
+        const result = await supabase
+          .from('public_media_assets_safe')
+          .select(`
+            *,
+            companies!inner(name)
+          `)
+          .eq('id', code)
+          .maybeSingle();
+        
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) throw error;
 
@@ -77,18 +93,17 @@ export default function MarketplaceAssetDetail() {
         return;
       }
 
-      // Fetch media_asset_code from media_assets table
-      const { data: assetData } = await supabase
-        .from('media_assets')
-        .select('media_asset_code')
-        .eq('id', assetId)
-        .single();
+      // If accessed via UUID but has media_asset_code, redirect to MNS code URL
+      if (data.media_asset_code && code !== data.media_asset_code) {
+        navigate(`/marketplace/asset/${data.media_asset_code}`, { replace: true });
+        return;
+      }
 
       // Map company data
       const mappedData: PublicAssetDetail = {
         ...data,
-        media_asset_code: assetData?.media_asset_code || null,
-        company_name: data.companies?.name || '',
+        media_asset_code: data.media_asset_code || null,
+        company_name: (data.companies as any)?.name || '',
       };
       
       setAsset(mappedData);
@@ -97,7 +112,7 @@ export default function MarketplaceAssetDetail() {
       const { data: photos } = await supabase
         .from('media_photos')
         .select('photo_url')
-        .eq('asset_id', assetId)
+        .eq('asset_id', data.id)
         .order('created_at', { ascending: false });
 
       setImageUrls(photos?.map(p => p.photo_url) || (data.primary_photo_url ? [data.primary_photo_url] : []));

@@ -7050,6 +7050,7 @@ export type Database = {
           latitude: number | null
           location: string | null
           longitude: number | null
+          media_asset_code: string | null
           media_type: string | null
           mounting_rate_default: number | null
           municipal_authority: string | null
@@ -7084,6 +7085,7 @@ export type Database = {
           latitude?: number | null
           location?: string | null
           longitude?: number | null
+          media_asset_code?: string | null
           media_type?: string | null
           mounting_rate_default?: number | null
           municipal_authority?: string | null
@@ -7118,6 +7120,7 @@ export type Database = {
           latitude?: number | null
           location?: string | null
           longitude?: number | null
+          media_asset_code?: string | null
           media_type?: string | null
           mounting_rate_default?: number | null
           municipal_authority?: string | null

@@ -166,6 +166,7 @@ export default function Marketplace() {
     const searchLower = searchQuery.toLowerCase();
     return (
       asset.id.toLowerCase().includes(searchLower) ||
+      asset.media_asset_code?.toLowerCase().includes(searchLower) ||
       asset.location.toLowerCase().includes(searchLower) ||
       asset.area.toLowerCase().includes(searchLower) ||
       asset.city.toLowerCase().includes(searchLower) ||
@@ -624,7 +625,7 @@ export default function Marketplace() {
                     variant="outline"
                     size="sm"
                     className="flex-1 text-xs h-8"
-                    onClick={() => navigate(`/marketplace/asset/${asset.id}`)}
+                    onClick={() => navigate(`/marketplace/asset/${asset.media_asset_code || asset.id}`)}
                   >
                     View Details
                   </Button>

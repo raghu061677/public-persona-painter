@@ -145,7 +145,7 @@ export async function downloadImageWithWatermark({
     if (fieldsToShow.includes('direction') && assetData.direction) fieldCount++;
     if (fieldsToShow.includes('dimension') && assetData.dimension) fieldCount++;
     if (fieldsToShow.includes('area') && assetData.total_sqft) fieldCount++;
-    if (fieldsToShow.includes('illumination_type') && assetData.illumination_type) fieldCount++;
+    if ((fieldsToShow.includes('illumination_type') || fieldsToShow.includes('illumination')) && assetData.illumination_type) fieldCount++;
     
     const panelHeight = 35 + (fieldCount * lineHeight) + 20;
     const panelWidth = settings.panel_width;
@@ -248,7 +248,7 @@ export async function downloadImageWithWatermark({
       y += lineHeight;
     }
 
-    if (fieldsToShow.includes('illumination_type') && assetData.illumination_type) {
+    if ((fieldsToShow.includes('illumination_type') || fieldsToShow.includes('illumination')) && assetData.illumination_type) {
       drawText('Type:', assetData.illumination_type, y);
       y += lineHeight;
     }

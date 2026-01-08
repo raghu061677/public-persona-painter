@@ -22,6 +22,7 @@ interface PhotoLightboxProps {
     illumination_type?: string;
     city?: string;
     area?: string;
+    qr_code_url?: string;
   };
 }
 
@@ -177,6 +178,7 @@ export function PhotoLightbox({ photos, initialIndex, isOpen, onClose, assetData
         },
         imageUrl: currentPhoto.photo_url,
         category: currentPhoto.category,
+        qrCodeUrl: assetData.qr_code_url,
       });
     } catch (error) {
       console.error('Error downloading with watermark:', error);

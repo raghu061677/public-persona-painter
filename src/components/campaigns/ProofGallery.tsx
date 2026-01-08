@@ -75,6 +75,7 @@ export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
         imageUrl: photoUrl,
         category: photoType,
         assetId: asset.asset_id,
+        qrCodeUrl: asset.qr_code_url,
       });
     } catch (error) {
       console.error('Error downloading with watermark:', error);

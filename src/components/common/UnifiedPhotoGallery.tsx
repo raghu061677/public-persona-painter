@@ -45,6 +45,7 @@ interface UnifiedPhotoGalleryProps {
     dimension?: string;
     total_sqft?: number;
     illumination_type?: string;
+    qr_code_url?: string;
   };
 }
 
@@ -235,6 +236,7 @@ export function UnifiedPhotoGallery({
         imageUrl: photo.photo_url,
         category: photo.category,
         assetId: assetData.asset_id,
+        qrCodeUrl: assetData.qr_code_url,
       });
     } catch (error) {
       console.error('Error downloading with watermark:', error);

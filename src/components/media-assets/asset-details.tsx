@@ -445,7 +445,7 @@ export function AssetDetails({ asset, isAdmin = false, onQRGenerated }: AssetDet
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8 lg:hidden">
         {/* Latest Photos Section */}
         <div>
-          <LatestPhotosSection assetId={currentAsset.id} />
+          <LatestPhotosSection assetId={currentAsset.id} asset={currentAsset} />
         </div>
 
         {/* Images Section */}

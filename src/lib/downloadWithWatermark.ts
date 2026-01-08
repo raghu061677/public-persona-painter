@@ -22,6 +22,7 @@ interface WatermarkOptions {
   imageUrl: string;
   category: string;
   assetId?: string;
+  qrCodeUrl?: string;
 }
 
 interface WatermarkSettings {
@@ -98,7 +99,8 @@ export async function downloadImageWithWatermark({
   assetData,
   imageUrl,
   category,
-  assetId
+  assetId,
+  qrCodeUrl
 }: WatermarkOptions): Promise<void> {
   try {
     toast({
@@ -248,6 +250,65 @@ export async function downloadImageWithWatermark({
 
     if (fieldsToShow.includes('illumination_type') && assetData.illumination_type) {
       drawText('Lighting Type:', assetData.illumination_type, y);
+    }
+
+    // Draw QR code if available
+    if (qrCodeUrl) {
+      try {
+        const qrImg = new Image();
+        qrImg.crossOrigin = 'anonymous';
+        await new Promise((resolve, reject) => {
+          qrImg.onload = resolve;
+          qrImg.onerror = reject;
+          qrImg.src = qrCodeUrl;
+        });
+        
+        // QR code size and position (opposite corner from watermark panel)
+        const qrSize = Math.min(120, canvas.width * 0.12);
+        const qrPadding = 20;
+        let qrX: number, qrY: number;
+        
+        // Place QR in opposite corner from watermark panel
+        switch (settings.position) {
+          case 'bottom-right':
+            qrX = qrPadding;
+            qrY = qrPadding;
+            break;
+          case 'bottom-left':
+            qrX = canvas.width - qrSize - qrPadding;
+            qrY = qrPadding;
+            break;
+          case 'top-right':
+            qrX = qrPadding;
+            qrY = canvas.height - qrSize - qrPadding;
+            break;
+          case 'top-left':
+            qrX = canvas.width - qrSize - qrPadding;
+            qrY = canvas.height - qrSize - qrPadding;
+            break;
+        }
+        
+        // Draw white background for QR code
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.fillRect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16);
+        
+        // Draw border around QR code
+        ctx.strokeStyle = settings.border_color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16);
+        
+        // Draw QR code
+        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+        
+        // Add "SCAN FOR DETAILS" label below QR
+        ctx.font = 'bold 10px Inter, system-ui, sans-serif';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.textAlign = 'center';
+        ctx.fillText('SCAN FOR DETAILS', qrX + qrSize / 2, qrY + qrSize + 14);
+        ctx.textAlign = 'left'; // Reset
+      } catch (error) {
+        console.warn('Could not load QR code for watermark:', error);
+      }
     }
 
     // Convert canvas to blob and download

@@ -92,10 +92,11 @@ export function LatestPhotosSection({ assetId, asset }: LatestPhotosSectionProps
     city: asset.city,
     area: asset.area,
     location: asset.location,
-    dimensions: asset.dimensions,
+    dimension: asset.dimensions,
     direction: asset.direction,
     illumination_type: asset.illumination_type,
-    total_sqft: asset.total_sqft
+    total_sqft: asset.total_sqft,
+    qr_code_url: asset.qr_code_url
   } : null;
 
   return (

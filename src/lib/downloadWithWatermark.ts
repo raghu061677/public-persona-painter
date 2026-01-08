@@ -249,7 +249,8 @@ export async function downloadImageWithWatermark({
     }
 
     if (fieldsToShow.includes('illumination_type') && assetData.illumination_type) {
-      drawText('Lighting Type:', assetData.illumination_type, y);
+      drawText('Type:', assetData.illumination_type, y);
+      y += lineHeight;
     }
 
     // Draw QR code if available

@@ -263,30 +263,11 @@ export async function downloadImageWithWatermark({
           qrImg.src = qrCodeUrl;
         });
         
-        // QR code size and position (opposite corner from watermark panel)
+        // QR code size and position (always top-right corner)
         const qrSize = Math.min(120, canvas.width * 0.12);
         const qrPadding = 20;
-        let qrX: number, qrY: number;
-        
-        // Place QR in opposite corner from watermark panel
-        switch (settings.position) {
-          case 'bottom-right':
-            qrX = qrPadding;
-            qrY = qrPadding;
-            break;
-          case 'bottom-left':
-            qrX = canvas.width - qrSize - qrPadding;
-            qrY = qrPadding;
-            break;
-          case 'top-right':
-            qrX = qrPadding;
-            qrY = canvas.height - qrSize - qrPadding;
-            break;
-          case 'top-left':
-            qrX = canvas.width - qrSize - qrPadding;
-            qrY = canvas.height - qrSize - qrPadding;
-            break;
-        }
+        const qrX = canvas.width - qrSize - qrPadding;
+        const qrY = qrPadding;
         
         // Draw white background for QR code
         ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';

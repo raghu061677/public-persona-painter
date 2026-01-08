@@ -282,11 +282,11 @@ export function UnifiedPhotoGallery({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {photos.map((photo, index) => (
               <div
                 key={photo.id}
-                className="group relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary transition-all duration-200 bg-muted"
+                className="group relative aspect-[4/3] rounded-xl overflow-hidden border-2 border-border hover:border-primary transition-all duration-200 bg-muted shadow-sm hover:shadow-lg"
               >
                 <img
                   src={photo.photo_url}
@@ -297,8 +297,8 @@ export function UnifiedPhotoGallery({
                 />
                 
                 {/* Overlay with badges and asset info */}
-                <div className="absolute top-2 left-2 right-2 flex flex-wrap gap-1">
-                  <Badge className={`${getTagColor(photo.category)} border`}>
+                <div className="absolute top-3 left-3 right-3 flex flex-wrap gap-1.5">
+                  <Badge className={`${getTagColor(photo.category)} border text-sm px-2 py-1`}>
                     <span className="mr-1">{getTagIcon(photo.category)}</span>
                     {photo.category}
                   </Badge>
@@ -307,8 +307,8 @@ export function UnifiedPhotoGallery({
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger>
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
-                            <MapPin className="h-3 w-3" />
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 px-2 py-1">
+                            <MapPin className="h-3.5 w-3.5" />
                           </Badge>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -323,13 +323,13 @@ export function UnifiedPhotoGallery({
                 
                 {/* Asset Information Overlay */}
                 {assetData && (
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="text-white space-y-1 text-xs">
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="text-white space-y-1.5 text-sm">
                       <div>
                         <span className="font-semibold">Location:</span> {assetData.city} - {assetData.area}
                       </div>
-                      <div className="text-[10px] opacity-90">{assetData.location}</div>
-                      <div className="flex gap-3 mt-1">
+                      <div className="text-xs opacity-90">{assetData.location}</div>
+                      <div className="flex gap-4 mt-1.5">
                         <div>
                           <span className="font-semibold">Size:</span> {assetData.dimension}
                         </div>
@@ -353,12 +353,12 @@ export function UnifiedPhotoGallery({
                   </div>
                 )}
 
-                {/* Action buttons */}
-                <div className="absolute bottom-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* Action buttons - always visible */}
+                <div className="absolute top-3 right-3 flex gap-2">
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-9 w-9 bg-white/90 hover:bg-white shadow-md"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDownload(photo);
@@ -370,7 +370,7 @@ export function UnifiedPhotoGallery({
                     <Button
                       variant="destructive"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-9 w-9 shadow-md"
                       onClick={(e) => {
                         e.stopPropagation();
                         openDeleteDialog(photo);
@@ -381,9 +381,9 @@ export function UnifiedPhotoGallery({
                   )}
                 </div>
 
-                {/* Upload date */}
-                <div className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Badge variant="secondary" className="text-xs">
+                {/* Upload date - always visible at bottom left */}
+                <div className="absolute bottom-3 left-3">
+                  <Badge variant="secondary" className="text-xs bg-white/90 shadow-sm px-2 py-1">
                     <Calendar className="h-3 w-3 mr-1" />
                     {format(new Date(photo.uploaded_at), 'MMM d, yyyy')}
                   </Badge>

@@ -291,7 +291,7 @@ export function UnifiedPhotoGallery({
                 <img
                   src={photo.photo_url}
                   alt={photo.category}
-                  className="w-full h-[420px] md:h-[560px] object-cover cursor-pointer transition-transform group-hover:scale-105"
+                  className="w-full h-[280px] md:h-[360px] object-cover cursor-pointer transition-transform group-hover:scale-105"
                   onClick={() => openViewer(photo)}
                   loading="lazy"
                 />

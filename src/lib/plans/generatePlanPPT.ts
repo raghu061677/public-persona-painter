@@ -3,6 +3,12 @@ import { format } from 'date-fns';
 import { buildStreetViewUrl } from '../streetview';
 import { fetchImageAsBase64 } from '../qrWatermark';
 import { supabase } from '@/integrations/supabase/client';
+import { 
+  sanitizePptHyperlink, 
+  sanitizePptText, 
+  getPptHyperlink,
+  PPT_SAFE_FONTS 
+} from '../ppt/sanitizers';
 
 function validateAndFixStreetViewUrl(
   url: string | undefined,
@@ -227,7 +233,7 @@ export async function generatePlanPPT(
     fill: { color: 'FFFFFF', transparency: 90 },
   });
 
-  coverSlide.addText('MEDIA ASSET PROPOSAL', {
+  coverSlide.addText(sanitizePptText('MEDIA ASSET PROPOSAL'), {
     x: 0.3,
     y: 0.2,
     w: 9.4,
@@ -236,11 +242,11 @@ export async function generatePlanPPT(
     bold: true,
     color: 'FFFFFF',
     align: 'left',
-    fontFace: 'Arial',
+    fontFace: PPT_SAFE_FONTS.primary,
   });
 
   // Title - Asset count
-  coverSlide.addText(`${plan.assets.length} Premium OOH Media Assets`, {
+  coverSlide.addText(sanitizePptText(`${plan.assets.length} Premium OOH Media Assets`), {
     x: 0.5,
     y: 2.5,
     w: 9,
@@ -249,11 +255,11 @@ export async function generatePlanPPT(
     bold: true,
     color: 'FFFFFF',
     align: 'center',
-    fontFace: 'Arial',
+    fontFace: PPT_SAFE_FONTS.primary,
   });
 
   // Client name
-  coverSlide.addText(`Prepared for: ${plan.client_name}`, {
+  coverSlide.addText(sanitizePptText(`Prepared for: ${plan.client_name}`), {
     x: 0.5,
     y: 4.0,
     w: 9,
@@ -261,11 +267,11 @@ export async function generatePlanPPT(
     fontSize: 22,
     color: 'E5E7EB',
     align: 'center',
-    fontFace: 'Arial',
+    fontFace: PPT_SAFE_FONTS.primary,
   });
 
   // Plan name
-  coverSlide.addText(plan.plan_name, {
+  coverSlide.addText(sanitizePptText(plan.plan_name), {
     x: 0.5,
     y: 4.8,
     w: 9,
@@ -273,7 +279,7 @@ export async function generatePlanPPT(
     fontSize: 18,
     color: 'FFFFFF',
     align: 'center',
-    fontFace: 'Arial',
+    fontFace: PPT_SAFE_FONTS.primary,
   });
 
   // Footer box
@@ -286,7 +292,7 @@ export async function generatePlanPPT(
   });
 
   coverSlide.addText(
-    `${format(new Date(), 'dd MMMM yyyy')} | ${orgSettings.organization_name || 'Go-Ads 360°'}`,
+    sanitizePptText(`${format(new Date(), 'dd MMMM yyyy')} | ${orgSettings.organization_name || 'Go-Ads 360°'}`),
     {
       x: 0.5,
       y: 6.85,
@@ -295,7 +301,7 @@ export async function generatePlanPPT(
       fontSize: 14,
       color: 'FFFFFF',
       align: 'center',
-      fontFace: 'Arial',
+      fontFace: PPT_SAFE_FONTS.primary,
     }
   );
 
@@ -312,7 +318,7 @@ export async function generatePlanPPT(
     fill: { color: brandColor },
   });
 
-  summarySlide.addText('Campaign Summary', {
+  summarySlide.addText(sanitizePptText('Campaign Summary'), {
     x: 0.3,
     y: 0.15,
     w: 9.4,
@@ -321,18 +327,18 @@ export async function generatePlanPPT(
     bold: true,
     color: 'FFFFFF',
     align: 'left',
-    fontFace: 'Arial',
+    fontFace: PPT_SAFE_FONTS.primary,
   });
 
-  // Summary table
+  // Summary table - sanitize all text values
   const summaryData = [
-    [{ text: 'Plan ID' }, { text: plan.id }],
-    [{ text: 'Company' }, { text: orgSettings.organization_name || 'Go-Ads 360°' }],
-    [{ text: 'Client' }, { text: plan.client_name }],
-    [{ text: 'Duration' }, { text: `${Math.ceil((new Date(plan.end_date).getTime() - new Date(plan.start_date).getTime()) / (1000 * 60 * 60 * 24))} days` }],
-    [{ text: 'Start Date' }, { text: format(new Date(plan.start_date), 'dd/MM/yyyy') }],
-    [{ text: 'End Date' }, { text: format(new Date(plan.end_date), 'dd/MM/yyyy') }],
-    [{ text: 'Total Assets' }, { text: `${plan.assets.length} sites` }],
+    [{ text: sanitizePptText('Plan ID') }, { text: sanitizePptText(plan.id) }],
+    [{ text: sanitizePptText('Company') }, { text: sanitizePptText(orgSettings.organization_name || 'Go-Ads 360°') }],
+    [{ text: sanitizePptText('Client') }, { text: sanitizePptText(plan.client_name) }],
+    [{ text: sanitizePptText('Duration') }, { text: sanitizePptText(`${Math.ceil((new Date(plan.end_date).getTime() - new Date(plan.start_date).getTime()) / (1000 * 60 * 60 * 24))} days`) }],
+    [{ text: sanitizePptText('Start Date') }, { text: sanitizePptText(format(new Date(plan.start_date), 'dd/MM/yyyy')) }],
+    [{ text: sanitizePptText('End Date') }, { text: sanitizePptText(format(new Date(plan.end_date), 'dd/MM/yyyy')) }],
+    [{ text: sanitizePptText('Total Assets') }, { text: sanitizePptText(`${plan.assets.length} sites`) }],
   ];
 
   summarySlide.addTable(summaryData, {
@@ -341,7 +347,7 @@ export async function generatePlanPPT(
     w: 9,
     colW: [3, 6],
     border: { type: 'solid', color: 'E5E7EB', pt: 0.5 },
-    fontFace: 'Arial',
+    fontFace: PPT_SAFE_FONTS.primary,
     fontSize: 14,
     valign: 'middle',
     rowH: 0.5,
@@ -381,7 +387,7 @@ export async function generatePlanPPT(
     });
 
     // Asset ID header
-    slide1.addText(asset.asset_id, {
+    slide1.addText(sanitizePptText(asset.asset_id), {
       x: 0.3,
       y: 0.4,
       w: 9.4,
@@ -390,11 +396,11 @@ export async function generatePlanPPT(
       bold: true,
       color: '6B7280',
       align: 'left',
-      fontFace: 'Arial',
+      fontFace: PPT_SAFE_FONTS.primary,
     });
 
     // Location header
-    slide1.addText(`${asset.area} · ${asset.location}`, {
+    slide1.addText(sanitizePptText(`${asset.area} - ${asset.location}`), {
       x: 0.3,
       y: 0.75,
       w: 9.4,
@@ -403,7 +409,7 @@ export async function generatePlanPPT(
       bold: true,
       color: brandColor,
       align: 'left',
-      fontFace: 'Arial',
+      fontFace: PPT_SAFE_FONTS.primary,
     });
 
     // Get QR data for this asset (cached)
@@ -438,7 +444,9 @@ export async function generatePlanPPT(
       }
 
       // Add clickable QR overlay on image 1 (bottom-right corner)
-      if (qrData) {
+      // CRITICAL: Sanitize hyperlink URL to prevent XML corruption
+      const sanitizedStreetViewUrl1 = qrData ? sanitizePptHyperlink(qrData.streetViewUrl) : undefined;
+      if (qrData && sanitizedStreetViewUrl1) {
         const qrSize = 0.7; // ~70px in inches
         const qrPadding = 0.12; // ~12px
         slide1.addImage({
@@ -447,7 +455,7 @@ export async function generatePlanPPT(
           y: 1.5 + 3.8 - qrSize - qrPadding,
           w: qrSize,
           h: qrSize,
-          hyperlink: { url: qrData.streetViewUrl },
+          hyperlink: { url: sanitizedStreetViewUrl1 },
         });
       }
     } catch (error) {
@@ -477,7 +485,9 @@ export async function generatePlanPPT(
       }
 
       // Add clickable QR overlay on image 2 (bottom-right corner)
-      if (qrData) {
+      // CRITICAL: Sanitize hyperlink URL to prevent XML corruption
+      const sanitizedStreetViewUrl2 = qrData ? sanitizePptHyperlink(qrData.streetViewUrl) : undefined;
+      if (qrData && sanitizedStreetViewUrl2) {
         const qrSize = 0.7;
         const qrPadding = 0.12;
         slide1.addImage({
@@ -486,7 +496,7 @@ export async function generatePlanPPT(
           y: 1.5 + 3.8 - qrSize - qrPadding,
           w: qrSize,
           h: qrSize,
-          hyperlink: { url: qrData.streetViewUrl },
+          hyperlink: { url: sanitizedStreetViewUrl2 },
         });
       }
     } catch (error) {
@@ -502,7 +512,7 @@ export async function generatePlanPPT(
       fill: { color: brandColor },
     });
 
-    slide1.addText(`${plan.plan_name} | ${plan.client_name} | ${orgSettings.organization_name || 'Go-Ads 360°'}`, {
+    slide1.addText(sanitizePptText(`${plan.plan_name} | ${plan.client_name} | ${orgSettings.organization_name || 'Go-Ads 360°'}`), {
       x: 0.3,
       y: 6.95,
       w: 9.4,
@@ -510,7 +520,7 @@ export async function generatePlanPPT(
       fontSize: 12,
       color: 'FFFFFF',
       align: 'center',
-      fontFace: 'Arial',
+      fontFace: PPT_SAFE_FONTS.primary,
     });
 
     // ===== SLIDE 2: DETAILS SLIDE =====
@@ -527,7 +537,7 @@ export async function generatePlanPPT(
     });
 
     // Header title
-    slide2.addText('Asset Specifications', {
+    slide2.addText(sanitizePptText('Asset Specifications'), {
       x: 0.3,
       y: 0.4,
       w: 9.4,
@@ -536,11 +546,11 @@ export async function generatePlanPPT(
       bold: true,
       color: '6B7280',
       align: 'left',
-      fontFace: 'Arial',
+      fontFace: PPT_SAFE_FONTS.primary,
     });
 
     // Asset ID badge
-    slide2.addText(asset.asset_id, {
+    slide2.addText(sanitizePptText(asset.asset_id), {
       x: 0.3,
       y: 0.85,
       w: 9.4,
@@ -549,11 +559,13 @@ export async function generatePlanPPT(
       bold: true,
       color: brandColor,
       align: 'left',
-      fontFace: 'Arial',
+      fontFace: PPT_SAFE_FONTS.primary,
     });
 
     // Add QR Code if available (top-right corner) - with clickable hyperlink
-    if (qrData) {
+    // CRITICAL: Sanitize hyperlink URL to prevent XML corruption
+    const sanitizedQrUrl = qrData ? sanitizePptHyperlink(qrData.streetViewUrl) : undefined;
+    if (qrData && sanitizedQrUrl) {
       try {
         slide2.addImage({
           data: qrData.base64,
@@ -561,7 +573,7 @@ export async function generatePlanPPT(
           y: 0.35,
           w: 1.3,
           h: 1.3,
-          hyperlink: { url: qrData.streetViewUrl },
+          hyperlink: { url: sanitizedQrUrl },
         });
       } catch (error) {
         console.error('Failed to add QR code:', error);
@@ -584,15 +596,15 @@ export async function generatePlanPPT(
       console.error('Failed to add thumbnail:', error);
     }
 
-    // Details table data - use object format for table cells
+    // Details table data - use object format for table cells, sanitize all text
     const detailsTableData = [
-      [{ text: 'City', options: { bold: true } }, { text: 'Hyderabad' }],
-      [{ text: 'Area', options: { bold: true } }, { text: asset.area }],
-      [{ text: 'Location', options: { bold: true } }, { text: asset.location }],
-      [{ text: 'Direction', options: { bold: true } }, { text: asset.direction || 'N/A' }],
-      [{ text: 'Dimensions', options: { bold: true } }, { text: width && height ? `${width}X${height}` : asset.dimensions || 'N/A' }],
-      [{ text: 'Total Sqft', options: { bold: true } }, { text: asset.total_sqft?.toString() || 'N/A' }],
-      [{ text: 'Illumination', options: { bold: true } }, { text: asset.illumination_type || 'Non-lit' }],
+      [{ text: sanitizePptText('City'), options: { bold: true } }, { text: sanitizePptText('Hyderabad') }],
+      [{ text: sanitizePptText('Area'), options: { bold: true } }, { text: sanitizePptText(asset.area) }],
+      [{ text: sanitizePptText('Location'), options: { bold: true } }, { text: sanitizePptText(asset.location) }],
+      [{ text: sanitizePptText('Direction'), options: { bold: true } }, { text: sanitizePptText(asset.direction || 'N/A') }],
+      [{ text: sanitizePptText('Dimensions'), options: { bold: true } }, { text: sanitizePptText(width && height ? `${width}X${height}` : asset.dimensions || 'N/A') }],
+      [{ text: sanitizePptText('Total Sqft'), options: { bold: true } }, { text: sanitizePptText(asset.total_sqft?.toString() || 'N/A') }],
+      [{ text: sanitizePptText('Illumination'), options: { bold: true } }, { text: sanitizePptText(asset.illumination_type || 'Non-lit') }],
     ];
 
     // Add details table
@@ -602,7 +614,7 @@ export async function generatePlanPPT(
       w: 6.3,
       colW: [2, 4.3],
       border: { type: 'solid', color: 'E5E7EB', pt: 0.5 },
-      fontFace: 'Arial',
+      fontFace: PPT_SAFE_FONTS.primary,
       fontSize: 12,
       valign: 'middle',
       rowH: 0.4,
@@ -610,14 +622,14 @@ export async function generatePlanPPT(
     });
 
     // Campaign period below
-    slide2.addText(`Campaign: ${format(new Date(plan.start_date), 'dd MMM yyyy')} - ${format(new Date(plan.end_date), 'dd MMM yyyy')}`, {
+    slide2.addText(sanitizePptText(`Campaign: ${format(new Date(plan.start_date), 'dd MMM yyyy')} - ${format(new Date(plan.end_date), 'dd MMM yyyy')}`), {
       x: 3.2,
       y: 4.6,
       w: 6.3,
       h: 0.35,
       fontSize: 12,
       color: '6B7280',
-      fontFace: 'Arial',
+      fontFace: PPT_SAFE_FONTS.primary,
     });
 
     // Street View Link - Auto-fix if needed
@@ -627,8 +639,10 @@ export async function generatePlanPPT(
       asset.longitude
     );
     
-    if (streetViewUrl) {
-      slide2.addText('View on Google Street View', {
+    // CRITICAL: Sanitize hyperlink URL to prevent XML corruption (& -> &amp;)
+    const sanitizedStreetViewUrl = sanitizePptHyperlink(streetViewUrl || undefined);
+    if (sanitizedStreetViewUrl) {
+      slide2.addText(sanitizePptText('View on Google Street View'), {
         x: 3.2,
         y: 5.0,
         w: 6.3,
@@ -636,14 +650,14 @@ export async function generatePlanPPT(
         fontSize: 12,
         color: '2563EB',
         underline: { color: '2563EB' },
-        hyperlink: { url: streetViewUrl },
-        fontFace: 'Arial',
+        hyperlink: { url: sanitizedStreetViewUrl },
+        fontFace: PPT_SAFE_FONTS.primary,
       });
     }
 
     // GPS Coordinates below thumbnail
     if (asset.latitude && asset.longitude) {
-      slide2.addText(`GPS: ${asset.latitude.toFixed(6)}, ${asset.longitude.toFixed(6)}`, {
+      slide2.addText(sanitizePptText(`GPS: ${asset.latitude.toFixed(6)}, ${asset.longitude.toFixed(6)}`), {
         x: 0.4,
         y: 4.2,
         w: 2.5,
@@ -651,7 +665,7 @@ export async function generatePlanPPT(
         fontSize: 9,
         color: '6B7280',
         align: 'center',
-        fontFace: 'Arial',
+        fontFace: PPT_SAFE_FONTS.primary,
       });
     }
 
@@ -664,7 +678,7 @@ export async function generatePlanPPT(
       fill: { color: '6B7280' },
     });
 
-    slide2.addText(`${orgSettings.organization_name || 'Go-Ads 360°'} Proposal – Confidential`, {
+    slide2.addText(sanitizePptText(`${orgSettings.organization_name || 'Go-Ads 360°'} Proposal - Confidential`), {
       x: 0.3,
       y: 6.95,
       w: 9.4,
@@ -672,7 +686,7 @@ export async function generatePlanPPT(
       fontSize: 12,
       color: 'FFFFFF',
       align: 'center',
-      fontFace: 'Arial',
+      fontFace: PPT_SAFE_FONTS.primary,
     });
   }
 

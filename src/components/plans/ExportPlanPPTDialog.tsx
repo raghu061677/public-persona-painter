@@ -99,9 +99,9 @@ export function ExportPlanPPTDialog({ planId, planName }: ExportPlanPPTDialogPro
         .limit(1)
         .single();
 
-      // Format assets for PPT
+      // Format assets for PPT - use media_asset_code for display (new format with company prefix)
       const assets = planItems.map((item: any) => ({
-        asset_id: item.asset.id,
+        asset_id: item.asset.media_asset_code || item.asset.id,
         area: item.asset.area,
         location: item.asset.location,
         direction: item.asset.direction,

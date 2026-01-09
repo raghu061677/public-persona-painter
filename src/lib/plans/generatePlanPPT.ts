@@ -245,9 +245,13 @@ export async function generatePlanPPT(
 
   // ===== ASSET SLIDES =====
   for (const asset of plan.assets) {
-    // Use primary_photo_url for presentation - fetch as base64
-    const photoUrl = asset.primary_photo_url || DEFAULT_PLACEHOLDER;
-    const photoBase64 = await fetchImageWithCache(photoUrl);
+    // Use primary_photo_url for presentation - fetch as base64.
+    // If fetching the asset image fails (auth/CORS/etc), fall back to a placeholder.
+    const preferredPhotoUrl = asset.primary_photo_url;
+    const photoBase64 = preferredPhotoUrl
+      ? (await fetchImageWithCache(preferredPhotoUrl))
+      : null;
+    const finalPhotoBase64 = photoBase64 || (await fetchImageWithCache(DEFAULT_PLACEHOLDER));
 
     // Parse dimensions
     let width = '';
@@ -319,9 +323,9 @@ export async function generatePlanPPT(
         line: { color: 'E5E7EB', width: 1 },
       });
 
-      if (photoBase64) {
+      if (finalPhotoBase64) {
         slide1.addImage({
-          data: photoBase64,
+          data: finalPhotoBase64,
           x: 0.4,
           y: 1.5,
           w: 4.5,
@@ -358,9 +362,9 @@ export async function generatePlanPPT(
         line: { color: 'E5E7EB', width: 1 },
       });
 
-      if (photoBase64) {
+      if (finalPhotoBase64) {
         slide1.addImage({
-          data: photoBase64,
+          data: finalPhotoBase64,
           x: 5.1,
           y: 1.5,
           w: 4.5,
@@ -463,9 +467,9 @@ export async function generatePlanPPT(
 
     // Small thumbnail
     try {
-      if (photoBase64) {
+      if (finalPhotoBase64) {
         slide2.addImage({
-          data: photoBase64,
+          data: finalPhotoBase64,
           x: 0.4,
           y: 1.6,
           w: 2.5,

@@ -83,17 +83,33 @@ async function getCachedQR(
   }
 }
 
-// Avoid external placeholder hosts (CORS can break PPT export). Use an inline SVG data URL instead.
-const DEFAULT_PLACEHOLDER_DATA_URL =
-  'data:image/svg+xml;base64,' +
-  btoa(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200">
-      <rect width="100%" height="100%" fill="#F3F4F6"/>
-      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#6B7280" font-family="Arial" font-size="64">
-        No Image
-      </text>
-    </svg>`
-  );
+// Placeholder image for PPT (must be PNG/JPEG; SVG may not render in PowerPoint)
+let _placeholderPngDataUrl: string | null = null;
+async function getPlaceholderPngDataUrl(): Promise<string> {
+  if (_placeholderPngDataUrl) return _placeholderPngDataUrl;
+
+  // Create a simple 1600x1200 PNG placeholder using canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = 1600;
+  canvas.height = 1200;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    // Fallback: tiny transparent PNG
+    _placeholderPngDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7W2u0AAAAASUVORK5CYII=';
+    return _placeholderPngDataUrl;
+  }
+
+  ctx.fillStyle = '#F3F4F6';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#6B7280';
+  ctx.font = 'bold 64px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('No Image', canvas.width / 2, canvas.height / 2);
+
+  _placeholderPngDataUrl = canvas.toDataURL('image/png');
+  return _placeholderPngDataUrl;
+}
 
 // Cache for fetched images to avoid re-fetching
 const imageCache = new Map<string, string>();
@@ -122,11 +138,38 @@ async function toFetchableUrl(url: string): Promise<string> {
   return url;
 }
 
+async function ensurePptCompatibleDataUrl(dataUrl: string): Promise<string | null> {
+  if (!dataUrl?.startsWith('data:')) return null;
+  if (dataUrl.startsWith('data:image/jpeg') || dataUrl.startsWith('data:image/png')) return dataUrl;
+
+  // Convert SVG/WebP/etc to JPEG via canvas
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('Failed to decode image for PPT conversion'));
+      img.src = dataUrl;
+    });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth || 1600;
+    canvas.height = img.naturalHeight || 1200;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(img, 0, 0);
+    return canvas.toDataURL('image/jpeg', 0.9);
+  } catch {
+    return null;
+  }
+}
+
 async function fetchImageAsBase64Smart(url: string): Promise<string | null> {
   try {
     // First try: fetch directly (works for public URLs)
     const directUrl = await toFetchableUrl(url);
-    return await fetchImageAsBase64(directUrl);
+    const base = await fetchImageAsBase64(directUrl);
+    return await ensurePptCompatibleDataUrl(base);
   } catch {
     // Fallback: if it's a storage public URL, try a signed URL
     try {
@@ -134,7 +177,8 @@ async function fetchImageAsBase64Smart(url: string): Promise<string | null> {
       if (!parsed) return null;
       const { data } = await supabase.storage.from(parsed.bucket).createSignedUrl(parsed.path, 3600);
       if (!data?.signedUrl) return null;
-      return await fetchImageAsBase64(data.signedUrl);
+      const base = await fetchImageAsBase64(data.signedUrl);
+      return await ensurePptCompatibleDataUrl(base);
     } catch (error) {
       console.warn('Failed to fetch image via signed URL fallback:', error);
       return null;
@@ -308,10 +352,10 @@ export async function generatePlanPPT(
   // ===== ASSET SLIDES =====
   for (const asset of plan.assets) {
     // Use primary_photo_url for presentation - fetch as base64.
-    // If fetching the asset image fails (auth/CORS/etc), fall back to an inline placeholder.
+    // IMPORTANT: PowerPoint does not reliably render SVG/WebP. Ensure we embed PNG/JPEG.
     const preferredPhotoUrl = asset.primary_photo_url;
     const photoBase64 = preferredPhotoUrl ? await fetchImageWithCache(preferredPhotoUrl) : null;
-    const finalPhotoBase64 = photoBase64 || (await fetchImageWithCache(DEFAULT_PLACEHOLDER_DATA_URL));
+    const finalPhotoBase64 = photoBase64 || (await fetchImageWithCache(await getPlaceholderPngDataUrl()));
 
     // Parse dimensions
     let width = '';

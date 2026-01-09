@@ -26,6 +26,7 @@ interface PlanItem {
 
 interface AssetDetails {
   id: string;
+  media_asset_code: string | null;
   location: string;
   area: string;
   city: string;
@@ -46,7 +47,7 @@ interface AssetDetails {
 async function fetchAssetDetails(assetIds: string[]): Promise<Map<string, AssetDetails>> {
   const { data } = await supabase
     .from('media_assets')
-    .select('id, location, area, city, media_type, dimensions, direction, illumination_type, total_sqft, primary_photo_url, qr_code_url, latitude, longitude')
+    .select('id, media_asset_code, location, area, city, media_type, dimensions, direction, illumination_type, total_sqft, primary_photo_url, qr_code_url, latitude, longitude')
     .in('id', assetIds);
 
   const assetMap = new Map<string, AssetDetails>();
@@ -72,45 +73,80 @@ async function getAssetImageUrls(assetId: string): Promise<string[]> {
 }
 
 /**
- * Convert image URL to base64 with compression - handles both public URLs and Supabase storage paths
+ * Attempt to parse a backend storage object URL into { bucket, path }.
+ * Supports URLs like: .../storage/v1/object/public/<bucket>/<path>
+ */
+function parseStorageObjectUrl(url: string): { bucket: string; path: string } | null {
+  try {
+    const u = new URL(url);
+    const match = u.pathname.match(/\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/(.+)$/);
+    if (!match) return null;
+    return { bucket: match[1], path: decodeURIComponent(match[2]) };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Convert image URL to base64 with compression.
+ * Handles:
+ *  - data: URLs
+ *  - storage paths
+ *  - storage public URLs (and falls back to signed URLs when public fetch fails)
  */
 async function imageToBase64(url: string): Promise<string | null> {
   try {
+    if (url.startsWith('data:')) return url;
+
     let fetchUrl = url;
-    
-    // If it's a Supabase storage path (starts with media-assets/ or similar), get a signed URL
-    if (!url.startsWith('http') && !url.startsWith('data:')) {
+
+    // If it's a storage path (starts with media-assets/ or similar), get a signed URL
+    if (!url.startsWith('http')) {
       const { data: signedUrlData } = await supabase.storage
         .from('media-assets')
         .createSignedUrl(url, 3600);
-      
+
       if (signedUrlData?.signedUrl) {
         fetchUrl = signedUrlData.signedUrl;
       }
     }
-    
-    // Fetch with mode 'cors' to handle cross-origin requests
-    const response = await fetch(fetchUrl, { mode: 'cors' });
+
+    // First try: fetch as-is
+    let response = await fetch(fetchUrl, { mode: 'cors' });
+
+    // Fallback: if it's a public object URL but not actually accessible, create a signed URL
+    if (!response.ok && url.startsWith('http')) {
+      const parsed = parseStorageObjectUrl(url);
+      if (parsed) {
+        const { data: signed } = await supabase.storage
+          .from(parsed.bucket)
+          .createSignedUrl(parsed.path, 3600);
+
+        if (signed?.signedUrl) {
+          response = await fetch(signed.signedUrl, { mode: 'cors' });
+        }
+      }
+    }
+
     if (!response.ok) {
       console.error(`Failed to fetch image: ${response.status} ${response.statusText}`);
       return null;
     }
-    
+
     const blob = await response.blob();
-    
-    // Convert blob to File and compress for PPT (optimize for smaller file size)
+
+    // Convert blob to File and compress for PPT
     const fileName = url.split('/').pop() || 'image.jpg';
-    const file = new File([blob], fileName, { type: blob.type });
-    
-    // Compress image - target 800px max dimension and 0.5MB max size for PPT
+    const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
+
     const compressedFile = await compressImage(file, {
       maxSizeMB: 0.5,
       maxWidthOrHeight: 1280,
       quality: 0.75,
-      preserveExif: false
+      preserveExif: false,
     });
-    
-    return new Promise((resolve, reject) => {
+
+    return await new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
       reader.onerror = (error) => {
@@ -217,6 +253,13 @@ export async function exportPlanToPPT(
       .select('*')
       .eq('id', plan.company_id)
       .single();
+
+    // Fetch code prefix settings (for display IDs like MNS-HYD-...)
+    const { data: codeSettings } = await supabase
+      .from('company_code_settings')
+      .select('use_custom_asset_codes, asset_code_prefix')
+      .eq('company_id', plan.company_id)
+      .maybeSingle();
 
     const pptx = new pptxgen();
     
@@ -355,16 +398,21 @@ export async function exportPlanToPPT(
         fill: { color: companyData?.theme_color?.replace('#', '') || "0EA5E9" }
       });
       
-      imageSlide.addText(`${item.asset_id}`, {
-        x: 0.5,
-        y: 0.32,
-        w: 4,
-        h: 0.35,
-        fontSize: 16,
-        bold: true,
-        color: "1E293B",
-        fontFace: "Arial"
-      });
+       const baseAssetCode = assetDetail.media_asset_code || item.asset_id;
+       const displayAssetCode = (codeSettings?.use_custom_asset_codes && codeSettings?.asset_code_prefix)
+         ? `${codeSettings.asset_code_prefix}-${baseAssetCode}`
+         : baseAssetCode;
+
+       imageSlide.addText(displayAssetCode, {
+         x: 0.5,
+         y: 0.32,
+         w: 4,
+         h: 0.35,
+         fontSize: 16,
+         bold: true,
+         color: "1E293B",
+         fontFace: "Arial"
+       });
       
       imageSlide.addText(`${assetDetail.area} · ${assetDetail.location}`, {
         x: 0.5,
@@ -533,16 +581,16 @@ export async function exportPlanToPPT(
         fontFace: "Arial"
       });
       
-      detailSlide.addText(item.asset_id, {
-        x: 0.5,
-        y: 0.65,
-        w: 4,
-        h: 0.3,
-        fontSize: 13,
-        color: companyData?.theme_color?.replace('#', '') || "0EA5E9",
-        fontFace: "Arial",
-        bold: true
-      });
+       detailSlide.addText(displayAssetCode, {
+         x: 0.5,
+         y: 0.65,
+         w: 4,
+         h: 0.3,
+         fontSize: 13,
+         color: companyData?.theme_color?.replace('#', '') || "0EA5E9",
+         fontFace: "Arial",
+         bold: true
+       });
 
       // High-quality image on the right with border
       const detailImgX = 5.25;

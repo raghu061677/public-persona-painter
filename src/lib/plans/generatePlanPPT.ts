@@ -69,6 +69,29 @@ async function getCachedQR(
 
 const DEFAULT_PLACEHOLDER = 'https://via.placeholder.com/800x600/f3f4f6/6b7280?text=No+Image+Available';
 
+// Cache for fetched images to avoid re-fetching
+const imageCache = new Map<string, string>();
+
+async function fetchImageWithCache(url: string): Promise<string | null> {
+  if (!url) return null;
+  
+  if (imageCache.has(url)) {
+    return imageCache.get(url)!;
+  }
+
+  try {
+    const base64 = await fetchImageAsBase64(url);
+    if (base64) {
+      imageCache.set(url, base64);
+      return base64;
+    }
+    return null;
+  } catch (error) {
+    console.warn(`Failed to fetch image: ${url}`, error);
+    return null;
+  }
+}
+
 export async function generatePlanPPT(
   plan: PlanData,
   orgSettings: OrganizationSettings
@@ -222,9 +245,9 @@ export async function generatePlanPPT(
 
   // ===== ASSET SLIDES =====
   for (const asset of plan.assets) {
-    // Use primary_photo_url for presentation
-    const photo1 = asset.primary_photo_url || DEFAULT_PLACEHOLDER;
-    const photo2 = asset.primary_photo_url || DEFAULT_PLACEHOLDER;
+    // Use primary_photo_url for presentation - fetch as base64
+    const photoUrl = asset.primary_photo_url || DEFAULT_PLACEHOLDER;
+    const photoBase64 = await fetchImageWithCache(photoUrl);
 
     // Parse dimensions
     let width = '';
@@ -296,14 +319,16 @@ export async function generatePlanPPT(
         line: { color: 'E5E7EB', width: 1 },
       });
 
-      slide1.addImage({
-        path: photo1,
-        x: 0.4,
-        y: 1.5,
-        w: 4.5,
-        h: 3.8,
-        sizing: { type: 'cover', w: 4.5, h: 3.8 },
-      });
+      if (photoBase64) {
+        slide1.addImage({
+          data: photoBase64,
+          x: 0.4,
+          y: 1.5,
+          w: 4.5,
+          h: 3.8,
+          sizing: { type: 'cover', w: 4.5, h: 3.8 },
+        });
+      }
 
       // Add clickable QR overlay on image 1 (bottom-right corner)
       if (qrData) {
@@ -333,14 +358,16 @@ export async function generatePlanPPT(
         line: { color: 'E5E7EB', width: 1 },
       });
 
-      slide1.addImage({
-        path: photo2,
-        x: 5.1,
-        y: 1.5,
-        w: 4.5,
-        h: 3.8,
-        sizing: { type: 'cover', w: 4.5, h: 3.8 },
-      });
+      if (photoBase64) {
+        slide1.addImage({
+          data: photoBase64,
+          x: 5.1,
+          y: 1.5,
+          w: 4.5,
+          h: 3.8,
+          sizing: { type: 'cover', w: 4.5, h: 3.8 },
+        });
+      }
 
       // Add clickable QR overlay on image 2 (bottom-right corner)
       if (qrData) {
@@ -436,14 +463,16 @@ export async function generatePlanPPT(
 
     // Small thumbnail
     try {
-      slide2.addImage({
-        path: photo1,
-        x: 0.4,
-        y: 1.6,
-        w: 2.5,
-        h: 2.5,
-        sizing: { type: 'cover', w: 2.5, h: 2.5 },
-      });
+      if (photoBase64) {
+        slide2.addImage({
+          data: photoBase64,
+          x: 0.4,
+          y: 1.6,
+          w: 2.5,
+          h: 2.5,
+          sizing: { type: 'cover', w: 2.5, h: 2.5 },
+        });
+      }
     } catch (error) {
       console.error('Failed to add thumbnail:', error);
     }

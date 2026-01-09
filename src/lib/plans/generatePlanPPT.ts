@@ -216,9 +216,8 @@ export async function generatePlanPPT(
   // ===== COVER SLIDE =====
   const coverSlide = prs.addSlide();
 
-  // Background gradient
-  coverSlide.background = { fill: brandColor };
-
+  // Background (PowerPoint expects "color" here; using "fill" can corrupt the file)
+  coverSlide.background = { color: brandColor };
   // Header bar
   coverSlide.addShape(prs.ShapeType.rect, {
     x: 0,

@@ -1,14 +1,64 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import pptxgen from 'https://esm.sh/pptxgenjs@3.12.0';
+import JSZip from 'https://esm.sh/jszip@3.10.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// ========== PPTX safety helpers (prevent PowerPoint "repair" prompts) ==========
+function sanitizePptHyperlink(url: string | null | undefined): string | undefined {
+  if (!url || typeof url !== 'string' || url.trim() === '') return undefined;
+  return url
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function sanitizePptText(text: string | null | undefined): string {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .replace(/→|–|—/g, '-')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+    .replace(/[\uFFFE\uFFFF]/g, '');
+}
+
+const PPT_SAFE_FONT = 'Arial';
+
 interface RequestBody {
   campaign_id: string;
   company_id: string;
+}
+
+async function validatePptxRelationships(pptxArrayBuffer: ArrayBuffer) {
+  const zip = await JSZip.loadAsync(pptxArrayBuffer);
+  const relsFiles = Object.keys(zip.files).filter((p) => p.endsWith('.rels'));
+
+  const badTargets: Array<{ file: string; target: string }> = [];
+  const targetAttrRegex = /Target="([^"]*)"/g;
+
+  for (const file of relsFiles) {
+    const content = await zip.file(file)!.async('string');
+    let m: RegExpExecArray | null;
+    while ((m = targetAttrRegex.exec(content))) {
+      const target = m[1] ?? '';
+      // Unescaped ampersand in XML attribute value is invalid
+      if (target.includes('&') && !target.includes('&amp;')) {
+        badTargets.push({ file, target });
+      }
+    }
+  }
+
+  if (badTargets.length) {
+    console.error('PPTX validation failed: invalid hyperlink XML (unescaped &)', badTargets);
+    const first = badTargets[0];
+    throw new Error(
+      `PPT generation failed: invalid hyperlink XML (unescaped &). File: ${first.file}. Target: ${first.target}`
+    );
+  }
 }
 
 Deno.serve(async (req) => {
@@ -122,7 +172,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    titleSlide.addText('PROOF OF PERFORMANCE', {
+    titleSlide.addText(sanitizePptText('PROOF OF PERFORMANCE'), {
       x: 1.0,
       y: 2.5,
       w: 8.0,
@@ -131,9 +181,10 @@ Deno.serve(async (req) => {
       bold: true,
       color: 'FFFFFF',
       align: 'center',
+      fontFace: PPT_SAFE_FONT,
     });
 
-    titleSlide.addText(campaign.campaign_name, {
+    titleSlide.addText(sanitizePptText(campaign.campaign_name), {
       x: 1.0,
       y: 3.6,
       w: 8.0,
@@ -141,9 +192,10 @@ Deno.serve(async (req) => {
       fontSize: 32,
       color: 'FFFFFF',
       align: 'center',
+      fontFace: PPT_SAFE_FONT,
     });
 
-    titleSlide.addText(`Client: ${campaign.clients?.name || campaign.client_name}`, {
+    titleSlide.addText(sanitizePptText(`Client: ${campaign.clients?.name || campaign.client_name}`), {
       x: 1.0,
       y: 4.4,
       w: 8.0,
@@ -151,17 +203,24 @@ Deno.serve(async (req) => {
       fontSize: 20,
       color: 'E0E7FF',
       align: 'center',
+      fontFace: PPT_SAFE_FONT,
     });
 
-    titleSlide.addText(`Campaign Period: ${new Date(campaign.start_date).toLocaleDateString('en-IN')} - ${new Date(campaign.end_date).toLocaleDateString('en-IN')}`, {
-      x: 1.0,
-      y: 5.0,
-      w: 8.0,
-      h: 0.4,
-      fontSize: 16,
-      color: 'E0E7FF',
-      align: 'center',
-    });
+    titleSlide.addText(
+      sanitizePptText(
+        `Campaign Period: ${new Date(campaign.start_date).toLocaleDateString('en-IN')} - ${new Date(campaign.end_date).toLocaleDateString('en-IN')}`
+      ),
+      {
+        x: 1.0,
+        y: 5.0,
+        w: 8.0,
+        h: 0.4,
+        fontSize: 16,
+        color: 'E0E7FF',
+        align: 'center',
+        fontFace: PPT_SAFE_FONT,
+      }
+    );
 
     // Add asset slides from campaign_assets
     let slidesWithPhotos = 0;
@@ -185,7 +244,7 @@ Deno.serve(async (req) => {
       const slide = pptx.addSlide();
 
       // Header with asset info
-      slide.addText(campaignAsset.location || asset?.location || 'Unknown Location', {
+      slide.addText(sanitizePptText(campaignAsset.location || asset?.location || 'Unknown Location'), {
         x: 0.5,
         y: 0.3,
         w: 9.0,
@@ -193,16 +252,23 @@ Deno.serve(async (req) => {
         fontSize: 24,
         bold: true,
         color: '1E40AF',
+        fontFace: PPT_SAFE_FONT,
       });
 
-      slide.addText(`${campaignAsset.city || asset?.city}, ${campaignAsset.area || asset?.area} • ${campaignAsset.media_type || asset?.media_type} • ${campaignAsset.dimensions || asset?.dimension || 'N/A'}`, {
-        x: 0.5,
-        y: 0.8,
-        w: 6.5,
-        h: 0.3,
-        fontSize: 12,
-        color: '666666',
-      });
+      slide.addText(
+        sanitizePptText(
+          `${campaignAsset.city || asset?.city}, ${campaignAsset.area || asset?.area} • ${campaignAsset.media_type || asset?.media_type} • ${campaignAsset.dimensions || asset?.dimension || 'N/A'}`
+        ),
+        {
+          x: 0.5,
+          y: 0.8,
+          w: 6.5,
+          h: 0.3,
+          fontSize: 12,
+          color: '666666',
+          fontFace: PPT_SAFE_FONT,
+        }
+      );
 
       // Status badge
       const statusColor = campaignAsset.status === 'Verified' || campaignAsset.status === 'Completed' ? '10B981' : 'F59E0B';
@@ -214,7 +280,7 @@ Deno.serve(async (req) => {
         fill: { color: statusColor },
       });
 
-      slide.addText(campaignAsset.status || 'Pending', {
+      slide.addText(sanitizePptText(campaignAsset.status || 'Pending'), {
         x: 7.5,
         y: 0.8,
         w: 1.5,
@@ -223,6 +289,7 @@ Deno.serve(async (req) => {
         bold: true,
         color: 'FFFFFF',
         align: 'center',
+        fontFace: PPT_SAFE_FONT,
       });
 
       // Add QR code if available
@@ -297,7 +364,7 @@ Deno.serve(async (req) => {
         }
 
         // Photo label
-        slide.addText(photoLabels[i], {
+        slide.addText(sanitizePptText(photoLabels[i]), {
           x,
           y: y + 2.05,
           w: 3.2,
@@ -306,21 +373,28 @@ Deno.serve(async (req) => {
           bold: true,
           color: '333333',
           align: 'center',
+          fontFace: PPT_SAFE_FONT,
         });
       }
 
       // Footer with mounter info
       const mounterName = campaignAsset.mounter_name || 'N/A';
       const completedDate = campaignAsset.completed_at;
-      slide.addText(`Installed by: ${mounterName} | Completed: ${completedDate ? new Date(completedDate).toLocaleDateString('en-IN') : 'Pending'}`, {
-        x: 0.5,
-        y: 6.8,
-        w: 9.0,
-        h: 0.3,
-        fontSize: 10,
-        color: '999999',
-        italic: true,
-      });
+      slide.addText(
+        sanitizePptText(
+          `Installed by: ${mounterName} | Completed: ${completedDate ? new Date(completedDate).toLocaleDateString('en-IN') : 'Pending'}`
+        ),
+        {
+          x: 0.5,
+          y: 6.8,
+          w: 9.0,
+          h: 0.3,
+          fontSize: 10,
+          color: '999999',
+          italic: true,
+          fontFace: PPT_SAFE_FONT,
+        }
+      );
     }
 
     // If no slides with photos, add a placeholder slide
@@ -405,6 +479,9 @@ Deno.serve(async (req) => {
 
     // Generate PPT binary
     const pptxBuffer = await pptx.write({ outputType: 'arraybuffer' });
+
+    // HARD FAIL validation: ensure no invalid rels XML is produced
+    await validatePptxRelationships(pptxBuffer as ArrayBuffer);
 
     // Upload to storage
     const fileName = `PROOF-${campaign.id}-${Date.now()}.pptx`;

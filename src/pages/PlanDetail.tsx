@@ -46,7 +46,7 @@ import { generateCampaignCode } from "@/lib/codeGenerator";
 import { calcProRata, calcDiscount, calcProfit } from "@/utils/pricing";
 import { toast } from "@/hooks/use-toast";
 import { useCompany } from "@/contexts/CompanyContext";
-import { exportPlanToPPT, exportPlanToExcel, exportPlanToPDF } from "@/utils/planExports";
+import { exportPlanToPPT, exportPlanToExcel, exportPlanToPDF, exportPlanImagesToPDF } from "@/utils/planExports";
 import { UnifiedExportButton } from "@/components/plans/UnifiedExportButton";
 import { ExportOptionsDialog, ExportOptions } from "@/components/plans/ExportOptionsDialog";
 import { ExportSettingsDialog, ExportSettings } from "@/components/plans/ExportSettingsDialog";
@@ -87,6 +87,7 @@ export default function PlanDetail() {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [exportingPPT, setExportingPPT] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportingImagesPdf, setExportingImagesPdf] = useState(false);
   const [existingCampaignId, setExistingCampaignId] = useState<string | null>(null);
   const [campaignData, setCampaignData] = useState({
     campaign_name: "",
@@ -463,6 +464,32 @@ export default function PlanDetail() {
     }
   };
 
+  const handleExportPlanImagesPDF = async (uploadToCloud = false) => {
+    setExportingImagesPdf(true);
+    try {
+      const result = await exportPlanImagesToPDF(plan, planItems, uploadToCloud);
+      toast({
+        title: "Success",
+        description: uploadToCloud
+          ? "Plan images exported to PDF and uploaded to cloud"
+          : "Plan images exported to PDF",
+      });
+
+      if (uploadToCloud && result) {
+        fetchPlan();
+      }
+    } catch (error: any) {
+      console.error("Plan Images PDF Export Error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to export plan images PDF",
+        variant: "destructive",
+      });
+    } finally {
+      setExportingImagesPdf(false);
+    }
+  };
+
   const handleExportExcel = async (uploadToCloud = false) => {
     setExportingExcel(true);
     try {
@@ -473,7 +500,7 @@ export default function PlanDetail() {
           ? "Plan exported to Excel and uploaded to cloud"
           : "Plan exported to Excel",
       });
-      
+
       if (uploadToCloud && result) {
         fetchPlan();
       }
@@ -1096,6 +1123,10 @@ export default function PlanDetail() {
                 <DropdownMenuItem onClick={() => handleExportExcel(true)} disabled={exportingExcel}>
                   <Save className="mr-2 h-4 w-4" />
                   {exportingExcel ? "Uploading..." : "Download Excel"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExportPlanImagesPDF(true)} disabled={exportingImagesPdf}>
+                  <Save className="mr-2 h-4 w-4" />
+                  {exportingImagesPdf ? "Uploading..." : "Download Plan Images (PDF)"}
                 </DropdownMenuItem>
                 
                 <DropdownMenuSeparator />

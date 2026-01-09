@@ -4,6 +4,8 @@ import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 import { compressImage } from "@/lib/imageCompression";
 import { getCachedQRData } from "@/lib/qrWatermark";
+import { sanitizePptHyperlink, sanitizePptText, PPT_SAFE_FONTS } from "@/lib/ppt/sanitizers";
+import JSZip from "jszip";
 
 // @ts-ignore
 import autoTable from "jspdf-autotable";
@@ -236,17 +238,41 @@ async function getTermsAndConditions(): Promise<string[]> {
 }
 
 /**
- * Upload file to Supabase Storage
+ * HARD FAIL validation: ensure no invalid rels XML is produced in PPTX.
+ * PowerPoint repairs PPTX when relationship Target attributes contain raw '&'.
  */
+async function validatePptxRelationships(pptxArrayBuffer: ArrayBuffer) {
+  const zip = await JSZip.loadAsync(pptxArrayBuffer);
+  const relsFiles = Object.keys(zip.files).filter((p) => p.endsWith('.rels'));
+  const targetAttrRegex = /Target="([^"]*)"/g;
+
+  for (const file of relsFiles) {
+    const content = await zip.file(file)!.async('string');
+    let m: RegExpExecArray | null;
+    while ((m = targetAttrRegex.exec(content))) {
+      const target = m[1] ?? '';
+      if (target.includes('&') && !target.includes('&amp;')) {
+        console.error('Invalid hyperlink XML (unescaped &):', { file, target });
+        throw new Error(
+          `PPT generation failed: invalid hyperlink XML (unescaped &). File: ${file}. Target: ${target}`
+        );
+      }
+    }
+  }
+}
 async function uploadToStorage(
   file: Blob,
   bucket: string,
-  path: string
+  path: string,
+  contentType?: string
 ): Promise<string | null> {
   try {
     const { data, error } = await supabase.storage
       .from(bucket)
-      .upload(path, file, { upsert: true });
+      .upload(path, file, { 
+        upsert: true,
+        ...(contentType ? { contentType } : {}),
+      });
 
     if (error) throw error;
 
@@ -513,8 +539,10 @@ export async function exportPlanToPPT(
             sizing: { type: "cover", w: img1Width, h: imgHeight }
           });
 
-          // Add QR code watermark on image 1 (bottom-right corner)
-          if (qrData) {
+          // Add clickable QR code watermark on image 1 (bottom-right corner)
+          // CRITICAL: sanitize hyperlink to avoid invalid XML in slide rels
+          const safeStreetViewUrl1 = sanitizePptHyperlink(qrData?.streetViewUrl);
+          if (qrData?.qrBase64 && safeStreetViewUrl1) {
             const qrSize = 0.7;
             const qrPadding = 0.12;
             imageSlide.addImage({
@@ -523,7 +551,7 @@ export async function exportPlanToPPT(
               y: img1Y + imgHeight - qrSize - qrPadding,
               w: qrSize,
               h: qrSize,
-              hyperlink: { url: qrData.streetViewUrl },
+              hyperlink: { url: safeStreetViewUrl1 },
             });
           }
         } catch (err) {
@@ -558,8 +586,10 @@ export async function exportPlanToPPT(
             sizing: { type: "cover", w: img2Width, h: imgHeight }
           });
 
-          // Add QR code watermark on image 2 (bottom-right corner)
-          if (qrData) {
+          // Add clickable QR code watermark on image 2 (bottom-right corner)
+          // CRITICAL: sanitize hyperlink to avoid invalid XML in slide rels
+          const safeStreetViewUrl2 = sanitizePptHyperlink(qrData?.streetViewUrl);
+          if (qrData?.qrBase64 && safeStreetViewUrl2) {
             const qrSize = 0.7;
             const qrPadding = 0.12;
             imageSlide.addImage({
@@ -568,7 +598,7 @@ export async function exportPlanToPPT(
               y: img1Y + imgHeight - qrSize - qrPadding,
               w: qrSize,
               h: qrSize,
-              hyperlink: { url: qrData.streetViewUrl },
+              hyperlink: { url: safeStreetViewUrl2 },
             });
           }
         } catch (err) {
@@ -681,8 +711,10 @@ export async function exportPlanToPPT(
               sizing: { type: "cover", w: detailImgW, h: detailImgH }
             });
 
-            // Add QR code watermark on detail image (bottom-right corner)
-            if (qrData) {
+            // Add clickable QR code watermark on detail image (bottom-right corner)
+            // CRITICAL: sanitize hyperlink to avoid invalid XML in slide rels
+            const safeStreetViewUrl3 = sanitizePptHyperlink(qrData?.streetViewUrl);
+            if (qrData?.qrBase64 && safeStreetViewUrl3) {
               const qrSize = 0.7;
               const qrPadding = 0.12;
               detailSlide.addImage({
@@ -691,7 +723,7 @@ export async function exportPlanToPPT(
                 y: detailImgY + detailImgH - qrSize - qrPadding,
                 w: qrSize,
                 h: qrSize,
-                hyperlink: { url: qrData.streetViewUrl },
+                hyperlink: { url: safeStreetViewUrl3 },
               });
             }
           }
@@ -826,6 +858,8 @@ export async function exportPlanToPPT(
       // Add public link if available
       if (plan.share_token) {
         const publicUrl = `${window.location.origin}/share/plan/${plan.id}/${plan.share_token}`;
+        const safePublicUrl = sanitizePptHyperlink(publicUrl);
+
         termsSlide.addText("View Interactive Map & Asset Details:", {
           x: 0.5,
           y: 6.5,
@@ -833,38 +867,82 @@ export async function exportPlanToPPT(
           h: 0.4,
           fontSize: 12,
           color: "1e40af",
-          bold: true
+          bold: true,
+          fontFace: PPT_SAFE_FONTS.primary,
         });
-        termsSlide.addText(publicUrl, {
-          x: 0.5,
-          y: 6.9,
-          w: 9,
-          h: 0.4,
-          fontSize: 10,
-          color: "0066cc",
-          hyperlink: { url: publicUrl }
-        });
+
+        if (safePublicUrl) {
+          termsSlide.addText(publicUrl, {
+            x: 0.5,
+            y: 6.9,
+            w: 9,
+            h: 0.4,
+            fontSize: 10,
+            color: "0066cc",
+            hyperlink: { url: safePublicUrl },
+            fontFace: PPT_SAFE_FONTS.primary,
+          });
+        } else {
+          termsSlide.addText(publicUrl, {
+            x: 0.5,
+            y: 6.9,
+            w: 9,
+            h: 0.4,
+            fontSize: 10,
+            color: "0066cc",
+            fontFace: PPT_SAFE_FONTS.primary,
+          });
+        }
       }
     }
 
     // Save file
+    // IMPORTANT: always validate and download from an ArrayBuffer to avoid corrupt PPTX output
+    const fileName = `plan_${plan.id}_${Date.now()}.pptx`;
+    const arrayBuffer = await pptx.write({ outputType: 'arraybuffer' }) as ArrayBuffer;
+    await validatePptxRelationships(arrayBuffer);
+
+    const blob = new Blob([arrayBuffer], {
+      type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    });
+
     if (uploadToCloud) {
-      const blob = await pptx.write({ outputType: 'blob' }) as Blob;
-      const fileName = `plan_${plan.id}_${Date.now()}.pptx`;
       const storagePath = `exports/plans/${plan.id}/${fileName}`;
-      
-      const publicUrl = await uploadToStorage(blob, 'client-documents', storagePath);
+
+      const publicUrl = await uploadToStorage(
+        blob,
+        'client-documents',
+        storagePath,
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+      );
       if (publicUrl) {
         await updatePlanExportLinks(plan.id, { ppt_url: publicUrl });
       }
-      
-      // Also download locally
-      await pptx.writeFile({ fileName: `${plan.id}_presentation.pptx` });
+
+      // Download locally too
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${plan.id}_presentation.pptx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
       return publicUrl;
-    } else {
-      await pptx.writeFile({ fileName: `${plan.id}_presentation.pptx` });
-      return true;
     }
+
+    // download
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${plan.id}_presentation.pptx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    return true;
   } catch (error) {
     console.error("PPT export error:", error);
     throw error;
@@ -955,7 +1033,12 @@ export async function exportPlanToExcel(
       const fileName = `plan_${plan.id}_${Date.now()}.xlsx`;
       const storagePath = `exports/plans/${plan.id}/${fileName}`;
       
-      const publicUrl = await uploadToStorage(blob, 'client-documents', storagePath);
+      const publicUrl = await uploadToStorage(
+        blob,
+        'client-documents',
+        storagePath,
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
       if (publicUrl) {
         await updatePlanExportLinks(plan.id, { excel_url: publicUrl });
       }
@@ -1151,7 +1234,7 @@ export async function exportPlanToPDF(
       const fileName = `plan_${plan.id}_${docType}_${Date.now()}.pdf`;
       const storagePath = `exports/plans/${plan.id}/${fileName}`;
 
-      const publicUrl = await uploadToStorage(pdfBlob, 'client-documents', storagePath);
+      const publicUrl = await uploadToStorage(pdfBlob, 'client-documents', storagePath, 'application/pdf');
       if (publicUrl) {
         await updatePlanExportLinks(plan.id, { pdf_url: publicUrl });
       }

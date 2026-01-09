@@ -467,7 +467,7 @@ export default function PlanDetail() {
   const handleExportPlanImagesPDF = async (uploadToCloud = false) => {
     setExportingImagesPdf(true);
     try {
-      const result = await exportPlanImagesToPDF(plan, planItems, uploadToCloud);
+      const result = await exportPlanImagesToPDF(plan, planItems, { uploadToCloud });
       toast({
         title: "Success",
         description: uploadToCloud

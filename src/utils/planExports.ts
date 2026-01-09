@@ -1257,3 +1257,204 @@ export async function exportPlanToPDF(
     throw error;
   }
 }
+
+/**
+ * Export plan images to PDF - Similar layout to PPT but in PDF format
+ * Each asset gets a page with its images arranged in a grid
+ */
+export async function exportPlanImagesToPDF(
+  plan: any,
+  planItems: any[],
+  options: { uploadToCloud?: boolean } = {}
+): Promise<string | boolean> {
+  const { uploadToCloud = false } = options;
+
+  try {
+    // Helper to fetch image as data URL
+    const fetchAsDataUrl = async (url: string): Promise<string | undefined> => {
+      try {
+        if (!url) return undefined;
+        if (url.startsWith('data:')) return url;
+        const res = await fetch(url, { mode: 'cors' });
+        if (!res.ok) return undefined;
+        const blob = await res.blob();
+        return await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch {
+        return undefined;
+      }
+    };
+
+    const assetIds = planItems.map(item => item.asset_id).filter(Boolean);
+    const assetDetailsMap = await fetchAssetDetails(assetIds);
+
+    const pdf = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4',
+    });
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 10;
+    const contentWidth = pageWidth - 2 * margin;
+
+    // Cover page
+    pdf.setFillColor(30, 64, 175); // Deep blue
+    pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+    
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(28);
+    pdf.text(plan.plan_name || 'Media Plan', pageWidth / 2, 60, { align: 'center' });
+    
+    pdf.setFontSize(16);
+    pdf.text(`Client: ${plan.client_name || 'N/A'}`, pageWidth / 2, 85, { align: 'center' });
+    
+    pdf.setFontSize(12);
+    const dateRange = `${plan.start_date || ''} to ${plan.end_date || ''}`;
+    pdf.text(dateRange, pageWidth / 2, 100, { align: 'center' });
+    
+    pdf.setFontSize(10);
+    pdf.text(`Plan ID: ${plan.id}`, pageWidth / 2, 115, { align: 'center' });
+    pdf.text(`Total Assets: ${planItems.length}`, pageWidth / 2, 125, { align: 'center' });
+
+    // Process each asset
+    for (let i = 0; i < planItems.length; i++) {
+      const item = planItems[i];
+      const assetDetails = assetDetailsMap.get(item.asset_id);
+      
+      pdf.addPage('landscape');
+      
+      // Header bar
+      pdf.setFillColor(30, 64, 175);
+      pdf.rect(0, 0, pageWidth, 25, 'F');
+      
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(14);
+      const assetCode = assetDetails?.media_asset_code || item.asset_id || `Asset ${i + 1}`;
+      pdf.text(assetCode, margin, 16);
+      
+      pdf.setFontSize(10);
+      pdf.text(`${i + 1} of ${planItems.length}`, pageWidth - margin, 16, { align: 'right' });
+      
+      // Reset text color
+      pdf.setTextColor(0, 0, 0);
+      
+      // Asset info section
+      const infoY = 35;
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Location:', margin, infoY);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(item.location || assetDetails?.location || 'N/A', margin + 25, infoY);
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Area:', margin + 120, infoY);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(item.area || assetDetails?.area || 'N/A', margin + 135, infoY);
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('City:', margin + 180, infoY);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(item.city || assetDetails?.city || 'N/A', margin + 195, infoY);
+      
+      const infoY2 = infoY + 8;
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Type:', margin, infoY2);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(item.media_type || assetDetails?.media_type || 'N/A', margin + 25, infoY2);
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Dimensions:', margin + 120, infoY2);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(item.dimensions || assetDetails?.dimensions || 'N/A', margin + 150, infoY2);
+      
+      // Get images for this asset
+      const imageUrls = await getAssetImageUrls(item.asset_id);
+      
+      // Image grid area
+      const imagesStartY = 55;
+      const availableHeight = pageHeight - imagesStartY - 15;
+      const availableWidth = contentWidth;
+      
+      if (imageUrls.length === 0) {
+        // No images placeholder
+        pdf.setFillColor(240, 240, 240);
+        pdf.rect(margin, imagesStartY, availableWidth, availableHeight, 'F');
+        pdf.setTextColor(128, 128, 128);
+        pdf.setFontSize(14);
+        pdf.text('No images available', pageWidth / 2, imagesStartY + availableHeight / 2, { align: 'center' });
+        pdf.setTextColor(0, 0, 0);
+      } else {
+        // Calculate grid layout - max 4 images per page (2x2)
+        const maxImages = Math.min(imageUrls.length, 4);
+        const cols = maxImages <= 2 ? maxImages : 2;
+        const rows = Math.ceil(maxImages / cols);
+        
+        const imgWidth = (availableWidth - (cols - 1) * 5) / cols;
+        const imgHeight = (availableHeight - (rows - 1) * 5) / rows;
+        
+        for (let j = 0; j < maxImages; j++) {
+          const col = j % cols;
+          const row = Math.floor(j / cols);
+          const x = margin + col * (imgWidth + 5);
+          const y = imagesStartY + row * (imgHeight + 5);
+          
+          try {
+            const dataUrl = await fetchAsDataUrl(imageUrls[j]);
+            if (dataUrl) {
+              pdf.addImage(dataUrl, 'JPEG', x, y, imgWidth, imgHeight);
+            } else {
+              // Placeholder for failed image
+              pdf.setFillColor(220, 220, 220);
+              pdf.rect(x, y, imgWidth, imgHeight, 'F');
+              pdf.setTextColor(100, 100, 100);
+              pdf.setFontSize(10);
+              pdf.text('Image unavailable', x + imgWidth / 2, y + imgHeight / 2, { align: 'center' });
+              pdf.setTextColor(0, 0, 0);
+            }
+          } catch (err) {
+            console.error(`Failed to add image ${j} for asset ${item.asset_id}:`, err);
+            pdf.setFillColor(220, 220, 220);
+            pdf.rect(x, y, imgWidth, imgHeight, 'F');
+          }
+        }
+      }
+      
+      // Footer
+      pdf.setFontSize(8);
+      pdf.setTextColor(128, 128, 128);
+      pdf.text(`Generated: ${new Date().toLocaleDateString('en-IN')}`, margin, pageHeight - 5);
+      pdf.text(plan.id, pageWidth - margin, pageHeight - 5, { align: 'right' });
+      pdf.setTextColor(0, 0, 0);
+    }
+
+    const pdfBlob = pdf.output('blob');
+
+    if (uploadToCloud) {
+      const fileName = `plan_${plan.id}_images_${Date.now()}.pdf`;
+      const storagePath = `exports/plans/${plan.id}/${fileName}`;
+      const publicUrl = await uploadToStorage(pdfBlob, 'client-documents', storagePath, 'application/pdf');
+      return publicUrl || false;
+    }
+
+    // Download
+    const url = URL.createObjectURL(pdfBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${plan.id}_images.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    return true;
+  } catch (error) {
+    console.error('Plan images PDF export error:', error);
+    throw error;
+  }
+}

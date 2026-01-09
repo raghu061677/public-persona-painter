@@ -1,7 +1,25 @@
 import pptxgen from 'pptxgenjs';
 import { format } from 'date-fns';
-import { validateAndFixStreetViewUrl, buildStreetViewUrl } from '../streetview';
+import { buildStreetViewUrl } from '../streetview';
 import { fetchImageAsBase64 } from '../qrWatermark';
+import { supabase } from '@/integrations/supabase/client';
+
+function validateAndFixStreetViewUrl(
+  url: string | undefined,
+  latitude: number | undefined,
+  longitude: number | undefined
+): string | null {
+  if (url && typeof url === 'string') {
+    try {
+      const u = new URL(url);
+      if (u.protocol === 'http:' || u.protocol === 'https:') return url;
+    } catch {
+      // fall through
+    }
+  }
+  if (latitude && longitude) return buildStreetViewUrl(latitude, longitude);
+  return null;
+}
 
 interface PlanAsset {
   asset_id: string;
@@ -45,16 +63,14 @@ async function getCachedQR(
   longitude: number | undefined
 ): Promise<{ base64: string; streetViewUrl: string } | null> {
   if (!qrCodeUrl) return null;
-  
+
   if (qrCache.has(assetId)) {
     return qrCache.get(assetId)!;
   }
 
   try {
-    const streetViewUrl = latitude && longitude 
-      ? buildStreetViewUrl(latitude, longitude)
-      : null;
-    
+    const streetViewUrl = latitude && longitude ? buildStreetViewUrl(latitude, longitude) : null;
+
     if (!streetViewUrl) return null;
 
     const base64 = await fetchImageAsBase64(qrCodeUrl);
@@ -67,29 +83,75 @@ async function getCachedQR(
   }
 }
 
-const DEFAULT_PLACEHOLDER = 'https://via.placeholder.com/800x600/f3f4f6/6b7280?text=No+Image+Available';
+// Avoid external placeholder hosts (CORS can break PPT export). Use an inline SVG data URL instead.
+const DEFAULT_PLACEHOLDER_DATA_URL =
+  'data:image/svg+xml;base64,' +
+  btoa(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200">
+      <rect width="100%" height="100%" fill="#F3F4F6"/>
+      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#6B7280" font-family="Arial" font-size="64">
+        No Image
+      </text>
+    </svg>`
+  );
 
 // Cache for fetched images to avoid re-fetching
 const imageCache = new Map<string, string>();
 
+function parseStorageObjectUrl(url: string): { bucket: string; path: string } | null {
+  try {
+    const u = new URL(url);
+    const match = u.pathname.match(/\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/(.+)$/);
+    if (!match) return null;
+    return { bucket: match[1], path: decodeURIComponent(match[2]) };
+  } catch {
+    return null;
+  }
+}
+
+async function toFetchableUrl(url: string): Promise<string> {
+  // If it's already a data URL, we can use it as-is.
+  if (url.startsWith('data:')) return url;
+
+  // If it isn't an http(s) URL, treat it as a storage object path in the media-assets bucket.
+  if (!url.startsWith('http')) {
+    const { data } = await supabase.storage.from('media-assets').createSignedUrl(url, 3600);
+    return data?.signedUrl || url;
+  }
+
+  return url;
+}
+
+async function fetchImageAsBase64Smart(url: string): Promise<string | null> {
+  try {
+    // First try: fetch directly (works for public URLs)
+    const directUrl = await toFetchableUrl(url);
+    return await fetchImageAsBase64(directUrl);
+  } catch {
+    // Fallback: if it's a storage public URL, try a signed URL
+    try {
+      const parsed = parseStorageObjectUrl(url);
+      if (!parsed) return null;
+      const { data } = await supabase.storage.from(parsed.bucket).createSignedUrl(parsed.path, 3600);
+      if (!data?.signedUrl) return null;
+      return await fetchImageAsBase64(data.signedUrl);
+    } catch (error) {
+      console.warn('Failed to fetch image via signed URL fallback:', error);
+      return null;
+    }
+  }
+}
+
 async function fetchImageWithCache(url: string): Promise<string | null> {
   if (!url) return null;
-  
+
   if (imageCache.has(url)) {
     return imageCache.get(url)!;
   }
 
-  try {
-    const base64 = await fetchImageAsBase64(url);
-    if (base64) {
-      imageCache.set(url, base64);
-      return base64;
-    }
-    return null;
-  } catch (error) {
-    console.warn(`Failed to fetch image: ${url}`, error);
-    return null;
-  }
+  const base64 = await fetchImageAsBase64Smart(url);
+  if (base64) imageCache.set(url, base64);
+  return base64;
 }
 
 export async function generatePlanPPT(
@@ -246,12 +308,10 @@ export async function generatePlanPPT(
   // ===== ASSET SLIDES =====
   for (const asset of plan.assets) {
     // Use primary_photo_url for presentation - fetch as base64.
-    // If fetching the asset image fails (auth/CORS/etc), fall back to a placeholder.
+    // If fetching the asset image fails (auth/CORS/etc), fall back to an inline placeholder.
     const preferredPhotoUrl = asset.primary_photo_url;
-    const photoBase64 = preferredPhotoUrl
-      ? (await fetchImageWithCache(preferredPhotoUrl))
-      : null;
-    const finalPhotoBase64 = photoBase64 || (await fetchImageWithCache(DEFAULT_PLACEHOLDER));
+    const photoBase64 = preferredPhotoUrl ? await fetchImageWithCache(preferredPhotoUrl) : null;
+    const finalPhotoBase64 = photoBase64 || (await fetchImageWithCache(DEFAULT_PLACEHOLDER_DATA_URL));
 
     // Parse dimensions
     let width = '';

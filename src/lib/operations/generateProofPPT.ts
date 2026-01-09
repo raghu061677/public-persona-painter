@@ -3,6 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { fetchImageAsBase64 } from "@/lib/qrWatermark";
 import { buildStreetViewUrl } from "@/lib/streetview";
+import { 
+  sanitizePptHyperlink, 
+  sanitizePptText, 
+  PPT_SAFE_FONTS 
+} from "@/lib/ppt/sanitizers";
 
 interface CampaignData {
   id: string;
@@ -237,7 +242,7 @@ async function addTitleSlide(
   slide.background = { color: "F8FAFC" };
 
   // Title
-  slide.addText("Proof of Display Report", {
+  slide.addText(sanitizePptText("Proof of Display Report"), {
     x: 0.5,
     y: 1.5,
     w: 9,
@@ -246,12 +251,13 @@ async function addTitleSlide(
     bold: true,
     color: primaryColor,
     align: "center",
+    fontFace: PPT_SAFE_FONTS.primary,
   });
 
-  // Campaign details
+  // Campaign details - sanitize all text
   const details = [
-    `Campaign: ${campaign.campaign_name}`,
-    `Client: ${campaign.client_name}`,
+    `Campaign: ${sanitizePptText(campaign.campaign_name)}`,
+    `Client: ${sanitizePptText(campaign.client_name)}`,
     `Duration: ${format(new Date(campaign.start_date), 'dd MMM yyyy')} - ${format(new Date(campaign.end_date), 'dd MMM yyyy')}`,
     `Total Sites: ${totalSites}`,
     `Total Photos: ${totalPhotos}`,
@@ -266,10 +272,11 @@ async function addTitleSlide(
     color: "334155",
     align: "center",
     lineSpacing: 32,
+    fontFace: PPT_SAFE_FONTS.primary,
   });
 
   // Branding
-  slide.addText(orgName, {
+  slide.addText(sanitizePptText(orgName), {
     x: 8,
     y: 0.3,
     w: 1.5,
@@ -278,11 +285,12 @@ async function addTitleSlide(
     bold: true,
     color: secondaryColor,
     align: "right",
+    fontFace: PPT_SAFE_FONTS.primary,
   });
 
   // Footer
   const footerText = settings?.ppt_footer_text || `Generated on ${format(new Date(), 'dd MMM yyyy')}`;
-  slide.addText(footerText, {
+  slide.addText(sanitizePptText(footerText), {
     x: 0.5,
     y: 7,
     w: 9,
@@ -290,6 +298,7 @@ async function addTitleSlide(
     fontSize: 10,
     color: "64748B",
     align: "center",
+    fontFace: PPT_SAFE_FONTS.primary,
   });
 }
 
@@ -307,7 +316,7 @@ async function addAssetSlides(
     slide.background = { color: "FFFFFF" };
 
     // Header Line 1: Asset: HYD-BQS-0059 – City, Area, Location
-    const title = `Asset: ${asset.asset_code} – ${asset.city}, ${asset.area}, ${asset.location}`;
+    const title = sanitizePptText(`Asset: ${asset.asset_code} - ${asset.city}, ${asset.area}, ${asset.location}`);
     slide.addText(title, {
       x: 0.5,
       y: 0.3,
@@ -316,27 +325,30 @@ async function addAssetSlides(
       fontSize: 20,
       bold: true,
       color: "1E40AF",
+      fontFace: PPT_SAFE_FONTS.primary,
     });
 
     // Add clickable QR in header area
-    if (qrData) {
+    // CRITICAL: Sanitize hyperlink URL to prevent XML corruption
+    const sanitizedStreetViewUrl = qrData ? sanitizePptHyperlink(qrData.streetViewUrl) : undefined;
+    if (qrData && sanitizedStreetViewUrl) {
       slide.addImage({
         data: qrData.base64,
         x: 9.0,
         y: 0.2,
         w: 0.8,
         h: 0.8,
-        hyperlink: { url: qrData.streetViewUrl },
+        hyperlink: { url: sanitizedStreetViewUrl },
       });
     }
 
     // Header Line 2: Location, Direction, Dimension, Total SQFT, Illumination Type
     const detailParts = [];
-    if (asset.location && asset.location !== "Unknown") detailParts.push(`Location: ${asset.location}`);
-    if (asset.direction) detailParts.push(`Direction: ${asset.direction}`);
-    if (asset.dimensions) detailParts.push(`Dimension: ${asset.dimensions}`);
-    if (asset.total_sqft) detailParts.push(`Total SQFT: ${asset.total_sqft}`);
-    if (asset.illumination_type) detailParts.push(`Illumination: ${asset.illumination_type}`);
+    if (asset.location && asset.location !== "Unknown") detailParts.push(`Location: ${sanitizePptText(asset.location)}`);
+    if (asset.direction) detailParts.push(`Direction: ${sanitizePptText(asset.direction)}`);
+    if (asset.dimensions) detailParts.push(`Dimension: ${sanitizePptText(asset.dimensions)}`);
+    if (asset.total_sqft) detailParts.push(`Total SQFT: ${sanitizePptText(String(asset.total_sqft))}`);
+    if (asset.illumination_type) detailParts.push(`Illumination: ${sanitizePptText(asset.illumination_type)}`);
 
     if (detailParts.length > 0) {
       slide.addText(detailParts.join(" | "), {
@@ -346,6 +358,7 @@ async function addAssetSlides(
         h: 0.3,
         fontSize: 12,
         color: "64748B",
+        fontFace: PPT_SAFE_FONTS.primary,
       });
     }
 
@@ -360,7 +373,7 @@ async function addAssetSlides(
     }
 
     // Footer with page indicator
-    slide.addText("Powered by Go-Ads 360° — OOH Media Platform", {
+    slide.addText(sanitizePptText("Powered by Go-Ads 360 - OOH Media Platform"), {
       x: 0.5,
       y: 7,
       w: 9,
@@ -368,6 +381,7 @@ async function addAssetSlides(
       fontSize: 10,
       color: "94A3B8",
       align: "center",
+      fontFace: PPT_SAFE_FONTS.primary,
     });
   }
 }
@@ -392,7 +406,9 @@ function addPhotoToSlide(
   });
 
   // Add clickable QR watermark at bottom-right of photo
-  if (qrData) {
+  // CRITICAL: Sanitize hyperlink URL to prevent XML corruption
+  const sanitizedQrUrl = qrData ? sanitizePptHyperlink(qrData.streetViewUrl) : undefined;
+  if (qrData && sanitizedQrUrl) {
     const qrSize = 0.7;
     const qrPadding = 0.12;
     slide.addImage({
@@ -401,7 +417,7 @@ function addPhotoToSlide(
       y: y + h - qrSize - qrPadding,
       w: qrSize,
       h: qrSize,
-      hyperlink: { url: qrData.streetViewUrl },
+      hyperlink: { url: sanitizedQrUrl },
     });
   }
 
@@ -420,7 +436,7 @@ function addPhotoToSlide(
 
   const tagColor = tagColors[photo.category] || "6B7280";
   
-  slide.addText(photo.category, {
+  slide.addText(sanitizePptText(photo.category), {
     x: x + 0.1,
     y: y + 0.1,
     w: 1.5,
@@ -430,11 +446,12 @@ function addPhotoToSlide(
     color: "FFFFFF",
     fill: { color: tagColor },
     align: "center",
+    fontFace: PPT_SAFE_FONTS.primary,
   });
 
   // Add GPS coordinates if available
   if (photo.latitude && photo.longitude) {
-    const gpsText = `GPS: ${photo.latitude.toFixed(6)}, ${photo.longitude.toFixed(6)}`;
+    const gpsText = sanitizePptText(`GPS: ${photo.latitude.toFixed(6)}, ${photo.longitude.toFixed(6)}`);
     slide.addText(gpsText, {
       x,
       y: y + h - 0.4,
@@ -444,6 +461,7 @@ function addPhotoToSlide(
       color: "FFFFFF",
       fill: { color: "00000080" },
       align: "center",
+      fontFace: PPT_SAFE_FONTS.primary,
     });
   }
 
@@ -457,5 +475,6 @@ function addPhotoToSlide(
     color: "FFFFFF",
     fill: { color: "00000080" },
     align: "center",
+    fontFace: PPT_SAFE_FONTS.primary,
   });
 }

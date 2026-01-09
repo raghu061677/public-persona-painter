@@ -1,3 +1,4 @@
+// Plan export utilities - PDF, PPT, Excel
 import { supabase } from "@/integrations/supabase/client";
 import pptxgen from "pptxgenjs";
 import jsPDF from "jspdf";

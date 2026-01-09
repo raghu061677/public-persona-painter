@@ -88,6 +88,63 @@ function parseStorageObjectUrl(url: string): { bucket: string; path: string } | 
 }
 
 /**
+ * Convert an image data URL to a PPT-compatible JPEG/PNG.
+ * PowerPoint often fails to render SVG/WebP.
+ */
+async function ensurePptCompatibleDataUrl(dataUrl: string): Promise<string | null> {
+  if (!dataUrl?.startsWith('data:')) return null;
+
+  // Already compatible
+  if (dataUrl.startsWith('data:image/jpeg') || dataUrl.startsWith('data:image/png')) return dataUrl;
+
+  // Convert via canvas
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('Failed to decode image for PPT conversion'));
+      img.src = dataUrl;
+    });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth || 1600;
+    canvas.height = img.naturalHeight || 1200;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(img, 0, 0);
+
+    return canvas.toDataURL('image/jpeg', 0.9);
+  } catch (e) {
+    console.warn('ensurePptCompatibleDataUrl failed:', e);
+    return null;
+  }
+}
+
+let _placeholderPptDataUrl: string | null = null;
+async function getPlaceholderPptDataUrl(): Promise<string> {
+  if (_placeholderPptDataUrl) return _placeholderPptDataUrl;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 1600;
+  canvas.height = 1200;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    _placeholderPptDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7W2u0AAAAASUVORK5CYII=';
+    return _placeholderPptDataUrl;
+  }
+  ctx.fillStyle = '#F3F4F6';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#6B7280';
+  ctx.font = 'bold 64px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('No Image', canvas.width / 2, canvas.height / 2);
+  _placeholderPptDataUrl = canvas.toDataURL('image/png');
+  return _placeholderPptDataUrl;
+}
+
+/**
  * Convert image URL to base64 with compression.
  * Handles:
  *  - data: URLs
@@ -96,7 +153,9 @@ function parseStorageObjectUrl(url: string): { bucket: string; path: string } | 
  */
 async function imageToBase64(url: string): Promise<string | null> {
   try {
-    if (url.startsWith('data:')) return url;
+    if (url.startsWith('data:')) {
+      return await ensurePptCompatibleDataUrl(url);
+    }
 
     let fetchUrl = url;
 
@@ -146,7 +205,7 @@ async function imageToBase64(url: string): Promise<string | null> {
       preserveExif: false,
     });
 
-    return await new Promise((resolve, reject) => {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
       reader.onerror = (error) => {
@@ -155,6 +214,8 @@ async function imageToBase64(url: string): Promise<string | null> {
       };
       reader.readAsDataURL(compressedFile);
     });
+
+    return await ensurePptCompatibleDataUrl(dataUrl);
   } catch (error) {
     console.error('Failed to convert image to base64:', error, 'URL:', url);
     return null;
@@ -442,33 +503,43 @@ export async function exportPlanToPPT(
       if (imagesToShow.length > 0) {
         try {
           const img1Base64 = await imageToBase64(imagesToShow[0]);
-          if (img1Base64) {
-            imageSlide.addImage({
-              data: img1Base64,
-              x: img1X,
-              y: img1Y,
-              w: img1Width,
-              h: imgHeight,
-              sizing: { type: "cover", w: img1Width, h: imgHeight }
-            });
+          const img1Final = img1Base64 || (await getPlaceholderPptDataUrl());
+          imageSlide.addImage({
+            data: img1Final,
+            x: img1X,
+            y: img1Y,
+            w: img1Width,
+            h: imgHeight,
+            sizing: { type: "cover", w: img1Width, h: imgHeight }
+          });
 
-            // Add QR code watermark on image 1 (bottom-right corner)
-            if (qrData) {
-              const qrSize = 0.7;
-              const qrPadding = 0.12;
-              imageSlide.addImage({
-                data: qrData.qrBase64,
-                x: img1X + img1Width - qrSize - qrPadding,
-                y: img1Y + imgHeight - qrSize - qrPadding,
-                w: qrSize,
-                h: qrSize,
-                hyperlink: { url: qrData.streetViewUrl },
-              });
-            }
+          // Add QR code watermark on image 1 (bottom-right corner)
+          if (qrData) {
+            const qrSize = 0.7;
+            const qrPadding = 0.12;
+            imageSlide.addImage({
+              data: qrData.qrBase64,
+              x: img1X + img1Width - qrSize - qrPadding,
+              y: img1Y + imgHeight - qrSize - qrPadding,
+              w: qrSize,
+              h: qrSize,
+              hyperlink: { url: qrData.streetViewUrl },
+            });
           }
         } catch (err) {
           console.warn("Failed to add first image:", err);
         }
+      } else {
+        // No images at all for this asset
+        const placeholder = await getPlaceholderPptDataUrl();
+        imageSlide.addImage({
+          data: placeholder,
+          x: img1X,
+          y: img1Y,
+          w: 9.3,
+          h: imgHeight,
+          sizing: { type: "cover", w: 9.3, h: imgHeight }
+        });
       }
 
       const img2X = 5.1;
@@ -477,29 +548,28 @@ export async function exportPlanToPPT(
       if (imagesToShow.length > 1) {
         try {
           const img2Base64 = await imageToBase64(imagesToShow[1]);
-          if (img2Base64) {
-            imageSlide.addImage({
-              data: img2Base64,
-              x: img2X,
-              y: img1Y,
-              w: img2Width,
-              h: imgHeight,
-              sizing: { type: "cover", w: img2Width, h: imgHeight }
-            });
+          const img2Final = img2Base64 || (await getPlaceholderPptDataUrl());
+          imageSlide.addImage({
+            data: img2Final,
+            x: img2X,
+            y: img1Y,
+            w: img2Width,
+            h: imgHeight,
+            sizing: { type: "cover", w: img2Width, h: imgHeight }
+          });
 
-            // Add QR code watermark on image 2 (bottom-right corner)
-            if (qrData) {
-              const qrSize = 0.7;
-              const qrPadding = 0.12;
-              imageSlide.addImage({
-                data: qrData.qrBase64,
-                x: img2X + img2Width - qrSize - qrPadding,
-                y: img1Y + imgHeight - qrSize - qrPadding,
-                w: qrSize,
-                h: qrSize,
-                hyperlink: { url: qrData.streetViewUrl },
-              });
-            }
+          // Add QR code watermark on image 2 (bottom-right corner)
+          if (qrData) {
+            const qrSize = 0.7;
+            const qrPadding = 0.12;
+            imageSlide.addImage({
+              data: qrData.qrBase64,
+              x: img2X + img2Width - qrSize - qrPadding,
+              y: img1Y + imgHeight - qrSize - qrPadding,
+              w: qrSize,
+              h: qrSize,
+              hyperlink: { url: qrData.streetViewUrl },
+            });
           }
         } catch (err) {
           console.warn("Failed to add second image:", err);

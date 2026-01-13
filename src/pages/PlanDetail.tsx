@@ -1403,14 +1403,21 @@ export default function PlanDetail() {
               
               {/* Profit - Green */}
               {(() => {
-                const baseCost = planItems.reduce((sum, item) => sum + (item.base_rent || 0), 0);
-                const profit = (plan.grand_total - plan.gst_amount) - baseCost;
-                if (profit > 0) {
+                // Profit = Sum of (Negotiated Price - Base Rent) for each item, pro-rated for duration
+                // Each item's profit = calcProRata(sales_price - base_rent, duration_days)
+                const totalProfit = planItems.reduce((sum, item) => {
+                  const effectivePrice = item.sales_price || item.card_rate;
+                  const baseRent = item.base_rent || 0;
+                  // Pro-rate the profit margin for the actual campaign duration
+                  const itemProfit = calcProRata(effectivePrice - baseRent, plan.duration_days);
+                  return sum + itemProfit;
+                }, 0);
+                if (totalProfit > 0) {
                   return (
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-medium text-green-600 dark:text-green-400">Profit</span>
                       <span className="font-semibold text-green-600 dark:text-green-400">
-                        {formatCurrency(profit)}
+                        {formatCurrency(totalProfit)}
                       </span>
                     </div>
                   );

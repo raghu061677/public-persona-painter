@@ -1503,11 +1503,28 @@ export default function PlanDetail() {
               </TableHeader>
               <TableBody>
                 {planItems.map((item) => {
-                  // Use sales_price if available, otherwise fall back to card_rate
+                  // Use pre-calculated values from the database for consistency
                   const effectivePrice = item.sales_price || item.card_rate;
-                  const proRata = calcProRata(effectivePrice, plan.duration_days);
-                  const discount = calcDiscount(item.card_rate, effectivePrice);
-                  const profit = calcProfit(item.base_rent || 0, effectivePrice);
+                  const printingCost = item.printing_charges || item.printing_cost || 0;
+                  const mountingCost = item.mounting_charges || item.installation_cost || 0;
+                  
+                  // Pro-rata: Calculate the display cost based on monthly rate and duration
+                  // Formula: (monthly_rate / 30) × days
+                  const proRataAmount = calcProRata(effectivePrice, plan.duration_days);
+                  
+                  // Discount: Use stored discount_amount from DB, or calculate pro-rata discount
+                  // The discount is the difference between card_rate and sales_price, pro-rated
+                  const discountAmount = item.discount_amount || calcProRata(item.card_rate - effectivePrice, plan.duration_days);
+                  const discountPercent = item.card_rate > 0 
+                    ? ((item.card_rate - effectivePrice) / item.card_rate) * 100 
+                    : 0;
+                  
+                  // Profit: Difference between negotiated price and base cost, pro-rated
+                  const baseRent = item.base_rent || 0;
+                  const profitAmount = calcProRata(effectivePrice - baseRent, plan.duration_days);
+                  const profitPercent = baseRent > 0 
+                    ? ((effectivePrice - baseRent) / baseRent) * 100 
+                    : (effectivePrice > 0 ? 100 : 0);
                   
                   return (
                     <TableRow key={item.id}>
@@ -1517,7 +1534,7 @@ export default function PlanDetail() {
                           onCheckedChange={() => toggleItemSelection(item.asset_id)}
                         />
                       </TableCell>
-              {isAdmin && ['pending', 'approved'].includes(plan.status?.toLowerCase()) && (
+                      {isAdmin && ['pending', 'approved'].includes(plan.status?.toLowerCase()) && (
                         <TableCell>
                           <Button
                             variant="ghost"
@@ -1533,15 +1550,15 @@ export default function PlanDetail() {
                       <TableCell>{item.city}</TableCell>
                       <TableCell className="text-right">{formatCurrency(item.card_rate)}</TableCell>
                       <TableCell className="text-right font-medium">{formatCurrency(effectivePrice)}</TableCell>
-                      <TableCell className="text-right text-purple-600">{formatCurrency(proRata)}</TableCell>
+                      <TableCell className="text-right text-purple-600">{formatCurrency(proRataAmount)}</TableCell>
                       <TableCell className="text-right text-blue-600 font-medium">
-                        -{formatCurrency(discount.value)} ({discount.percent.toFixed(2)}%)
+                        -{formatCurrency(discountAmount)} ({discountPercent.toFixed(1)}%)
                       </TableCell>
                       <TableCell className="text-right text-green-600 font-medium">
-                        {formatCurrency(profit.value)} ({profit.percent.toFixed(2)}%)
+                        {formatCurrency(profitAmount)} ({profitPercent.toFixed(1)}%)
                       </TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.printing_cost || item.printing_charges || 0)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.installation_cost || item.mounting_charges || 0)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(printingCost)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(mountingCost)}</TableCell>
                       <TableCell className="text-right font-semibold text-lg">
                         {formatCurrency(item.total_with_gst)}
                       </TableCell>

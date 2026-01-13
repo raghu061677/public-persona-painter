@@ -47,7 +47,7 @@ export function EnhancedPowerBillsTab({ assetId, asset, isAdmin }: EnhancedPower
 
       setBills(data || []);
       
-      // Extract consumer info from the latest bill
+      // Extract consumer info from the latest bill, or fallback to asset data
       if (data && data.length > 0) {
         const latestBill = data[0];
         setConsumerInfo({
@@ -57,6 +57,16 @@ export function EnhancedPowerBillsTab({ assetId, asset, isAdmin }: EnhancedPower
           ero_name: latestBill.ero_name,
           section_name: latestBill.section_name,
           consumer_address: latestBill.consumer_address,
+        });
+      } else if (asset) {
+        // Fallback to asset data when no bills exist
+        setConsumerInfo({
+          consumer_name: asset.consumer_name,
+          service_number: asset.service_number,
+          unique_service_number: asset.unique_service_number,
+          ero_name: asset.ero,  // media_assets uses 'ero' column
+          section_name: asset.section_name,
+          consumer_address: asset.consumer_address || asset.location,
         });
       }
     } catch (error) {
@@ -119,8 +129,8 @@ export function EnhancedPowerBillsTab({ assetId, asset, isAdmin }: EnhancedPower
 
   return (
     <div className="space-y-6">
-      {/* Consumer Information Card */}
-      {consumerInfo && (
+      {/* Consumer Information Card - Show if consumerInfo exists OR asset has consumer data */}
+      {(consumerInfo || asset?.consumer_name || asset?.unique_service_number) && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -133,33 +143,33 @@ export function EnhancedPowerBillsTab({ assetId, asset, isAdmin }: EnhancedPower
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Consumer Name</p>
-                <p className="font-medium">{consumerInfo.consumer_name || "N/A"}</p>
+                <p className="font-medium">{consumerInfo?.consumer_name || asset?.consumer_name || "N/A"}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Service Number</p>
-                <p className="font-medium">{consumerInfo.service_number || "N/A"}</p>
+                <p className="font-medium">{consumerInfo?.service_number || asset?.service_number || "N/A"}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Unique Service Number (USN)</p>
-                <p className="font-medium">{consumerInfo.unique_service_number || asset?.unique_service_number || "N/A"}</p>
+                <p className="font-medium">{consumerInfo?.unique_service_number || asset?.unique_service_number || "N/A"}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
                   <Building2 className="h-4 w-4" />
                   ERO Name
                 </p>
-                <p className="font-medium">{consumerInfo.ero_name || "N/A"}</p>
+                <p className="font-medium">{consumerInfo?.ero_name || asset?.ero || "N/A"}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Section Name</p>
-                <p className="font-medium">{consumerInfo.section_name || "N/A"}</p>
+                <p className="font-medium">{consumerInfo?.section_name || asset?.section_name || "N/A"}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
                   <MapPin className="h-4 w-4" />
                   Address
                 </p>
-                <p className="font-medium">{consumerInfo.consumer_address || "N/A"}</p>
+                <p className="font-medium">{consumerInfo?.consumer_address || asset?.consumer_address || asset?.location || "N/A"}</p>
               </div>
             </div>
           </CardContent>

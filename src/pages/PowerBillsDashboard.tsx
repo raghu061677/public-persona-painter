@@ -34,6 +34,7 @@ import {
 
 interface MediaAssetWithBill {
   id: string;
+  media_asset_code: string | null;
   location: string;
   area: string;
   city: string;
@@ -96,7 +97,7 @@ export default function PowerBillsDashboard() {
       // Fetch all illumination media assets (assets with power connections)
       const { data: assetsData, error: assetsError } = await supabase
         .from('media_assets')
-        .select('id, location, area, city, illumination_type, service_number, unique_service_number, consumer_name, ero, section_name')
+        .select('id, media_asset_code, location, area, city, illumination_type, service_number, unique_service_number, consumer_name, ero, section_name')
         .not('illumination_type', 'is', null)
         .neq('illumination_type', '')
         .order('city', { ascending: true });
@@ -286,7 +287,7 @@ export default function PowerBillsDashboard() {
 
   const exportToExcel = () => {
     const exportData = assets.map(asset => ({
-      'Asset ID': asset.id,
+      'Asset ID': asset.media_asset_code || asset.id,
       'Area': asset.area,
       'Location': asset.location,
       'City': asset.city,
@@ -349,7 +350,7 @@ export default function PowerBillsDashboard() {
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
 
     const tableData = assets.map(asset => [
-      asset.id,
+      asset.media_asset_code || asset.id,
       asset.area,
       asset.location,
       asset.city,
@@ -671,9 +672,9 @@ export default function PowerBillsDashboard() {
                       <Button
                         variant="link"
                         className="p-0 h-auto font-medium"
-                        onClick={() => navigate(`/admin/media-assets/${asset.id}`)}
+                        onClick={() => navigate(`/admin/media-assets/${asset.media_asset_code || asset.id}`)}
                       >
-                        {asset.id}
+                        {asset.media_asset_code || asset.id}
                       </Button>
                     </TableCell>
                     <TableCell>{asset.location}</TableCell>

@@ -25,10 +25,12 @@ const PowerBillsBulkUpload = () => {
 
   const downloadTemplate = () => {
     // Define column order explicitly for better usability
+    // Required identification columns (in order): Asset ID → Location → Direction → Unique Service Number
     const template = [
       {
         'Asset ID': 'MNS-HYD-BQS-0001',
         'Location': 'Near Metro Station, Begumpet',
+        'Direction': 'Towards Secunderabad',
         'Unique Service Number': '115321754',
         'Bill Month': '2025-01',
         'Units': 40,
@@ -39,11 +41,12 @@ const PowerBillsBulkUpload = () => {
         'Arrears': 0,
         'Total Amount': 982,
         'Energy Charges': 650,
-        'Fixed Charges': 332
+        'Fixed Charges': 332,
       },
       {
         'Asset ID': 'MNS-HYD-BQS-0002',
         'Location': 'Opposite HDFC Bank, Kukatpally',
+        'Direction': 'Towards JNTU',
         'Unique Service Number': '115321755',
         'Bill Month': '2025-01',
         'Units': 55,
@@ -54,29 +57,30 @@ const PowerBillsBulkUpload = () => {
         'Arrears': 100,
         'Total Amount': 1350,
         'Energy Charges': 890,
-        'Fixed Charges': 360
-      }
+        'Fixed Charges': 360,
+      },
     ];
 
     const ws = XLSX.utils.json_to_sheet(template);
-    
+
     // Set column widths for better readability
     ws['!cols'] = [
-      { wch: 20 },  // Asset ID
-      { wch: 35 },  // Location
-      { wch: 22 },  // Unique Service Number
-      { wch: 12 },  // Bill Month
-      { wch: 8 },   // Units
-      { wch: 12 },  // Bill Date
-      { wch: 12 },  // Due Date
-      { wch: 18 },  // Current Month Bill
-      { wch: 12 },  // ACD Amount
-      { wch: 10 },  // Arrears
-      { wch: 14 },  // Total Amount
-      { wch: 15 },  // Energy Charges
-      { wch: 14 },  // Fixed Charges
+      { wch: 20 }, // Asset ID
+      { wch: 35 }, // Location
+      { wch: 22 }, // Direction
+      { wch: 24 }, // Unique Service Number
+      { wch: 12 }, // Bill Month
+      { wch: 8 }, // Units
+      { wch: 12 }, // Bill Date
+      { wch: 12 }, // Due Date
+      { wch: 18 }, // Current Month Bill
+      { wch: 12 }, // ACD Amount
+      { wch: 10 }, // Arrears
+      { wch: 14 }, // Total Amount
+      { wch: 15 }, // Energy Charges
+      { wch: 14 }, // Fixed Charges
     ];
-    
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Power Bills Template');
     XLSX.writeFile(wb, 'power-bills-template.xlsx');
@@ -88,15 +92,24 @@ const PowerBillsBulkUpload = () => {
     return {
       asset_id: row['Asset ID'] || row['asset_id'] || row.asset_id,
       location: row['Location'] || row['location'] || row.location,
-      unique_service_number: row['Unique Service Number'] || row['unique_service_number'] || row.unique_service_number,
+      direction: row['Direction'] || row['direction'] || row.direction,
+      unique_service_number:
+        row['Unique Service Number'] ||
+        row['unique_service_number'] ||
+        row.unique_service_number ||
+        row['USN'] ||
+        row['usn'] ||
+        row.usn,
       bill_month: row['Bill Month'] || row['bill_month'] || row.bill_month,
       units: row['Units'] || row['units'] || row.units,
       bill_date: row['Bill Date'] || row['bill_date'] || row.bill_date,
       due_date: row['Due Date'] || row['due_date'] || row.due_date,
-      current_month_bill: row['Current Month Bill'] || row['current_month_bill'] || row.current_month_bill,
+      current_month_bill:
+        row['Current Month Bill'] || row['current_month_bill'] || row.current_month_bill,
       acd_amount: row['ACD Amount'] || row['acd_amount'] || row.acd_amount,
       arrears: row['Arrears'] || row['arrears'] || row.arrears,
-      bill_amount: row['Total Amount'] || row['bill_amount'] || row.bill_amount || row['total_amount'],
+      bill_amount:
+        row['Total Amount'] || row['bill_amount'] || row.bill_amount || row['total_amount'],
       energy_charges: row['Energy Charges'] || row['energy_charges'] || row.energy_charges,
       fixed_charges: row['Fixed Charges'] || row['fixed_charges'] || row.fixed_charges,
       payment_status: row['Payment Status'] || row['payment_status'] || row.payment_status,
@@ -238,10 +251,11 @@ const PowerBillsBulkUpload = () => {
           fixed_charges: row.data.fixed_charges ? parseFloat(row.data.fixed_charges) : null,
           unique_service_number: row.data.unique_service_number || null,
           location: row.data.location || null,
+          direction: row.data.direction || null,
           payment_status: row.data.payment_status || 'Pending',
           paid_amount: parseFloat(row.data.paid_amount) || 0,
           payment_date: row.data.payment_date || null,
-          created_by: userData.user?.id
+          created_by: userData.user?.id,
         };
       }));
 
@@ -331,50 +345,54 @@ const PowerBillsBulkUpload = () => {
                 </div>
 
                 <div className="border rounded-lg overflow-auto max-h-[500px]">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12">Row</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Asset ID</TableHead>
-                        <TableHead>Location</TableHead>
-                        <TableHead>USN</TableHead>
-                        <TableHead>Bill Month</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Errors</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {preview.map((row) => (
-                        <TableRow key={row.rowNum}>
-                          <TableCell>{row.rowNum}</TableCell>
-                          <TableCell>
-                            {row.status === 'valid' ? (
-                              <CheckCircle2 className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <XCircle className="h-4 w-4 text-destructive" />
-                            )}
-                          </TableCell>
-                          <TableCell className="font-medium">{row.data.asset_id}</TableCell>
-                          <TableCell className="max-w-[200px] truncate" title={row.data.location}>
-                            {row.data.location || 'N/A'}
-                          </TableCell>
-                          <TableCell>{row.data.unique_service_number || 'N/A'}</TableCell>
-                          <TableCell>{row.data.bill_month}</TableCell>
-                          <TableCell>₹{row.data.bill_amount || 0}</TableCell>
-                          <TableCell>
-                            {row.errors.length > 0 && (
-                              <div className="text-xs text-destructive space-y-1">
-                                {row.errors.map((err, i) => (
-                                  <div key={i}>• {err}</div>
-                                ))}
-                              </div>
-                            )}
-                          </TableCell>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12">Row</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Asset ID</TableHead>
+                          <TableHead>Location</TableHead>
+                          <TableHead>Direction</TableHead>
+                          <TableHead>USN</TableHead>
+                          <TableHead>Bill Month</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Errors</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {preview.map((row) => (
+                          <TableRow key={row.rowNum}>
+                            <TableCell>{row.rowNum}</TableCell>
+                            <TableCell>
+                              {row.status === 'valid' ? (
+                                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <XCircle className="h-4 w-4 text-destructive" />
+                              )}
+                            </TableCell>
+                            <TableCell className="font-medium">{row.data.asset_id}</TableCell>
+                            <TableCell className="max-w-[200px] truncate" title={row.data.location}>
+                              {row.data.location || 'N/A'}
+                            </TableCell>
+                            <TableCell className="max-w-[160px] truncate" title={row.data.direction}>
+                              {row.data.direction || 'N/A'}
+                            </TableCell>
+                            <TableCell>{row.data.unique_service_number || 'N/A'}</TableCell>
+                            <TableCell>{row.data.bill_month}</TableCell>
+                            <TableCell>₹{row.data.bill_amount || 0}</TableCell>
+                            <TableCell>
+                              {row.errors.length > 0 && (
+                                <div className="text-xs text-destructive space-y-1">
+                                  {row.errors.map((err, i) => (
+                                    <div key={i}>• {err}</div>
+                                  ))}
+                                </div>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                 </div>
 
                 <div className="mt-4 flex justify-end">

@@ -165,9 +165,10 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
     const itemDays = item.duration_days || totalDays;
     const prorataCost = Math.round((monthlyRate / 30) * itemDays) + printingCharge + mountingCharge;
 
-    // Build location code from asset_id or location
-    const locationCode = item.asset_id 
-      ? `[${item.asset_id}] ${item.location || ''}`.trim()
+    // Build location code from media_asset_code or asset_id or location
+    const assetCode = item.media_asset_code || item.asset_id;
+    const locationCode = assetCode 
+      ? `[${assetCode}] ${item.location || ''}`.trim()
       : item.location || 'Display';
 
     return {

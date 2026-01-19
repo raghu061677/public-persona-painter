@@ -211,7 +211,7 @@ export function AddAssetsDialog({
                           className="h-4 w-4 rounded border-gray-300"
                         />
                       </TableCell>
-                      <TableCell className="font-medium">{asset.id}</TableCell>
+                      <TableCell className="font-medium font-mono text-sm">{asset.media_asset_code || asset.id}</TableCell>
                       <TableCell>{asset.location}</TableCell>
                       <TableCell>{asset.city}</TableCell>
                       <TableCell>{asset.area}</TableCell>

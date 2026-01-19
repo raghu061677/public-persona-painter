@@ -50,14 +50,19 @@ export default function PlanComparison() {
 
     setPlans(plansData || []);
 
-    // Fetch plan items for each plan
+    // Fetch plan items for each plan with media_asset_code
     const itemsMap: Record<string, any[]> = {};
     for (const plan of plansData || []) {
       const { data: items } = await supabase
         .from('plan_items')
-        .select('*')
+        .select('*, media_assets(id, media_asset_code)')
         .eq('plan_id', plan.id);
-      itemsMap[plan.id] = items || [];
+      
+      // Enrich items with media_asset_code
+      itemsMap[plan.id] = (items || []).map(item => ({
+        ...item,
+        media_asset_code: (item.media_assets as any)?.media_asset_code || item.asset_id
+      }));
     }
     setPlanItems(itemsMap);
     setLoading(false);
@@ -272,7 +277,7 @@ export default function PlanComparison() {
                     <div key={plan.id} className="space-y-2 max-h-96 overflow-y-auto">
                       {items.map((item, idx) => (
                         <div key={idx} className="p-3 border rounded-lg bg-muted/20">
-                          <p className="font-medium text-sm text-primary">{item.asset_id}</p>
+                          <p className="font-medium text-sm text-primary font-mono">{item.media_asset_code || item.asset_id}</p>
                           <p className="text-xs text-muted-foreground">{item.location}</p>
                           <p className="text-xs text-muted-foreground">{item.media_type} - {item.dimensions}</p>
                           <div className="flex justify-between items-center mt-2">

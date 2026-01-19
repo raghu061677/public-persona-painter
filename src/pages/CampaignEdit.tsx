@@ -39,6 +39,7 @@ export default function CampaignEdit() {
   interface CampaignItem {
     id: string;
     asset_id: string;
+    media_asset_code: string;
     location: string;
     area: string;
     city: string;
@@ -159,6 +160,7 @@ export default function CampaignEdit() {
         mounting_charge,
         media_assets (
           id,
+          media_asset_code,
           location,
           area,
           city,
@@ -186,6 +188,7 @@ export default function CampaignEdit() {
         return {
           id: item.id,
           asset_id: item.asset_id,
+          media_asset_code: asset?.media_asset_code || item.asset_id,
           location: asset?.location || '',
           area: asset?.area || '',
           city: asset?.city || '',
@@ -631,7 +634,7 @@ export default function CampaignEdit() {
                     campaignItems.map((item, index) => (
                       <TableRow key={item.id}>
                         <TableCell className="font-mono text-sm">
-                          {item.asset_id}
+                          {item.media_asset_code || item.asset_id}
                         </TableCell>
                         <TableCell className="max-w-[200px] truncate" title={item.location}>
                           {item.location}

@@ -59,6 +59,7 @@ import { ApprovalWorkflowDialog } from "@/components/plans/ApprovalWorkflowDialo
 import { ApprovalHistoryTimeline } from "@/components/plans/ApprovalHistoryTimeline";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PageCustomization } from "@/components/ui/page-customization";
+import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
 
 export default function PlanDetail() {
   const { id } = useParams();
@@ -220,8 +221,12 @@ export default function PlanDetail() {
     const items = (data || []).map(item => ({
       ...item,
       plan_item_id: item.id,
-      // Use media_asset_code, then media_assets.id, then fallback to asset_id
-      display_asset_id: item.media_assets?.media_asset_code || item.media_assets?.id || item.asset_id
+      // Always show company-prefixed, human-readable asset codes
+      display_asset_id: formatAssetDisplayCode({
+        mediaAssetCode: item.media_assets?.media_asset_code,
+        fallbackId: item.media_assets?.id || item.asset_id,
+        companyName: company?.name || null,
+      })
     }));
     
     setPlanItems(items);

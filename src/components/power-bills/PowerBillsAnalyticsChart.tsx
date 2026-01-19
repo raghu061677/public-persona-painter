@@ -41,16 +41,27 @@ export function PowerBillsAnalyticsChart() {
       if (data) {
         setBills(data);
         
-        // Extract unique assets
-        const uniqueAssets = Array.from(
-          new Set(data.map(b => b.asset_id))
-        ).map(assetId => {
-          const bill = data.find(b => b.asset_id === assetId);
+        // Get unique asset IDs
+        const uniqueAssetIds = Array.from(new Set(data.map(b => b.asset_id)));
+        
+        // Fetch asset details from media_assets for better labels
+        const { data: assetDetails } = await supabase
+          .from('media_assets')
+          .select('id, media_asset_code, location, area')
+          .in('id', uniqueAssetIds);
+        
+        // Build asset dropdown options with location info
+        const uniqueAssets = uniqueAssetIds.map(assetId => {
+          const asset = assetDetails?.find(a => a.id === assetId);
+          const displayCode = asset?.media_asset_code || assetId.slice(0, 8);
+          const location = asset?.location || '';
+          const area = asset?.area || '';
+          
           return {
             id: assetId,
-            label: bill?.location 
-              ? `${assetId} - ${bill.area || ''} ${bill.location}`.trim()
-              : assetId
+            label: location 
+              ? `${displayCode} - ${area ? area + ', ' : ''}${location}`.trim()
+              : displayCode
           };
         });
         

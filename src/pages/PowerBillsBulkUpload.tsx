@@ -24,45 +24,101 @@ const PowerBillsBulkUpload = () => {
   const [uploading, setUploading] = useState(false);
 
   const downloadTemplate = () => {
+    // Define column order explicitly for better usability
     const template = [
       {
-        asset_id: 'MNS-HYD-BQS-0001',
-        location: 'Near Metro Station, Begumpet',
-        unique_service_number: '1234567890',
-        area: 'Begumpet',
-        direction: 'East',
-        service_number: 'SRV-101',
-        consumer_name: 'MNS Advertising',
-        ero: 'Begumpet',
-        section_name: 'SR Nagar',
-        bill_amount: 2450,
-        bill_month: '2025-01-01',
-        payment_status: 'Paid',
-        paid_amount: 2450,
-        payment_date: '2025-01-10'
+        'Asset ID': 'MNS-HYD-BQS-0001',
+        'Location': 'Near Metro Station, Begumpet',
+        'Unique Service Number': '115321754',
+        'Bill Month': '2025-01',
+        'Units': 40,
+        'Bill Date': '2025-01-05',
+        'Due Date': '2025-01-19',
+        'Current Month Bill': 982,
+        'ACD Amount': 0,
+        'Arrears': 0,
+        'Total Amount': 982,
+        'Energy Charges': 650,
+        'Fixed Charges': 332
+      },
+      {
+        'Asset ID': 'MNS-HYD-BQS-0002',
+        'Location': 'Opposite HDFC Bank, Kukatpally',
+        'Unique Service Number': '115321755',
+        'Bill Month': '2025-01',
+        'Units': 55,
+        'Bill Date': '2025-01-05',
+        'Due Date': '2025-01-19',
+        'Current Month Bill': 1250,
+        'ACD Amount': 0,
+        'Arrears': 100,
+        'Total Amount': 1350,
+        'Energy Charges': 890,
+        'Fixed Charges': 360
       }
     ];
 
     const ws = XLSX.utils.json_to_sheet(template);
+    
+    // Set column widths for better readability
+    ws['!cols'] = [
+      { wch: 20 },  // Asset ID
+      { wch: 35 },  // Location
+      { wch: 22 },  // Unique Service Number
+      { wch: 12 },  // Bill Month
+      { wch: 8 },   // Units
+      { wch: 12 },  // Bill Date
+      { wch: 12 },  // Due Date
+      { wch: 18 },  // Current Month Bill
+      { wch: 12 },  // ACD Amount
+      { wch: 10 },  // Arrears
+      { wch: 14 },  // Total Amount
+      { wch: 15 },  // Energy Charges
+      { wch: 14 },  // Fixed Charges
+    ];
+    
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Power Bills Template');
     XLSX.writeFile(wb, 'power-bills-template.xlsx');
     toast.success("Template downloaded successfully");
   };
 
+  // Normalize row keys - handle both snake_case and space-separated column names
+  const normalizeRow = (row: any) => {
+    return {
+      asset_id: row['Asset ID'] || row['asset_id'] || row.asset_id,
+      location: row['Location'] || row['location'] || row.location,
+      unique_service_number: row['Unique Service Number'] || row['unique_service_number'] || row.unique_service_number,
+      bill_month: row['Bill Month'] || row['bill_month'] || row.bill_month,
+      units: row['Units'] || row['units'] || row.units,
+      bill_date: row['Bill Date'] || row['bill_date'] || row.bill_date,
+      due_date: row['Due Date'] || row['due_date'] || row.due_date,
+      current_month_bill: row['Current Month Bill'] || row['current_month_bill'] || row.current_month_bill,
+      acd_amount: row['ACD Amount'] || row['acd_amount'] || row.acd_amount,
+      arrears: row['Arrears'] || row['arrears'] || row.arrears,
+      bill_amount: row['Total Amount'] || row['bill_amount'] || row.bill_amount || row['total_amount'],
+      energy_charges: row['Energy Charges'] || row['energy_charges'] || row.energy_charges,
+      fixed_charges: row['Fixed Charges'] || row['fixed_charges'] || row.fixed_charges,
+      payment_status: row['Payment Status'] || row['payment_status'] || row.payment_status,
+      paid_amount: row['Paid Amount'] || row['paid_amount'] || row.paid_amount,
+      payment_date: row['Payment Date'] || row['payment_date'] || row.payment_date,
+    };
+  };
+
   const validateRow = async (row: any, rowNum: number): Promise<PreviewRow> => {
     const errors: string[] = [];
+    const normalizedRow = normalizeRow(row);
 
-    if (!row.asset_id) errors.push('Asset ID is required');
-    if (!row.bill_month) errors.push('Bill month is required');
-    if (!row.bill_amount && row.bill_amount !== 0) errors.push('Bill amount is required');
+    if (!normalizedRow.asset_id) errors.push('Asset ID is required');
+    if (!normalizedRow.bill_month) errors.push('Bill month is required');
+    if (!normalizedRow.bill_amount && normalizedRow.bill_amount !== 0) errors.push('Total Amount is required');
 
     // Validate asset_id exists - check by media_asset_code first, then by id
-    if (row.asset_id) {
+    if (normalizedRow.asset_id) {
       const { data: assetByCode } = await supabase
         .from('media_assets')
         .select('id')
-        .eq('media_asset_code', row.asset_id)
+        .eq('media_asset_code', normalizedRow.asset_id)
         .single();
 
       if (!assetByCode) {
@@ -70,7 +126,7 @@ const PowerBillsBulkUpload = () => {
         const { data: assetById } = await supabase
           .from('media_assets')
           .select('id')
-          .eq('id', row.asset_id)
+          .eq('id', normalizedRow.asset_id)
           .single();
         
         if (!assetById) {
@@ -79,18 +135,14 @@ const PowerBillsBulkUpload = () => {
       }
     }
 
-    // Validate date format
-    if (row.bill_month && !/^\d{4}-\d{2}-\d{2}$/.test(row.bill_month)) {
-      errors.push('Bill month must be in YYYY-MM-DD format');
-    }
-
-    if (row.payment_date && !/^\d{4}-\d{2}-\d{2}$/.test(row.payment_date)) {
-      errors.push('Payment date must be in YYYY-MM-DD format');
+    // Validate bill_month format (YYYY-MM or YYYY-MM-DD)
+    if (normalizedRow.bill_month && !/^\d{4}-\d{2}(-\d{2})?$/.test(String(normalizedRow.bill_month))) {
+      errors.push('Bill month must be in YYYY-MM or YYYY-MM-DD format');
     }
 
     return {
       rowNum,
-      data: row,
+      data: normalizedRow,
       status: errors.length === 0 ? 'valid' : 'error',
       errors
     };
@@ -166,18 +218,26 @@ const PowerBillsBulkUpload = () => {
           }
         }
         
+        // Convert bill_month to proper format (YYYY-MM-01 for first of month)
+        let billMonth = row.data.bill_month;
+        if (billMonth && billMonth.match(/^\d{4}-\d{2}$/)) {
+          billMonth = billMonth + '-01';
+        }
+        
         return {
           asset_id: assetId,
-          bill_month: row.data.bill_month,
+          bill_month: billMonth,
           bill_amount: parseFloat(row.data.bill_amount) || 0,
-          consumer_name: row.data.consumer_name || null,
-          service_number: row.data.service_number || null,
+          units: row.data.units ? parseInt(row.data.units) : null,
+          bill_date: row.data.bill_date || null,
+          due_date: row.data.due_date || null,
+          current_month_bill: row.data.current_month_bill ? parseFloat(row.data.current_month_bill) : null,
+          acd_amount: row.data.acd_amount ? parseFloat(row.data.acd_amount) : null,
+          arrears: row.data.arrears ? parseFloat(row.data.arrears) : null,
+          energy_charges: row.data.energy_charges ? parseFloat(row.data.energy_charges) : null,
+          fixed_charges: row.data.fixed_charges ? parseFloat(row.data.fixed_charges) : null,
           unique_service_number: row.data.unique_service_number || null,
-          ero: row.data.ero || null,
-          section_name: row.data.section_name || null,
           location: row.data.location || null,
-          area: row.data.area || null,
-          direction: row.data.direction || null,
           payment_status: row.data.payment_status || 'Pending',
           paid_amount: parseFloat(row.data.paid_amount) || 0,
           payment_date: row.data.payment_date || null,

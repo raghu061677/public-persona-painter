@@ -6,6 +6,7 @@ import * as XLSX from "xlsx";
 import { compressImage } from "@/lib/imageCompression";
 import { getCachedQRData } from "@/lib/qrWatermark";
 import { sanitizePptHyperlink, sanitizePptText, PPT_SAFE_FONTS } from "@/lib/ppt/sanitizers";
+import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
 import JSZip from "jszip";
 
 // @ts-ignore
@@ -966,6 +967,13 @@ export async function exportPlanToExcel(
       .eq('id', plan.company_id)
       .single();
 
+    // Fetch company code settings (prefix for display IDs like MNS-HYD-...)
+    const { data: codeSettings } = await supabase
+      .from('company_code_settings')
+      .select('asset_code_prefix')
+      .eq('company_id', plan.company_id)
+      .maybeSingle();
+
     // Fetch client details
     const { data: clientData } = await supabase
       .from('clients')
@@ -1009,21 +1017,30 @@ export async function exportPlanToExcel(
     XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
 
     // Assets sheet
-    const assetData = planItems.map(item => ({
-      "Asset ID": item.asset_id,
-      "Location": item.location,
-      "Area": item.area,
-      "City": item.city,
-      "Media Type": item.media_type,
-      "Dimensions": item.dimensions,
-      "Card Rate": item.card_rate,
-      "Sales Price": item.sales_price,
-      "Printing Charges": item.printing_charges,
-      "Mounting Charges": item.mounting_charges,
-      "Subtotal": item.subtotal,
-      "GST Amount": item.gst_amount,
-      "Total with GST": item.total_with_gst,
-    }));
+    const assetData = planItems.map(item => {
+      const baseCode = (item as any).display_asset_id || (item as any).media_asset_code || item.asset_id;
+
+      return {
+        "Asset ID": formatAssetDisplayCode({
+          mediaAssetCode: baseCode,
+          fallbackId: item.asset_id,
+          companyPrefix: (codeSettings as any)?.asset_code_prefix || null,
+          companyName: companyData?.name || null,
+        }),
+        "Location": item.location,
+        "Area": item.area,
+        "City": item.city,
+        "Media Type": item.media_type,
+        "Dimensions": item.dimensions,
+        "Card Rate": item.card_rate,
+        "Sales Price": item.sales_price,
+        "Printing Charges": item.printing_charges,
+        "Mounting Charges": item.mounting_charges,
+        "Subtotal": item.subtotal,
+        "GST Amount": item.gst_amount,
+        "Total with GST": item.total_with_gst,
+      };
+    });
     const assetsSheet = XLSX.utils.json_to_sheet(assetData);
     XLSX.utils.book_append_sheet(workbook, assetsSheet, "Assets");
 

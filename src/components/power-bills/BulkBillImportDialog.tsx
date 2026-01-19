@@ -38,6 +38,9 @@ import * as XLSX from 'xlsx';
 
 interface ParsedBill {
   asset_id: string;
+  location?: string;
+  direction?: string;
+  unique_service_number?: string;
   units?: string;
   bill_date?: string;
   due_date?: string;
@@ -296,6 +299,10 @@ export function BulkBillImportDialog({ onImportComplete }: { onImportComplete?: 
             energy_charges: bill.energy_charges ? parseFloat(bill.energy_charges) : null,
             fixed_charges: bill.fixed_charges ? parseFloat(bill.fixed_charges) : null,
             bill_amount: bill.current_month_bill ? parseFloat(bill.current_month_bill) : (bill.total_amount ? parseFloat(bill.total_amount) : 0),
+            // Identification helpers for UI/reconciliation
+            location: bill.location || null,
+            direction: bill.direction || null,
+            unique_service_number: bill.unique_service_number || null,
           };
 
           const { error } = await supabase
@@ -357,6 +364,16 @@ export function BulkBillImportDialog({ onImportComplete }: { onImportComplete?: 
       const bills: ParsedBill[] = jsonData.map((row: any, index) => {
         const bill: ParsedBill = {
           asset_id: row['Asset ID'] || row['asset_id'] || row['AssetID'] || '',
+          location: row['Location'] || row['location'] || row.location || '',
+          direction: row['Direction'] || row['direction'] || row.direction || '',
+          unique_service_number:
+            row['Unique Service Number'] ||
+            row['unique_service_number'] ||
+            row.unique_service_number ||
+            row['USN'] ||
+            row['usn'] ||
+            row.usn ||
+            '',
           bill_month: row['Bill Month'] || row['bill_month'] || row['Month'] || '',
           units: row['Units'] || row['units'] || '',
           bill_date: row['Bill Date'] || row['bill_date'] || '',
@@ -475,9 +492,13 @@ export function BulkBillImportDialog({ onImportComplete }: { onImportComplete?: 
 
   // Download Excel template
   const downloadExcelTemplate = () => {
+    // Required identification columns (in order): Asset ID → Location → Direction → Unique Service Number
     const template = [
       {
         'Asset ID': 'HYD-BQS-0001',
+        'Location': 'Near Metro Station, Begumpet',
+        'Direction': 'Towards Secunderabad',
+        'Unique Service Number': '115321754',
         'Bill Month': '2025-01',
         'Units': 40,
         'Bill Date': '2025-01-05',
@@ -487,10 +508,13 @@ export function BulkBillImportDialog({ onImportComplete }: { onImportComplete?: 
         'Arrears': 0,
         'Total Amount': 982,
         'Energy Charges': 650,
-        'Fixed Charges': 332
+        'Fixed Charges': 332,
       },
       {
         'Asset ID': 'HYD-BQS-0002',
+        'Location': 'Opposite HDFC Bank, Kukatpally',
+        'Direction': 'Towards JNTU',
+        'Unique Service Number': '115321755',
         'Bill Month': '2025-01',
         'Units': 55,
         'Bill Date': '2025-01-05',
@@ -500,19 +524,22 @@ export function BulkBillImportDialog({ onImportComplete }: { onImportComplete?: 
         'Arrears': 100,
         'Total Amount': 1350,
         'Energy Charges': 890,
-        'Fixed Charges': 360
-      }
+        'Fixed Charges': 360,
+      },
     ];
 
     const ws = XLSX.utils.json_to_sheet(template);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Power Bills');
-    
+
     // Set column widths
     ws['!cols'] = [
       { wch: 15 }, // Asset ID
+      { wch: 35 }, // Location
+      { wch: 22 }, // Direction
+      { wch: 24 }, // Unique Service Number
       { wch: 12 }, // Bill Month
-      { wch: 8 },  // Units
+      { wch: 8 }, // Units
       { wch: 12 }, // Bill Date
       { wch: 12 }, // Due Date
       { wch: 18 }, // Current Month Bill
@@ -666,7 +693,7 @@ Total Amount to be Paid: 1350.0`;
                   <div className="bg-muted/50 p-3 rounded-lg text-xs">
                     <p className="font-semibold mb-1">Expected Columns:</p>
                     <p className="text-muted-foreground">
-                      Asset ID, Bill Month, Units, Bill Date, Due Date, Current Month Bill, 
+                      Asset ID, Location, Direction, Unique Service Number, Bill Month, Units, Bill Date, Due Date, Current Month Bill,
                       ACD Amount, Arrears, Total Amount, Energy Charges, Fixed Charges
                     </p>
                   </div>
@@ -742,6 +769,9 @@ Total Amount to be Paid: 1350.0`;
                     <TableRow>
                       <TableHead className="w-[100px]">Status</TableHead>
                       <TableHead>Asset ID</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Direction</TableHead>
+                      <TableHead>USN</TableHead>
                       <TableHead>Month</TableHead>
                       <TableHead>Amount</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
@@ -765,6 +795,15 @@ Total Amount to be Paid: 1350.0`;
                         </TableCell>
                         <TableCell className="font-mono text-xs">
                           {bill.asset_id || '-'}
+                        </TableCell>
+                        <TableCell className="text-xs max-w-[200px] truncate" title={bill.location}>
+                          {bill.location || '-'}
+                        </TableCell>
+                        <TableCell className="text-xs max-w-[160px] truncate" title={bill.direction}>
+                          {bill.direction || '-'}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {bill.unique_service_number || '-'}
                         </TableCell>
                         <TableCell className="text-xs">
                           {bill.bill_month || bill.bill_date?.substring(0, 7) || '-'}

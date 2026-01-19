@@ -26,20 +26,20 @@ const PowerBillsBulkUpload = () => {
   const downloadTemplate = () => {
     const template = [
       {
-        asset_id: 'HYD-BSQ-0001',
-        area: 'Begumpet',
-        location: 'Near Metro Station',
-        direction: 'East',
+        asset_id: 'MNS-HYD-BQS-0001',
+        location: 'Near Metro Station, Begumpet',
         unique_service_number: '1234567890',
+        area: 'Begumpet',
+        direction: 'East',
         service_number: 'SRV-101',
         consumer_name: 'MNS Advertising',
         ero: 'Begumpet',
         section_name: 'SR Nagar',
         bill_amount: 2450,
-        bill_month: '2025-11-01',
+        bill_month: '2025-01-01',
         payment_status: 'Paid',
         paid_amount: 2450,
-        payment_date: '2025-11-10'
+        payment_date: '2025-01-10'
       }
     ];
 
@@ -57,16 +57,25 @@ const PowerBillsBulkUpload = () => {
     if (!row.bill_month) errors.push('Bill month is required');
     if (!row.bill_amount && row.bill_amount !== 0) errors.push('Bill amount is required');
 
-    // Validate asset_id exists
+    // Validate asset_id exists - check by media_asset_code first, then by id
     if (row.asset_id) {
-      const { data: asset } = await supabase
+      const { data: assetByCode } = await supabase
         .from('media_assets')
         .select('id')
-        .eq('id', row.asset_id)
+        .eq('media_asset_code', row.asset_id)
         .single();
 
-      if (!asset) {
-        errors.push('Asset ID not found in database');
+      if (!assetByCode) {
+        // Fallback to check by UUID
+        const { data: assetById } = await supabase
+          .from('media_assets')
+          .select('id')
+          .eq('id', row.asset_id)
+          .single();
+        
+        if (!assetById) {
+          errors.push('Asset ID/Code not found in database');
+        }
       }
     }
 
@@ -140,19 +149,40 @@ const PowerBillsBulkUpload = () => {
     try {
       const { data: userData } = await supabase.auth.getUser();
       
-      const billsToInsert = validRows.map(row => ({
-        asset_id: row.data.asset_id,
-        bill_month: row.data.bill_month,
-        bill_amount: parseFloat(row.data.bill_amount) || 0,
-        consumer_name: row.data.consumer_name || null,
-        service_number: row.data.service_number || null,
-        unique_service_number: row.data.unique_service_number || null,
-        ero: row.data.ero || null,
-        section_name: row.data.section_name || null,
-        payment_status: row.data.payment_status || 'Pending',
-        paid_amount: parseFloat(row.data.paid_amount) || 0,
-        payment_date: row.data.payment_date || null,
-        created_by: userData.user?.id
+      // Resolve asset IDs - handle both media_asset_code and UUID formats
+      const billsToInsert = await Promise.all(validRows.map(async (row) => {
+        let assetId = row.data.asset_id;
+        
+        // Check if asset_id is a media_asset_code format (not UUID)
+        if (assetId && !assetId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+          const { data: asset } = await supabase
+            .from('media_assets')
+            .select('id')
+            .eq('media_asset_code', assetId)
+            .single();
+          
+          if (asset) {
+            assetId = asset.id;
+          }
+        }
+        
+        return {
+          asset_id: assetId,
+          bill_month: row.data.bill_month,
+          bill_amount: parseFloat(row.data.bill_amount) || 0,
+          consumer_name: row.data.consumer_name || null,
+          service_number: row.data.service_number || null,
+          unique_service_number: row.data.unique_service_number || null,
+          ero: row.data.ero || null,
+          section_name: row.data.section_name || null,
+          location: row.data.location || null,
+          area: row.data.area || null,
+          direction: row.data.direction || null,
+          payment_status: row.data.payment_status || 'Pending',
+          paid_amount: parseFloat(row.data.paid_amount) || 0,
+          payment_date: row.data.payment_date || null,
+          created_by: userData.user?.id
+        };
       }));
 
       const { error } = await supabase
@@ -247,10 +277,10 @@ const PowerBillsBulkUpload = () => {
                         <TableHead className="w-12">Row</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Asset ID</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>USN</TableHead>
                         <TableHead>Bill Month</TableHead>
                         <TableHead>Amount</TableHead>
-                        <TableHead>Consumer</TableHead>
-                        <TableHead>Service No.</TableHead>
                         <TableHead>Errors</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -265,11 +295,13 @@ const PowerBillsBulkUpload = () => {
                               <XCircle className="h-4 w-4 text-destructive" />
                             )}
                           </TableCell>
-                          <TableCell>{row.data.asset_id}</TableCell>
+                          <TableCell className="font-medium">{row.data.asset_id}</TableCell>
+                          <TableCell className="max-w-[200px] truncate" title={row.data.location}>
+                            {row.data.location || 'N/A'}
+                          </TableCell>
+                          <TableCell>{row.data.unique_service_number || 'N/A'}</TableCell>
                           <TableCell>{row.data.bill_month}</TableCell>
                           <TableCell>₹{row.data.bill_amount || 0}</TableCell>
-                          <TableCell>{row.data.consumer_name || 'N/A'}</TableCell>
-                          <TableCell>{row.data.service_number || 'N/A'}</TableCell>
                           <TableCell>
                             {row.errors.length > 0 && (
                               <div className="text-xs text-destructive space-y-1">

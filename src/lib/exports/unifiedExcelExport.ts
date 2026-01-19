@@ -37,6 +37,13 @@ export async function generateUnifiedExcel(data: ExportData): Promise<Blob> {
     .eq('id', plan.client_id)
     .single();
 
+  // Fetch company code settings for asset ID prefix
+  const { data: codeSettings } = await supabase
+    .from('company_code_settings')
+    .select('use_custom_asset_codes, asset_code_prefix')
+    .eq('company_id', plan.company_id)
+    .maybeSingle();
+
   const workbook = new ExcelJS.Workbook();
   
   // ============ SHEET 1: SUMMARY ============
@@ -240,9 +247,15 @@ export async function generateUnifiedExcel(data: ExportData): Promise<Blob> {
       ? Math.round(item.mounting_charges / item.total_sqft)
       : item.mounting_charges || 0;
 
+    // Build display asset code with company prefix
+    const baseCode = item.media_asset_code || item.asset_id;
+    const displayAssetCode = (codeSettings?.use_custom_asset_codes && codeSettings?.asset_code_prefix)
+      ? `${codeSettings.asset_code_prefix}-${baseCode}`
+      : baseCode;
+
     const row = itemsSheet.addRow([
       index + 1,
-      item.asset_id,
+      displayAssetCode,
       item.area,
       item.location,
       item.dimensions,

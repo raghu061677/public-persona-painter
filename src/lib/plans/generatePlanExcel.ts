@@ -89,6 +89,8 @@ export async function generatePlanExcel(planId: string): Promise<void> {
       .select(`
         *,
         media_assets (
+          id,
+          media_asset_code,
           area,
           location,
           direction,
@@ -104,6 +106,13 @@ export async function generatePlanExcel(planId: string): Promise<void> {
     if (!planItems || planItems.length === 0) {
       throw new Error("No assets found in this plan");
     }
+
+    // Fetch company code settings for asset ID prefix
+    const { data: codeSettings } = await supabase
+      .from("company_code_settings")
+      .select("use_custom_asset_codes, asset_code_prefix")
+      .eq("company_id", plan.company_id)
+      .maybeSingle();
 
     // Generate Excel
     const workbook = new ExcelJS.Workbook();
@@ -281,9 +290,15 @@ export async function generatePlanExcel(planId: string): Promise<void> {
     const dataStartRow = currentRow;
     planItems.forEach((item: any, index: number) => {
       const asset = item.media_assets;
+      // Build display asset code with company prefix
+      const baseCode = asset?.media_asset_code || item.asset_id;
+      const displayAssetCode = (codeSettings?.use_custom_asset_codes && codeSettings?.asset_code_prefix)
+        ? `${codeSettings.asset_code_prefix}-${baseCode}`
+        : baseCode;
+      
       const rowData = [
         index + 1,
-        item.asset_id,
+        displayAssetCode,
         asset?.area || "N/A",
         asset?.location || "N/A",
         asset?.direction || "N/A",

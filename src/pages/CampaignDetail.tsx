@@ -98,12 +98,12 @@ export default function CampaignDetail() {
       .eq('campaign_id', id)
       .order('created_at');
     
-    // Fetch media asset details to get total_sqft for printing calculations
+    // Fetch media asset details to get total_sqft and media_asset_code
     if (assets && assets.length > 0) {
       const assetIds = assets.map(a => a.asset_id);
       const { data: mediaAssets } = await supabase
         .from('media_assets')
-        .select('id, total_sqft')
+        .select('id, total_sqft, media_asset_code')
         .in('id', assetIds);
       
       const mediaAssetsMap = (mediaAssets || []).reduce((acc, ma) => {
@@ -114,7 +114,8 @@ export default function CampaignDetail() {
       // Merge media asset data with campaign assets
       const enrichedAssets = assets.map(a => ({
         ...a,
-        total_sqft: mediaAssetsMap[a.asset_id]?.total_sqft || 0
+        total_sqft: mediaAssetsMap[a.asset_id]?.total_sqft || 0,
+        media_asset_code: mediaAssetsMap[a.asset_id]?.media_asset_code || a.asset_id
       }));
       
       setCampaignAssets(enrichedAssets);
@@ -654,7 +655,7 @@ export default function CampaignDetail() {
                   <TableBody>
                     {campaignAssets.map((asset) => (
                       <TableRow key={asset.id}>
-                        <TableCell className="font-medium">{asset.asset_id}</TableCell>
+                        <TableCell className="font-medium font-mono text-sm">{asset.media_asset_code || asset.asset_id}</TableCell>
                         <TableCell>{asset.location}</TableCell>
                         <TableCell>{asset.city}</TableCell>
                         <TableCell>

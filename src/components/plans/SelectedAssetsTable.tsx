@@ -300,7 +300,7 @@ export function SelectedAssetsTable({
                 return (
                   <TableRow key={asset.id}>
                     {isColumnVisible('asset_id') && (
-                      <TableCell className="font-medium">{asset.id}</TableCell>
+                      <TableCell className="font-medium font-mono text-sm">{asset.media_asset_code || asset.id}</TableCell>
                     )}
                     {isColumnVisible('area') && (
                       <TableCell className="text-sm">{asset.area}</TableCell>

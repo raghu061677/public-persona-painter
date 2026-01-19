@@ -112,40 +112,44 @@ export default function InvoiceCreate() {
       // Fetch campaign items to create invoice line items with full asset details
       const { data: campaignItems } = await supabase
         .from('campaign_items')
-        .select('*, media_assets(id, location, area, city, media_type, dimensions, direction, illumination_type, total_sqft)')
+        .select('*, media_assets(id, media_asset_code, location, area, city, media_type, dimensions, direction, illumination_type, total_sqft)')
         .eq('campaign_id', selectedCampaignId);
 
       // Build line items from campaign items with all required data for PDF
-      const items = (campaignItems || []).map((item, index) => ({
-        sno: index + 1,
-        asset_id: item.asset_id,
-        location: item.media_assets?.location || `Asset ${item.asset_id}`,
-        description: item.media_assets 
-          ? `${item.media_assets.media_type} - ${item.media_assets.location}, ${item.media_assets.area}, ${item.media_assets.city}`
-          : `Media Display - ${item.asset_id}`,
-        // Detailed asset info for PDF
-        area: item.media_assets?.area || '',
-        zone: item.media_assets?.area || '',
-        media_type: item.media_assets?.media_type || 'Bus Shelter',
-        direction: item.media_assets?.direction || '',
-        illumination_type: item.media_assets?.illumination_type || 'NonLit',
-        dimensions: item.media_assets?.dimensions || 'N/A',
-        total_sqft: item.media_assets?.total_sqft || '',
-        // Booking dates
-        start_date: item.start_date,
-        end_date: item.end_date,
-        booking_period: item.start_date && item.end_date 
-          ? `${new Date(item.start_date).toLocaleDateString('en-IN')} - ${new Date(item.end_date).toLocaleDateString('en-IN')}`
-          : '',
-        // Pricing
-        quantity: item.quantity || 1,
-        rate: item.negotiated_rate || item.card_rate,
-        unit_price: item.negotiated_rate || item.card_rate,
-        display_rate: item.negotiated_rate || item.card_rate,
-        mounting_cost: item.mounting_charge || 0,
-        printing_cost: item.printing_charge || 0,
-        amount: item.final_price || (item.negotiated_rate || item.card_rate) * (item.quantity || 1),
-      }));
+      const items = (campaignItems || []).map((item, index) => {
+        const displayAssetCode = item.media_assets?.media_asset_code || item.asset_id;
+        return {
+          sno: index + 1,
+          asset_id: displayAssetCode,
+          media_asset_code: displayAssetCode,
+          location: item.media_assets?.location || `Asset ${displayAssetCode}`,
+          description: item.media_assets 
+            ? `${item.media_assets.media_type} - ${item.media_assets.location}, ${item.media_assets.area}, ${item.media_assets.city}`
+            : `Media Display - ${displayAssetCode}`,
+          // Detailed asset info for PDF
+          area: item.media_assets?.area || '',
+          zone: item.media_assets?.area || '',
+          media_type: item.media_assets?.media_type || 'Bus Shelter',
+          direction: item.media_assets?.direction || '',
+          illumination_type: item.media_assets?.illumination_type || 'NonLit',
+          dimensions: item.media_assets?.dimensions || 'N/A',
+          total_sqft: item.media_assets?.total_sqft || '',
+          // Booking dates
+          start_date: item.start_date,
+          end_date: item.end_date,
+          booking_period: item.start_date && item.end_date 
+            ? `${new Date(item.start_date).toLocaleDateString('en-IN')} - ${new Date(item.end_date).toLocaleDateString('en-IN')}`
+            : '',
+          // Pricing
+          quantity: item.quantity || 1,
+          rate: item.negotiated_rate || item.card_rate,
+          unit_price: item.negotiated_rate || item.card_rate,
+          display_rate: item.negotiated_rate || item.card_rate,
+          mounting_cost: item.mounting_charge || 0,
+          printing_cost: item.printing_charge || 0,
+          amount: item.final_price || (item.negotiated_rate || item.card_rate) * (item.quantity || 1),
+        };
+      });
 
       const invoiceId = generateInvoiceId();
       const subTotal = selectedCampaign.subtotal || selectedCampaign.grand_total / 1.18;

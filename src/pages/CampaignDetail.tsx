@@ -46,6 +46,7 @@ export default function CampaignDetail() {
   const [campaignAssets, setCampaignAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [assetCodePrefix, setAssetCodePrefix] = useState<string | null>(null);
   const { company } = useCompany();
 
   // Enable automated workflows
@@ -88,6 +89,19 @@ export default function CampaignDetail() {
       navigate('/admin/campaigns');
     } else {
       setCampaign(data);
+      
+      // Fetch company code settings for asset display
+      if (data?.company_id) {
+        const { data: codeSettings } = await supabase
+          .from('company_code_settings')
+          .select('asset_code_prefix, use_custom_asset_codes')
+          .eq('company_id', data.company_id)
+          .maybeSingle();
+        
+        if (codeSettings?.use_custom_asset_codes && codeSettings?.asset_code_prefix) {
+          setAssetCodePrefix(codeSettings.asset_code_prefix);
+        }
+      }
     }
     setLoading(false);
   };
@@ -656,7 +670,7 @@ export default function CampaignDetail() {
                   <TableBody>
                     {campaignAssets.map((asset) => (
                       <TableRow key={asset.id}>
-                        <TableCell className="font-medium font-mono text-sm">{formatAssetDisplayCode({ mediaAssetCode: asset.media_asset_code, fallbackId: asset.asset_id, companyName: company?.name })}</TableCell>
+                        <TableCell className="font-medium font-mono text-sm">{formatAssetDisplayCode({ mediaAssetCode: asset.media_asset_code, fallbackId: asset.asset_id, companyPrefix: assetCodePrefix, companyName: company?.name })}</TableCell>
                         <TableCell>{asset.location}</TableCell>
                         <TableCell>{asset.city}</TableCell>
                         <TableCell>
@@ -698,6 +712,8 @@ export default function CampaignDetail() {
                     campaignId={campaign.id}
                     assets={campaignAssets}
                     onUpdate={refreshData}
+                    assetCodePrefix={assetCodePrefix}
+                    companyName={company?.name}
                   />
                 </CardContent>
               </Card>

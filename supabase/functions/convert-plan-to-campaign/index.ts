@@ -102,9 +102,30 @@ serve(async (req) => {
       return jsonError("Plan not found for this company", 404);
     }
 
-    // Check if already converted
+    // Check if already converted - return success with existing campaign (idempotent)
     if (plan.converted_to_campaign_id) {
-      return jsonError(`Plan already converted to campaign ${plan.converted_to_campaign_id}`, 400);
+      console.log("[v9.0] Plan already converted to campaign:", plan.converted_to_campaign_id);
+      const { data: existingCampaign } = await supabase
+        .from('campaigns')
+        .select('status')
+        .eq('id', plan.converted_to_campaign_id)
+        .single();
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Plan was already converted to campaign",
+          campaign_id: plan.converted_to_campaign_id,
+          campaign_code: plan.converted_to_campaign_id,
+          plan_id: plan.id,
+          already_converted: true,
+          status: existingCampaign?.status || 'Draft',
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     if (plan.status !== "Approved") {

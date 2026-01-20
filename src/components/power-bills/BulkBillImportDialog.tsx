@@ -741,22 +741,22 @@ Total Amount to be Paid: 1350.0`;
             </div>
 
             {/* Right: Preview Table */}
-            <div className="flex flex-col space-y-4">
-            <div className="flex items-center justify-between">
-              <Label>Parsed Bills Preview</Label>
-              {parsedBills.length > 0 && (
-                <div className="flex gap-2">
-                  <Badge variant="secondary">
-                    {parsedBills.filter(b => b.status === 'valid').length} Valid
-                  </Badge>
-                  <Badge variant="destructive">
-                    {parsedBills.filter(b => b.status !== 'valid').length} Issues
-                  </Badge>
-                </div>
-              )}
-            </div>
+            <div className="flex flex-col space-y-4 overflow-hidden">
+              <div className="flex items-center justify-between flex-shrink-0">
+                <Label>Parsed Bills Preview</Label>
+                {parsedBills.length > 0 && (
+                  <div className="flex gap-2">
+                    <Badge variant="secondary">
+                      {parsedBills.filter(b => b.status === 'valid').length} Valid
+                    </Badge>
+                    <Badge variant="destructive">
+                      {parsedBills.filter(b => b.status !== 'valid').length} Issues
+                    </Badge>
+                  </div>
+                )}
+              </div>
 
-            <ScrollArea className="flex-1 border rounded-md">
+              <ScrollArea className="flex-1 border rounded-md min-h-0">
               {parsedBills.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">
                   <Upload className="mx-auto h-12 w-12 mb-2 opacity-20" />
@@ -827,24 +827,24 @@ Total Amount to be Paid: 1350.0`;
               )}
             </ScrollArea>
 
-            <Button 
-              onClick={handleSaveAll}
-              disabled={parsedBills.filter(b => b.status === 'valid').length === 0 || saving}
-              className="w-full"
-              size="lg"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving {parsedBills.filter(b => b.status === 'valid').length} Bills...
-                </>
-              ) : (
-                <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Save {parsedBills.filter(b => b.status === 'valid').length} Bills to Database
-                </>
-              )}
-            </Button>
+              <Button 
+                onClick={handleSaveAll}
+                disabled={parsedBills.filter(b => b.status === 'valid').length === 0 || saving}
+                className="w-full flex-shrink-0"
+                size="lg"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving {parsedBills.filter(b => b.status === 'valid').length} Bills...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Save {parsedBills.filter(b => b.status === 'valid').length} Bills to Database
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </Tabs>

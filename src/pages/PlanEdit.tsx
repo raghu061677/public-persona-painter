@@ -20,6 +20,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { 
   calculateDurationDays, 
@@ -35,12 +36,15 @@ import {
   BILLING_CYCLE_DAYS,
 } from "@/utils/billingEngine";
 import { LineItemDurationControl } from "@/components/plans/LineItemDurationControl";
-import { ArrowLeft, Calendar as CalendarIcon, FileText, CalendarDays, DollarSign } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, FileText, CalendarDays, DollarSign, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AssetSelectionTable } from "@/components/plans/AssetSelectionTable";
 import { SelectedAssetsTable } from "@/components/plans/SelectedAssetsTable";
 import { PlanSummaryCard } from "@/components/plans/PlanSummaryCard";
 import { calcProRata, calcDiscount, calcProfit } from "@/utils/pricing";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+type TaxType = 'CGST_SGST' | 'IGST';
 
 export default function PlanEdit() {
   const { id } = useParams();
@@ -50,6 +54,8 @@ export default function PlanEdit() {
   const [availableAssets, setAvailableAssets] = useState<any[]>([]);
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [assetPricing, setAssetPricing] = useState<Record<string, any>>({});
+  const [companyState, setCompanyState] = useState<string>("");
+  const [manualTaxOverride, setManualTaxOverride] = useState(false);
   
   const [formData, setFormData] = useState({
     id: "",
@@ -63,6 +69,7 @@ export default function PlanEdit() {
     duration_mode: 'MONTH' as DurationMode,
     months_count: 1,
     gst_percent: "18",
+    tax_type: "CGST_SGST" as TaxType,
     notes: "",
   });
 
@@ -70,7 +77,54 @@ export default function PlanEdit() {
     fetchClients();
     fetchAvailableAssets();
     fetchPlan();
+    fetchCompanyState();
   }, [id]);
+
+  // Auto-detect tax type when client changes
+  useEffect(() => {
+    if (!manualTaxOverride && formData.client_id && companyState) {
+      const client = clients.find(c => c.id === formData.client_id);
+      const clientState = client?.billing_state || "";
+      
+      // Normalize state names for comparison (case-insensitive, trimmed)
+      const normalizedCompanyState = companyState.toLowerCase().trim();
+      const normalizedClientState = clientState.toLowerCase().trim();
+      
+      const isSameState = normalizedCompanyState === normalizedClientState && normalizedClientState !== "";
+      const detectedTaxType: TaxType = isSameState ? 'CGST_SGST' : 'IGST';
+      
+      if (formData.tax_type !== detectedTaxType) {
+        setFormData(prev => ({ ...prev, tax_type: detectedTaxType }));
+      }
+    }
+  }, [formData.client_id, companyState, clients, manualTaxOverride]);
+
+  const fetchCompanyState = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (companyUser?.company_id) {
+        const { data: company } = await supabase
+          .from('companies')
+          .select('state')
+          .eq('id', companyUser.company_id)
+          .single();
+
+        if (company?.state) {
+          setCompanyState(company.state);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching company state:', error);
+    }
+  };
 
   const fetchPlan = async () => {
     const { data: plan } = await supabase
@@ -82,6 +136,11 @@ export default function PlanEdit() {
     if (plan) {
       const days = calculateDurationDays(new Date(plan.start_date), new Date(plan.end_date));
       const months = plan.months_count || calculateMonthsFromDays(days);
+      
+      // If plan has manual tax override saved, set it
+      if ((plan as any).tax_type) {
+        setManualTaxOverride(true);
+      }
       
       setFormData({
         id: plan.id,
@@ -95,6 +154,7 @@ export default function PlanEdit() {
         duration_mode: (plan.duration_mode as DurationMode) || 'MONTH',
         months_count: months,
         gst_percent: plan.gst_percent.toString(),
+        tax_type: ((plan as any).tax_type as TaxType) || 'CGST_SGST',
         notes: plan.notes || "",
       });
 
@@ -283,8 +343,22 @@ export default function PlanEdit() {
 
     const subtotal = displayCost + printingCost + mountingCost;
     const netTotal = subtotal;
-    const gstAmount = (netTotal * parseFloat(formData.gst_percent)) / 100;
-    const grandTotal = netTotal + gstAmount;
+    const gstPercent = parseFloat(formData.gst_percent);
+    const totalGst = (netTotal * gstPercent) / 100;
+    
+    // Calculate CGST, SGST, IGST based on tax type
+    let cgstAmount = 0;
+    let sgstAmount = 0;
+    let igstAmount = 0;
+    
+    if (formData.tax_type === 'IGST') {
+      igstAmount = totalGst;
+    } else {
+      cgstAmount = totalGst / 2;
+      sgstAmount = totalGst / 2;
+    }
+    
+    const grandTotal = netTotal + totalGst;
 
     return {
       displayCost,
@@ -294,7 +368,10 @@ export default function PlanEdit() {
       totalDiscount,
       netTotal,
       totalProfit,
-      gstAmount,
+      gstAmount: totalGst,
+      cgstAmount,
+      sgstAmount,
+      igstAmount,
       grandTotal,
       totalBaseRent,
     };
@@ -322,7 +399,8 @@ export default function PlanEdit() {
       const totals = calculateTotals();
       const { netTotal, gstAmount, grandTotal } = totals;
 
-      // Update plan with duration mode and months
+      // Update plan with duration mode, months, and tax breakdown
+      const gstPercent = parseFloat(formData.gst_percent);
       const { error: planError } = await supabase
         .from('plans')
         .update({
@@ -336,11 +414,19 @@ export default function PlanEdit() {
           duration_mode: formData.duration_mode,
           months_count: formData.months_count,
           total_amount: netTotal,
-          gst_percent: parseFloat(formData.gst_percent),
+          gst_percent: gstPercent,
           gst_amount: gstAmount,
           grand_total: grandTotal,
+          // Tax type fields
+          tax_type: formData.tax_type,
+          cgst_percent: formData.tax_type === 'CGST_SGST' ? gstPercent / 2 : 0,
+          sgst_percent: formData.tax_type === 'CGST_SGST' ? gstPercent / 2 : 0,
+          igst_percent: formData.tax_type === 'IGST' ? gstPercent : 0,
+          cgst_amount: totals.cgstAmount,
+          sgst_amount: totals.sgstAmount,
+          igst_amount: totals.igstAmount,
           notes: formData.notes,
-        })
+        } as any)
         .eq('id', id);
 
       if (planError) throw planError;
@@ -586,6 +672,52 @@ export default function PlanEdit() {
                       <SelectItem value="28">28%</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">Tax Type</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p><strong>CGST+SGST:</strong> Same state (intra-state)</p>
+                          <p><strong>IGST:</strong> Different state (inter-state)</p>
+                          <p className="mt-1 text-xs">Company: {companyState || 'Not set'}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <Select 
+                    value={formData.tax_type} 
+                    onValueChange={(v: TaxType) => {
+                      setManualTaxOverride(true);
+                      setFormData(prev => ({ ...prev, tax_type: v }));
+                    }}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CGST_SGST">CGST + SGST ({parseFloat(formData.gst_percent)/2}% + {parseFloat(formData.gst_percent)/2}%)</SelectItem>
+                      <SelectItem value="IGST">IGST ({formData.gst_percent}%)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {!manualTaxOverride && (
+                    <p className="text-xs text-muted-foreground">Auto-detected based on client state</p>
+                  )}
+                  {manualTaxOverride && (
+                    <Button 
+                      type="button" 
+                      variant="link" 
+                      size="sm" 
+                      className="h-auto p-0 text-xs"
+                      onClick={() => setManualTaxOverride(false)}
+                    >
+                      Reset to auto-detect
+                    </Button>
+                  )}
                 </div>
               </div>
             </SectionCard>

@@ -5250,6 +5250,7 @@ export type Database = {
           asset_id: string
           base_rent: number | null
           card_rate: number
+          cgst_amount: number | null
           city: string
           created_at: string | null
           dimensions: string
@@ -5260,6 +5261,7 @@ export type Database = {
           district: string | null
           gst_amount: number
           id: string
+          igst_amount: number | null
           illumination_type: string | null
           installation_cost: number | null
           installation_mode: string | null
@@ -5275,8 +5277,10 @@ export type Database = {
           printing_mode: string | null
           printing_rate: number | null
           sales_price: number
+          sgst_amount: number | null
           state: string | null
           subtotal: number
+          tax_type: string | null
           total_sqft: number | null
           total_with_gst: number
         }
@@ -5285,6 +5289,7 @@ export type Database = {
           asset_id: string
           base_rent?: number | null
           card_rate: number
+          cgst_amount?: number | null
           city: string
           created_at?: string | null
           dimensions: string
@@ -5295,6 +5300,7 @@ export type Database = {
           district?: string | null
           gst_amount: number
           id?: string
+          igst_amount?: number | null
           illumination_type?: string | null
           installation_cost?: number | null
           installation_mode?: string | null
@@ -5310,8 +5316,10 @@ export type Database = {
           printing_mode?: string | null
           printing_rate?: number | null
           sales_price: number
+          sgst_amount?: number | null
           state?: string | null
           subtotal: number
+          tax_type?: string | null
           total_sqft?: number | null
           total_with_gst: number
         }
@@ -5320,6 +5328,7 @@ export type Database = {
           asset_id?: string
           base_rent?: number | null
           card_rate?: number
+          cgst_amount?: number | null
           city?: string
           created_at?: string | null
           dimensions?: string
@@ -5330,6 +5339,7 @@ export type Database = {
           district?: string | null
           gst_amount?: number
           id?: string
+          igst_amount?: number | null
           illumination_type?: string | null
           installation_cost?: number | null
           installation_mode?: string | null
@@ -5345,8 +5355,10 @@ export type Database = {
           printing_mode?: string | null
           printing_rate?: number | null
           sales_price?: number
+          sgst_amount?: number | null
           state?: string | null
           subtotal?: number
+          tax_type?: string | null
           total_sqft?: number | null
           total_with_gst?: number
         }
@@ -5657,6 +5669,8 @@ export type Database = {
       }
       plans: {
         Row: {
+          cgst_amount: number | null
+          cgst_percent: number | null
           client_id: string
           client_name: string
           company_id: string
@@ -5672,19 +5686,26 @@ export type Database = {
           gst_amount: number
           gst_percent: number
           id: string
+          igst_amount: number | null
+          igst_percent: number | null
           months_count: number | null
           notes: string | null
           owner_company_id: string | null
           plan_name: string
           plan_type: Database["public"]["Enums"]["plan_type"]
+          sgst_amount: number | null
+          sgst_percent: number | null
           share_link_active: boolean | null
           share_token: string | null
           start_date: string
           status: Database["public"]["Enums"]["plan_status"]
+          tax_type: string | null
           total_amount: number
           updated_at: string | null
         }
         Insert: {
+          cgst_amount?: number | null
+          cgst_percent?: number | null
           client_id: string
           client_name: string
           company_id: string
@@ -5700,19 +5721,26 @@ export type Database = {
           gst_amount?: number
           gst_percent?: number
           id: string
+          igst_amount?: number | null
+          igst_percent?: number | null
           months_count?: number | null
           notes?: string | null
           owner_company_id?: string | null
           plan_name: string
           plan_type?: Database["public"]["Enums"]["plan_type"]
+          sgst_amount?: number | null
+          sgst_percent?: number | null
           share_link_active?: boolean | null
           share_token?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["plan_status"]
+          tax_type?: string | null
           total_amount?: number
           updated_at?: string | null
         }
         Update: {
+          cgst_amount?: number | null
+          cgst_percent?: number | null
           client_id?: string
           client_name?: string
           company_id?: string
@@ -5728,15 +5756,20 @@ export type Database = {
           gst_amount?: number
           gst_percent?: number
           id?: string
+          igst_amount?: number | null
+          igst_percent?: number | null
           months_count?: number | null
           notes?: string | null
           owner_company_id?: string | null
           plan_name?: string
           plan_type?: Database["public"]["Enums"]["plan_type"]
+          sgst_amount?: number | null
+          sgst_percent?: number | null
           share_link_active?: boolean | null
           share_token?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["plan_status"]
+          tax_type?: string | null
           total_amount?: number
           updated_at?: string | null
         }

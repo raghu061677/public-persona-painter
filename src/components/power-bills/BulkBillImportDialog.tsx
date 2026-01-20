@@ -65,7 +65,7 @@ export function BulkBillImportDialog({ onImportComplete }: { onImportComplete?: 
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Helper to parse date formats
+  // Helper to parse date formats (returns YYYY-MM-DD)
   const parseDate = (dateStr: string) => {
     try {
       const cleaned = dateStr.trim();
@@ -73,29 +73,56 @@ export function BulkBillImportDialog({ onImportComplete }: { onImportComplete?: 
         jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
         jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'
       };
-      
+
       const parts = cleaned.split(/[-\/]/);
       if (parts.length === 3) {
         const day = parts[0].padStart(2, '0');
         let month = parts[1];
         let year = parts[2];
-        
+
         if (isNaN(Number(month))) {
           month = monthMap[month.toLowerCase().substring(0, 3)] || month;
         } else {
           month = month.padStart(2, '0');
         }
-        
+
         if (year.length === 2) {
           year = '20' + year;
         }
-        
+
         return `${year}-${month}-${day}`;
       }
       return cleaned;
     } catch {
       return dateStr;
     }
+  };
+
+  // Excel dates may come as serial numbers (e.g. 46029). Convert to YYYY-MM-DD.
+  const normalizeExcelDateToISO = (value: unknown): string | null => {
+    if (value === null || value === undefined || value === '') return null;
+
+    // If a JS Date object
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return value.toISOString().slice(0, 10);
+    }
+
+    // If Excel serial number
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      // Excel serial date: days since 1899-12-30
+      const utcMs = Math.round((value - 25569) * 86400 * 1000);
+      const d = new Date(utcMs);
+      if (Number.isNaN(d.getTime())) return null;
+      return d.toISOString().slice(0, 10);
+    }
+
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+      return parseDate(trimmed);
+    }
+
+    return null;
   };
 
   // Parse a single bill section
@@ -376,8 +403,8 @@ export function BulkBillImportDialog({ onImportComplete }: { onImportComplete?: 
             '',
           bill_month: row['Bill Month'] || row['bill_month'] || row['Month'] || '',
           units: row['Units'] || row['units'] || '',
-          bill_date: row['Bill Date'] || row['bill_date'] || '',
-          due_date: row['Due Date'] || row['due_date'] || '',
+          bill_date: normalizeExcelDateToISO(row['Bill Date'] || row['bill_date'] || '' ) || '',
+          due_date: normalizeExcelDateToISO(row['Due Date'] || row['due_date'] || '' ) || '',
           current_month_bill: row['Current Month Bill'] || row['Bill Amount'] || row['current_month_bill'] || '',
           acd_amount: row['ACD Amount'] || row['acd_amount'] || '0',
           arrears: row['Arrears'] || row['arrears'] || '0',

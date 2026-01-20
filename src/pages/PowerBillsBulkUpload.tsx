@@ -90,6 +90,28 @@ const PowerBillsBulkUpload = () => {
 
   // Normalize row keys - handle both snake_case and space-separated column names
   const normalizeRow = (row: any) => {
+    const normalizeExcelDateToISO = (value: unknown): string | null => {
+      if (value === null || value === undefined || value === '') return null;
+
+      if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        return value.toISOString().slice(0, 10);
+      }
+
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        const utcMs = Math.round((value - 25569) * 86400 * 1000);
+        const d = new Date(utcMs);
+        if (Number.isNaN(d.getTime())) return null;
+        return d.toISOString().slice(0, 10);
+      }
+
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        return trimmed ? trimmed : null;
+      }
+
+      return null;
+    };
+
     return {
       asset_id: row['Asset ID'] || row['asset_id'] || row.asset_id,
       location: row['Location'] || row['location'] || row.location,
@@ -103,8 +125,8 @@ const PowerBillsBulkUpload = () => {
         row.usn,
       bill_month: row['Bill Month'] || row['bill_month'] || row.bill_month,
       units: row['Units'] || row['units'] || row.units,
-      bill_date: row['Bill Date'] || row['bill_date'] || row.bill_date,
-      due_date: row['Due Date'] || row['due_date'] || row.due_date,
+      bill_date: normalizeExcelDateToISO(row['Bill Date'] || row['bill_date'] || row.bill_date),
+      due_date: normalizeExcelDateToISO(row['Due Date'] || row['due_date'] || row.due_date),
       current_month_bill:
         row['Current Month Bill'] || row['current_month_bill'] || row.current_month_bill,
       acd_amount: row['ACD Amount'] || row['acd_amount'] || row.acd_amount,
@@ -115,7 +137,7 @@ const PowerBillsBulkUpload = () => {
       fixed_charges: row['Fixed Charges'] || row['fixed_charges'] || row.fixed_charges,
       payment_status: row['Payment Status'] || row['payment_status'] || row.payment_status,
       paid_amount: row['Paid Amount'] || row['paid_amount'] || row.paid_amount,
-      payment_date: row['Payment Date'] || row['payment_date'] || row.payment_date,
+      payment_date: normalizeExcelDateToISO(row['Payment Date'] || row['payment_date'] || row.payment_date),
     };
   };
 

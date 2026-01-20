@@ -62,38 +62,29 @@ export default function CampaignAssetProofs() {
   }, [asset, campaignId, setBreadcrumbs]);
 
   useEffect(() => {
-    if (campaignId && assetId) {
+    if (campaignId && asset) {
       fetchPhotos();
     }
-  }, [campaignId, assetId]);
+  }, [campaignId, asset]);
 
   // Load asset QR code URL
   useEffect(() => {
     const loadAssetQrCode = async () => {
-      if (!assetId) return;
+      if (!assetId || !asset) return;
       
-      // First get the media asset_id from campaign_assets
-      const { data: campaignAsset } = await supabase
-        .from('campaign_assets')
-        .select('asset_id')
-        .eq('id', assetId)
-        .single();
-      
-      if (!campaignAsset?.asset_id) return;
-      
-      // Then get the QR code URL from media_assets
+      // Use the asset_id from the already fetched campaign_asset
       const { data: mediaAsset } = await supabase
         .from('media_assets')
         .select('qr_code_url')
-        .eq('id', campaignAsset.asset_id)
-        .single();
+        .eq('id', asset.asset_id)
+        .maybeSingle();
       
       if (mediaAsset?.qr_code_url) {
         setQrCodeUrl(mediaAsset.qr_code_url);
       }
     };
     loadAssetQrCode();
-  }, [assetId]);
+  }, [asset]);
 
   const checkAdminRole = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -113,15 +104,50 @@ export default function CampaignAssetProofs() {
     if (!campaignId || !assetId) return;
 
     try {
-      // assetId from URL params is the campaign_assets.id (UUID), not asset_id
-      const { data, error } = await supabase
-        .from('campaign_assets')
-        .select('*')
-        .eq('campaign_id', campaignId)
-        .eq('id', assetId)
-        .single();
+      // Check if assetId is a UUID or a media_asset_code
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(assetId);
+      
+      let data;
+      let error;
+      
+      if (isUUID) {
+        // assetId is a campaign_assets.id UUID
+        const result = await supabase
+          .from('campaign_assets')
+          .select('*')
+          .eq('campaign_id', campaignId)
+          .eq('id', assetId)
+          .single();
+        data = result.data;
+        error = result.error;
+      } else {
+        // assetId is a media_asset_code (like HYD-BQS-0045)
+        // First, find the media_asset UUID by its code
+        const { data: mediaAsset, error: mediaError } = await supabase
+          .from('media_assets')
+          .select('id')
+          .eq('media_asset_code', assetId)
+          .maybeSingle();
+        
+        if (mediaError) throw mediaError;
+        
+        if (mediaAsset) {
+          // Now find the campaign_asset using the media asset's UUID
+          const result = await supabase
+            .from('campaign_assets')
+            .select('*')
+            .eq('campaign_id', campaignId)
+            .eq('asset_id', mediaAsset.id)
+            .maybeSingle();
+          data = result.data;
+          error = result.error;
+        }
+      }
 
       if (error) throw error;
+      if (!data) {
+        throw new Error('Asset not found in campaign');
+      }
       setAsset(data);
     } catch (error: any) {
       console.error('Error fetching asset:', error?.message || error);
@@ -134,16 +160,16 @@ export default function CampaignAssetProofs() {
   };
 
   const fetchPhotos = async () => {
-    if (!campaignId || !assetId) return;
+    if (!campaignId || !asset) return;
 
     try {
       setLoading(true);
-      // Photos are saved with the campaign_assets.id (assetId from URL), not the media asset_id
+      // Photos are saved with the campaign_assets.id, use the fetched asset's id
       const { data, error } = await supabase
         .from('media_photos')
         .select('*')
         .eq('campaign_id', campaignId)
-        .eq('asset_id', assetId)
+        .eq('asset_id', asset.id)
         .order('uploaded_at', { ascending: false });
 
       if (error) throw error;

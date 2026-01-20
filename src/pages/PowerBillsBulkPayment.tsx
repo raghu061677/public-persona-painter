@@ -51,6 +51,7 @@ export default function PowerBillsBulkPayment() {
   const fetchPendingBills = async () => {
     try {
       setLoading(true);
+      // Use left join (no !inner) so bills without matching assets still load
       const { data, error } = await supabase
         .from("asset_power_bills")
         .select(`
@@ -61,7 +62,8 @@ export default function PowerBillsBulkPayment() {
           consumer_name,
           bill_month,
           bill_amount,
-          media_assets!inner (
+          total_due,
+          media_assets (
             location
           )
         `)
@@ -70,16 +72,22 @@ export default function PowerBillsBulkPayment() {
 
       if (error) throw error;
 
-      const formattedBills = data?.map((bill: any) => ({
-        id: bill.id,
-        asset_id: bill.asset_id,
-        service_number: bill.service_number,
-        unique_service_number: bill.unique_service_number,
-        consumer_name: bill.consumer_name,
-        bill_month: bill.bill_month,
-        bill_amount: Number(bill.bill_amount),
-        location: bill.media_assets?.location || bill.asset_id,
-      })) || [];
+      const formattedBills = (data || [])
+        .filter((bill: any) => {
+          // Exclude zero-amount placeholder rows
+          const amount = Number(bill.bill_amount ?? bill.total_due ?? 0);
+          return amount > 0;
+        })
+        .map((bill: any) => ({
+          id: bill.id,
+          asset_id: bill.asset_id,
+          service_number: bill.service_number || "",
+          unique_service_number: bill.unique_service_number || "",
+          consumer_name: bill.consumer_name || "",
+          bill_month: bill.bill_month,
+          bill_amount: Number(bill.bill_amount ?? bill.total_due ?? 0),
+          location: bill.media_assets?.location || bill.asset_id,
+        }));
 
       setBills(formattedBills);
     } catch (error) {

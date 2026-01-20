@@ -118,11 +118,15 @@ export default function PowerBillsDashboard() {
 
       // Map latest bills to assets
       const billsByAsset = new Map();
-      billsData?.forEach(bill => {
+      billsData?.forEach((bill) => {
         if (!billsByAsset.has(bill.asset_id)) {
           billsByAsset.set(bill.asset_id, bill);
         }
       });
+
+      // Fast lookup for asset metadata (for fallback fields in bills)
+      const assetsById = new Map<string, (typeof assetsData)[number]>();
+      assetsData?.forEach((a) => assetsById.set(a.id, a));
 
       // Calculate aggregates
       let totalDue = 0;
@@ -131,32 +135,33 @@ export default function PowerBillsDashboard() {
       let totalPaidAmount = 0;
       let pendingCount = 0;
 
-      const assetsWithBills = assetsData?.map(asset => {
-        const latestBill = billsByAsset.get(asset.id);
-        if (latestBill) {
-          if (latestBill.payment_status === 'Paid') {
-            paidCount++;
-            totalPaidAmount += latestBill.total_due || 0;
-          } else if (latestBill.payment_status === 'Pending') {
-            unpaidCount++;
-            totalDue += latestBill.total_due || 0;
-            pendingCount++;
+      const assetsWithBills =
+        assetsData?.map((asset) => {
+          const latestBill = billsByAsset.get(asset.id);
+          if (latestBill) {
+            if (latestBill.payment_status === "Paid") {
+              paidCount++;
+              totalPaidAmount += latestBill.total_due || 0;
+            } else if (latestBill.payment_status === "Pending") {
+              unpaidCount++;
+              totalDue += latestBill.total_due || 0;
+              pendingCount++;
+            }
           }
-        }
-        return {
-          ...asset,
-          latest_bill_amount: latestBill?.bill_amount,
-          latest_bill_month: latestBill?.bill_month,
-          payment_status: latestBill?.payment_status,
-        };
-      }) || [];
+          return {
+            ...asset,
+            latest_bill_amount: latestBill?.bill_amount,
+            latest_bill_month: latestBill?.bill_month,
+            payment_status: latestBill?.payment_status,
+          };
+        }) || [];
 
       // Compute monthly aggregates for chart
       const monthlyMap = new Map<string, any>();
       billsData?.forEach((bill: any) => {
         if (!bill.bill_month) return;
         const month = bill.bill_month.substring(0, 7); // YYYY-MM
-        
+
         if (!monthlyMap.has(month)) {
           monthlyMap.set(month, {
             monthLabel: month,
@@ -166,12 +171,12 @@ export default function PowerBillsDashboard() {
             billCount: 0,
           });
         }
-        
+
         const entry = monthlyMap.get(month);
         entry.billCount++;
         entry.totalAmount += bill.total_due || 0;
-        
-        if (bill.payment_status === 'Paid') {
+
+        if (bill.payment_status === "Paid") {
           entry.paidAmount += bill.total_due || 0;
         } else {
           entry.unpaidAmount += bill.total_due || 0;
@@ -183,7 +188,25 @@ export default function PowerBillsDashboard() {
         .slice(-6); // Last 6 months
 
       // Get unpaid bills for table
-      const unpaid = billsData?.filter((b: any) => b.payment_status !== 'Paid') || [];
+      // Notes:
+      // - Exclude zero-amount placeholder rows (total_due/bill_amount = 0)
+      // - Fallback consumer/service details from the asset master when bill row is missing them
+      // - Ignore bill rows whose asset_id doesn't exist in the asset master (avoids orphan/dirty imports)
+      const unpaid = (billsData || [])
+        .filter((b: any) => (b.payment_status || "Pending") !== "Paid")
+        .filter((b: any) => assetsById.has(b.asset_id))
+        .map((b: any) => {
+          const a = assetsById.get(b.asset_id);
+          return {
+            ...b,
+            asset_id: a?.media_asset_code || b.asset_id,
+            consumer_name: b.consumer_name || a?.consumer_name || null,
+            service_number: b.service_number || a?.service_number || null,
+            ero_name: b.ero_name || a?.ero || null,
+            section_name: b.section_name || a?.section_name || null,
+          };
+        })
+        .filter((b: any) => ((b.total_due ?? b.bill_amount ?? 0) as number) > 0);
 
       setAssets(assetsWithBills);
       setTotalAssets(assetsWithBills.length);

@@ -93,11 +93,14 @@ const PowerBillsBulkUpload = () => {
     const normalizeExcelDateToISO = (value: unknown): string | null => {
       if (value === null || value === undefined || value === '') return null;
 
+      // Handle JS Date object
       if (value instanceof Date && !Number.isNaN(value.getTime())) {
         return value.toISOString().slice(0, 10);
       }
 
+      // Handle Excel serial number (as number)
       if (typeof value === 'number' && Number.isFinite(value)) {
+        // Excel serial: days since 1899-12-30
         const utcMs = Math.round((value - 25569) * 86400 * 1000);
         const d = new Date(utcMs);
         if (Number.isNaN(d.getTime())) return null;
@@ -106,7 +109,44 @@ const PowerBillsBulkUpload = () => {
 
       if (typeof value === 'string') {
         const trimmed = value.trim();
-        return trimmed ? trimmed : null;
+        if (!trimmed) return null;
+        
+        // Check if it's a numeric string (Excel serial as string)
+        const numVal = parseFloat(trimmed);
+        if (!Number.isNaN(numVal) && /^\d+(\.\d+)?$/.test(trimmed) && numVal > 40000 && numVal < 60000) {
+          // Likely an Excel serial date (between ~2009 and ~2063)
+          const utcMs = Math.round((numVal - 25569) * 86400 * 1000);
+          const d = new Date(utcMs);
+          if (!Number.isNaN(d.getTime())) {
+            return d.toISOString().slice(0, 10);
+          }
+        }
+        
+        // Already in YYYY-MM-DD format
+        if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+          return trimmed;
+        }
+        
+        // Try parsing DD/MM/YYYY or DD-MM-YYYY
+        const ddmmyyyyMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (ddmmyyyyMatch) {
+          const [, dd, mm, yyyy] = ddmmyyyyMatch;
+          return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+        }
+        
+        // Try parsing MM/DD/YYYY
+        const mmddyyyyMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (mmddyyyyMatch) {
+          const [, mm, dd, yyyy] = mmddyyyyMatch;
+          const month = parseInt(mm);
+          const day = parseInt(dd);
+          // If month > 12, it's likely DD/MM/YYYY (already handled above)
+          if (month <= 12 && day <= 31) {
+            return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+          }
+        }
+
+        return null;
       }
 
       return null;

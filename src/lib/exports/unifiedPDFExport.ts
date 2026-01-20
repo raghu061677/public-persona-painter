@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getSignedUrl } from '@/utils/storage';
 import type { ExportOptions } from '@/components/plans/ExportOptionsDialog';
 import { addWatermarkToImage, loadImageAsDataUrl } from './photoWatermark';
+import { formatAssetDisplayCode } from '@/lib/assets/formatAssetDisplayCode';
 
 interface ExportData {
   plan: any;
@@ -165,10 +166,14 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
     const itemDays = item.duration_days || totalDays;
     const prorataCost = Math.round((monthlyRate / 30) * itemDays) + printingCharge + mountingCharge;
 
-    // Build location code from media_asset_code or asset_id or location
-    const assetCode = item.media_asset_code || item.asset_id;
-    const locationCode = assetCode 
-      ? `[${assetCode}] ${item.location || ''}`.trim()
+    // Build location code from media_asset_code or asset_id with company prefix
+    const displayCode = formatAssetDisplayCode({
+      mediaAssetCode: item.media_asset_code,
+      fallbackId: item.asset_id,
+      companyName: companyName,
+    });
+    const locationCode = displayCode 
+      ? `[${displayCode}] ${item.location || ''}`.trim()
       : item.location || 'Display';
 
     return {

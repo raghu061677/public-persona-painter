@@ -967,12 +967,6 @@ export async function exportPlanToExcel(
       .eq('id', plan.company_id)
       .single();
 
-    // Fetch company code settings (prefix for display IDs like MNS-HYD-...)
-    const { data: codeSettings } = await supabase
-      .from('company_code_settings')
-      .select('asset_code_prefix')
-      .eq('company_id', plan.company_id)
-      .maybeSingle();
 
     // Fetch client details
     const { data: clientData } = await supabase
@@ -1024,7 +1018,6 @@ export async function exportPlanToExcel(
         "Asset ID": formatAssetDisplayCode({
           mediaAssetCode: baseCode,
           fallbackId: item.asset_id,
-          companyPrefix: (codeSettings as any)?.asset_code_prefix || null,
           companyName: companyData?.name || null,
         }),
         "Location": item.location,

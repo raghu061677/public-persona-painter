@@ -20,7 +20,8 @@ interface PreviewRow {
 const PowerBillsBulkUpload = () => {
   const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<PreviewRow[]>([]);
+  const [allRows, setAllRows] = useState<PreviewRow[]>([]); // All validated rows for import
+  const [preview, setPreview] = useState<PreviewRow[]>([]); // First 15 rows for UI display
   const [uploading, setUploading] = useState(false);
 
   const downloadTemplate = () => {
@@ -186,8 +187,9 @@ const PowerBillsBulkUpload = () => {
           jsonData.map((row, index) => validateRow(row, index + 2)) // +2 because Excel rows start at 1 and we have header
         );
 
-        setPreview(validatedRows.slice(0, 15)); // Show first 15 rows
-        toast.success(`Loaded ${jsonData.length} rows for preview`);
+        setAllRows(validatedRows); // Store all rows for import
+        setPreview(validatedRows.slice(0, 15)); // Show first 15 rows in UI
+        toast.success(`Loaded ${validatedRows.length} rows (${validatedRows.filter(r => r.status === 'valid').length} valid)`);
       } catch (error) {
         toast.error("Error parsing file");
         console.error(error);
@@ -198,12 +200,12 @@ const PowerBillsBulkUpload = () => {
   };
 
   const handleImport = async () => {
-    if (preview.length === 0) {
+    if (allRows.length === 0) {
       toast.error("No data to import");
       return;
     }
 
-    const validRows = preview.filter(row => row.status === 'valid');
+    const validRows = allRows.filter(row => row.status === 'valid');
     if (validRows.length === 0) {
       toast.error("No valid rows to import");
       return;
@@ -275,8 +277,9 @@ const PowerBillsBulkUpload = () => {
     }
   };
 
-  const validCount = preview.filter(r => r.status === 'valid').length;
-  const errorCount = preview.filter(r => r.status === 'error').length;
+  const validCount = allRows.filter(r => r.status === 'valid').length;
+  const errorCount = allRows.filter(r => r.status === 'error').length;
+  const totalCount = allRows.length;
 
   return (
     <div className="container mx-auto py-8">
@@ -329,7 +332,7 @@ const PowerBillsBulkUpload = () => {
               <CardHeader>
                 <CardTitle>Preview & Validation</CardTitle>
                 <CardDescription>
-                  Review the data before importing (showing first 15 rows)
+                  Review the data before importing. Showing first 15 of {totalCount} rows.
                 </CardDescription>
               </CardHeader>
               <CardContent>

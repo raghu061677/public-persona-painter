@@ -24,14 +24,17 @@ import { getAssetStatusColor } from "@/utils/campaigns";
 import { useNavigate } from "react-router-dom";
 import { BulkOperationsDialog } from "./BulkOperationsDialog";
 import { checkAndAutoGeneratePPT } from "@/lib/operations/autoGenerateProofPPT";
+import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
 
 interface OperationsBoardProps {
   campaignId: string;
   assets: any[];
   onUpdate: () => void;
+  assetCodePrefix?: string | null;
+  companyName?: string | null;
 }
 
-export function OperationsBoard({ campaignId, assets, onUpdate }: OperationsBoardProps) {
+export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix, companyName }: OperationsBoardProps) {
   const navigate = useNavigate();
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
@@ -188,7 +191,7 @@ export function OperationsBoard({ campaignId, assets, onUpdate }: OperationsBoar
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 space-y-3">
                   <div>
-                    <h3 className="font-semibold">{asset.asset_id}</h3>
+                    <h3 className="font-semibold font-mono text-sm">{formatAssetDisplayCode({ mediaAssetCode: asset.media_asset_code, fallbackId: asset.asset_id, companyPrefix: assetCodePrefix, companyName })}</h3>
                     <p className="text-sm text-muted-foreground">
                       {asset.location}, {asset.area}, {asset.city}
                     </p>

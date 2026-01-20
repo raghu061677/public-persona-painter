@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import { supabase } from '@/integrations/supabase/client';
 import type { ExportOptions } from '@/components/plans/ExportOptionsDialog';
+import { formatAssetDisplayCode } from '@/lib/assets/formatAssetDisplayCode';
 
 interface ExportData {
   plan: any;
@@ -37,11 +38,11 @@ export async function generateUnifiedExcel(data: ExportData): Promise<Blob> {
     .eq('id', plan.client_id)
     .single();
 
-  // Fetch company code settings for asset ID prefix
-  const { data: codeSettings } = await supabase
-    .from('company_code_settings')
-    .select('use_custom_asset_codes, asset_code_prefix')
-    .eq('company_id', plan.company_id)
+  // Fetch company details for the prefix
+  const { data: companyData } = await supabase
+    .from('companies')
+    .select('name')
+    .eq('id', plan.company_id)
     .maybeSingle();
 
   const workbook = new ExcelJS.Workbook();
@@ -247,11 +248,12 @@ export async function generateUnifiedExcel(data: ExportData): Promise<Blob> {
       ? Math.round(item.mounting_charges / item.total_sqft)
       : item.mounting_charges || 0;
 
-    // Build display asset code with company prefix
-    const baseCode = item.media_asset_code || item.asset_id;
-    const displayAssetCode = (codeSettings?.use_custom_asset_codes && codeSettings?.asset_code_prefix)
-      ? `${codeSettings.asset_code_prefix}-${baseCode}`
-      : baseCode;
+    // Build display asset code with company prefix (always apply)
+    const displayAssetCode = formatAssetDisplayCode({
+      mediaAssetCode: item.media_asset_code,
+      fallbackId: item.asset_id,
+      companyName: companyData?.name || null,
+    });
 
     const row = itemsSheet.addRow([
       index + 1,

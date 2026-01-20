@@ -37,6 +37,7 @@ import { AutoAssignMountersButton } from "@/components/campaigns/AutoAssignMount
 import { ShareTrackingLinkDialog } from "@/components/campaigns/ShareTrackingLinkDialog";
 import { useCompany } from "@/contexts/CompanyContext";
 import { CampaignTimelineView } from "@/components/campaigns/CampaignTimelineView";
+import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
 
 export default function CampaignDetail() {
   const { id } = useParams();
@@ -655,7 +656,7 @@ export default function CampaignDetail() {
                   <TableBody>
                     {campaignAssets.map((asset) => (
                       <TableRow key={asset.id}>
-                        <TableCell className="font-medium font-mono text-sm">{asset.media_asset_code || asset.asset_id}</TableCell>
+                        <TableCell className="font-medium font-mono text-sm">{formatAssetDisplayCode({ mediaAssetCode: asset.media_asset_code, fallbackId: asset.asset_id, companyName: company?.name })}</TableCell>
                         <TableCell>{asset.location}</TableCell>
                         <TableCell>{asset.city}</TableCell>
                         <TableCell>

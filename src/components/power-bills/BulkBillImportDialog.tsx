@@ -495,7 +495,7 @@ export function BulkBillImportDialog({ onImportComplete }: { onImportComplete?: 
     // Required identification columns (in order): Asset ID → Location → Direction → Unique Service Number
     const template = [
       {
-        'Asset ID': 'HYD-BQS-0001',
+        'Asset ID': 'MNS-HYD-BQS-0001',
         'Location': 'Near Metro Station, Begumpet',
         'Direction': 'Towards Secunderabad',
         'Unique Service Number': '115321754',
@@ -511,7 +511,7 @@ export function BulkBillImportDialog({ onImportComplete }: { onImportComplete?: 
         'Fixed Charges': 332,
       },
       {
-        'Asset ID': 'HYD-BQS-0002',
+        'Asset ID': 'MNS-HYD-BQS-0002',
         'Location': 'Opposite HDFC Bank, Kukatpally',
         'Direction': 'Towards JNTU',
         'Unique Service Number': '115321755',

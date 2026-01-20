@@ -8,6 +8,7 @@ import {
   sanitizePptText, 
   PPT_SAFE_FONTS 
 } from "@/lib/ppt/sanitizers";
+import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
 
 interface CampaignData {
   id: string;

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatINR } from '@/utils/finance';
 import { formatDate } from '@/utils/plans';
+import { formatAssetDisplayCode } from '@/lib/assets/formatAssetDisplayCode';
 
 interface InvoiceTemplateZohoProps {
   invoiceId: string;
@@ -298,7 +299,7 @@ export function InvoiceTemplateZoho({ invoiceId, readOnly = false }: InvoiceTemp
                 <tr key={index} className="border-t border-border">
                   <td className="p-2 align-top border-r border-border">{index + 1}</td>
                   <td className="p-2 align-top border-r border-border">
-                    <div className="font-medium">[{item.media_asset_code || item.asset_id}] {item.location || item.description}</div>
+                    <div className="font-medium">[{formatAssetDisplayCode({ mediaAssetCode: item.media_asset_code, fallbackId: item.asset_id, companyName: data?.company?.name })}] {item.location || item.description}</div>
                     <div className="text-muted-foreground">
                       {item.area && <span>Area: {item.area} </span>}
                       {item.media_type && <span>Media: {item.media_type} </span>}

@@ -9,6 +9,7 @@ import {
   getPptHyperlink,
   PPT_SAFE_FONTS 
 } from '../ppt/sanitizers';
+import { formatAssetDisplayCode } from '@/lib/assets/formatAssetDisplayCode';
 
 function validateAndFixStreetViewUrl(
   url: string | undefined,

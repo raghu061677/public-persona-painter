@@ -12,7 +12,10 @@ import {
   MapPin,
   DollarSign,
   PlayCircle,
-  Calendar
+  Calendar,
+  RefreshCw,
+  Archive,
+  Receipt
 } from "lucide-react";
 
 interface TimelineEvent {
@@ -41,6 +44,11 @@ const eventTypeConfig: Record<string, { icon: any; color: string; bgColor: strin
   completed: { icon: CheckCircle2, color: "text-gray-600", bgColor: "bg-gray-100" },
   invoice_created: { icon: DollarSign, color: "text-yellow-600", bgColor: "bg-yellow-100" },
   payment_received: { icon: DollarSign, color: "text-green-600", bgColor: "bg-green-100" },
+  // Renewal/Extension events
+  campaign_extended: { icon: RefreshCw, color: "text-primary", bgColor: "bg-primary/10" },
+  campaign_renewed: { icon: RefreshCw, color: "text-primary", bgColor: "bg-primary/10" },
+  photos_archived: { icon: Archive, color: "text-orange-600", bgColor: "bg-orange-100" },
+  renewal_invoice_created: { icon: Receipt, color: "text-emerald-600", bgColor: "bg-emerald-100" },
 };
 
 export function CampaignTimelineView({ campaignId, isPublicView = false }: CampaignTimelineViewProps) {
@@ -163,9 +171,27 @@ export function CampaignTimelineView({ campaignId, isPublicView = false }: Campa
                     </p>
                   )}
                   {event.metadata && Object.keys(event.metadata).length > 0 && (
-                    <div className="mt-2 text-xs text-muted-foreground">
+                    <div className="mt-2 text-xs text-muted-foreground space-y-1">
                       {event.metadata.latitude && event.metadata.longitude && (
                         <div>📍 {event.metadata.latitude.toFixed(6)}, {event.metadata.longitude.toFixed(6)}</div>
+                      )}
+                      {event.metadata.extension_days && (
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>+{event.metadata.extension_days} days extension</span>
+                        </div>
+                      )}
+                      {event.metadata.amount && (
+                        <div className="flex items-center gap-1">
+                          <DollarSign className="h-3 w-3" />
+                          <span>₹{Number(event.metadata.amount).toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                      {event.metadata.invoice_id && (
+                        <div className="flex items-center gap-1">
+                          <Receipt className="h-3 w-3" />
+                          <span>Invoice: {event.metadata.invoice_id}</span>
+                        </div>
                       )}
                     </div>
                   )}

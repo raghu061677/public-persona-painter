@@ -219,17 +219,17 @@ export function ExtendCampaignDialog({
       }
 
       // Generate invoice for renewal period if selected
-      if (generateInvoice && campaignData) {
+      if (generateInvoice && campaignData && campaignData.client_id) {
         const invoiceId = await generateInvoiceId(supabase);
         const gstPercent = campaignData.gst_percent || 18;
-        const subTotal = renewalAmount / (1 + gstPercent / 100);
-        const gstAmount = renewalAmount - subTotal;
+        const subTotal = Math.round(renewalAmount / (1 + gstPercent / 100));
+        const gstAmount = Math.round(renewalAmount - subTotal);
 
         const { error: invoiceError } = await supabase.from("invoices").insert({
           id: invoiceId,
           campaign_id: campaign.id,
           client_id: campaignData.client_id,
-          client_name: campaign.client_name,
+          client_name: campaign.client_name || campaignData.client_name,
           company_id: campaignData.company_id,
           invoice_date: new Date().toISOString().split('T')[0],
           due_date: format(addDays(new Date(), 30), "yyyy-MM-dd"),
@@ -237,9 +237,9 @@ export function ExtendCampaignDialog({
           invoice_period_end: newEndDateStr,
           status: "Draft",
           invoice_type: "renewal",
-          sub_total: Math.round(subTotal),
+          sub_total: subTotal,
           gst_percent: gstPercent,
-          gst_amount: Math.round(gstAmount),
+          gst_amount: gstAmount,
           total_amount: renewalAmount,
           balance_due: renewalAmount,
           items: [{
@@ -247,7 +247,7 @@ export function ExtendCampaignDialog({
             period: `${format(addDays(currentEndDate, 1), "MMM dd, yyyy")} - ${format(newEndDate, "MMM dd, yyyy")}`,
             quantity: extensionDays,
             unit: "days",
-            rate: Math.round(renewalAmount / extensionDays),
+            rate: extensionDays > 0 ? Math.round(renewalAmount / extensionDays) : 0,
             amount: renewalAmount,
           }],
           notes: `Renewal invoice for extended campaign period. ${notes || ""}`.trim(),

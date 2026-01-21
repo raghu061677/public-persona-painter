@@ -56,6 +56,9 @@ export function ExtendCampaignDialog({
   const [durationOption, setDurationOption] = useState<DurationOption>("1month");
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>();
   const [customStartDate, setCustomStartDate] = useState<Date | undefined>();
+  // Separate dates for copy_new mode
+  const [copyNewStartDate, setCopyNewStartDate] = useState<Date | undefined>();
+  const [copyNewEndDate, setCopyNewEndDate] = useState<Date | undefined>();
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   
@@ -68,17 +71,27 @@ export function ExtendCampaignDialog({
   const currentEndDate = new Date(campaign.end_date);
   const today = new Date();
 
-  // For "copy_new", start date is day after original end (or today if past)
+  // Initialize copy_new dates when switching to that mode
+  const getDefaultCopyNewStartDate = (): Date => {
+    const dayAfterEnd = addDays(currentEndDate, 1);
+    return dayAfterEnd > today ? dayAfterEnd : today;
+  };
+
+  // For "copy_new", use explicitly set dates
   const getNewStartDate = (): Date => {
     if (extensionType === "copy_new") {
-      if (customStartDate) return customStartDate;
-      const dayAfterEnd = addDays(currentEndDate, 1);
-      return dayAfterEnd > today ? dayAfterEnd : today;
+      return copyNewStartDate || getDefaultCopyNewStartDate();
     }
+    if (customStartDate) return customStartDate;
     return extensionType === "extend" ? currentEndDate : today;
   };
 
   const calculateNewEndDate = (): Date => {
+    // For copy_new, use explicitly set end date
+    if (extensionType === "copy_new") {
+      return copyNewEndDate || addMonths(getNewStartDate(), 1);
+    }
+    
     const baseDate = getNewStartDate();
     
     switch (durationOption) {
@@ -99,20 +112,20 @@ export function ExtendCampaignDialog({
 
   const newStartDate = getNewStartDate();
   const newEndDate = calculateNewEndDate();
-  const newDurationDays = differenceInDays(newEndDate, newStartDate);
+  const newDurationDays = Math.max(1, differenceInDays(newEndDate, newStartDate) + 1);
   const extensionDays = differenceInDays(newEndDate, currentEndDate);
   
   // Calculate renewal amount estimate based on daily rate
   const calculateRenewalAmount = () => {
     if (!campaign.grand_total) return 0;
-    const originalDays = differenceInDays(new Date(campaign.end_date), new Date(campaign.start_date));
+    const originalDays = differenceInDays(new Date(campaign.end_date), new Date(campaign.start_date)) + 1;
     if (originalDays <= 0) return campaign.grand_total;
     const dailyRate = campaign.grand_total / originalDays;
     
     if (extensionType === "copy_new") {
       return Math.round(dailyRate * newDurationDays);
     }
-    return Math.round(dailyRate * extensionDays);
+    return Math.round(dailyRate * Math.max(1, extensionDays));
   };
 
   const renewalAmount = calculateRenewalAmount();
@@ -559,6 +572,8 @@ export function ExtendCampaignDialog({
       setDurationOption("1month");
       setCustomEndDate(undefined);
       setCustomStartDate(undefined);
+      setCopyNewStartDate(undefined);
+      setCopyNewEndDate(undefined);
       setNotes("");
       setGenerateInvoice(true);
       setResetProofPhotos(true);
@@ -663,97 +678,134 @@ export function ExtendCampaignDialog({
               </RadioGroup>
             </div>
 
-            {/* Custom Start Date for Copy New */}
+            {/* Date Selection for Copy New - Start & End Date pickers */}
             {extensionType === "copy_new" && (
-              <div className="space-y-3">
-                <Label>New Campaign Start Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {customStartDate ? format(customStartDate, "MMMM dd, yyyy") : format(newStartDate, "MMMM dd, yyyy")}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={customStartDate || newStartDate}
-                      onSelect={setCustomStartDate}
-                      disabled={(date) => date < today}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  <Label>New Campaign Start Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {copyNewStartDate ? format(copyNewStartDate, "MMMM dd, yyyy") : format(getDefaultCopyNewStartDate(), "MMMM dd, yyyy")}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={copyNewStartDate || getDefaultCopyNewStartDate()}
+                        onSelect={(date) => {
+                          setCopyNewStartDate(date);
+                          // Reset end date if it's before new start
+                          if (date && copyNewEndDate && copyNewEndDate <= date) {
+                            setCopyNewEndDate(addMonths(date, 1));
+                          }
+                        }}
+                        disabled={(date) => date < today}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                
+                <div className="space-y-3">
+                  <Label>New Campaign End Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {copyNewEndDate ? format(copyNewEndDate, "MMMM dd, yyyy") : format(addMonths(copyNewStartDate || getDefaultCopyNewStartDate(), 1), "MMMM dd, yyyy")}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={copyNewEndDate || addMonths(copyNewStartDate || getDefaultCopyNewStartDate(), 1)}
+                        onSelect={setCopyNewEndDate}
+                        disabled={(date) => date <= (copyNewStartDate || getDefaultCopyNewStartDate())}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Duration Summary */}
+                <div className="rounded-lg bg-muted/50 p-3 text-sm">
+                  <span className="text-muted-foreground">Duration: </span>
+                  <span className="font-medium">{newDurationDays} days</span>
+                </div>
               </div>
             )}
 
-            {/* Duration Options */}
-            <div className="space-y-3">
-              <Label>Duration</Label>
-              <RadioGroup
-                value={durationOption}
-                onValueChange={(v) => setDurationOption(v as DurationOption)}
-                className="space-y-2"
-              >
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { value: "15days", label: "15 Days" },
-                    { value: "1month", label: "1 Month" },
-                    { value: "2months", label: "2 Months" },
-                    { value: "3months", label: "3 Months" },
-                  ].map((option) => (
-                    <div
-                      key={option.value}
-                      className={cn(
-                        "flex items-center space-x-2 rounded-lg border p-3 cursor-pointer transition-colors",
-                        durationOption === option.value && "border-primary bg-primary/5"
-                      )}
-                    >
-                      <RadioGroupItem value={option.value} id={option.value} />
-                      <Label htmlFor={option.value} className="cursor-pointer flex-1">
-                        {option.label}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Custom Date Option */}
-                <div
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
-                    durationOption === "custom" && "border-primary bg-primary/5"
-                  )}
-                  onClick={() => setDurationOption("custom")}
+            {/* Duration Options - Only for extend/renew */}
+            {extensionType !== "copy_new" && (
+              <div className="space-y-3">
+                <Label>Duration</Label>
+                <RadioGroup
+                  value={durationOption}
+                  onValueChange={(v) => setDurationOption(v as DurationOption)}
+                  className="space-y-2"
                 >
-                  <RadioGroupItem value="custom" id="custom" />
-                  <Label htmlFor="custom" className="cursor-pointer">Custom End Date</Label>
-                  {durationOption === "custom" && (
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="ml-auto"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {customEndDate ? format(customEndDate, "MMM dd, yyyy") : "Pick date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="end">
-                        <Calendar
-                          mode="single"
-                          selected={customEndDate}
-                          onSelect={setCustomEndDate}
-                          disabled={(date) => date <= newStartDate}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  )}
-                </div>
-              </RadioGroup>
-            </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: "15days", label: "15 Days" },
+                      { value: "1month", label: "1 Month" },
+                      { value: "2months", label: "2 Months" },
+                      { value: "3months", label: "3 Months" },
+                    ].map((option) => (
+                      <div
+                        key={option.value}
+                        className={cn(
+                          "flex items-center space-x-2 rounded-lg border p-3 cursor-pointer transition-colors",
+                          durationOption === option.value && "border-primary bg-primary/5"
+                        )}
+                      >
+                        <RadioGroupItem value={option.value} id={option.value} />
+                        <Label htmlFor={option.value} className="cursor-pointer flex-1">
+                          {option.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Custom Date Option */}
+                  <div
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                      durationOption === "custom" && "border-primary bg-primary/5"
+                    )}
+                    onClick={() => setDurationOption("custom")}
+                  >
+                    <RadioGroupItem value="custom" id="custom" />
+                    <Label htmlFor="custom" className="cursor-pointer">Custom End Date</Label>
+                    {durationOption === "custom" && (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="ml-auto"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {customEndDate ? format(customEndDate, "MMM dd, yyyy") : "Pick date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                          <Calendar
+                            mode="single"
+                            selected={customEndDate}
+                            onSelect={setCustomEndDate}
+                            disabled={(date) => date <= newStartDate}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
 
             {/* New Dates Preview */}
             <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">

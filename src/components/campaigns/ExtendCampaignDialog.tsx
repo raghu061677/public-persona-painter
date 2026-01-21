@@ -407,64 +407,66 @@ export function ExtendCampaignDialog({
               <RadioGroup
                 value={durationOption}
                 onValueChange={(v) => setDurationOption(v as DurationOption)}
-                className="grid grid-cols-2 gap-2"
+                className="space-y-2"
               >
-                {[
-                  { value: "15days", label: "15 Days" },
-                  { value: "1month", label: "1 Month" },
-                  { value: "2months", label: "2 Months" },
-                  { value: "3months", label: "3 Months" },
-                ].map((option) => (
-                  <div
-                    key={option.value}
-                    className={cn(
-                      "flex items-center space-x-2 rounded-lg border p-3 cursor-pointer transition-colors",
-                      durationOption === option.value && "border-primary bg-primary/5"
-                    )}
-                  >
-                    <RadioGroupItem value={option.value} id={option.value} />
-                    <Label htmlFor={option.value} className="cursor-pointer flex-1">
-                      {option.label}
-                    </Label>
-                  </div>
-                ))}
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: "15days", label: "15 Days" },
+                    { value: "1month", label: "1 Month" },
+                    { value: "2months", label: "2 Months" },
+                    { value: "3months", label: "3 Months" },
+                  ].map((option) => (
+                    <div
+                      key={option.value}
+                      className={cn(
+                        "flex items-center space-x-2 rounded-lg border p-3 cursor-pointer transition-colors",
+                        durationOption === option.value && "border-primary bg-primary/5"
+                      )}
+                    >
+                      <RadioGroupItem value={option.value} id={option.value} />
+                      <Label htmlFor={option.value} className="cursor-pointer flex-1">
+                        {option.label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Custom Date Option */}
+                <div
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                    durationOption === "custom" && "border-primary bg-primary/5"
+                  )}
+                  onClick={() => setDurationOption("custom")}
+                >
+                  <RadioGroupItem value="custom" id="custom" />
+                  <Label htmlFor="custom" className="cursor-pointer">Custom Date</Label>
+                  {durationOption === "custom" && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="ml-auto"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {customEndDate ? format(customEndDate, "MMM dd, yyyy") : "Pick date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="end">
+                        <Calendar
+                          mode="single"
+                          selected={customEndDate}
+                          onSelect={setCustomEndDate}
+                          disabled={(date) => date <= currentEndDate}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
               </RadioGroup>
-              
-              {/* Custom Date Option */}
-              <div
-                className={cn(
-                  "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
-                  durationOption === "custom" && "border-primary bg-primary/5"
-                )}
-                onClick={() => setDurationOption("custom")}
-              >
-                <RadioGroupItem value="custom" id="custom" checked={durationOption === "custom"} />
-                <Label htmlFor="custom" className="cursor-pointer">Custom Date</Label>
-                {durationOption === "custom" && (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="ml-auto"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {customEndDate ? format(customEndDate, "MMM dd, yyyy") : "Pick date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="end">
-                      <Calendar
-                        mode="single"
-                        selected={customEndDate}
-                        onSelect={setCustomEndDate}
-                        disabled={(date) => date <= currentEndDate}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                )}
-              </div>
             </div>
 
             {/* New End Date Preview */}

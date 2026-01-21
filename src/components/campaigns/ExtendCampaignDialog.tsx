@@ -200,38 +200,50 @@ export function ExtendCampaignDialog({
 
     // Copy campaign assets with new dates and reset status
     if (campaignAssets && campaignAssets.length > 0) {
-      const newAssets = campaignAssets.map(asset => ({
-        ...asset,
-        id: undefined, // Let DB generate new ID
-        campaign_id: newCampaignId,
-        booking_start_date: newStartDateStr,
-        booking_end_date: newEndDateStr,
-        status: "Pending" as const,
-        installation_status: "Pending",
-        photos: null, // Reset photos for new campaign
-        assigned_mounter_id: null,
-        mounter_name: null,
-        assigned_at: null,
-        completed_at: null,
-        created_at: new Date().toISOString(),
-      }));
+      const newAssets = campaignAssets.map(asset => {
+        // Destructure to remove id and other fields we want to reset
+        const { id, created_at, photos, assigned_mounter_id, mounter_name, assigned_at, completed_at, ...rest } = asset;
+        return {
+          ...rest,
+          campaign_id: newCampaignId,
+          booking_start_date: newStartDateStr,
+          booking_end_date: newEndDateStr,
+          status: "Pending" as const,
+          installation_status: "Pending",
+          photos: null,
+          assigned_mounter_id: null,
+          mounter_name: null,
+          assigned_at: null,
+          completed_at: null,
+          created_at: new Date().toISOString(),
+        };
+      });
 
-      await supabase.from("campaign_assets").insert(newAssets);
+      const { error: assetsError } = await supabase.from("campaign_assets").insert(newAssets);
+      if (assetsError) {
+        console.error("Error copying campaign assets:", assetsError);
+      }
     }
 
     // Copy campaign items with new dates
     if (campaignItems && campaignItems.length > 0) {
-      const newItems = campaignItems.map(item => ({
-        ...item,
-        id: undefined,
-        campaign_id: newCampaignId,
-        start_date: newStartDateStr,
-        end_date: newEndDateStr,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }));
+      const newItems = campaignItems.map(item => {
+        // Destructure to remove id
+        const { id, created_at, updated_at, ...rest } = item;
+        return {
+          ...rest,
+          campaign_id: newCampaignId,
+          start_date: newStartDateStr,
+          end_date: newEndDateStr,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+      });
 
-      await supabase.from("campaign_items").insert(newItems);
+      const { error: itemsError } = await supabase.from("campaign_items").insert(newItems);
+      if (itemsError) {
+        console.error("Error copying campaign items:", itemsError);
+      }
     }
 
     // Create asset bookings for new campaign

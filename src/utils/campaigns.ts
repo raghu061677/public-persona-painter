@@ -7,13 +7,31 @@ export async function generateCampaignId(supabase: any): Promise<string> {
   const { data, error } = await supabase.rpc('generate_campaign_id');
   
   if (error) {
-    console.error('Error generating campaign ID:', error);
-    // Fallback to client-side generation
+    console.error('Error generating campaign ID via RPC:', error);
+    // Fallback to sequential client-side generation
     const now = new Date();
     const year = now.getFullYear();
     const month = now.toLocaleString('en-US', { month: 'long' });
-    const random = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
-    return `CAM-${year}-${month}-${random}`;
+    const prefix = `CAM-${year}-${month}-`;
+    
+    // Query existing campaigns to get next sequence number
+    const { data: existingCampaigns } = await supabase
+      .from('campaigns')
+      .select('id')
+      .like('id', `${prefix}%`)
+      .order('id', { ascending: false })
+      .limit(1);
+    
+    let nextSeq = 1;
+    if (existingCampaigns && existingCampaigns.length > 0) {
+      const lastId = existingCampaigns[0].id;
+      const match = lastId.match(/CAM-\d{4}-[A-Za-z]+-(\d+)$/);
+      if (match) {
+        nextSeq = parseInt(match[1], 10) + 1;
+      }
+    }
+    
+    return `${prefix}${String(nextSeq).padStart(3, '0')}`;
   }
   
   return data;

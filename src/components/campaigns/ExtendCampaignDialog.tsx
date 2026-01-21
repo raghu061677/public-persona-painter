@@ -701,8 +701,8 @@ export function ExtendCampaignDialog({
                             setCopyNewEndDate(addMonths(date, 1));
                           }
                         }}
-                        disabled={(date) => date < today}
                         initialFocus
+                        className="p-3 pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>

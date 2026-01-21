@@ -13,12 +13,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Eye, Trash2, FileText, Plus, Pencil, CheckCircle2 } from "lucide-react";
+import { Eye, Trash2, FileText, Plus, Pencil, CheckCircle2, RefreshCw } from "lucide-react";
 import { CreateCampaignFromPlanDialog } from "@/components/campaigns/CreateCampaignFromPlanDialog";
 import { CampaignTemplatesDialog } from "@/components/campaigns/CampaignTemplatesDialog";
 import { BulkStatusUpdateDialog } from "@/components/campaigns/BulkStatusUpdateDialog";
 import { CampaignHealthAlerts } from "@/components/campaigns/CampaignHealthAlerts";
 import { DeleteCampaignDialog } from "@/components/campaigns/DeleteCampaignDialog";
+import { ExtendCampaignDialog } from "@/components/campaigns/ExtendCampaignDialog";
 import { getCampaignStatusConfig } from "@/utils/statusBadges";
 import { getCampaignStatusColor } from "@/utils/campaigns";
 import { formatDate as formatPlanDate } from "@/utils/plans";
@@ -48,6 +49,10 @@ export default function CampaignsList() {
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; campaign: any | null }>({
+    open: false,
+    campaign: null,
+  });
+  const [extendDialog, setExtendDialog] = useState<{ open: boolean; campaign: any | null }>({
     open: false,
     campaign: null,
   });
@@ -556,20 +561,34 @@ export default function CampaignsList() {
                       className={`px-4 py-3 text-right ${getCellClassName()}`}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => navigate(`/admin/campaigns/${campaign.id}`)}
+                          title="View Campaign"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
                         {isAdmin && (
                           <>
+                            {/* Extend/Renew button - show for Running or Completed campaigns */}
+                            {['Running', 'Completed', 'Upcoming'].includes(campaign.status) && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setExtendDialog({ open: true, campaign })}
+                                title="Extend/Renew Campaign"
+                                className="text-primary hover:text-primary hover:bg-primary/10"
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() => navigate(`/admin/campaigns/edit/${campaign.id}`)}
+                              title="Edit Campaign"
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
@@ -577,6 +596,7 @@ export default function CampaignsList() {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleOpenDeleteDialog(campaign)}
+                              title="Delete Campaign"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -612,6 +632,16 @@ export default function CampaignsList() {
             campaignId={deleteDialog.campaign.id}
             campaignName={deleteDialog.campaign.campaign_name}
             onDeleted={fetchCampaigns}
+          />
+        )}
+
+        {/* Extend/Renew Campaign Dialog */}
+        {extendDialog.campaign && (
+          <ExtendCampaignDialog
+            open={extendDialog.open}
+            onOpenChange={(open) => setExtendDialog({ ...extendDialog, open })}
+            campaign={extendDialog.campaign}
+            onSuccess={fetchCampaigns}
           />
         )}
       </PageContainer>

@@ -24,6 +24,8 @@ interface RequestBody {
   notes?: string;
   status?: string;
   is_historical_entry?: boolean;
+  gst_type?: 'gst' | 'igst';
+  gst_percent?: number;
   assets: AssetItem[];
   created_by: string;
   auto_assign?: boolean;
@@ -60,6 +62,8 @@ Deno.serve(async (req) => {
       notes,
       status = 'Draft',
       is_historical_entry = false,
+      gst_type = 'gst',
+      gst_percent: custom_gst_percent,
       assets,
       created_by,
       auto_assign = false,
@@ -167,9 +171,12 @@ Deno.serve(async (req) => {
     });
 
     const total_amount = subtotal + printing_total + mounting_total;
-    const gst_percent = 18;
+    // Use custom GST percent if provided, default to 18%
+    const gst_percent = custom_gst_percent !== undefined ? custom_gst_percent : 18;
     const gst_amount = total_amount * (gst_percent / 100);
     const grand_total = total_amount + gst_amount;
+
+    console.log('GST Settings:', { gst_type, gst_percent, gst_amount });
 
     // Determine campaign status
     let campaign_status = status;

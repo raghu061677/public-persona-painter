@@ -465,21 +465,6 @@ export default function CampaignCreate() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Select Assets</CardTitle>
-              <CardDescription>Choose media assets for this campaign</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AssetSelectionTable
-                assets={availableAssets}
-                selectedIds={selectedAssets}
-                onSelect={toggleAssetSelection}
-                onMultiSelect={handleMultiSelect}
-              />
-            </CardContent>
-          </Card>
-
           {selectedAssets.size > 0 && (
             <Card>
               <CardHeader>
@@ -617,6 +602,22 @@ export default function CampaignCreate() {
           </Card>
         </div>
       </div>
+
+      {/* Full Width Asset Selection Section */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Select Assets</CardTitle>
+          <CardDescription>Choose media assets for this campaign</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AssetSelectionTable
+            assets={availableAssets}
+            selectedIds={selectedAssets}
+            onSelect={toggleAssetSelection}
+            onMultiSelect={handleMultiSelect}
+          />
+        </CardContent>
+      </Card>
     </PageContainer>
   );
 }

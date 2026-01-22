@@ -58,6 +58,11 @@ export default function CampaignCreate() {
     notes: '',
     status: 'Planned' as string,
   });
+  
+  // GST settings
+  const [gstType, setGstType] = useState<'gst' | 'igst'>('gst');
+  const [gstPercent, setGstPercent] = useState<number>(18);
+  const [customGstPercent, setCustomGstPercent] = useState<string>('');
 
   useEffect(() => {
     fetchClients();
@@ -202,10 +207,46 @@ export default function CampaignCreate() {
     });
 
     const totalAmount = subtotal + printingTotal + mountingTotal;
-    const gstAmount = totalAmount * 0.18;
+    const effectiveGstPercent = gstPercent;
+    const gstAmount = totalAmount * (effectiveGstPercent / 100);
     const grandTotal = totalAmount + gstAmount;
 
-    return { subtotal, printingTotal, mountingTotal, totalAmount, gstAmount, grandTotal };
+    // Calculate split for GST (CGST + SGST) or single for IGST
+    const cgstPercent = gstType === 'gst' ? effectiveGstPercent / 2 : 0;
+    const sgstPercent = gstType === 'gst' ? effectiveGstPercent / 2 : 0;
+    const igstPercent = gstType === 'igst' ? effectiveGstPercent : 0;
+    const cgstAmount = gstType === 'gst' ? gstAmount / 2 : 0;
+    const sgstAmount = gstType === 'gst' ? gstAmount / 2 : 0;
+    const igstAmount = gstType === 'igst' ? gstAmount : 0;
+
+    return { 
+      subtotal, 
+      printingTotal, 
+      mountingTotal, 
+      totalAmount, 
+      gstAmount, 
+      grandTotal,
+      cgstPercent,
+      sgstPercent,
+      igstPercent,
+      cgstAmount,
+      sgstAmount,
+      igstAmount,
+      effectiveGstPercent,
+    };
+  };
+
+  const handleGstPreset = (percent: number) => {
+    setGstPercent(percent);
+    setCustomGstPercent('');
+  };
+
+  const handleCustomGstChange = (value: string) => {
+    setCustomGstPercent(value);
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue) && numValue >= 0 && numValue <= 100) {
+      setGstPercent(numValue);
+    }
   };
 
   const handleSubmit = async (autoAssign: boolean = false) => {
@@ -252,6 +293,8 @@ export default function CampaignCreate() {
           notes: formData.notes,
           status: isHistoricalEntry ? formData.status : 'Planned',
           is_historical_entry: isHistoricalEntry,
+          gst_type: gstType,
+          gst_percent: gstPercent,
           assets: Array.from(selectedAssets).map(assetId => {
             const pricing = assetPricing[assetId];
             return {
@@ -538,6 +581,75 @@ export default function CampaignCreate() {
         </div>
 
         <div className="space-y-6">
+          {/* GST Settings Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Tax Settings</CardTitle>
+              <CardDescription>Configure GST type and percentage</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Tax Type Selection */}
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Tax Type</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={gstType === 'gst' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setGstType('gst')}
+                    className="flex-1"
+                  >
+                    GST (CGST + SGST)
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={gstType === 'igst' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setGstType('igst')}
+                    className="flex-1"
+                  >
+                    IGST
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {gstType === 'gst' ? 'Intra-state: Split equally into CGST & SGST' : 'Inter-state: Single IGST rate'}
+                </p>
+              </div>
+
+              {/* GST Percentage Selection */}
+              <div>
+                <Label className="text-sm font-medium mb-2 block">GST Percentage</Label>
+                <div className="flex gap-2 flex-wrap">
+                  {[0, 5, 12, 18, 28].map((percent) => (
+                    <Button
+                      key={percent}
+                      type="button"
+                      variant={gstPercent === percent && !customGstPercent ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleGstPreset(percent)}
+                    >
+                      {percent}%
+                    </Button>
+                  ))}
+                </div>
+                <div className="flex gap-2 items-center mt-2">
+                  <Label className="text-xs text-muted-foreground whitespace-nowrap">Custom:</Label>
+                  <Input
+                    type="number"
+                    placeholder="e.g. 8"
+                    value={customGstPercent}
+                    onChange={(e) => handleCustomGstChange(e.target.value)}
+                    className="w-24 h-8 text-sm"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                  />
+                  <span className="text-sm text-muted-foreground">%</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Campaign Totals</CardTitle>
@@ -548,7 +660,7 @@ export default function CampaignCreate() {
                 <span className="font-medium">{selectedAssets.size}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Subtotal:</span>
+                <span className="text-muted-foreground">Display Cost:</span>
                 <span className="font-medium">₹{totals.subtotal.toLocaleString('en-IN')}</span>
               </div>
               <div className="flex justify-between text-sm">
@@ -561,13 +673,29 @@ export default function CampaignCreate() {
               </div>
               <Separator />
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Total (Before GST):</span>
+                <span className="text-muted-foreground">Total (Before Tax):</span>
                 <span className="font-medium">₹{totals.totalAmount.toLocaleString('en-IN')}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">GST (18%):</span>
-                <span className="font-medium">₹{totals.gstAmount.toLocaleString('en-IN')}</span>
-              </div>
+              
+              {/* Tax Breakdown */}
+              {gstType === 'gst' ? (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">CGST ({totals.cgstPercent}%):</span>
+                    <span className="font-medium">₹{totals.cgstAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">SGST ({totals.sgstPercent}%):</span>
+                    <span className="font-medium">₹{totals.sgstAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">IGST ({totals.igstPercent}%):</span>
+                  <span className="font-medium">₹{totals.igstAmount.toLocaleString('en-IN')}</span>
+                </div>
+              )}
+              
               <Separator />
               <div className="flex justify-between text-lg font-bold">
                 <span>Grand Total:</span>

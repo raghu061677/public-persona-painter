@@ -139,86 +139,92 @@ export function AssetSelectionTable({ assets, selectedIds, onSelect, onMultiSele
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      {/* Search and Filters Row */}
+      <div className="flex flex-col gap-4">
+        {/* Large Search Input */}
+        <div className="relative w-full">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
-            placeholder="Search by ID, location, area..."
+            placeholder="Search by Asset ID, location, area..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-12 h-12 text-base w-full"
           />
         </div>
-        <Select value={cityFilter} onValueChange={setCityFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Filter by city" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Cities</SelectItem>
-            {cities.map(city => (
-              <SelectItem key={city} value={city}>{city}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={mediaTypeFilter} onValueChange={setMediaTypeFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Filter by type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            {mediaTypes.map(type => (
-              <SelectItem key={type} value={type}>{type}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Assets</SelectItem>
-            <SelectItem value="available">Available</SelectItem>
-            <SelectItem value="booked">Booked</SelectItem>
-          </SelectContent>
-        </Select>
         
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="icon">
-              <Settings2 className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64" align="end">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium text-sm">Show Columns</h4>
-                <Button variant="ghost" size="sm" onClick={reset}>
-                  Reset
-                </Button>
+        {/* Filters Row */}
+        <div className="flex flex-wrap gap-3">
+          <Select value={cityFilter} onValueChange={setCityFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by city" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Cities</SelectItem>
+              {cities.map(city => (
+                <SelectItem key={city} value={city}>{city}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={mediaTypeFilter} onValueChange={setMediaTypeFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              {mediaTypes.map(type => (
+                <SelectItem key={type} value={type}>{type}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Assets</SelectItem>
+              <SelectItem value="available">Available</SelectItem>
+              <SelectItem value="booked">Booked</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Settings2 className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64" align="end">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-sm">Show Columns</h4>
+                  <Button variant="ghost" size="sm" onClick={reset}>
+                    Reset
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {ALL_COLUMNS.map((col) => (
+                    <div key={col} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={col}
+                        checked={isColumnVisible(col)}
+                        onCheckedChange={() => toggleColumn(col)}
+                      />
+                      <label
+                        htmlFor={col}
+                        className="text-sm cursor-pointer"
+                      >
+                        {COLUMN_LABELS[col]}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                <div className="text-xs text-muted-foreground border-t pt-2">
+                  {visibleKeys.length} of {ALL_COLUMNS.length} columns visible
+                </div>
               </div>
-              <div className="space-y-2">
-                {ALL_COLUMNS.map((col) => (
-                  <div key={col} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={col}
-                      checked={isColumnVisible(col)}
-                      onCheckedChange={() => toggleColumn(col)}
-                    />
-                    <label
-                      htmlFor={col}
-                      className="text-sm cursor-pointer"
-                    >
-                      {COLUMN_LABELS[col]}
-                    </label>
-                  </div>
-                ))}
-              </div>
-              <div className="text-xs text-muted-foreground border-t pt-2">
-                {visibleKeys.length} of {ALL_COLUMNS.length} columns visible
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
       {checkedAssets.size > 0 && (

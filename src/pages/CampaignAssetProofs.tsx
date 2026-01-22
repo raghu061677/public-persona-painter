@@ -241,15 +241,13 @@ export default function CampaignAssetProofs() {
         </Card>
 
         {/* Navigation Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BackToCampaignButton variant="ghost" size="icon" />
-            <div>
-              <h2 className="text-3xl font-bold tracking-tight">Proof of Installation</h2>
-              <p className="text-muted-foreground">
-                {asset?.location} - {asset?.city}
-              </p>
-            </div>
+        <div className="flex flex-col gap-4">
+          <BackToCampaignButton variant="ghost" className="self-start" />
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Proof of Installation</h2>
+            <p className="text-muted-foreground">
+              {asset?.location} - {asset?.city}
+            </p>
           </div>
         </div>
 

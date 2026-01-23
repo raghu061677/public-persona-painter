@@ -66,6 +66,32 @@ export function CreateCampaignFromPlanDialog({
       if (error) throw error;
 
       if (!data.success) {
+        // Check for conflict details in response
+        if (data.conflicts && data.conflicts.length > 0) {
+          toast({
+            title: "Asset Booking Conflict",
+            description: (
+              <div className="space-y-2">
+                <p>{data.error}</p>
+                <ul className="text-xs space-y-1 mt-2">
+                  {data.conflicts.map((c: any, i: number) => (
+                    <li key={i} className="bg-destructive/10 p-2 rounded">
+                      <strong>{c.asset_id}</strong> ({c.location || c.city})
+                      <br />
+                      <span className="text-muted-foreground">
+                        Booked for "{c.campaign_name}" ({c.booked_from} to {c.booked_to})
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-sm mt-2">Remove these assets from the plan or adjust dates.</p>
+              </div>
+            ),
+            variant: "destructive",
+            duration: 15000,
+          });
+          return;
+        }
         throw new Error(data.error || 'Failed to convert plan');
       }
 

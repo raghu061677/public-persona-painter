@@ -172,20 +172,57 @@ serve(async (req) => {
 
     console.log(`[v9.0] Loaded ${planItems.length} plan items`);
 
-    // 5) Check for booking conflicts
+    // 5) Check for booking conflicts with detailed information
     const assetIds = planItems.map(item => item.asset_id);
-    const { data: conflicts } = await supabase
+    const { data: bookedAssets } = await supabase
       .from("media_assets")
-      .select("id, location, status, booked_from, booked_to, current_campaign_id")
+      .select("id, location, area, city, status, booked_from, booked_to, current_campaign_id")
       .in("id", assetIds)
-      .eq("status", "Booked")
-      .or(`and(booked_from.lte.${plan.end_date},booked_to.gte.${plan.start_date})`);
+      .eq("status", "Booked");
 
-    if (conflicts && conflicts.length > 0) {
+    // Filter for actual date overlaps (booked_from <= plan.end_date AND booked_to >= plan.start_date)
+    const conflicts = (bookedAssets || []).filter(asset => {
+      if (!asset.booked_from || !asset.booked_to) return false;
+      const bookedFrom = new Date(asset.booked_from);
+      const bookedTo = new Date(asset.booked_to);
+      const planStart = new Date(plan.start_date);
+      const planEnd = new Date(plan.end_date);
+      return bookedFrom <= planEnd && bookedTo >= planStart;
+    });
+
+    if (conflicts.length > 0) {
       console.warn("[v9.0] Booking conflicts found:", conflicts);
-      return jsonError(
-        `${conflicts.length} asset(s) already booked during this period`,
-        409
+      
+      // Fetch campaign details for conflicting assets
+      const campaignIds = [...new Set(conflicts.map(c => c.current_campaign_id).filter(Boolean))];
+      const { data: campaignDetails } = await supabase
+        .from("campaigns")
+        .select("id, campaign_name, client_name")
+        .in("id", campaignIds);
+      
+      const campaignMap = new Map((campaignDetails || []).map(c => [c.id, c]));
+      
+      const conflictDetails = conflicts.map(asset => ({
+        asset_id: asset.id,
+        location: asset.location || asset.area || '',
+        city: asset.city || '',
+        booked_from: asset.booked_from,
+        booked_to: asset.booked_to,
+        campaign_id: asset.current_campaign_id,
+        campaign_name: campaignMap.get(asset.current_campaign_id)?.campaign_name || 'Unknown',
+        client_name: campaignMap.get(asset.current_campaign_id)?.client_name || 'Unknown',
+      }));
+      
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `${conflicts.length} asset(s) already booked during this period`,
+          conflicts: conflictDetails,
+        }),
+        {
+          status: 409,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 

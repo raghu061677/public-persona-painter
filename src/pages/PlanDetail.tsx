@@ -804,20 +804,55 @@ export default function PlanDetail() {
       if (!response.ok) {
         const errorText = await response.text();
         let errorMessage = `HTTP ${response.status}`;
+        let conflictDetails: Array<{asset_id: string; location: string; city: string; campaign_name: string; booked_from: string; booked_to: string}> | null = null;
         
         try {
           const errorJson = JSON.parse(errorText);
           errorMessage = errorJson.error || errorMessage;
+          if (response.status === 409 && errorJson.conflicts) {
+            conflictDetails = errorJson.conflicts;
+          }
         } catch {
           errorMessage = errorText || errorMessage;
         }
         
         console.error("❌ Edge Function Error Response:", errorText);
-        toast({
-          title: "Conversion Failed",
-          description: errorMessage,
-          variant: "destructive",
-        });
+        
+        // Show detailed conflict information for 409 errors
+        if (response.status === 409 && conflictDetails && conflictDetails.length > 0) {
+          const assetList = conflictDetails.map(c => 
+            `• ${c.asset_id} (${c.location}, ${c.city}) - booked for "${c.campaign_name}" (${c.booked_from} to ${c.booked_to})`
+          ).join('\n');
+          
+          toast({
+            title: "Asset Booking Conflict",
+            description: (
+              <div className="space-y-2">
+                <p>The following assets are already booked during this period:</p>
+                <ul className="text-xs space-y-1 mt-2">
+                  {conflictDetails.map((c, i) => (
+                    <li key={i} className="bg-destructive/10 p-2 rounded">
+                      <strong>{c.asset_id}</strong> ({c.location || c.city})
+                      <br />
+                      <span className="text-muted-foreground">
+                        Booked for "{c.campaign_name}" ({c.booked_from} to {c.booked_to})
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-sm mt-2">Remove these assets from the plan or adjust dates to proceed.</p>
+              </div>
+            ),
+            variant: "destructive",
+            duration: 15000, // Show longer for conflict details
+          });
+        } else {
+          toast({
+            title: "Conversion Failed",
+            description: errorMessage,
+            variant: "destructive",
+          });
+        }
         return;
       }
 

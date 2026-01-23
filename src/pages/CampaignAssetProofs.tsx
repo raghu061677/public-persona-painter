@@ -147,9 +147,9 @@ export default function CampaignAssetProofs() {
         data = result.data;
         error = result.error;
       } else {
-        // assetId is a media_asset_code (like HYD-BQS-0045)
-        // First, find the media_asset UUID by its code
-        const { data: mediaAsset, error: mediaError } = await supabase
+        // assetId is a media_asset_code (like HYD-BQS-0045 or MNS-HYD-BQS-0045)
+        // First, try exact match on media_asset_code
+        let { data: mediaAsset, error: mediaError } = await supabase
           .from('media_assets')
           .select('id')
           .eq('media_asset_code', assetId)
@@ -157,8 +157,35 @@ export default function CampaignAssetProofs() {
         
         if (mediaError) throw mediaError;
         
+        // If no exact match, try matching the end of media_asset_code (for prefix-less URLs)
+        if (!mediaAsset) {
+          const { data: mediaAssets, error: iLikeError } = await supabase
+            .from('media_assets')
+            .select('id, media_asset_code')
+            .ilike('media_asset_code', `%${assetId}`)
+            .limit(1);
+          
+          if (iLikeError) throw iLikeError;
+          if (mediaAssets && mediaAssets.length > 0) {
+            mediaAsset = mediaAssets[0];
+          }
+        }
+        
+        // Also try matching against the legacy id field (some old assets use id as the code)
+        if (!mediaAsset) {
+          const { data: legacyAsset, error: legacyError } = await supabase
+            .from('media_assets')
+            .select('id')
+            .eq('id', assetId)
+            .maybeSingle();
+          
+          if (!legacyError && legacyAsset) {
+            mediaAsset = legacyAsset;
+          }
+        }
+        
         if (mediaAsset) {
-          // Now find the campaign_asset using the media asset's UUID
+          // Now find the campaign_asset using the media asset's UUID/id
           const result = await supabase
             .from('campaign_assets')
             .select('*')
@@ -182,6 +209,8 @@ export default function CampaignAssetProofs() {
         description: "Failed to load asset details",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 

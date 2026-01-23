@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +16,10 @@ import {
   Clock, 
   AlertTriangle,
   Search,
-  RefreshCw
+  RefreshCw,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -36,6 +39,14 @@ import {
 } from "@/components/ui/table";
 import { format, addDays, addMonths } from "date-fns";
 import { formatCurrency } from "@/utils/mediaAssets";
+
+type SortColumn = 'asset_id' | 'location' | 'area' | 'available_from' | null;
+type SortDirection = 'asc' | 'desc' | null;
+
+interface SortConfig {
+  column: SortColumn;
+  direction: SortDirection;
+}
 
 interface BookingInfo {
   campaign_id: string;
@@ -106,6 +117,11 @@ export default function MediaAvailabilityReport() {
   
   const [cities, setCities] = useState<string[]>([]);
   const [mediaTypes, setMediaTypes] = useState<string[]>([]);
+  
+  // Sort state for each tab
+  const [availableSortConfig, setAvailableSortConfig] = useState<SortConfig>({ column: null, direction: null });
+  const [bookedSortConfig, setBookedSortConfig] = useState<SortConfig>({ column: null, direction: null });
+  const [soonSortConfig, setSoonSortConfig] = useState<SortConfig>({ column: null, direction: null });
 
   useEffect(() => {
     if (company?.id) {
@@ -270,9 +286,74 @@ export default function MediaAvailabilityReport() {
     return null;
   };
 
+  // Sorting helpers
+  const handleSort = (
+    column: SortColumn,
+    currentConfig: SortConfig,
+    setConfig: React.Dispatch<React.SetStateAction<SortConfig>>
+  ) => {
+    let newDirection: SortDirection = 'asc';
+    if (currentConfig.column === column) {
+      if (currentConfig.direction === 'asc') newDirection = 'desc';
+      else if (currentConfig.direction === 'desc') newDirection = null;
+    }
+    setConfig({ column: newDirection ? column : null, direction: newDirection });
+  };
+
+  const getSortIcon = (column: SortColumn, config: SortConfig) => {
+    if (config.column !== column) {
+      return <ArrowUpDown className="h-4 w-4 ml-1 text-muted-foreground" />;
+    }
+    if (config.direction === 'asc') {
+      return <ArrowUp className="h-4 w-4 ml-1" />;
+    }
+    if (config.direction === 'desc') {
+      return <ArrowDown className="h-4 w-4 ml-1" />;
+    }
+    return <ArrowUpDown className="h-4 w-4 ml-1 text-muted-foreground" />;
+  };
+
+  const sortAssets = <T extends AvailableAsset | BookedAsset>(assets: T[], config: SortConfig): T[] => {
+    if (!config.column || !config.direction) return assets;
+    
+    return [...assets].sort((a, b) => {
+      let aVal: string | null = '';
+      let bVal: string | null = '';
+      
+      switch (config.column) {
+        case 'asset_id':
+          aVal = a.media_asset_code || a.id;
+          bVal = b.media_asset_code || b.id;
+          break;
+        case 'location':
+          aVal = a.location || '';
+          bVal = b.location || '';
+          break;
+        case 'area':
+          aVal = a.area || '';
+          bVal = b.area || '';
+          break;
+        case 'available_from':
+          aVal = (a as BookedAsset).available_from || '';
+          bVal = (b as BookedAsset).available_from || '';
+          break;
+        default:
+          return 0;
+      }
+      
+      const comparison = (aVal || '').localeCompare(bVal || '');
+      return config.direction === 'asc' ? comparison : -comparison;
+    });
+  };
+
   const filteredAvailable = filterBySearchAvailable(availableAssets);
   const filteredBooked = filterBySearchBooked(bookedAssets);
   const filteredAvailableSoon = filterBySearchBooked(availableSoonAssets);
+
+  // Apply sorting
+  const sortedAvailable = useMemo(() => sortAssets(filteredAvailable, availableSortConfig), [filteredAvailable, availableSortConfig]);
+  const sortedBooked = useMemo(() => sortAssets(filteredBooked, bookedSortConfig), [filteredBooked, bookedSortConfig]);
+  const sortedAvailableSoon = useMemo(() => sortAssets(filteredAvailableSoon, soonSortConfig), [filteredAvailableSoon, soonSortConfig]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -465,7 +546,7 @@ export default function MediaAvailabilityReport() {
           <TabsContent value="available">
             <Card>
               <CardContent className="pt-6">
-                {filteredAvailable.length === 0 ? (
+                {sortedAvailable.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     {summary ? "No available assets for selected period" : "Click 'Check Availability' to load results"}
                   </div>
@@ -474,17 +555,38 @@ export default function MediaAvailabilityReport() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Asset ID</TableHead>
+                          <TableHead 
+                            className="cursor-pointer select-none hover:bg-muted/50"
+                            onClick={() => handleSort('asset_id', availableSortConfig, setAvailableSortConfig)}
+                          >
+                            <div className="flex items-center">
+                              Asset ID {getSortIcon('asset_id', availableSortConfig)}
+                            </div>
+                          </TableHead>
                           <TableHead>Type</TableHead>
-                          <TableHead>Location</TableHead>
-                          <TableHead>City</TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none hover:bg-muted/50"
+                            onClick={() => handleSort('location', availableSortConfig, setAvailableSortConfig)}
+                          >
+                            <div className="flex items-center">
+                              Location {getSortIcon('location', availableSortConfig)}
+                            </div>
+                          </TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none hover:bg-muted/50"
+                            onClick={() => handleSort('area', availableSortConfig, setAvailableSortConfig)}
+                          >
+                            <div className="flex items-center">
+                              Area {getSortIcon('area', availableSortConfig)}
+                            </div>
+                          </TableHead>
                           <TableHead>Dimensions</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead className="text-right">Card Rate</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredAvailable.map((asset) => (
+                        {sortedAvailable.map((asset) => (
                           <TableRow key={asset.id}>
                             <TableCell className="font-mono text-sm">
                               {asset.media_asset_code || asset.id}
@@ -517,7 +619,7 @@ export default function MediaAvailabilityReport() {
           <TabsContent value="booked">
             <Card>
               <CardContent className="pt-6">
-                {filteredBooked.length === 0 ? (
+                {sortedBooked.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     {summary ? "No booked assets for selected period" : "Click 'Check Availability' to load results"}
                   </div>
@@ -526,17 +628,45 @@ export default function MediaAvailabilityReport() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Asset ID</TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none hover:bg-muted/50"
+                            onClick={() => handleSort('asset_id', bookedSortConfig, setBookedSortConfig)}
+                          >
+                            <div className="flex items-center">
+                              Asset ID {getSortIcon('asset_id', bookedSortConfig)}
+                            </div>
+                          </TableHead>
                           <TableHead>Type</TableHead>
-                          <TableHead>Location</TableHead>
-                          <TableHead>Status</TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none hover:bg-muted/50"
+                            onClick={() => handleSort('location', bookedSortConfig, setBookedSortConfig)}
+                          >
+                            <div className="flex items-center">
+                              Location {getSortIcon('location', bookedSortConfig)}
+                            </div>
+                          </TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none hover:bg-muted/50"
+                            onClick={() => handleSort('area', bookedSortConfig, setBookedSortConfig)}
+                          >
+                            <div className="flex items-center">
+                              Area {getSortIcon('area', bookedSortConfig)}
+                            </div>
+                          </TableHead>
                           <TableHead>Current Booking</TableHead>
-                          <TableHead>Available From</TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none hover:bg-muted/50"
+                            onClick={() => handleSort('available_from', bookedSortConfig, setBookedSortConfig)}
+                          >
+                            <div className="flex items-center">
+                              Available From {getSortIcon('available_from', bookedSortConfig)}
+                            </div>
+                          </TableHead>
                           <TableHead className="text-right">Card Rate</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredBooked.map((asset) => (
+                        {sortedBooked.map((asset) => (
                           <TableRow key={asset.id}>
                             <TableCell className="font-mono text-sm">
                               {asset.media_asset_code || asset.id}
@@ -547,7 +677,7 @@ export default function MediaAvailabilityReport() {
                             <TableCell>
                               <span className="max-w-[150px] truncate block">{asset.location}</span>
                             </TableCell>
-                            <TableCell>{getBookedStatusBadge(asset)}</TableCell>
+                            <TableCell>{asset.city}, {asset.area}</TableCell>
                             <TableCell>
                               {asset.current_booking ? (
                                 <div className="text-sm">
@@ -584,7 +714,7 @@ export default function MediaAvailabilityReport() {
           <TabsContent value="soon">
             <Card>
               <CardContent className="pt-6">
-                {filteredAvailableSoon.length === 0 ? (
+                {sortedAvailableSoon.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     {summary ? "No assets becoming available during selected period" : "Click 'Check Availability' to load results"}
                   </div>
@@ -593,16 +723,45 @@ export default function MediaAvailabilityReport() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Asset ID</TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none hover:bg-muted/50"
+                            onClick={() => handleSort('asset_id', soonSortConfig, setSoonSortConfig)}
+                          >
+                            <div className="flex items-center">
+                              Asset ID {getSortIcon('asset_id', soonSortConfig)}
+                            </div>
+                          </TableHead>
                           <TableHead>Type</TableHead>
-                          <TableHead>Location</TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none hover:bg-muted/50"
+                            onClick={() => handleSort('location', soonSortConfig, setSoonSortConfig)}
+                          >
+                            <div className="flex items-center">
+                              Location {getSortIcon('location', soonSortConfig)}
+                            </div>
+                          </TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none hover:bg-muted/50"
+                            onClick={() => handleSort('area', soonSortConfig, setSoonSortConfig)}
+                          >
+                            <div className="flex items-center">
+                              Area {getSortIcon('area', soonSortConfig)}
+                            </div>
+                          </TableHead>
                           <TableHead>Current Booking Ends</TableHead>
-                          <TableHead>Available From</TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none hover:bg-muted/50"
+                            onClick={() => handleSort('available_from', soonSortConfig, setSoonSortConfig)}
+                          >
+                            <div className="flex items-center">
+                              Available From {getSortIcon('available_from', soonSortConfig)}
+                            </div>
+                          </TableHead>
                           <TableHead className="text-right">Card Rate</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredAvailableSoon.map((asset) => (
+                        {sortedAvailableSoon.map((asset) => (
                           <TableRow key={asset.id}>
                             <TableCell className="font-mono text-sm">
                               {asset.media_asset_code || asset.id}
@@ -613,6 +772,7 @@ export default function MediaAvailabilityReport() {
                             <TableCell>
                               <span className="max-w-[200px] truncate block">{asset.location}</span>
                             </TableCell>
+                            <TableCell>{asset.city}, {asset.area}</TableCell>
                             <TableCell>
                               {asset.current_booking ? (
                                 <span>{format(new Date(asset.current_booking.end_date), 'dd MMM yyyy')}</span>

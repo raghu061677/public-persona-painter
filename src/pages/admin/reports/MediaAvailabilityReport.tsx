@@ -539,14 +539,14 @@ export default function MediaAvailabilityReport() {
 
     return (
       <Dialog open={showDialog === type} onOpenChange={(open) => setShowDialog(open ? type : null)}>
-        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
+        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               {icon}
               {title}
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="flex-1 min-h-0">
+          <ScrollArea className="flex-1 h-[60vh]">
             <div className="space-y-3 pr-4">
               {assets.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">No assets found</p>

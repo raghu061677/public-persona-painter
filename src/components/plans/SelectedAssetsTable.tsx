@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2, Sparkles, Loader2, Settings2, History } from "lucide-react";
+import { Trash2, Sparkles, Loader2, Settings2, History, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -28,6 +28,14 @@ import {
 } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
+
+type SortDirection = 'asc' | 'desc' | null;
+type SortableColumn = 'asset_id' | 'location' | 'area';
+
+interface SortConfig {
+  column: SortableColumn | null;
+  direction: SortDirection;
+}
 
 interface SelectedAssetsTableProps {
   assets: any[];
@@ -104,6 +112,7 @@ export function SelectedAssetsTable({
     location: string;
     cardRate: number;
   } | null>(null);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ column: null, direction: null });
   
   const { visibleKeys, setVisibleKeys } = useColumnPrefs(
     'plan-assets',
@@ -119,6 +128,63 @@ export function SelectedAssetsTable({
     } else {
       setVisibleKeys([...visibleKeys, col]);
     }
+  };
+
+  const sortedAssets = useMemo(() => {
+    if (!sortConfig.column || !sortConfig.direction) {
+      return assets;
+    }
+
+    return [...assets].sort((a, b) => {
+      let aValue: string;
+      let bValue: string;
+
+      switch (sortConfig.column) {
+        case 'asset_id':
+          aValue = (a.media_asset_code || a.id || '').toLowerCase();
+          bValue = (b.media_asset_code || b.id || '').toLowerCase();
+          break;
+        case 'location':
+          aValue = (a.location || '').toLowerCase();
+          bValue = (b.location || '').toLowerCase();
+          break;
+        case 'area':
+          aValue = (a.area || '').toLowerCase();
+          bValue = (b.area || '').toLowerCase();
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [assets, sortConfig]);
+
+  const handleSort = (column: SortableColumn) => {
+    setSortConfig(prev => {
+      if (prev.column !== column) {
+        return { column, direction: 'asc' };
+      }
+      if (prev.direction === 'asc') {
+        return { column, direction: 'desc' };
+      }
+      if (prev.direction === 'desc') {
+        return { column: null, direction: null };
+      }
+      return { column, direction: 'asc' };
+    });
+  };
+
+  const getSortIcon = (column: SortableColumn) => {
+    if (sortConfig.column !== column) {
+      return <ArrowUpDown className="ml-1 h-3 w-3 text-muted-foreground" />;
+    }
+    if (sortConfig.direction === 'asc') {
+      return <ArrowUp className="ml-1 h-3 w-3 text-primary" />;
+    }
+    return <ArrowDown className="ml-1 h-3 w-3 text-primary" />;
   };
 
   const getSuggestion = async (assetId: string, asset: any) => {
@@ -211,9 +277,39 @@ export function SelectedAssetsTable({
         <Table>
           <TableHeader>
             <TableRow>
-              {isColumnVisible('asset_id') && <TableHead>Asset ID</TableHead>}
-              {isColumnVisible('area') && <TableHead>Area</TableHead>}
-              {isColumnVisible('location') && <TableHead>Location</TableHead>}
+              {isColumnVisible('asset_id') && (
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort('asset_id')}
+                >
+                  <div className="flex items-center">
+                    Asset ID
+                    {getSortIcon('asset_id')}
+                  </div>
+                </TableHead>
+              )}
+              {isColumnVisible('area') && (
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort('area')}
+                >
+                  <div className="flex items-center">
+                    Area
+                    {getSortIcon('area')}
+                  </div>
+                </TableHead>
+              )}
+              {isColumnVisible('location') && (
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort('location')}
+                >
+                  <div className="flex items-center">
+                    Location
+                    {getSortIcon('location')}
+                  </div>
+                </TableHead>
+              )}
               {isColumnVisible('direction') && <TableHead>Direction</TableHead>}
               {isColumnVisible('dimensions') && <TableHead>Dimensions</TableHead>}
               {isColumnVisible('total_sqft') && <TableHead>Sq.Ft</TableHead>}
@@ -231,14 +327,14 @@ export function SelectedAssetsTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {assets.length === 0 ? (
+            {sortedAssets.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={20} className="text-center py-8 text-muted-foreground">
                   No assets selected. Add assets from the table below.
                 </TableCell>
               </TableRow>
             ) : (
-              assets.map((asset) => {
+              sortedAssets.map((asset) => {
                 const pricing = assetPricing[asset.id] || {};
                 
                 // Get rates from asset

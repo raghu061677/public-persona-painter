@@ -258,3 +258,6 @@ verify_jwt = true
 [functions.audit-media-assets]
 verify_jwt = true
 
+[functions.generate-vacant-media-ppt]
+verify_jwt = true
+

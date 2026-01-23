@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Plus, Settings2 } from "lucide-react";
+import { Search, Plus, Settings2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import {
   Select,
@@ -21,6 +21,14 @@ import {
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+
+type SortDirection = 'asc' | 'desc' | null;
+type SortableColumn = 'asset_id' | 'location' | 'area';
+
+interface SortConfig {
+  column: SortableColumn | null;
+  direction: SortDirection;
+}
 
 interface AssetSelectionTableProps {
   assets: any[];
@@ -70,6 +78,7 @@ export function AssetSelectionTable({ assets, selectedIds, onSelect, onMultiSele
   const [mediaTypeFilter, setMediaTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("available");
   const [checkedAssets, setCheckedAssets] = useState<Set<string>>(new Set());
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ column: null, direction: null });
   
   const {
     isReady,
@@ -91,20 +100,84 @@ export function AssetSelectionTable({ assets, selectedIds, onSelect, onMultiSele
   const cities = Array.from(new Set(assets.map(a => a.city))).sort();
   const mediaTypes = Array.from(new Set(assets.map(a => a.media_type))).sort();
 
-  const filteredAssets = assets.filter(asset => {
-    const matchesSearch = !searchTerm || 
-      asset.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.area?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesCity = cityFilter === "all" || asset.city === cityFilter;
-    const matchesType = mediaTypeFilter === "all" || asset.media_type === mediaTypeFilter;
-    const matchesStatus = statusFilter === "all" || 
-      (statusFilter === "available" && asset.status === "Available") ||
-      (statusFilter === "booked" && asset.status === "Booked");
-    
-    return matchesSearch && matchesCity && matchesType && matchesStatus;
-  });
+  const filteredAssets = useMemo(() => {
+    return assets.filter(asset => {
+      const matchesSearch = !searchTerm || 
+        asset.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        asset.media_asset_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        asset.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        asset.area?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesCity = cityFilter === "all" || asset.city === cityFilter;
+      const matchesType = mediaTypeFilter === "all" || asset.media_type === mediaTypeFilter;
+      const matchesStatus = statusFilter === "all" || 
+        (statusFilter === "available" && asset.status === "Available") ||
+        (statusFilter === "booked" && asset.status === "Booked");
+      
+      return matchesSearch && matchesCity && matchesType && matchesStatus;
+    });
+  }, [assets, searchTerm, cityFilter, mediaTypeFilter, statusFilter]);
+
+  const sortedAssets = useMemo(() => {
+    if (!sortConfig.column || !sortConfig.direction) {
+      return filteredAssets;
+    }
+
+    return [...filteredAssets].sort((a, b) => {
+      let aValue: string;
+      let bValue: string;
+
+      switch (sortConfig.column) {
+        case 'asset_id':
+          aValue = (a.media_asset_code || a.id || '').toLowerCase();
+          bValue = (b.media_asset_code || b.id || '').toLowerCase();
+          break;
+        case 'location':
+          aValue = (a.location || '').toLowerCase();
+          bValue = (b.location || '').toLowerCase();
+          break;
+        case 'area':
+          aValue = (a.area || '').toLowerCase();
+          bValue = (b.area || '').toLowerCase();
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredAssets, sortConfig]);
+
+  const handleSort = (column: SortableColumn) => {
+    setSortConfig(prev => {
+      if (prev.column !== column) {
+        return { column, direction: 'asc' };
+      }
+      if (prev.direction === 'asc') {
+        return { column, direction: 'desc' };
+      }
+      if (prev.direction === 'desc') {
+        return { column: null, direction: null };
+      }
+      return { column, direction: 'asc' };
+    });
+  };
+
+  const getSortIcon = (column: SortableColumn) => {
+    if (sortConfig.column !== column) {
+      return <ArrowUpDown className="ml-1 h-3 w-3 text-muted-foreground" />;
+    }
+    if (sortConfig.direction === 'asc') {
+      return <ArrowUp className="ml-1 h-3 w-3 text-primary" />;
+    }
+    return <ArrowDown className="ml-1 h-3 w-3 text-primary" />;
+  };
+
+  const isSortableColumn = (key: string): key is SortableColumn => {
+    return ['asset_id', 'location', 'area'].includes(key);
+  };
 
   const handleCheckAsset = (assetId: string) => {
     const newChecked = new Set(checkedAssets);
@@ -117,16 +190,16 @@ export function AssetSelectionTable({ assets, selectedIds, onSelect, onMultiSele
   };
 
   const handleSelectAll = () => {
-    if (checkedAssets.size === filteredAssets.length) {
+    if (checkedAssets.size === sortedAssets.length) {
       setCheckedAssets(new Set());
     } else {
-      setCheckedAssets(new Set(filteredAssets.map(a => a.id)));
+      setCheckedAssets(new Set(sortedAssets.map(a => a.id)));
     }
   };
 
   const handleAddSelected = () => {
     if (checkedAssets.size === 0) return;
-    const assetsToAdd = filteredAssets.filter(a => checkedAssets.has(a.id) && !selectedIds.has(a.id));
+    const assetsToAdd = sortedAssets.filter(a => checkedAssets.has(a.id) && !selectedIds.has(a.id));
     if (onMultiSelect) {
       onMultiSelect(assetsToAdd.map(a => a.id), assetsToAdd);
     }
@@ -245,32 +318,39 @@ export function AssetSelectionTable({ assets, selectedIds, onSelect, onMultiSele
 
       <div className="border rounded-lg max-h-96 overflow-y-auto">
         <Table>
-          <TableHeader className="sticky top-0 bg-background">
+          <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow>
               <TableHead className="w-12">
                 <Checkbox
-                  checked={filteredAssets.length > 0 && checkedAssets.size === filteredAssets.length}
+                  checked={sortedAssets.length > 0 && checkedAssets.size === sortedAssets.length}
                   onCheckedChange={handleSelectAll}
                   aria-label="Select all"
                 />
               </TableHead>
               {visibleKeys.map((key) => (
-                <TableHead key={key} className={key === 'asset_id' ? '' : key.includes('rate') || key.includes('charges') || key.includes('rent') ? 'text-right' : ''}>
-                  {COLUMN_LABELS[key]}
+                <TableHead 
+                  key={key} 
+                  className={`${key === 'asset_id' ? '' : key.includes('rate') || key.includes('charges') || key.includes('rent') ? 'text-right' : ''} ${isSortableColumn(key) ? 'cursor-pointer select-none hover:bg-muted/50' : ''}`}
+                  onClick={() => isSortableColumn(key) && handleSort(key)}
+                >
+                  <div className={`flex items-center ${key.includes('rate') || key.includes('charges') || key.includes('rent') ? 'justify-end' : ''}`}>
+                    {COLUMN_LABELS[key]}
+                    {isSortableColumn(key) && getSortIcon(key)}
+                  </div>
                 </TableHead>
               ))}
               <TableHead className="text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredAssets.length === 0 ? (
+            {sortedAssets.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={visibleKeys.length + 2} className="text-center py-8 text-muted-foreground">
                   No assets found
                 </TableCell>
               </TableRow>
             ) : (
-              filteredAssets.map((asset) => (
+              sortedAssets.map((asset) => (
                 <TableRow key={asset.id} className={selectedIds.has(asset.id) ? 'bg-muted/50' : ''}>
                   <TableCell>
                     <Checkbox
@@ -306,7 +386,7 @@ export function AssetSelectionTable({ assets, selectedIds, onSelect, onMultiSele
         </Table>
       </div>
       <p className="text-sm text-muted-foreground">
-        Showing {filteredAssets.length} of {assets.length} available assets
+        Showing {sortedAssets.length} of {assets.length} available assets
       </p>
     </div>
   );

@@ -19,7 +19,10 @@ import {
   RefreshCw,
   ArrowUp,
   ArrowDown,
-  ArrowUpDown
+  ArrowUpDown,
+  FileSpreadsheet,
+  Presentation,
+  FileText
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -39,6 +42,17 @@ import {
 } from "@/components/ui/table";
 import { format, addDays, addMonths } from "date-fns";
 import { formatCurrency } from "@/utils/mediaAssets";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { 
+  generateAvailabilityExcel, 
+  generateAvailabilityPDF, 
+  generateAvailabilityPPT 
+} from "@/lib/reports/generateAvailabilityExports";
 
 type SortColumn = 'asset_id' | 'location' | 'area' | 'available_from' | null;
 type SortDirection = 'asc' | 'desc' | null;
@@ -122,6 +136,39 @@ export default function MediaAvailabilityReport() {
   const [availableSortConfig, setAvailableSortConfig] = useState<SortConfig>({ column: null, direction: null });
   const [bookedSortConfig, setBookedSortConfig] = useState<SortConfig>({ column: null, direction: null });
   const [soonSortConfig, setSoonSortConfig] = useState<SortConfig>({ column: null, direction: null });
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async (type: 'excel' | 'pdf' | 'ppt') => {
+    if (!summary) {
+      toast({ title: "No Data", description: "Please check availability first", variant: "destructive" });
+      return;
+    }
+    setExporting(true);
+    try {
+      const exportData = {
+        availableAssets,
+        bookedAssets,
+        availableSoonAssets,
+        dateRange: `${format(new Date(startDate), 'dd MMM yyyy')} - ${format(new Date(endDate), 'dd MMM yyyy')}`,
+        summary: {
+          total_assets: summary.total_assets,
+          available_count: summary.available_count,
+          booked_count: summary.booked_count,
+          available_soon_count: summary.available_soon_count,
+          potential_revenue: summary.potential_revenue,
+        },
+      };
+      if (type === 'excel') await generateAvailabilityExcel(exportData);
+      else if (type === 'pdf') await generateAvailabilityPDF(exportData);
+      else await generateAvailabilityPPT(exportData);
+      toast({ title: "Export Complete", description: `${type.toUpperCase()} downloaded successfully` });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({ title: "Export Failed", description: "Could not generate the report", variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     if (company?.id) {
@@ -358,11 +405,37 @@ export default function MediaAvailabilityReport() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">Media Availability Report</h1>
-          <p className="text-muted-foreground mt-1">
-            Check asset availability for specific date ranges
-          </p>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold">Media Availability Report</h1>
+            <p className="text-muted-foreground mt-1">
+              Check asset availability for specific date ranges
+            </p>
+          </div>
+          {summary && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button disabled={exporting}>
+                  <Download className="h-4 w-4 mr-2" />
+                  {exporting ? "Exporting..." : "Export"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport('excel')}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Export to Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('ppt')}>
+                  <Presentation className="h-4 w-4 mr-2" />
+                  Export to PowerPoint
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export to PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         {/* Filters */}

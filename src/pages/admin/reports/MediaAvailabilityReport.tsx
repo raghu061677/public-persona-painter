@@ -7,6 +7,19 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { 
   Download, 
   Calendar, 
@@ -22,7 +35,9 @@ import {
   ArrowUpDown,
   FileSpreadsheet,
   Presentation,
-  FileText
+  FileText,
+  Columns,
+  RotateCcw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -53,6 +68,22 @@ import {
   generateAvailabilityPDF, 
   generateAvailabilityPPT 
 } from "@/lib/reports/generateAvailabilityExports";
+import { useColumnPrefs } from "@/hooks/use-column-prefs";
+
+// Column definitions for the availability tables
+const ALL_COLUMNS = ['asset_id', 'type', 'location', 'area', 'dimensions', 'status', 'card_rate', 'booking', 'available_from'] as const;
+const DEFAULT_VISIBLE = ['asset_id', 'type', 'location', 'area', 'status', 'card_rate', 'booking', 'available_from'];
+const COLUMN_LABELS: Record<string, string> = {
+  asset_id: 'Asset ID',
+  type: 'Type',
+  location: 'Location',
+  area: 'Area',
+  dimensions: 'Dimensions',
+  status: 'Status',
+  card_rate: 'Card Rate',
+  booking: 'Booking Info',
+  available_from: 'Available From',
+};
 
 type SortColumn = 'asset_id' | 'location' | 'area' | 'available_from' | null;
 type SortDirection = 'asc' | 'desc' | null;
@@ -137,6 +168,28 @@ export default function MediaAvailabilityReport() {
   const [bookedSortConfig, setBookedSortConfig] = useState<SortConfig>({ column: null, direction: null });
   const [soonSortConfig, setSoonSortConfig] = useState<SortConfig>({ column: null, direction: null });
   const [exporting, setExporting] = useState(false);
+  const [showConflictsDialog, setShowConflictsDialog] = useState(false);
+  
+  // Column visibility
+  const {
+    visibleKeys,
+    setVisibleKeys,
+    reset: resetColumns,
+  } = useColumnPrefs('availability-report', [...ALL_COLUMNS], DEFAULT_VISIBLE);
+  
+  const isColumnVisible = (col: string) => visibleKeys.includes(col);
+  const toggleColumn = (col: string) => {
+    if (visibleKeys.includes(col)) {
+      setVisibleKeys(visibleKeys.filter(k => k !== col));
+    } else {
+      setVisibleKeys([...visibleKeys, col]);
+    }
+  };
+  
+  // Get conflict assets from booked assets
+  const conflictAssets = useMemo(() => {
+    return bookedAssets.filter(a => a.availability_status === 'conflict');
+  }, [bookedAssets]);
 
   const handleExport = async (type: 'excel' | 'pdf' | 'ppt') => {
     if (!summary) {
@@ -571,7 +624,10 @@ export default function MediaAvailabilityReport() {
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card 
+              className={summary.conflict_count > 0 ? "cursor-pointer hover:border-orange-400 transition-colors" : ""}
+              onClick={() => summary.conflict_count > 0 && setShowConflictsDialog(true)}
+            >
               <CardContent className="pt-6">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-orange-600" />
@@ -579,16 +635,16 @@ export default function MediaAvailabilityReport() {
                 </div>
                 <div className="text-3xl font-bold mt-2 text-orange-600">{summary.conflict_count}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Multiple bookings overlap
+                  {summary.conflict_count > 0 ? "Click to view details" : "Multiple bookings overlap"}
                 </div>
               </CardContent>
             </Card>
           </div>
         )}
 
-        {/* Search */}
-        <div className="mb-4">
-          <div className="relative max-w-md">
+        {/* Search and Column Toggle */}
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <div className="relative max-w-md flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search by ID, location, city, type..."
@@ -597,6 +653,44 @@ export default function MediaAvailabilityReport() {
               className="pl-10"
             />
           </div>
+          
+          {/* Column Visibility Toggle */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Columns className="h-4 w-4" />
+                Columns
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-56">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium">Toggle Columns</span>
+                <Button variant="ghost" size="sm" onClick={resetColumns} className="h-7 px-2">
+                  <RotateCcw className="h-3 w-3 mr-1" />
+                  Reset
+                </Button>
+              </div>
+              <ScrollArea className="h-[200px]">
+                <div className="space-y-2">
+                  {ALL_COLUMNS.map((col) => (
+                    <div key={col} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`col-${col}`}
+                        checked={isColumnVisible(col)}
+                        onCheckedChange={() => toggleColumn(col)}
+                      />
+                      <label
+                        htmlFor={`col-${col}`}
+                        className="text-sm cursor-pointer"
+                      >
+                        {COLUMN_LABELS[col] || col}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* Results Tabs */}
@@ -624,61 +718,81 @@ export default function MediaAvailabilityReport() {
                     {summary ? "No available assets for selected period" : "Click 'Check Availability' to load results"}
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
+                  <div className="overflow-x-auto border rounded-md">
+                    <Table className="min-w-[900px]">
                       <TableHeader>
                         <TableRow>
-                          <TableHead 
-                            className="cursor-pointer select-none hover:bg-muted/50"
-                            onClick={() => handleSort('asset_id', availableSortConfig, setAvailableSortConfig)}
-                          >
-                            <div className="flex items-center">
-                              Asset ID {getSortIcon('asset_id', availableSortConfig)}
-                            </div>
-                          </TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead
-                            className="cursor-pointer select-none hover:bg-muted/50"
-                            onClick={() => handleSort('location', availableSortConfig, setAvailableSortConfig)}
-                          >
-                            <div className="flex items-center">
-                              Location {getSortIcon('location', availableSortConfig)}
-                            </div>
-                          </TableHead>
-                          <TableHead
-                            className="cursor-pointer select-none hover:bg-muted/50"
-                            onClick={() => handleSort('area', availableSortConfig, setAvailableSortConfig)}
-                          >
-                            <div className="flex items-center">
-                              Area {getSortIcon('area', availableSortConfig)}
-                            </div>
-                          </TableHead>
-                          <TableHead>Dimensions</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Card Rate</TableHead>
+                          {isColumnVisible('asset_id') && (
+                            <TableHead 
+                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
+                              onClick={() => handleSort('asset_id', availableSortConfig, setAvailableSortConfig)}
+                            >
+                              <div className="flex items-center">
+                                Asset ID {getSortIcon('asset_id', availableSortConfig)}
+                              </div>
+                            </TableHead>
+                          )}
+                          {isColumnVisible('type') && <TableHead className="whitespace-nowrap">Type</TableHead>}
+                          {isColumnVisible('location') && (
+                            <TableHead
+                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap min-w-[200px]"
+                              onClick={() => handleSort('location', availableSortConfig, setAvailableSortConfig)}
+                            >
+                              <div className="flex items-center">
+                                Location {getSortIcon('location', availableSortConfig)}
+                              </div>
+                            </TableHead>
+                          )}
+                          {isColumnVisible('area') && (
+                            <TableHead
+                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
+                              onClick={() => handleSort('area', availableSortConfig, setAvailableSortConfig)}
+                            >
+                              <div className="flex items-center">
+                                Area {getSortIcon('area', availableSortConfig)}
+                              </div>
+                            </TableHead>
+                          )}
+                          {isColumnVisible('dimensions') && <TableHead className="whitespace-nowrap">Dimensions</TableHead>}
+                          {isColumnVisible('status') && <TableHead className="whitespace-nowrap">Status</TableHead>}
+                          {isColumnVisible('card_rate') && <TableHead className="text-right whitespace-nowrap">Card Rate</TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {sortedAvailable.map((asset) => (
                           <TableRow key={asset.id}>
-                            <TableCell className="font-mono text-sm">
-                              {asset.media_asset_code || asset.id}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{asset.media_type}</Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4 text-muted-foreground" />
-                                <span className="max-w-[200px] truncate">{asset.location}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>{asset.city}, {asset.area}</TableCell>
-                            <TableCell>{asset.dimensions || '-'}</TableCell>
-                            <TableCell>{getAvailableStatusBadge(asset)}</TableCell>
-                            <TableCell className="text-right font-medium">
-                              {formatCurrency(asset.card_rate)}
-                            </TableCell>
+                            {isColumnVisible('asset_id') && (
+                              <TableCell className="font-mono text-sm whitespace-nowrap">
+                                {asset.media_asset_code || asset.id}
+                              </TableCell>
+                            )}
+                            {isColumnVisible('type') && (
+                              <TableCell>
+                                <Badge variant="outline">{asset.media_type}</Badge>
+                              </TableCell>
+                            )}
+                            {isColumnVisible('location') && (
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                  <span className="min-w-[150px]">{asset.location}</span>
+                                </div>
+                              </TableCell>
+                            )}
+                            {isColumnVisible('area') && (
+                              <TableCell className="whitespace-nowrap">{asset.city}, {asset.area}</TableCell>
+                            )}
+                            {isColumnVisible('dimensions') && (
+                              <TableCell className="whitespace-nowrap">{asset.dimensions || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('status') && (
+                              <TableCell>{getAvailableStatusBadge(asset)}</TableCell>
+                            )}
+                            {isColumnVisible('card_rate') && (
+                              <TableCell className="text-right font-medium whitespace-nowrap">
+                                {formatCurrency(asset.card_rate)}
+                              </TableCell>
+                            )}
                           </TableRow>
                         ))}
                       </TableBody>
@@ -697,83 +811,105 @@ export default function MediaAvailabilityReport() {
                     {summary ? "No booked assets for selected period" : "Click 'Check Availability' to load results"}
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
+                  <div className="overflow-x-auto border rounded-md">
+                    <Table className="min-w-[1000px]">
                       <TableHeader>
                         <TableRow>
-                          <TableHead
-                            className="cursor-pointer select-none hover:bg-muted/50"
-                            onClick={() => handleSort('asset_id', bookedSortConfig, setBookedSortConfig)}
-                          >
-                            <div className="flex items-center">
-                              Asset ID {getSortIcon('asset_id', bookedSortConfig)}
-                            </div>
-                          </TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead
-                            className="cursor-pointer select-none hover:bg-muted/50"
-                            onClick={() => handleSort('location', bookedSortConfig, setBookedSortConfig)}
-                          >
-                            <div className="flex items-center">
-                              Location {getSortIcon('location', bookedSortConfig)}
-                            </div>
-                          </TableHead>
-                          <TableHead
-                            className="cursor-pointer select-none hover:bg-muted/50"
-                            onClick={() => handleSort('area', bookedSortConfig, setBookedSortConfig)}
-                          >
-                            <div className="flex items-center">
-                              Area {getSortIcon('area', bookedSortConfig)}
-                            </div>
-                          </TableHead>
-                          <TableHead>Current Booking</TableHead>
-                          <TableHead
-                            className="cursor-pointer select-none hover:bg-muted/50"
-                            onClick={() => handleSort('available_from', bookedSortConfig, setBookedSortConfig)}
-                          >
-                            <div className="flex items-center">
-                              Available From {getSortIcon('available_from', bookedSortConfig)}
-                            </div>
-                          </TableHead>
-                          <TableHead className="text-right">Card Rate</TableHead>
+                          {isColumnVisible('asset_id') && (
+                            <TableHead
+                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
+                              onClick={() => handleSort('asset_id', bookedSortConfig, setBookedSortConfig)}
+                            >
+                              <div className="flex items-center">
+                                Asset ID {getSortIcon('asset_id', bookedSortConfig)}
+                              </div>
+                            </TableHead>
+                          )}
+                          {isColumnVisible('type') && <TableHead className="whitespace-nowrap">Type</TableHead>}
+                          {isColumnVisible('location') && (
+                            <TableHead
+                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap min-w-[200px]"
+                              onClick={() => handleSort('location', bookedSortConfig, setBookedSortConfig)}
+                            >
+                              <div className="flex items-center">
+                                Location {getSortIcon('location', bookedSortConfig)}
+                              </div>
+                            </TableHead>
+                          )}
+                          {isColumnVisible('area') && (
+                            <TableHead
+                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
+                              onClick={() => handleSort('area', bookedSortConfig, setBookedSortConfig)}
+                            >
+                              <div className="flex items-center">
+                                Area {getSortIcon('area', bookedSortConfig)}
+                              </div>
+                            </TableHead>
+                          )}
+                          {isColumnVisible('booking') && <TableHead className="whitespace-nowrap min-w-[180px]">Current Booking</TableHead>}
+                          {isColumnVisible('available_from') && (
+                            <TableHead
+                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
+                              onClick={() => handleSort('available_from', bookedSortConfig, setBookedSortConfig)}
+                            >
+                              <div className="flex items-center">
+                                Available From {getSortIcon('available_from', bookedSortConfig)}
+                              </div>
+                            </TableHead>
+                          )}
+                          {isColumnVisible('card_rate') && <TableHead className="text-right whitespace-nowrap">Card Rate</TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {sortedBooked.map((asset) => (
                           <TableRow key={asset.id}>
-                            <TableCell className="font-mono text-sm">
-                              {asset.media_asset_code || asset.id}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{asset.media_type}</Badge>
-                            </TableCell>
-                            <TableCell>
-                              <span className="max-w-[150px] truncate block">{asset.location}</span>
-                            </TableCell>
-                            <TableCell>{asset.city}, {asset.area}</TableCell>
-                            <TableCell>
-                              {asset.current_booking ? (
-                                <div className="text-sm">
-                                  <div className="font-medium">{asset.current_booking.campaign_name}</div>
-                                  <div className="text-muted-foreground">
-                                    {asset.current_booking.client_name}
+                            {isColumnVisible('asset_id') && (
+                              <TableCell className="font-mono text-sm whitespace-nowrap">
+                                {asset.media_asset_code || asset.id}
+                              </TableCell>
+                            )}
+                            {isColumnVisible('type') && (
+                              <TableCell>
+                                <Badge variant="outline">{asset.media_type}</Badge>
+                              </TableCell>
+                            )}
+                            {isColumnVisible('location') && (
+                              <TableCell>
+                                <span className="min-w-[150px] block">{asset.location}</span>
+                              </TableCell>
+                            )}
+                            {isColumnVisible('area') && (
+                              <TableCell className="whitespace-nowrap">{asset.city}, {asset.area}</TableCell>
+                            )}
+                            {isColumnVisible('booking') && (
+                              <TableCell>
+                                {asset.current_booking ? (
+                                  <div className="text-sm">
+                                    <div className="font-medium">{asset.current_booking.campaign_name}</div>
+                                    <div className="text-muted-foreground">
+                                      {asset.current_booking.client_name}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {format(new Date(asset.current_booking.start_date), 'dd MMM')} - {format(new Date(asset.current_booking.end_date), 'dd MMM yyyy')}
+                                    </div>
                                   </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {format(new Date(asset.current_booking.start_date), 'dd MMM')} - {format(new Date(asset.current_booking.end_date), 'dd MMM yyyy')}
-                                  </div>
-                                </div>
-                              ) : '-'}
-                            </TableCell>
-                            <TableCell>
-                              {asset.available_from ? (
-                                <Badge variant="outline" className="bg-green-50">
-                                  {format(new Date(asset.available_from), 'dd MMM yyyy')}
-                                </Badge>
-                              ) : '-'}
-                            </TableCell>
-                            <TableCell className="text-right font-medium">
-                              {formatCurrency(asset.card_rate)}
-                            </TableCell>
+                                ) : '-'}
+                              </TableCell>
+                            )}
+                            {isColumnVisible('available_from') && (
+                              <TableCell>
+                                {asset.available_from ? (
+                                  <Badge variant="outline" className="bg-green-50">
+                                    {format(new Date(asset.available_from), 'dd MMM yyyy')}
+                                  </Badge>
+                                ) : '-'}
+                              </TableCell>
+                            )}
+                            {isColumnVisible('card_rate') && (
+                              <TableCell className="text-right font-medium whitespace-nowrap">
+                                {formatCurrency(asset.card_rate)}
+                              </TableCell>
+                            )}
                           </TableRow>
                         ))}
                       </TableBody>
@@ -792,75 +928,97 @@ export default function MediaAvailabilityReport() {
                     {summary ? "No assets becoming available during selected period" : "Click 'Check Availability' to load results"}
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
+                  <div className="overflow-x-auto border rounded-md">
+                    <Table className="min-w-[1000px]">
                       <TableHeader>
                         <TableRow>
-                          <TableHead
-                            className="cursor-pointer select-none hover:bg-muted/50"
-                            onClick={() => handleSort('asset_id', soonSortConfig, setSoonSortConfig)}
-                          >
-                            <div className="flex items-center">
-                              Asset ID {getSortIcon('asset_id', soonSortConfig)}
-                            </div>
-                          </TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead
-                            className="cursor-pointer select-none hover:bg-muted/50"
-                            onClick={() => handleSort('location', soonSortConfig, setSoonSortConfig)}
-                          >
-                            <div className="flex items-center">
-                              Location {getSortIcon('location', soonSortConfig)}
-                            </div>
-                          </TableHead>
-                          <TableHead
-                            className="cursor-pointer select-none hover:bg-muted/50"
-                            onClick={() => handleSort('area', soonSortConfig, setSoonSortConfig)}
-                          >
-                            <div className="flex items-center">
-                              Area {getSortIcon('area', soonSortConfig)}
-                            </div>
-                          </TableHead>
-                          <TableHead>Current Booking Ends</TableHead>
-                          <TableHead
-                            className="cursor-pointer select-none hover:bg-muted/50"
-                            onClick={() => handleSort('available_from', soonSortConfig, setSoonSortConfig)}
-                          >
-                            <div className="flex items-center">
-                              Available From {getSortIcon('available_from', soonSortConfig)}
-                            </div>
-                          </TableHead>
-                          <TableHead className="text-right">Card Rate</TableHead>
+                          {isColumnVisible('asset_id') && (
+                            <TableHead
+                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
+                              onClick={() => handleSort('asset_id', soonSortConfig, setSoonSortConfig)}
+                            >
+                              <div className="flex items-center">
+                                Asset ID {getSortIcon('asset_id', soonSortConfig)}
+                              </div>
+                            </TableHead>
+                          )}
+                          {isColumnVisible('type') && <TableHead className="whitespace-nowrap">Type</TableHead>}
+                          {isColumnVisible('location') && (
+                            <TableHead
+                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap min-w-[200px]"
+                              onClick={() => handleSort('location', soonSortConfig, setSoonSortConfig)}
+                            >
+                              <div className="flex items-center">
+                                Location {getSortIcon('location', soonSortConfig)}
+                              </div>
+                            </TableHead>
+                          )}
+                          {isColumnVisible('area') && (
+                            <TableHead
+                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
+                              onClick={() => handleSort('area', soonSortConfig, setSoonSortConfig)}
+                            >
+                              <div className="flex items-center">
+                                Area {getSortIcon('area', soonSortConfig)}
+                              </div>
+                            </TableHead>
+                          )}
+                          {isColumnVisible('booking') && <TableHead className="whitespace-nowrap">Booking Ends</TableHead>}
+                          {isColumnVisible('available_from') && (
+                            <TableHead
+                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
+                              onClick={() => handleSort('available_from', soonSortConfig, setSoonSortConfig)}
+                            >
+                              <div className="flex items-center">
+                                Available From {getSortIcon('available_from', soonSortConfig)}
+                              </div>
+                            </TableHead>
+                          )}
+                          {isColumnVisible('card_rate') && <TableHead className="text-right whitespace-nowrap">Card Rate</TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {sortedAvailableSoon.map((asset) => (
                           <TableRow key={asset.id}>
-                            <TableCell className="font-mono text-sm">
-                              {asset.media_asset_code || asset.id}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{asset.media_type}</Badge>
-                            </TableCell>
-                            <TableCell>
-                              <span className="max-w-[200px] truncate block">{asset.location}</span>
-                            </TableCell>
-                            <TableCell>{asset.city}, {asset.area}</TableCell>
-                            <TableCell>
-                              {asset.current_booking ? (
-                                <span>{format(new Date(asset.current_booking.end_date), 'dd MMM yyyy')}</span>
-                              ) : '-'}
-                            </TableCell>
-                            <TableCell>
-                              {asset.available_from ? (
-                                <Badge className="bg-green-100 text-green-800">
-                                  {format(new Date(asset.available_from), 'dd MMM yyyy')}
-                                </Badge>
-                              ) : '-'}
-                            </TableCell>
-                            <TableCell className="text-right font-medium">
-                              {formatCurrency(asset.card_rate)}
-                            </TableCell>
+                            {isColumnVisible('asset_id') && (
+                              <TableCell className="font-mono text-sm whitespace-nowrap">
+                                {asset.media_asset_code || asset.id}
+                              </TableCell>
+                            )}
+                            {isColumnVisible('type') && (
+                              <TableCell>
+                                <Badge variant="outline">{asset.media_type}</Badge>
+                              </TableCell>
+                            )}
+                            {isColumnVisible('location') && (
+                              <TableCell>
+                                <span className="min-w-[150px] block">{asset.location}</span>
+                              </TableCell>
+                            )}
+                            {isColumnVisible('area') && (
+                              <TableCell className="whitespace-nowrap">{asset.city}, {asset.area}</TableCell>
+                            )}
+                            {isColumnVisible('booking') && (
+                              <TableCell>
+                                {asset.current_booking ? (
+                                  <span>{format(new Date(asset.current_booking.end_date), 'dd MMM yyyy')}</span>
+                                ) : '-'}
+                              </TableCell>
+                            )}
+                            {isColumnVisible('available_from') && (
+                              <TableCell>
+                                {asset.available_from ? (
+                                  <Badge className="bg-green-100 text-green-800">
+                                    {format(new Date(asset.available_from), 'dd MMM yyyy')}
+                                  </Badge>
+                                ) : '-'}
+                              </TableCell>
+                            )}
+                            {isColumnVisible('card_rate') && (
+                              <TableCell className="text-right font-medium whitespace-nowrap">
+                                {formatCurrency(asset.card_rate)}
+                              </TableCell>
+                            )}
                           </TableRow>
                         ))}
                       </TableBody>
@@ -871,6 +1029,60 @@ export default function MediaAvailabilityReport() {
             </Card>
           </TabsContent>
         </Tabs>
+        
+        {/* Conflicts Dialog */}
+        <Dialog open={showConflictsDialog} onOpenChange={setShowConflictsDialog}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-orange-600" />
+                Booking Conflicts ({conflictAssets.length} assets)
+              </DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="flex-1 pr-4">
+              <div className="space-y-4">
+                {conflictAssets.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">No conflicts found</p>
+                ) : (
+                  conflictAssets.map((asset) => (
+                    <Card key={asset.id} className="border-orange-200">
+                      <CardContent className="pt-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h4 className="font-semibold text-sm">{asset.media_asset_code || asset.id}</h4>
+                            <p className="text-sm text-muted-foreground">{asset.location}</p>
+                            <p className="text-xs text-muted-foreground">{asset.city}, {asset.area}</p>
+                          </div>
+                          <Badge className="bg-orange-100 text-orange-800 border-orange-200">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            {asset.all_bookings?.length || 0} overlapping
+                          </Badge>
+                        </div>
+                        
+                        {/* All overlapping bookings */}
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground">Overlapping Campaigns:</p>
+                          {asset.all_bookings?.map((booking, idx) => (
+                            <div key={idx} className="bg-muted/50 rounded p-2 text-sm">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium">{booking.campaign_name}</span>
+                                <Badge variant="outline" className="text-xs">{booking.status}</Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground">{booking.client_name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

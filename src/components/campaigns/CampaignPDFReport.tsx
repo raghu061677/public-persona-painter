@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { FileDown, RefreshCw } from "lucide-react";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { formatDate } from "@/utils/plans";
 import { addQrToPdfPage } from "@/lib/reports/addQrToPdf";
@@ -76,7 +76,7 @@ export function CampaignPDFReport({ campaign, campaignAssets }: CampaignPDFRepor
         ['Grand Total', formatCurrency(campaign.grand_total)],
       ];
 
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: yPos,
         head: [['Item', 'Amount']],
         body: financialData,
@@ -110,7 +110,7 @@ export function CampaignPDFReport({ campaign, campaignAssets }: CampaignPDFRepor
         ['Campaign Status', campaign.status],
       ];
 
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: yPos,
         body: metricsData,
         theme: 'plain',
@@ -144,7 +144,7 @@ export function CampaignPDFReport({ campaign, campaignAssets }: CampaignPDFRepor
         asset.mounter_name || '-',
       ]);
 
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: yPos,
         head: [['Asset ID', 'Location', 'Status', 'Mounter']],
         body: assetsData,
@@ -200,6 +200,7 @@ export function CampaignPDFReport({ campaign, campaignAssets }: CampaignPDFRepor
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Generate Campaign Report</DialogTitle>
+          <DialogDescription>Download a comprehensive PDF report of the campaign</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <p className="text-sm text-muted-foreground">

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -465,6 +466,7 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Export Campaign Proofs</DialogTitle>
+          <DialogDescription>Choose a format to export proof photos for this campaign</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">

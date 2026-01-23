@@ -14,6 +14,7 @@ import { useCompany } from "@/contexts/CompanyContext";
 import { BackToCampaignButton } from "@/components/campaigns/BackToCampaignButton";
 import { CampaignBreadcrumbs } from "@/components/campaigns/CampaignBreadcrumbs";
 import { CampaignContextHeader } from "@/components/campaigns/CampaignContextHeader";
+import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
 
 interface CampaignAsset {
   id: string;
@@ -36,6 +37,8 @@ export default function CampaignAssetProofs() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [mediaAssetCode, setMediaAssetCode] = useState<string | null>(null);
+  const [assetCodePrefix, setAssetCodePrefix] = useState<string | null>(null);
 
   useEffect(() => {
     if (campaignId && assetId) {
@@ -47,19 +50,26 @@ export default function CampaignAssetProofs() {
   // Set custom breadcrumbs when asset is loaded
   useEffect(() => {
     if (asset) {
+      const displayAssetCode = formatAssetDisplayCode({ 
+        mediaAssetCode: mediaAssetCode || asset.asset_id, 
+        fallbackId: asset.asset_id, 
+        companyPrefix: assetCodePrefix, 
+        companyName: company?.name 
+      });
+      
       setBreadcrumbs([
         { title: 'Home', href: '/admin/dashboard' },
         { title: 'Admin', href: '/admin' },
         { title: 'Operations', href: '/admin/operations' },
         { title: campaignId || 'Campaign', href: `/admin/operations/${campaignId}` },
         { title: 'Assets', href: `/admin/operations/${campaignId}` },
-        { title: asset.asset_id || asset.location || 'Asset' }
+        { title: displayAssetCode || asset.location || 'Asset' }
       ]);
     }
     
     // Clear breadcrumbs when unmounting
     return () => setBreadcrumbs(null);
-  }, [asset, campaignId, setBreadcrumbs]);
+  }, [asset, campaignId, setBreadcrumbs, mediaAssetCode, assetCodePrefix, company?.name]);
 
   useEffect(() => {
     if (campaignId && asset) {
@@ -67,23 +77,39 @@ export default function CampaignAssetProofs() {
     }
   }, [campaignId, asset]);
 
-  // Load asset QR code URL
+  // Load asset QR code URL, media asset code, and company prefix
   useEffect(() => {
-    const loadAssetQrCode = async () => {
+    const loadAssetInfo = async () => {
       if (!assetId || !asset) return;
       
       // Use the asset_id from the already fetched campaign_asset
       const { data: mediaAsset } = await supabase
         .from('media_assets')
-        .select('qr_code_url')
+        .select('qr_code_url, media_asset_code, company_id')
         .eq('id', asset.asset_id)
         .maybeSingle();
       
       if (mediaAsset?.qr_code_url) {
         setQrCodeUrl(mediaAsset.qr_code_url);
       }
+      if (mediaAsset?.media_asset_code) {
+        setMediaAssetCode(mediaAsset.media_asset_code);
+      }
+      
+      // Fetch company code settings for display prefix
+      if (mediaAsset?.company_id) {
+        const { data: codeSettings } = await supabase
+          .from('company_code_settings')
+          .select('asset_code_prefix, use_custom_asset_codes')
+          .eq('company_id', mediaAsset.company_id)
+          .maybeSingle();
+        
+        if (codeSettings?.use_custom_asset_codes && codeSettings?.asset_code_prefix) {
+          setAssetCodePrefix(codeSettings.asset_code_prefix);
+        }
+      }
     };
-    loadAssetQrCode();
+    loadAssetInfo();
   }, [asset]);
 
   const checkAdminRole = async () => {
@@ -263,7 +289,14 @@ export default function CampaignAssetProofs() {
               <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Asset ID</p>
-                  <p className="font-medium">{asset.asset_id}</p>
+                  <p className="font-medium font-mono text-sm">
+                    {formatAssetDisplayCode({ 
+                      mediaAssetCode: mediaAssetCode || asset.asset_id, 
+                      fallbackId: asset.asset_id, 
+                      companyPrefix: assetCodePrefix, 
+                      companyName: company?.name 
+                    })}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Location</p>
@@ -298,12 +331,14 @@ export default function CampaignAssetProofs() {
         </Card>
       )}
 
-      {/* Photo Upload Section */}
-      <PhotoUploadSection
-        campaignId={campaignId}
-        assetId={assetId}
-        onUploadComplete={handleUploadComplete}
-      />
+      {/* Photo Upload Section - Use asset.id (campaign_assets.id) not the URL assetId */}
+      {asset && (
+        <PhotoUploadSection
+          campaignId={campaignId}
+          assetId={asset.id}
+          onUploadComplete={handleUploadComplete}
+        />
+      )}
 
       {/* Photo Gallery */}
       {!loading && (

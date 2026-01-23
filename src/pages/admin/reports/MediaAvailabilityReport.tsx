@@ -62,23 +62,33 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { 
   generateAvailabilityExcel, 
   generateAvailabilityPDF, 
-  generateAvailabilityPPT 
+  generateAvailabilityPPT,
+  ExportTab 
 } from "@/lib/reports/generateAvailabilityExports";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
 
 // Column definitions for the availability tables
-const ALL_COLUMNS = ['asset_id', 'type', 'location', 'area', 'dimensions', 'status', 'card_rate', 'booking', 'available_from'] as const;
+const ALL_COLUMNS = [
+  'asset_id', 'type', 'location', 'area', 'city', 'dimensions', 'sqft', 
+  'direction', 'illumination', 'status', 'card_rate', 'booking', 'available_from'
+] as const;
 const DEFAULT_VISIBLE = ['asset_id', 'type', 'location', 'area', 'status', 'card_rate', 'booking', 'available_from'];
 const COLUMN_LABELS: Record<string, string> = {
   asset_id: 'Asset ID',
   type: 'Type',
   location: 'Location',
   area: 'Area',
+  city: 'City',
   dimensions: 'Dimensions',
+  sqft: 'Sq.Ft',
+  direction: 'Direction',
+  illumination: 'Illumination',
   status: 'Status',
   card_rate: 'Card Rate',
   booking: 'Booking Info',
@@ -113,6 +123,8 @@ interface AvailableAsset {
   card_rate: number;
   total_sqft: number | null;
   status: string;
+  direction?: string | null;
+  illumination_type?: string | null;
   availability_status: 'available' | 'available_soon';
   next_available_from: string | null;
 }
@@ -128,6 +140,8 @@ interface BookedAsset {
   card_rate: number;
   total_sqft: number | null;
   status: string;
+  direction?: string | null;
+  illumination_type?: string | null;
   availability_status: 'booked' | 'conflict';
   current_booking: BookingInfo | null;
   all_bookings: BookingInfo[];
@@ -144,6 +158,8 @@ interface AvailabilitySummary {
   potential_revenue: number;
 }
 
+type DialogType = 'available' | 'booked' | 'soon' | 'conflict' | null;
+
 export default function MediaAvailabilityReport() {
   const { company } = useCompany();
   const { toast } = useToast();
@@ -154,6 +170,7 @@ export default function MediaAvailabilityReport() {
   const [selectedCity, setSelectedCity] = useState<string>("all");
   const [selectedMediaType, setSelectedMediaType] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState<string>("available");
   
   const [availableAssets, setAvailableAssets] = useState<AvailableAsset[]>([]);
   const [bookedAssets, setBookedAssets] = useState<BookedAsset[]>([]);
@@ -168,7 +185,7 @@ export default function MediaAvailabilityReport() {
   const [bookedSortConfig, setBookedSortConfig] = useState<SortConfig>({ column: null, direction: null });
   const [soonSortConfig, setSoonSortConfig] = useState<SortConfig>({ column: null, direction: null });
   const [exporting, setExporting] = useState(false);
-  const [showConflictsDialog, setShowConflictsDialog] = useState(false);
+  const [showDialog, setShowDialog] = useState<DialogType>(null);
   
   // Column visibility
   const {
@@ -191,30 +208,85 @@ export default function MediaAvailabilityReport() {
     return bookedAssets.filter(a => a.availability_status === 'conflict');
   }, [bookedAssets]);
 
-  const handleExport = async (type: 'excel' | 'pdf' | 'ppt') => {
+  // Get non-conflict booked assets
+  const nonConflictBookedAssets = useMemo(() => {
+    return bookedAssets.filter(a => a.availability_status !== 'conflict');
+  }, [bookedAssets]);
+
+  const getExportTabFromActiveTab = (): ExportTab => {
+    switch (activeTab) {
+      case 'available': return 'available';
+      case 'booked': return 'booked';
+      case 'soon': return 'soon';
+      default: return 'all';
+    }
+  };
+
+  const handleExport = async (type: 'excel' | 'pdf' | 'ppt', exportScope: 'current' | 'all' = 'current') => {
     if (!summary) {
       toast({ title: "No Data", description: "Please check availability first", variant: "destructive" });
       return;
     }
     setExporting(true);
     try {
+      const exportTab: ExportTab = exportScope === 'all' ? 'all' : getExportTabFromActiveTab();
       const exportData = {
         availableAssets,
         bookedAssets,
         availableSoonAssets,
+        conflictAssets,
         dateRange: `${format(new Date(startDate), 'dd MMM yyyy')} - ${format(new Date(endDate), 'dd MMM yyyy')}`,
         summary: {
           total_assets: summary.total_assets,
           available_count: summary.available_count,
           booked_count: summary.booked_count,
           available_soon_count: summary.available_soon_count,
+          conflict_count: summary.conflict_count,
           potential_revenue: summary.potential_revenue,
         },
+        exportTab,
       };
       if (type === 'excel') await generateAvailabilityExcel(exportData);
       else if (type === 'pdf') await generateAvailabilityPDF(exportData);
       else await generateAvailabilityPPT(exportData);
-      toast({ title: "Export Complete", description: `${type.toUpperCase()} downloaded successfully` });
+      
+      const tabLabel = exportScope === 'all' ? 'All data' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1);
+      toast({ title: "Export Complete", description: `${type.toUpperCase()} (${tabLabel}) downloaded successfully` });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({ title: "Export Failed", description: "Could not generate the report", variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportConflicts = async (type: 'excel' | 'pdf' | 'ppt') => {
+    if (!summary || conflictAssets.length === 0) {
+      toast({ title: "No Data", description: "No conflicts to export", variant: "destructive" });
+      return;
+    }
+    setExporting(true);
+    try {
+      const exportData = {
+        availableAssets: [],
+        bookedAssets: [],
+        availableSoonAssets: [],
+        conflictAssets,
+        dateRange: `${format(new Date(startDate), 'dd MMM yyyy')} - ${format(new Date(endDate), 'dd MMM yyyy')}`,
+        summary: {
+          total_assets: summary.total_assets,
+          available_count: summary.available_count,
+          booked_count: summary.booked_count,
+          available_soon_count: summary.available_soon_count,
+          conflict_count: summary.conflict_count,
+          potential_revenue: summary.potential_revenue,
+        },
+        exportTab: 'conflict' as ExportTab,
+      };
+      if (type === 'excel') await generateAvailabilityExcel(exportData);
+      else if (type === 'pdf') await generateAvailabilityPDF(exportData);
+      else await generateAvailabilityPPT(exportData);
+      toast({ title: "Export Complete", description: `Conflicts ${type.toUpperCase()} downloaded successfully` });
     } catch (error) {
       console.error('Export error:', error);
       toast({ title: "Export Failed", description: "Could not generate the report", variant: "destructive" });
@@ -362,30 +434,6 @@ export default function MediaAvailabilityReport() {
     }
   };
 
-  const getStatusBadge = (asset: AvailableAsset | BookedAsset) => {
-    if ('availability_status' in asset) {
-      switch (asset.availability_status) {
-        case 'available':
-          return <Badge className="bg-green-100 text-green-800 border-green-200">
-            <CheckCircle2 className="h-3 w-3 mr-1" />Available
-          </Badge>;
-        case 'available_soon':
-          return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
-            <Clock className="h-3 w-3 mr-1" />Available Soon
-          </Badge>;
-        case 'booked':
-          return <Badge className="bg-red-100 text-red-800 border-red-200">
-            <XCircle className="h-3 w-3 mr-1" />Booked
-          </Badge>;
-        case 'conflict':
-          return <Badge className="bg-orange-100 text-orange-800 border-orange-200">
-            <AlertTriangle className="h-3 w-3 mr-1" />Conflict
-          </Badge>;
-      }
-    }
-    return null;
-  };
-
   // Sorting helpers
   const handleSort = (
     column: SortColumn,
@@ -447,13 +495,130 @@ export default function MediaAvailabilityReport() {
   };
 
   const filteredAvailable = filterBySearchAvailable(availableAssets);
-  const filteredBooked = filterBySearchBooked(bookedAssets);
+  const filteredBooked = filterBySearchBooked(nonConflictBookedAssets);
   const filteredAvailableSoon = filterBySearchBooked(availableSoonAssets);
 
   // Apply sorting
   const sortedAvailable = useMemo(() => sortAssets(filteredAvailable, availableSortConfig), [filteredAvailable, availableSortConfig]);
   const sortedBooked = useMemo(() => sortAssets(filteredBooked, bookedSortConfig), [filteredBooked, bookedSortConfig]);
   const sortedAvailableSoon = useMemo(() => sortAssets(filteredAvailableSoon, soonSortConfig), [filteredAvailableSoon, soonSortConfig]);
+
+  // Render asset dialog content
+  const renderDialogAssets = (type: DialogType) => {
+    let assets: (AvailableAsset | BookedAsset)[] = [];
+    let title = "";
+    let icon = null;
+    let colorClass = "";
+
+    switch (type) {
+      case 'available':
+        assets = sortedAvailable;
+        title = `Available Assets (${assets.length})`;
+        icon = <CheckCircle2 className="h-5 w-5 text-green-600" />;
+        colorClass = "border-green-200";
+        break;
+      case 'booked':
+        assets = sortedBooked;
+        title = `Booked Assets (${assets.length})`;
+        icon = <XCircle className="h-5 w-5 text-red-600" />;
+        colorClass = "border-red-200";
+        break;
+      case 'soon':
+        assets = sortedAvailableSoon;
+        title = `Available Soon (${assets.length})`;
+        icon = <Clock className="h-5 w-5 text-yellow-600" />;
+        colorClass = "border-yellow-200";
+        break;
+      case 'conflict':
+        assets = conflictAssets;
+        title = `Booking Conflicts (${assets.length})`;
+        icon = <AlertTriangle className="h-5 w-5 text-orange-600" />;
+        colorClass = "border-orange-200";
+        break;
+    }
+
+    return (
+      <Dialog open={showDialog === type} onOpenChange={(open) => setShowDialog(open ? type : null)}>
+        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              {icon}
+              {title}
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="space-y-3 pr-4">
+              {assets.length === 0 ? (
+                <p className="text-muted-foreground text-center py-4">No assets found</p>
+              ) : (
+                assets.map((asset) => {
+                  const bookedAsset = asset as BookedAsset;
+                  const isConflict = type === 'conflict';
+                  const isBooked = type === 'booked' || type === 'soon';
+                  
+                  return (
+                    <Card key={asset.id} className={colorClass}>
+                      <CardContent className="pt-4 pb-3">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h4 className="font-semibold text-sm">{asset.media_asset_code || asset.id}</h4>
+                            <p className="text-sm text-muted-foreground">{asset.location}</p>
+                            <p className="text-xs text-muted-foreground">{asset.city}, {asset.area}</p>
+                          </div>
+                          <div className="text-right">
+                            <Badge variant="outline" className="mb-1">{asset.media_type}</Badge>
+                            <p className="text-sm font-medium">{formatCurrency(asset.card_rate)}</p>
+                          </div>
+                        </div>
+                        
+                        {/* Extra info row */}
+                        <div className="flex gap-4 text-xs text-muted-foreground mt-2">
+                          {asset.dimensions && <span>Dim: {asset.dimensions}</span>}
+                          {asset.total_sqft && <span>Sq.Ft: {asset.total_sqft}</span>}
+                          {asset.direction && <span>Dir: {asset.direction}</span>}
+                          {asset.illumination_type && <span>Illum: {asset.illumination_type}</span>}
+                        </div>
+                        
+                        {/* Booking info for booked/soon types */}
+                        {isBooked && bookedAsset.current_booking && (
+                          <div className="mt-2 bg-muted/50 rounded p-2 text-sm">
+                            <div className="font-medium">{bookedAsset.current_booking.campaign_name}</div>
+                            <p className="text-xs text-muted-foreground">{bookedAsset.current_booking.client_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(bookedAsset.current_booking.start_date), 'dd MMM')} - {format(new Date(bookedAsset.current_booking.end_date), 'dd MMM yyyy')}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {/* Conflict details */}
+                        {isConflict && bookedAsset.all_bookings && bookedAsset.all_bookings.length > 0 && (
+                          <div className="mt-2 space-y-2">
+                            <p className="text-xs font-medium text-muted-foreground">Overlapping Campaigns ({bookedAsset.all_bookings.length}):</p>
+                            {bookedAsset.all_bookings.map((booking, idx) => (
+                              <div key={idx} className="bg-muted/50 rounded p-2 text-sm">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-medium">{booking.campaign_name}</span>
+                                  <Badge variant="outline" className="text-xs">{booking.status}</Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground">{booking.client_name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -473,18 +638,33 @@ export default function MediaAvailabilityReport() {
                   {exporting ? "Exporting..." : "Export"}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('excel')}>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Export Current Tab ({activeTab})</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => handleExport('excel', 'current')}>
                   <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Export to Excel
+                  Excel ({activeTab})
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('ppt')}>
+                <DropdownMenuItem onClick={() => handleExport('ppt', 'current')}>
                   <Presentation className="h-4 w-4 mr-2" />
-                  Export to PowerPoint
+                  PowerPoint ({activeTab})
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                <DropdownMenuItem onClick={() => handleExport('pdf', 'current')}>
                   <FileText className="h-4 w-4 mr-2" />
-                  Export to PDF
+                  PDF ({activeTab})
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Export All Data</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => handleExport('excel', 'all')}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Excel (All)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('ppt', 'all')}>
+                  <Presentation className="h-4 w-4 mr-2" />
+                  PowerPoint (All)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('pdf', 'all')}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  PDF (All)
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -585,10 +765,13 @@ export default function MediaAvailabilityReport() {
           </CardContent>
         </Card>
 
-        {/* Summary Cards */}
+        {/* Summary Cards - All Clickable */}
         {summary && (
           <div className="grid gap-4 md:grid-cols-4 mb-6">
-            <Card>
+            <Card 
+              className="cursor-pointer hover:border-green-400 transition-colors"
+              onClick={() => setShowDialog('available')}
+            >
               <CardContent className="pt-6">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
@@ -596,23 +779,29 @@ export default function MediaAvailabilityReport() {
                 </div>
                 <div className="text-3xl font-bold mt-2 text-green-600">{summary.available_count}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  {formatCurrency(summary.potential_revenue)} potential
+                  {formatCurrency(summary.potential_revenue)} potential • Click to view
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card 
+              className="cursor-pointer hover:border-red-400 transition-colors"
+              onClick={() => setShowDialog('booked')}
+            >
               <CardContent className="pt-6">
                 <div className="flex items-center gap-2">
                   <XCircle className="h-5 w-5 text-red-600" />
                   <div className="text-sm text-muted-foreground">Booked</div>
                 </div>
-                <div className="text-3xl font-bold mt-2 text-red-600">{summary.booked_count}</div>
+                <div className="text-3xl font-bold mt-2 text-red-600">{summary.booked_count - summary.conflict_count}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  During selected period
+                  During selected period • Click to view
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card 
+              className="cursor-pointer hover:border-yellow-400 transition-colors"
+              onClick={() => setShowDialog('soon')}
+            >
               <CardContent className="pt-6">
                 <div className="flex items-center gap-2">
                   <Clock className="h-5 w-5 text-yellow-600" />
@@ -620,13 +809,13 @@ export default function MediaAvailabilityReport() {
                 </div>
                 <div className="text-3xl font-bold mt-2 text-yellow-600">{summary.available_soon_count}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Becomes free during period
+                  Becomes free during period • Click to view
                 </div>
               </CardContent>
             </Card>
             <Card 
               className={summary.conflict_count > 0 ? "cursor-pointer hover:border-orange-400 transition-colors" : ""}
-              onClick={() => summary.conflict_count > 0 && setShowConflictsDialog(true)}
+              onClick={() => summary.conflict_count > 0 && setShowDialog('conflict')}
             >
               <CardContent className="pt-6">
                 <div className="flex items-center gap-2">
@@ -670,7 +859,7 @@ export default function MediaAvailabilityReport() {
                   Reset
                 </Button>
               </div>
-              <ScrollArea className="h-[200px]">
+              <ScrollArea className="h-[280px]">
                 <div className="space-y-2">
                   {ALL_COLUMNS.map((col) => (
                     <div key={col} className="flex items-center space-x-2">
@@ -694,7 +883,7 @@ export default function MediaAvailabilityReport() {
         </div>
 
         {/* Results Tabs */}
-        <Tabs defaultValue="available" className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList>
             <TabsTrigger value="available" className="gap-2">
               <CheckCircle2 className="h-4 w-4" />
@@ -719,7 +908,7 @@ export default function MediaAvailabilityReport() {
                   </div>
                 ) : (
                   <div className="overflow-x-auto border rounded-md">
-                    <Table className="min-w-[900px]">
+                    <Table className="min-w-[1200px]">
                       <TableHeader>
                         <TableRow>
                           {isColumnVisible('asset_id') && (
@@ -733,6 +922,7 @@ export default function MediaAvailabilityReport() {
                             </TableHead>
                           )}
                           {isColumnVisible('type') && <TableHead className="whitespace-nowrap">Type</TableHead>}
+                          {isColumnVisible('city') && <TableHead className="whitespace-nowrap">City</TableHead>}
                           {isColumnVisible('location') && (
                             <TableHead
                               className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap min-w-[200px]"
@@ -754,6 +944,9 @@ export default function MediaAvailabilityReport() {
                             </TableHead>
                           )}
                           {isColumnVisible('dimensions') && <TableHead className="whitespace-nowrap">Dimensions</TableHead>}
+                          {isColumnVisible('sqft') && <TableHead className="whitespace-nowrap">Sq.Ft</TableHead>}
+                          {isColumnVisible('direction') && <TableHead className="whitespace-nowrap">Direction</TableHead>}
+                          {isColumnVisible('illumination') && <TableHead className="whitespace-nowrap">Illumination</TableHead>}
                           {isColumnVisible('status') && <TableHead className="whitespace-nowrap">Status</TableHead>}
                           {isColumnVisible('card_rate') && <TableHead className="text-right whitespace-nowrap">Card Rate</TableHead>}
                         </TableRow>
@@ -771,6 +964,9 @@ export default function MediaAvailabilityReport() {
                                 <Badge variant="outline">{asset.media_type}</Badge>
                               </TableCell>
                             )}
+                            {isColumnVisible('city') && (
+                              <TableCell className="whitespace-nowrap">{asset.city}</TableCell>
+                            )}
                             {isColumnVisible('location') && (
                               <TableCell>
                                 <div className="flex items-center gap-2">
@@ -780,10 +976,19 @@ export default function MediaAvailabilityReport() {
                               </TableCell>
                             )}
                             {isColumnVisible('area') && (
-                              <TableCell className="whitespace-nowrap">{asset.city}, {asset.area}</TableCell>
+                              <TableCell className="whitespace-nowrap">{asset.area}</TableCell>
                             )}
                             {isColumnVisible('dimensions') && (
                               <TableCell className="whitespace-nowrap">{asset.dimensions || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('sqft') && (
+                              <TableCell className="whitespace-nowrap">{asset.total_sqft || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('direction') && (
+                              <TableCell className="whitespace-nowrap">{asset.direction || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('illumination') && (
+                              <TableCell className="whitespace-nowrap">{asset.illumination_type || '-'}</TableCell>
                             )}
                             {isColumnVisible('status') && (
                               <TableCell>{getAvailableStatusBadge(asset)}</TableCell>
@@ -812,7 +1017,7 @@ export default function MediaAvailabilityReport() {
                   </div>
                 ) : (
                   <div className="overflow-x-auto border rounded-md">
-                    <Table className="min-w-[1000px]">
+                    <Table className="min-w-[1200px]">
                       <TableHeader>
                         <TableRow>
                           {isColumnVisible('asset_id') && (
@@ -826,6 +1031,7 @@ export default function MediaAvailabilityReport() {
                             </TableHead>
                           )}
                           {isColumnVisible('type') && <TableHead className="whitespace-nowrap">Type</TableHead>}
+                          {isColumnVisible('city') && <TableHead className="whitespace-nowrap">City</TableHead>}
                           {isColumnVisible('location') && (
                             <TableHead
                               className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap min-w-[200px]"
@@ -846,6 +1052,10 @@ export default function MediaAvailabilityReport() {
                               </div>
                             </TableHead>
                           )}
+                          {isColumnVisible('dimensions') && <TableHead className="whitespace-nowrap">Dimensions</TableHead>}
+                          {isColumnVisible('sqft') && <TableHead className="whitespace-nowrap">Sq.Ft</TableHead>}
+                          {isColumnVisible('direction') && <TableHead className="whitespace-nowrap">Direction</TableHead>}
+                          {isColumnVisible('illumination') && <TableHead className="whitespace-nowrap">Illumination</TableHead>}
                           {isColumnVisible('booking') && <TableHead className="whitespace-nowrap min-w-[180px]">Current Booking</TableHead>}
                           {isColumnVisible('available_from') && (
                             <TableHead
@@ -873,13 +1083,28 @@ export default function MediaAvailabilityReport() {
                                 <Badge variant="outline">{asset.media_type}</Badge>
                               </TableCell>
                             )}
+                            {isColumnVisible('city') && (
+                              <TableCell className="whitespace-nowrap">{asset.city}</TableCell>
+                            )}
                             {isColumnVisible('location') && (
                               <TableCell>
                                 <span className="min-w-[150px] block">{asset.location}</span>
                               </TableCell>
                             )}
                             {isColumnVisible('area') && (
-                              <TableCell className="whitespace-nowrap">{asset.city}, {asset.area}</TableCell>
+                              <TableCell className="whitespace-nowrap">{asset.area}</TableCell>
+                            )}
+                            {isColumnVisible('dimensions') && (
+                              <TableCell className="whitespace-nowrap">{asset.dimensions || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('sqft') && (
+                              <TableCell className="whitespace-nowrap">{asset.total_sqft || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('direction') && (
+                              <TableCell className="whitespace-nowrap">{asset.direction || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('illumination') && (
+                              <TableCell className="whitespace-nowrap">{asset.illumination_type || '-'}</TableCell>
                             )}
                             {isColumnVisible('booking') && (
                               <TableCell>
@@ -929,7 +1154,7 @@ export default function MediaAvailabilityReport() {
                   </div>
                 ) : (
                   <div className="overflow-x-auto border rounded-md">
-                    <Table className="min-w-[1000px]">
+                    <Table className="min-w-[1200px]">
                       <TableHeader>
                         <TableRow>
                           {isColumnVisible('asset_id') && (
@@ -943,6 +1168,7 @@ export default function MediaAvailabilityReport() {
                             </TableHead>
                           )}
                           {isColumnVisible('type') && <TableHead className="whitespace-nowrap">Type</TableHead>}
+                          {isColumnVisible('city') && <TableHead className="whitespace-nowrap">City</TableHead>}
                           {isColumnVisible('location') && (
                             <TableHead
                               className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap min-w-[200px]"
@@ -963,6 +1189,10 @@ export default function MediaAvailabilityReport() {
                               </div>
                             </TableHead>
                           )}
+                          {isColumnVisible('dimensions') && <TableHead className="whitespace-nowrap">Dimensions</TableHead>}
+                          {isColumnVisible('sqft') && <TableHead className="whitespace-nowrap">Sq.Ft</TableHead>}
+                          {isColumnVisible('direction') && <TableHead className="whitespace-nowrap">Direction</TableHead>}
+                          {isColumnVisible('illumination') && <TableHead className="whitespace-nowrap">Illumination</TableHead>}
                           {isColumnVisible('booking') && <TableHead className="whitespace-nowrap">Booking Ends</TableHead>}
                           {isColumnVisible('available_from') && (
                             <TableHead
@@ -990,13 +1220,28 @@ export default function MediaAvailabilityReport() {
                                 <Badge variant="outline">{asset.media_type}</Badge>
                               </TableCell>
                             )}
+                            {isColumnVisible('city') && (
+                              <TableCell className="whitespace-nowrap">{asset.city}</TableCell>
+                            )}
                             {isColumnVisible('location') && (
                               <TableCell>
                                 <span className="min-w-[150px] block">{asset.location}</span>
                               </TableCell>
                             )}
                             {isColumnVisible('area') && (
-                              <TableCell className="whitespace-nowrap">{asset.city}, {asset.area}</TableCell>
+                              <TableCell className="whitespace-nowrap">{asset.area}</TableCell>
+                            )}
+                            {isColumnVisible('dimensions') && (
+                              <TableCell className="whitespace-nowrap">{asset.dimensions || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('sqft') && (
+                              <TableCell className="whitespace-nowrap">{asset.total_sqft || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('direction') && (
+                              <TableCell className="whitespace-nowrap">{asset.direction || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('illumination') && (
+                              <TableCell className="whitespace-nowrap">{asset.illumination_type || '-'}</TableCell>
                             )}
                             {isColumnVisible('booking') && (
                               <TableCell>
@@ -1030,59 +1275,11 @@ export default function MediaAvailabilityReport() {
           </TabsContent>
         </Tabs>
         
-        {/* Conflicts Dialog */}
-        <Dialog open={showConflictsDialog} onOpenChange={setShowConflictsDialog}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-orange-600" />
-                Booking Conflicts ({conflictAssets.length} assets)
-              </DialogTitle>
-            </DialogHeader>
-            <ScrollArea className="flex-1 pr-4">
-              <div className="space-y-4">
-                {conflictAssets.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">No conflicts found</p>
-                ) : (
-                  conflictAssets.map((asset) => (
-                    <Card key={asset.id} className="border-orange-200">
-                      <CardContent className="pt-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h4 className="font-semibold text-sm">{asset.media_asset_code || asset.id}</h4>
-                            <p className="text-sm text-muted-foreground">{asset.location}</p>
-                            <p className="text-xs text-muted-foreground">{asset.city}, {asset.area}</p>
-                          </div>
-                          <Badge className="bg-orange-100 text-orange-800 border-orange-200">
-                            <AlertTriangle className="h-3 w-3 mr-1" />
-                            {asset.all_bookings?.length || 0} overlapping
-                          </Badge>
-                        </div>
-                        
-                        {/* All overlapping bookings */}
-                        <div className="space-y-2">
-                          <p className="text-xs font-medium text-muted-foreground">Overlapping Campaigns:</p>
-                          {asset.all_bookings?.map((booking, idx) => (
-                            <div key={idx} className="bg-muted/50 rounded p-2 text-sm">
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium">{booking.campaign_name}</span>
-                                <Badge variant="outline" className="text-xs">{booking.status}</Badge>
-                              </div>
-                              <p className="text-xs text-muted-foreground">{booking.client_name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
-          </DialogContent>
-        </Dialog>
+        {/* Dialogs for each type */}
+        {renderDialogAssets('available')}
+        {renderDialogAssets('booked')}
+        {renderDialogAssets('soon')}
+        {renderDialogAssets('conflict')}
       </div>
     </div>
   );

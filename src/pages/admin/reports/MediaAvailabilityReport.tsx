@@ -551,15 +551,20 @@ export default function MediaAvailabilityReport() {
 
     return (
       <Dialog open={showDialog === type} onOpenChange={(open) => setShowDialog(open ? type : null)}>
-        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
+        {/*
+          NOTE: Use a fixed container height + min-h-0 on the scroll region.
+          This prevents flex overflow issues where the content cannot scroll
+          (commonly seen when cards are taller than the available viewport).
+        */}
+        <DialogContent className="max-w-4xl h-[85vh] flex flex-col overflow-hidden">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               {icon}
               {title}
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="flex-1 h-[60vh]">
-            <div className="space-y-3 pr-4">
+          <ScrollArea className="flex-1 min-h-0 overscroll-contain">
+            <div className="space-y-3 pr-4 pb-4">
               {assets.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">No assets found</p>
               ) : (

@@ -604,6 +604,10 @@ export default function MediaAvailabilityReport() {
                             <p className="text-xs text-muted-foreground">
                               {format(new Date(bookedAsset.current_booking.start_date), 'dd MMM')} - {format(new Date(bookedAsset.current_booking.end_date), 'dd MMM yyyy')}
                             </p>
+                            {/* Campaign ID for easy identification */}
+                            <p className="text-xs font-mono text-muted-foreground mt-1">
+                              ID: <span className="select-all">{bookedAsset.current_booking.campaign_id}</span>
+                            </p>
                           </div>
                         )}
                         

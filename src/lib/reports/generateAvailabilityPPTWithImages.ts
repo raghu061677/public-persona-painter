@@ -187,8 +187,77 @@ async function fetchImageWithCache(url: string): Promise<string | null> {
   return base64;
 }
 
-async function fetchAssetPhoto(asset: AvailableAsset | BookedAsset, companyId?: string): Promise<string | null> {
-  // Priority 1: Try to get latest campaign photo
+async function fetchAssetPhoto(
+  asset: AvailableAsset | BookedAsset, 
+  companyId?: string,
+  isBookedReport: boolean = false
+): Promise<string | null> {
+  const bookedAsset = asset as BookedAsset;
+  
+  // SPECIAL RULE: For BOOKED assets, prioritize proof photos from the latest booking/campaign
+  if (isBookedReport && bookedAsset.current_booking?.campaign_id) {
+    try {
+      // First, try to get campaign_assets.id for this specific booking
+      const { data: campaignAssetData } = await supabase
+        .from('campaign_assets')
+        .select('id, photos, completed_at')
+        .eq('campaign_id', bookedAsset.current_booking.campaign_id)
+        .eq('asset_id', asset.id)
+        .limit(1);
+
+      if (campaignAssetData?.[0]) {
+        const campaignAssetId = campaignAssetData[0].id;
+        
+        // Priority 1a: Fetch latest proof photos from media_photos table for this campaign asset
+        // Prefer: geotag, traffic1, traffic2, newspaper
+        const { data: proofPhotos } = await supabase
+          .from('media_photos')
+          .select('photo_url, category')
+          .eq('campaign_id', bookedAsset.current_booking.campaign_id)
+          .eq('asset_id', campaignAssetId)
+          .order('uploaded_at', { ascending: false })
+          .limit(10);
+
+        if (proofPhotos?.length) {
+          // Order by preference: geotag -> traffic1 -> traffic2 -> newspaper
+          const categoryPriority = ['geo', 'geotag', 'traffic1', 'traffic_left', 'traffic2', 'traffic_right', 'newspaper'];
+          for (const cat of categoryPriority) {
+            const match = proofPhotos.find(p => 
+              p.category?.toLowerCase().includes(cat) || 
+              p.category?.toLowerCase() === cat
+            );
+            if (match?.photo_url) {
+              const img = await fetchImageWithCache(match.photo_url);
+              if (img) return img;
+            }
+          }
+          // Fallback: any proof photo from this campaign
+          const firstPhoto = proofPhotos[0]?.photo_url;
+          if (firstPhoto) {
+            const img = await fetchImageWithCache(firstPhoto);
+            if (img) return img;
+          }
+        }
+
+        // Priority 1b: Try campaign_assets.photos JSONB field
+        if (campaignAssetData[0].photos) {
+          const photos = campaignAssetData[0].photos as Record<string, string>;
+          // Prefer: geo/geotag -> traffic1 -> traffic2 -> newspaper
+          const photoUrl = photos.geo || photos.geotag || photos.traffic1 || photos.traffic_left || 
+                          photos.traffic2 || photos.traffic_right || photos.newspaper || 
+                          Object.values(photos).find(v => v && typeof v === 'string');
+          if (photoUrl) {
+            const img = await fetchImageWithCache(photoUrl);
+            if (img) return img;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch booked campaign proof photos:', e);
+    }
+  }
+
+  // Priority 2: Try to get latest campaign photo (for non-booked or fallback)
   if (companyId) {
     try {
       const { data: campaignAssets } = await supabase
@@ -205,7 +274,7 @@ async function fetchAssetPhoto(asset: AvailableAsset | BookedAsset, companyId?: 
 
       if (campaignAssets?.[0]?.photos) {
         const photos = campaignAssets[0].photos as Record<string, string>;
-        const photoUrl = photos.geotag || photos.traffic1 || photos.newspaper || photos.traffic2;
+        const photoUrl = photos.geo || photos.geotag || photos.traffic1 || photos.newspaper || photos.traffic2;
         if (photoUrl) {
           const img = await fetchImageWithCache(photoUrl);
           if (img) return img;
@@ -216,13 +285,13 @@ async function fetchAssetPhoto(asset: AvailableAsset | BookedAsset, companyId?: 
     }
   }
 
-  // Priority 2: Try primary_photo_url from asset
+  // Priority 3: Try primary_photo_url from asset
   if ((asset as any).primary_photo_url) {
     const img = await fetchImageWithCache((asset as any).primary_photo_url);
     if (img) return img;
   }
 
-  // Priority 3: Try to fetch from media_photos table
+  // Priority 4: Try to fetch from media_photos table
   try {
     const { data: photos } = await supabase
       .from('media_photos')
@@ -436,7 +505,9 @@ export async function generateAvailabilityPPTWithImages(data: ExportData): Promi
     const statusLabel = getStatusLabel(assetType);
 
     // Fetch asset photo
-    const photoBase64 = await fetchAssetPhoto(asset, data.companyId);
+    // Fetch asset photo - pass isBookedReport flag for booked assets to prioritize proof photos
+    const isBookedReport = exportTab === 'booked';
+    const photoBase64 = await fetchAssetPhoto(asset, data.companyId, isBookedReport);
 
     // Parse dimensions
     let width = '';

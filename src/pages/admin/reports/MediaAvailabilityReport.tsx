@@ -71,6 +71,7 @@ import {
   generateAvailabilityPPT,
   ExportTab 
 } from "@/lib/reports/generateAvailabilityExports";
+import { generateAvailabilityPPTWithImages } from "@/lib/reports/generateAvailabilityPPTWithImages";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
 
 // Column definitions for the availability tables
@@ -222,7 +223,7 @@ export default function MediaAvailabilityReport() {
     }
   };
 
-  const handleExport = async (type: 'excel' | 'pdf' | 'ppt', exportScope: 'current' | 'all' = 'current') => {
+  const handleExport = async (type: 'excel' | 'pdf' | 'ppt' | 'ppt-images', exportScope: 'current' | 'all' = 'current') => {
     if (!summary) {
       toast({ title: "No Data", description: "Please check availability first", variant: "destructive" });
       return;
@@ -245,13 +246,24 @@ export default function MediaAvailabilityReport() {
           potential_revenue: summary.potential_revenue,
         },
         exportTab,
+        companyId: company?.id,
       };
-      if (type === 'excel') await generateAvailabilityExcel(exportData);
-      else if (type === 'pdf') await generateAvailabilityPDF(exportData);
-      else await generateAvailabilityPPT(exportData);
+      
+      if (type === 'excel') {
+        await generateAvailabilityExcel(exportData);
+      } else if (type === 'pdf') {
+        await generateAvailabilityPDF(exportData);
+      } else if (type === 'ppt-images') {
+        // Premium image-based PPT export (like Plans module)
+        await generateAvailabilityPPTWithImages(exportData);
+      } else {
+        // Basic table-based PPT export
+        await generateAvailabilityPPT(exportData);
+      }
       
       const tabLabel = exportScope === 'all' ? 'All data' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1);
-      toast({ title: "Export Complete", description: `${type.toUpperCase()} (${tabLabel}) downloaded successfully` });
+      const exportTypeLabel = type === 'ppt-images' ? 'PPT (with images)' : type.toUpperCase();
+      toast({ title: "Export Complete", description: `${exportTypeLabel} (${tabLabel}) downloaded successfully` });
     } catch (error) {
       console.error('Export error:', error);
       toast({ title: "Export Failed", description: "Could not generate the report", variant: "destructive" });
@@ -638,15 +650,19 @@ export default function MediaAvailabilityReport() {
                   {exporting ? "Exporting..." : "Export"}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuContent align="end" className="w-64">
                 <DropdownMenuLabel>Export Current Tab ({activeTab})</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => handleExport('excel', 'current')}>
                   <FileSpreadsheet className="h-4 w-4 mr-2" />
                   Excel ({activeTab})
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('ppt-images', 'current')}>
+                  <Presentation className="h-4 w-4 mr-2 text-primary" />
+                  <span className="font-medium">PPT with Images ({activeTab})</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExport('ppt', 'current')}>
                   <Presentation className="h-4 w-4 mr-2" />
-                  PowerPoint ({activeTab})
+                  PPT Table Only ({activeTab})
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExport('pdf', 'current')}>
                   <FileText className="h-4 w-4 mr-2" />
@@ -658,9 +674,13 @@ export default function MediaAvailabilityReport() {
                   <FileSpreadsheet className="h-4 w-4 mr-2" />
                   Excel (All)
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('ppt-images', 'all')}>
+                  <Presentation className="h-4 w-4 mr-2 text-primary" />
+                  <span className="font-medium">PPT with Images (All)</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExport('ppt', 'all')}>
                   <Presentation className="h-4 w-4 mr-2" />
-                  PowerPoint (All)
+                  PPT Table Only (All)
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExport('pdf', 'all')}>
                   <FileText className="h-4 w-4 mr-2" />

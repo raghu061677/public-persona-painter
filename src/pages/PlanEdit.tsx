@@ -170,8 +170,15 @@ export default function PlanEdit() {
 
         const pricing: Record<string, any> = {};
         items.forEach(item => {
+          // Load sales_price from DB; if it's 0 or null, fallback to card_rate
+          const cardRate = item.card_rate || 0;
+          const effectivePrice = (item.sales_price && item.sales_price > 0) 
+            ? item.sales_price 
+            : cardRate;
+          
           pricing[item.asset_id] = {
-            negotiated_price: item.sales_price,
+            negotiated_price: effectivePrice, // Primary UI field
+            sales_price: effectivePrice,      // Keep in sync for compatibility
             printing_charges: item.printing_charges || 0,
             mounting_charges: item.mounting_charges || 0,
             discount_value: item.discount_value || 0,
@@ -442,11 +449,12 @@ export default function PlanEdit() {
         const asset = availableAssets.find(a => a.id === assetId);
         const pricing = assetPricing[assetId];
         
-        const cardRate = asset.card_rate || 0;
-        const baseRate = asset.base_rate || 0;
-        const negotiatedPrice = pricing.negotiated_price || cardRate;
-        const printing = pricing.printing_charges || 0;
-        const mounting = pricing.mounting_charges || 0;
+        const cardRate = asset?.card_rate || 0;
+        const baseRate = asset?.base_rate || 0;
+        // Priority: negotiated_price > sales_price > cardRate (consistent with PlanNew.tsx)
+        const negotiatedPrice = pricing?.negotiated_price || pricing?.sales_price || cardRate;
+        const printing = pricing?.printing_charges || 0;
+        const mounting = pricing?.mounting_charges || 0;
         
         // Calculate pro-rata
         const proRata = calcProRata(negotiatedPrice, durationDays);

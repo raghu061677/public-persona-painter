@@ -418,11 +418,14 @@ export default function PlanNew() {
         const asset = availableAssets.find(a => a.id === assetId);
         const pricing = assetPricing[assetId];
         
-        const salesPrice = pricing.sales_price || 0;
-        const discountType = pricing.discount_type || 'Percent';
-        const discountValue = pricing.discount_value || 0;
-        const printing = pricing.printing_charges || 0;
-        const mounting = pricing.mounting_charges || 0;
+        // Use negotiated_price from UI state (consistent with PlanEdit.tsx)
+        // Priority: negotiated_price > sales_price > card_rate
+        const cardRate = asset.card_rate || 0;
+        const salesPrice = pricing?.negotiated_price || pricing?.sales_price || cardRate;
+        const discountType = pricing?.discount_type || 'Percent';
+        const discountValue = pricing?.discount_value || 0;
+        const printing = pricing?.printing_charges || 0;
+        const mounting = pricing?.mounting_charges || 0;
         
         const discountAmount = discountType === 'Percent'
           ? (salesPrice * discountValue) / 100

@@ -151,3 +151,197 @@ export function toDatabasePricing(
     mounting_charges: pricing?.mounting_charges || 0,
   };
 }
+
+// =============================================================================
+// PRINTING COST CALCULATION - SINGLE SOURCE OF TRUTH
+// =============================================================================
+
+/**
+ * Interface for asset with size information
+ */
+export interface AssetWithSize {
+  total_sqft?: number | null;
+  areaSqft?: number | null;
+  width?: number | null;
+  height?: number | null;
+  dimensions?: string | null;
+}
+
+/**
+ * Result of printing cost calculation
+ */
+export interface PrintingCostResult {
+  sqft: number;
+  rate: number;
+  cost: number;
+  error: string | null;
+}
+
+/**
+ * Parse dimensions string to calculate total square feet
+ * Supports formats: "40x20", "40 X 20", "25x5 - 12x3" (multi-face)
+ */
+export function parseDimensionsToSqft(dimensions: string | null | undefined): number {
+  if (!dimensions || typeof dimensions !== 'string') return 0;
+  
+  const cleaned = dimensions.trim();
+  
+  // Split by dash for multi-face
+  const faceStrings = cleaned.split(/\s*[-–—]\s*/).filter(f => f.trim());
+  
+  let totalSqft = 0;
+  
+  for (const faceStr of faceStrings) {
+    const separators = /[xX*×\s]+/;
+    const parts = faceStr.split(separators).filter(p => p).map(p => parseFloat(p.trim()));
+    
+    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1]) && parts[0] > 0 && parts[1] > 0) {
+      totalSqft += parts[0] * parts[1];
+    }
+  }
+  
+  return Math.round(totalSqft);
+}
+
+/**
+ * Get the effective square footage from an asset
+ * Priority: total_sqft > areaSqft > parsed from dimensions
+ */
+export function getAssetSqft(asset: AssetWithSize): number {
+  // Priority 1: total_sqft field
+  if (asset.total_sqft != null && asset.total_sqft > 0) {
+    return asset.total_sqft;
+  }
+  
+  // Priority 2: areaSqft field
+  if (asset.areaSqft != null && asset.areaSqft > 0) {
+    return asset.areaSqft;
+  }
+  
+  // Priority 3: Calculate from width x height
+  if (asset.width != null && asset.height != null && asset.width > 0 && asset.height > 0) {
+    return Math.round(asset.width * asset.height);
+  }
+  
+  // Priority 4: Parse from dimensions string
+  if (asset.dimensions) {
+    return parseDimensionsToSqft(asset.dimensions);
+  }
+  
+  return 0;
+}
+
+/**
+ * SINGLE SOURCE OF TRUTH: Calculate printing cost
+ * 
+ * Formula: Printing Cost = SQFT × Rate (₹/SQFT)
+ * 
+ * This function MUST be used everywhere printing cost is calculated:
+ * - Plan Builder UI
+ * - Plan Save
+ * - Plan → Campaign Conversion
+ * - Campaign Edit
+ * - Exports (PDF/Excel/PPT)
+ * 
+ * @param asset - Asset with size information
+ * @param printingRatePerSqft - Rate in ₹ per square foot
+ * @returns PrintingCostResult with sqft, rate, cost, and any error
+ */
+export function calculatePrintingCost(
+  asset: AssetWithSize,
+  printingRatePerSqft: number | null | undefined
+): PrintingCostResult {
+  const sqft = getAssetSqft(asset);
+  const rate = printingRatePerSqft ?? 0;
+  
+  // Validation: SQFT must be positive
+  if (sqft <= 0) {
+    return {
+      sqft: 0,
+      rate,
+      cost: 0,
+      error: "Asset size missing. Cannot calculate printing cost."
+    };
+  }
+  
+  // Validation: Rate must be non-negative
+  if (rate < 0) {
+    return {
+      sqft,
+      rate: 0,
+      cost: 0,
+      error: "Printing rate cannot be negative."
+    };
+  }
+  
+  // If rate is 0 or empty, cost is 0 (not an error)
+  if (rate === 0) {
+    return {
+      sqft,
+      rate: 0,
+      cost: 0,
+      error: null
+    };
+  }
+  
+  // Calculate: SQFT × Rate, round to 2 decimal places
+  const cost = Math.round((sqft * rate) * 100) / 100;
+  
+  return {
+    sqft,
+    rate,
+    cost,
+    error: null
+  };
+}
+
+/**
+ * SINGLE SOURCE OF TRUTH: Calculate mounting/installation cost
+ * 
+ * Formula: Mounting Cost = SQFT × Rate (₹/SQFT)
+ * 
+ * Same logic as printing cost but for mounting/installation
+ */
+export function calculateMountingCost(
+  asset: AssetWithSize,
+  mountingRatePerSqft: number | null | undefined
+): PrintingCostResult {
+  const sqft = getAssetSqft(asset);
+  const rate = mountingRatePerSqft ?? 0;
+  
+  if (sqft <= 0) {
+    return {
+      sqft: 0,
+      rate,
+      cost: 0,
+      error: "Asset size missing. Cannot calculate mounting cost."
+    };
+  }
+  
+  if (rate < 0) {
+    return {
+      sqft,
+      rate: 0,
+      cost: 0,
+      error: "Mounting rate cannot be negative."
+    };
+  }
+  
+  if (rate === 0) {
+    return {
+      sqft,
+      rate: 0,
+      cost: 0,
+      error: null
+    };
+  }
+  
+  const cost = Math.round((sqft * rate) * 100) / 100;
+  
+  return {
+    sqft,
+    rate,
+    cost,
+    error: null
+  };
+}

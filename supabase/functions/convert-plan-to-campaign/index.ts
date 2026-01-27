@@ -162,7 +162,11 @@ serve(async (req) => {
         card_rate,
         sales_price,
         printing_charges,
+        printing_rate,
+        printing_cost,
         mounting_charges,
+        installation_rate,
+        installation_cost,
         total_with_gst,
         state,
         district,
@@ -301,6 +305,9 @@ serve(async (req) => {
     // Use getEffectivePrice helper for consistent pricing
     const campaignItemsPayload = planItems.map((item) => {
       const effectivePrice = getEffectivePrice(item.sales_price, item.card_rate);
+      // Use printing_cost if available, otherwise fall back to printing_charges
+      const printingCost = item.printing_cost || item.printing_charges || 0;
+      const mountingCost = item.installation_cost || item.mounting_charges || 0;
       return {
         campaign_id: campaignId,
         plan_item_id: item.id,
@@ -309,8 +316,8 @@ serve(async (req) => {
         end_date: plan.end_date,
         card_rate: item.card_rate || 0,
         negotiated_rate: effectivePrice, // Use effective price (sales_price if > 0, else card_rate)
-        printing_charge: item.printing_charges || 0,
-        mounting_charge: item.mounting_charges || 0,
+        printing_charge: printingCost,
+        mounting_charge: mountingCost,
         final_price: item.total_with_gst || 0,
         quantity: 1,
       };
@@ -331,14 +338,17 @@ serve(async (req) => {
     // Use getEffectivePrice helper for consistent pricing
     const campaignAssetsPayload = planItems.map((item) => {
       const effectivePrice = getEffectivePrice(item.sales_price, item.card_rate);
+      // Use printing_cost if available, otherwise fall back to printing_charges
+      const printingCost = item.printing_cost || item.printing_charges || 0;
+      const mountingCost = item.installation_cost || item.mounting_charges || 0;
       return {
         campaign_id: campaignId,
         asset_id: item.asset_id,
         // Pricing snapshot - use effective price for negotiated_rate
         card_rate: item.card_rate || 0,
         negotiated_rate: effectivePrice, // Use effective price (sales_price if > 0, else card_rate)
-        printing_charges: item.printing_charges || 0,
-        mounting_charges: item.mounting_charges || 0,
+        printing_charges: printingCost,
+        mounting_charges: mountingCost,
         total_price: item.total_with_gst || 0,
         // Media snapshot
         media_type: item.media_type || "Unknown",

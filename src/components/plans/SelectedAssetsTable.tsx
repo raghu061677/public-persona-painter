@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2, Sparkles, Loader2, Settings2, History, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Trash2, Sparkles, Loader2, Settings2, History, ArrowUpDown, ArrowUp, ArrowDown, AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
+import { calculatePrintingCost, calculateMountingCost, getAssetSqft } from "@/utils/effectivePricing";
 
 type SortDirection = 'asc' | 'desc' | null;
 type SortableColumn = 'asset_id' | 'location' | 'area';
@@ -92,8 +93,8 @@ const COLUMN_LABELS: Record<string, string> = {
   pro_rata: 'Pro-Rata (₹)',
   discount: 'Discount',
   profit: 'Profit',
-  printing: 'Printing (₹)',
-  mounting: 'Mounting (₹)',
+  printing: 'Printing (Rate/Cost)',
+  mounting: 'Mounting (Rate/Cost)',
   total: 'Total (₹)',
 };
 
@@ -349,9 +350,17 @@ export function SelectedAssetsTable({
                 const discount = calcDiscount(cardRate, negotiatedPrice);
                 const profit = calcProfit(baseRate, negotiatedPrice);
                 
-                // Get charges
-                const printing = pricing.printing_charges || 0;
-                const mounting = pricing.mounting_charges || 0;
+                // Calculate printing and mounting using SQFT × Rate formula
+                const printingRate = pricing.printing_rate || 0;
+                const mountingRate = pricing.mounting_rate || 0;
+                const assetSqft = getAssetSqft(asset);
+                
+                const printingResult = calculatePrintingCost(asset, printingRate);
+                const mountingResult = calculateMountingCost(asset, mountingRate);
+                
+                // Get the calculated costs
+                const printing = printingResult.cost;
+                const mounting = mountingResult.cost;
                 const subtotal = proRata + printing + mounting;
 
                 const formatNumberWithCommas = (num: number) => {
@@ -567,24 +576,88 @@ export function SelectedAssetsTable({
                     )}
                     {isColumnVisible('printing') && (
                       <TableCell>
-                        <Input
-                          type="text"
-                          value={formatNumberWithCommas(printing)}
-                          onChange={(e) => onPricingUpdate(asset.id, 'printing_charges', parseFormattedNumber(e.target.value))}
-                          className="h-10 w-40 text-base"
-                          placeholder="0"
-                        />
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1">
+                                  <Input
+                                    type="text"
+                                    value={formatNumberWithCommas(printingRate)}
+                                    onChange={(e) => {
+                                      const rate = parseFormattedNumber(e.target.value);
+                                      onPricingUpdate(asset.id, 'printing_rate', rate);
+                                      // Auto-calculate and update the printing_charges field
+                                      const result = calculatePrintingCost(asset, rate);
+                                      onPricingUpdate(asset.id, 'printing_charges', result.cost);
+                                    }}
+                                    className="h-8 w-24 text-sm"
+                                    placeholder="₹/SQFT"
+                                  />
+                                  <span className="text-xs text-muted-foreground">/sqft</span>
+                                </div>
+                                <div className={`text-sm font-medium ${printingResult.error ? 'text-destructive' : 'text-green-600 dark:text-green-400'}`}>
+                                  {printingResult.error ? (
+                                    <span className="flex items-center gap-1">
+                                      <AlertCircle className="h-3 w-3" />
+                                      <span className="text-xs">N/A</span>
+                                    </span>
+                                  ) : (
+                                    formatCurrency(printing)
+                                  )}
+                                </div>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs font-semibold">Printing = SQFT × Rate</p>
+                              <p className="text-xs">{assetSqft} sqft × ₹{printingRate} = ₹{printing.toFixed(2)}</p>
+                              {printingResult.error && <p className="text-xs text-destructive">{printingResult.error}</p>}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </TableCell>
                     )}
                     {isColumnVisible('mounting') && (
                       <TableCell>
-                        <Input
-                          type="text"
-                          value={formatNumberWithCommas(mounting)}
-                          onChange={(e) => onPricingUpdate(asset.id, 'mounting_charges', parseFormattedNumber(e.target.value))}
-                          className="h-10 w-40 text-base"
-                          placeholder="0"
-                        />
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1">
+                                  <Input
+                                    type="text"
+                                    value={formatNumberWithCommas(mountingRate)}
+                                    onChange={(e) => {
+                                      const rate = parseFormattedNumber(e.target.value);
+                                      onPricingUpdate(asset.id, 'mounting_rate', rate);
+                                      // Auto-calculate and update the mounting_charges field
+                                      const result = calculateMountingCost(asset, rate);
+                                      onPricingUpdate(asset.id, 'mounting_charges', result.cost);
+                                    }}
+                                    className="h-8 w-24 text-sm"
+                                    placeholder="₹/SQFT"
+                                  />
+                                  <span className="text-xs text-muted-foreground">/sqft</span>
+                                </div>
+                                <div className={`text-sm font-medium ${mountingResult.error ? 'text-destructive' : 'text-green-600 dark:text-green-400'}`}>
+                                  {mountingResult.error ? (
+                                    <span className="flex items-center gap-1">
+                                      <AlertCircle className="h-3 w-3" />
+                                      <span className="text-xs">N/A</span>
+                                    </span>
+                                  ) : (
+                                    formatCurrency(mounting)
+                                  )}
+                                </div>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs font-semibold">Mounting = SQFT × Rate</p>
+                              <p className="text-xs">{assetSqft} sqft × ₹{mountingRate} = ₹{mounting.toFixed(2)}</p>
+                              {mountingResult.error && <p className="text-xs text-destructive">{mountingResult.error}</p>}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </TableCell>
                     )}
                     {isColumnVisible('total') && (

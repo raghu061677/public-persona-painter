@@ -424,6 +424,8 @@ export default function PlanNew() {
         const salesPrice = pricing?.negotiated_price || pricing?.sales_price || cardRate;
         const discountType = pricing?.discount_type || 'Percent';
         const discountValue = pricing?.discount_value || 0;
+        const printingRate = pricing?.printing_rate || 0;
+        const mountingRate = pricing?.mounting_rate || 0;
         const printing = pricing?.printing_charges || 0;
         const mounting = pricing?.mounting_charges || 0;
         
@@ -459,7 +461,11 @@ export default function PlanNew() {
           discount_type: discountType,
           discount_value: discountValue,
           discount_amount: discountAmount,
+          printing_rate: printingRate,
+          printing_cost: printing,
           printing_charges: printing,
+          installation_rate: mountingRate,
+          installation_cost: mounting,
           mounting_charges: mounting,
           subtotal,
           gst_amount: itemGst,

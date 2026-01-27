@@ -13,13 +13,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Eye, Trash2, FileText, Plus, Pencil, CheckCircle2, RefreshCw } from "lucide-react";
+import { Eye, Trash2, FileText, Plus, Pencil, CheckCircle2, RefreshCw, CopyPlus } from "lucide-react";
 import { CreateCampaignFromPlanDialog } from "@/components/campaigns/CreateCampaignFromPlanDialog";
 import { CampaignTemplatesDialog } from "@/components/campaigns/CampaignTemplatesDialog";
 import { BulkStatusUpdateDialog } from "@/components/campaigns/BulkStatusUpdateDialog";
 import { CampaignHealthAlerts } from "@/components/campaigns/CampaignHealthAlerts";
 import { DeleteCampaignDialog } from "@/components/campaigns/DeleteCampaignDialog";
 import { ExtendCampaignDialog } from "@/components/campaigns/ExtendCampaignDialog";
+import { DuplicateCampaignDialog } from "@/components/campaigns/DuplicateCampaignDialog";
 import { getCampaignStatusConfig } from "@/utils/statusBadges";
 import { getCampaignStatusColor } from "@/utils/campaigns";
 import { formatDate as formatPlanDate } from "@/utils/plans";
@@ -53,6 +54,10 @@ export default function CampaignsList() {
     campaign: null,
   });
   const [extendDialog, setExtendDialog] = useState<{ open: boolean; campaign: any | null }>({
+    open: false,
+    campaign: null,
+  });
+  const [duplicateDialog, setDuplicateDialog] = useState<{ open: boolean; campaign: any | null }>({
     open: false,
     campaign: null,
   });
@@ -587,6 +592,15 @@ export default function CampaignsList() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              onClick={() => setDuplicateDialog({ open: true, campaign })}
+                              title="Duplicate Campaign"
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            >
+                              <CopyPlus className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => navigate(`/admin/campaigns/edit/${campaign.id}`)}
                               title="Edit Campaign"
                             >
@@ -641,6 +655,16 @@ export default function CampaignsList() {
             open={extendDialog.open}
             onOpenChange={(open) => setExtendDialog({ ...extendDialog, open })}
             campaign={extendDialog.campaign}
+            onSuccess={fetchCampaigns}
+          />
+        )}
+
+        {/* Duplicate Campaign Dialog */}
+        {duplicateDialog.campaign && (
+          <DuplicateCampaignDialog
+            open={duplicateDialog.open}
+            onOpenChange={(open) => setDuplicateDialog({ ...duplicateDialog, open })}
+            campaign={duplicateDialog.campaign}
             onSuccess={fetchCampaigns}
           />
         )}

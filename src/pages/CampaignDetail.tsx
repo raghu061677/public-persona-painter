@@ -14,7 +14,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Trash2, Upload, RefreshCw, Info, Pencil, TrendingUp } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ArrowLeft, Trash2, Upload, RefreshCw, Info, Pencil, TrendingUp, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { getCampaignStatusColor, getAssetStatusColor, calculateProgress } from "@/utils/campaigns";
 import { formatDate } from "@/utils/plans";
@@ -38,6 +39,7 @@ import { ShareTrackingLinkDialog } from "@/components/campaigns/ShareTrackingLin
 import { useCompany } from "@/contexts/CompanyContext";
 import { CampaignTimelineView } from "@/components/campaigns/CampaignTimelineView";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
+import { DeleteCampaignDialog } from "@/components/campaigns/DeleteCampaignDialog";
 
 export default function CampaignDetail() {
   const { id } = useParams();
@@ -47,6 +49,7 @@ export default function CampaignDetail() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [assetCodePrefix, setAssetCodePrefix] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { company } = useCompany();
 
   // Enable automated workflows
@@ -139,28 +142,10 @@ export default function CampaignDetail() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this campaign?")) return;
+  // Check if campaign is already deleted
+  const isDeleted = campaign?.is_deleted === true;
 
-    const { error } = await supabase
-      .from('campaigns')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete campaign",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "Campaign deleted successfully",
-      });
-      navigate('/admin/campaigns');
-    }
-  };
+  const openDeleteDialog = () => setShowDeleteDialog(true);
 
   const handleAutoComplete = async () => {
     const today = new Date();
@@ -265,6 +250,19 @@ export default function CampaignDetail() {
           Back to Campaigns
         </Button>
 
+        {/* Deleted Campaign Banner */}
+        {isDeleted && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Archived Campaign</AlertTitle>
+            <AlertDescription>
+              This campaign was deleted on {campaign.deleted_at ? formatDate(campaign.deleted_at) : 'Unknown date'}.
+              <br />
+              <strong>Reason:</strong> {campaign.deletion_reason || 'No reason provided'}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Header Card with Border */}
         <Card className="mb-6 border-2">
           <CardContent className="pt-6">
@@ -322,7 +320,7 @@ export default function CampaignDetail() {
                   <TrendingUp className="mr-2 h-4 w-4" />
                   Budget Tracker
                 </Button>
-                {isAdmin && (
+                {isAdmin && !isDeleted && (
                   <>
                     {campaign.status !== 'Completed' && new Date(campaign.end_date) < new Date() && (
                       <Button
@@ -342,7 +340,7 @@ export default function CampaignDetail() {
                       <Pencil className="mr-2 h-4 w-4" />
                       Edit
                     </Button>
-                    <Button variant="destructive" size="sm" onClick={handleDelete}>
+                    <Button variant="destructive" size="sm" onClick={openDeleteDialog}>
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete
                     </Button>
@@ -743,6 +741,15 @@ export default function CampaignDetail() {
             </CardContent>
           </Card>
         )}
+
+        {/* Delete Campaign Dialog */}
+        <DeleteCampaignDialog
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          campaignId={campaign.id}
+          campaignName={campaign.campaign_name}
+          onDeleted={() => navigate('/admin/campaigns')}
+        />
       </div>
     </div>
   );

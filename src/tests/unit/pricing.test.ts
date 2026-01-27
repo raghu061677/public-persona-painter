@@ -1,4 +1,10 @@
 import { describe, it, expect } from 'vitest';
+import { 
+  calculatePrintingCost, 
+  calculateMountingCost, 
+  getAssetSqft, 
+  parseDimensionsToSqft 
+} from '@/utils/effectivePricing';
 
 describe('Pricing Calculations', () => {
   describe('GST Calculations', () => {
@@ -79,6 +85,95 @@ describe('Pricing Calculations', () => {
       const total = taxableAmount + gst;
       
       expect(total).toBe(10620); // 9000 + 1620 GST
+    });
+  });
+
+  describe('Printing Cost Calculations - SQFT × Rate', () => {
+    it('should calculate printing cost as SQFT × Rate', () => {
+      // Test case from requirements: 10 ft × 5 ft = 50 SQFT, Rate = ₹20/SQFT → Cost = ₹1000
+      const asset = { width: 10, height: 5 };
+      const printingRatePerSqft = 20;
+      
+      const result = calculatePrintingCost(asset, printingRatePerSqft);
+      
+      expect(result.sqft).toBe(50);
+      expect(result.rate).toBe(20);
+      expect(result.cost).toBe(1000);
+      expect(result.error).toBeNull();
+    });
+
+    it('should use total_sqft when available', () => {
+      const asset = { total_sqft: 100, width: 10, height: 5 };
+      const result = calculatePrintingCost(asset, 15);
+      
+      expect(result.sqft).toBe(100); // Should use total_sqft, not width*height
+      expect(result.cost).toBe(1500);
+    });
+
+    it('should return error when SQFT is 0 or missing', () => {
+      const asset = { width: 0, height: 0 };
+      const result = calculatePrintingCost(asset, 20);
+      
+      expect(result.sqft).toBe(0);
+      expect(result.cost).toBe(0);
+      expect(result.error).toBe("Asset size missing. Cannot calculate printing cost.");
+    });
+
+    it('should return 0 cost when rate is 0', () => {
+      const asset = { total_sqft: 50 };
+      const result = calculatePrintingCost(asset, 0);
+      
+      expect(result.sqft).toBe(50);
+      expect(result.cost).toBe(0);
+      expect(result.error).toBeNull();
+    });
+
+    it('should handle negative rate', () => {
+      const asset = { total_sqft: 50 };
+      const result = calculatePrintingCost(asset, -10);
+      
+      expect(result.cost).toBe(0);
+      expect(result.error).toBe("Printing rate cannot be negative.");
+    });
+
+    it('should round to 2 decimal places', () => {
+      const asset = { total_sqft: 33 };
+      const result = calculatePrintingCost(asset, 7.5);
+      
+      expect(result.cost).toBe(247.5); // 33 × 7.5 = 247.5
+    });
+  });
+
+  describe('Mounting Cost Calculations - SQFT × Rate', () => {
+    it('should calculate mounting cost as SQFT × Rate', () => {
+      const asset = { total_sqft: 100 };
+      const result = calculateMountingCost(asset, 10);
+      
+      expect(result.cost).toBe(1000);
+      expect(result.error).toBeNull();
+    });
+  });
+
+  describe('SQFT Resolution', () => {
+    it('should prioritize total_sqft over dimensions parsing', () => {
+      const asset = { total_sqft: 200, dimensions: '10x10' };
+      expect(getAssetSqft(asset)).toBe(200);
+    });
+
+    it('should parse dimensions string when total_sqft is missing', () => {
+      const asset = { dimensions: '40x20' };
+      expect(getAssetSqft(asset)).toBe(800);
+    });
+
+    it('should handle multi-face dimensions', () => {
+      // "25x5 - 12x3" = 125 + 36 = 161
+      expect(parseDimensionsToSqft('25x5 - 12x3')).toBe(161);
+    });
+
+    it('should return 0 for invalid dimensions', () => {
+      expect(parseDimensionsToSqft('')).toBe(0);
+      expect(parseDimensionsToSqft(null)).toBe(0);
+      expect(parseDimensionsToSqft('invalid')).toBe(0);
     });
   });
 });

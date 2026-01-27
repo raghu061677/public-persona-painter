@@ -6,10 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { 
   sanitizePptHyperlink, 
   sanitizePptText, 
-  getPptHyperlink,
   PPT_SAFE_FONTS 
 } from '../ppt/sanitizers';
-import { formatAssetDisplayCode } from '@/lib/assets/formatAssetDisplayCode';
 
 function validateAndFixStreetViewUrl(
   url: string | undefined,
@@ -60,35 +58,8 @@ interface OrganizationSettings {
   primary_color?: string;
 }
 
-// QR cache to avoid refetching
-const qrCache = new Map<string, { base64: string; streetViewUrl: string }>();
-
-async function getCachedQR(
-  assetId: string,
-  qrCodeUrl: string | undefined,
-  latitude: number | undefined,
-  longitude: number | undefined
-): Promise<{ base64: string; streetViewUrl: string } | null> {
-  if (!qrCodeUrl) return null;
-
-  if (qrCache.has(assetId)) {
-    return qrCache.get(assetId)!;
-  }
-
-  try {
-    const streetViewUrl = latitude && longitude ? buildStreetViewUrl(latitude, longitude) : null;
-
-    if (!streetViewUrl) return null;
-
-    const base64 = await fetchImageAsBase64(qrCodeUrl);
-    const result = { base64, streetViewUrl };
-    qrCache.set(assetId, result);
-    return result;
-  } catch (error) {
-    console.warn(`Failed to fetch QR for asset ${assetId}:`, error);
-    return null;
-  }
-}
+// NOTE: QR codes are already watermarked onto asset photos during the upload process.
+// We no longer add separate QR elements to avoid duplicates.
 
 // Placeholder image for PPT (must be PNG/JPEG; SVG may not render in PowerPoint)
 let _placeholderPngDataUrl: string | null = null;
@@ -413,13 +384,8 @@ export async function generatePlanPPT(
       fontFace: PPT_SAFE_FONTS.primary,
     });
 
-    // Get QR data for this asset (cached)
-    const qrData = await getCachedQR(
-      asset.asset_id,
-      asset.qr_code_url,
-      asset.latitude,
-      asset.longitude
-    );
+    // NOTE: QR codes are already watermarked into the asset photos during upload.
+    // We don't add separate QR elements to avoid duplicates.
 
     // Image 1 (fixed frame, cover to keep exact positioning)
     try {
@@ -535,23 +501,9 @@ export async function generatePlanPPT(
       fontFace: PPT_SAFE_FONTS.primary,
     });
 
-    // Add QR Code if available (top-right corner) - with clickable hyperlink
-    // CRITICAL: Sanitize hyperlink URL to prevent XML corruption
-    const sanitizedQrUrl = qrData ? sanitizePptHyperlink(qrData.streetViewUrl) : undefined;
-    if (qrData && sanitizedQrUrl) {
-      try {
-        slide2.addImage({
-          data: qrData.base64,
-          x: 8.8,
-          y: 0.35,
-          w: 1.3,
-          h: 1.3,
-          hyperlink: { url: sanitizedQrUrl },
-        });
-      } catch (error) {
-        console.error('Failed to add QR code:', error);
-      }
-    }
+    // NOTE: QR code element is NOT added here because the asset photos already have 
+    // QR watermarks baked in from the photo upload/watermarking process.
+    // Adding another QR here would create duplicates (3 QR codes: 2 on images + 1 element).
 
     // Small thumbnail
     try {

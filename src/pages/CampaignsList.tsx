@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -37,6 +37,7 @@ import { PageCustomization } from "@/components/ui/page-customization";
 import { useLayoutSettings } from "@/hooks/use-layout-settings";
 import { EnhancedFilterToggle } from "@/components/common/EnhancedFilterToggle";
 import { MobileBottomNav, MobileBottomNavButton } from "@/components/ui/mobile-bottom-nav";
+import { SortableTableHead, SortConfig } from "@/components/common/SortableTableHead";
 
 export default function CampaignsList() {
   const navigate = useNavigate();
@@ -61,6 +62,9 @@ export default function CampaignsList() {
     open: false,
     campaign: null,
   });
+  
+  // Sorting state
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
   const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("campaigns");
   const { 
@@ -72,6 +76,20 @@ export default function CampaignsList() {
   
   const layoutSettings = useLayoutSettings('campaigns-list');
   const [showFilters, setShowFilters] = useState(true);
+
+  // Handle sorting
+  const handleSort = (key: string) => {
+    setSortConfig((current) => {
+      if (current?.key === key) {
+        // Cycle: asc -> desc -> null
+        if (current.direction === 'asc') {
+          return { key, direction: 'desc' };
+        }
+        return null;
+      }
+      return { key, direction: 'asc' };
+    });
+  };
 
   // Auto-refresh
   useEffect(() => {
@@ -182,23 +200,85 @@ export default function CampaignsList() {
     setGlobalSearchFiltered(data || []);
   };
 
-  const filteredCampaigns = globalSearchFiltered.filter(campaign => {
-    // Search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      const matchesSearch = (
-        campaign.id?.toLowerCase().includes(term) ||
-        campaign.client_name?.toLowerCase().includes(term) ||
-        campaign.campaign_name?.toLowerCase().includes(term)
-      );
-      if (!matchesSearch) return false;
+  const filteredCampaigns = useMemo(() => {
+    let result = globalSearchFiltered.filter(campaign => {
+      // Search filter
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        const matchesSearch = (
+          campaign.id?.toLowerCase().includes(term) ||
+          campaign.client_name?.toLowerCase().includes(term) ||
+          campaign.campaign_name?.toLowerCase().includes(term)
+        );
+        if (!matchesSearch) return false;
+      }
+      
+      // Status filter
+      if (filterStatus && filterStatus !== "all" && campaign.status !== filterStatus) return false;
+      
+      return true;
+    });
+    
+    // Apply sorting
+    if (sortConfig && sortConfig.direction) {
+      result = [...result].sort((a, b) => {
+        let aVal: any;
+        let bVal: any;
+        
+        // Handle special cases for sorting keys
+        switch (sortConfig.key) {
+          case 'id':
+            aVal = a.id;
+            bVal = b.id;
+            break;
+          case 'client_name':
+            aVal = a.client_name;
+            bVal = b.client_name;
+            break;
+          case 'campaign_name':
+            aVal = a.campaign_name;
+            bVal = b.campaign_name;
+            break;
+          case 'start_date':
+            aVal = a.start_date ? new Date(a.start_date).getTime() : 0;
+            bVal = b.start_date ? new Date(b.start_date).getTime() : 0;
+            break;
+          case 'status':
+            aVal = a.status;
+            bVal = b.status;
+            break;
+          case 'total_assets':
+            aVal = a.total_assets || 0;
+            bVal = b.total_assets || 0;
+            break;
+          case 'grand_total':
+            aVal = a.grand_total || 0;
+            bVal = b.grand_total || 0;
+            break;
+          default:
+            aVal = a[sortConfig.key];
+            bVal = b[sortConfig.key];
+        }
+        
+        // Handle null/undefined
+        if (aVal == null && bVal == null) return 0;
+        if (aVal == null) return 1;
+        if (bVal == null) return -1;
+        
+        // Compare values
+        let comparison: number;
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+          comparison = aVal - bVal;
+        } else {
+          comparison = String(aVal).toLowerCase().localeCompare(String(bVal).toLowerCase());
+        }
+        
+        return sortConfig.direction === 'asc' ? comparison : -comparison;
+      });
     }
     
-    // Status filter
-    if (filterStatus && filterStatus !== "all" && campaign.status !== filterStatus) return false;
-    
-    return true;
-  });
+    return result;
+  }, [globalSearchFiltered, searchTerm, filterStatus, sortConfig]);
   
   const uniqueStatuses = Array.from(new Set(campaigns.map(c => c.status).filter(Boolean)));
 
@@ -495,13 +575,63 @@ export default function CampaignsList() {
                           onCheckedChange={toggleAllCampaigns}
                         />
                       </TableHead>
-                      <TableHead className={`px-4 py-3 text-left font-semibold ${getCellClassName()}`}>Campaign ID</TableHead>
-                      <TableHead className={`px-4 py-3 text-left font-semibold ${getCellClassName()}`}>Client</TableHead>
-                      <TableHead className={`px-4 py-3 text-left font-semibold ${getCellClassName()}`}>Campaign</TableHead>
-                      <TableHead className={`px-4 py-3 text-left font-semibold ${getCellClassName()}`}>Period</TableHead>
-                      <TableHead className={`px-4 py-3 text-left font-semibold ${getCellClassName()}`}>Status</TableHead>
-                      <TableHead className={`px-4 py-3 text-left font-semibold ${getCellClassName()}`}>Assets</TableHead>
-                      <TableHead className={`px-4 py-3 text-right font-semibold ${getCellClassName()}`}>Total</TableHead>
+                      <SortableTableHead
+                        sortKey="id"
+                        currentSort={sortConfig}
+                        onSort={handleSort}
+                        className={getCellClassName()}
+                      >
+                        Campaign ID
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="client_name"
+                        currentSort={sortConfig}
+                        onSort={handleSort}
+                        className={getCellClassName()}
+                      >
+                        Client
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="campaign_name"
+                        currentSort={sortConfig}
+                        onSort={handleSort}
+                        className={getCellClassName()}
+                      >
+                        Campaign
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="start_date"
+                        currentSort={sortConfig}
+                        onSort={handleSort}
+                        className={getCellClassName()}
+                      >
+                        Period
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="status"
+                        currentSort={sortConfig}
+                        onSort={handleSort}
+                        className={getCellClassName()}
+                      >
+                        Status
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="total_assets"
+                        currentSort={sortConfig}
+                        onSort={handleSort}
+                        className={getCellClassName()}
+                      >
+                        Assets
+                      </SortableTableHead>
+                      <SortableTableHead
+                        sortKey="grand_total"
+                        currentSort={sortConfig}
+                        onSort={handleSort}
+                        className={getCellClassName()}
+                        align="right"
+                      >
+                        Total
+                      </SortableTableHead>
                       <TableHead className={`px-4 py-3 text-right font-semibold ${getCellClassName()}`}>Actions</TableHead>
                     </TableRow>
                   </TableHeader>

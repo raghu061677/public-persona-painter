@@ -444,21 +444,7 @@ export async function generatePlanPPT(
         });
       }
 
-      // Add clickable QR overlay on image 1 (bottom-right corner)
-      // CRITICAL: Sanitize hyperlink URL to prevent XML corruption
-      const sanitizedStreetViewUrl1 = qrData ? sanitizePptHyperlink(qrData.streetViewUrl) : undefined;
-      if (qrData && sanitizedStreetViewUrl1) {
-        const qrSize = 0.7; // ~70px in inches
-        const qrPadding = 0.12; // ~12px
-        slide1.addImage({
-          data: qrData.base64,
-          x: 0.4 + 4.5 - qrSize - qrPadding,
-          y: 1.5 + 3.8 - qrSize - qrPadding,
-          w: qrSize,
-          h: qrSize,
-          hyperlink: { url: sanitizedStreetViewUrl1 },
-        });
-      }
+      // NOTE: QR code is now only added to Slide 2 (Details slide) to avoid duplicates
     } catch (error) {
       console.error('Failed to add image 1:', error);
     }
@@ -485,21 +471,7 @@ export async function generatePlanPPT(
         });
       }
 
-      // Add clickable QR overlay on image 2 (bottom-right corner)
-      // CRITICAL: Sanitize hyperlink URL to prevent XML corruption
-      const sanitizedStreetViewUrl2 = qrData ? sanitizePptHyperlink(qrData.streetViewUrl) : undefined;
-      if (qrData && sanitizedStreetViewUrl2) {
-        const qrSize = 0.7;
-        const qrPadding = 0.12;
-        slide1.addImage({
-          data: qrData.base64,
-          x: 5.1 + 4.5 - qrSize - qrPadding,
-          y: 1.5 + 3.8 - qrSize - qrPadding,
-          w: qrSize,
-          h: qrSize,
-          hyperlink: { url: sanitizedStreetViewUrl2 },
-        });
-      }
+      // NOTE: QR code is now only added to Slide 2 (Details slide) to avoid duplicates
     } catch (error) {
       console.error('Failed to add image 2:', error);
     }

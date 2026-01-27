@@ -19,6 +19,7 @@ import {
   PPT_SAFE_FONTS 
 } from '../ppt/sanitizers';
 import { fetchImageAsBase64 } from '../qrWatermark';
+import { buildStreetViewUrl } from '../streetview';
 
 interface AvailableAsset {
   id: string;
@@ -187,12 +188,68 @@ async function fetchImageWithCache(url: string): Promise<string | null> {
   return base64;
 }
 
+// QR cache to avoid refetching
+const qrCache = new Map<string, { base64: string; streetViewUrl: string }>();
+
+async function getCachedQR(
+  assetId: string,
+  qrCodeUrl: string | undefined | null,
+  latitude: number | undefined | null,
+  longitude: number | undefined | null
+): Promise<{ base64: string; streetViewUrl: string } | null> {
+  if (!qrCodeUrl) return null;
+
+  const cacheKey = `${assetId}-${qrCodeUrl}`;
+  if (qrCache.has(cacheKey)) {
+    return qrCache.get(cacheKey)!;
+  }
+
+  try {
+    const streetViewUrl = latitude && longitude ? buildStreetViewUrl(latitude, longitude) : null;
+    if (!streetViewUrl) return null;
+
+    const base64 = await fetchImageAsBase64(qrCodeUrl);
+    const result = { base64, streetViewUrl };
+    qrCache.set(cacheKey, result);
+    return result;
+  } catch (error) {
+    console.warn(`Failed to fetch QR for asset ${assetId}:`, error);
+    return null;
+  }
+}
+
 async function fetchAssetPhoto(
   asset: AvailableAsset | BookedAsset, 
   companyId?: string,
-  isBookedReport: boolean = false
+  isBookedReport: boolean = false,
+  isAvailableReport: boolean = false
 ): Promise<string | null> {
   const bookedAsset = asset as BookedAsset;
+  
+  // NEW: For AVAILABLE reports, prioritize Photo Library (media_photos) first
+  if (isAvailableReport) {
+    try {
+      // Priority 1: Fetch most recent Photo Library image for this asset
+      const { data: libraryPhotos } = await supabase
+        .from('media_photos')
+        .select('photo_url, category, uploaded_at')
+        .eq('asset_id', asset.id)
+        .order('uploaded_at', { ascending: false })
+        .limit(5);
+
+      if (libraryPhotos?.length) {
+        // Try each photo in order until one loads successfully
+        for (const photo of libraryPhotos) {
+          if (photo.photo_url) {
+            const img = await fetchImageWithCache(photo.photo_url);
+            if (img) return img;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch Photo Library images for available asset:', e);
+    }
+  }
   
   // SPECIAL RULE: For BOOKED assets, prioritize proof photos from the latest booking/campaign
   if (isBookedReport && bookedAsset.current_booking?.campaign_id) {
@@ -291,7 +348,7 @@ async function fetchAssetPhoto(
     if (img) return img;
   }
 
-  // Priority 4: Try to fetch from media_photos table
+  // Priority 4: Try to fetch from media_photos table (final attempt for any asset)
   try {
     const { data: photos } = await supabase
       .from('media_photos')
@@ -308,7 +365,7 @@ async function fetchAssetPhoto(
     console.warn('Failed to fetch media_photos:', e);
   }
 
-  // Fallback: placeholder
+  // Fallback: placeholder - NEVER skip an asset due to missing image
   return await getPlaceholderPngDataUrl();
 }
 
@@ -489,9 +546,10 @@ export async function generateAvailabilityPPTWithImages(data: ExportData): Promi
   });
 
   // ===== ASSET SLIDES =====
-  const maxAssets = Math.min(assetsToExport.length, 50); // Limit to prevent huge files
+  // IMPORTANT: Export ALL assets - no arbitrary limit. User expects count to match UI.
+  const totalAssets = assetsToExport.length;
   
-  for (let i = 0; i < maxAssets; i++) {
+  for (let i = 0; i < totalAssets; i++) {
     const asset = assetsToExport[i];
     const assetType = (asset as BookedAsset).availability_status === 'conflict' 
       ? 'conflict' 
@@ -504,10 +562,18 @@ export async function generateAvailabilityPPTWithImages(data: ExportData): Promi
     const statusColor = getStatusColor(assetType);
     const statusLabel = getStatusLabel(assetType);
 
-    // Fetch asset photo
-    // Fetch asset photo - pass isBookedReport flag for booked assets to prioritize proof photos
+    // Fetch asset photo - pass context flags to prioritize correct image sources
     const isBookedReport = exportTab === 'booked';
-    const photoBase64 = await fetchAssetPhoto(asset, data.companyId, isBookedReport);
+    const isAvailableReport = exportTab === 'available' || exportTab === 'soon' || exportTab === 'all';
+    const photoBase64 = await fetchAssetPhoto(asset, data.companyId, isBookedReport, isAvailableReport);
+
+    // Fetch QR code data for this asset (cached)
+    const qrData = await getCachedQR(
+      asset.id,
+      asset.qr_code_url,
+      asset.latitude,
+      asset.longitude
+    );
 
     // Parse dimensions
     let width = '';
@@ -571,6 +637,27 @@ export async function generateAvailabilityPPTWithImages(data: ExportData): Promi
       console.error('Failed to add image:', e);
     }
 
+    // Add QR code overlay on image (bottom-right corner) - clickable link to Street View
+    if (qrData) {
+      try {
+        const sanitizedStreetViewUrl = sanitizePptHyperlink(qrData.streetViewUrl);
+        if (sanitizedStreetViewUrl) {
+          const qrSize = 0.8; // ~80px in inches
+          const qrPadding = 0.15;
+          slide.addImage({
+            data: qrData.base64,
+            x: 0.4 + 5 - qrSize - qrPadding, // Bottom-right of image area
+            y: 1.4 + 4 - qrSize - qrPadding,
+            w: qrSize,
+            h: qrSize,
+            hyperlink: { url: sanitizedStreetViewUrl },
+          });
+        }
+      } catch (e) {
+        console.error('Failed to add QR code:', e);
+      }
+    }
+
     // Details panel (right side)
     slide.addShape(prs.ShapeType.rect, {
       x: 5.6, y: 1.4, w: 4, h: 4,
@@ -625,7 +712,7 @@ export async function generateAvailabilityPPTWithImages(data: ExportData): Promi
     });
 
     slide.addText(
-      sanitizePptText(`${orgSettings.organization_name || 'Go-Ads 360°'} | Media Availability Report | Asset ${i + 1} of ${maxAssets}`),
+      sanitizePptText(`${orgSettings.organization_name || 'Go-Ads 360°'} | Media Availability Report | Asset ${i + 1} of ${totalAssets}`),
       {
         x: 0.3, y: 6.95, w: 9.4, h: 0.35,
         fontSize: 11, color: 'FFFFFF', align: 'center', fontFace: PPT_SAFE_FONTS.primary,

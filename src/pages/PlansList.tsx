@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket, Download, Sparkles, ChevronDown, Info, FolderOpen, Edit, ClipboardList, Users, TrendingUp } from "lucide-react";
+import { Plus, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket, Download, Sparkles, ChevronDown, Info, FolderOpen, Edit, ClipboardList, Users, TrendingUp, CopyPlus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,6 +42,7 @@ import { highlightText } from "@/components/common/global-search";
 import { TemplatesDialog } from "@/components/plans/TemplatesDialog";
 import { BulkActionsToolbar } from "@/components/plans/BulkActionsToolbar";
 import { BulkConversionDialog } from "@/components/plans/BulkConversionDialog";
+import { DuplicatePlanDialog } from "@/components/plans/DuplicatePlanDialog";
 import {
   Tooltip,
   TooltipContent,
@@ -65,6 +66,10 @@ export default function PlansList() {
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
   const [showTemplatesDialog, setShowTemplatesDialog] = useState(false);
   const [showBulkConversionDialog, setShowBulkConversionDialog] = useState(false);
+  const [duplicateDialog, setDuplicateDialog] = useState<{ open: boolean; plan: any | null }>({
+    open: false,
+    plan: null,
+  });
   
   // Layout settings with persistence
   const { getSetting, updateSetting, isReady: layoutReady } = useLayoutSettings('plans');
@@ -1066,6 +1071,13 @@ export default function PlansList() {
                                   <Copy className="mr-2 h-4 w-4" />
                                   Copy ID
                                 </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => setDuplicateDialog({ open: true, plan })}
+                                  className="text-primary"
+                                >
+                                  <CopyPlus className="mr-2 h-4 w-4" />
+                                  Duplicate Plan
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleShare(plan)}>
                                   <Share2 className="mr-2 h-4 w-4" />
                                   Share
@@ -1112,6 +1124,16 @@ export default function PlansList() {
           fetchPlans();
         }}
       />
+
+      {/* Duplicate Plan Dialog */}
+      {duplicateDialog.plan && (
+        <DuplicatePlanDialog
+          open={duplicateDialog.open}
+          onOpenChange={(open) => setDuplicateDialog({ ...duplicateDialog, open })}
+          plan={duplicateDialog.plan}
+          onSuccess={fetchPlans}
+        />
+      )}
     </div>
   );
 }

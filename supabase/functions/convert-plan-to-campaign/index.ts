@@ -13,6 +13,19 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+/**
+ * Get effective selling price - Single source of truth for pricing
+ * Priority: sales_price (if > 0) > card_rate
+ */
+function getEffectivePrice(salesPrice: number | null | undefined, cardRate: number | null | undefined): number {
+  // Use sales_price if it's a positive number
+  if (salesPrice != null && salesPrice > 0) {
+    return salesPrice;
+  }
+  // Fallback to card_rate
+  return cardRate || 0;
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -171,6 +184,12 @@ serve(async (req) => {
     }
 
     console.log(`[v9.0] Loaded ${planItems.length} plan items`);
+    
+    // Log pricing for each item to debug negotiated price issues
+    planItems.forEach((item, idx) => {
+      const effectivePrice = getEffectivePrice(item.sales_price, item.card_rate);
+      console.log(`[v9.0] Item ${idx + 1}: asset=${item.asset_id}, card_rate=${item.card_rate}, sales_price=${item.sales_price}, effective_price=${effectivePrice}`);
+    });
 
     // 5) Check for booking conflicts with detailed information
     const assetIds = planItems.map(item => item.asset_id);
@@ -279,19 +298,23 @@ serve(async (req) => {
     console.log("[v9.0] Campaign created successfully:", campaign.id);
 
     // 8) Insert campaign_items (for financial tracking)
-    const campaignItemsPayload = planItems.map((item) => ({
-      campaign_id: campaignId,
-      plan_item_id: item.id,
-      asset_id: item.asset_id,
-      start_date: plan.start_date,
-      end_date: plan.end_date,
-      card_rate: item.card_rate || 0,
-      negotiated_rate: item.sales_price || 0,
-      printing_charge: item.printing_charges || 0,
-      mounting_charge: item.mounting_charges || 0,
-      final_price: item.total_with_gst || 0,
-      quantity: 1,
-    }));
+    // Use getEffectivePrice helper for consistent pricing
+    const campaignItemsPayload = planItems.map((item) => {
+      const effectivePrice = getEffectivePrice(item.sales_price, item.card_rate);
+      return {
+        campaign_id: campaignId,
+        plan_item_id: item.id,
+        asset_id: item.asset_id,
+        start_date: plan.start_date,
+        end_date: plan.end_date,
+        card_rate: item.card_rate || 0,
+        negotiated_rate: effectivePrice, // Use effective price (sales_price if > 0, else card_rate)
+        printing_charge: item.printing_charges || 0,
+        mounting_charge: item.mounting_charges || 0,
+        final_price: item.total_with_gst || 0,
+        quantity: 1,
+      };
+    });
 
     const { error: campaignItemsError } = await supabase
       .from("campaign_items")
@@ -305,34 +328,38 @@ serve(async (req) => {
     console.log(`[v9.0] Created ${campaignItemsPayload.length} campaign items`);
 
     // 9) Insert campaign_assets (for operations tracking with full snapshot)
-    const campaignAssetsPayload = planItems.map((item) => ({
-      campaign_id: campaignId,
-      asset_id: item.asset_id,
-      // Pricing snapshot
-      card_rate: item.card_rate || 0,
-      negotiated_rate: item.sales_price || 0,
-      printing_charges: item.printing_charges || 0,
-      mounting_charges: item.mounting_charges || 0,
-      total_price: item.total_with_gst || 0,
-      // Media snapshot
-      media_type: item.media_type || "Unknown",
-      state: item.state || "",
-      district: item.district || "",
-      city: item.city || "",
-      area: item.area || "",
-      location: item.location || "",
-      direction: item.direction || "",
-      dimensions: item.dimensions || "",
-      total_sqft: item.total_sqft || null,
-      illumination_type: item.illumination_type || "",
-      latitude: item.latitude || null,
-      longitude: item.longitude || null,
-      // Booking dates
-      booking_start_date: plan.start_date,
-      booking_end_date: plan.end_date,
-      // Status
-      status: "Pending" as const,
-    }));
+    // Use getEffectivePrice helper for consistent pricing
+    const campaignAssetsPayload = planItems.map((item) => {
+      const effectivePrice = getEffectivePrice(item.sales_price, item.card_rate);
+      return {
+        campaign_id: campaignId,
+        asset_id: item.asset_id,
+        // Pricing snapshot - use effective price for negotiated_rate
+        card_rate: item.card_rate || 0,
+        negotiated_rate: effectivePrice, // Use effective price (sales_price if > 0, else card_rate)
+        printing_charges: item.printing_charges || 0,
+        mounting_charges: item.mounting_charges || 0,
+        total_price: item.total_with_gst || 0,
+        // Media snapshot
+        media_type: item.media_type || "Unknown",
+        state: item.state || "",
+        district: item.district || "",
+        city: item.city || "",
+        area: item.area || "",
+        location: item.location || "",
+        direction: item.direction || "",
+        dimensions: item.dimensions || "",
+        total_sqft: item.total_sqft || null,
+        illumination_type: item.illumination_type || "",
+        latitude: item.latitude || null,
+        longitude: item.longitude || null,
+        // Booking dates
+        booking_start_date: plan.start_date,
+        booking_end_date: plan.end_date,
+        // Status
+        status: "Pending" as const,
+      };
+    });
 
     const { error: campaignAssetsError } = await supabase
       .from("campaign_assets")

@@ -149,12 +149,43 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Generate campaign code
-    const { data: codeData, error: codeError } = await supabase.rpc('generate_campaign_code', {
-      p_company_id: company_id,
+    // Generate campaign code using proper sequential ID
+    let campaign_code: string;
+    
+    // First try the database RPC function
+    const { data: codeData, error: codeError } = await supabase.rpc('generate_campaign_id', {
+      p_user_id: user.id,
     });
 
-    const campaign_code = codeData || `CAM-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+    if (codeData && !codeError) {
+      campaign_code = codeData;
+    } else {
+      // Fallback: Query existing campaigns and generate sequential ID
+      console.log('RPC failed, using fallback:', codeError?.message);
+      
+      const now = new Date();
+      const year = now.getFullYear();
+      const monthName = now.toLocaleString('en-US', { month: 'long' });
+      const prefix = `CAM-${year}-${monthName}-`;
+      
+      const { data: existingCampaigns } = await supabase
+        .from('campaigns')
+        .select('id')
+        .like('id', `${prefix}%`)
+        .order('id', { ascending: false })
+        .limit(1);
+      
+      let nextSeq = 1;
+      if (existingCampaigns && existingCampaigns.length > 0) {
+        const lastId = existingCampaigns[0].id;
+        const match = lastId.match(/CAM-\d{4}-[A-Za-z]+-(\d+)$/);
+        if (match) {
+          nextSeq = parseInt(match[1], 10) + 1;
+        }
+      }
+      
+      campaign_code = `${prefix}${String(nextSeq).padStart(3, '0')}`;
+    }
 
     console.log('Generated campaign code:', campaign_code);
 

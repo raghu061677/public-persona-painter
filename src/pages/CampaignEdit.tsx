@@ -16,6 +16,35 @@ import { formatCurrency } from "@/utils/mediaAssets";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { AddCampaignAssetsDialog } from "@/components/campaigns/AddCampaignAssetsDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+// Campaign asset interface
+interface CampaignAsset {
+  id: string;
+  asset_id: string;
+  media_asset_code: string;
+  location: string;
+  area: string;
+  city: string;
+  media_type: string;
+  card_rate: number;
+  negotiated_rate: number;
+  printing_charges: number;
+  mounting_charges: number;
+  total_price: number;
+  status: string;
+  isNew?: boolean;
+}
 
 export default function CampaignEdit() {
   const { id } = useParams();
@@ -23,6 +52,8 @@ export default function CampaignEdit() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
+  const [showAddAssetsDialog, setShowAddAssetsDialog] = useState(false);
+  const [assetToDelete, setAssetToDelete] = useState<CampaignAsset | null>(null);
   
   // Campaign fields
   const [campaignName, setCampaignName] = useState("");
@@ -35,30 +66,13 @@ export default function CampaignEdit() {
   const [gstPercent, setGstPercent] = useState(18);
   const [isGstApplicable, setIsGstApplicable] = useState(true);
   
-  // Campaign Items (source of truth for pricing)
-  interface CampaignItem {
-    id: string;
-    asset_id: string;
-    media_asset_code: string;
-    location: string;
-    area: string;
-    city: string;
-    media_type: string;
-    card_rate: number;
-    negotiated_rate: number;
-    final_price: number;
-    printing_charge: number;
-    mounting_charge: number;
-    total_amount: number;
-    status: string;
-  }
-  
-  const [campaignItems, setCampaignItems] = useState<CampaignItem[]>([]);
+  // Campaign assets (from campaign_assets table - primary source)
+  const [campaignAssets, setCampaignAssets] = useState<CampaignAsset[]>([]);
+  const [deletedAssetIds, setDeletedAssetIds] = useState<string[]>([]);
 
   useEffect(() => {
     fetchClients();
     if (id) {
-      // Trigger status update first, then fetch
       updateCampaignStatuses().then(() => {
         fetchCampaign();
       });
@@ -111,7 +125,7 @@ export default function CampaignEdit() {
       .from('clients')
       .select('is_gst_applicable')
       .eq('id', campaign.client_id)
-      .single();
+      .maybeSingle();
     
     const gstApplicable = clientData?.is_gst_applicable !== false;
     setIsGstApplicable(gstApplicable);
@@ -144,64 +158,83 @@ export default function CampaignEdit() {
     
     setStatus(correctStatus);
     setNotes(campaign.notes || "");
-    // Use stored GST percent if client is GST applicable, otherwise 0
     setGstPercent(gstApplicable ? (campaign.gst_percent || 18) : 0);
 
-    // Fetch campaign_items (source of truth for pricing) with media_assets for display info
-    const { data: items } = await supabase
-      .from('campaign_items')
-      .select(`
-        id,
-        asset_id,
-        card_rate,
-        negotiated_rate,
-        final_price,
-        printing_charge,
-        mounting_charge,
-        media_assets (
-          id,
-          media_asset_code,
-          location,
-          area,
-          city,
-          media_type
-        )
-      `)
+    // Fetch campaign_assets (primary source for both direct campaigns and plan-converted)
+    const { data: assets, error: assetsError } = await supabase
+      .from('campaign_assets')
+      .select('*')
       .eq('campaign_id', id)
       .order('created_at');
 
-    // Also fetch campaign_assets for status info
-    const { data: assetStatuses } = await supabase
-      .from('campaign_assets')
-      .select('asset_id, status')
-      .eq('campaign_id', id);
+    if (assetsError) {
+      console.error('Error fetching campaign assets:', assetsError);
+    }
 
-    const statusMap = new Map((assetStatuses || []).map(a => [a.asset_id, a.status]));
+    if (assets && assets.length > 0) {
+      setCampaignAssets(assets.map(asset => ({
+        id: asset.id,
+        asset_id: asset.asset_id,
+        media_asset_code: asset.asset_id, // Will be same as asset_id for display
+        location: asset.location || '',
+        area: asset.area || '',
+        city: asset.city || '',
+        media_type: asset.media_type || '',
+        card_rate: Number(asset.card_rate) || 0,
+        negotiated_rate: Number(asset.negotiated_rate) || Number(asset.card_rate) || 0,
+        printing_charges: Number(asset.printing_charges) || 0,
+        mounting_charges: Number(asset.mounting_charges) || 0,
+        total_price: Number(asset.total_price) || 0,
+        status: asset.status || 'Pending'
+      })));
+    } else {
+      // Fallback: try to fetch from campaign_items for plan-converted campaigns
+      const { data: items } = await supabase
+        .from('campaign_items')
+        .select(`
+          id,
+          asset_id,
+          card_rate,
+          negotiated_rate,
+          final_price,
+          printing_charge,
+          mounting_charge,
+          media_assets (
+            id,
+            media_asset_code,
+            location,
+            area,
+            city,
+            media_type
+          )
+        `)
+        .eq('campaign_id', id)
+        .order('created_at');
 
-    if (items) {
-      setCampaignItems(items.map(item => {
-        const asset = item.media_assets as any;
-        const finalPrice = Number(item.final_price) || Number(item.negotiated_rate) || 0;
-        const printingCharge = Number(item.printing_charge) || 0;
-        const mountingCharge = Number(item.mounting_charge) || 0;
-        
-        return {
-          id: item.id,
-          asset_id: item.asset_id,
-          media_asset_code: asset?.media_asset_code || item.asset_id,
-          location: asset?.location || '',
-          area: asset?.area || '',
-          city: asset?.city || '',
-          media_type: asset?.media_type || '',
-          card_rate: Number(item.card_rate) || 0,
-          negotiated_rate: Number(item.negotiated_rate) || 0,
-          final_price: finalPrice,
-          printing_charge: printingCharge,
-          mounting_charge: mountingCharge,
-          total_amount: finalPrice + printingCharge + mountingCharge,
-          status: statusMap.get(item.asset_id) || 'Pending'
-        };
-      }));
+      if (items && items.length > 0) {
+        setCampaignAssets(items.map(item => {
+          const asset = item.media_assets as any;
+          const finalPrice = Number(item.final_price) || Number(item.negotiated_rate) || 0;
+          const printingCharge = Number(item.printing_charge) || 0;
+          const mountingCharge = Number(item.mounting_charge) || 0;
+          
+          return {
+            id: item.id,
+            asset_id: item.asset_id,
+            media_asset_code: asset?.media_asset_code || item.asset_id,
+            location: asset?.location || '',
+            area: asset?.area || '',
+            city: asset?.city || '',
+            media_type: asset?.media_type || '',
+            card_rate: Number(item.card_rate) || 0,
+            negotiated_rate: finalPrice,
+            printing_charges: printingCharge,
+            mounting_charges: mountingCharge,
+            total_price: finalPrice + printingCharge + mountingCharge,
+            status: 'Pending'
+          };
+        }));
+      }
     }
 
     setLoading(false);
@@ -212,41 +245,76 @@ export default function CampaignEdit() {
     const client = clients.find(c => c.id === value);
     if (client) {
       setClientName(client.name || client.company || "");
-      // Update GST applicability based on client setting
       const gstApplicable = client.is_gst_applicable !== false;
       setIsGstApplicable(gstApplicable);
       setGstPercent(gstApplicable ? 18 : 0);
     }
   };
 
-  const updateCampaignItem = (index: number, field: keyof CampaignItem, value: any) => {
-    const updated = [...campaignItems];
+  const updateCampaignAsset = (index: number, field: keyof CampaignAsset, value: any) => {
+    const updated = [...campaignAssets];
     updated[index] = { ...updated[index], [field]: value };
     
-    // Recalculate total_amount when price fields change
-    if (field === 'final_price' || field === 'printing_charge' || field === 'mounting_charge') {
-      const finalPrice = field === 'final_price' ? Number(value) : Number(updated[index].final_price);
-      const printing = field === 'printing_charge' ? Number(value) : Number(updated[index].printing_charge);
-      const mounting = field === 'mounting_charge' ? Number(value) : Number(updated[index].mounting_charge);
-      updated[index].total_amount = finalPrice + printing + mounting;
+    // Recalculate total_price when price fields change
+    if (field === 'negotiated_rate' || field === 'printing_charges' || field === 'mounting_charges') {
+      const negotiated = field === 'negotiated_rate' ? Number(value) : Number(updated[index].negotiated_rate);
+      const printing = field === 'printing_charges' ? Number(value) : Number(updated[index].printing_charges);
+      const mounting = field === 'mounting_charges' ? Number(value) : Number(updated[index].mounting_charges);
+      updated[index].total_price = negotiated + printing + mounting;
     }
     
-    setCampaignItems(updated);
+    setCampaignAssets(updated);
   };
 
-  const removeCampaignItem = (index: number) => {
-    const updated = campaignItems.filter((_, i) => i !== index);
-    setCampaignItems(updated);
+  const confirmDeleteAsset = (asset: CampaignAsset) => {
+    setAssetToDelete(asset);
+  };
+
+  const handleDeleteAsset = () => {
+    if (!assetToDelete) return;
+    
+    // Remove from local state
+    setCampaignAssets(prev => prev.filter(a => a.id !== assetToDelete.id));
+    
+    // Track for database deletion (if not a new asset)
+    if (!assetToDelete.isNew) {
+      setDeletedAssetIds(prev => [...prev, assetToDelete.id]);
+    }
+    
+    setAssetToDelete(null);
+    toast({
+      title: "Asset removed",
+      description: "Asset will be removed when you save changes",
+    });
+  };
+
+  const handleAddAssets = (assets: any[]) => {
+    const newAssets: CampaignAsset[] = assets.map(asset => ({
+      id: `new-${Date.now()}-${asset.id}`,
+      asset_id: asset.id,
+      media_asset_code: asset.media_asset_code || asset.id,
+      location: asset.location || '',
+      area: asset.area || '',
+      city: asset.city || '',
+      media_type: asset.media_type || '',
+      card_rate: Number(asset.card_rate) || 0,
+      negotiated_rate: Number(asset.card_rate) || 0,
+      printing_charges: 0,
+      mounting_charges: 0,
+      total_price: Number(asset.card_rate) || 0,
+      status: 'Pending',
+      isNew: true
+    }));
+    
+    setCampaignAssets(prev => [...prev, ...newAssets]);
+    toast({
+      title: "Assets added",
+      description: `${assets.length} asset(s) added to campaign`,
+    });
   };
 
   const calculateTotals = () => {
-    // Use final_price from campaign_items - no pro-rata recalculation
-    // Prices are locked at Plan conversion time
-    const totalAmount = campaignItems.reduce((sum, item) => {
-      return sum + item.total_amount;
-    }, 0);
-
-    // GST calculation based on client's is_gst_applicable flag
+    const totalAmount = campaignAssets.reduce((sum, asset) => sum + asset.total_price, 0);
     const effectiveGstPercent = isGstApplicable ? gstPercent : 0;
     const gstAmount = (totalAmount * effectiveGstPercent) / 100;
     const grandTotal = totalAmount + gstAmount;
@@ -268,7 +336,7 @@ export default function CampaignEdit() {
       toast({ title: "Error", description: "Start and end dates are required", variant: "destructive" });
       return;
     }
-    if (campaignItems.length === 0) {
+    if (campaignAssets.length === 0) {
       toast({ title: "Error", description: "At least one asset is required", variant: "destructive" });
       return;
     }
@@ -289,7 +357,7 @@ export default function CampaignEdit() {
           end_date: format(endDate, 'yyyy-MM-dd'),
           status,
           notes,
-          total_assets: campaignItems.length,
+          total_assets: campaignAssets.length,
           total_amount: totalAmount,
           gst_percent: gstPercent,
           gst_amount: gstAmount,
@@ -300,32 +368,61 @@ export default function CampaignEdit() {
 
       if (campaignError) throw campaignError;
 
-      // Update campaign_items with new prices
-      for (const item of campaignItems) {
-        await supabase
-          .from('campaign_items')
-          .update({
-            final_price: item.final_price,
-            printing_charge: item.printing_charge,
-            mounting_charge: item.mounting_charge,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', item.id);
+      // Delete removed assets from campaign_assets
+      if (deletedAssetIds.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('campaign_assets')
+          .delete()
+          .in('id', deletedAssetIds);
+        
+        if (deleteError) {
+          console.error('Error deleting assets:', deleteError);
+        }
       }
 
-      // Update campaign_assets status
-      for (const item of campaignItems) {
-        await supabase
-          .from('campaign_assets')
-          .update({
-            status: item.status as Database['public']['Enums']['asset_installation_status'],
-            negotiated_rate: item.final_price,
-            printing_charges: item.printing_charge,
-            mounting_charges: item.mounting_charge,
-            total_price: item.total_amount
-          })
-          .eq('campaign_id', id)
-          .eq('asset_id', item.asset_id);
+      // Update existing and insert new assets
+      for (const asset of campaignAssets) {
+        if (asset.isNew) {
+          // Insert new campaign_asset
+          const { error: insertError } = await supabase
+            .from('campaign_assets')
+            .insert({
+              campaign_id: id!,
+              asset_id: asset.asset_id,
+              location: asset.location,
+              area: asset.area,
+              city: asset.city,
+              media_type: asset.media_type,
+              card_rate: asset.card_rate,
+              negotiated_rate: asset.negotiated_rate,
+              printing_charges: asset.printing_charges,
+              mounting_charges: asset.mounting_charges,
+              total_price: asset.total_price,
+              status: asset.status as Database['public']['Enums']['asset_installation_status'],
+              booking_start_date: format(startDate, 'yyyy-MM-dd'),
+              booking_end_date: format(endDate, 'yyyy-MM-dd'),
+            });
+
+          if (insertError) {
+            console.error('Error inserting asset:', insertError);
+          }
+        } else {
+          // Update existing campaign_asset
+          const { error: updateError } = await supabase
+            .from('campaign_assets')
+            .update({
+              negotiated_rate: asset.negotiated_rate,
+              printing_charges: asset.printing_charges,
+              mounting_charges: asset.mounting_charges,
+              total_price: asset.total_price,
+              status: asset.status as Database['public']['Enums']['asset_installation_status'],
+            })
+            .eq('id', asset.id);
+
+          if (updateError) {
+            console.error('Error updating asset:', updateError);
+          }
+        }
       }
 
       toast({
@@ -358,6 +455,7 @@ export default function CampaignEdit() {
   }
 
   const { totalAmount, gstAmount, grandTotal, effectiveGstPercent } = calculateTotals();
+  const existingAssetIds = campaignAssets.map(a => a.asset_id);
 
   return (
     <div className="min-h-screen bg-background">
@@ -411,7 +509,7 @@ export default function CampaignEdit() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Assets</p>
-                <p className="font-semibold">{campaignItems.length}</p>
+                <p className="font-semibold">{campaignAssets.length}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Grand Total</p>
@@ -516,6 +614,7 @@ export default function CampaignEdit() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Draft">Draft</SelectItem>
+                    <SelectItem value="Planned">Planned</SelectItem>
                     <SelectItem value="Upcoming">Upcoming</SelectItem>
                     <SelectItem value="Running">Running</SelectItem>
                     <SelectItem value="Completed">Completed</SelectItem>
@@ -582,9 +681,8 @@ export default function CampaignEdit() {
               </div>
 
               <div className="pt-3 border-t text-xs text-muted-foreground">
-                <p>Prices locked from approved Plan</p>
                 {!isGstApplicable && (
-                  <p className="mt-1 text-amber-600">Client is not GST applicable</p>
+                  <p className="text-amber-600">Client is not GST applicable</p>
                 )}
                 <p className="mt-1">
                   {startDate && endDate && (
@@ -596,14 +694,15 @@ export default function CampaignEdit() {
           </Card>
         </div>
 
-        {/* Campaign Items Table - Source of truth from Plan */}
+        {/* Campaign Assets Table */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Campaign Assets</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Prices are locked from the approved Plan
-              </p>
+              <CardTitle>Campaign Assets ({campaignAssets.length})</CardTitle>
+              <Button onClick={() => setShowAddAssetsDialog(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Assets
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -615,7 +714,7 @@ export default function CampaignEdit() {
                     <TableHead>Location</TableHead>
                     <TableHead>Area / City</TableHead>
                     <TableHead className="text-right text-muted-foreground">Card Rate</TableHead>
-                    <TableHead className="text-right">Final Price</TableHead>
+                    <TableHead className="text-right">Negotiated</TableHead>
                     <TableHead className="text-right">Printing</TableHead>
                     <TableHead className="text-right">Mounting</TableHead>
                     <TableHead className="text-right font-semibold">Total</TableHead>
@@ -624,58 +723,59 @@ export default function CampaignEdit() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {campaignItems.length === 0 ? (
+                  {campaignAssets.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
-                        No assets in this campaign. Campaign items are created from an approved Plan.
+                        No assets in this campaign. Click "Add Assets" to add media assets.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    campaignItems.map((item, index) => (
-                      <TableRow key={item.id}>
+                    campaignAssets.map((asset, index) => (
+                      <TableRow key={asset.id} className={asset.isNew ? "bg-green-50/50" : ""}>
                         <TableCell className="font-mono text-sm">
-                          {item.media_asset_code || item.asset_id}
+                          {asset.media_asset_code || asset.asset_id}
+                          {asset.isNew && <span className="ml-1 text-xs text-green-600">(new)</span>}
                         </TableCell>
-                        <TableCell className="max-w-[200px] truncate" title={item.location}>
-                          {item.location}
+                        <TableCell className="max-w-[200px] truncate" title={asset.location}>
+                          {asset.location}
                         </TableCell>
                         <TableCell className="text-sm">
-                          {item.area}{item.city ? `, ${item.city}` : ''}
+                          {asset.area}{asset.city ? `, ${asset.city}` : ''}
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground">
-                          {formatCurrency(item.card_rate)}
+                          {formatCurrency(asset.card_rate)}
                         </TableCell>
                         <TableCell>
                           <Input
                             type="number"
-                            value={item.final_price}
-                            onChange={(e) => updateCampaignItem(index, 'final_price', Number(e.target.value))}
+                            value={asset.negotiated_rate}
+                            onChange={(e) => updateCampaignAsset(index, 'negotiated_rate', Number(e.target.value))}
                             className="h-8 w-24 text-right ml-auto"
                           />
                         </TableCell>
                         <TableCell>
                           <Input
                             type="number"
-                            value={item.printing_charge}
-                            onChange={(e) => updateCampaignItem(index, 'printing_charge', Number(e.target.value))}
+                            value={asset.printing_charges}
+                            onChange={(e) => updateCampaignAsset(index, 'printing_charges', Number(e.target.value))}
                             className="h-8 w-20 text-right ml-auto"
                           />
                         </TableCell>
                         <TableCell>
                           <Input
                             type="number"
-                            value={item.mounting_charge}
-                            onChange={(e) => updateCampaignItem(index, 'mounting_charge', Number(e.target.value))}
+                            value={asset.mounting_charges}
+                            onChange={(e) => updateCampaignAsset(index, 'mounting_charges', Number(e.target.value))}
                             className="h-8 w-20 text-right ml-auto"
                           />
                         </TableCell>
                         <TableCell className="text-right font-semibold text-primary">
-                          {formatCurrency(item.total_amount)}
+                          {formatCurrency(asset.total_price)}
                         </TableCell>
                         <TableCell>
                           <Select
-                            value={item.status}
-                            onValueChange={(value) => updateCampaignItem(index, 'status', value)}
+                            value={asset.status}
+                            onValueChange={(value) => updateCampaignAsset(index, 'status', value)}
                           >
                             <SelectTrigger className="h-8 w-28">
                               <SelectValue />
@@ -694,7 +794,7 @@ export default function CampaignEdit() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => removeCampaignItem(index)}
+                            onClick={() => confirmDeleteAsset(asset)}
                             className="h-8 w-8 text-destructive hover:text-destructive"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -708,7 +808,7 @@ export default function CampaignEdit() {
             </div>
             
             {/* Totals Row */}
-            {campaignItems.length > 0 && (
+            {campaignAssets.length > 0 && (
               <div className="flex justify-end mt-4 pt-4 border-t">
                 <div className="grid grid-cols-3 gap-6 text-sm">
                   <div className="text-right">
@@ -731,6 +831,33 @@ export default function CampaignEdit() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Add Assets Dialog */}
+      <AddCampaignAssetsDialog
+        open={showAddAssetsDialog}
+        onClose={() => setShowAddAssetsDialog(false)}
+        existingAssetIds={existingAssetIds}
+        onAddAssets={handleAddAssets}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!assetToDelete} onOpenChange={() => setAssetToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Asset</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove "{assetToDelete?.media_asset_code || assetToDelete?.asset_id}" from this campaign?
+              This action will be applied when you save changes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteAsset} className="bg-destructive text-destructive-foreground">
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

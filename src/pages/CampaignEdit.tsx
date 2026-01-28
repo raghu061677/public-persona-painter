@@ -17,6 +17,7 @@ import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { AddCampaignAssetsDialog } from "@/components/campaigns/AddCampaignAssetsDialog";
+import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -65,6 +66,7 @@ export default function CampaignEdit() {
   const [notes, setNotes] = useState("");
   const [gstPercent, setGstPercent] = useState(18);
   const [isGstApplicable, setIsGstApplicable] = useState(true);
+  const [companyPrefix, setCompanyPrefix] = useState<string | null>(null);
   
   // Campaign assets (from campaign_assets table - primary source)
   const [campaignAssets, setCampaignAssets] = useState<CampaignAsset[]>([]);
@@ -72,12 +74,34 @@ export default function CampaignEdit() {
 
   useEffect(() => {
     fetchClients();
+    fetchCompanySettings();
     if (id) {
       updateCampaignStatuses().then(() => {
         fetchCampaign();
       });
     }
   }, [id]);
+
+  const fetchCompanySettings = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: companyUser } = await supabase
+          .from('company_users')
+          .select('company_id, companies(asset_id_prefix, name)')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+        
+        if (companyUser?.companies) {
+          const company = companyUser.companies as any;
+          setCompanyPrefix(company.asset_id_prefix || null);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching company settings:', error);
+    }
+  };
 
   const updateCampaignStatuses = async () => {
     try {
@@ -172,10 +196,22 @@ export default function CampaignEdit() {
     }
 
     if (assets && assets.length > 0) {
+      // Fetch media_asset_code from media_assets table for proper display
+      const assetIds = assets.map(a => a.asset_id);
+      const { data: mediaAssets } = await supabase
+        .from('media_assets')
+        .select('id, media_asset_code')
+        .in('id', assetIds);
+      
+      const mediaAssetCodeMap = new Map<string, string>();
+      mediaAssets?.forEach(ma => {
+        mediaAssetCodeMap.set(ma.id, ma.media_asset_code || ma.id);
+      });
+
       setCampaignAssets(assets.map(asset => ({
         id: asset.id,
         asset_id: asset.asset_id,
-        media_asset_code: asset.asset_id, // Will be same as asset_id for display
+        media_asset_code: mediaAssetCodeMap.get(asset.asset_id) || asset.asset_id,
         location: asset.location || '',
         area: asset.area || '',
         city: asset.city || '',
@@ -710,7 +746,8 @@ export default function CampaignEdit() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[120px]">Asset ID</TableHead>
+                    <TableHead className="w-[60px] text-center">S.No</TableHead>
+                    <TableHead className="w-[140px]">Asset ID</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Area / City</TableHead>
                     <TableHead className="text-right text-muted-foreground">Card Rate</TableHead>
@@ -725,15 +762,22 @@ export default function CampaignEdit() {
                 <TableBody>
                   {campaignAssets.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                         No assets in this campaign. Click "Add Assets" to add media assets.
                       </TableCell>
                     </TableRow>
                   ) : (
                     campaignAssets.map((asset, index) => (
                       <TableRow key={asset.id} className={asset.isNew ? "bg-green-50/50" : ""}>
+                        <TableCell className="text-center font-medium text-muted-foreground">
+                          {index + 1}
+                        </TableCell>
                         <TableCell className="font-mono text-sm">
-                          {asset.media_asset_code || asset.asset_id}
+                          {formatAssetDisplayCode({
+                            mediaAssetCode: asset.media_asset_code,
+                            fallbackId: asset.asset_id,
+                            companyPrefix: companyPrefix
+                          })}
                           {asset.isNew && <span className="ml-1 text-xs text-green-600">(new)</span>}
                         </TableCell>
                         <TableCell className="max-w-[200px] truncate" title={asset.location}>

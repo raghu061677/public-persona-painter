@@ -454,25 +454,60 @@ export default function CampaignCreate() {
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="start_date">Start Date *</Label>
-                  <Input
-                    id="start_date"
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                  />
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="start_date">Start Date *</Label>
+                    <Input
+                      id="start_date"
+                      type="date"
+                      value={formData.start_date}
+                      onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="end_date">End Date *</Label>
+                    <Input
+                      id="end_date"
+                      type="date"
+                      value={formData.end_date}
+                      onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="end_date">End Date *</Label>
-                  <Input
-                    id="end_date"
-                    type="date"
-                    value={formData.end_date}
-                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                  />
-                </div>
+                
+                {/* Duration display */}
+                {formData.start_date && formData.end_date && (
+                  (() => {
+                    const start = new Date(formData.start_date);
+                    const end = new Date(formData.end_date);
+                    const diffTime = end.getTime() - start.getTime();
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                    const months = Math.round(diffDays / 30 * 10) / 10;
+                    
+                    if (diffDays > 0) {
+                      return (
+                        <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Campaign Duration:</span>
+                          <Badge variant="secondary" className="font-semibold">
+                            {diffDays} {diffDays === 1 ? 'day' : 'days'}
+                          </Badge>
+                          {diffDays >= 7 && (
+                            <Badge variant="outline" className="font-medium">
+                              ~{months} {months === 1 ? 'month' : 'months'}
+                            </Badge>
+                          )}
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/20">
+                        <span className="text-sm text-destructive">End date must be after start date</span>
+                      </div>
+                    );
+                  })()
+                )}
               </div>
 
               {/* Status selector for historical entries */}

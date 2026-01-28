@@ -260,8 +260,8 @@ export default function CampaignAssetProofs() {
       <CampaignContextHeader />
       
       <div className="flex-1 space-y-4 p-4 sm:p-8 pt-6">
-        {/* Breadcrumbs */}
-        <CampaignBreadcrumbs additionalItems={[{ label: 'Asset Proof' }]} />
+        {/* Breadcrumbs - no additionalItems since CampaignBreadcrumbs already adds "Asset Proof" for asset pages */}
+        <CampaignBreadcrumbs />
         
         {/* Company Branding Header */}
         <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">

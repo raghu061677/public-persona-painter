@@ -107,12 +107,17 @@ Deno.serve(async (req) => {
     // Build JSON response with all data
     const assetsData = campaignAssets?.map(asset => {
       // Get photos from campaign_assets.photos jsonb field
+      // Photos may be stored as:
+      // - Specific types: newspaper, geo, traffic1, traffic2
+      // - Or numbered: photo_1, photo_2, photo_3, photo_4
       const photosObj = (asset.photos || {}) as Record<string, string>;
+      
+      // Try specific photo type keys first, fall back to numbered keys
       const photoMap = {
-        newspaper: photosObj.newspaper || null,
-        geo: photosObj.geo || null,
-        traffic_left: photosObj.traffic1 || null,
-        traffic_right: photosObj.traffic2 || null,
+        newspaper: photosObj.newspaper || photosObj.photo_1 || null,
+        geo: photosObj.geo || photosObj.geotag || photosObj.photo_2 || null,
+        traffic_left: photosObj.traffic1 || photosObj.traffic_left || photosObj.photo_3 || null,
+        traffic_right: photosObj.traffic2 || photosObj.traffic_right || photosObj.photo_4 || null,
       };
 
       // Use campaign_assets snapshot data (single source of truth)

@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2, Sparkles, Loader2, Settings2, History, ArrowUpDown, ArrowUp, ArrowDown, AlertCircle } from "lucide-react";
+import { Trash2, Sparkles, Loader2, Settings2, History, ArrowUpDown, ArrowUp, ArrowDown, AlertCircle, CalendarDays } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -29,6 +29,17 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import { calculatePrintingCost, calculateMountingCost, getAssetSqft } from "@/utils/effectivePricing";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import {
+  computeBookedDays,
+  computeRentAmount,
+  BillingMode,
+  BILLING_CYCLE_DAYS,
+} from "@/utils/perAssetPricing";
 
 type SortDirection = 'asc' | 'desc' | null;
 type SortableColumn = 'asset_id' | 'location' | 'area';
@@ -44,6 +55,8 @@ interface SelectedAssetsTableProps {
   onRemove: (assetId: string) => void;
   onPricingUpdate: (assetId: string, field: string, value: any) => void;
   durationDays?: number;
+  planStartDate?: Date;
+  planEndDate?: Date;
 }
 
 const ALL_COLUMNS = [
@@ -54,10 +67,13 @@ const ALL_COLUMNS = [
   'dimensions',
   'total_sqft',
   'illumination',
+  'asset_dates',
+  'days',
+  'billing_mode',
   'card_rate',
   'base_rate',
   'negotiated_price',
-  'pro_rata',
+  'rent_amount',
   'discount',
   'profit',
   'printing',
@@ -69,9 +85,11 @@ const DEFAULT_VISIBLE = [
   'asset_id',
   'area',
   'location',
+  'asset_dates',
+  'days',
   'card_rate',
   'negotiated_price',
-  'pro_rata',
+  'rent_amount',
   'discount',
   'profit',
   'printing',
@@ -87,10 +105,13 @@ const COLUMN_LABELS: Record<string, string> = {
   dimensions: 'Dimensions',
   total_sqft: 'Total Sq.Ft',
   illumination: 'Illumination',
+  asset_dates: 'Asset Dates',
+  days: 'Days',
+  billing_mode: 'Billing Mode',
   card_rate: 'Card Rate (₹/Mo)',
   base_rate: 'Base Rate (₹/Mo)',
   negotiated_price: 'Negotiated (₹/Mo)',
-  pro_rata: 'Pro-Rata (₹)',
+  rent_amount: 'Rent Amount (₹)',
   discount: 'Discount',
   profit: 'Profit',
   printing: 'Printing (Rate/Cost)',
@@ -104,6 +125,8 @@ export function SelectedAssetsTable({
   onRemove,
   onPricingUpdate,
   durationDays = 30,
+  planStartDate,
+  planEndDate,
 }: SelectedAssetsTableProps) {
   const [loadingRates, setLoadingRates] = useState<Set<string>>(new Set());
   const [showBulkSettingsDialog, setShowBulkSettingsDialog] = useState(false);
@@ -315,10 +338,13 @@ export function SelectedAssetsTable({
               {isColumnVisible('dimensions') && <TableHead>Dimensions</TableHead>}
               {isColumnVisible('total_sqft') && <TableHead>Sq.Ft</TableHead>}
               {isColumnVisible('illumination') && <TableHead>Illumination</TableHead>}
+              {isColumnVisible('asset_dates') && <TableHead className="w-56">Asset Dates</TableHead>}
+              {isColumnVisible('days') && <TableHead className="w-20">Days</TableHead>}
+              {isColumnVisible('billing_mode') && <TableHead className="w-36">Billing Mode</TableHead>}
               {isColumnVisible('card_rate') && <TableHead>Card Rate</TableHead>}
               {isColumnVisible('base_rate') && <TableHead>Base Rate</TableHead>}
-              {isColumnVisible('negotiated_price') && <TableHead className="w-48">Negotiated ({durationDays}d)</TableHead>}
-              {isColumnVisible('pro_rata') && <TableHead>Pro-Rata</TableHead>}
+              {isColumnVisible('negotiated_price') && <TableHead className="w-48">Negotiated (₹/Mo)</TableHead>}
+              {isColumnVisible('rent_amount') && <TableHead>Rent Amount</TableHead>}
               {isColumnVisible('discount') && <TableHead>Discount</TableHead>}
               {isColumnVisible('profit') && <TableHead>Profit</TableHead>}
               {isColumnVisible('printing') && <TableHead className="w-48">Printing</TableHead>}
@@ -343,10 +369,28 @@ export function SelectedAssetsTable({
                 const baseRate = asset.base_rate || 0;
                 const negotiatedPrice = pricing.negotiated_price || cardRate;
                 
-                // Calculate pro-rata
-                const proRata = calcProRata(negotiatedPrice, durationDays);
+                // Per-asset dates (default to plan dates if not set)
+                const assetStartDate = pricing.start_date 
+                  ? new Date(pricing.start_date) 
+                  : (planStartDate || new Date());
+                const assetEndDate = pricing.end_date 
+                  ? new Date(pricing.end_date) 
+                  : (planEndDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
                 
-                // Calculate discount and profit
+                // Per-asset billing mode
+                const billingMode: BillingMode = pricing.billing_mode || 'PRORATA_30';
+                
+                // Calculate booked days and rent using per-asset pricing
+                const rentResult = computeRentAmount(
+                  negotiatedPrice,
+                  assetStartDate,
+                  assetEndDate,
+                  billingMode
+                );
+                const assetBookedDays = rentResult.booked_days;
+                const rentAmount = rentResult.rent_amount;
+                
+                // Calculate discount and profit (based on monthly rates, not pro-rated)
                 const discount = calcDiscount(cardRate, negotiatedPrice);
                 const profit = calcProfit(baseRate, negotiatedPrice);
                 
@@ -361,7 +405,7 @@ export function SelectedAssetsTable({
                 // Get the calculated costs
                 const printing = printingResult.cost;
                 const mounting = mountingResult.cost;
-                const subtotal = proRata + printing + mounting;
+                const subtotal = rentAmount + printing + mounting;
 
                 const formatNumberWithCommas = (num: number) => {
                   return num.toLocaleString('en-IN');
@@ -377,12 +421,14 @@ export function SelectedAssetsTable({
                   // Update negotiated price and recalculate all dependent values
                   onPricingUpdate(asset.id, 'negotiated_price', numValue);
                   
-                  // Recalculate pro-rata, discount, and profit
-                  const newProRata = calcProRata(numValue, durationDays);
+                  // Recalculate rent, discount, and profit
+                  const newRentResult = computeRentAmount(numValue, assetStartDate, assetEndDate, billingMode);
                   const newDiscount = calcDiscount(cardRate, numValue);
                   const newProfit = calcProfit(baseRate, numValue);
                   
-                  onPricingUpdate(asset.id, 'pro_rata', newProRata);
+                  onPricingUpdate(asset.id, 'rent_amount', newRentResult.rent_amount);
+                  onPricingUpdate(asset.id, 'daily_rate', newRentResult.daily_rate);
+                  onPricingUpdate(asset.id, 'booked_days', newRentResult.booked_days);
                   onPricingUpdate(asset.id, 'discount_value', newDiscount.value);
                   onPricingUpdate(asset.id, 'discount_percent', newDiscount.percent);
                   onPricingUpdate(asset.id, 'profit_value', newProfit.value);
@@ -400,6 +446,30 @@ export function SelectedAssetsTable({
                       variant: "destructive",
                     });
                   }
+                };
+
+                const handleAssetDateChange = (field: 'start_date' | 'end_date', date: Date | undefined) => {
+                  if (!date) return;
+                  
+                  onPricingUpdate(asset.id, field, date.toISOString().split('T')[0]);
+                  
+                  // Recalculate rent based on new dates
+                  const newStart = field === 'start_date' ? date : assetStartDate;
+                  const newEnd = field === 'end_date' ? date : assetEndDate;
+                  const newRentResult = computeRentAmount(negotiatedPrice, newStart, newEnd, billingMode);
+                  
+                  onPricingUpdate(asset.id, 'rent_amount', newRentResult.rent_amount);
+                  onPricingUpdate(asset.id, 'daily_rate', newRentResult.daily_rate);
+                  onPricingUpdate(asset.id, 'booked_days', newRentResult.booked_days);
+                };
+
+                const handleBillingModeChange = (mode: BillingMode) => {
+                  onPricingUpdate(asset.id, 'billing_mode', mode);
+                  
+                  // Recalculate rent with new mode
+                  const newRentResult = computeRentAmount(negotiatedPrice, assetStartDate, assetEndDate, mode);
+                  onPricingUpdate(asset.id, 'rent_amount', newRentResult.rent_amount);
+                  onPricingUpdate(asset.id, 'daily_rate', newRentResult.daily_rate);
                 };
 
                 return (
@@ -424,8 +494,100 @@ export function SelectedAssetsTable({
                     {isColumnVisible('total_sqft') && (
                       <TableCell className="text-sm">{asset.total_sqft || '-'}</TableCell>
                     )}
-                {isColumnVisible('illumination') && (
-                  <TableCell className="text-sm">{asset.illumination_type || '-'}</TableCell>
+                    {isColumnVisible('illumination') && (
+                      <TableCell className="text-sm">{asset.illumination_type || '-'}</TableCell>
+                    )}
+                    {/* Per-Asset Dates Column */}
+                    {isColumnVisible('asset_dates') && (
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className={cn(
+                                  "h-8 w-24 text-xs justify-start text-left font-normal",
+                                  !pricing.start_date && "text-muted-foreground"
+                                )}
+                              >
+                                {format(assetStartDate, "dd/MM/yy")}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={assetStartDate}
+                                onSelect={(date) => handleAssetDateChange('start_date', date)}
+                                initialFocus
+                                className="pointer-events-auto"
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <span className="text-muted-foreground text-xs">-</span>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className={cn(
+                                  "h-8 w-24 text-xs justify-start text-left font-normal",
+                                  !pricing.end_date && "text-muted-foreground"
+                                )}
+                              >
+                                {format(assetEndDate, "dd/MM/yy")}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={assetEndDate}
+                                onSelect={(date) => handleAssetDateChange('end_date', date)}
+                                initialFocus
+                                className="pointer-events-auto"
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </TableCell>
+                    )}
+                    {/* Days Column */}
+                    {isColumnVisible('days') && (
+                      <TableCell className="text-center">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="secondary" className="font-mono">
+                                {assetBookedDays}d
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">Booked for {assetBookedDays} days</p>
+                              <p className="text-xs text-muted-foreground">
+                                Pro-rata factor: {(assetBookedDays / BILLING_CYCLE_DAYS).toFixed(2)}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
+                    )}
+                    {/* Billing Mode Column */}
+                    {isColumnVisible('billing_mode') && (
+                      <TableCell>
+                        <Select
+                          value={billingMode}
+                          onValueChange={(val) => handleBillingModeChange(val as BillingMode)}
+                        >
+                          <SelectTrigger className="h-8 w-32 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PRORATA_30">Pro-rata (30d)</SelectItem>
+                            <SelectItem value="FULL_MONTH">Full Month</SelectItem>
+                            <SelectItem value="DAILY">Daily</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
                     )}
                     {isColumnVisible('card_rate') && (
                       <TableCell className="text-right bg-muted/30">
@@ -514,17 +676,17 @@ export function SelectedAssetsTable({
                         </div>
                       </TableCell>
                     )}
-                    {isColumnVisible('pro_rata') && (
+                    {isColumnVisible('rent_amount') && (
                       <TableCell className="text-right bg-muted/30">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="cursor-help font-medium">{formatCurrency(proRata)}</span>
+                              <span className="cursor-help font-medium">{formatCurrency(rentAmount)}</span>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p className="text-xs font-semibold">Pro-Rata = Negotiated ÷ 30 × Days</p>
-                              <p className="text-xs">₹{negotiatedPrice.toFixed(0)} ÷ 30 × {durationDays} days</p>
-                              <p className="text-xs">= ₹{proRata.toFixed(2)}</p>
+                              <p className="text-xs font-semibold">Rent = Negotiated ÷ 30 × {assetBookedDays} Days</p>
+                              <p className="text-xs">₹{negotiatedPrice.toFixed(0)} ÷ 30 × {assetBookedDays} days</p>
+                              <p className="text-xs">= ₹{rentAmount.toFixed(2)}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>

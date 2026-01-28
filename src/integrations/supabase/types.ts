@@ -1193,6 +1193,8 @@ export type Database = {
           assigned_at: string | null
           assigned_mounter_id: string | null
           base_rate_monthly: number | null
+          billing_mode: string
+          booked_days: number | null
           booking_end_date: string | null
           booking_start_date: string | null
           campaign_id: string
@@ -1200,6 +1202,7 @@ export type Database = {
           city: string
           completed_at: string | null
           created_at: string | null
+          daily_rate: number | null
           dimensions: string | null
           direction: string | null
           district: string | null
@@ -1219,6 +1222,7 @@ export type Database = {
           photos: Json | null
           printing_charges: number | null
           printing_cost_default: number | null
+          rent_amount: number | null
           state: string | null
           status: Database["public"]["Enums"]["asset_installation_status"]
           tax_percent: number | null
@@ -1231,6 +1235,8 @@ export type Database = {
           assigned_at?: string | null
           assigned_mounter_id?: string | null
           base_rate_monthly?: number | null
+          billing_mode?: string
+          booked_days?: number | null
           booking_end_date?: string | null
           booking_start_date?: string | null
           campaign_id: string
@@ -1238,6 +1244,7 @@ export type Database = {
           city: string
           completed_at?: string | null
           created_at?: string | null
+          daily_rate?: number | null
           dimensions?: string | null
           direction?: string | null
           district?: string | null
@@ -1257,6 +1264,7 @@ export type Database = {
           photos?: Json | null
           printing_charges?: number | null
           printing_cost_default?: number | null
+          rent_amount?: number | null
           state?: string | null
           status?: Database["public"]["Enums"]["asset_installation_status"]
           tax_percent?: number | null
@@ -1269,6 +1277,8 @@ export type Database = {
           assigned_at?: string | null
           assigned_mounter_id?: string | null
           base_rate_monthly?: number | null
+          billing_mode?: string
+          booked_days?: number | null
           booking_end_date?: string | null
           booking_start_date?: string | null
           campaign_id?: string
@@ -1276,6 +1286,7 @@ export type Database = {
           city?: string
           completed_at?: string | null
           created_at?: string | null
+          daily_rate?: number | null
           dimensions?: string | null
           direction?: string | null
           district?: string | null
@@ -1295,6 +1306,7 @@ export type Database = {
           photos?: Json | null
           printing_charges?: number | null
           printing_cost_default?: number | null
+          rent_amount?: number | null
           state?: string | null
           status?: Database["public"]["Enums"]["asset_installation_status"]
           tax_percent?: number | null
@@ -5249,16 +5261,20 @@ export type Database = {
           area: string
           asset_id: string
           base_rent: number | null
+          billing_mode: string
+          booked_days: number | null
           card_rate: number
           cgst_amount: number | null
           city: string
           created_at: string | null
+          daily_rate: number | null
           dimensions: string
           direction: string | null
           discount_amount: number | null
           discount_type: string | null
           discount_value: number | null
           district: string | null
+          end_date: string | null
           gst_amount: number
           id: string
           igst_amount: number | null
@@ -5276,8 +5292,10 @@ export type Database = {
           printing_cost: number | null
           printing_mode: string | null
           printing_rate: number | null
+          rent_amount: number | null
           sales_price: number
           sgst_amount: number | null
+          start_date: string | null
           state: string | null
           subtotal: number
           tax_type: string | null
@@ -5288,16 +5306,20 @@ export type Database = {
           area: string
           asset_id: string
           base_rent?: number | null
+          billing_mode?: string
+          booked_days?: number | null
           card_rate: number
           cgst_amount?: number | null
           city: string
           created_at?: string | null
+          daily_rate?: number | null
           dimensions: string
           direction?: string | null
           discount_amount?: number | null
           discount_type?: string | null
           discount_value?: number | null
           district?: string | null
+          end_date?: string | null
           gst_amount: number
           id?: string
           igst_amount?: number | null
@@ -5315,8 +5337,10 @@ export type Database = {
           printing_cost?: number | null
           printing_mode?: string | null
           printing_rate?: number | null
+          rent_amount?: number | null
           sales_price: number
           sgst_amount?: number | null
+          start_date?: string | null
           state?: string | null
           subtotal: number
           tax_type?: string | null
@@ -5327,16 +5351,20 @@ export type Database = {
           area?: string
           asset_id?: string
           base_rent?: number | null
+          billing_mode?: string
+          booked_days?: number | null
           card_rate?: number
           cgst_amount?: number | null
           city?: string
           created_at?: string | null
+          daily_rate?: number | null
           dimensions?: string
           direction?: string | null
           discount_amount?: number | null
           discount_type?: string | null
           discount_value?: number | null
           district?: string | null
+          end_date?: string | null
           gst_amount?: number
           id?: string
           igst_amount?: number | null
@@ -5354,8 +5382,10 @@ export type Database = {
           printing_cost?: number | null
           printing_mode?: string | null
           printing_rate?: number | null
+          rent_amount?: number | null
           sales_price?: number
           sgst_amount?: number | null
+          start_date?: string | null
           state?: string | null
           subtotal?: number
           tax_type?: string | null

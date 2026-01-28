@@ -219,12 +219,13 @@ export default function CampaignAssetProofs() {
 
     try {
       setLoading(true);
-      // Photos are saved with the campaign_assets.id, use the fetched asset's id
+      // Photos are saved with the media asset code (asset.asset_id like HYD-BQS-0001),
+      // NOT the campaign_assets.id UUID
       const { data, error } = await supabase
         .from('media_photos')
         .select('*')
         .eq('campaign_id', campaignId)
-        .eq('asset_id', asset.id)
+        .eq('asset_id', asset.asset_id)
         .order('uploaded_at', { ascending: false });
 
       if (error) throw error;

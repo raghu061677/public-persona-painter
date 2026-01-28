@@ -206,7 +206,7 @@ export function MonthlyBillingScheduleTable({
 
                 {/* GST */}
                 <TableCell className="text-right text-sm">
-                  {formatCurrency(amounts.gstAmount)}
+                  {gstPercent > 0 ? formatCurrency(amounts.gstAmount) : "—"}
                 </TableCell>
 
                 {/* Total */}

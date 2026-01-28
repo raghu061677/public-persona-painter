@@ -21,6 +21,13 @@ import { ConflictWarning } from '@/components/campaigns/ConflictWarning';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  DurationMode,
+  calculateDurationDays,
+  calculateEndDate,
+  calculateMonthsFromDays,
+  BILLING_CYCLE_DAYS,
+} from '@/utils/billingEngine';
 
 interface AssetItem {
   asset_id: string;
@@ -58,6 +65,10 @@ export default function CampaignCreate() {
     notes: '',
     status: 'Planned' as string,
   });
+  
+  // Duration settings
+  const [durationMode, setDurationMode] = useState<DurationMode>('MONTH');
+  const [durationValue, setDurationValue] = useState<number>(1); // months or days
   
   // GST settings
   const [gstType, setGstType] = useState<'gst' | 'igst'>('gst');
@@ -192,17 +203,45 @@ export default function CampaignCreate() {
     }));
   };
 
+  // Calculate duration days from form dates
+  const getDurationDays = (): number => {
+    if (!formData.start_date || !formData.end_date) return 0;
+    const start = new Date(formData.start_date);
+    const end = new Date(formData.end_date);
+    return calculateDurationDays(start, end);
+  };
+
   const calculateTotals = () => {
     let subtotal = 0;
     let printingTotal = 0;
     let mountingTotal = 0;
 
+    const durationDays = getDurationDays();
+    
     selectedAssets.forEach(assetId => {
       const pricing = assetPricing[assetId];
-      if (pricing) {
-        subtotal += pricing.negotiated_price || 0;
-        printingTotal += pricing.printing_charges || 0;
-        mountingTotal += pricing.mounting_charges || 0;
+      const asset = availableAssets.find(a => a.id === assetId);
+      
+      if (pricing && asset) {
+        // Get monthly rates
+        const monthlyNegotiatedPrice = pricing.negotiated_price || asset.card_rate || 0;
+        const printing = pricing.printing_charges || 0;
+        const mounting = pricing.mounting_charges || 0;
+        
+        // Calculate based on billing mode
+        let effectivePrice = monthlyNegotiatedPrice;
+        
+        if (durationMode === 'DAYS' && durationDays > 0) {
+          // Pro-rata: days / 30 * monthly rate
+          effectivePrice = (monthlyNegotiatedPrice / BILLING_CYCLE_DAYS) * durationDays;
+        } else if (durationMode === 'MONTH') {
+          // Full monthly rate * months count
+          effectivePrice = monthlyNegotiatedPrice * durationValue;
+        }
+        
+        subtotal += effectivePrice;
+        printingTotal += printing;
+        mountingTotal += mounting;
       }
     });
 
@@ -233,7 +272,82 @@ export default function CampaignCreate() {
       sgstAmount,
       igstAmount,
       effectiveGstPercent,
+      durationDays: getDurationDays(),
     };
+  };
+
+  // Handle duration value change (update end date accordingly)
+  const handleDurationValueChange = (value: number) => {
+    if (value < 0.5) return;
+    setDurationValue(value);
+    
+    if (formData.start_date) {
+      const startDate = new Date(formData.start_date);
+      let daysToAdd: number;
+      
+      if (durationMode === 'MONTH') {
+        daysToAdd = value * BILLING_CYCLE_DAYS;
+      } else {
+        daysToAdd = value;
+      }
+      
+      const endDate = calculateEndDate(startDate, daysToAdd);
+      const endDateStr = endDate.toISOString().split('T')[0];
+      setFormData(prev => ({ ...prev, end_date: endDateStr }));
+    }
+  };
+  
+  // Handle duration mode change
+  const handleDurationModeChange = (mode: DurationMode) => {
+    setDurationMode(mode);
+    
+    const currentDays = getDurationDays();
+    if (currentDays > 0) {
+      if (mode === 'MONTH') {
+        // Convert current days to months
+        setDurationValue(calculateMonthsFromDays(currentDays));
+      } else {
+        // Use current days
+        setDurationValue(currentDays);
+      }
+    }
+  };
+  
+  // Handle start date change (keep duration, update end date)
+  const handleStartDateChange = (startDateStr: string) => {
+    setFormData(prev => ({ ...prev, start_date: startDateStr }));
+    
+    if (startDateStr) {
+      const startDate = new Date(startDateStr);
+      let daysToAdd: number;
+      
+      if (durationMode === 'MONTH') {
+        daysToAdd = durationValue * BILLING_CYCLE_DAYS;
+      } else {
+        daysToAdd = durationValue;
+      }
+      
+      const endDate = calculateEndDate(startDate, daysToAdd);
+      const endDateStr = endDate.toISOString().split('T')[0];
+      setFormData(prev => ({ ...prev, end_date: endDateStr }));
+    }
+  };
+  
+  // Handle end date change (update duration value)
+  const handleEndDateChange = (endDateStr: string) => {
+    setFormData(prev => ({ ...prev, end_date: endDateStr }));
+    
+    if (formData.start_date && endDateStr) {
+      const startDate = new Date(formData.start_date);
+      const endDate = new Date(endDateStr);
+      const days = calculateDurationDays(startDate, endDate);
+      
+      if (durationMode === 'MONTH') {
+        setDurationValue(calculateMonthsFromDays(days));
+      } else {
+        setDurationValue(days);
+      }
+    }
   };
 
   const handleGstPreset = (percent: number) => {
@@ -454,7 +568,7 @@ export default function CampaignCreate() {
                 </Select>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="start_date">Start Date *</Label>
@@ -462,7 +576,7 @@ export default function CampaignCreate() {
                       id="start_date"
                       type="date"
                       value={formData.start_date}
-                      onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                      onChange={(e) => handleStartDateChange(e.target.value)}
                     />
                   </div>
                   <div>
@@ -471,42 +585,84 @@ export default function CampaignCreate() {
                       id="end_date"
                       type="date"
                       value={formData.end_date}
-                      onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                      onChange={(e) => handleEndDateChange(e.target.value)}
                     />
                   </div>
                 </div>
                 
-                {/* Duration display */}
-                {formData.start_date && formData.end_date && (
-                  (() => {
-                    const start = new Date(formData.start_date);
-                    const end = new Date(formData.end_date);
-                    const diffTime = end.getTime() - start.getTime();
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-                    const months = Math.round(diffDays / 30 * 10) / 10;
+                {/* Editable Duration Controls */}
+                <div className="p-4 bg-muted/30 rounded-lg border space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Campaign Duration & Billing</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-4">
+                    {/* Billing Mode Dropdown */}
+                    <div>
+                      <Label>Billing Mode</Label>
+                      <Select 
+                        value={durationMode} 
+                        onValueChange={(value: DurationMode) => handleDurationModeChange(value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="MONTH">Month-wise</SelectItem>
+                          <SelectItem value="DAYS">Day-wise (Pro-rata)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     
-                    if (diffDays > 0) {
-                      return (
-                        <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Campaign Duration:</span>
-                          <Badge variant="secondary" className="font-semibold">
-                            {diffDays} {diffDays === 1 ? 'day' : 'days'}
+                    {/* Duration Value Input */}
+                    <div>
+                      <Label>{durationMode === 'MONTH' ? 'Months' : 'Days'}</Label>
+                      <Input
+                        type="number"
+                        min={durationMode === 'MONTH' ? '0.5' : '1'}
+                        step={durationMode === 'MONTH' ? '0.5' : '1'}
+                        value={durationValue}
+                        onChange={(e) => handleDurationValueChange(parseFloat(e.target.value) || 0.5)}
+                        className="font-medium"
+                      />
+                    </div>
+                    
+                    {/* Duration Summary */}
+                    <div>
+                      <Label>Duration Summary</Label>
+                      <div className="h-10 flex items-center gap-2">
+                        <Badge variant="secondary" className="font-semibold">
+                          {getDurationDays()} days
+                        </Badge>
+                        {durationMode === 'DAYS' && getDurationDays() > 0 && (
+                          <Badge variant="outline" className="text-xs">
+                            Factor: {(getDurationDays() / BILLING_CYCLE_DAYS).toFixed(2)}
                           </Badge>
-                          {diffDays >= 7 && (
-                            <Badge variant="outline" className="font-medium">
-                              ~{months} {months === 1 ? 'month' : 'months'}
-                            </Badge>
-                          )}
-                        </div>
-                      );
-                    }
-                    return (
-                      <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/20">
-                        <span className="text-sm text-destructive">End date must be after start date</span>
+                        )}
                       </div>
-                    );
-                  })()
+                    </div>
+                  </div>
+                  
+                  {/* Billing Info */}
+                  <div className="text-xs text-muted-foreground border-t pt-3 mt-2">
+                    {durationMode === 'MONTH' ? (
+                      <p>
+                        <strong>Month-wise billing:</strong> Negotiated price × {durationValue} {durationValue === 1 ? 'month' : 'months'}
+                      </p>
+                    ) : (
+                      <p>
+                        <strong>Day-wise (Pro-rata):</strong> (Negotiated price ÷ 30) × {getDurationDays()} days = Factor {(getDurationDays() / BILLING_CYCLE_DAYS).toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Validation Error */}
+                {formData.start_date && formData.end_date && getDurationDays() <= 0 && (
+                  <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/20">
+                    <span className="text-sm text-destructive">End date must be after start date</span>
+                  </div>
                 )}
               </div>
 

@@ -1206,6 +1206,7 @@ export type Database = {
           dimensions: string | null
           direction: string | null
           district: string | null
+          end_date: string | null
           id: string
           illumination_type: string | null
           installation_status: string | null
@@ -1223,6 +1224,7 @@ export type Database = {
           printing_charges: number | null
           printing_cost_default: number | null
           rent_amount: number | null
+          start_date: string | null
           state: string | null
           status: Database["public"]["Enums"]["asset_installation_status"]
           tax_percent: number | null
@@ -1248,6 +1250,7 @@ export type Database = {
           dimensions?: string | null
           direction?: string | null
           district?: string | null
+          end_date?: string | null
           id?: string
           illumination_type?: string | null
           installation_status?: string | null
@@ -1265,6 +1268,7 @@ export type Database = {
           printing_charges?: number | null
           printing_cost_default?: number | null
           rent_amount?: number | null
+          start_date?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["asset_installation_status"]
           tax_percent?: number | null
@@ -1290,6 +1294,7 @@ export type Database = {
           dimensions?: string | null
           direction?: string | null
           district?: string | null
+          end_date?: string | null
           id?: string
           illumination_type?: string | null
           installation_status?: string | null
@@ -1307,6 +1312,7 @@ export type Database = {
           printing_charges?: number | null
           printing_cost_default?: number | null
           rent_amount?: number | null
+          start_date?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["asset_installation_status"]
           tax_percent?: number | null

@@ -51,6 +51,27 @@ export function useCampaignBillingPeriods({
     const start = new Date(startDate);
     const end = new Date(endDate);
     const today = new Date();
+
+    // If campaign duration is <= 30 days, treat it as a SINGLE pro‑rata period.
+    // This avoids creating month-wise invoices for short campaigns (industry expectation).
+    const totalDays = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    if (totalDays <= BILLING_CYCLE_DAYS) {
+      const proRataFactor = Math.round((totalDays / BILLING_CYCLE_DAYS) * 100) / 100;
+      return [
+        {
+          monthKey: format(start, 'yyyy-MM'),
+          label: format(start, 'MMMM yyyy'),
+          periodStart: start,
+          periodEnd: end,
+          daysInPeriod: totalDays,
+          proRataFactor,
+          isFirstMonth: true,
+          isLastMonth: true,
+          isCurrentMonth: isSameMonth(start, today),
+        },
+      ];
+    }
+
     const result: BillingPeriod[] = [];
 
     let currentPeriodStart = new Date(start);

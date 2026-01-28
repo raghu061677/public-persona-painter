@@ -62,8 +62,13 @@ export function CampaignBillingTab({
   const [generating, setGenerating] = useState(false);
   const [showBulkDialog, setShowBulkDialog] = useState(false);
 
-  const printingTotal = campaign.printing_total || 0;
-  const mountingTotal = campaign.mounting_total || 0;
+  // Fallback: some legacy campaigns may not have campaign-level totals populated.
+  // In that case, compute from campaign_assets snapshots so billing shows the correct one-time charges.
+  const computedPrintingTotal = campaignAssets.reduce((sum, a) => sum + (Number(a?.printing_charges) || 0), 0);
+  const computedMountingTotal = campaignAssets.reduce((sum, a) => sum + (Number(a?.mounting_charges) || 0), 0);
+
+  const printingTotal = Number(campaign.printing_total ?? computedPrintingTotal) || 0;
+  const mountingTotal = Number(campaign.mounting_total ?? computedMountingTotal) || 0;
 
   // Calculate billing periods
   const billingSummary = useCampaignBillingPeriods({
@@ -72,7 +77,8 @@ export function CampaignBillingTab({
     totalAmount: displayCost,
     printingTotal,
     mountingTotal,
-    gstPercent: campaign.gst_percent || 18,
+    // Respect campaign tax config. If GST wasn't set, keep it 0.
+    gstPercent: Number(campaign.gst_percent ?? 0) || 0,
   });
 
   // Fetch existing invoices for this campaign
@@ -258,26 +264,31 @@ export function CampaignBillingTab({
         <div>
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <CalendarDays className="h-5 w-5" />
-            Monthly Billing Schedule
+            {billingSummary.periods.length > 1 ? 'Monthly Billing Schedule' : 'Billing Schedule'}
           </h3>
           <p className="text-sm text-muted-foreground">
-            Generate invoices for each billing period individually or all at once.
+            {billingSummary.periods.length > 1
+              ? 'Generate invoices for each billing period individually or all at once.'
+              : 'Generate a single pro-rata invoice for this short campaign.'}
           </p>
         </div>
-        <Button onClick={() => setShowBulkDialog(true)} variant="outline">
-          <FileText className="mr-2 h-4 w-4" />
-          Generate All Invoices
-        </Button>
+        {billingSummary.periods.length > 1 && (
+          <Button onClick={() => setShowBulkDialog(true)} variant="outline">
+            <FileText className="mr-2 h-4 w-4" />
+            Generate All Invoices
+          </Button>
+        )}
       </div>
 
       {/* Info Alert */}
-      <Alert>
-        <Info className="h-4 w-4" />
-        <AlertDescription>
-          Select which months should include one-time charges (printing & mounting) before generating invoices.
-          These charges are typically applied to the first invoice.
-        </AlertDescription>
-      </Alert>
+      {(printingTotal > 0 || mountingTotal > 0) && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            Select which billing period should include one-time charges (printing & mounting) before generating invoices.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Monthly Schedule Table */}
       <MonthlyBillingScheduleTable

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, CalendarIcon, Plus, Trash2, Save, X } from "lucide-react";
+import { ArrowLeft, CalendarIcon, Plus, Trash2, Save, X, AlertCircle, Calculator } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -19,6 +19,10 @@ import { cn } from "@/lib/utils";
 import { AddCampaignAssetsDialog } from "@/components/campaigns/AddCampaignAssetsDialog";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { PrintingPricingBar } from "@/components/shared/PrintingPricingBar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { calculatePrintingCost, calculateMountingCost, getAssetSqft } from "@/utils/effectivePricing";
 import {
   DurationMode,
   calculateDurationDays,
@@ -69,6 +73,13 @@ interface CampaignAsset {
   billing_mode: BillingMode;
   daily_rate: number;
   rent_amount: number;
+  // Sqft-based pricing fields
+  total_sqft: number;
+  printing_rate_per_sqft: number;
+  mounting_rate_per_sqft: number;
+  printing_cost: number;
+  mounting_cost: number;
+  dimensions?: string;
 }
 
 export default function CampaignEdit() {
@@ -101,6 +112,13 @@ export default function CampaignEdit() {
   // Campaign assets (from campaign_assets table - primary source)
   const [campaignAssets, setCampaignAssets] = useState<CampaignAsset[]>([]);
   const [deletedAssetIds, setDeletedAssetIds] = useState<string[]>([]);
+  
+  // Selection state for bulk operations
+  const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
+  
+  // Bulk pricing rates
+  const [bulkPrintingRate, setBulkPrintingRate] = useState<number>(17);
+  const [bulkMountingRate, setBulkMountingRate] = useState<number>(8);
 
   useEffect(() => {
     fetchClients();
@@ -242,16 +260,20 @@ export default function CampaignEdit() {
     }
 
     if (assets && assets.length > 0) {
-      // Fetch media_asset_code from media_assets table for proper display
+      // Fetch media_asset data including total_sqft for proper display and calculations
       const assetIds = assets.map(a => a.asset_id);
       const { data: mediaAssets } = await supabase
         .from('media_assets')
-        .select('id, media_asset_code')
+        .select('id, media_asset_code, total_sqft, dimensions')
         .in('id', assetIds);
       
-      const mediaAssetCodeMap = new Map<string, string>();
+      const mediaAssetDataMap = new Map<string, { code: string; sqft: number; dimensions: string }>();
       mediaAssets?.forEach(ma => {
-        mediaAssetCodeMap.set(ma.id, ma.media_asset_code || ma.id);
+        mediaAssetDataMap.set(ma.id, { 
+          code: ma.media_asset_code || ma.id,
+          sqft: Number(ma.total_sqft) || 0,
+          dimensions: ma.dimensions || ''
+        });
       });
 
       setCampaignAssets(assets.map(asset => {
@@ -262,18 +284,27 @@ export default function CampaignEdit() {
           ? computeRentAmount(monthlyRate, assetStartDate, assetEndDate, (asset.billing_mode as BillingMode) || 'PRORATA_30')
           : { booked_days: 0, daily_rate: 0, rent_amount: 0, billing_mode: 'PRORATA_30' as BillingMode };
         
+        const assetData = mediaAssetDataMap.get(asset.asset_id);
+        const totalSqft = Number(asset.total_sqft) || assetData?.sqft || 0;
+        
+        // Calculate printing and mounting rates from existing charges
+        const printingCharges = Number(asset.printing_charges) || 0;
+        const mountingCharges = Number(asset.mounting_charges) || 0;
+        const printingRatePerSqft = totalSqft > 0 && printingCharges > 0 ? printingCharges / totalSqft : 0;
+        const mountingRatePerSqft = totalSqft > 0 && mountingCharges > 0 ? mountingCharges / totalSqft : 0;
+        
         return {
           id: asset.id,
           asset_id: asset.asset_id,
-          media_asset_code: mediaAssetCodeMap.get(asset.asset_id) || asset.asset_id,
+          media_asset_code: assetData?.code || asset.asset_id,
           location: asset.location || '',
           area: asset.area || '',
           city: asset.city || '',
           media_type: asset.media_type || '',
           card_rate: Number(asset.card_rate) || 0,
           negotiated_rate: monthlyRate,
-          printing_charges: Number(asset.printing_charges) || 0,
-          mounting_charges: Number(asset.mounting_charges) || 0,
+          printing_charges: printingCharges,
+          mounting_charges: mountingCharges,
           total_price: Number(asset.total_price) || 0,
           status: asset.status || 'Pending',
           start_date: assetStartDate,
@@ -282,6 +313,13 @@ export default function CampaignEdit() {
           billing_mode: (asset.billing_mode as BillingMode) || 'PRORATA_30',
           daily_rate: asset.daily_rate || rentResult.daily_rate,
           rent_amount: asset.rent_amount || rentResult.rent_amount,
+          // New sqft-based fields
+          total_sqft: totalSqft,
+          printing_rate_per_sqft: printingRatePerSqft,
+          mounting_rate_per_sqft: mountingRatePerSqft,
+          printing_cost: printingCharges,
+          mounting_cost: mountingCharges,
+          dimensions: assetData?.dimensions || asset.dimensions || '',
         };
       }));
     } else {
@@ -302,7 +340,9 @@ export default function CampaignEdit() {
             location,
             area,
             city,
-            media_type
+            media_type,
+            total_sqft,
+            dimensions
           )
         `)
         .eq('campaign_id', id)
@@ -317,6 +357,7 @@ export default function CampaignEdit() {
           const finalPrice = Number(item.final_price) || Number(item.negotiated_rate) || 0;
           const printingCharge = Number(item.printing_charge) || 0;
           const mountingCharge = Number(item.mounting_charge) || 0;
+          const totalSqft = Number(asset?.total_sqft) || 0;
           const rentResult = campaignStart && campaignEnd 
             ? computeRentAmount(finalPrice, campaignStart, campaignEnd, 'PRORATA_30')
             : { booked_days: 0, daily_rate: 0, rent_amount: 0, billing_mode: 'PRORATA_30' as BillingMode };
@@ -341,6 +382,13 @@ export default function CampaignEdit() {
             billing_mode: 'PRORATA_30' as BillingMode,
             daily_rate: rentResult.daily_rate,
             rent_amount: rentResult.rent_amount,
+            // New sqft-based fields
+            total_sqft: totalSqft,
+            printing_rate_per_sqft: totalSqft > 0 && printingCharge > 0 ? printingCharge / totalSqft : 0,
+            mounting_rate_per_sqft: totalSqft > 0 && mountingCharge > 0 ? mountingCharge / totalSqft : 0,
+            printing_cost: printingCharge,
+            mounting_cost: mountingCharge,
+            dimensions: asset?.dimensions || '',
           };
         }));
       }
@@ -430,6 +478,7 @@ export default function CampaignEdit() {
     
     const newAssets: CampaignAsset[] = assets.map(asset => {
       const monthlyRate = Number(asset.card_rate) || 0;
+      const totalSqft = Number(asset.total_sqft) || 0;
       const rentResult = campaignStart && campaignEnd 
         ? computeRentAmount(monthlyRate, campaignStart, campaignEnd, 'PRORATA_30')
         : { booked_days: 0, daily_rate: 0, rent_amount: 0, billing_mode: 'PRORATA_30' as BillingMode };
@@ -455,6 +504,13 @@ export default function CampaignEdit() {
         billing_mode: 'PRORATA_30' as BillingMode,
         daily_rate: rentResult.daily_rate,
         rent_amount: rentResult.rent_amount,
+        // New sqft-based fields
+        total_sqft: totalSqft,
+        printing_rate_per_sqft: 0,
+        mounting_rate_per_sqft: 0,
+        printing_cost: 0,
+        mounting_cost: 0,
+        dimensions: asset.dimensions || '',
       };
     });
     
@@ -658,6 +714,176 @@ export default function CampaignEdit() {
     };
   };
 
+  // Selection handlers
+  const toggleAssetSelection = (assetId: string) => {
+    setSelectedAssetIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(assetId)) {
+        newSet.delete(assetId);
+      } else {
+        newSet.add(assetId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedAssetIds.size === campaignAssets.length) {
+      setSelectedAssetIds(new Set());
+    } else {
+      setSelectedAssetIds(new Set(campaignAssets.map(a => a.id)));
+    }
+  };
+
+  // Calculate and update printing cost for a single asset
+  const updateAssetPrintingRate = (assetId: string, rate: number) => {
+    setCampaignAssets(prev => prev.map(asset => {
+      if (asset.id !== assetId) return asset;
+      
+      const printingResult = calculatePrintingCost(
+        { total_sqft: asset.total_sqft, dimensions: asset.dimensions },
+        rate
+      );
+      
+      return {
+        ...asset,
+        printing_rate_per_sqft: rate,
+        printing_cost: printingResult.cost,
+        printing_charges: printingResult.cost, // Keep in sync with legacy field
+      };
+    }));
+  };
+
+  // Calculate and update mounting cost for a single asset
+  const updateAssetMountingRate = (assetId: string, rate: number) => {
+    setCampaignAssets(prev => prev.map(asset => {
+      if (asset.id !== assetId) return asset;
+      
+      const mountingResult = calculateMountingCost(
+        { total_sqft: asset.total_sqft, dimensions: asset.dimensions },
+        rate
+      );
+      
+      return {
+        ...asset,
+        mounting_rate_per_sqft: rate,
+        mounting_cost: mountingResult.cost,
+        mounting_charges: mountingResult.cost, // Keep in sync with legacy field
+      };
+    }));
+  };
+
+  // Bulk apply printing rate
+  const applyPrintingRateToSelected = () => {
+    if (selectedAssetIds.size === 0) {
+      toast({
+        title: "No assets selected",
+        description: "Select at least 1 asset to apply printing rate",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setCampaignAssets(prev => prev.map(asset => {
+      if (!selectedAssetIds.has(asset.id)) return asset;
+      
+      const printingResult = calculatePrintingCost(
+        { total_sqft: asset.total_sqft, dimensions: asset.dimensions },
+        bulkPrintingRate
+      );
+      
+      return {
+        ...asset,
+        printing_rate_per_sqft: bulkPrintingRate,
+        printing_cost: printingResult.cost,
+        printing_charges: printingResult.cost,
+      };
+    }));
+    
+    toast({
+      title: "Printing rate applied",
+      description: `Applied ₹${bulkPrintingRate}/sqft to ${selectedAssetIds.size} asset(s)`,
+    });
+  };
+
+  const applyPrintingRateToAll = () => {
+    if (campaignAssets.length === 0) return;
+    
+    setCampaignAssets(prev => prev.map(asset => {
+      const printingResult = calculatePrintingCost(
+        { total_sqft: asset.total_sqft, dimensions: asset.dimensions },
+        bulkPrintingRate
+      );
+      
+      return {
+        ...asset,
+        printing_rate_per_sqft: bulkPrintingRate,
+        printing_cost: printingResult.cost,
+        printing_charges: printingResult.cost,
+      };
+    }));
+    
+    toast({
+      title: "Printing rate applied",
+      description: `Applied ₹${bulkPrintingRate}/sqft to ${campaignAssets.length} asset(s)`,
+    });
+  };
+
+  // Bulk apply mounting rate
+  const applyMountingRateToSelected = () => {
+    if (selectedAssetIds.size === 0) {
+      toast({
+        title: "No assets selected",
+        description: "Select at least 1 asset to apply mounting rate",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setCampaignAssets(prev => prev.map(asset => {
+      if (!selectedAssetIds.has(asset.id)) return asset;
+      
+      const mountingResult = calculateMountingCost(
+        { total_sqft: asset.total_sqft, dimensions: asset.dimensions },
+        bulkMountingRate
+      );
+      
+      return {
+        ...asset,
+        mounting_rate_per_sqft: bulkMountingRate,
+        mounting_cost: mountingResult.cost,
+        mounting_charges: mountingResult.cost,
+      };
+    }));
+    
+    toast({
+      title: "Mounting rate applied",
+      description: `Applied ₹${bulkMountingRate}/sqft to ${selectedAssetIds.size} asset(s)`,
+    });
+  };
+
+  const applyMountingRateToAll = () => {
+    if (campaignAssets.length === 0) return;
+    
+    setCampaignAssets(prev => prev.map(asset => {
+      const mountingResult = calculateMountingCost(
+        { total_sqft: asset.total_sqft, dimensions: asset.dimensions },
+        bulkMountingRate
+      );
+      
+      return {
+        ...asset,
+        mounting_rate_per_sqft: bulkMountingRate,
+        mounting_cost: mountingResult.cost,
+        mounting_charges: mountingResult.cost,
+      };
+    }));
+    
+    toast({
+      title: "Mounting rate applied",
+      description: `Applied ₹${bulkMountingRate}/sqft to ${campaignAssets.length} asset(s)`,
+    });
+  };
 
 
   const handleSave = async () => {
@@ -1160,19 +1386,41 @@ export default function CampaignEdit() {
             </div>
           </CardHeader>
           <CardContent>
+            {/* Bulk Pricing Controls */}
+            {campaignAssets.length > 0 && (
+              <PrintingPricingBar
+                printingRate={bulkPrintingRate}
+                mountingRate={bulkMountingRate}
+                onPrintingRateChange={setBulkPrintingRate}
+                onMountingRateChange={setBulkMountingRate}
+                onApplyPrintingToSelected={applyPrintingRateToSelected}
+                onApplyPrintingToAll={applyPrintingRateToAll}
+                onApplyMountingToSelected={applyMountingRateToSelected}
+                onApplyMountingToAll={applyMountingRateToAll}
+                selectedCount={selectedAssetIds.size}
+                totalCount={campaignAssets.length}
+              />
+            )}
+            
             <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[60px] text-center">S.No</TableHead>
+                    <TableHead className="w-[40px]">
+                      <Checkbox
+                        checked={selectedAssetIds.size === campaignAssets.length && campaignAssets.length > 0}
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </TableHead>
+                    <TableHead className="w-[50px] text-center">S.No</TableHead>
                     <TableHead className="w-[140px]">Asset ID</TableHead>
                     <TableHead>Location</TableHead>
-                    <TableHead className="min-w-[220px]">Duration</TableHead>
-                    <TableHead className="text-right text-muted-foreground">Card Rate</TableHead>
+                    <TableHead className="text-right w-[80px]">Sqft</TableHead>
+                    <TableHead className="min-w-[180px]">Duration</TableHead>
                     <TableHead className="text-right">Negotiated</TableHead>
-                    <TableHead className="text-right">Rent Amount</TableHead>
-                    <TableHead className="text-right">Printing</TableHead>
-                    <TableHead className="text-right">Mounting</TableHead>
+                    <TableHead className="text-right">Rent</TableHead>
+                    <TableHead className="w-[160px]">Printing (Rate→Cost)</TableHead>
+                    <TableHead className="w-[160px]">Mounting (Rate→Cost)</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
@@ -1180,13 +1428,19 @@ export default function CampaignEdit() {
                 <TableBody>
                   {campaignAssets.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
                         No assets in this campaign. Click "Add Assets" to add media assets.
                       </TableCell>
                     </TableRow>
                   ) : (
                     campaignAssets.map((asset, index) => (
-                      <TableRow key={asset.id} className={asset.isNew ? "bg-green-50/50" : ""}>
+                      <TableRow key={asset.id} className={cn(asset.isNew && "bg-green-50/50", selectedAssetIds.has(asset.id) && "bg-primary/5")}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedAssetIds.has(asset.id)}
+                            onCheckedChange={() => toggleAssetSelection(asset.id)}
+                          />
+                        </TableCell>
                         <TableCell className="text-center font-medium text-muted-foreground">
                           {index + 1}
                         </TableCell>
@@ -1198,11 +1452,28 @@ export default function CampaignEdit() {
                           })}
                           {asset.isNew && <span className="ml-1 text-xs text-green-600">(new)</span>}
                         </TableCell>
-                        <TableCell className="min-w-[200px] max-w-[300px] text-sm">
+                        <TableCell className="min-w-[180px] max-w-[250px] text-sm">
                           <div className="break-words whitespace-normal" title={asset.location}>
                             {asset.location}
                           </div>
-                          <span className="block text-xs text-muted-foreground">{asset.area}{asset.city ? `, ${asset.city}` : ''}</span>
+                          <span className="block text-xs text-muted-foreground">{asset.area}</span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {asset.total_sqft > 0 ? (
+                            <span className="font-medium">{asset.total_sqft}</span>
+                          ) : (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="destructive" className="text-xs cursor-help">
+                                    <AlertCircle className="h-3 w-3 mr-1" />
+                                    N/A
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>Area missing - cannot calculate printing cost</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                         </TableCell>
                         <TableCell>
                           <CampaignAssetDurationCell
@@ -1215,35 +1486,48 @@ export default function CampaignEdit() {
                             onChange={(updates) => handleAssetDurationChange(index, updates)}
                           />
                         </TableCell>
-                        <TableCell className="text-right text-muted-foreground">
-                          {formatCurrency(asset.card_rate)}
-                        </TableCell>
                         <TableCell>
                           <Input
                             type="number"
                             value={asset.negotiated_rate}
                             onChange={(e) => updateCampaignAsset(index, 'negotiated_rate', Number(e.target.value))}
-                            className="h-8 w-24 text-right ml-auto"
+                            className="h-8 w-24 text-right"
                           />
                         </TableCell>
                         <TableCell className="text-right font-semibold text-primary">
                           {formatCurrency(asset.rent_amount || 0)}
                         </TableCell>
                         <TableCell>
-                          <Input
-                            type="number"
-                            value={asset.printing_charges}
-                            onChange={(e) => updateCampaignAsset(index, 'printing_charges', Number(e.target.value))}
-                            className="h-8 w-20 text-right ml-auto"
-                          />
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              value={asset.printing_rate_per_sqft || ''}
+                              onChange={(e) => updateAssetPrintingRate(asset.id, Number(e.target.value))}
+                              className="h-8 w-16 text-right text-xs"
+                              placeholder="₹/sqft"
+                              step="0.5"
+                            />
+                            <span className="text-muted-foreground">→</span>
+                            <span className="font-medium text-green-600 min-w-[60px] text-right">
+                              {formatCurrency(asset.printing_charges || 0)}
+                            </span>
+                          </div>
                         </TableCell>
                         <TableCell>
-                          <Input
-                            type="number"
-                            value={asset.mounting_charges}
-                            onChange={(e) => updateCampaignAsset(index, 'mounting_charges', Number(e.target.value))}
-                            className="h-8 w-20 text-right ml-auto"
-                          />
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              value={asset.mounting_rate_per_sqft || ''}
+                              onChange={(e) => updateAssetMountingRate(asset.id, Number(e.target.value))}
+                              className="h-8 w-16 text-right text-xs"
+                              placeholder="₹/sqft"
+                              step="0.5"
+                            />
+                            <span className="text-muted-foreground">→</span>
+                            <span className="font-medium text-green-600 min-w-[60px] text-right">
+                              {formatCurrency(asset.mounting_charges || 0)}
+                            </span>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Select

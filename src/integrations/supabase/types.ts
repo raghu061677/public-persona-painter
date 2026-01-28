@@ -1216,13 +1216,17 @@ export type Database = {
           media_type: string
           mounter_name: string | null
           mounting_charges: number | null
+          mounting_cost: number
           mounting_cost_default: number | null
+          mounting_rate_per_sqft: number
           municipal_authority: string | null
           municipal_id: string | null
           negotiated_rate: number | null
           photos: Json | null
           printing_charges: number | null
+          printing_cost: number
           printing_cost_default: number | null
+          printing_rate_per_sqft: number
           rent_amount: number | null
           start_date: string | null
           state: string | null
@@ -1260,13 +1264,17 @@ export type Database = {
           media_type: string
           mounter_name?: string | null
           mounting_charges?: number | null
+          mounting_cost?: number
           mounting_cost_default?: number | null
+          mounting_rate_per_sqft?: number
           municipal_authority?: string | null
           municipal_id?: string | null
           negotiated_rate?: number | null
           photos?: Json | null
           printing_charges?: number | null
+          printing_cost?: number
           printing_cost_default?: number | null
+          printing_rate_per_sqft?: number
           rent_amount?: number | null
           start_date?: string | null
           state?: string | null
@@ -1304,13 +1312,17 @@ export type Database = {
           media_type?: string
           mounter_name?: string | null
           mounting_charges?: number | null
+          mounting_cost?: number
           mounting_cost_default?: number | null
+          mounting_rate_per_sqft?: number
           municipal_authority?: string | null
           municipal_id?: string | null
           negotiated_rate?: number | null
           photos?: Json | null
           printing_charges?: number | null
+          printing_cost?: number
           printing_cost_default?: number | null
+          printing_rate_per_sqft?: number
           rent_amount?: number | null
           start_date?: string | null
           state?: string | null
@@ -5293,6 +5305,8 @@ export type Database = {
           longitude: number | null
           media_type: string
           mounting_charges: number | null
+          mounting_cost: number
+          mounting_rate: number
           plan_id: string
           printing_charges: number | null
           printing_cost: number | null
@@ -5338,6 +5352,8 @@ export type Database = {
           longitude?: number | null
           media_type: string
           mounting_charges?: number | null
+          mounting_cost?: number
+          mounting_rate?: number
           plan_id: string
           printing_charges?: number | null
           printing_cost?: number | null
@@ -5383,6 +5399,8 @@ export type Database = {
           longitude?: number | null
           media_type?: string
           mounting_charges?: number | null
+          mounting_cost?: number
+          mounting_rate?: number
           plan_id?: string
           printing_charges?: number | null
           printing_cost?: number | null

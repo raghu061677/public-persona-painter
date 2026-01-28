@@ -315,20 +315,20 @@ export default function CampaignAssetProofs() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col lg:flex-row gap-6">
-              {/* QR Code - Single, Large, Prominent - Left Side */}
+              {/* Single Large QR Code - Asset Verification */}
               {qrCodeUrl && (
-                <div className="flex flex-col items-center justify-center gap-4 p-6 border-2 border-primary/20 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 min-w-[200px]">
+                <div className="flex flex-col items-center justify-center gap-4 p-8 border-2 border-primary/30 rounded-2xl bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 min-w-[280px] shadow-lg">
                   <img 
                     src={qrCodeUrl} 
                     alt="Asset QR Code"
-                    className="w-48 h-48 object-contain bg-white p-4 rounded-lg shadow-lg border"
+                    className="w-56 h-56 object-contain bg-white p-5 rounded-xl shadow-xl border-2 border-primary/20"
                   />
-                  <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-                    <QrCode className="h-5 w-5" />
-                    <span>Scan to Verify</span>
+                  <div className="flex items-center gap-2 text-base font-bold text-primary">
+                    <QrCode className="h-6 w-6" />
+                    <span>Scan to Verify Asset</span>
                   </div>
-                  <p className="text-xs text-muted-foreground text-center max-w-[180px]">
-                    Scan this QR code to verify the asset location and details
+                  <p className="text-sm text-muted-foreground text-center max-w-[220px]">
+                    Use this QR code to verify asset location and installation details
                   </p>
                 </div>
               )}

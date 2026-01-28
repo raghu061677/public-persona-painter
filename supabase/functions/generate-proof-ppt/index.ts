@@ -317,11 +317,18 @@ Deno.serve(async (req) => {
       }
 
       // Add photos in 2x2 grid (show placeholders if missing)
-      const photoTypes = ['geo', 'newspaper', 'traffic1', 'traffic2'];
-      const photoLabels = ['Geo-tagged Photo', 'Newspaper Ad', 'Traffic View 1', 'Traffic View 2'];
+      // Support both specific type keys and numbered keys (photo_1, photo_2, etc.)
+      const photoTypeMapping = [
+        { keys: ['geo', 'geotag', 'photo_1'], label: 'Geo-tagged Photo' },
+        { keys: ['newspaper', 'photo_2'], label: 'Newspaper Ad' },
+        { keys: ['traffic1', 'traffic_left', 'photo_3'], label: 'Traffic View 1' },
+        { keys: ['traffic2', 'traffic_right', 'photo_4'], label: 'Traffic View 2' },
+      ];
       
       for (let i = 0; i < 4; i++) {
-        const photo = photos.find((p: any) => p.photo_type === photoTypes[i]);
+        // Find a photo matching any of the accepted keys for this slot
+        const acceptedKeys = photoTypeMapping[i].keys;
+        const photo = photos.find((p: any) => acceptedKeys.includes(p.photo_type));
         const col = i % 2;
         const row = Math.floor(i / 2);
         const x = 0.5 + (col * 3.5);
@@ -364,7 +371,7 @@ Deno.serve(async (req) => {
         }
 
         // Photo label
-        slide.addText(sanitizePptText(photoLabels[i]), {
+        slide.addText(sanitizePptText(photoTypeMapping[i].label), {
           x,
           y: y + 2.05,
           w: 3.2,

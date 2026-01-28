@@ -313,14 +313,16 @@ const Dashboard = () => {
           {/* Metric Cards */}
           {shouldShowWidget('revenue') && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4" data-tour="dashboard">
-              <StatCard
-                title="Total Assets"
-                value={metrics.totalAssets}
-                icon={ClipboardList}
-                description="Total inventory"
-                borderColor="border-l-blue-500"
-              />
-              <div onClick={() => navigate('/admin/media-assets?status=Available')} className="cursor-pointer">
+              <div onClick={() => navigate('/media-assets')} className="cursor-pointer hover:opacity-80 transition-opacity">
+                <StatCard
+                  title="Total Assets"
+                  value={metrics.totalAssets}
+                  icon={ClipboardList}
+                  description="Total inventory"
+                  borderColor="border-l-blue-500"
+                />
+              </div>
+              <div onClick={() => navigate('/media-assets?status=Available')} className="cursor-pointer hover:opacity-80 transition-opacity">
                 <StatCard
                   title="Available Assets"
                   value={metrics.availableAssets}
@@ -329,7 +331,7 @@ const Dashboard = () => {
                   borderColor="border-l-emerald-500"
                 />
               </div>
-              <div onClick={() => navigate('/admin/media-assets?status=Booked')} className="cursor-pointer">
+              <div onClick={() => navigate('/media-assets?status=Booked')} className="cursor-pointer hover:opacity-80 transition-opacity">
                 <StatCard
                   title="Booked Assets"
                   value={metrics.bookedAssets}
@@ -338,28 +340,34 @@ const Dashboard = () => {
                   borderColor="border-l-amber-500"
                 />
               </div>
-              <StatCard
-                title="Active Campaigns"
-                value={metrics.activeCampaigns}
-                icon={GanttChartSquare}
-                description="Currently running"
-                borderColor="border-l-green-500"
-              />
-              <StatCard
-                title="New Leads"
-                value={metrics.leadsThisMonth}
-                icon={Users}
-                description="This month"
-                borderColor="border-l-purple-500"
-              />
-              <StatCard
-                title="Revenue"
-                value={`₹${(metrics.revenueThisMonth / 100000).toFixed(1)}L`}
-                icon={IndianRupee}
-                description="This month"
-                borderColor="border-l-orange-500"
-              />
-              <div onClick={() => navigate('/admin/operations')} className="cursor-pointer">
+              <div onClick={() => navigate('/campaigns?status=Running')} className="cursor-pointer hover:opacity-80 transition-opacity">
+                <StatCard
+                  title="Active Campaigns"
+                  value={metrics.activeCampaigns}
+                  icon={GanttChartSquare}
+                  description="Currently running"
+                  borderColor="border-l-green-500"
+                />
+              </div>
+              <div onClick={() => navigate('/leads')} className="cursor-pointer hover:opacity-80 transition-opacity">
+                <StatCard
+                  title="New Leads"
+                  value={metrics.leadsThisMonth}
+                  icon={Users}
+                  description="This month"
+                  borderColor="border-l-purple-500"
+                />
+              </div>
+              <div onClick={() => navigate('/admin/invoices')} className="cursor-pointer hover:opacity-80 transition-opacity">
+                <StatCard
+                  title="Revenue"
+                  value={`₹${(metrics.revenueThisMonth / 100000).toFixed(1)}L`}
+                  icon={IndianRupee}
+                  description="This month"
+                  borderColor="border-l-orange-500"
+                />
+              </div>
+              <div onClick={() => navigate('/admin/operations')} className="cursor-pointer hover:opacity-80 transition-opacity">
                 <StatCard
                   title="Pending Tasks"
                   value={metrics.pendingTasks}

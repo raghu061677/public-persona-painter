@@ -222,9 +222,14 @@ export default function CampaignDetail() {
   const durationMonths = Math.round(durationDays / 30);
 
   // Use campaign_assets pricing which is locked from Plan
-  // Display cost from negotiated_rate (final price)
+  // Display cost from negotiated_rate (final price) with pro-rata for campaign duration
+  // Formula: (monthly_rate / 30) × duration_days
+  const BILLING_CYCLE_DAYS = 30;
   const displayCost = campaignAssets.reduce((sum, a) => {
-    return sum + (a.negotiated_rate || a.card_rate || 0);
+    const monthlyRate = a.negotiated_rate || a.card_rate || 0;
+    // Apply pro-rata: (monthly_rate / 30) * actual_days
+    const proRataAmount = (monthlyRate / BILLING_CYCLE_DAYS) * durationDays;
+    return sum + proRataAmount;
   }, 0);
   
   // Printing and mounting from campaign_assets

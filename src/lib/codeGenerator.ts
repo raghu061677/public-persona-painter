@@ -102,18 +102,33 @@ export async function generatePlanCode(): Promise<string> {
 
 /**
  * Generate Campaign Code
- * Format: CMP-YYYYMM-####
- * Example: CMP-202511-0003
+ * Format: CAM-YYYY-MonthName-###
+ * Example: CAM-2026-January-001
  */
 export async function generateCampaignCode(startDate?: Date): Promise<string> {
   const date = startDate || new Date();
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const period = `${year}${month}`;
+  const monthName = date.toLocaleString('en-US', { month: 'long' });
+  const prefix = `CAM-${year}-${monthName}-`;
   
-  const sequence = await getNextSequence('CAMPAIGN', 'default', period);
+  // Query existing campaigns to get next sequence number
+  const { data: existingCampaigns } = await supabase
+    .from('campaigns')
+    .select('id')
+    .like('id', `${prefix}%`)
+    .order('id', { ascending: false })
+    .limit(1);
   
-  return `CMP-${period}-${padNumber(sequence)}`;
+  let nextSeq = 1;
+  if (existingCampaigns && existingCampaigns.length > 0) {
+    const lastId = existingCampaigns[0].id;
+    const match = lastId.match(/CAM-\d{4}-[A-Za-z]+-(\d+)$/);
+    if (match) {
+      nextSeq = parseInt(match[1], 10) + 1;
+    }
+  }
+  
+  return `${prefix}${String(nextSeq).padStart(3, '0')}`;
 }
 
 /**

@@ -28,6 +28,13 @@ import {
   calculateMonthsFromDays,
   BILLING_CYCLE_DAYS,
 } from '@/utils/billingEngine';
+import {
+  BillingMode,
+  computeRentAmount,
+  BILLING_CYCLE_DAYS as PRICING_CYCLE_DAYS,
+} from '@/utils/perAssetPricing';
+import { CampaignAssetDurationCell } from '@/components/campaigns/CampaignAssetDurationCell';
+import { format } from 'date-fns';
 
 interface AssetItem {
   asset_id: string;
@@ -133,12 +140,23 @@ export default function CampaignCreate() {
       newSelected.add(assetId);
       const monthlyCardRate = asset.card_rate || 0;
       
+      // Calculate initial rent using campaign dates
+      const campaignStart = formData.start_date ? new Date(formData.start_date) : new Date();
+      const campaignEnd = formData.end_date ? new Date(formData.end_date) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      const rentResult = computeRentAmount(monthlyCardRate, campaignStart, campaignEnd, 'PRORATA_30');
+      
       setAssetPricing(prev => ({
         ...prev,
         [assetId]: {
           negotiated_price: monthlyCardRate,
           printing_charges: asset.printing_charge || 0,
           mounting_charges: asset.mounting_charge || 0,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          billing_mode: 'PRORATA_30' as BillingMode,
+          booked_days: rentResult.booked_days,
+          daily_rate: rentResult.daily_rate,
+          rent_amount: rentResult.rent_amount,
         }
       }));
 
@@ -164,14 +182,24 @@ export default function CampaignCreate() {
     const newSelected = new Set(selectedAssets);
     const newPricing = { ...assetPricing };
 
+    const campaignStart = formData.start_date ? new Date(formData.start_date) : new Date();
+    const campaignEnd = formData.end_date ? new Date(formData.end_date) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
     assets.forEach(asset => {
       newSelected.add(asset.id);
       const monthlyCardRate = asset.card_rate || 0;
+      const rentResult = computeRentAmount(monthlyCardRate, campaignStart, campaignEnd, 'PRORATA_30');
       
       newPricing[asset.id] = {
         negotiated_price: monthlyCardRate,
         printing_charges: asset.printing_charge || 0,
         mounting_charges: asset.mounting_charge || 0,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        billing_mode: 'PRORATA_30' as BillingMode,
+        booked_days: rentResult.booked_days,
+        daily_rate: rentResult.daily_rate,
+        rent_amount: rentResult.rent_amount,
       };
     });
 
@@ -193,12 +221,44 @@ export default function CampaignCreate() {
     setAssetPricing(newPricing);
   };
 
-  const updateAssetPricing = (assetId: string, field: string, value: number) => {
+  const updateAssetPricing = (assetId: string, field: string, value: any) => {
+    const pricing = assetPricing[assetId] || {};
+    const updatedPricing = { ...pricing, [field]: value };
+    
+    // Recalculate rent if rate or dates change
+    if (field === 'negotiated_price' || field === 'start_date' || field === 'end_date' || field === 'billing_mode') {
+      const startDate = field === 'start_date' ? value : (updatedPricing.start_date || formData.start_date);
+      const endDate = field === 'end_date' ? value : (updatedPricing.end_date || formData.end_date);
+      const rate = field === 'negotiated_price' ? value : updatedPricing.negotiated_price;
+      const mode = field === 'billing_mode' ? value : (updatedPricing.billing_mode || 'PRORATA_30');
+      
+      if (startDate && endDate && rate) {
+        const rentResult = computeRentAmount(rate, startDate, endDate, mode);
+        updatedPricing.booked_days = rentResult.booked_days;
+        updatedPricing.daily_rate = rentResult.daily_rate;
+        updatedPricing.rent_amount = rentResult.rent_amount;
+      }
+    }
+    
+    setAssetPricing(prev => ({
+      ...prev,
+      [assetId]: updatedPricing,
+    }));
+  };
+
+  const handleAssetDurationChange = (assetId: string, updates: {
+    start_date?: Date | string;
+    end_date?: Date | string;
+    billing_mode?: BillingMode;
+    booked_days?: number;
+    daily_rate?: number;
+    rent_amount?: number;
+  }) => {
     setAssetPricing(prev => ({
       ...prev,
       [assetId]: {
         ...prev[assetId],
-        [field]: value,
+        ...updates,
       }
     }));
   };
@@ -212,40 +272,34 @@ export default function CampaignCreate() {
   };
 
   const calculateTotals = () => {
-    let subtotal = 0;
+    let rentTotal = 0;
     let printingTotal = 0;
     let mountingTotal = 0;
-
-    const durationDays = getDurationDays();
     
     selectedAssets.forEach(assetId => {
       const pricing = assetPricing[assetId];
       const asset = availableAssets.find(a => a.id === assetId);
       
       if (pricing && asset) {
-        // Get monthly rates
-        const monthlyNegotiatedPrice = pricing.negotiated_price || asset.card_rate || 0;
+        // Use per-asset rent_amount if available
+        const assetRent = pricing.rent_amount > 0 
+          ? pricing.rent_amount 
+          : (() => {
+              const monthlyRate = pricing.negotiated_price || asset.card_rate || 0;
+              const days = pricing.booked_days || getDurationDays();
+              return (monthlyRate / PRICING_CYCLE_DAYS) * days;
+            })();
+        
         const printing = pricing.printing_charges || 0;
         const mounting = pricing.mounting_charges || 0;
         
-        // Calculate based on billing mode
-        let effectivePrice = monthlyNegotiatedPrice;
-        
-        if (durationMode === 'DAYS' && durationDays > 0) {
-          // Pro-rata: days / 30 * monthly rate
-          effectivePrice = (monthlyNegotiatedPrice / BILLING_CYCLE_DAYS) * durationDays;
-        } else if (durationMode === 'MONTH') {
-          // Full monthly rate * months count
-          effectivePrice = monthlyNegotiatedPrice * durationValue;
-        }
-        
-        subtotal += effectivePrice;
+        rentTotal += assetRent;
         printingTotal += printing;
         mountingTotal += mounting;
       }
     });
 
-    const totalAmount = subtotal + printingTotal + mountingTotal;
+    const totalAmount = rentTotal + printingTotal + mountingTotal;
     const effectiveGstPercent = gstPercent;
     const gstAmount = totalAmount * (effectiveGstPercent / 100);
     const grandTotal = totalAmount + gstAmount;
@@ -259,7 +313,7 @@ export default function CampaignCreate() {
     const igstAmount = gstType === 'igst' ? gstAmount : 0;
 
     return { 
-      subtotal, 
+      subtotal: rentTotal, 
       printingTotal, 
       mountingTotal, 
       totalAmount, 
@@ -275,6 +329,9 @@ export default function CampaignCreate() {
       durationDays: getDurationDays(),
     };
   };
+
+
+
 
   // Handle duration value change (update end date accordingly)
   const handleDurationValueChange = (value: number) => {

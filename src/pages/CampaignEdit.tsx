@@ -37,6 +37,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+import { 
+  BillingMode, 
+  computeBookedDays, 
+  computeRentAmount,
+  BILLING_CYCLE_DAYS as PRICING_BILLING_CYCLE_DAYS 
+} from "@/utils/perAssetPricing";
+import { CampaignAssetDurationCell } from "@/components/campaigns/CampaignAssetDurationCell";
+import { ApplyDatesToAssetsDialog } from "@/components/campaigns/ApplyDatesToAssetsDialog";
+
 // Campaign asset interface
 interface CampaignAsset {
   id: string;
@@ -53,6 +62,13 @@ interface CampaignAsset {
   total_price: number;
   status: string;
   isNew?: boolean;
+  // Per-asset duration fields
+  start_date: Date | string | null;
+  end_date: Date | string | null;
+  booked_days: number;
+  billing_mode: BillingMode;
+  daily_rate: number;
+  rent_amount: number;
 }
 
 export default function CampaignEdit() {
@@ -236,21 +252,36 @@ export default function CampaignEdit() {
         mediaAssetCodeMap.set(ma.id, ma.media_asset_code || ma.id);
       });
 
-      setCampaignAssets(assets.map(asset => ({
-        id: asset.id,
-        asset_id: asset.asset_id,
-        media_asset_code: mediaAssetCodeMap.get(asset.asset_id) || asset.asset_id,
-        location: asset.location || '',
-        area: asset.area || '',
-        city: asset.city || '',
-        media_type: asset.media_type || '',
-        card_rate: Number(asset.card_rate) || 0,
-        negotiated_rate: Number(asset.negotiated_rate) || Number(asset.card_rate) || 0,
-        printing_charges: Number(asset.printing_charges) || 0,
-        mounting_charges: Number(asset.mounting_charges) || 0,
-        total_price: Number(asset.total_price) || 0,
-        status: asset.status || 'Pending'
-      })));
+      setCampaignAssets(assets.map(asset => {
+        const assetStartDate = asset.booking_start_date || campaign.start_date;
+        const assetEndDate = asset.booking_end_date || campaign.end_date;
+        const monthlyRate = Number(asset.negotiated_rate) || Number(asset.card_rate) || 0;
+        const rentResult = assetStartDate && assetEndDate 
+          ? computeRentAmount(monthlyRate, assetStartDate, assetEndDate, (asset.billing_mode as BillingMode) || 'PRORATA_30')
+          : { booked_days: 0, daily_rate: 0, rent_amount: 0, billing_mode: 'PRORATA_30' as BillingMode };
+        
+        return {
+          id: asset.id,
+          asset_id: asset.asset_id,
+          media_asset_code: mediaAssetCodeMap.get(asset.asset_id) || asset.asset_id,
+          location: asset.location || '',
+          area: asset.area || '',
+          city: asset.city || '',
+          media_type: asset.media_type || '',
+          card_rate: Number(asset.card_rate) || 0,
+          negotiated_rate: monthlyRate,
+          printing_charges: Number(asset.printing_charges) || 0,
+          mounting_charges: Number(asset.mounting_charges) || 0,
+          total_price: Number(asset.total_price) || 0,
+          status: asset.status || 'Pending',
+          start_date: assetStartDate,
+          end_date: assetEndDate,
+          booked_days: asset.booked_days || rentResult.booked_days,
+          billing_mode: (asset.billing_mode as BillingMode) || 'PRORATA_30',
+          daily_rate: asset.daily_rate || rentResult.daily_rate,
+          rent_amount: asset.rent_amount || rentResult.rent_amount,
+        };
+      }));
     } else {
       // Fallback: try to fetch from campaign_items for plan-converted campaigns
       const { data: items } = await supabase
@@ -276,11 +307,17 @@ export default function CampaignEdit() {
         .order('created_at');
 
       if (items && items.length > 0) {
+        const campaignStart = campaign.start_date;
+        const campaignEnd = campaign.end_date;
+        
         setCampaignAssets(items.map(item => {
           const asset = item.media_assets as any;
           const finalPrice = Number(item.final_price) || Number(item.negotiated_rate) || 0;
           const printingCharge = Number(item.printing_charge) || 0;
           const mountingCharge = Number(item.mounting_charge) || 0;
+          const rentResult = campaignStart && campaignEnd 
+            ? computeRentAmount(finalPrice, campaignStart, campaignEnd, 'PRORATA_30')
+            : { booked_days: 0, daily_rate: 0, rent_amount: 0, billing_mode: 'PRORATA_30' as BillingMode };
           
           return {
             id: item.id,
@@ -295,7 +332,13 @@ export default function CampaignEdit() {
             printing_charges: printingCharge,
             mounting_charges: mountingCharge,
             total_price: finalPrice + printingCharge + mountingCharge,
-            status: 'Pending'
+            status: 'Pending',
+            start_date: campaignStart,
+            end_date: campaignEnd,
+            booked_days: rentResult.booked_days,
+            billing_mode: 'PRORATA_30' as BillingMode,
+            daily_rate: rentResult.daily_rate,
+            rent_amount: rentResult.rent_amount,
           };
         }));
       }
@@ -325,8 +368,35 @@ export default function CampaignEdit() {
       const printing = field === 'printing_charges' ? Number(value) : Number(updated[index].printing_charges);
       const mounting = field === 'mounting_charges' ? Number(value) : Number(updated[index].mounting_charges);
       updated[index].total_price = negotiated + printing + mounting;
+      
+      // Recalculate rent if dates are set
+      if (updated[index].start_date && updated[index].end_date) {
+        const rentResult = computeRentAmount(
+          negotiated,
+          updated[index].start_date!,
+          updated[index].end_date!,
+          updated[index].billing_mode
+        );
+        updated[index].booked_days = rentResult.booked_days;
+        updated[index].daily_rate = rentResult.daily_rate;
+        updated[index].rent_amount = rentResult.rent_amount;
+      }
     }
     
+    setCampaignAssets(updated);
+  };
+  
+  // Handler for per-asset duration changes
+  const handleAssetDurationChange = (index: number, updates: {
+    start_date?: Date | string;
+    end_date?: Date | string;
+    billing_mode?: BillingMode;
+    booked_days?: number;
+    daily_rate?: number;
+    rent_amount?: number;
+  }) => {
+    const updated = [...campaignAssets];
+    updated[index] = { ...updated[index], ...updates };
     setCampaignAssets(updated);
   };
 
@@ -353,22 +423,38 @@ export default function CampaignEdit() {
   };
 
   const handleAddAssets = (assets: any[]) => {
-    const newAssets: CampaignAsset[] = assets.map(asset => ({
-      id: `new-${Date.now()}-${asset.id}`,
-      asset_id: asset.id,
-      media_asset_code: asset.media_asset_code || asset.id,
-      location: asset.location || '',
-      area: asset.area || '',
-      city: asset.city || '',
-      media_type: asset.media_type || '',
-      card_rate: Number(asset.card_rate) || 0,
-      negotiated_rate: Number(asset.card_rate) || 0,
-      printing_charges: 0,
-      mounting_charges: 0,
-      total_price: Number(asset.card_rate) || 0,
-      status: 'Pending',
-      isNew: true
-    }));
+    const campaignStart = startDate;
+    const campaignEnd = endDate;
+    
+    const newAssets: CampaignAsset[] = assets.map(asset => {
+      const monthlyRate = Number(asset.card_rate) || 0;
+      const rentResult = campaignStart && campaignEnd 
+        ? computeRentAmount(monthlyRate, campaignStart, campaignEnd, 'PRORATA_30')
+        : { booked_days: 0, daily_rate: 0, rent_amount: 0, billing_mode: 'PRORATA_30' as BillingMode };
+      
+      return {
+        id: `new-${Date.now()}-${asset.id}`,
+        asset_id: asset.id,
+        media_asset_code: asset.media_asset_code || asset.id,
+        location: asset.location || '',
+        area: asset.area || '',
+        city: asset.city || '',
+        media_type: asset.media_type || '',
+        card_rate: monthlyRate,
+        negotiated_rate: monthlyRate,
+        printing_charges: 0,
+        mounting_charges: 0,
+        total_price: monthlyRate,
+        status: 'Pending',
+        isNew: true,
+        start_date: campaignStart || null,
+        end_date: campaignEnd || null,
+        booked_days: rentResult.booked_days,
+        billing_mode: 'PRORATA_30' as BillingMode,
+        daily_rate: rentResult.daily_rate,
+        rent_amount: rentResult.rent_amount,
+      };
+    });
     
     setCampaignAssets(prev => [...prev, ...newAssets]);
     toast({
@@ -452,41 +538,35 @@ export default function CampaignEdit() {
   };
 
   const calculateTotals = () => {
-    let subtotal = 0;
+    let rentTotal = 0;
     let printingTotal = 0;
     let mountingTotal = 0;
 
-    const durationDays = getDurationDays();
-    
     campaignAssets.forEach(asset => {
-      // Get monthly rates
-      const monthlyNegotiatedPrice = asset.negotiated_rate || asset.card_rate || 0;
+      // Use per-asset rent_amount if available, otherwise calculate from campaign duration
+      const assetRent = asset.rent_amount > 0 
+        ? asset.rent_amount 
+        : (() => {
+            const monthlyRate = asset.negotiated_rate || asset.card_rate || 0;
+            const days = asset.booked_days || getDurationDays();
+            return (monthlyRate / PRICING_BILLING_CYCLE_DAYS) * days;
+          })();
+      
       const printing = asset.printing_charges || 0;
       const mounting = asset.mounting_charges || 0;
       
-      // Calculate based on billing mode
-      let effectivePrice = monthlyNegotiatedPrice;
-      
-      if (durationMode === 'DAYS' && durationDays > 0) {
-        // Pro-rata: days / 30 * monthly rate
-        effectivePrice = (monthlyNegotiatedPrice / BILLING_CYCLE_DAYS) * durationDays;
-      } else if (durationMode === 'MONTH') {
-        // Full monthly rate * months count
-        effectivePrice = monthlyNegotiatedPrice * durationValue;
-      }
-      
-      subtotal += effectivePrice;
+      rentTotal += assetRent;
       printingTotal += printing;
       mountingTotal += mounting;
     });
 
-    const totalAmount = subtotal + printingTotal + mountingTotal;
+    const totalAmount = rentTotal + printingTotal + mountingTotal;
     const effectiveGstPercent = isGstApplicable ? gstPercent : 0;
     const gstAmount = (totalAmount * effectiveGstPercent) / 100;
     const grandTotal = totalAmount + gstAmount;
 
     return { 
-      subtotal, 
+      subtotal: rentTotal, 
       printingTotal, 
       mountingTotal, 
       totalAmount, 
@@ -496,6 +576,8 @@ export default function CampaignEdit() {
       durationDays: getDurationDays(),
     };
   };
+
+
 
   const handleSave = async () => {
     // Validation
@@ -561,6 +643,13 @@ export default function CampaignEdit() {
 
       // Update existing and insert new assets
       for (const asset of campaignAssets) {
+        const assetStartDate = asset.start_date 
+          ? (typeof asset.start_date === 'string' ? asset.start_date : format(asset.start_date, 'yyyy-MM-dd'))
+          : format(startDate!, 'yyyy-MM-dd');
+        const assetEndDate = asset.end_date
+          ? (typeof asset.end_date === 'string' ? asset.end_date : format(asset.end_date, 'yyyy-MM-dd'))
+          : format(endDate!, 'yyyy-MM-dd');
+        
         if (asset.isNew) {
           // Insert new campaign_asset
           const { error: insertError } = await supabase
@@ -578,8 +667,12 @@ export default function CampaignEdit() {
               mounting_charges: asset.mounting_charges,
               total_price: asset.total_price,
               status: asset.status as Database['public']['Enums']['asset_installation_status'],
-              booking_start_date: format(startDate, 'yyyy-MM-dd'),
-              booking_end_date: format(endDate, 'yyyy-MM-dd'),
+              booking_start_date: assetStartDate,
+              booking_end_date: assetEndDate,
+              billing_mode: asset.billing_mode,
+              booked_days: asset.booked_days,
+              daily_rate: asset.daily_rate,
+              rent_amount: asset.rent_amount,
             });
 
           if (insertError) {
@@ -595,6 +688,12 @@ export default function CampaignEdit() {
               mounting_charges: asset.mounting_charges,
               total_price: asset.total_price,
               status: asset.status as Database['public']['Enums']['asset_installation_status'],
+              booking_start_date: assetStartDate,
+              booking_end_date: assetEndDate,
+              billing_mode: asset.billing_mode,
+              booked_days: asset.booked_days,
+              daily_rate: asset.daily_rate,
+              rent_amount: asset.rent_amount,
             })
             .eq('id', asset.id);
 
@@ -987,12 +1086,12 @@ export default function CampaignEdit() {
                     <TableHead className="w-[60px] text-center">S.No</TableHead>
                     <TableHead className="w-[140px]">Asset ID</TableHead>
                     <TableHead>Location</TableHead>
-                    <TableHead>Area / City</TableHead>
+                    <TableHead className="min-w-[220px]">Duration</TableHead>
                     <TableHead className="text-right text-muted-foreground">Card Rate</TableHead>
                     <TableHead className="text-right">Negotiated</TableHead>
+                    <TableHead className="text-right">Rent Amount</TableHead>
                     <TableHead className="text-right">Printing</TableHead>
                     <TableHead className="text-right">Mounting</TableHead>
-                    <TableHead className="text-right font-semibold">Total</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
@@ -1018,11 +1117,20 @@ export default function CampaignEdit() {
                           })}
                           {asset.isNew && <span className="ml-1 text-xs text-green-600">(new)</span>}
                         </TableCell>
-                        <TableCell className="max-w-[200px] truncate" title={asset.location}>
+                        <TableCell className="max-w-[150px] truncate text-sm" title={asset.location}>
                           {asset.location}
+                          <span className="block text-xs text-muted-foreground">{asset.area}{asset.city ? `, ${asset.city}` : ''}</span>
                         </TableCell>
-                        <TableCell className="text-sm">
-                          {asset.area}{asset.city ? `, ${asset.city}` : ''}
+                        <TableCell>
+                          <CampaignAssetDurationCell
+                            startDate={asset.start_date}
+                            endDate={asset.end_date}
+                            billingMode={asset.billing_mode}
+                            monthlyRate={asset.negotiated_rate || asset.card_rate}
+                            campaignStartDate={startDate}
+                            campaignEndDate={endDate}
+                            onChange={(updates) => handleAssetDurationChange(index, updates)}
+                          />
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground">
                           {formatCurrency(asset.card_rate)}
@@ -1034,6 +1142,9 @@ export default function CampaignEdit() {
                             onChange={(e) => updateCampaignAsset(index, 'negotiated_rate', Number(e.target.value))}
                             className="h-8 w-24 text-right ml-auto"
                           />
+                        </TableCell>
+                        <TableCell className="text-right font-semibold text-primary">
+                          {formatCurrency(asset.rent_amount || 0)}
                         </TableCell>
                         <TableCell>
                           <Input
@@ -1050,9 +1161,6 @@ export default function CampaignEdit() {
                             onChange={(e) => updateCampaignAsset(index, 'mounting_charges', Number(e.target.value))}
                             className="h-8 w-20 text-right ml-auto"
                           />
-                        </TableCell>
-                        <TableCell className="text-right font-semibold text-primary">
-                          {formatCurrency(asset.total_price)}
                         </TableCell>
                         <TableCell>
                           <Select

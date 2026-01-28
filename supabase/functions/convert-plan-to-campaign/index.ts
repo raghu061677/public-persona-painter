@@ -147,7 +147,7 @@ serve(async (req) => {
 
     console.log("[v9.0] Plan validated:", plan.id, "Status:", plan.status);
 
-    // 4) Load Plan Items
+    // 4) Load Plan Items (including per-asset duration fields)
     const { data: planItems, error: itemsError } = await supabase
       .from("plan_items")
       .select(`
@@ -174,7 +174,13 @@ serve(async (req) => {
         longitude,
         illumination_type,
         direction,
-        total_sqft
+        total_sqft,
+        start_date,
+        end_date,
+        booked_days,
+        billing_mode,
+        daily_rate,
+        rent_amount
       `)
       .eq("plan_id", planId);
 
@@ -341,12 +347,27 @@ serve(async (req) => {
       // Use printing_cost if available, otherwise fall back to printing_charges
       const printingCost = item.printing_cost || item.printing_charges || 0;
       const mountingCost = item.installation_cost || item.mounting_charges || 0;
+      
+      // Use per-asset dates if available, otherwise fall back to plan dates
+      const assetStartDate = item.start_date || plan.start_date;
+      const assetEndDate = item.end_date || plan.end_date;
+      
+      // Calculate booked_days if not provided
+      const bookedDays = item.booked_days || 
+        Math.max(1, Math.ceil((new Date(assetEndDate).getTime() - new Date(assetStartDate).getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      
+      // Calculate daily_rate if not provided
+      const dailyRate = item.daily_rate || Math.round((effectivePrice / 30) * 100) / 100;
+      
+      // Calculate rent_amount if not provided
+      const rentAmount = item.rent_amount || Math.round(dailyRate * bookedDays * 100) / 100;
+      
       return {
         campaign_id: campaignId,
         asset_id: item.asset_id,
         // Pricing snapshot - use effective price for negotiated_rate
         card_rate: item.card_rate || 0,
-        negotiated_rate: effectivePrice, // Use effective price (sales_price if > 0, else card_rate)
+        negotiated_rate: effectivePrice,
         printing_charges: printingCost,
         mounting_charges: mountingCost,
         total_price: item.total_with_gst || 0,
@@ -363,9 +384,15 @@ serve(async (req) => {
         illumination_type: item.illumination_type || "",
         latitude: item.latitude || null,
         longitude: item.longitude || null,
-        // Booking dates
-        booking_start_date: plan.start_date,
-        booking_end_date: plan.end_date,
+        // Per-asset booking dates (copied from plan_items)
+        booking_start_date: assetStartDate,
+        booking_end_date: assetEndDate,
+        start_date: assetStartDate,
+        end_date: assetEndDate,
+        booked_days: bookedDays,
+        billing_mode: item.billing_mode || 'PRORATA_30',
+        daily_rate: dailyRate,
+        rent_amount: rentAmount,
         // Status
         status: "Pending" as const,
       };

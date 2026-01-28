@@ -79,6 +79,8 @@ export default function CampaignEdit() {
   const [clients, setClients] = useState<any[]>([]);
   const [showAddAssetsDialog, setShowAddAssetsDialog] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState<CampaignAsset | null>(null);
+  const [showApplyDatesDialog, setShowApplyDatesDialog] = useState(false);
+  const [pendingDatesUpdate, setPendingDatesUpdate] = useState<{ start: Date; end: Date } | null>(null);
   
   // Campaign fields
   const [campaignName, setCampaignName] = useState("");
@@ -469,23 +471,9 @@ export default function CampaignEdit() {
     return calculateDurationDays(startDate, endDate);
   };
 
-  // Handle duration value change (update end date accordingly)
+  // Legacy handler - kept for reference, replaced by handleDurationValueChangeWithSync
   const handleDurationValueChange = (value: number) => {
-    if (value < 0.5) return;
-    setDurationValue(value);
-    
-    if (startDate) {
-      let daysToAdd: number;
-      
-      if (durationMode === 'MONTH') {
-        daysToAdd = value * BILLING_CYCLE_DAYS;
-      } else {
-        daysToAdd = value;
-      }
-      
-      const newEndDate = calculateEndDate(startDate, daysToAdd);
-      setEndDate(newEndDate);
-    }
+    handleDurationValueChangeWithSync(value);
   };
   
   // Handle duration mode change
@@ -506,35 +494,128 @@ export default function CampaignEdit() {
   
   // Handle start date change (keep duration, update end date)
   const handleStartDateChange = (date: Date | undefined) => {
-    setStartDate(date);
+    if (!date) return;
     
-    if (date) {
-      let daysToAdd: number;
-      
-      if (durationMode === 'MONTH') {
-        daysToAdd = durationValue * BILLING_CYCLE_DAYS;
-      } else {
-        daysToAdd = durationValue;
-      }
-      
-      const newEndDate = calculateEndDate(date, daysToAdd);
+    let daysToAdd: number;
+    if (durationMode === 'MONTH') {
+      daysToAdd = durationValue * BILLING_CYCLE_DAYS;
+    } else {
+      daysToAdd = durationValue;
+    }
+    
+    const newEndDate = calculateEndDate(date, daysToAdd);
+    
+    // If there are assets, prompt user to apply dates
+    if (campaignAssets.length > 0) {
+      setPendingDatesUpdate({ start: date, end: newEndDate });
+      setShowApplyDatesDialog(true);
+    } else {
+      setStartDate(date);
       setEndDate(newEndDate);
     }
   };
   
   // Handle end date change (update duration value)
   const handleEndDateChange = (date: Date | undefined) => {
-    setEndDate(date);
+    if (!date || !startDate) return;
     
-    if (startDate && date) {
-      const days = calculateDurationDays(startDate, date);
-      
+    const days = calculateDurationDays(startDate, date);
+    
+    // If there are assets, prompt user to apply dates
+    if (campaignAssets.length > 0) {
+      setPendingDatesUpdate({ start: startDate, end: date });
+      setShowApplyDatesDialog(true);
+    } else {
+      setEndDate(date);
       if (durationMode === 'MONTH') {
         setDurationValue(calculateMonthsFromDays(days));
       } else {
         setDurationValue(days);
       }
     }
+  };
+
+  // Handle duration value change (update end date accordingly)
+  const handleDurationValueChangeWithSync = (value: number) => {
+    if (value < 0.5) return;
+    
+    if (!startDate) {
+      setDurationValue(value);
+      return;
+    }
+    
+    let daysToAdd: number;
+    if (durationMode === 'MONTH') {
+      daysToAdd = value * BILLING_CYCLE_DAYS;
+    } else {
+      daysToAdd = value;
+    }
+    
+    const newEndDate = calculateEndDate(startDate, daysToAdd);
+    
+    // If there are assets, prompt user to apply dates
+    if (campaignAssets.length > 0) {
+      setPendingDatesUpdate({ start: startDate, end: newEndDate });
+      setShowApplyDatesDialog(true);
+      setDurationValue(value);
+    } else {
+      setDurationValue(value);
+      setEndDate(newEndDate);
+    }
+  };
+
+  // Apply campaign dates to all assets
+  const applyDatesToAllAssets = () => {
+    if (!pendingDatesUpdate) return;
+    
+    const { start, end } = pendingDatesUpdate;
+    setStartDate(start);
+    setEndDate(end);
+    
+    const days = calculateDurationDays(start, end);
+    if (durationMode === 'MONTH') {
+      setDurationValue(calculateMonthsFromDays(days));
+    } else {
+      setDurationValue(days);
+    }
+    
+    // Update all assets with new dates and recalculate rent
+    const updatedAssets = campaignAssets.map(asset => {
+      const monthlyRate = asset.negotiated_rate || asset.card_rate || 0;
+      const rentResult = computeRentAmount(monthlyRate, start, end, asset.billing_mode);
+      
+      return {
+        ...asset,
+        start_date: start,
+        end_date: end,
+        booked_days: rentResult.booked_days,
+        daily_rate: rentResult.daily_rate,
+        rent_amount: rentResult.rent_amount,
+      };
+    });
+    
+    setCampaignAssets(updatedAssets);
+    setShowApplyDatesDialog(false);
+    setPendingDatesUpdate(null);
+  };
+
+  // Keep individual asset dates (only update campaign header)
+  const skipApplyDatesToAssets = () => {
+    if (!pendingDatesUpdate) return;
+    
+    const { start, end } = pendingDatesUpdate;
+    setStartDate(start);
+    setEndDate(end);
+    
+    const days = calculateDurationDays(start, end);
+    if (durationMode === 'MONTH') {
+      setDurationValue(calculateMonthsFromDays(days));
+    } else {
+      setDurationValue(days);
+    }
+    
+    setShowApplyDatesDialog(false);
+    setPendingDatesUpdate(null);
   };
 
   const calculateTotals = () => {
@@ -1117,8 +1198,10 @@ export default function CampaignEdit() {
                           })}
                           {asset.isNew && <span className="ml-1 text-xs text-green-600">(new)</span>}
                         </TableCell>
-                        <TableCell className="max-w-[150px] truncate text-sm" title={asset.location}>
-                          {asset.location}
+                        <TableCell className="min-w-[200px] max-w-[300px] text-sm">
+                          <div className="break-words whitespace-normal" title={asset.location}>
+                            {asset.location}
+                          </div>
                           <span className="block text-xs text-muted-foreground">{asset.area}{asset.city ? `, ${asset.city}` : ''}</span>
                         </TableCell>
                         <TableCell>
@@ -1248,6 +1331,22 @@ export default function CampaignEdit() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Apply Dates to Assets Dialog */}
+      {pendingDatesUpdate && (
+        <ApplyDatesToAssetsDialog
+          open={showApplyDatesDialog}
+          onClose={() => {
+            setShowApplyDatesDialog(false);
+            setPendingDatesUpdate(null);
+          }}
+          onApply={applyDatesToAllAssets}
+          onSkip={skipApplyDatesToAssets}
+          startDate={pendingDatesUpdate.start}
+          endDate={pendingDatesUpdate.end}
+          assetCount={campaignAssets.length}
+        />
+      )}
     </div>
   );
 }

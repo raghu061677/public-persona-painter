@@ -307,16 +307,34 @@ export default function CampaignAssetProofs() {
           </div>
         </div>
 
-      {/* Asset Info Card with QR Code */}
+      {/* Asset Info Card with Single Large QR Code */}
       {asset && (
         <Card>
           <CardHeader>
             <CardTitle>Asset Information</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col md:flex-row gap-6">
-              {/* Asset Details */}
-              <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* QR Code - Single, Large, Prominent - Left Side */}
+              {qrCodeUrl && (
+                <div className="flex flex-col items-center justify-center gap-4 p-6 border-2 border-primary/20 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 min-w-[200px]">
+                  <img 
+                    src={qrCodeUrl} 
+                    alt="Asset QR Code"
+                    className="w-48 h-48 object-contain bg-white p-4 rounded-lg shadow-lg border"
+                  />
+                  <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                    <QrCode className="h-5 w-5" />
+                    <span>Scan to Verify</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center max-w-[180px]">
+                    Scan this QR code to verify the asset location and details
+                  </p>
+                </div>
+              )}
+              
+              {/* Asset Details - Right Side */}
+              <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-4 content-start">
                 <div>
                   <p className="text-sm text-muted-foreground">Asset ID</p>
                   <p className="font-medium font-mono text-sm">
@@ -333,6 +351,10 @@ export default function CampaignAssetProofs() {
                   <p className="font-medium">{asset.location}</p>
                 </div>
                 <div>
+                  <p className="text-sm text-muted-foreground">City / Area</p>
+                  <p className="font-medium">{asset.city} - {asset.area}</p>
+                </div>
+                <div>
                   <p className="text-sm text-muted-foreground">Media Type</p>
                   <p className="font-medium">{asset.media_type}</p>
                 </div>
@@ -341,21 +363,6 @@ export default function CampaignAssetProofs() {
                   <Badge>{asset.status}</Badge>
                 </div>
               </div>
-
-              {/* QR Code - Larger and more prominent */}
-              {qrCodeUrl && (
-                <div className="flex flex-col items-center gap-3 p-5 border rounded-lg bg-muted/30">
-                  <img 
-                    src={qrCodeUrl} 
-                    alt="Asset QR Code"
-                    className="w-44 h-44 object-contain bg-white p-3 rounded-md shadow-md"
-                  />
-                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                    <QrCode className="h-5 w-5" />
-                    <span>Scan to verify location</span>
-                  </div>
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>

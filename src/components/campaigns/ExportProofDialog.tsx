@@ -13,6 +13,8 @@ import { toast } from "@/hooks/use-toast";
 import { Download, FileArchive, Presentation } from "lucide-react";
 import PptxGenJS from "pptxgenjs";
 import JSZip from "jszip";
+import { fetchImageAsDataUri } from "@/lib/exports/imageData";
+import { getCampaignAssetProofPhotos } from "@/lib/exports/proofPhotos";
 
 interface ExportProofDialogProps {
   campaignId: string;
@@ -32,34 +34,23 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
   const handleExportZIP = async () => {
     setExporting(true);
     try {
-      // Always fetch fresh proof data (do not rely on campaignAssets shape)
+      // Always fetch fresh proof data from campaign_assets (source of truth)
       const { data: campaignAssets, error: assetsError } = await supabase
         .from("campaign_assets")
-        .select("id, asset_id, city, area, location")
+        .select("id, asset_id, city, area, location, photos")
         .eq("campaign_id", campaignId)
         .order("created_at");
 
       if (assetsError) throw assetsError;
 
-      const campaignAssetIds = (campaignAssets || []).map((a) => a.id);
-
-      const { data: photos, error: photosError } = await supabase
-        .from("media_photos")
-        .select("asset_id, category, photo_url, uploaded_at")
-        .eq("campaign_id", campaignId)
-        .in("asset_id", campaignAssetIds)
-        .order("asset_id", { ascending: true })
-        .order("uploaded_at", { ascending: true });
-
-      if (photosError) throw photosError;
-
       const assetById = new Map<string, any>();
       (campaignAssets || []).forEach((a) => assetById.set(a.id, a));
 
-      const grouped = (photos || []).reduce((acc, p) => {
-        (acc[p.asset_id] ||= []).push(p);
+      const grouped = (campaignAssets || []).reduce((acc, ca) => {
+        const entries = getCampaignAssetProofPhotos(ca.photos);
+        acc[ca.id] = entries;
         return acc;
-      }, {} as Record<string, any[]>);
+      }, {} as Record<string, { key: string; label: string; url: string }[]>);
 
       const zip = new JSZip();
       const folder = zip.folder(campaignName);
@@ -73,10 +64,10 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
 
         for (const p of assetPhotos) {
           try {
-            const blob = await downloadImage(p.photo_url);
-            const ext = p.photo_url.split(".").pop()?.split("?")[0] || "jpg";
-            const safeCategory = String(p.category || "photo").replace(/[^a-z0-9_-]/gi, "_");
-            assetFolder!.file(`${safeCategory}_${new Date(p.uploaded_at).getTime()}.${ext}`, blob);
+            const blob = await downloadImage(p.url);
+            const ext = p.url.split(".").pop()?.split("?")[0] || "jpg";
+            const safeCategory = String(p.label || "photo").replace(/[^a-z0-9_-]/gi, "_");
+            assetFolder!.file(`${safeCategory}_${Date.now()}.${ext}`, blob);
           } catch (error) {
             console.error(`Failed to download photo for ${safeFolderName}`, error);
           }
@@ -114,7 +105,7 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
       // Fetch snapshot assets with master asset details for complete info
       const { data: campaignAssets, error: assetsError } = await supabase
         .from("campaign_assets")
-        .select("id, asset_id, city, area, location, media_type, status, direction, dimensions, total_sqft, illumination_type")
+        .select("id, asset_id, city, area, location, media_type, status, direction, dimensions, total_sqft, illumination_type, photos")
         .eq("campaign_id", campaignId)
         .order("created_at");
 
@@ -152,23 +143,11 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
         };
       });
 
-      const campaignAssetIds = campaignAssets.map((a) => a.id);
-
-      const { data: photos, error: photosError } = await supabase
-        .from("media_photos")
-        .select("asset_id, category, photo_url, uploaded_at")
-        .eq("campaign_id", campaignId)
-        .in("asset_id", campaignAssetIds)
-        .order("asset_id", { ascending: true })
-        .order("uploaded_at", { ascending: true });
-
-      if (photosError) throw photosError;
-
-      // Group photos by campaign_assets.id
-      const photosByAsset = (photos || []).reduce((acc, p) => {
-        (acc[p.asset_id] ||= []).push(p);
+      // Group photos by campaign_assets.id (source of truth: campaign_assets.photos)
+      const photosByAsset = (campaignAssets || []).reduce((acc, ca) => {
+        acc[ca.id] = getCampaignAssetProofPhotos(ca.photos);
         return acc;
-      }, {} as Record<string, any[]>);
+      }, {} as Record<string, { key: string; label: string; url: string }[]>);
 
       const pptx = new PptxGenJS();
       pptx.layout = "LAYOUT_16x9";
@@ -231,7 +210,7 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
 
       const verifiedCount = campaignAssets.filter((a) => a.status === "Verified" || a.status === "Completed").length;
       const installedCount = campaignAssets.filter((a) => a.status === "Installed").length;
-      const totalPhotos = photos?.length || 0;
+      const totalPhotos = Object.values(photosByAsset).reduce((sum, arr) => sum + (arr?.length || 0), 0);
       const assetsWithPhotos = Object.keys(photosByAsset).length;
 
       const summaryData = [
@@ -347,7 +326,7 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
           });
         } else {
           // 2 images per slide
-          for (let i = 0; i < assetPhotos.length; i += 2) {
+            for (let i = 0; i < assetPhotos.length; i += 2) {
             const slide = pptx.addSlide();
 
             // Header
@@ -376,14 +355,27 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
               { x: 6.8, y: 1.5 },
             ];
 
-            const batch = assetPhotos.slice(i, i + 2);
-            batch.forEach((p: any, index: number) => {
+              const batch = assetPhotos.slice(i, i + 2);
+
+              const batchDataUris = await Promise.all(
+                batch.map(async (p: any) => {
+                  try {
+                    return await fetchImageAsDataUri(p.url);
+                  } catch {
+                    return null;
+                  }
+                })
+              );
+
+              batch.forEach((p: any, index: number) => {
               const pos = positions[index];
               if (!pos) return;
 
               try {
+                  const dataUri = batchDataUris[index];
+                  if (!dataUri) throw new Error('Image fetch failed');
                 slide.addImage({
-                  path: p.photo_url,
+                    data: dataUri,
                   x: pos.x,
                   y: pos.y,
                   w: photoWidth,
@@ -412,7 +404,7 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
               }
 
               // Label below photo
-              slide.addText(p.category || "Photo", {
+                slide.addText(p.label || "Photo", {
                 x: pos.x,
                 y: pos.y + photoHeight + 0.1,
                 w: photoWidth,
@@ -442,7 +434,7 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
 
       toast({
         title: "Exported",
-        description: `PPT generated with ${campaignAssets.length} assets (${Object.keys(photosByAsset).length} with photos).`,
+        description: `PPT generated with ${campaignAssets.length} assets (${Object.values(photosByAsset).filter((a) => (a?.length || 0) > 0).length} with photos).`,
       });
     } catch (error: any) {
       toast({

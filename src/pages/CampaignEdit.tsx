@@ -18,6 +18,14 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { AddCampaignAssetsDialog } from "@/components/campaigns/AddCampaignAssetsDialog";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
+import { Badge } from "@/components/ui/badge";
+import {
+  DurationMode,
+  calculateDurationDays,
+  calculateEndDate,
+  calculateMonthsFromDays,
+  BILLING_CYCLE_DAYS,
+} from "@/utils/billingEngine";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,6 +75,10 @@ export default function CampaignEdit() {
   const [gstPercent, setGstPercent] = useState(18);
   const [isGstApplicable, setIsGstApplicable] = useState(true);
   const [companyPrefix, setCompanyPrefix] = useState<string | null>(null);
+  
+  // Duration settings
+  const [durationMode, setDurationMode] = useState<DurationMode>('MONTH');
+  const [durationValue, setDurationValue] = useState<number>(1);
   
   // Campaign assets (from campaign_assets table - primary source)
   const [campaignAssets, setCampaignAssets] = useState<CampaignAsset[]>([]);
@@ -158,6 +170,22 @@ export default function CampaignEdit() {
     const campaignEndDate = campaign.end_date ? new Date(campaign.end_date) : undefined;
     setStartDate(campaignStartDate);
     setEndDate(campaignEndDate);
+    
+    // Calculate and set duration from dates
+    if (campaignStartDate && campaignEndDate) {
+      const days = calculateDurationDays(campaignStartDate, campaignEndDate);
+      const months = calculateMonthsFromDays(days);
+      
+      // Determine if this is month-wise or day-wise based on the billing_cycle
+      const mode = campaign.billing_cycle === 'DAILY' ? 'DAYS' : 'MONTH';
+      setDurationMode(mode);
+      
+      if (mode === 'MONTH') {
+        setDurationValue(months);
+      } else {
+        setDurationValue(days);
+      }
+    }
     
     // Auto-detect correct status based on dates
     const today = new Date();
@@ -349,13 +377,124 @@ export default function CampaignEdit() {
     });
   };
 
+  // Calculate duration days from dates
+  const getDurationDays = (): number => {
+    if (!startDate || !endDate) return 0;
+    return calculateDurationDays(startDate, endDate);
+  };
+
+  // Handle duration value change (update end date accordingly)
+  const handleDurationValueChange = (value: number) => {
+    if (value < 0.5) return;
+    setDurationValue(value);
+    
+    if (startDate) {
+      let daysToAdd: number;
+      
+      if (durationMode === 'MONTH') {
+        daysToAdd = value * BILLING_CYCLE_DAYS;
+      } else {
+        daysToAdd = value;
+      }
+      
+      const newEndDate = calculateEndDate(startDate, daysToAdd);
+      setEndDate(newEndDate);
+    }
+  };
+  
+  // Handle duration mode change
+  const handleDurationModeChange = (mode: DurationMode) => {
+    setDurationMode(mode);
+    
+    const currentDays = getDurationDays();
+    if (currentDays > 0) {
+      if (mode === 'MONTH') {
+        // Convert current days to months
+        setDurationValue(calculateMonthsFromDays(currentDays));
+      } else {
+        // Use current days
+        setDurationValue(currentDays);
+      }
+    }
+  };
+  
+  // Handle start date change (keep duration, update end date)
+  const handleStartDateChange = (date: Date | undefined) => {
+    setStartDate(date);
+    
+    if (date) {
+      let daysToAdd: number;
+      
+      if (durationMode === 'MONTH') {
+        daysToAdd = durationValue * BILLING_CYCLE_DAYS;
+      } else {
+        daysToAdd = durationValue;
+      }
+      
+      const newEndDate = calculateEndDate(date, daysToAdd);
+      setEndDate(newEndDate);
+    }
+  };
+  
+  // Handle end date change (update duration value)
+  const handleEndDateChange = (date: Date | undefined) => {
+    setEndDate(date);
+    
+    if (startDate && date) {
+      const days = calculateDurationDays(startDate, date);
+      
+      if (durationMode === 'MONTH') {
+        setDurationValue(calculateMonthsFromDays(days));
+      } else {
+        setDurationValue(days);
+      }
+    }
+  };
+
   const calculateTotals = () => {
-    const totalAmount = campaignAssets.reduce((sum, asset) => sum + asset.total_price, 0);
+    let subtotal = 0;
+    let printingTotal = 0;
+    let mountingTotal = 0;
+
+    const durationDays = getDurationDays();
+    
+    campaignAssets.forEach(asset => {
+      // Get monthly rates
+      const monthlyNegotiatedPrice = asset.negotiated_rate || asset.card_rate || 0;
+      const printing = asset.printing_charges || 0;
+      const mounting = asset.mounting_charges || 0;
+      
+      // Calculate based on billing mode
+      let effectivePrice = monthlyNegotiatedPrice;
+      
+      if (durationMode === 'DAYS' && durationDays > 0) {
+        // Pro-rata: days / 30 * monthly rate
+        effectivePrice = (monthlyNegotiatedPrice / BILLING_CYCLE_DAYS) * durationDays;
+      } else if (durationMode === 'MONTH') {
+        // Full monthly rate * months count
+        effectivePrice = monthlyNegotiatedPrice * durationValue;
+      }
+      
+      subtotal += effectivePrice;
+      printingTotal += printing;
+      mountingTotal += mounting;
+    });
+
+    const totalAmount = subtotal + printingTotal + mountingTotal;
     const effectiveGstPercent = isGstApplicable ? gstPercent : 0;
     const gstAmount = (totalAmount * effectiveGstPercent) / 100;
     const grandTotal = totalAmount + gstAmount;
 
-    return { totalAmount, gstAmount, grandTotal, effectiveGstPercent };
+    return { 
+      subtotal, 
+      printingTotal, 
+      mountingTotal, 
+      totalAmount, 
+      gstAmount, 
+      grandTotal, 
+      effectiveGstPercent,
+      durationDays: getDurationDays(),
+    };
   };
 
   const handleSave = async () => {
@@ -380,7 +519,7 @@ export default function CampaignEdit() {
     setSaving(true);
 
     try {
-      const { totalAmount, gstAmount, grandTotal } = calculateTotals();
+      const { subtotal, printingTotal, mountingTotal, totalAmount, gstAmount, grandTotal } = calculateTotals();
 
       // Update campaign
       const { error: campaignError } = await supabase
@@ -394,10 +533,14 @@ export default function CampaignEdit() {
           status,
           notes,
           total_assets: campaignAssets.length,
+          subtotal: subtotal,
+          printing_total: printingTotal,
+          mounting_total: mountingTotal,
           total_amount: totalAmount,
           gst_percent: gstPercent,
           gst_amount: gstAmount,
           grand_total: grandTotal,
+          billing_cycle: durationMode === 'DAYS' ? 'DAILY' : 'MONTHLY',
           updated_at: new Date().toISOString()
         })
         .eq('id', id);
@@ -490,7 +633,7 @@ export default function CampaignEdit() {
     );
   }
 
-  const { totalAmount, gstAmount, grandTotal, effectiveGstPercent } = calculateTotals();
+  const { subtotal, printingTotal, mountingTotal, totalAmount, gstAmount, grandTotal, effectiveGstPercent, durationDays } = calculateTotals();
   const existingAssetIds = campaignAssets.map(a => a.asset_id);
 
   return (
@@ -608,8 +751,9 @@ export default function CampaignEdit() {
                       <Calendar
                         mode="single"
                         selected={startDate}
-                        onSelect={setStartDate}
+                        onSelect={handleStartDateChange}
                         initialFocus
+                        className="pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
@@ -634,13 +778,89 @@ export default function CampaignEdit() {
                       <Calendar
                         mode="single"
                         selected={endDate}
-                        onSelect={setEndDate}
+                        onSelect={handleEndDateChange}
                         initialFocus
+                        className="pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
                 </div>
               </div>
+              
+              {/* Editable Duration Controls */}
+              <div className="p-4 bg-muted/30 rounded-lg border space-y-4">
+                <div className="flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">Campaign Duration & Billing</span>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-4">
+                  {/* Billing Mode Dropdown */}
+                  <div>
+                    <Label>Billing Mode</Label>
+                    <Select 
+                      value={durationMode} 
+                      onValueChange={(value: DurationMode) => handleDurationModeChange(value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="MONTH">Month-wise</SelectItem>
+                        <SelectItem value="DAYS">Day-wise (Pro-rata)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Duration Value Input */}
+                  <div>
+                    <Label>{durationMode === 'MONTH' ? 'Months' : 'Days'}</Label>
+                    <Input
+                      type="number"
+                      min={durationMode === 'MONTH' ? '0.5' : '1'}
+                      step={durationMode === 'MONTH' ? '0.5' : '1'}
+                      value={durationValue}
+                      onChange={(e) => handleDurationValueChange(parseFloat(e.target.value) || 0.5)}
+                      className="font-medium"
+                    />
+                  </div>
+                  
+                  {/* Duration Summary */}
+                  <div>
+                    <Label>Duration Summary</Label>
+                    <div className="h-10 flex items-center gap-2">
+                      <Badge variant="secondary" className="font-semibold">
+                        {durationDays} days
+                      </Badge>
+                      {durationMode === 'DAYS' && durationDays > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          Factor: {(durationDays / BILLING_CYCLE_DAYS).toFixed(2)}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Billing Info */}
+                <div className="text-xs text-muted-foreground border-t pt-3 mt-2">
+                  {durationMode === 'MONTH' ? (
+                    <p>
+                      <strong>Month-wise billing:</strong> Negotiated price × {durationValue} {durationValue === 1 ? 'month' : 'months'}
+                    </p>
+                  ) : (
+                    <p>
+                      <strong>Day-wise (Pro-rata):</strong> (Negotiated price ÷ 30) × {durationDays} days = Factor {(durationDays / BILLING_CYCLE_DAYS).toFixed(2)}
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Validation Error */}
+              {startDate && endDate && durationDays <= 0 && (
+                <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/20">
+                  <span className="text-sm text-destructive">End date must be after start date</span>
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="status">Status</Label>
@@ -680,6 +900,21 @@ export default function CampaignEdit() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Display Cost (Subtotal)</span>
+                <span className="font-medium">{formatCurrency(subtotal)}</span>
+              </div>
+              
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Printing Charges</span>
+                <span className="font-medium">{formatCurrency(printingTotal)}</span>
+              </div>
+              
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Mounting Charges</span>
+                <span className="font-medium">{formatCurrency(mountingTotal)}</span>
+              </div>
+              
+              <div className="flex justify-between text-sm border-t pt-2">
                 <span className="text-muted-foreground">Taxable Amount</span>
                 <span className="font-medium">{formatCurrency(totalAmount)}</span>
               </div>
@@ -716,15 +951,18 @@ export default function CampaignEdit() {
                 <span className="font-bold text-lg text-primary">{formatCurrency(grandTotal)}</span>
               </div>
 
-              <div className="pt-3 border-t text-xs text-muted-foreground">
+              <div className="pt-3 border-t text-xs text-muted-foreground space-y-1">
                 {!isGstApplicable && (
                   <p className="text-amber-600">Client is not GST applicable</p>
                 )}
-                <p className="mt-1">
-                  {startDate && endDate && (
-                    <>Duration: {Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1} days</>
-                  )}
+                <p>
+                  Duration: {durationDays} days ({durationMode === 'MONTH' ? `${durationValue} month${durationValue !== 1 ? 's' : ''}` : `Factor: ${(durationDays / BILLING_CYCLE_DAYS).toFixed(2)}`})
                 </p>
+                {durationMode === 'DAYS' && (
+                  <p className="text-primary">
+                    Pro-rata applied: (Monthly Rate ÷ 30) × {durationDays}
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>

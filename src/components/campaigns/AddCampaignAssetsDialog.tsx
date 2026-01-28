@@ -27,6 +27,7 @@ import { Plus, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { Checkbox } from "@/components/ui/checkbox";
+import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
 
 interface AddCampaignAssetsDialogProps {
   open: boolean;
@@ -48,6 +49,32 @@ export function AddCampaignAssetsDialog({
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [mediaTypeFilter, setMediaTypeFilter] = useState<string>("all");
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
+  const [companyPrefix, setCompanyPrefix] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchCompanySettings();
+  }, []);
+
+  const fetchCompanySettings = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: companyUser } = await supabase
+          .from('company_users')
+          .select('company_id, companies(asset_id_prefix, name)')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+        
+        if (companyUser?.companies) {
+          const company = companyUser.companies as any;
+          setCompanyPrefix(company.asset_id_prefix || null);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching company settings:', error);
+    }
+  };
 
   useEffect(() => {
     if (open) {
@@ -182,6 +209,7 @@ export function AddCampaignAssetsDialog({
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
                   <TableHead className="w-12"></TableHead>
+                  <TableHead className="w-[50px] text-center">S.No</TableHead>
                   <TableHead>Asset ID</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>City</TableHead>
@@ -193,18 +221,18 @@ export function AddCampaignAssetsDialog({
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       Loading assets...
                     </TableCell>
                   </TableRow>
                 ) : filteredAssets.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       No available assets found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredAssets.map((asset) => (
+                  filteredAssets.map((asset, index) => (
                     <TableRow key={asset.id}>
                       <TableCell>
                         <Checkbox
@@ -212,8 +240,15 @@ export function AddCampaignAssetsDialog({
                           onCheckedChange={() => toggleAssetSelection(asset.id)}
                         />
                       </TableCell>
+                      <TableCell className="text-center font-medium text-muted-foreground">
+                        {index + 1}
+                      </TableCell>
                       <TableCell className="font-medium font-mono text-sm">
-                        {asset.media_asset_code || asset.id}
+                        {formatAssetDisplayCode({
+                          mediaAssetCode: asset.media_asset_code,
+                          fallbackId: asset.id,
+                          companyPrefix: companyPrefix
+                        })}
                       </TableCell>
                       <TableCell className="max-w-[200px] truncate">{asset.location}</TableCell>
                       <TableCell>{asset.city}</TableCell>

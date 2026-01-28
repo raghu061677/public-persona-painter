@@ -40,6 +40,7 @@ import { useCompany } from "@/contexts/CompanyContext";
 import { CampaignTimelineView } from "@/components/campaigns/CampaignTimelineView";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
 import { DeleteCampaignDialog } from "@/components/campaigns/DeleteCampaignDialog";
+import { CampaignBillingTab } from "@/components/campaigns/billing";
 
 export default function CampaignDetail() {
   const { id } = useParams();
@@ -643,11 +644,12 @@ export default function CampaignDetail() {
         {/* Tabs - Enhanced with border */}
         <Card className="border-2">
           <Tabs defaultValue="assets" className="p-4">
-            <TabsList className="grid grid-cols-5 w-full max-w-3xl">
+            <TabsList className="grid grid-cols-6 w-full max-w-4xl">
               <TabsTrigger value="assets">Assets ({campaignAssets.length})</TabsTrigger>
               <TabsTrigger value="creatives">Creatives</TabsTrigger>
               <TabsTrigger value="operations">Operations</TabsTrigger>
               <TabsTrigger value="proof">Proof Gallery</TabsTrigger>
+              <TabsTrigger value="billing">Billing & Invoices</TabsTrigger>
               <TabsTrigger value="timeline">Timeline</TabsTrigger>
             </TabsList>
 
@@ -723,6 +725,30 @@ export default function CampaignDetail() {
                   <ProofGallery assets={campaignAssets} onUpdate={refreshData} />
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="billing" className="mt-4">
+              <CampaignBillingTab
+                campaign={{
+                  id: campaign.id,
+                  campaign_name: campaign.campaign_name,
+                  client_id: campaign.client_id,
+                  client_name: campaign.client_name,
+                  start_date: campaign.start_date,
+                  end_date: campaign.end_date,
+                  total_amount: campaign.total_amount,
+                  gst_amount: campaign.gst_amount,
+                  gst_percent: campaign.gst_percent,
+                  printing_total: printingTotal,
+                  mounting_total: mountingTotal,
+                  subtotal: campaign.subtotal,
+                  billing_cycle: campaign.billing_cycle,
+                  company_id: campaign.company_id,
+                }}
+                campaignAssets={campaignAssets}
+                displayCost={displayCost}
+                onRefresh={refreshData}
+              />
             </TabsContent>
 
             <TabsContent value="timeline" className="mt-4">

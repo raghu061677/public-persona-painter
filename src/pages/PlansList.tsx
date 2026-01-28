@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket, Download, Sparkles, ChevronDown, Info, FolderOpen, Edit, ClipboardList, Users, TrendingUp, CopyPlus } from "lucide-react";
+import { Plus, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket, Download, Sparkles, ChevronDown, Info, FolderOpen, Edit, ClipboardList, Users, TrendingUp, CopyPlus, Search, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,6 +52,21 @@ import {
 import { PageCustomization, PageCustomizationOption } from "@/components/ui/page-customization";
 import { EnhancedFilterToggle } from "@/components/common/EnhancedFilterToggle";
 import { useLayoutSettings } from "@/hooks/use-layout-settings";
+import { SortableTableHead, useSortableData, SortConfig } from "@/components/common/SortableTableHead";
+import { Input } from "@/components/ui/input";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export default function PlansList() {
   const navigate = useNavigate();
@@ -70,6 +85,8 @@ export default function PlansList() {
     open: false,
     plan: null,
   });
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   
   // Layout settings with persistence
   const { getSetting, updateSetting, isReady: layoutReady } = useLayoutSettings('plans');
@@ -307,31 +324,68 @@ export default function PlansList() {
     }
   };
 
-  const filteredPlans = globalSearchFiltered.filter(plan => {
-    // Status tab filter
-    if (statusTab !== "all") {
-      const planStatus = plan.status?.toLowerCase() || "pending";
-      if (planStatus !== statusTab) return false;
-    }
-    
-    // Search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      const matchesSearch = (
-        plan.id?.toLowerCase().includes(term) ||
-        plan.client_name?.toLowerCase().includes(term) ||
-        plan.plan_name?.toLowerCase().includes(term)
-      );
-      if (!matchesSearch) return false;
-    }
-    
-    // Additional status filter (from dropdown)
-    if (filterStatus && plan.status !== filterStatus) return false;
-    
-    return true;
-  });
+  // Filter plans first
+  const baseFilteredPlans = useMemo(() => {
+    return globalSearchFiltered.filter(plan => {
+      // Status tab filter
+      if (statusTab !== "all") {
+        const planStatus = plan.status?.toLowerCase() || "pending";
+        if (planStatus !== statusTab) return false;
+      }
+      
+      // Search filter
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        const matchesSearch = (
+          plan.id?.toLowerCase().includes(term) ||
+          plan.client_name?.toLowerCase().includes(term) ||
+          plan.plan_name?.toLowerCase().includes(term)
+        );
+        if (!matchesSearch) return false;
+      }
+      
+      // Additional status filter (from dropdown)
+      if (filterStatus && plan.status !== filterStatus) return false;
+      
+      return true;
+    });
+  }, [globalSearchFiltered, statusTab, searchTerm, filterStatus]);
+
+  // Apply sorting
+  const { sortedData: filteredPlans, sortConfig, handleSort } = useSortableData(baseFilteredPlans);
   
   const uniqueStatuses = Array.from(new Set(plans.map(p => p.status).filter(Boolean)));
+
+  // Generate search suggestions based on current data
+  const searchSuggestions = useMemo(() => {
+    if (!searchTerm || searchTerm.length < 2) return [];
+    
+    const term = searchTerm.toLowerCase();
+    const suggestions: { type: string; value: string; label: string }[] = [];
+    const seen = new Set<string>();
+    
+    for (const plan of plans) {
+      // Plan ID suggestions
+      if (plan.id?.toLowerCase().includes(term) && !seen.has(`id:${plan.id}`)) {
+        seen.add(`id:${plan.id}`);
+        suggestions.push({ type: 'Plan ID', value: plan.id, label: plan.id });
+      }
+      // Customer name suggestions
+      if (plan.client_name?.toLowerCase().includes(term) && !seen.has(`client:${plan.client_name}`)) {
+        seen.add(`client:${plan.client_name}`);
+        suggestions.push({ type: 'Customer', value: plan.client_name, label: plan.client_name });
+      }
+      // Display/Plan name suggestions
+      if (plan.plan_name?.toLowerCase().includes(term) && !seen.has(`display:${plan.plan_name}`)) {
+        seen.add(`display:${plan.plan_name}`);
+        suggestions.push({ type: 'Display', value: plan.plan_name, label: plan.plan_name });
+      }
+      
+      if (suggestions.length >= 10) break;
+    }
+    
+    return suggestions;
+  }, [searchTerm, plans]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this plan?")) return;
@@ -629,63 +683,132 @@ export default function PlansList() {
           </CardContent>
         </Card>
 
-        {/* Filters Bar */}
+        {/* Search and Filters Bar */}
         <Card className="mb-4">
           <CardContent className="p-4">
-            <EnhancedFilterToggle
-              open={getSetting('showFilters', false)}
-              onOpenChange={(val) => updateSetting('showFilters', val)}
-              activeFiltersCount={[searchTerm, filterStatus].filter(Boolean).length}
-              showClearButton={true}
-              onClearFilters={() => {
-                setSearchTerm('');
-                setFilterStatus('');
-              }}
-            >
-              <div className="space-y-4">
-                <TableFilters
-                  filters={[
-                    {
-                      key: "status",
-                      label: "Status",
-                      type: "select",
-                      options: uniqueStatuses.map(s => ({ value: s, label: s })),
-                    },
-                  ]}
-                  filterValues={{
-                    status: filterStatus,
-                  }}
-                  onFilterChange={(key, value) => {
-                    if (key === "status") setFilterStatus(value);
-                  }}
-                  onClearFilters={() => {
-                    setSearchTerm("");
-                    setFilterStatus("");
-                  }}
-                  allColumns={allColumns}
-                  visibleColumns={visibleColumns}
-                  onColumnVisibilityChange={setVisibleColumns}
-                  onResetColumns={resetColumns}
-                  density={density}
-                  onDensityChange={setDensity}
-                  tableKey="plans"
-                  settings={settings}
-                  onUpdateSettings={updateSettings}
-                  onResetSettings={resetSettings}
-                />
-                <FilterPresets
-                  tableKey="plans"
-                  currentFilters={{
-                    searchTerm,
-                    status: filterStatus,
-                  }}
-                  onApplyPreset={(filters) => {
-                    setSearchTerm(filters.searchTerm || "");
-                    setFilterStatus(filters.status || "");
-                  }}
-                />
+            <div className="flex flex-col gap-4">
+              {/* Search Input with Suggestions */}
+              <div className="relative">
+                <Popover open={searchOpen && searchSuggestions.length > 0} onOpenChange={setSearchOpen}>
+                  <PopoverTrigger asChild>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        ref={searchInputRef}
+                        type="text"
+                        placeholder="Search by Plan ID, Customer Name, or Display Name..."
+                        value={searchTerm}
+                        onChange={(e) => {
+                          setSearchTerm(e.target.value);
+                          if (e.target.value.length >= 2) setSearchOpen(true);
+                        }}
+                        onFocus={() => {
+                          if (searchTerm.length >= 2) setSearchOpen(true);
+                        }}
+                        className="pl-10 pr-10 h-11"
+                      />
+                      {searchTerm && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                          onClick={() => {
+                            setSearchTerm('');
+                            setSearchOpen(false);
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                    <Command>
+                      <CommandList>
+                        <CommandEmpty>No results found.</CommandEmpty>
+                        {['Plan ID', 'Customer', 'Display'].map((type) => {
+                          const typeItems = searchSuggestions.filter(s => s.type === type);
+                          if (typeItems.length === 0) return null;
+                          return (
+                            <CommandGroup key={type} heading={type}>
+                              {typeItems.map((suggestion) => (
+                                <CommandItem
+                                  key={`${suggestion.type}:${suggestion.value}`}
+                                  value={suggestion.value}
+                                  onSelect={() => {
+                                    setSearchTerm(suggestion.value);
+                                    setSearchOpen(false);
+                                  }}
+                                  className="cursor-pointer"
+                                >
+                                  <span className="truncate">{suggestion.label}</span>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          );
+                        })}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
-            </EnhancedFilterToggle>
+
+              {/* Enhanced Filters */}
+              <EnhancedFilterToggle
+                open={getSetting('showFilters', false)}
+                onOpenChange={(val) => updateSetting('showFilters', val)}
+                activeFiltersCount={[filterStatus].filter(Boolean).length}
+                showClearButton={true}
+                onClearFilters={() => {
+                  setSearchTerm('');
+                  setFilterStatus('');
+                }}
+              >
+                <div className="space-y-4">
+                  <TableFilters
+                    filters={[
+                      {
+                        key: "status",
+                        label: "Status",
+                        type: "select",
+                        options: uniqueStatuses.map(s => ({ value: s, label: s })),
+                      },
+                    ]}
+                    filterValues={{
+                      status: filterStatus,
+                    }}
+                    onFilterChange={(key, value) => {
+                      if (key === "status") setFilterStatus(value);
+                    }}
+                    onClearFilters={() => {
+                      setSearchTerm("");
+                      setFilterStatus("");
+                    }}
+                    allColumns={allColumns}
+                    visibleColumns={visibleColumns}
+                    onColumnVisibilityChange={setVisibleColumns}
+                    onResetColumns={resetColumns}
+                    density={density}
+                    onDensityChange={setDensity}
+                    tableKey="plans"
+                    settings={settings}
+                    onUpdateSettings={updateSettings}
+                    onResetSettings={resetSettings}
+                  />
+                  <FilterPresets
+                    tableKey="plans"
+                    currentFilters={{
+                      searchTerm,
+                      status: filterStatus,
+                    }}
+                    onApplyPreset={(filters) => {
+                      setSearchTerm(filters.searchTerm || "");
+                      setFilterStatus(filters.status || "");
+                    }}
+                  />
+                </div>
+              </EnhancedFilterToggle>
+            </div>
           </CardContent>
         </Card>
 
@@ -774,37 +897,55 @@ export default function PlansList() {
                     </TableHead>
                   )}
                   {visibleColumns.includes("id") && (
-                    <TableHead className="px-4 py-3 text-left font-semibold">Plan ID</TableHead>
+                    <SortableTableHead sortKey="id" currentSort={sortConfig} onSort={handleSort}>
+                      Plan ID
+                    </SortableTableHead>
                   )}
                   {visibleColumns.includes("employee") && (
                     <TableHead className="px-4 py-3 text-left font-semibold">Employee</TableHead>
                   )}
                   {visibleColumns.includes("client") && (
-                    <TableHead className="px-4 py-3 text-left font-semibold">Customer Name</TableHead>
+                    <SortableTableHead sortKey="client_name" currentSort={sortConfig} onSort={handleSort}>
+                      Customer Name
+                    </SortableTableHead>
                   )}
                   {visibleColumns.includes("display") && (
-                    <TableHead className="px-4 py-3 text-left font-semibold">Display</TableHead>
+                    <SortableTableHead sortKey="plan_name" currentSort={sortConfig} onSort={handleSort}>
+                      Display
+                    </SortableTableHead>
                   )}
                   {visibleColumns.includes("from") && (
-                    <TableHead className="px-4 py-3 text-left font-semibold">From</TableHead>
+                    <SortableTableHead sortKey="start_date" currentSort={sortConfig} onSort={handleSort}>
+                      From
+                    </SortableTableHead>
                   )}
                   {visibleColumns.includes("to") && (
-                    <TableHead className="px-4 py-3 text-left font-semibold">To</TableHead>
+                    <SortableTableHead sortKey="end_date" currentSort={sortConfig} onSort={handleSort}>
+                      To
+                    </SortableTableHead>
                   )}
                   {visibleColumns.includes("days") && (
-                    <TableHead className="px-4 py-3 text-left font-semibold">Days</TableHead>
+                    <SortableTableHead sortKey="duration_days" currentSort={sortConfig} onSort={handleSort}>
+                      Days
+                    </SortableTableHead>
                   )}
                   {visibleColumns.includes("sqft") && (
-                    <TableHead className="px-4 py-3 text-right font-semibold">SQFT</TableHead>
+                    <SortableTableHead sortKey="total_sqft" currentSort={sortConfig} onSort={handleSort} align="right">
+                      SQFT
+                    </SortableTableHead>
                   )}
                   {visibleColumns.includes("amount") && (
-                    <TableHead className="px-4 py-3 text-right font-semibold">Amount</TableHead>
+                    <SortableTableHead sortKey="grand_total" currentSort={sortConfig} onSort={handleSort} align="right">
+                      Amount
+                    </SortableTableHead>
                   )}
                   {visibleColumns.includes("qos") && (
                     <TableHead className="px-4 py-3 text-right font-semibold">QoS</TableHead>
                   )}
                   {visibleColumns.includes("status") && (
-                    <TableHead className="px-4 py-3 text-left font-semibold">Status</TableHead>
+                    <SortableTableHead sortKey="status" currentSort={sortConfig} onSort={handleSort}>
+                      Status
+                    </SortableTableHead>
                   )}
                   {visibleColumns.includes("actions") && (
                     <TableHead className="px-4 py-3 text-right font-semibold">Actions</TableHead>

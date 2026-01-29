@@ -705,6 +705,8 @@ export default function PlanNew() {
                 selectedIds={selectedAssets}
                 onSelect={toggleAssetSelection}
                 onMultiSelect={handleMultiSelect}
+                planStartDate={formData.start_date}
+                planEndDate={formData.end_date}
               />
             </CardContent>
           </Card>

@@ -117,6 +117,7 @@ serve(async (req) => {
         latitude,
         longitude,
         primary_photo_url,
+        qr_code_url,
         is_public,
         booked_from,
         booked_to,

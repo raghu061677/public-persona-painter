@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
 
     console.log('Generated campaign code:', campaign_code);
 
-    // Calculate totals
+    // Calculate totals with proper rounding to avoid floating-point precision issues
     let subtotal = 0;
     let printing_total = 0;
     let mounting_total = 0;
@@ -201,11 +201,16 @@ Deno.serve(async (req) => {
       mounting_total += asset.mounting_cost;
     });
 
-    const total_amount = subtotal + printing_total + mounting_total;
+    // Round to 2 decimal places to avoid floating-point precision issues
+    subtotal = Math.round(subtotal * 100) / 100;
+    printing_total = Math.round(printing_total * 100) / 100;
+    mounting_total = Math.round(mounting_total * 100) / 100;
+
+    const total_amount = Math.round((subtotal + printing_total + mounting_total) * 100) / 100;
     // Use custom GST percent if provided, default to 18%
     const gst_percent = custom_gst_percent !== undefined ? custom_gst_percent : 18;
-    const gst_amount = total_amount * (gst_percent / 100);
-    const grand_total = total_amount + gst_amount;
+    const gst_amount = Math.round((total_amount * (gst_percent / 100)) * 100) / 100;
+    const grand_total = Math.round((total_amount + gst_amount) * 100) / 100;
 
     console.log('GST Settings:', { gst_type, gst_percent, gst_amount });
 

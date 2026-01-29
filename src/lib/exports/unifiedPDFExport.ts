@@ -164,7 +164,8 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
     const printingCharge = Number(item.printing_charges || 0);
     const mountingCharge = Number(item.mounting_charges || 0);
     const itemDays = item.duration_days || totalDays;
-    const prorataCost = Math.round((monthlyRate / 30) * itemDays) + printingCharge + mountingCharge;
+    // Use full precision for pro-rata calculation, round only the final total
+    const prorataCost = Math.round(((monthlyRate / 30) * itemDays + printingCharge + mountingCharge) * 100) / 100;
 
     // Build location code from media_asset_code or asset_id with company prefix
     const displayCode = formatAssetDisplayCode({
@@ -311,7 +312,8 @@ function generateFullDetailPDF(
     const endDate = formatDateToDDMonYY(item.end_date || plan.end_date);
     const days = plan.duration_days || 30;
     const monthlyRate = item.sales_price || item.card_rate || 0;
-    const proRataCost = (monthlyRate / 30) * days;
+    // Use full precision for pro-rata, round only the result
+    const proRataCost = Math.round(((monthlyRate / 30) * days) * 100) / 100;
 
     tableData.push([
       item.location || item.asset_id,

@@ -235,8 +235,9 @@ export async function generateUnifiedExcel(data: ExportData): Promise<Blob> {
   // Add data rows
   planItems.forEach((item, index) => {
     const days = plan.duration_days || 30;
-    const proRataCost = ((item.sales_price || item.card_rate) / 30) * days;
-    const lineTotal = proRataCost + (item.printing_charges || 0) + (item.mounting_charges || 0);
+    // Use full precision for pro-rata, round only the final line total
+    const proRataCost = Math.round(((item.sales_price || item.card_rate) / 30) * days * 100) / 100;
+    const lineTotal = Math.round((proRataCost + (item.printing_charges || 0) + (item.mounting_charges || 0)) * 100) / 100;
 
     const printingSqftMode = item.printing_charges && item.total_sqft ? 'Sqft' : 'Unit';
     const printingRate = item.printing_charges && item.total_sqft && printingSqftMode === 'Sqft' 
@@ -296,11 +297,12 @@ export async function generateUnifiedExcel(data: ExportData): Promise<Blob> {
   itemsSheet.getCell(`A${totalsRowNum}`).value = 'TOTALS';
   itemsSheet.getCell(`A${totalsRowNum}`).font = { bold: true };
   
-  const totalDisplayCost = planItems.reduce((sum, item) => {
+  const totalDisplayCost = Math.round(planItems.reduce((sum, item) => {
     const days = plan.duration_days || 30;
+    // Use full precision for each item, then round the total sum
     const proRata = ((item.sales_price || item.card_rate) / 30) * days;
     return sum + proRata;
-  }, 0);
+  }, 0) * 100) / 100;
   
   const totalPrintingCost = planItems.reduce((sum, item) => sum + (item.printing_charges || 0), 0);
   const totalMountingCost = planItems.reduce((sum, item) => sum + (item.mounting_charges || 0), 0);

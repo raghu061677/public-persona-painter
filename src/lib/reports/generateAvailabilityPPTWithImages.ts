@@ -115,6 +115,39 @@ function normalizeString(val: string | null | undefined): string {
 }
 
 /**
+ * Format multi-face dimensions for display
+ * Preserves formats like "25x5 - 12x3" instead of truncating to first face only
+ * Single face: "40x20" → "40 x 20 ft"
+ * Multi-face: "25X5 - 12X3" → "25x5 - 12x3 ft"
+ */
+function formatMultiFaceDimensions(dimensions: string | null | undefined): string {
+  if (!dimensions) return 'N/A';
+  
+  const trimmed = dimensions.trim();
+  if (!trimmed) return 'N/A';
+  
+  // Check if it's multi-face (contains a dash with dimensions on both sides)
+  const hasDash = /\d\s*[-–—]\s*\d/.test(trimmed);
+  
+  if (hasDash) {
+    // Multi-face: normalize spacing and case, add "ft" suffix
+    const normalized = trimmed
+      .replace(/\s*[-–—]\s*/g, ' - ')  // Normalize dashes
+      .replace(/\s*[xX×]\s*/g, 'x');    // Normalize x separators
+    return `${normalized} ft`;
+  }
+  
+  // Single-face: parse and format as "W x H ft"
+  const match = trimmed.match(/(\d+\.?\d*)\s*[xX×]\s*(\d+\.?\d*)/);
+  if (match) {
+    return `${match[1]} x ${match[2]} ft`;
+  }
+  
+  // Fallback: return original
+  return trimmed;
+}
+
+/**
  * Sort assets for PPT export based on selected order
  * Works with both AvailableAsset and BookedAsset types
  */
@@ -699,16 +732,8 @@ export async function generateAvailabilityPPTWithImages(data: ExportData): Promi
       asset.qr_code_url
     );
 
-    // Parse dimensions
-    let width = '';
-    let height = '';
-    if (asset.dimensions) {
-      const match = asset.dimensions.match(/(\d+\.?\d*)\s*[xX×]\s*(\d+\.?\d*)/);
-      if (match) {
-        width = match[1];
-        height = match[2];
-      }
-    }
+    // Format dimensions - preserve multi-face format like "25x5 - 12x3"
+    const formattedDimensions = formatMultiFaceDimensions(asset.dimensions);
 
     // ===== SLIDE: ASSET PRESENTATION =====
     const slide = prs.addSlide();
@@ -795,7 +820,7 @@ export async function generateAvailabilityPPTWithImages(data: ExportData): Promi
       [{ text: sanitizePptText('Area'), options: { bold: true } }, { text: sanitizePptText(asset.area) }],
       [{ text: sanitizePptText('Location'), options: { bold: true } }, { text: sanitizePptText(asset.location) }],
       [{ text: sanitizePptText('Direction'), options: { bold: true } }, { text: sanitizePptText(asset.direction || 'N/A') }],
-      [{ text: sanitizePptText('Dimensions'), options: { bold: true } }, { text: sanitizePptText(width && height ? `${width} x ${height} ft` : asset.dimensions || 'N/A') }],
+      [{ text: sanitizePptText('Dimensions'), options: { bold: true } }, { text: sanitizePptText(formattedDimensions) }],
       [{ text: sanitizePptText('Sq.Ft'), options: { bold: true } }, { text: sanitizePptText(asset.total_sqft?.toString() || 'N/A') }],
       [{ text: sanitizePptText('Illumination'), options: { bold: true } }, { text: sanitizePptText(asset.illumination_type || 'Non-lit') }],
       [{ text: sanitizePptText('Media Type'), options: { bold: true } }, { text: sanitizePptText(asset.media_type) }],

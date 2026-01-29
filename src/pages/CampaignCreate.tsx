@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { ArrowLeft, Trash2, Save, Send, History, ShieldAlert, Calendar } from 'lucide-react';
+import { ClientSelect } from '@/components/shared/ClientSelect';
 import { Separator } from '@/components/ui/separator';
 import { AssetSelectionTable } from '@/components/plans/AssetSelectionTable';
 import { formatCurrency } from '@/utils/mediaAssets';
@@ -611,18 +612,13 @@ export default function CampaignCreate() {
 
               <div>
                 <Label htmlFor="client">Client *</Label>
-                <Select value={formData.client_id} onValueChange={(value) => setFormData({ ...formData, client_id: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ClientSelect
+                  clients={clients}
+                  value={formData.client_id}
+                  onSelect={(value) => setFormData({ ...formData, client_id: value })}
+                  placeholder="Select client"
+                  returnPath="/admin/campaigns/create"
+                />
               </div>
 
               <div className="space-y-4">

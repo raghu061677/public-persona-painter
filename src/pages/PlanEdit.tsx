@@ -37,6 +37,7 @@ import {
 } from "@/utils/billingEngine";
 import { LineItemDurationControl } from "@/components/plans/LineItemDurationControl";
 import { ArrowLeft, Calendar as CalendarIcon, FileText, CalendarDays, DollarSign, Info } from "lucide-react";
+import { ClientSelect } from "@/components/shared/ClientSelect";
 import { cn } from "@/lib/utils";
 import { AssetSelectionTable } from "@/components/plans/AssetSelectionTable";
 import { SelectedAssetsTable } from "@/components/plans/SelectedAssetsTable";
@@ -569,18 +570,13 @@ export default function PlanEdit() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Client *</Label>
-                  <Select value={formData.client_id} onValueChange={handleClientSelect}>
-                    <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Select client" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clients.map(client => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <ClientSelect
+                    clients={clients}
+                    value={formData.client_id}
+                    onSelect={handleClientSelect}
+                    placeholder="Select client"
+                    returnPath={`/admin/plans/${id}/edit`}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Plan Name *</Label>

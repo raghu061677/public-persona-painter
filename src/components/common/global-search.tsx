@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, X } from "lucide-react";
@@ -18,10 +18,16 @@ export function GlobalSearch({
   placeholder = "Search across all columns...",
 }: GlobalSearchProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const onFilteredDataRef = useRef(onFilteredData);
+  
+  // Keep ref updated
+  useEffect(() => {
+    onFilteredDataRef.current = onFilteredData;
+  }, [onFilteredData]);
 
+  // Calculate filtered data without calling callback in useMemo
   const { filteredData, matchCount } = useMemo(() => {
     if (!searchTerm.trim()) {
-      onFilteredData(data);
       return { filteredData: data, matchCount: 0 };
     }
 
@@ -34,14 +40,17 @@ export function GlobalSearch({
       });
     });
 
-    onFilteredData(filtered);
     return { filteredData: filtered, matchCount: filtered.length };
-  }, [data, searchTerm, searchableKeys, onFilteredData]);
+  }, [data, searchTerm, searchableKeys]);
 
-  const handleClear = () => {
+  // Call the callback in useEffect to avoid infinite loop
+  useEffect(() => {
+    onFilteredDataRef.current(filteredData);
+  }, [filteredData]);
+
+  const handleClear = useCallback(() => {
     setSearchTerm("");
-    onFilteredData(data);
-  };
+  }, []);
 
   return (
     <div className="space-y-2">

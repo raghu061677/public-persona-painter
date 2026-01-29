@@ -557,55 +557,7 @@ export async function generateAvailabilityPPTWithImages(data: ExportData): Promi
     }
   );
 
-  // ===== TABLE SLIDES (PAGINATED, SAME AS EXCEL/PDF) =====
-  const standardized = standardizeAssets(getAssetsForExport(data), sortOrder);
-  const rowsPerSlide = 12;
-  const headerRow: pptxgen.TableRow = (EXPORT_COLUMNS as readonly string[]).map((label) => ({
-    text: sanitizePptText(label),
-    options: { fill: { color: '3B82F6' }, color: 'FFFFFF', bold: true, align: 'center' },
-  })) as any;
-
-  const makeRow = (a: any): pptxgen.TableRow => ([
-    { text: sanitizePptText(String(a.sNo)), options: { align: 'center' } },
-    { text: sanitizePptText(a.mediaType), options: { align: 'center' } },
-    { text: sanitizePptText(a.city), options: { align: 'center' } },
-    { text: sanitizePptText(a.area), options: { align: 'center' } },
-    { text: sanitizePptText(a.location), options: { align: 'left' } },
-    { text: sanitizePptText(a.direction), options: { align: 'center' } },
-    { text: sanitizePptText(a.dimensions), options: { align: 'center' } },
-    { text: sanitizePptText(Number(a.sqft).toFixed(2)), options: { align: 'right' } },
-    { text: sanitizePptText(a.illumination), options: { align: 'center' } },
-    { text: sanitizePptText(`Rs. ${Math.round(a.cardRate).toLocaleString('en-IN')}`), options: { align: 'right' } },
-    { text: sanitizePptText(a.status), options: { align: 'center' } },
-  ] as any);
-
-  for (let i = 0; i < standardized.length; i += rowsPerSlide) {
-    const chunk = standardized.slice(i, i + rowsPerSlide);
-    const slide = prs.addSlide();
-    slide.background = { color: 'FFFFFF' };
-
-    slide.addShape(prs.ShapeType.rect, {
-      x: 0, y: 0, w: 10, h: 0.7,
-      fill: { color: brandColor },
-    });
-    slide.addText(sanitizePptText('Vacant Media — Asset List'), {
-      x: 0.3, y: 0.15, w: 9.4, h: 0.5,
-      fontSize: 18, bold: true, color: 'FFFFFF', align: 'left', fontFace: PPT_SAFE_FONTS.primary,
-    });
-    slide.addText(sanitizePptText(`Sorted by: ${getSortLabel(sortOrder)} | Period: ${data.dateRange}`), {
-      x: 0.3, y: 0.78, w: 9.4, h: 0.3,
-      fontSize: 10, color: '64748B', align: 'left', fontFace: PPT_SAFE_FONTS.primary,
-    });
-
-    const tableRows: pptxgen.TableRow[] = [headerRow, ...chunk.map(makeRow)];
-    slide.addTable(tableRows, {
-      x: 0.3, y: 1.2, w: 9.4, h: 5.8,
-      fontSize: 8,
-      fontFace: PPT_SAFE_FONTS.primary,
-      border: { pt: 0.5, color: 'D1D5DB' },
-      colW: [0.45, 1.0, 0.8, 0.9, 2.2, 0.9, 0.9, 0.7, 0.9, 0.9, 0.75],
-    });
-  }
+  // NOTE: Table slides removed per user request - only Cover, Summary, and Asset slides are generated
 
   // ===== SUMMARY SLIDE =====
   const summarySlide = prs.addSlide();

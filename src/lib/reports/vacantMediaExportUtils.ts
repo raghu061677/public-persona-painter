@@ -91,24 +91,36 @@ export function sortAssets(
 }
 
 /**
- * Parse dimensions string to extract width and height
- * Supports formats: "20x10", "20 x 10", "20X10", "20 X 10"
+ * Parse dimensions string to extract all faces (supports multi-face formats)
+ * Single face: "20x10", "20 x 10", "20X10"
+ * Multi-face: "25X5 - 12X3", "40x20-30x10", "25x5 - 12x3"
  */
-function parseDimensions(dimensions: string | null | undefined): { width: number; height: number } | null {
-  if (!dimensions) return null;
+function parseAllDimensions(dimensions: string | null | undefined): Array<{ width: number; height: number }> {
+  if (!dimensions) return [];
   
-  const match = dimensions.match(/(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)/);
-  if (match) {
-    return {
-      width: parseFloat(match[1]),
-      height: parseFloat(match[2]),
-    };
+  const cleaned = dimensions.trim();
+  
+  // Split by dash/hyphen to detect multi-face (but not negative numbers)
+  const faceStrings = cleaned.split(/\s*[-–—]\s*/).filter(f => f.trim() && /\d/.test(f));
+  
+  const faces: Array<{ width: number; height: number }> = [];
+  
+  for (const faceStr of faceStrings) {
+    const match = faceStr.match(/(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)/);
+    if (match) {
+      const width = parseFloat(match[1]);
+      const height = parseFloat(match[2]);
+      if (width > 0 && height > 0) {
+        faces.push({ width, height });
+      }
+    }
   }
-  return null;
+  
+  return faces;
 }
 
 /**
- * Calculate square feet from dimensions
+ * Calculate total square feet from dimensions (sum of all faces)
  */
 function calculateSqft(asset: VacantAssetExportData): number {
   // If total_sqft is already available, use it
@@ -116,27 +128,42 @@ function calculateSqft(asset: VacantAssetExportData): number {
     return Math.round(asset.total_sqft * 100) / 100;
   }
   
-  // Try to parse from dimensions
-  const parsed = parseDimensions(asset.dimensions);
-  if (parsed) {
-    return Math.round(parsed.width * parsed.height * 100) / 100;
+  // Parse all faces from dimensions
+  const faces = parseAllDimensions(asset.dimensions);
+  if (faces.length > 0) {
+    const totalSqft = faces.reduce((sum, face) => sum + (face.width * face.height), 0);
+    return Math.round(totalSqft * 100) / 100;
   }
   
   return 0;
 }
 
 /**
- * Format dimensions string consistently
+ * Format dimensions string - PRESERVE ORIGINAL FORMAT for multi-face
+ * Only normalize single-face dimensions
  */
 function formatDimensions(asset: VacantAssetExportData): string {
-  if (asset.dimensions) {
-    const parsed = parseDimensions(asset.dimensions);
-    if (parsed) {
-      return `${parsed.width} x ${parsed.height}`;
-    }
-    return asset.dimensions;
+  if (!asset.dimensions) return 'N/A';
+  
+  const trimmed = asset.dimensions.trim();
+  if (!trimmed) return 'N/A';
+  
+  // Check if it's multi-face (contains a dash with dimensions on both sides)
+  const hasDash = /\d\s*[-–—]\s*\d/.test(trimmed);
+  
+  if (hasDash) {
+    // Multi-face: preserve original format, just clean up spacing
+    return trimmed.replace(/\s*[-–—]\s*/g, ' - ').replace(/\s*[xX×]\s*/g, 'x');
   }
-  return 'N/A';
+  
+  // Single-face: normalize to "W x H" format
+  const faces = parseAllDimensions(trimmed);
+  if (faces.length === 1) {
+    return `${faces[0].width} x ${faces[0].height}`;
+  }
+  
+  // Fallback: return original
+  return trimmed;
 }
 
 /**

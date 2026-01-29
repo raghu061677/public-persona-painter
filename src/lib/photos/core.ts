@@ -395,26 +395,52 @@ export async function uploadPhoto(
 export async function deletePhoto(
   photoId: string,
   photoUrl: string,
-  bucket: 'media-assets' | 'operations-photos'
+  bucket: 'media-assets' | 'operations-photos' | 'campaign-proofs'
 ): Promise<void> {
   try {
-    // Extract file path from URL
-    const urlParts = photoUrl.split(`/${bucket}/`);
-    if (urlParts.length < 2) {
-      throw new Error('Invalid photo URL format');
+    // Try to extract file path from URL - support multiple bucket formats
+    let filePath: string | null = null;
+    let actualBucket: string = bucket;
+
+    // List of possible buckets to check in order
+    const bucketsToCheck = [bucket, 'media-assets', 'campaign-proofs', 'operations-photos'];
+    
+    for (const b of bucketsToCheck) {
+      const pattern = `/${b}/`;
+      if (photoUrl.includes(pattern)) {
+        const parts = photoUrl.split(pattern);
+        if (parts.length >= 2) {
+          filePath = parts[1];
+          actualBucket = b;
+          break;
+        }
+      }
     }
-    const filePath = urlParts[1];
 
-    // Delete from storage
-    const { error: storageError } = await supabase.storage
-      .from(bucket)
-      .remove([filePath]);
-
-    if (storageError) {
-      console.error('Storage deletion error:', storageError);
+    // If still no match, try to extract path after /object/public/ or /object/sign/
+    if (!filePath) {
+      const publicMatch = photoUrl.match(/\/object\/(?:public|sign)\/([^/]+)\/(.+)/);
+      if (publicMatch) {
+        actualBucket = publicMatch[1];
+        filePath = publicMatch[2];
+      }
     }
 
-    // Delete from database
+    // Delete from storage if we have a valid path
+    if (filePath && actualBucket) {
+      const { error: storageError } = await supabase.storage
+        .from(actualBucket)
+        .remove([filePath]);
+
+      if (storageError) {
+        console.error('Storage deletion error:', storageError);
+        // Continue to delete from database even if storage deletion fails
+      }
+    } else {
+      console.warn('Could not extract file path from URL, skipping storage deletion:', photoUrl);
+    }
+
+    // Always delete from database
     const { error: dbError } = await supabase
       .from('media_photos')
       .delete()

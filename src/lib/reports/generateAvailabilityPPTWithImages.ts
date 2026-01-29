@@ -107,6 +107,60 @@ function getSortLabel(sortOrder: ExportSortOrder): string {
       : 'City → Area → Location';
 }
 
+/**
+ * Normalize string for comparison
+ */
+function normalizeString(val: string | null | undefined): string {
+  return (val || '').trim().toLowerCase();
+}
+
+/**
+ * Sort assets for PPT export based on selected order
+ * Works with both AvailableAsset and BookedAsset types
+ */
+function sortExportAssets<T extends { location: string; area: string; city: string; media_type: string }>(
+  assets: T[],
+  sortOrder: ExportSortOrder
+): T[] {
+  const sorted = [...assets];
+  
+  sorted.sort((a, b) => {
+    let comparison = 0;
+    
+    switch (sortOrder) {
+      case 'location':
+        comparison = normalizeString(a.location).localeCompare(normalizeString(b.location));
+        break;
+        
+      case 'area':
+        comparison = normalizeString(a.area).localeCompare(normalizeString(b.area));
+        break;
+        
+      case 'city-area-location':
+        comparison = normalizeString(a.city).localeCompare(normalizeString(b.city));
+        if (comparison === 0) {
+          comparison = normalizeString(a.area).localeCompare(normalizeString(b.area));
+        }
+        if (comparison === 0) {
+          comparison = normalizeString(a.location).localeCompare(normalizeString(b.location));
+        }
+        break;
+    }
+    
+    // Tie-breaker: Location, then Media Type
+    if (comparison === 0 && sortOrder !== 'location') {
+      comparison = normalizeString(a.location).localeCompare(normalizeString(b.location));
+    }
+    if (comparison === 0) {
+      comparison = normalizeString(a.media_type).localeCompare(normalizeString(b.media_type));
+    }
+    
+    return comparison;
+  });
+  
+  return sorted;
+}
+
 function toVacantExportAsset(
   asset: AvailableAsset | BookedAsset,
   statusOverride?: string,
@@ -510,18 +564,22 @@ export async function generateAvailabilityPPTWithImages(data: ExportData): Promi
   let exportType: 'available' | 'booked' | 'soon' | 'conflict' = 'available';
   
   if (exportTab === 'available' || exportTab === 'all') {
-    assetsToExport = data.availableAssets;
+    assetsToExport = [...data.availableAssets];
     exportType = 'available';
   } else if (exportTab === 'booked') {
     assetsToExport = data.bookedAssets.filter(a => a.availability_status !== 'conflict');
     exportType = 'booked';
   } else if (exportTab === 'soon') {
-    assetsToExport = data.availableSoonAssets;
+    assetsToExport = [...data.availableSoonAssets];
     exportType = 'soon';
   } else if (exportTab === 'conflict') {
     assetsToExport = data.conflictAssets || data.bookedAssets.filter(a => a.availability_status === 'conflict');
     exportType = 'conflict';
   }
+
+  // IMPORTANT: Apply sorting based on user selection
+  // Sort by location field using the sortOrder parameter
+  assetsToExport = sortExportAssets(assetsToExport, sortOrder);
 
   coverSlide.addText(sanitizePptText(`${assetsToExport.length} Premium OOH Media Assets`), {
     x: 0.5, y: 2.5, w: 9, h: 1.2,

@@ -100,10 +100,17 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to fetch mounters: ${mountersError.message}`);
     }
 
+    // IMPORTANT: Return 200 so the web client doesn't treat this as a transport failure
+    // (Supabase invoke marks any non-2xx as FunctionsHttpError).
     if (!mounters || mounters.length === 0) {
       return new Response(
-        JSON.stringify({ error: 'No active mounters found for this company' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          success: false,
+          code: 'NO_ACTIVE_MOUNTERS',
+          error: 'No active mounters found for this company',
+          message: 'Please add at least one active mounter for this company before running auto-assign.',
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

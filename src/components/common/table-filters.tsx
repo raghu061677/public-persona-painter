@@ -83,7 +83,7 @@ export function TableFilters({
 
   return (
     <Collapsible defaultOpen={false}>
-      <Card className="border shadow-sm mb-4">
+      <Card className="border shadow-sm mb-4 relative z-10">
         <CollapsibleTrigger asChild>
           <CardHeader className="p-3 cursor-pointer hover:bg-muted/30 transition-colors group">
             <div className="flex items-center justify-between">

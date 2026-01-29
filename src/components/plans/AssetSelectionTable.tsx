@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Plus, Settings2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Search, Plus, Settings2, ArrowUpDown, ArrowUp, ArrowDown, Calendar as CalendarIcon, Clock, Info } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import {
   Select,
@@ -21,13 +21,26 @@ import {
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { supabase } from "@/integrations/supabase/client";
+import { format, addDays, isAfter, isBefore } from "date-fns";
+import { cn } from "@/lib/utils";
 
 type SortDirection = 'asc' | 'desc' | null;
-type SortableColumn = 'asset_id' | 'location' | 'area';
+type SortableColumn = 'asset_id' | 'location' | 'area' | 'available_from';
 
 interface SortConfig {
   column: SortableColumn | null;
   direction: SortDirection;
+}
+
+interface AssetBooking {
+  asset_id: string;
+  booked_to: string | null;
+  campaign_name: string;
+  client_name: string;
 }
 
 interface AssetSelectionTableProps {
@@ -35,6 +48,8 @@ interface AssetSelectionTableProps {
   selectedIds: Set<string>;
   onSelect: (assetId: string, asset: any) => void;
   onMultiSelect?: (assetIds: string[], assets: any[]) => void;
+  planStartDate?: Date;
+  planEndDate?: Date;
 }
 
 const ALL_COLUMNS = [
@@ -48,6 +63,7 @@ const ALL_COLUMNS = [
   'base_rate',
   'printing_rate_default',
   'mounting_rate_default',
+  'available_from',
 ] as const;
 
 const DEFAULT_VISIBLE = [
@@ -57,6 +73,7 @@ const DEFAULT_VISIBLE = [
   'area',
   'media_type',
   'card_rate',
+  'available_from',
 ] as const;
 
 const COLUMN_LABELS: Record<string, string> = {
@@ -70,15 +87,28 @@ const COLUMN_LABELS: Record<string, string> = {
   base_rate: 'Base Rate',
   printing_rate_default: 'Printing',
   mounting_rate_default: 'Mounting',
+  available_from: 'Available From',
 };
 
-export function AssetSelectionTable({ assets, selectedIds, onSelect, onMultiSelect }: AssetSelectionTableProps) {
+type AvailabilityFilter = 'available_now' | 'available_by_date' | 'all' | 'booked';
+
+export function AssetSelectionTable({ 
+  assets, 
+  selectedIds, 
+  onSelect, 
+  onMultiSelect,
+  planStartDate,
+  planEndDate,
+}: AssetSelectionTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [cityFilter, setCityFilter] = useState("all");
   const [mediaTypeFilter, setMediaTypeFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("available");
+  const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilter>("available_now");
+  const [availableFromDate, setAvailableFromDate] = useState<Date | undefined>(planStartDate);
   const [checkedAssets, setCheckedAssets] = useState<Set<string>>(new Set());
   const [sortConfig, setSortConfig] = useState<SortConfig>({ column: null, direction: null });
+  const [assetBookings, setAssetBookings] = useState<Map<string, AssetBooking>>(new Map());
+  const [loadingBookings, setLoadingBookings] = useState(false);
   
   const {
     isReady,
@@ -86,6 +116,64 @@ export function AssetSelectionTable({ assets, selectedIds, onSelect, onMultiSele
     setVisibleKeys,
     reset,
   } = useColumnPrefs('asset-selection', ALL_COLUMNS as any, DEFAULT_VISIBLE as any);
+
+  // Fetch active bookings for all assets
+  useEffect(() => {
+    fetchAssetBookings();
+  }, []);
+
+  // Update availableFromDate when plan dates change
+  useEffect(() => {
+    if (planStartDate && availabilityFilter === 'available_by_date') {
+      setAvailableFromDate(planStartDate);
+    }
+  }, [planStartDate]);
+
+  const fetchAssetBookings = async () => {
+    setLoadingBookings(true);
+    try {
+      // Get all active campaign assets with their end dates
+      const { data, error } = await supabase
+        .from('campaign_assets')
+        .select(`
+          asset_id,
+          booking_end_date,
+          end_date,
+          campaigns!inner(
+            campaign_name,
+            client_name,
+            status,
+            end_date
+          )
+        `)
+        .in('campaigns.status', ['Draft', 'Upcoming', 'Running']);
+
+      if (error) throw error;
+
+      const bookingsMap = new Map<string, AssetBooking>();
+      
+      (data || []).forEach((item: any) => {
+        const endDate = item.booking_end_date || item.end_date || item.campaigns?.end_date;
+        const existing = bookingsMap.get(item.asset_id);
+        
+        // Keep the latest end date for each asset
+        if (!existing || (endDate && new Date(endDate) > new Date(existing.booked_to || ''))) {
+          bookingsMap.set(item.asset_id, {
+            asset_id: item.asset_id,
+            booked_to: endDate,
+            campaign_name: item.campaigns?.campaign_name || 'Unknown',
+            client_name: item.campaigns?.client_name || 'Unknown',
+          });
+        }
+      });
+
+      setAssetBookings(bookingsMap);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
 
   const isColumnVisible = (key: string) => visibleKeys.includes(key);
   
@@ -100,6 +188,28 @@ export function AssetSelectionTable({ assets, selectedIds, onSelect, onMultiSele
   const cities = Array.from(new Set(assets.map(a => a.city))).sort();
   const mediaTypes = Array.from(new Set(assets.map(a => a.media_type))).sort();
 
+  // Get availability info for an asset
+  const getAssetAvailability = (asset: any): { available: boolean; availableFrom: Date | null; booking?: AssetBooking } => {
+    const booking = assetBookings.get(asset.id);
+    
+    if (asset.status === 'Available' && !booking) {
+      return { available: true, availableFrom: null };
+    }
+    
+    if (booking?.booked_to) {
+      const bookedTo = new Date(booking.booked_to);
+      const availableFrom = addDays(bookedTo, 1);
+      return { available: false, availableFrom, booking };
+    }
+    
+    // Asset is booked but no end date - not available
+    if (asset.status === 'Booked' || booking) {
+      return { available: false, availableFrom: null, booking };
+    }
+    
+    return { available: true, availableFrom: null };
+  };
+
   const filteredAssets = useMemo(() => {
     return assets.filter(asset => {
       const matchesSearch = !searchTerm || 
@@ -110,13 +220,31 @@ export function AssetSelectionTable({ assets, selectedIds, onSelect, onMultiSele
       
       const matchesCity = cityFilter === "all" || asset.city === cityFilter;
       const matchesType = mediaTypeFilter === "all" || asset.media_type === mediaTypeFilter;
-      const matchesStatus = statusFilter === "all" || 
-        (statusFilter === "available" && asset.status === "Available") ||
-        (statusFilter === "booked" && asset.status === "Booked");
       
-      return matchesSearch && matchesCity && matchesType && matchesStatus;
+      // Availability filter logic
+      const availability = getAssetAvailability(asset);
+      let matchesAvailability = true;
+      
+      if (availabilityFilter === 'available_now') {
+        matchesAvailability = availability.available;
+      } else if (availabilityFilter === 'available_by_date' && availableFromDate) {
+        // Asset is available if: currently available OR will become available before the target date
+        if (availability.available) {
+          matchesAvailability = true;
+        } else if (availability.availableFrom) {
+          matchesAvailability = isBefore(availability.availableFrom, availableFromDate) || 
+                               format(availability.availableFrom, 'yyyy-MM-dd') === format(availableFromDate, 'yyyy-MM-dd');
+        } else {
+          matchesAvailability = false;
+        }
+      } else if (availabilityFilter === 'booked') {
+        matchesAvailability = !availability.available;
+      }
+      // 'all' shows everything
+      
+      return matchesSearch && matchesCity && matchesType && matchesAvailability;
     });
-  }, [assets, searchTerm, cityFilter, mediaTypeFilter, statusFilter]);
+  }, [assets, searchTerm, cityFilter, mediaTypeFilter, availabilityFilter, availableFromDate, assetBookings]);
 
   const sortedAssets = useMemo(() => {
     if (!sortConfig.column || !sortConfig.direction) {
@@ -249,16 +377,91 @@ export function AssetSelectionTable({ assets, selectedIds, onSelect, onMultiSele
               ))}
             </SelectContent>
           </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by status" />
+          {/* Availability Filter */}
+          <Select value={availabilityFilter} onValueChange={(v) => setAvailabilityFilter(v as AvailabilityFilter)}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filter by availability" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="available_now">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                  Available Now
+                </div>
+              </SelectItem>
+              <SelectItem value="available_by_date">
+                <div className="flex items-center gap-2">
+                  <CalendarIcon className="h-3 w-3" />
+                  Available By Date...
+                </div>
+              </SelectItem>
+              <SelectItem value="booked">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-amber-500" />
+                  Currently Booked
+                </div>
+              </SelectItem>
               <SelectItem value="all">All Assets</SelectItem>
-              <SelectItem value="available">Available</SelectItem>
-              <SelectItem value="booked">Booked</SelectItem>
             </SelectContent>
           </Select>
+          
+          {/* Date Picker for "Available By Date" */}
+          {availabilityFilter === 'available_by_date' && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-[200px] justify-start text-left font-normal",
+                    !availableFromDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {availableFromDate ? format(availableFromDate, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={availableFromDate}
+                  onSelect={setAvailableFromDate}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                  disabled={(date) => isBefore(date, new Date())}
+                />
+              </PopoverContent>
+            </Popover>
+          )}
+          
+          {/* Quick date presets */}
+          {availabilityFilter === 'available_by_date' && (
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAvailableFromDate(addDays(new Date(), 7))}
+                className="text-xs"
+              >
+                +7 days
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAvailableFromDate(addDays(new Date(), 15))}
+                className="text-xs"
+              >
+                +15 days
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAvailableFromDate(addDays(new Date(), 30))}
+                className="text-xs"
+              >
+                +30 days
+              </Button>
+            </div>
+          )}
           
           <Popover>
             <PopoverTrigger asChild>
@@ -366,6 +569,40 @@ export function AssetSelectionTable({ assets, selectedIds, onSelect, onMultiSele
                     }
                     if (key === 'card_rate' || key === 'base_rate' || key === 'printing_rate_default' || key === 'mounting_rate_default') {
                       return <TableCell key={key} className="text-right">{formatCurrency(asset[key] || 0)}</TableCell>;
+                    }
+                    if (key === 'available_from') {
+                      const availability = getAssetAvailability(asset);
+                      return (
+                        <TableCell key={key}>
+                          {availability.available ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
+                              Available Now
+                            </Badge>
+                          ) : availability.availableFrom ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800 cursor-help">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    {format(availability.availableFrom, "dd MMM yyyy")}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-sm">
+                                    Currently booked for: <strong>{availability.booking?.campaign_name}</strong>
+                                    <br />
+                                    Client: {availability.booking?.client_name}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800">
+                              Booked
+                            </Badge>
+                          )}
+                        </TableCell>
+                      );
                     }
                     return <TableCell key={key}>{asset[key] || '-'}</TableCell>;
                   })}

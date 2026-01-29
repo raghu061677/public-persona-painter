@@ -21,6 +21,11 @@ export async function generateVacantMediaExcel(
   assets: VacantAsset[],
   dateFilter: string
 ): Promise<void> {
+  // Sort assets by location alphabetically
+  const sortedAssets = [...assets].sort((a, b) => 
+    (a.location || '').localeCompare(b.location || '')
+  );
+  
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Vacant Media Report", {
     pageSetup: {
@@ -125,7 +130,7 @@ export async function generateVacantMediaExcel(
   currentRow++;
 
   // Data Rows
-  assets.forEach((asset, index) => {
+  sortedAssets.forEach((asset, index) => {
     const dataRow = worksheet.getRow(currentRow);
     dataRow.values = [
       index + 1,

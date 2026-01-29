@@ -25,6 +25,11 @@ export async function generateVacantMediaPPT(
   assets: VacantAsset[],
   dateFilter: string
 ): Promise<void> {
+  // Sort assets by location alphabetically
+  const sortedAssets = [...assets].sort((a, b) => 
+    (a.location || '').localeCompare(b.location || '')
+  );
+  
   const prs = new pptxgen();
 
   prs.author = "Go-Ads 360°";
@@ -156,7 +161,7 @@ export async function generateVacantMediaPPT(
   });
 
   // ===== ASSET SLIDES =====
-  for (const asset of assets) {
+  for (const asset of sortedAssets) {
     // Use primary_photo_url for presentation
     const photo1 = asset.primary_photo_url || DEFAULT_PLACEHOLDER;
     const photo2 = asset.primary_photo_url || DEFAULT_PLACEHOLDER;
@@ -266,7 +271,7 @@ export async function generateVacantMediaPPT(
     });
 
     // Footer
-    slide.addText(`Available Now | Page ${assets.indexOf(asset) + 3} of ${assets.length + 2}`, {
+    slide.addText(`Available Now | Page ${sortedAssets.indexOf(asset) + 3} of ${sortedAssets.length + 2}`, {
       x: 0.5,
       y: 7.1,
       w: 9,

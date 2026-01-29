@@ -905,20 +905,20 @@ export default function CampaignCreate() {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Display Cost:</span>
-                <span className="font-medium">₹{totals.subtotal.toLocaleString('en-IN')}</span>
+                <span className="font-medium">{formatCurrency(totals.subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Printing Total:</span>
-                <span className="font-medium">₹{totals.printingTotal.toLocaleString('en-IN')}</span>
+                <span className="font-medium">{formatCurrency(totals.printingTotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Mounting Total:</span>
-                <span className="font-medium">₹{totals.mountingTotal.toLocaleString('en-IN')}</span>
+                <span className="font-medium">{formatCurrency(totals.mountingTotal)}</span>
               </div>
               <Separator />
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Total (Before Tax):</span>
-                <span className="font-medium">₹{totals.totalAmount.toLocaleString('en-IN')}</span>
+                <span className="font-medium">{formatCurrency(totals.totalAmount)}</span>
               </div>
               
               {/* Tax Breakdown */}
@@ -926,24 +926,24 @@ export default function CampaignCreate() {
                 <>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">CGST ({totals.cgstPercent}%):</span>
-                    <span className="font-medium">₹{totals.cgstAmount.toLocaleString('en-IN')}</span>
+                    <span className="font-medium">{formatCurrency(totals.cgstAmount)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">SGST ({totals.sgstPercent}%):</span>
-                    <span className="font-medium">₹{totals.sgstAmount.toLocaleString('en-IN')}</span>
+                    <span className="font-medium">{formatCurrency(totals.sgstAmount)}</span>
                   </div>
                 </>
               ) : (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">IGST ({totals.igstPercent}%):</span>
-                  <span className="font-medium">₹{totals.igstAmount.toLocaleString('en-IN')}</span>
+                  <span className="font-medium">{formatCurrency(totals.igstAmount)}</span>
                 </div>
               )}
               
               <Separator />
               <div className="flex justify-between text-lg font-bold">
                 <span>Grand Total:</span>
-                <span>₹{totals.grandTotal.toLocaleString('en-IN')}</span>
+                <span>{formatCurrency(totals.grandTotal)}</span>
               </div>
             </CardContent>
           </Card>

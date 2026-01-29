@@ -87,11 +87,11 @@ export function buildSearchTokens(inputs: string[]): string[] {
 }
 
 /**
- * Format currency for display
+ * Format currency for display (always 2 decimal places)
  */
 export function formatCurrency(amount: number | null | undefined): string {
-  if (amount == null) return '₹0';
-  return `₹${amount.toLocaleString('en-IN')}`;
+  if (amount == null || isNaN(amount)) return '₹0.00';
+  return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 /**

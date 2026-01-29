@@ -324,12 +324,16 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   yPos = doc.lastAutoTable.finalY + 10;
 
   // ========== 5. SUMMARY & BANK DETAILS (Side by Side, Zoho Style) ==========
-  // Calculate required space for summary + bank + terms + signatory
-  const requiredSpace = 120; // Bank details + summary + terms + signatory
+  // Calculate required space dynamically based on actual content
+  // Bank details: ~25mm, Summary table: ~25mm, Payment terms: ~8mm, Signatory: ~25mm
+  // Terms: varies based on count (~4mm per term after wrapping)
+  const termsCount = (data.terms?.length || 8);
+  const estimatedTermsSpace = termsCount * 5 + 10; // ~5mm per term + header
+  const requiredSpace = 25 + 25 + 8 + 25 + estimatedTermsSpace; // ~83mm for default 8 terms
   const availableSpace = pageHeight - yPos - PAGE_MARGINS.bottom;
   
-  // Check if we need a new page for summary section
-  if (availableSpace < requiredSpace) {
+  // Only add new page if absolutely necessary (less than minimum required)
+  if (availableSpace < Math.min(requiredSpace, 75)) {
     doc.addPage();
     // Clear header area and render compact header
     doc.setFillColor(255, 255, 255);

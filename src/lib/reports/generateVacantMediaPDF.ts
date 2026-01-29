@@ -47,7 +47,6 @@ export async function generateVacantMediaPDF(
   // Summary Stats
   const totalAssets = assets.length;
   const totalSqft = assets.reduce((sum, a) => sum + (a.total_sqft || 0), 0);
-  const totalValue = assets.reduce((sum, a) => sum + a.card_rate, 0);
 
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(11);
@@ -55,8 +54,7 @@ export async function generateVacantMediaPDF(
   let yPos = 35;
 
   doc.text(`Total Assets: ${totalAssets}`, 20, yPos);
-  doc.text(`Total Sq.Ft: ${totalSqft.toFixed(2)}`, 100, yPos);
-  doc.text(`Potential Revenue: ₹${totalValue.toLocaleString("en-IN")}`, 180, yPos);
+  doc.text(`Total Sq.Ft: ${totalSqft.toFixed(2)}`, 120, yPos);
 
   // Table
   const tableData = assets.map((asset, index) => [

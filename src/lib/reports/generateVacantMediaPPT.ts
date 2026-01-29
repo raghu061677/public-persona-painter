@@ -66,11 +66,10 @@ export async function generateVacantMediaPPT(
     fontFace: "Arial",
   });
 
-  const totalValue = assets.reduce((sum, a) => sum + a.card_rate, 0);
   const totalSqft = assets.reduce((sum, a) => sum + (a.total_sqft || 0), 0);
 
   coverSlide.addText(
-    `${assets.length} Available Assets | ₹${totalValue.toLocaleString("en-IN")} Potential Revenue`,
+    `${assets.length} Available Assets | ${totalSqft.toLocaleString("en-IN")} Total Sq.Ft`,
     {
       x: 0.5,
       y: 4.7,
@@ -127,18 +126,15 @@ export async function generateVacantMediaPPT(
       { text: "City", options: { bold: true, fill: brandColor, color: "FFFFFF" } },
       { text: "Assets", options: { bold: true, fill: brandColor, color: "FFFFFF" } },
       { text: "Total Sq.Ft", options: { bold: true, fill: brandColor, color: "FFFFFF" } },
-      { text: "Potential Revenue", options: { bold: true, fill: brandColor, color: "FFFFFF" } },
     ],
   ];
 
   Object.entries(cityGroups).forEach(([city, cityAssets]: [string, any[]]) => {
     const citySqft = cityAssets.reduce((sum, a) => sum + (a.total_sqft || 0), 0);
-    const cityRevenue = cityAssets.reduce((sum, a) => sum + a.card_rate, 0);
     tableData.push([
       city,
       cityAssets.length.toString(),
       citySqft.toFixed(0),
-      `₹${cityRevenue.toLocaleString("en-IN")}`,
     ]);
   });
 
@@ -146,7 +142,6 @@ export async function generateVacantMediaPPT(
     { text: "TOTAL", options: { bold: true } },
     { text: assets.length.toString(), options: { bold: true } },
     { text: totalSqft.toFixed(0), options: { bold: true } },
-    { text: `₹${totalValue.toLocaleString("en-IN")}`, options: { bold: true } },
   ]);
 
   summarySlide.addTable(tableData, {

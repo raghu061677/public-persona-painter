@@ -20,12 +20,10 @@ import {
   type VacantAssetExportData,
 } from '@/lib/reports/vacantMediaExportUtils';
 import { 
-  sanitizePptHyperlink, 
   sanitizePptText, 
   PPT_SAFE_FONTS 
 } from '../ppt/sanitizers';
 import { fetchImageAsBase64 } from '../qrWatermark';
-import { buildStreetViewUrl } from '../streetview';
 
 interface AvailableAsset {
   id: string;
@@ -261,14 +259,12 @@ async function fetchImageWithCache(url: string): Promise<string | null> {
 }
 
 // QR cache to avoid refetching
-const qrCache = new Map<string, { base64: string; streetViewUrl: string }>();
+const qrCache = new Map<string, { base64: string }>();
 
 async function getCachedQR(
   assetId: string,
-  qrCodeUrl: string | undefined | null,
-  latitude: number | undefined | null,
-  longitude: number | undefined | null
-): Promise<{ base64: string; streetViewUrl: string } | null> {
+  qrCodeUrl: string | undefined | null
+): Promise<{ base64: string } | null> {
   if (!qrCodeUrl) return null;
 
   const cacheKey = `${assetId}-${qrCodeUrl}`;
@@ -277,11 +273,9 @@ async function getCachedQR(
   }
 
   try {
-    const streetViewUrl = latitude && longitude ? buildStreetViewUrl(latitude, longitude) : null;
-    if (!streetViewUrl) return null;
-
     const base64 = await fetchImageAsBase64(qrCodeUrl);
-    const result = { base64, streetViewUrl };
+    if (!base64) return null;
+    const result = { base64 };
     qrCache.set(cacheKey, result);
     return result;
   } catch (error) {
@@ -641,12 +635,10 @@ export async function generateAvailabilityPPTWithImages(data: ExportData): Promi
     const isAvailableReport = exportTab === 'available' || exportTab === 'soon' || exportTab === 'all';
     const photoBase64 = await fetchAssetPhoto(asset, data.companyId, isBookedReport, isAvailableReport);
 
-    // Fetch QR code data for this asset (cached)
+    // Fetch QR code data for this asset (cached) - no hyperlink, just the image
     const qrData = await getCachedQR(
       asset.id,
-      asset.qr_code_url,
-      asset.latitude,
-      asset.longitude
+      asset.qr_code_url
     );
 
     // Parse dimensions
@@ -711,22 +703,21 @@ export async function generateAvailabilityPPTWithImages(data: ExportData): Promi
       console.error('Failed to add image:', e);
     }
 
-    // Add QR code overlay on image (bottom-right corner) - clickable link to Street View
+    // Add QR code overlay on image (bottom-right corner) - NO hyperlink to avoid PPTX corruption
+    // NOTE: Hyperlinks with complex URLs (containing & characters) can corrupt PPTX files
+    // The QR code itself contains the link - users can scan it with their phone
     if (qrData) {
       try {
-        const sanitizedStreetViewUrl = sanitizePptHyperlink(qrData.streetViewUrl);
-        if (sanitizedStreetViewUrl) {
-          const qrSize = 0.8; // ~80px in inches
-          const qrPadding = 0.15;
-          slide.addImage({
-            data: qrData.base64,
-            x: 0.4 + 5 - qrSize - qrPadding, // Bottom-right of image area
-            y: 1.4 + 4 - qrSize - qrPadding,
-            w: qrSize,
-            h: qrSize,
-            hyperlink: { url: sanitizedStreetViewUrl },
-          });
-        }
+        const qrSize = 0.8; // ~80px in inches
+        const qrPadding = 0.15;
+        slide.addImage({
+          data: qrData.base64,
+          x: 0.4 + 5 - qrSize - qrPadding, // Bottom-right of image area
+          y: 1.4 + 4 - qrSize - qrPadding,
+          w: qrSize,
+          h: qrSize,
+          // Removed hyperlink - QR code is scannable and hyperlinks with &amp; can corrupt PPTX
+        });
       } catch (e) {
         console.error('Failed to add QR code:', e);
       }

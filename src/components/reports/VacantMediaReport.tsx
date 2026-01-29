@@ -3,9 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Download, Filter, MapPin, FileSpreadsheet, FileText, Presentation } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, Presentation, ArrowUpDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -22,9 +21,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 import { generateVacantMediaExcel } from "@/lib/reports/generateVacantMediaExcel";
 import { generateVacantMediaPPT } from "@/lib/reports/generateVacantMediaPPT";
 import { generateVacantMediaPDF } from "@/lib/reports/generateVacantMediaPDF";
+import { ExportSortOrder } from "@/lib/reports/vacantMediaExportUtils";
 import { addDays, addWeeks, startOfDay } from "date-fns";
 
 interface VacantAsset {
@@ -54,6 +62,7 @@ export function VacantMediaReport() {
   const [selectedCity, setSelectedCity] = useState<string>("all");
   const [selectedMediaType, setSelectedMediaType] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("all");
+  const [exportSortOrder, setExportSortOrder] = useState<ExportSortOrder>("location");
   const [cities, setCities] = useState<string[]>([]);
   const [mediaTypes, setMediaTypes] = useState<string[]>([]);
   const { toast } = useToast();
@@ -138,13 +147,26 @@ export function VacantMediaReport() {
     }
   };
 
+  const getSortOrderLabel = (order: ExportSortOrder) => {
+    switch (order) {
+      case "location":
+        return "Location (A-Z)";
+      case "area":
+        return "Area (A-Z)";
+      case "city-area-location":
+        return "City → Area → Location";
+      default:
+        return "Location (A-Z)";
+    }
+  };
+
   const handleExportExcel = async () => {
     setExporting(true);
     try {
-      await generateVacantMediaExcel(filteredAssets, getDateFilterLabel());
+      await generateVacantMediaExcel(filteredAssets, getDateFilterLabel(), exportSortOrder);
       toast({
         title: "Success",
-        description: "Excel report exported successfully",
+        description: `Excel exported with ${getSortOrderLabel(exportSortOrder)} sorting`,
       });
     } catch (error) {
       console.error("Export error:", error);
@@ -161,10 +183,10 @@ export function VacantMediaReport() {
   const handleExportPPT = async () => {
     setExporting(true);
     try {
-      await generateVacantMediaPPT(filteredAssets, getDateFilterLabel());
+      await generateVacantMediaPPT(filteredAssets, getDateFilterLabel(), exportSortOrder);
       toast({
         title: "Success",
-        description: "PowerPoint presentation exported successfully",
+        description: `PPT exported with ${getSortOrderLabel(exportSortOrder)} sorting`,
       });
     } catch (error) {
       console.error("Export error:", error);
@@ -181,10 +203,10 @@ export function VacantMediaReport() {
   const handleExportPDF = async () => {
     setExporting(true);
     try {
-      await generateVacantMediaPDF(filteredAssets, getDateFilterLabel());
+      await generateVacantMediaPDF(filteredAssets, getDateFilterLabel(), exportSortOrder);
       toast({
         title: "Success",
-        description: "PDF report exported successfully",
+        description: `PDF exported with ${getSortOrderLabel(exportSortOrder)} sorting`,
       });
     } catch (error) {
       console.error("Export error:", error);
@@ -198,12 +220,11 @@ export function VacantMediaReport() {
     }
   };
 
-  const totalValue = filteredAssets.reduce((sum, a) => sum + a.card_rate, 0);
   const totalSqft = filteredAssets.reduce((sum, a) => sum + (a.total_sqft || 0), 0);
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium">Total Vacant</CardTitle>
@@ -223,21 +244,63 @@ export function VacantMediaReport() {
             <p className="text-xs text-muted-foreground">Available space</p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Potential Revenue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">₹{totalValue.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Monthly rates</p>
-          </CardContent>
-        </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Vacant Media Inventory</CardTitle>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <CardTitle>Vacant Media Inventory</CardTitle>
+            
+            {/* Export Controls */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Sort Order Selector */}
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                <Select 
+                  value={exportSortOrder} 
+                  onValueChange={(value: ExportSortOrder) => setExportSortOrder(value)}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Sort by..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="location">Location (A-Z)</SelectItem>
+                    <SelectItem value="area">Area (A-Z)</SelectItem>
+                    <SelectItem value="city-area-location">City → Area → Location</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Export Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" disabled={exporting || filteredAssets.length === 0}>
+                    <Download className="mr-2 h-4 w-4" />
+                    {exporting ? "Exporting..." : "Export"}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 bg-background border shadow-lg">
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">
+                    Sorted by: {getSortOrderLabel(exportSortOrder)}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer">
+                    <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
+                    Export to Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportPPT} className="cursor-pointer">
+                    <Presentation className="mr-2 h-4 w-4 text-orange-600" />
+                    Export to PowerPoint
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportPDF} className="cursor-pointer">
+                    <FileText className="mr-2 h-4 w-4 text-red-600" />
+                    Export to PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2 mt-4">
             <div className="space-y-2">
               <Label>City</Label>

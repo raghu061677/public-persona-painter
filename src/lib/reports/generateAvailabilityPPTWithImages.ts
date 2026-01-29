@@ -532,7 +532,6 @@ export async function generateAvailabilityPPTWithImages(data: ExportData): Promi
     [{ text: sanitizePptText('Company') }, { text: sanitizePptText(orgSettings.organization_name || 'Go-Ads 360°') }],
     [{ text: sanitizePptText('Total Assets') }, { text: sanitizePptText(`${data.summary.total_assets} sites`) }],
     [{ text: sanitizePptText('Export Type') }, { text: sanitizePptText(titleTexts[exportTab]) }],
-    [{ text: sanitizePptText('Potential Revenue') }, { text: sanitizePptText(`Rs. ${data.summary.potential_revenue.toLocaleString('en-IN')}`) }],
   ];
 
   summarySlide.addTable(summaryData, {

@@ -163,7 +163,7 @@ export function SmartSearch() {
           />
         </div>
       </PopoverTrigger>
-      <PopoverContent className="w-96 p-0" align="start">
+      <PopoverContent className="w-96 p-0 z-50" align="start">
         <Command>
           <CommandInput placeholder="Search assets, clients, plans..." />
           <CommandList>

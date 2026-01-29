@@ -4,6 +4,14 @@ import autoTable from "jspdf-autotable";
 import pptxgen from "pptxgenjs";
 import { format } from "date-fns";
 
+import {
+  EXPORT_COLUMNS,
+  EXCEL_COLUMN_WIDTHS,
+  standardizeAssets,
+  type ExportSortOrder,
+  type VacantAssetExportData,
+} from "./vacantMediaExportUtils";
+
 interface AvailableAsset {
   id: string;
   media_asset_code: string | null;
@@ -72,163 +80,159 @@ interface ExportData {
     potential_revenue: number;
   };
   exportTab?: ExportTab;
+  exportSortOrder?: ExportSortOrder;
+}
+
+function getSortLabel(sortOrder: ExportSortOrder): string {
+  return sortOrder === 'location'
+    ? 'Location A-Z'
+    : sortOrder === 'area'
+      ? 'Area A-Z'
+      : 'City → Area → Location';
+}
+
+function toVacantExportAsset(
+  asset: AvailableAsset | BookedAsset,
+  statusOverride?: string,
+  nextAvailableFrom?: string | null
+): VacantAssetExportData {
+  const anyAsset = asset as any;
+  return {
+    id: asset.media_asset_code || asset.id,
+    city: asset.city || anyAsset.location_city || "",
+    area: asset.area || anyAsset.zone || anyAsset.subzone || "",
+    location: asset.location || anyAsset.location_name || "",
+    media_type: asset.media_type || anyAsset.category || "",
+    dimensions: asset.dimensions || "",
+    card_rate: asset.card_rate ?? 0,
+    total_sqft: asset.total_sqft ?? null,
+    status: statusOverride ?? asset.status,
+    next_available_from: nextAvailableFrom ?? anyAsset.next_available_from ?? undefined,
+    direction: anyAsset.direction ?? anyAsset.facing ?? undefined,
+    illumination_type: anyAsset.illumination_type ?? anyAsset.illumination ?? anyAsset.lit_type ?? undefined,
+    primary_photo_url: anyAsset.primary_photo_url ?? undefined,
+    latitude: anyAsset.latitude ?? undefined,
+    longitude: anyAsset.longitude ?? undefined,
+    qr_code_url: anyAsset.qr_code_url ?? undefined,
+  };
+}
+
+function getAssetsForExport(data: ExportData): VacantAssetExportData[] {
+  const exportTab = data.exportTab || 'all';
+  const nonConflictBooked = data.bookedAssets.filter(a => a.availability_status !== 'conflict');
+  const conflicts = data.conflictAssets || data.bookedAssets.filter(a => a.availability_status === 'conflict');
+
+  const availableRows = data.availableAssets.map((a) =>
+    toVacantExportAsset(
+      a,
+      'available',
+      a.availability_status === 'available_soon' ? a.next_available_from : null
+    )
+  );
+  const bookedRows = nonConflictBooked.map((a) => toVacantExportAsset(a, 'booked', a.available_from));
+  const soonRows = data.availableSoonAssets.map((a) => toVacantExportAsset(a, 'booked', a.available_from));
+  const conflictRows = conflicts.map((a) => toVacantExportAsset(a, 'booked', a.available_from));
+
+  switch (exportTab) {
+    case 'available':
+      return availableRows;
+    case 'booked':
+      return bookedRows;
+    case 'soon':
+      return soonRows;
+    case 'conflict':
+      return conflictRows;
+    case 'all':
+    default:
+      return [...availableRows, ...bookedRows, ...soonRows, ...conflictRows];
+  }
 }
 
 // ==================== EXCEL EXPORT ====================
 export async function generateAvailabilityExcel(data: ExportData): Promise<void> {
   const workbook = new ExcelJS.Workbook();
   const exportTab = data.exportTab || 'all';
-  
-  const brandColor = "FF1E3A8A";
-  const headerColor = "FF3B82F6";
-  const successGreen = "FF22C55E";
-  const dangerRed = "FFDC2626";
-  const warningYellow = "FFEAB308";
-  const orangeColor = "FFF97316";
+  const sortOrder = data.exportSortOrder || 'location';
 
-  // Helper function to create a sheet
-  const createSheet = (
-    sheetName: string, 
-    assets: (AvailableAsset | BookedAsset)[], 
-    type: 'available' | 'booked' | 'soon' | 'conflict'
-  ) => {
-    const sheet = workbook.addWorksheet(sheetName, {
-      pageSetup: { paperSize: 9, orientation: "landscape", fitToPage: true },
-    });
+  const standardized = standardizeAssets(getAssetsForExport(data), sortOrder);
 
-    sheet.columns = [
-      { width: 6 }, { width: 18 }, { width: 12 }, { width: 15 },
-      { width: 30 }, { width: 15 }, { width: 12 }, { width: 10 },
-      { width: 12 }, { width: 12 }, { width: 20 }, { width: 14 },
+  const worksheet = workbook.addWorksheet("Vacant Media", {
+    pageSetup: { paperSize: 9, orientation: "landscape", fitToPage: true },
+  });
+  worksheet.columns = EXCEL_COLUMN_WIDTHS.map((width) => ({ width }));
+
+  let row = 1;
+
+  worksheet.mergeCells(`A${row}:K${row}`);
+  const titleCell = worksheet.getRow(row).getCell(1);
+  titleCell.value = "GO-ADS 360° – VACANT MEDIA REPORT";
+  titleCell.font = { size: 18, bold: true, color: { argb: "FFFFFFFF" } };
+  titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E3A8A" } };
+  titleCell.alignment = { horizontal: "center", vertical: "middle" };
+  worksheet.getRow(row).height = 30;
+  row++;
+
+  worksheet.mergeCells(`A${row}:K${row}`);
+  const infoCell = worksheet.getRow(row).getCell(1);
+  infoCell.value = `Period: ${data.dateRange} | Generated: ${format(new Date(), "dd MMM yyyy HH:mm")} | Sorted by: ${getSortLabel(sortOrder)}`;
+  infoCell.font = { size: 11, italic: true };
+  infoCell.alignment = { horizontal: "center" };
+  worksheet.getRow(row).height = 20;
+  row += 2;
+
+  const totalAssets = standardized.length;
+  const totalSqft = standardized.reduce((sum, a) => sum + a.sqft, 0);
+  worksheet.getRow(row).values = ["Total Assets:", totalAssets, "", "Total Sq.Ft:", totalSqft.toFixed(2)];
+  worksheet.getRow(row).font = { bold: true };
+  worksheet.getRow(row).height = 22;
+  row += 2;
+
+  const headerRow = worksheet.getRow(row);
+  headerRow.values = [...EXPORT_COLUMNS];
+  headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+  headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF3B82F6" } };
+  headerRow.alignment = { horizontal: "center", vertical: "middle" };
+  headerRow.height = 24;
+  headerRow.eachCell((cell) => {
+    cell.border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
+  });
+  row++;
+
+  standardized.forEach((asset, idx) => {
+    const r = worksheet.getRow(row);
+    r.values = [
+      asset.sNo,
+      asset.mediaType,
+      asset.city,
+      asset.area,
+      asset.location,
+      asset.direction,
+      asset.dimensions,
+      asset.sqft,
+      asset.illumination,
+      asset.cardRate,
+      asset.status,
     ];
 
-    let row = 1;
-    
-    const titleColors: Record<string, string> = {
-      available: brandColor,
-      booked: dangerRed,
-      soon: warningYellow,
-      conflict: orangeColor,
-    };
-    
-    const titleTexts: Record<string, string> = {
-      available: "AVAILABLE ASSETS",
-      booked: "BOOKED ASSETS",
-      soon: "AVAILABLE SOON ASSETS",
-      conflict: "CONFLICT ASSETS",
-    };
-    
-    // Header
-    sheet.mergeCells(`A${row}:L${row}`);
-    const titleCell = sheet.getRow(row).getCell(1);
-    titleCell.value = `MEDIA AVAILABILITY REPORT - ${titleTexts[type]}`;
-    titleCell.font = { size: 16, bold: true, color: { argb: "FFFFFFFF" } };
-    titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: titleColors[type] } };
-    titleCell.alignment = { horizontal: "center", vertical: "middle" };
-    sheet.getRow(row).height = 28;
-    row++;
+    r.getCell(10).numFmt = '₹#,##0';
+    r.getCell(8).numFmt = '#,##0.00';
 
-    // Date Range
-    sheet.mergeCells(`A${row}:L${row}`);
-    const infoCell = sheet.getRow(row).getCell(1);
-    infoCell.value = `Period: ${data.dateRange} | Generated: ${format(new Date(), "dd MMM yyyy HH:mm")}`;
-    infoCell.font = { size: 10, italic: true };
-    infoCell.alignment = { horizontal: "center" };
-    row += 2;
-
-    // Summary
-    sheet.getRow(row).values = [
-      "Total:", assets.length
-    ];
-    sheet.getRow(row).font = { bold: true };
-    row += 2;
-
-    // Column Headers based on type
-    const isBookedType = type === 'booked' || type === 'soon' || type === 'conflict';
-    const colHeaders = isBookedType 
-      ? ["S.No", "Asset ID", "City", "Area", "Location", "Media Type", "Dimensions", "Sq.Ft", "Direction", "Illumination", "Booking Info", "Card Rate"]
-      : ["S.No", "Asset ID", "City", "Area", "Location", "Media Type", "Dimensions", "Sq.Ft", "Direction", "Illumination", "Status", "Card Rate"];
-    
-    const headerRow = sheet.getRow(row);
-    headerRow.values = colHeaders;
-    headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
-    headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: titleColors[type] } };
-    headerRow.alignment = { horizontal: "center", vertical: "middle" };
-    headerRow.height = 22;
-    headerRow.eachCell(cell => {
-      cell.border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
+    r.eachCell((cell, colNumber) => {
+      cell.alignment = { horizontal: colNumber === 5 ? 'left' : 'center', vertical: 'middle' };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+        left: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+        bottom: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+        right: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+      };
     });
+
+    if (idx % 2 === 0) {
+      r.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9FAFB' } };
+    }
     row++;
+  });
 
-    // Data Rows
-    assets.forEach((asset, index) => {
-      const dataRow = sheet.getRow(row);
-      const bookedAsset = asset as BookedAsset;
-      const availableAsset = asset as AvailableAsset;
-      
-      dataRow.values = [
-        index + 1,
-        asset.media_asset_code || asset.id,
-        asset.city,
-        asset.area,
-        asset.location,
-        asset.media_type,
-        asset.dimensions || "-",
-        asset.total_sqft || 0,
-        asset.direction || "-",
-        asset.illumination_type || "-",
-        isBookedType 
-          ? (bookedAsset.current_booking?.campaign_name || "-")
-          : (availableAsset.availability_status || asset.status),
-        asset.card_rate,
-      ];
-      dataRow.eachCell((cell, colNum) => {
-        cell.alignment = { horizontal: colNum === 5 ? "left" : "center", vertical: "middle" };
-        cell.border = { top: { style: "thin", color: { argb: "FFD1D5DB" } }, left: { style: "thin", color: { argb: "FFD1D5DB" } }, bottom: { style: "thin", color: { argb: "FFD1D5DB" } }, right: { style: "thin", color: { argb: "FFD1D5DB" } } };
-      });
-      if (index % 2 === 0) {
-        const altColors: Record<string, string> = {
-          available: "FFF0FDF4",
-          booked: "FFFEF2F2",
-          soon: "FFFFFBEB",
-          conflict: "FFFFF7ED",
-        };
-        dataRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: altColors[type] } };
-      }
-      row++;
-    });
-  };
-
-  // Create sheets based on export tab
-  if (exportTab === 'all' || exportTab === 'available') {
-    if (data.availableAssets.length > 0) {
-      createSheet("Available Assets", data.availableAssets, 'available');
-    }
-  }
-  
-  if (exportTab === 'all' || exportTab === 'booked') {
-    if (data.bookedAssets.length > 0) {
-      const nonConflictBooked = data.bookedAssets.filter(a => a.availability_status !== 'conflict');
-      if (nonConflictBooked.length > 0) {
-        createSheet("Booked Assets", nonConflictBooked, 'booked');
-      }
-    }
-  }
-  
-  if (exportTab === 'all' || exportTab === 'soon') {
-    if (data.availableSoonAssets.length > 0) {
-      createSheet("Available Soon", data.availableSoonAssets, 'soon');
-    }
-  }
-  
-  if (exportTab === 'all' || exportTab === 'conflict') {
-    const conflicts = data.conflictAssets || data.bookedAssets.filter(a => a.availability_status === 'conflict');
-    if (conflicts.length > 0) {
-      createSheet("Conflicts", conflicts, 'conflict');
-    }
-  }
-
-  // Generate and download
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   const url = URL.createObjectURL(blob);
@@ -246,17 +250,25 @@ export async function generateAvailabilityPDF(data: ExportData): Promise<void> {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const exportTab = data.exportTab || 'all';
+  const sortOrder = data.exportSortOrder || 'location';
 
-  const addPageHeader = (title: string, color: [number, number, number]) => {
-    doc.setFillColor(...color);
-    doc.rect(0, 0, pageWidth, 22, "F");
+  const standardized = standardizeAssets(getAssetsForExport(data), sortOrder);
+
+  const addHeader = () => {
+    doc.setFillColor(30, 58, 138);
+    doc.rect(0, 0, pageWidth, 20, "F");
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(18);
+    doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text(title, pageWidth / 2, 10, { align: "center" });
-    doc.setFontSize(10);
+    doc.text("GO-ADS 360° – VACANT MEDIA REPORT", pageWidth / 2, 8, { align: "center" });
+    doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.text(`${data.dateRange} | Generated: ${format(new Date(), "dd MMM yyyy")}`, pageWidth / 2, 18, { align: "center" });
+    doc.text(
+      `Period: ${data.dateRange} | Sorted by: ${getSortLabel(sortOrder)} | Generated: ${format(new Date(), "dd MMM yyyy")}`,
+      pageWidth / 2,
+      16,
+      { align: "center" }
+    );
   };
 
   const addFooter = () => {
@@ -265,181 +277,44 @@ export async function generateAvailabilityPDF(data: ExportData): Promise<void> {
     doc.text("Go-Ads 360° | OOH Media Management Platform", pageWidth - 15, pageHeight - 8, { align: "right" });
   };
 
-  let isFirstPage = true;
+  addHeader();
 
-  // ===== AVAILABLE ASSETS PAGE =====
-  if ((exportTab === 'all' || exportTab === 'available') && data.availableAssets.length > 0) {
-    if (!isFirstPage) doc.addPage();
-    isFirstPage = false;
-    
-    addPageHeader("MEDIA AVAILABILITY REPORT - AVAILABLE ASSETS", [30, 58, 138]);
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text(`Total Assets: ${standardized.length}`, 12, 28);
 
-    // Summary
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text(`Available: ${data.availableAssets.length}`, 15, 30);
+  const body = standardized.map((a) => [
+    a.sNo,
+    a.mediaType,
+    a.city,
+    a.area,
+    a.location,
+    a.direction,
+    a.dimensions,
+    a.sqft.toFixed(2),
+    a.illumination,
+    `Rs. ${Math.round(a.cardRate).toLocaleString("en-IN")}`,
+    a.status,
+  ]);
 
-    const availableTableData = data.availableAssets.map((asset, i) => [
-      (i + 1).toString(),
-      asset.media_asset_code || asset.id,
-      asset.city,
-      asset.area,
-      asset.location,
-      asset.media_type,
-      asset.direction || "-",
-      asset.illumination_type || "-",
-      `Rs. ${asset.card_rate.toLocaleString("en-IN")}`,
-    ]);
-
-    autoTable(doc, {
-      startY: 38,
-      head: [["S.No", "Asset ID", "City", "Area", "Location", "Type", "Direction", "Illumination", "Card Rate"]],
-      body: availableTableData,
-      theme: "grid",
-      headStyles: { fillColor: [34, 197, 94], textColor: [255, 255, 255], fontSize: 8, fontStyle: "bold", halign: "center" },
-      bodyStyles: { fontSize: 7, textColor: [31, 41, 55] },
-      alternateRowStyles: { fillColor: [240, 253, 244] },
-      columnStyles: {
-        0: { cellWidth: 10, halign: "center" },
-        1: { cellWidth: 28, halign: "center" },
-        2: { cellWidth: 20, halign: "center" },
-        3: { cellWidth: 22, halign: "left" },
-        4: { cellWidth: 45, halign: "left" },
-        5: { cellWidth: 22, halign: "center" },
-        6: { cellWidth: 20, halign: "center" },
-        7: { cellWidth: 22, halign: "center" },
-        8: { cellWidth: 25, halign: "right" },
-      },
-      margin: { left: 10, right: 10 },
-      didDrawPage: addFooter,
-    });
-  }
-
-  // ===== BOOKED ASSETS PAGE =====
-  const nonConflictBooked = data.bookedAssets.filter(a => a.availability_status !== 'conflict');
-  if ((exportTab === 'all' || exportTab === 'booked') && nonConflictBooked.length > 0) {
-    if (!isFirstPage) doc.addPage();
-    isFirstPage = false;
-    
-    addPageHeader("MEDIA AVAILABILITY REPORT - BOOKED ASSETS", [220, 38, 38]);
-
-    const bookedTableData = nonConflictBooked.map((asset, i) => [
-      (i + 1).toString(),
-      asset.media_asset_code || asset.id,
-      asset.city,
-      asset.area,
-      asset.location,
-      asset.current_booking?.campaign_name || "-",
-      asset.available_from ? format(new Date(asset.available_from), "dd MMM yyyy") : "-",
-      `Rs. ${asset.card_rate.toLocaleString("en-IN")}`,
-    ]);
-
-    autoTable(doc, {
-      startY: 30,
-      head: [["S.No", "Asset ID", "City", "Area", "Location", "Current Campaign", "Available From", "Card Rate"]],
-      body: bookedTableData,
-      theme: "grid",
-      headStyles: { fillColor: [220, 38, 38], textColor: [255, 255, 255], fontSize: 8, fontStyle: "bold", halign: "center" },
-      bodyStyles: { fontSize: 7, textColor: [31, 41, 55] },
-      alternateRowStyles: { fillColor: [254, 242, 242] },
-      columnStyles: {
-        0: { cellWidth: 10, halign: "center" },
-        1: { cellWidth: 28, halign: "center" },
-        2: { cellWidth: 20, halign: "center" },
-        3: { cellWidth: 25, halign: "left" },
-        4: { cellWidth: 50, halign: "left" },
-        5: { cellWidth: 40, halign: "left" },
-        6: { cellWidth: 25, halign: "center" },
-        7: { cellWidth: 25, halign: "right" },
-      },
-      margin: { left: 10, right: 10 },
-      didDrawPage: addFooter,
-    });
-  }
-
-  // ===== AVAILABLE SOON ASSETS PAGE =====
-  if ((exportTab === 'all' || exportTab === 'soon') && data.availableSoonAssets.length > 0) {
-    if (!isFirstPage) doc.addPage();
-    isFirstPage = false;
-    
-    addPageHeader("MEDIA AVAILABILITY REPORT - AVAILABLE SOON", [234, 179, 8]);
-
-    const soonTableData = data.availableSoonAssets.map((asset, i) => [
-      (i + 1).toString(),
-      asset.media_asset_code || asset.id,
-      asset.city,
-      asset.area,
-      asset.location,
-      asset.current_booking?.campaign_name || "-",
-      asset.available_from ? format(new Date(asset.available_from), "dd MMM yyyy") : "-",
-      `Rs. ${asset.card_rate.toLocaleString("en-IN")}`,
-    ]);
-
-    autoTable(doc, {
-      startY: 30,
-      head: [["S.No", "Asset ID", "City", "Area", "Location", "Current Campaign", "Available From", "Card Rate"]],
-      body: soonTableData,
-      theme: "grid",
-      headStyles: { fillColor: [234, 179, 8], textColor: [255, 255, 255], fontSize: 8, fontStyle: "bold", halign: "center" },
-      bodyStyles: { fontSize: 7, textColor: [31, 41, 55] },
-      alternateRowStyles: { fillColor: [255, 251, 235] },
-      columnStyles: {
-        0: { cellWidth: 10, halign: "center" },
-        1: { cellWidth: 28, halign: "center" },
-        2: { cellWidth: 20, halign: "center" },
-        3: { cellWidth: 25, halign: "left" },
-        4: { cellWidth: 50, halign: "left" },
-        5: { cellWidth: 40, halign: "left" },
-        6: { cellWidth: 25, halign: "center" },
-        7: { cellWidth: 25, halign: "right" },
-      },
-      margin: { left: 10, right: 10 },
-      didDrawPage: addFooter,
-    });
-  }
-
-  // ===== CONFLICT ASSETS PAGE =====
-  const conflicts = data.conflictAssets || data.bookedAssets.filter(a => a.availability_status === 'conflict');
-  if ((exportTab === 'all' || exportTab === 'conflict') && conflicts.length > 0) {
-    if (!isFirstPage) doc.addPage();
-    isFirstPage = false;
-    
-    addPageHeader("MEDIA AVAILABILITY REPORT - CONFLICTS", [249, 115, 22]);
-
-    const conflictTableData = conflicts.map((asset, i) => [
-      (i + 1).toString(),
-      asset.media_asset_code || asset.id,
-      asset.city,
-      asset.area,
-      asset.location,
-      (asset.all_bookings?.length || 0).toString() + " overlapping",
-      asset.all_bookings?.map(b => b.campaign_name).join(", ") || "-",
-      `Rs. ${asset.card_rate.toLocaleString("en-IN")}`,
-    ]);
-
-    autoTable(doc, {
-      startY: 30,
-      head: [["S.No", "Asset ID", "City", "Area", "Location", "Conflicts", "Campaigns", "Card Rate"]],
-      body: conflictTableData,
-      theme: "grid",
-      headStyles: { fillColor: [249, 115, 22], textColor: [255, 255, 255], fontSize: 8, fontStyle: "bold", halign: "center" },
-      bodyStyles: { fontSize: 7, textColor: [31, 41, 55] },
-      alternateRowStyles: { fillColor: [255, 247, 237] },
-      columnStyles: {
-        0: { cellWidth: 10, halign: "center" },
-        1: { cellWidth: 28, halign: "center" },
-        2: { cellWidth: 20, halign: "center" },
-        3: { cellWidth: 22, halign: "left" },
-        4: { cellWidth: 40, halign: "left" },
-        5: { cellWidth: 22, halign: "center" },
-        6: { cellWidth: 55, halign: "left" },
-        7: { cellWidth: 22, halign: "right" },
-      },
-      margin: { left: 10, right: 10 },
-      didDrawPage: addFooter,
-    });
-  }
+  autoTable(doc, {
+    startY: 32,
+    head: [[...EXPORT_COLUMNS]],
+    body,
+    theme: "grid",
+    headStyles: {
+      fillColor: [59, 130, 246],
+      textColor: [255, 255, 255],
+      fontSize: 8,
+      fontStyle: "bold",
+      halign: "center",
+    },
+    bodyStyles: { fontSize: 7, textColor: [31, 41, 55] },
+    alternateRowStyles: { fillColor: [249, 250, 251] },
+    margin: { left: 8, right: 8 },
+    didDrawPage: addFooter,
+  });
 
   const tabSuffix = exportTab === 'all' ? '' : `-${exportTab}`;
   doc.save(`media-availability${tabSuffix}-${format(new Date(), "yyyy-MM-dd")}.pdf`);
@@ -451,134 +326,76 @@ export async function generateAvailabilityPPT(data: ExportData): Promise<void> {
   prs.author = "Go-Ads 360°";
   prs.company = "Go-Ads 360°";
   prs.title = `Media Availability Report - ${data.dateRange}`;
+
   const exportTab = data.exportTab || 'all';
+  const sortOrder = data.exportSortOrder || 'location';
+  const standardized = standardizeAssets(getAssetsForExport(data), sortOrder);
 
   const brandBlue = "1E3A8A";
-  const successGreen = "22C55E";
-  const dangerRed = "DC2626";
-  const warningYellow = "EAB308";
-  const orangeColor = "F97316";
 
   // ===== COVER SLIDE =====
   const coverSlide = prs.addSlide();
   coverSlide.background = { fill: brandBlue };
 
-  const titleTexts: Record<string, string> = {
-    all: "MEDIA AVAILABILITY REPORT",
-    available: "AVAILABLE ASSETS REPORT",
-    booked: "BOOKED ASSETS REPORT",
-    soon: "AVAILABLE SOON REPORT",
-    conflict: "CONFLICT ASSETS REPORT",
-  };
-
-  coverSlide.addText(titleTexts[exportTab], {
-    x: 0.5, y: 1.8, w: 9, h: 1.2,
+  coverSlide.addText("VACANT MEDIA REPORT", {
+    x: 0.5, y: 1.6, w: 9, h: 0.8,
     fontSize: 40, bold: true, color: "FFFFFF", align: "center", fontFace: "Arial",
   });
-
-  coverSlide.addText(data.dateRange, {
-    x: 0.5, y: 3.2, w: 9, h: 0.6,
-    fontSize: 24, color: "FFFFFF", align: "center", fontFace: "Arial",
+  coverSlide.addText(`Period: ${data.dateRange}`, {
+    x: 0.5, y: 2.6, w: 9, h: 0.5,
+    fontSize: 22, color: "FFFFFF", align: "center", fontFace: "Arial",
+  });
+  coverSlide.addText(`Sorted by: ${getSortLabel(sortOrder)} | Generated: ${format(new Date(), "dd MMM yyyy")}`, {
+    x: 0.5, y: 3.2, w: 9, h: 0.4,
+    fontSize: 12, color: "E2E8F0", align: "center", fontFace: "Arial",
+  });
+  coverSlide.addText(`${standardized.length} assets`, {
+    x: 0.5, y: 3.8, w: 9, h: 0.5,
+    fontSize: 18, color: "FFFFFF", align: "center", fontFace: "Arial",
   });
 
-  coverSlide.addText(`Generated: ${format(new Date(), "dd MMM yyyy")}`, {
-    x: 0.5, y: 3.9, w: 9, h: 0.5,
-    fontSize: 14, color: "94A3B8", align: "center", fontFace: "Arial",
-  });
+  // ===== TABLE SLIDES (PAGINATED) =====
+  const rowsPerSlide = 14;
+  const headerRow: pptxgen.TableRow = (EXPORT_COLUMNS as readonly string[]).map((label) => ({
+    text: label,
+    options: { fill: { color: "3B82F6" }, color: "FFFFFF", bold: true, align: "center" },
+  })) as any;
 
-  // Helper to create asset table slide
-  const createAssetSlide = (
-    title: string,
-    assets: (AvailableAsset | BookedAsset)[],
-    color: string,
-    type: 'available' | 'booked' | 'soon' | 'conflict'
-  ) => {
-    if (assets.length === 0) return;
+  const makeRow = (a: any): pptxgen.TableRow => ([
+    { text: String(a.sNo), options: { align: "center" } },
+    { text: a.mediaType, options: { align: "center" } },
+    { text: a.city, options: { align: "center" } },
+    { text: a.area, options: { align: "center" } },
+    { text: a.location, options: { align: "left" } },
+    { text: a.direction, options: { align: "center" } },
+    { text: a.dimensions, options: { align: "center" } },
+    { text: Number(a.sqft).toFixed(2), options: { align: "right" } },
+    { text: a.illumination, options: { align: "center" } },
+    { text: `Rs. ${Math.round(a.cardRate).toLocaleString("en-IN")}`, options: { align: "right" } },
+    { text: a.status, options: { align: "center" } },
+  ] as any);
 
+  for (let i = 0; i < standardized.length; i += rowsPerSlide) {
+    const chunk = standardized.slice(i, i + rowsPerSlide);
     const slide = prs.addSlide();
-    slide.addText(title, {
-      x: 0.5, y: 0.3, w: 9, h: 0.6,
-      fontSize: 28, bold: true, color: color, fontFace: "Arial",
+
+    slide.addText(`VACANT MEDIA (${exportTab.toUpperCase()})`, {
+      x: 0.5, y: 0.2, w: 9, h: 0.4,
+      fontSize: 18, bold: true, color: "1E3A8A", fontFace: "Arial",
+    });
+    slide.addText(`Sorted by: ${getSortLabel(sortOrder)} | Period: ${data.dateRange}`, {
+      x: 0.5, y: 0.62, w: 9, h: 0.3,
+      fontSize: 10, color: "64748B", fontFace: "Arial",
     });
 
-    // Count card
-    slide.addShape("rect", {
-      x: 0.5, y: 1, w: 2, h: 0.8,
-      fill: { color: color }, line: { color: color, width: 0 },
-    });
-    slide.addText(assets.length.toString(), {
-      x: 0.5, y: 1.05, w: 2, h: 0.5,
-      fontSize: 24, bold: true, color: "FFFFFF", align: "center", fontFace: "Arial",
-    });
-    slide.addText("Assets", {
-      x: 0.5, y: 1.5, w: 2, h: 0.25,
-      fontSize: 10, color: "FFFFFF", align: "center", fontFace: "Arial",
-    });
-
-    const tableRows: pptxgen.TableRow[] = [
-      [
-        { text: "Asset ID", options: { fill: { color: color }, color: "FFFFFF", bold: true, align: "center" } },
-        { text: "City", options: { fill: { color: color }, color: "FFFFFF", bold: true, align: "center" } },
-        { text: "Area", options: { fill: { color: color }, color: "FFFFFF", bold: true, align: "center" } },
-        { text: "Location", options: { fill: { color: color }, color: "FFFFFF", bold: true, align: "left" } },
-        { text: "Type", options: { fill: { color: color }, color: "FFFFFF", bold: true, align: "center" } },
-        { text: type === 'conflict' ? "Conflicts" : "Rate", options: { fill: { color: color }, color: "FFFFFF", bold: true, align: "right" } },
-      ],
-    ];
-
-    assets.slice(0, 12).forEach(asset => {
-      const bookedAsset = asset as BookedAsset;
-      tableRows.push([
-        { text: asset.media_asset_code || asset.id, options: { align: "center" } },
-        { text: asset.city, options: { align: "center" } },
-        { text: asset.area, options: { align: "center" } },
-        { text: asset.location, options: { align: "left" } },
-        { text: asset.media_type, options: { align: "center" } },
-        { text: type === 'conflict' 
-          ? `${bookedAsset.all_bookings?.length || 0} overlapping` 
-          : `Rs. ${asset.card_rate.toLocaleString("en-IN")}`, 
-          options: { align: "right" } 
-        },
-      ]);
-    });
-
+    const tableRows: pptxgen.TableRow[] = [headerRow, ...chunk.map(makeRow)];
     slide.addTable(tableRows, {
-      x: 0.5, y: 2, w: 9, h: 2.5,
-      fontSize: 9, fontFace: "Arial",
+      x: 0.3, y: 1.0, w: 9.4, h: 5.7,
+      fontSize: 8,
+      fontFace: "Arial",
       border: { pt: 0.5, color: "D1D5DB" },
-      colW: [1.6, 0.9, 1.2, 2.4, 1.2, 1.2],
+      colW: [0.45, 1.0, 0.8, 0.9, 2.2, 0.9, 0.9, 0.7, 0.9, 0.9, 0.75],
     });
-
-    if (assets.length > 12) {
-      slide.addText(`+ ${assets.length - 12} more assets...`, {
-        x: 0.5, y: 4.6, w: 9, h: 0.3,
-        fontSize: 10, italic: true, color: "6B7280", align: "center", fontFace: "Arial",
-      });
-    }
-
-    slide.addText("Go-Ads 360° | OOH Media Management Platform", {
-      x: 0.5, y: 5.3, w: 9, h: 0.3,
-      fontSize: 9, color: "94A3B8", align: "center", fontFace: "Arial",
-    });
-  };
-
-  // Create slides based on export tab
-  if (exportTab === 'all' || exportTab === 'available') {
-    createAssetSlide("AVAILABLE ASSETS", data.availableAssets, successGreen, 'available');
-  }
-  
-  if (exportTab === 'all' || exportTab === 'booked') {
-    const nonConflictBooked = data.bookedAssets.filter(a => a.availability_status !== 'conflict');
-    createAssetSlide("BOOKED ASSETS", nonConflictBooked, dangerRed, 'booked');
-  }
-  
-  if (exportTab === 'all' || exportTab === 'soon') {
-    createAssetSlide("AVAILABLE SOON", data.availableSoonAssets, warningYellow, 'soon');
-  }
-  
-  if (exportTab === 'all' || exportTab === 'conflict') {
-    const conflicts = data.conflictAssets || data.bookedAssets.filter(a => a.availability_status === 'conflict');
-    createAssetSlide("CONFLICT ASSETS", conflicts, orangeColor, 'conflict');
   }
 
   const tabSuffix = exportTab === 'all' ? '' : `-${exportTab}`;

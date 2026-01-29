@@ -13,6 +13,12 @@
 import pptxgen from 'pptxgenjs';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  EXPORT_COLUMNS,
+  standardizeAssets,
+  type ExportSortOrder,
+  type VacantAssetExportData,
+} from '@/lib/reports/vacantMediaExportUtils';
 import { 
   sanitizePptHyperlink, 
   sanitizePptText, 
@@ -92,6 +98,72 @@ interface ExportData {
   };
   exportTab?: ExportTab;
   companyId?: string;
+  exportSortOrder?: ExportSortOrder;
+}
+
+function getSortLabel(sortOrder: ExportSortOrder): string {
+  return sortOrder === 'location'
+    ? 'Location A-Z'
+    : sortOrder === 'area'
+      ? 'Area A-Z'
+      : 'City → Area → Location';
+}
+
+function toVacantExportAsset(
+  asset: AvailableAsset | BookedAsset,
+  statusOverride?: string,
+  nextAvailableFrom?: string | null
+): VacantAssetExportData {
+  const anyAsset = asset as any;
+  return {
+    id: asset.media_asset_code || asset.id,
+    city: asset.city || anyAsset.location_city || "",
+    area: asset.area || anyAsset.zone || anyAsset.subzone || "",
+    location: asset.location || anyAsset.location_name || "",
+    media_type: asset.media_type || anyAsset.category || "",
+    dimensions: asset.dimensions || "",
+    card_rate: asset.card_rate ?? 0,
+    total_sqft: asset.total_sqft ?? null,
+    status: statusOverride ?? asset.status,
+    next_available_from: nextAvailableFrom ?? anyAsset.next_available_from ?? undefined,
+    direction: anyAsset.direction ?? anyAsset.facing ?? undefined,
+    illumination_type: anyAsset.illumination_type ?? anyAsset.illumination ?? anyAsset.lit_type ?? undefined,
+    primary_photo_url: anyAsset.primary_photo_url ?? undefined,
+    latitude: anyAsset.latitude ?? undefined,
+    longitude: anyAsset.longitude ?? undefined,
+    qr_code_url: anyAsset.qr_code_url ?? undefined,
+  };
+}
+
+function getAssetsForExport(data: ExportData): VacantAssetExportData[] {
+  const exportTab = data.exportTab || 'all';
+  const nonConflictBooked = data.bookedAssets.filter(a => a.availability_status !== 'conflict');
+  const conflicts = data.conflictAssets || data.bookedAssets.filter(a => a.availability_status === 'conflict');
+
+  const availableRows = data.availableAssets.map((a) =>
+    toVacantExportAsset(
+      a,
+      'available',
+      a.availability_status === 'available_soon' ? a.next_available_from : null
+    )
+  );
+  const bookedRows = nonConflictBooked.map((a) => toVacantExportAsset(a, 'booked', a.available_from));
+  const soonRows = data.availableSoonAssets.map((a) => toVacantExportAsset(a, 'booked', a.available_from));
+  const conflictRows = conflicts.map((a) => toVacantExportAsset(a, 'booked', a.available_from));
+
+  switch (exportTab) {
+    case 'available':
+      return availableRows;
+    case 'booked':
+      return bookedRows;
+    case 'soon':
+      return soonRows;
+    case 'conflict':
+      return conflictRows;
+    case 'all':
+    default:
+      return [...availableRows, ...bookedRows, ...soonRows, ...conflictRows];
+  }
 }
 
 interface OrganizationSettings {
@@ -376,6 +448,7 @@ export async function generateAvailabilityPPTWithImages(data: ExportData): Promi
   prs.title = `Media Availability Report - ${data.dateRange}`;
   
   const exportTab = data.exportTab || 'all';
+  const sortOrder = data.exportSortOrder || 'location';
 
   // Fetch organization settings
   let orgSettings: OrganizationSettings = { organization_name: 'Go-Ads 360°' };
@@ -483,6 +556,56 @@ export async function generateAvailabilityPPTWithImages(data: ExportData): Promi
       fontSize: 14, color: 'FFFFFF', align: 'center', fontFace: PPT_SAFE_FONTS.primary,
     }
   );
+
+  // ===== TABLE SLIDES (PAGINATED, SAME AS EXCEL/PDF) =====
+  const standardized = standardizeAssets(getAssetsForExport(data), sortOrder);
+  const rowsPerSlide = 12;
+  const headerRow: pptxgen.TableRow = (EXPORT_COLUMNS as readonly string[]).map((label) => ({
+    text: sanitizePptText(label),
+    options: { fill: { color: '3B82F6' }, color: 'FFFFFF', bold: true, align: 'center' },
+  })) as any;
+
+  const makeRow = (a: any): pptxgen.TableRow => ([
+    { text: sanitizePptText(String(a.sNo)), options: { align: 'center' } },
+    { text: sanitizePptText(a.mediaType), options: { align: 'center' } },
+    { text: sanitizePptText(a.city), options: { align: 'center' } },
+    { text: sanitizePptText(a.area), options: { align: 'center' } },
+    { text: sanitizePptText(a.location), options: { align: 'left' } },
+    { text: sanitizePptText(a.direction), options: { align: 'center' } },
+    { text: sanitizePptText(a.dimensions), options: { align: 'center' } },
+    { text: sanitizePptText(Number(a.sqft).toFixed(2)), options: { align: 'right' } },
+    { text: sanitizePptText(a.illumination), options: { align: 'center' } },
+    { text: sanitizePptText(`Rs. ${Math.round(a.cardRate).toLocaleString('en-IN')}`), options: { align: 'right' } },
+    { text: sanitizePptText(a.status), options: { align: 'center' } },
+  ] as any);
+
+  for (let i = 0; i < standardized.length; i += rowsPerSlide) {
+    const chunk = standardized.slice(i, i + rowsPerSlide);
+    const slide = prs.addSlide();
+    slide.background = { color: 'FFFFFF' };
+
+    slide.addShape(prs.ShapeType.rect, {
+      x: 0, y: 0, w: 10, h: 0.7,
+      fill: { color: brandColor },
+    });
+    slide.addText(sanitizePptText('Vacant Media — Asset List'), {
+      x: 0.3, y: 0.15, w: 9.4, h: 0.5,
+      fontSize: 18, bold: true, color: 'FFFFFF', align: 'left', fontFace: PPT_SAFE_FONTS.primary,
+    });
+    slide.addText(sanitizePptText(`Sorted by: ${getSortLabel(sortOrder)} | Period: ${data.dateRange}`), {
+      x: 0.3, y: 0.78, w: 9.4, h: 0.3,
+      fontSize: 10, color: '64748B', align: 'left', fontFace: PPT_SAFE_FONTS.primary,
+    });
+
+    const tableRows: pptxgen.TableRow[] = [headerRow, ...chunk.map(makeRow)];
+    slide.addTable(tableRows, {
+      x: 0.3, y: 1.2, w: 9.4, h: 5.8,
+      fontSize: 8,
+      fontFace: PPT_SAFE_FONTS.primary,
+      border: { pt: 0.5, color: 'D1D5DB' },
+      colW: [0.45, 1.0, 0.8, 0.9, 2.2, 0.9, 0.9, 0.7, 0.9, 0.9, 0.75],
+    });
+  }
 
   // ===== SUMMARY SLIDE =====
   const summarySlide = prs.addSlide();

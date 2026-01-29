@@ -227,10 +227,13 @@ export default function CampaignDetail() {
   const BILLING_CYCLE_DAYS = 30;
   const displayCost = campaignAssets.reduce((sum, a) => {
     const monthlyRate = a.negotiated_rate || a.card_rate || 0;
-    // Apply pro-rata: (monthly_rate / 30) * actual_days
+    // Apply pro-rata with full precision, round only the final sum
+    // Formula: (monthly_rate / 30) * actual_days (single multiplication to avoid compounding errors)
     const proRataAmount = (monthlyRate / BILLING_CYCLE_DAYS) * durationDays;
     return sum + proRataAmount;
   }, 0);
+  // Round the final displayCost sum
+  const roundedDisplayCost = Math.round(displayCost * 100) / 100;
   
   // Printing and mounting from campaign_assets
   const printingTotal = campaignAssets.reduce((sum, a) => {
@@ -241,7 +244,7 @@ export default function CampaignDetail() {
     return sum + (a.mounting_charges || 0);
   }, 0);
   
-  const subtotal = displayCost + printingTotal + mountingTotal;
+  const subtotal = roundedDisplayCost + printingTotal + mountingTotal;
   const discount = subtotal > campaign.total_amount ? subtotal - campaign.total_amount : 0;
 
   return (
@@ -302,7 +305,7 @@ export default function CampaignDetail() {
                 <GenerateInvoiceDialog 
                   campaign={campaign} 
                   campaignAssets={campaignAssets}
-                  displayCost={displayCost}
+                  displayCost={roundedDisplayCost}
                   printingTotal={printingTotal}
                   mountingTotal={mountingTotal}
                   discount={discount}
@@ -512,7 +515,7 @@ export default function CampaignDetail() {
                         </TooltipContent>
                       </Tooltip>
                     </div>
-                    <span className="font-medium">{formatCurrency(displayCost)}</span>
+                    <span className="font-medium">{formatCurrency(roundedDisplayCost)}</span>
                   </div>
                   
                   {printingTotal > 0 && (
@@ -751,7 +754,7 @@ export default function CampaignDetail() {
                   company_id: campaign.company_id,
                 }}
                 campaignAssets={campaignAssets}
-                displayCost={displayCost}
+                displayCost={roundedDisplayCost}
                 onRefresh={refreshData}
               />
             </TabsContent>

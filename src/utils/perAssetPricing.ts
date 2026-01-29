@@ -53,19 +53,23 @@ export function computeBookedDays(start: Date | string, end: Date | string): num
  * @param monthlyRate Monthly rate
  * @param billingMode Billing mode (default: PRORATA_30)
  * @param providedDailyRate Optional pre-calculated daily rate for DAILY mode
+ * @param forDisplay If true, rounds to 2 decimal places. If false, returns raw value for calculations.
  * @returns Daily rate
  */
 export function computeDailyRate(
   monthlyRate: number,
   billingMode: BillingMode = 'PRORATA_30',
-  providedDailyRate?: number
+  providedDailyRate?: number,
+  forDisplay: boolean = true
 ): number {
   if (billingMode === 'DAILY' && providedDailyRate !== undefined && providedDailyRate > 0) {
-    return Math.round(providedDailyRate * 100) / 100;
+    return forDisplay ? Math.round(providedDailyRate * 100) / 100 : providedDailyRate;
   }
   
   // For PRORATA_30 and FULL_MONTH, daily rate = monthly / 30
-  return Math.round((monthlyRate / BILLING_CYCLE_DAYS) * 100) / 100;
+  // Only round if for display purposes - keep precision for calculations
+  const dailyRate = monthlyRate / BILLING_CYCLE_DAYS;
+  return forDisplay ? Math.round(dailyRate * 100) / 100 : dailyRate;
 }
 
 /**
@@ -85,7 +89,10 @@ export function computeRentAmount(
   providedDailyRate?: number
 ): AssetRentResult {
   const bookedDays = computeBookedDays(startDate, endDate);
-  const dailyRate = computeDailyRate(monthlyRate, billingMode, providedDailyRate);
+  // Use unrounded daily rate for calculations to avoid compounding errors
+  const rawDailyRate = computeDailyRate(monthlyRate, billingMode, providedDailyRate, false);
+  // Rounded daily rate for display
+  const displayDailyRate = computeDailyRate(monthlyRate, billingMode, providedDailyRate, true);
   
   let rentAmount: number;
   
@@ -98,20 +105,23 @@ export function computeRentAmount(
       
     case 'DAILY':
       // Daily billing with provided or computed daily rate
-      rentAmount = dailyRate * bookedDays;
+      // Use raw rate for calculation, only round the final result
+      rentAmount = rawDailyRate * bookedDays;
       break;
       
     case 'PRORATA_30':
     default:
       // Pro-rata billing: (monthly_rate / 30) × days
-      rentAmount = dailyRate * bookedDays;
+      // Use raw rate for calculation to avoid precision errors
+      // Example: 50000/30 × 180 days = 300000.00 (not 300000.60)
+      rentAmount = rawDailyRate * bookedDays;
       break;
   }
   
   return {
     booked_days: bookedDays,
-    daily_rate: dailyRate,
-    rent_amount: Math.round(rentAmount * 100) / 100,
+    daily_rate: displayDailyRate, // Display value is rounded
+    rent_amount: Math.round(rentAmount * 100) / 100, // Final amount is rounded
     billing_mode: billingMode,
   };
 }

@@ -19,11 +19,14 @@ export function getDaysInclusive(startDate: string | Date, endDate: string | Dat
 /**
  * Calculate pro-rata rate based on monthly rate and number of days
  * Formula: (monthly_rate / 30) × number_of_days
+ * Uses full precision in calculation, rounds only at the end
  */
 export function calcProRata(monthlyRate: number, days: number): number {
   if (!monthlyRate || !days || days < 0) return 0;
-  const dailyRate = monthlyRate / 30;
-  return Math.round(dailyRate * days * 100) / 100;
+  // Use full precision: (monthlyRate / 30) * days, then round final result
+  // This avoids compounding errors (e.g., 50000/30*180 = 300000.00 not 300000.60)
+  const proRataAmount = (monthlyRate / 30) * days;
+  return Math.round(proRataAmount * 100) / 100;
 }
 
 /**

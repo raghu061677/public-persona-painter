@@ -686,7 +686,8 @@ export default function CampaignEdit() {
         : (() => {
             const monthlyRate = asset.negotiated_rate || asset.card_rate || 0;
             const days = asset.booked_days || getDurationDays();
-            return (monthlyRate / PRICING_BILLING_CYCLE_DAYS) * days;
+            // Use full precision, round only at final result to avoid compounding errors
+            return Math.round((monthlyRate / PRICING_BILLING_CYCLE_DAYS) * days * 100) / 100;
           })();
       
       const printing = asset.printing_charges || 0;

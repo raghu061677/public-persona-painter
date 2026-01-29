@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
-import { FileText, CalendarDays, Loader2, Info } from "lucide-react";
+import { FileText, CalendarDays, Loader2, Info, Receipt } from "lucide-react";
 import { BillingSummaryCard } from "./BillingSummaryCard";
 import { MonthlyBillingScheduleTable } from "./MonthlyBillingScheduleTable";
 import { 
@@ -17,6 +17,10 @@ import { GenerateMonthlyInvoicesDialog } from "../GenerateMonthlyInvoicesDialog"
 import { generateInvoiceId } from "@/utils/finance";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { format } from "date-fns";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 interface CampaignBillingTabProps {
   campaign: {
@@ -42,13 +46,16 @@ interface CampaignBillingTabProps {
 
 interface InvoiceRecord {
   id: string;
-  invoice_period_start: string;
-  invoice_period_end: string;
+  invoice_period_start: string | null;
+  invoice_period_end: string | null;
   total_amount: number;
   balance_due: number;
   status: string;
   due_date: string;
+  is_monthly_split: boolean | null;
 }
+
+type BillingMode = 'monthly' | 'single';
 
 export function CampaignBillingTab({
   campaign,
@@ -61,6 +68,7 @@ export function CampaignBillingTab({
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [showBulkDialog, setShowBulkDialog] = useState(false);
+  const [billingMode, setBillingMode] = useState<BillingMode>('monthly');
 
   // Fallback: some legacy campaigns may not have campaign-level totals populated.
   // In that case, compute from campaign_assets snapshots so billing shows the correct one-time charges.
@@ -81,7 +89,7 @@ export function CampaignBillingTab({
     gstPercent: Number(campaign.gst_percent ?? 0) || 0,
   });
 
-  // Fetch existing invoices for this campaign
+  // Fetch existing invoices for this campaign (both monthly split and single)
   useEffect(() => {
     fetchExistingInvoices();
   }, [campaign.id]);
@@ -90,13 +98,21 @@ export function CampaignBillingTab({
     try {
       const { data, error } = await supabase
         .from('invoices')
-        .select('id, invoice_period_start, invoice_period_end, total_amount, balance_due, status, due_date')
+        .select('id, invoice_period_start, invoice_period_end, total_amount, balance_due, status, due_date, is_monthly_split')
         .eq('campaign_id', campaign.id)
-        .eq('is_monthly_split', true)
         .order('invoice_period_start', { ascending: true });
 
       if (error) throw error;
       setExistingInvoices(data || []);
+      
+      // Auto-detect billing mode based on existing invoices
+      if (data && data.length > 0) {
+        const hasSingleInvoice = data.some(inv => inv.is_monthly_split === false || inv.is_monthly_split === null);
+        const hasMonthlyInvoices = data.some(inv => inv.is_monthly_split === true);
+        if (hasSingleInvoice && !hasMonthlyInvoices) {
+          setBillingMode('single');
+        }
+      }
     } catch (err) {
       console.error('Error fetching invoices:', err);
     } finally {
@@ -104,11 +120,116 @@ export function CampaignBillingTab({
     }
   };
 
+  // Separate invoices by type
+  const monthlyInvoices = existingInvoices.filter(inv => inv.is_monthly_split === true);
+  const singleInvoices = existingInvoices.filter(inv => inv.is_monthly_split === false || inv.is_monthly_split === null);
+
   // Calculate totals
   const totalInvoiced = existingInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
   const totalPaid = existingInvoices
     .filter(inv => inv.status === 'Paid')
     .reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+
+  // Generate single invoice for entire campaign
+  const handleGenerateSingleInvoice = async () => {
+    setGenerating(true);
+
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Not authenticated");
+
+      // Calculate total amount for entire campaign
+      const subtotal = displayCost + printingTotal + mountingTotal;
+      const gstAmount = Math.round(subtotal * (billingSummary.gstPercent / 100) * 100) / 100;
+      const total = subtotal + gstAmount;
+
+      // Generate invoice ID
+      const invoiceId = await generateInvoiceId(supabase);
+
+      // Build items array
+      const items: any[] = [];
+      
+      // Add display rent for entire period
+      const startDate = new Date(campaign.start_date);
+      const endDate = new Date(campaign.end_date);
+      const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      
+      items.push({
+        sno: 1,
+        description: `Display Rent - ${format(startDate, "dd MMM yyyy")} to ${format(endDate, "dd MMM yyyy")} (${totalDays} days)`,
+        quantity: 1,
+        rate: displayCost,
+        amount: displayCost,
+      });
+
+      if (printingTotal > 0) {
+        items.push({
+          sno: items.length + 1,
+          description: `Printing Charges (${campaignAssets.length} assets)`,
+          quantity: 1,
+          rate: printingTotal,
+          amount: printingTotal,
+        });
+      }
+
+      if (mountingTotal > 0) {
+        items.push({
+          sno: items.length + 1,
+          description: `Mounting Charges (${campaignAssets.length} assets)`,
+          quantity: 1,
+          rate: mountingTotal,
+          amount: mountingTotal,
+        });
+      }
+
+      // Calculate due date (30 days from invoice date)
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 30);
+
+      // Create invoice
+      const { error } = await supabase.from('invoices').insert({
+        id: invoiceId,
+        campaign_id: campaign.id,
+        client_id: campaign.client_id,
+        client_name: campaign.client_name,
+        company_id: campaign.company_id,
+        invoice_date: format(new Date(), 'yyyy-MM-dd'),
+        due_date: format(dueDate, 'yyyy-MM-dd'),
+        invoice_period_start: campaign.start_date,
+        invoice_period_end: campaign.end_date,
+        is_monthly_split: false,
+        sub_total: subtotal,
+        gst_percent: billingSummary.gstPercent,
+        gst_amount: gstAmount,
+        total_amount: total,
+        balance_due: total,
+        status: 'Draft',
+        items,
+        notes: `Single invoice for campaign: ${campaign.campaign_name}`,
+        created_by: userData.user.id,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Invoice Generated",
+        description: `Invoice ${invoiceId} created for entire campaign`,
+      });
+
+      // Refresh data
+      await fetchExistingInvoices();
+      onRefresh?.();
+    } catch (err: any) {
+      console.error('Generate single invoice error:', err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to generate invoice",
+        variant: "destructive",
+      });
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   // Generate invoice for a single period
   const handleGenerateInvoice = async (
@@ -245,6 +366,11 @@ export function CampaignBillingTab({
     );
   }
 
+  // Calculate single invoice totals
+  const singleInvoiceSubtotal = displayCost + printingTotal + mountingTotal;
+  const singleInvoiceGst = Math.round(singleInvoiceSubtotal * (billingSummary.gstPercent / 100) * 100) / 100;
+  const singleInvoiceTotal = singleInvoiceSubtotal + singleInvoiceGst;
+
   return (
     <div className="space-y-6">
       {/* Billing Summary */}
@@ -259,49 +385,190 @@ export function CampaignBillingTab({
         totalPaid={totalPaid}
       />
 
-      {/* Actions Bar */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <CalendarDays className="h-5 w-5" />
-            {billingSummary.periods.length > 1 ? 'Monthly Billing Schedule' : 'Billing Schedule'}
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            {billingSummary.periods.length > 1
-              ? 'Generate invoices for each billing period individually or all at once.'
-              : 'Generate a single pro-rata invoice for this short campaign.'}
-          </p>
-        </div>
-        {billingSummary.periods.length > 1 && (
-          <Button onClick={() => setShowBulkDialog(true)} variant="outline">
-            <FileText className="mr-2 h-4 w-4" />
-            Generate All Invoices
-          </Button>
-        )}
-      </div>
-
-      {/* Info Alert */}
-      {(printingTotal > 0 || mountingTotal > 0) && (
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            Select which billing period should include one-time charges (printing & mounting) before generating invoices.
-          </AlertDescription>
-        </Alert>
+      {/* Billing Mode Selector */}
+      {billingSummary.periods.length > 1 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Invoice Generation Mode</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RadioGroup 
+              value={billingMode} 
+              onValueChange={(val) => setBillingMode(val as BillingMode)}
+              className="flex flex-col sm:flex-row gap-4"
+            >
+              <div className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 flex-1">
+                <RadioGroupItem value="monthly" id="monthly" />
+                <Label htmlFor="monthly" className="flex-1 cursor-pointer">
+                  <div className="font-medium">Monthly Invoices</div>
+                  <div className="text-sm text-muted-foreground">
+                    Generate separate invoices for each billing period
+                  </div>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 flex-1">
+                <RadioGroupItem value="single" id="single" />
+                <Label htmlFor="single" className="flex-1 cursor-pointer">
+                  <div className="font-medium">Single Invoice</div>
+                  <div className="text-sm text-muted-foreground">
+                    Generate one invoice for the entire campaign
+                  </div>
+                </Label>
+              </div>
+            </RadioGroup>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Monthly Schedule Table */}
-      <MonthlyBillingScheduleTable
-        periods={billingSummary.periods}
-        monthlyBaseRent={billingSummary.monthlyBaseRent}
-        gstPercent={billingSummary.gstPercent}
-        printingTotal={printingTotal}
-        mountingTotal={mountingTotal}
-        existingInvoices={existingInvoices}
-        onGenerateInvoice={handleGenerateInvoice}
-        onViewInvoice={handleViewInvoice}
-        isGenerating={generating}
-      />
+      {/* Monthly Billing Mode */}
+      {billingMode === 'monthly' && (
+        <>
+          {/* Actions Bar */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <CalendarDays className="h-5 w-5" />
+                {billingSummary.periods.length > 1 ? 'Monthly Billing Schedule' : 'Billing Schedule'}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {billingSummary.periods.length > 1
+                  ? 'Generate invoices for each billing period individually or all at once.'
+                  : 'Generate a single pro-rata invoice for this short campaign.'}
+              </p>
+            </div>
+            {billingSummary.periods.length > 1 && (
+              <Button onClick={() => setShowBulkDialog(true)} variant="outline">
+                <FileText className="mr-2 h-4 w-4" />
+                Generate All Invoices
+              </Button>
+            )}
+          </div>
+
+          {/* Info Alert */}
+          {(printingTotal > 0 || mountingTotal > 0) && (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                Select which billing period should include one-time charges (printing & mounting) before generating invoices.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Monthly Schedule Table */}
+          <MonthlyBillingScheduleTable
+            periods={billingSummary.periods}
+            monthlyBaseRent={billingSummary.monthlyBaseRent}
+            gstPercent={billingSummary.gstPercent}
+            printingTotal={printingTotal}
+            mountingTotal={mountingTotal}
+            existingInvoices={monthlyInvoices}
+            onGenerateInvoice={handleGenerateInvoice}
+            onViewInvoice={handleViewInvoice}
+            isGenerating={generating}
+          />
+        </>
+      )}
+
+      {/* Single Invoice Mode */}
+      {billingMode === 'single' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Receipt className="h-5 w-5" />
+              Single Campaign Invoice
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Invoice Summary */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
+              <div>
+                <div className="text-xs text-muted-foreground">Campaign Period</div>
+                <div className="font-medium text-sm">
+                  {format(new Date(campaign.start_date), "dd MMM yyyy")} - {format(new Date(campaign.end_date), "dd MMM yyyy")}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Display Rent</div>
+                <div className="font-medium">{formatCurrency(displayCost)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Printing + Mounting</div>
+                <div className="font-medium">{formatCurrency(printingTotal + mountingTotal)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">GST ({billingSummary.gstPercent}%)</div>
+                <div className="font-medium">{formatCurrency(singleInvoiceGst)}</div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-lg font-semibold">Total Invoice Amount</div>
+                <div className="text-sm text-muted-foreground">
+                  Includes all rent, printing, mounting, and GST
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-primary">
+                {formatCurrency(singleInvoiceTotal)}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Existing Single Invoices */}
+            {singleInvoices.length > 0 ? (
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-muted-foreground">Generated Invoices:</div>
+                {singleInvoices.map((inv) => (
+                  <div 
+                    key={inv.id} 
+                    className="flex items-center justify-between p-3 border rounded-lg bg-background"
+                  >
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <div className="font-medium">{inv.id}</div>
+                        <div className="text-xs text-muted-foreground">
+                          Due: {inv.due_date ? format(new Date(inv.due_date), "dd MMM yyyy") : "N/A"}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Badge variant={inv.status === 'Paid' ? 'default' : inv.status === 'Draft' ? 'secondary' : 'outline'}>
+                        {inv.status}
+                      </Badge>
+                      <div className="font-medium">{formatCurrency(inv.total_amount)}</div>
+                      <Button size="sm" variant="outline" onClick={() => handleViewInvoice(inv.id)}>
+                        View
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Button 
+                onClick={handleGenerateSingleInvoice} 
+                disabled={generating}
+                className="w-full"
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Generate Single Invoice for Entire Campaign
+                  </>
+                )}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Bulk Generate Dialog */}
       <GenerateMonthlyInvoicesDialog

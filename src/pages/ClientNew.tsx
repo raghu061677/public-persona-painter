@@ -26,7 +26,7 @@ import { getStateCode } from "@/lib/stateCodeMapping";
 
 // Discriminated union schema for customer type
 const baseSchema = z.object({
-  id: z.string().min(1, "Client ID is required"),
+  // ID is auto-generated on submit, not required for validation
   email: z.string().trim().email("Invalid email").max(255, "Email must be less than 255 characters").optional().or(z.literal("")),
   phone: z.string().trim().regex(/^[0-9]{10}$/, "Phone must be 10 digits").optional().or(z.literal("")),
   gst_number: z.string().trim().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST format").optional().or(z.literal("")),
@@ -180,35 +180,14 @@ export default function ClientNew() {
   const [contactPersons, setContactPersons] = useState<ContactPerson[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Auto-generate client ID when state changes
+  // Generate preview ID when state changes (just for display - actual ID is generated atomically on submit)
   useEffect(() => {
-    if (formData.state && company?.id) {
-      generateClientId();
-    }
-  }, [formData.state, company?.id]);
-
-  const generateClientId = async () => {
-    if (!formData.state || !company?.id) return;
-    
-    try {
+    if (formData.state) {
       const stateCode = getStateCode(formData.state);
-      
-      // Call server-side RPC function for guaranteed unique ID
-      const { data, error } = await supabase.rpc('generate_client_id', {
-        p_state_code: stateCode,
-        p_company_id: company.id
-      });
-
-      if (error) throw error;
-      
-      if (data) {
-        setFormData(prev => ({ ...prev, id: data }));
-      }
-    } catch (error: any) {
-      console.error("Error generating client ID:", error);
-      toast.error(error.message || "Failed to generate client ID");
+      // Show preview ID format (actual ID will be generated on submit)
+      setFormData(prev => ({ ...prev, id: `${stateCode}-XXXX (auto)` }));
     }
-  };
+  }, [formData.state]);
 
   const updateField = (field: string, value: any) => {
     setFormData(prev => {
@@ -291,16 +270,8 @@ export default function ClientNew() {
         return;
       }
 
-      // Ensure we have a client ID
-      if (!formData.id) {
-        toast.error("Client ID not generated. Please select a state first.");
-        setLoading(false);
-        return;
-      }
-
       // Prepare validation data based on customer type
       const validationData = {
-        id: formData.id,
         customer_type: formData.customer_type,
         ...(formData.customer_type === "business"
           ? {
@@ -339,55 +310,57 @@ export default function ClientNew() {
         ? formData.company 
         : [formData.salutation, formData.first_name, formData.last_name].filter(Boolean).join(' ');
 
-      // Insert client using the pre-generated ID from RPC
       // Map customer_type to database client_type enum (capitalize first letter)
       const dbClientType = formData.customer_type.charAt(0).toUpperCase() + formData.customer_type.slice(1);
-      
-      const { error: clientError } = await supabase
-        .from("clients")
-        .insert([{
-          id: formData.id,
-          name: clientName,
-          client_type: dbClientType as any,
-          company: formData.customer_type === "business" ? formData.company.trim() : null,
-          company_id: company.id,
-          email: formData.email.trim() || null,
-          phone: formData.phone.trim() || null,
-          gst_number: formData.gst_number.trim() || null,
-          state: formData.state,
-          city: formData.city.trim() || null,
-          notes: formData.notes.trim() || null,
-          billing_address_line1: formData.billing_address_line1.trim() || null,
-          billing_address_line2: formData.billing_address_line2.trim() || null,
-          billing_city: formData.billing_city.trim() || null,
-          billing_state: formData.billing_state || null,
-          billing_pincode: formData.billing_pincode.trim() || null,
-          shipping_address_line1: formData.shipping_address_line1.trim() || null,
-          shipping_address_line2: formData.shipping_address_line2.trim() || null,
-          shipping_city: formData.shipping_city.trim() || null,
-          shipping_state: formData.shipping_state || null,
-          shipping_pincode: formData.shipping_pincode.trim() || null,
-          shipping_same_as_billing: formData.shipping_same_as_billing,
-        }]);
+      const stateCode = getStateCode(formData.state);
 
-      if (clientError) {
-        // If duplicate error, regenerate ID and try one more time
-        if (clientError.code === '23505') {
-          console.log("Duplicate detected, regenerating ID...");
-          await generateClientId();
-          toast.error("Client ID conflict detected. Please try again.");
-          setLoading(false);
-          return;
-        }
-        throw clientError;
+      // Use atomic RPC function that generates ID and inserts in one transaction
+      const { data: result, error: rpcError } = await supabase.rpc('create_client_with_id', {
+        p_company_id: company.id,
+        p_state_code: stateCode,
+        p_name: clientName,
+        p_client_type: dbClientType,
+        p_company_name: formData.customer_type === "business" ? formData.company.trim() : null,
+        p_email: formData.email.trim() || null,
+        p_phone: formData.phone.trim() || null,
+        p_gst_number: formData.gst_number.trim() || null,
+        p_state: formData.state,
+        p_city: formData.city.trim() || null,
+        p_notes: formData.notes.trim() || null,
+        p_billing_address_line1: formData.billing_address_line1.trim() || null,
+        p_billing_address_line2: formData.billing_address_line2.trim() || null,
+        p_billing_city: formData.billing_city.trim() || null,
+        p_billing_state: formData.billing_state || null,
+        p_billing_pincode: formData.billing_pincode.trim() || null,
+        p_shipping_address_line1: formData.shipping_address_line1.trim() || null,
+        p_shipping_address_line2: formData.shipping_address_line2.trim() || null,
+        p_shipping_city: formData.shipping_city.trim() || null,
+        p_shipping_state: formData.shipping_state || null,
+        p_shipping_pincode: formData.shipping_pincode.trim() || null,
+        p_shipping_same_as_billing: formData.shipping_same_as_billing,
+      });
+
+      if (rpcError) {
+        throw rpcError;
       }
+
+      // Check RPC result
+      const rpcResult = result as { success: boolean; client_id: string | null; message: string };
+      
+      if (!rpcResult.success) {
+        toast.error(rpcResult.message || "Failed to create client");
+        setLoading(false);
+        return;
+      }
+
+      const newClientId = rpcResult.client_id!;
 
       // Insert contact persons if any
       if (contactPersons.length > 0) {
         const contactsPayload = contactPersons
           .filter(c => c.firstName || c.lastName || c.email || c.mobile)
           .map((c, index) => ({
-            client_id: formData.id,
+            client_id: newClientId,
             company_id: company.id,
             salutation: c.salutation || null,
             first_name: c.firstName || null,
@@ -415,8 +388,16 @@ export default function ClientNew() {
       // Clear saved form draft after successful creation
       localStorage.removeItem(FORM_STORAGE_KEY);
       
-      toast.success(`Client created successfully with ID: ${formData.id}`);
-      navigate("/admin/clients");
+      toast.success(`Client created successfully with ID: ${newClientId}`);
+      
+      // Check for return path (from Plan/Campaign creation)
+      const returnPath = sessionStorage.getItem("clientCreateReturnPath");
+      if (returnPath) {
+        sessionStorage.removeItem("clientCreateReturnPath");
+        navigate(returnPath);
+      } else {
+        navigate("/admin/clients");
+      }
 
     } catch (error: any) {
       console.error("Error creating client:", error);
@@ -472,12 +453,19 @@ export default function ClientNew() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Client ID Display */}
-              {formData.id && (
+              {formData.state && (
                 <div className="space-y-2 bg-muted/50 p-4 rounded-lg border border-border">
-                  <Label className="text-sm font-medium">Client ID (Auto-generated)</Label>
-                  <p className="text-lg font-semibold text-primary">{formData.id}</p>
+                  <Label className="text-sm font-medium">Client ID</Label>
+                  <div className="flex items-center gap-2">
+                    <p className="text-lg font-semibold text-primary">
+                      {getStateCode(formData.state)}-XXXX
+                    </p>
+                    <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">
+                      Auto-generated on save
+                    </span>
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    This ID is automatically generated based on the state you select below
+                    A unique ID will be generated automatically when you save
                   </p>
                 </div>
               )}

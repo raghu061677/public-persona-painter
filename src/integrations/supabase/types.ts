@@ -7312,6 +7312,33 @@ export type Database = {
         Args: { p_campaign_id: string; p_month_key: string }
         Returns: Json
       }
+      create_client_with_id: {
+        Args: {
+          p_billing_address_line1?: string
+          p_billing_address_line2?: string
+          p_billing_city?: string
+          p_billing_pincode?: string
+          p_billing_state?: string
+          p_city?: string
+          p_client_type?: string
+          p_company_id: string
+          p_company_name?: string
+          p_email?: string
+          p_gst_number?: string
+          p_name: string
+          p_notes?: string
+          p_phone?: string
+          p_shipping_address_line1?: string
+          p_shipping_address_line2?: string
+          p_shipping_city?: string
+          p_shipping_pincode?: string
+          p_shipping_same_as_billing?: boolean
+          p_shipping_state?: string
+          p_state?: string
+          p_state_code: string
+        }
+        Returns: Json
+      }
       create_plan_approval_workflow: {
         Args: { p_plan_id: string }
         Returns: undefined

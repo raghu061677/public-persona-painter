@@ -1,34 +1,22 @@
 import pptxgen from "pptxgenjs";
 import { format } from "date-fns";
-
-interface VacantAsset {
-  id: string;
-  city: string;
-  area: string;
-  location: string;
-  media_type: string;
-  dimensions: string;
-  card_rate: number;
-  total_sqft: number | null;
-  status: string;
-  direction?: string;
-  illumination_type?: string;
-  primary_photo_url?: string;
-  latitude?: number;
-  longitude?: number;
-  qr_code_url?: string;
-}
+import { 
+  VacantAssetExportData, 
+  ExportSortOrder, 
+  standardizeAssets, 
+  EXPORT_COLUMNS,
+  StandardizedAssetRow 
+} from "./vacantMediaExportUtils";
 
 const DEFAULT_PLACEHOLDER = "https://via.placeholder.com/800x600/f3f4f6/6b7280?text=No+Image+Available";
 
 export async function generateVacantMediaPPT(
-  assets: VacantAsset[],
-  dateFilter: string
+  assets: VacantAssetExportData[],
+  dateFilter: string,
+  sortOrder: ExportSortOrder = 'location'
 ): Promise<void> {
-  // Sort assets by location alphabetically
-  const sortedAssets = [...assets].sort((a, b) => 
-    (a.location || '').localeCompare(b.location || '')
-  );
+  // Standardize and sort assets
+  const standardizedAssets = standardizeAssets(assets, sortOrder);
   
   const prs = new pptxgen();
 
@@ -66,16 +54,18 @@ export async function generateVacantMediaPPT(
     fontFace: "Arial",
   });
 
-  const totalSqft = assets.reduce((sum, a) => sum + (a.total_sqft || 0), 0);
+  const totalSqft = standardizedAssets.reduce((sum, a) => sum + a.sqft, 0);
+  const sortLabel = sortOrder === 'location' ? 'Location A-Z' : 
+                    sortOrder === 'area' ? 'Area A-Z' : 'City → Area → Location';
 
   coverSlide.addText(
-    `${assets.length} Available Assets | ${totalSqft.toLocaleString("en-IN")} Total Sq.Ft`,
+    `${standardizedAssets.length} Available Assets | ${totalSqft.toLocaleString("en-IN")} Total Sq.Ft | Sorted: ${sortLabel}`,
     {
       x: 0.5,
       y: 4.7,
       w: 9,
       h: 0.5,
-      fontSize: 20,
+      fontSize: 18,
       color: "E5E7EB",
       align: "center",
       fontFace: "Arial",
@@ -101,9 +91,81 @@ export async function generateVacantMediaPPT(
     fontFace: "Arial",
   });
 
+  // ===== TABLE SLIDES (Paginated) =====
+  const ROWS_PER_SLIDE = 12;
+  const totalSlides = Math.ceil(standardizedAssets.length / ROWS_PER_SLIDE);
+  
+  for (let slideIndex = 0; slideIndex < totalSlides; slideIndex++) {
+    const tableSlide = prs.addSlide();
+    
+    // Header
+    tableSlide.addText(`VACANT MEDIA LIST (Page ${slideIndex + 1} of ${totalSlides})`, {
+      x: 0.3,
+      y: 0.2,
+      w: 9.4,
+      h: 0.5,
+      fontSize: 20,
+      bold: true,
+      color: brandColor,
+      align: "center",
+    });
+
+    // Get assets for this slide
+    const startIdx = slideIndex * ROWS_PER_SLIDE;
+    const endIdx = Math.min(startIdx + ROWS_PER_SLIDE, standardizedAssets.length);
+    const slideAssets = standardizedAssets.slice(startIdx, endIdx);
+
+    // Build table data with header row
+    const tableData: any[][] = [
+      EXPORT_COLUMNS.map(col => ({ 
+        text: col, 
+        options: { bold: true, fill: brandColor, color: "FFFFFF", fontSize: 8 } 
+      })),
+    ];
+
+    slideAssets.forEach((asset) => {
+      tableData.push([
+        { text: asset.sNo.toString(), options: { fontSize: 7 } },
+        { text: asset.mediaType, options: { fontSize: 7 } },
+        { text: asset.city, options: { fontSize: 7 } },
+        { text: asset.area, options: { fontSize: 7 } },
+        { text: asset.location.substring(0, 30) + (asset.location.length > 30 ? '...' : ''), options: { fontSize: 7 } },
+        { text: asset.direction, options: { fontSize: 7 } },
+        { text: asset.dimensions, options: { fontSize: 7 } },
+        { text: asset.sqft.toFixed(0), options: { fontSize: 7 } },
+        { text: asset.illumination, options: { fontSize: 7 } },
+        { text: `₹${asset.cardRate.toLocaleString("en-IN")}`, options: { fontSize: 7 } },
+        { text: asset.status, options: { fontSize: 7 } },
+      ]);
+    });
+
+    tableSlide.addTable(tableData, {
+      x: 0.2,
+      y: 0.8,
+      w: 9.6,
+      rowH: 0.4,
+      fontSize: 8,
+      border: { pt: 0.5, color: "D1D5DB" },
+      align: "center",
+      valign: "middle",
+      colW: [0.5, 0.9, 0.7, 0.9, 1.8, 0.7, 0.7, 0.6, 0.7, 0.8, 0.7],
+    });
+
+    // Footer
+    tableSlide.addText(`Go-Ads 360° | Generated: ${format(new Date(), "dd MMM yyyy")}`, {
+      x: 0.5,
+      y: 7.1,
+      w: 9,
+      h: 0.3,
+      fontSize: 10,
+      color: "6B7280",
+      align: "center",
+    });
+  }
+
   // ===== SUMMARY SLIDE =====
   const summarySlide = prs.addSlide();
-  summarySlide.addText("SUMMARY OVERVIEW", {
+  summarySlide.addText("SUMMARY BY CITY", {
     x: 0.5,
     y: 0.5,
     w: 9,
@@ -115,13 +177,13 @@ export async function generateVacantMediaPPT(
   });
 
   // Group by city
-  const cityGroups = assets.reduce((acc: any, asset) => {
-    if (!acc[asset.city]) acc[asset.city] = [];
-    acc[asset.city].push(asset);
-    return acc;
-  }, {});
+  const cityGroups: Record<string, StandardizedAssetRow[]> = {};
+  standardizedAssets.forEach(asset => {
+    if (!cityGroups[asset.city]) cityGroups[asset.city] = [];
+    cityGroups[asset.city].push(asset);
+  });
 
-  const tableData: any[] = [
+  const summaryTableData: any[] = [
     [
       { text: "City", options: { bold: true, fill: brandColor, color: "FFFFFF" } },
       { text: "Assets", options: { bold: true, fill: brandColor, color: "FFFFFF" } },
@@ -129,22 +191,22 @@ export async function generateVacantMediaPPT(
     ],
   ];
 
-  Object.entries(cityGroups).forEach(([city, cityAssets]: [string, any[]]) => {
-    const citySqft = cityAssets.reduce((sum, a) => sum + (a.total_sqft || 0), 0);
-    tableData.push([
+  Object.entries(cityGroups).forEach(([city, cityAssets]) => {
+    const citySqft = cityAssets.reduce((sum, a) => sum + a.sqft, 0);
+    summaryTableData.push([
       city,
       cityAssets.length.toString(),
       citySqft.toFixed(0),
     ]);
   });
 
-  tableData.push([
+  summaryTableData.push([
     { text: "TOTAL", options: { bold: true } },
-    { text: assets.length.toString(), options: { bold: true } },
+    { text: standardizedAssets.length.toString(), options: { bold: true } },
     { text: totalSqft.toFixed(0), options: { bold: true } },
   ]);
 
-  summarySlide.addTable(tableData, {
+  summarySlide.addTable(summaryTableData, {
     x: 1.5,
     y: 1.5,
     w: 7,
@@ -155,11 +217,10 @@ export async function generateVacantMediaPPT(
     valign: "middle",
   });
 
-  // ===== ASSET SLIDES =====
-  for (const asset of sortedAssets) {
-    // Use primary_photo_url for presentation
-    const photo1 = asset.primary_photo_url || DEFAULT_PLACEHOLDER;
-    const photo2 = asset.primary_photo_url || DEFAULT_PLACEHOLDER;
+  // ===== ASSET SLIDES (with images) =====
+  for (const asset of standardizedAssets) {
+    const originalAsset = asset.originalAsset;
+    const photo1 = originalAsset.primary_photo_url || DEFAULT_PLACEHOLDER;
 
     const slide = prs.addSlide();
 
@@ -173,22 +234,22 @@ export async function generateVacantMediaPPT(
       line: { color: brandColor, width: 8 },
     });
 
-    // Header
-    slide.addText(`${asset.id} – ${asset.area} – ${asset.location}`, {
+    // Header with S.No
+    slide.addText(`#${asset.sNo} – ${asset.area} – ${asset.location.substring(0, 50)}`, {
       x: 0.5,
       y: 0.5,
-      w: 9,
+      w: 8,
       h: 0.6,
-      fontSize: 20,
+      fontSize: 18,
       bold: true,
       color: brandColor,
-      align: "center",
+      align: "left",
     });
 
     // Add QR Code if available (top-right corner)
-    if (asset.qr_code_url) {
+    if (originalAsset.qr_code_url) {
       try {
-        const qrResponse = await fetch(asset.qr_code_url);
+        const qrResponse = await fetch(originalAsset.qr_code_url);
         const qrBlob = await qrResponse.blob();
         const qrBase64 = await new Promise<string>((resolve) => {
           const reader = new FileReader();
@@ -198,75 +259,59 @@ export async function generateVacantMediaPPT(
         
         slide.addImage({
           data: qrBase64,
-          x: 9.2,
+          x: 8.5,
           y: 0.4,
-          w: 1.2,
-          h: 1.2,
+          w: 1.0,
+          h: 1.0,
         });
       } catch (error) {
         console.error('Failed to add QR code:', error);
       }
     }
 
-    // Two images side by side
+    // Asset image
     try {
       slide.addImage({
         path: photo1,
         x: 0.5,
         y: 1.3,
-        w: 4.4,
-        h: 3.3,
-        sizing: { type: "contain", w: 4.4, h: 3.3 },
+        w: 9,
+        h: 3.5,
+        sizing: { type: "contain", w: 9, h: 3.5 },
       });
     } catch (e) {
-      console.error("Error adding image 1:", e);
-    }
-
-    try {
-      slide.addImage({
-        path: photo2,
-        x: 5.1,
-        y: 1.3,
-        w: 4.4,
-        h: 3.3,
-        sizing: { type: "contain", w: 4.4, h: 3.3 },
-      });
-    } catch (e) {
-      console.error("Error adding image 2:", e);
+      console.error("Error adding image:", e);
     }
 
     // Details box
     slide.addShape(prs.ShapeType.rect, {
       x: 0.5,
-      y: 4.8,
+      y: 5.0,
       w: 9,
-      h: 2.2,
+      h: 1.8,
       fill: { color: "F9FAFB" },
       line: { color: "E5E7EB", width: 1 },
     });
 
     const detailsText = [
-      `Media Type: ${asset.media_type}`,
-      `Dimensions: ${asset.dimensions}`,
-      `Direction: ${asset.direction || "N/A"}`,
-      `Illumination: ${asset.illumination_type || "N/A"}`,
-      `Sq.Ft: ${asset.total_sqft || 0}`,
-      `Card Rate: ₹${asset.card_rate.toLocaleString("en-IN")}`,
+      `Media Type: ${asset.mediaType}        City: ${asset.city}        Area: ${asset.area}`,
+      `Dimensions: ${asset.dimensions}        Sq.Ft: ${asset.sqft.toFixed(2)}        Direction: ${asset.direction}`,
+      `Illumination: ${asset.illumination}        Card Rate: Rs. ${asset.cardRate.toLocaleString("en-IN")}        Status: ${asset.status}`,
     ].join("\n");
 
     slide.addText(detailsText, {
       x: 0.7,
-      y: 5.0,
+      y: 5.1,
       w: 8.6,
-      h: 1.8,
-      fontSize: 16,
+      h: 1.6,
+      fontSize: 14,
       color: "1F2937",
       fontFace: "Arial",
-      lineSpacing: 22,
+      lineSpacing: 24,
     });
 
     // Footer
-    slide.addText(`Available Now | Page ${sortedAssets.indexOf(asset) + 3} of ${sortedAssets.length + 2}`, {
+    slide.addText(`Page ${asset.sNo + totalSlides + 1} | Go-Ads 360°`, {
       x: 0.5,
       y: 7.1,
       w: 9,

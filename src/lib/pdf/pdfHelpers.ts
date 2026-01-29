@@ -15,9 +15,19 @@ export const formatINR = (value: number = 0): string => {
 };
 
 /**
- * Alias used across PDF generators
+ * Format currency for PDF using "Rs." prefix instead of ₹ symbol
+ * This avoids font encoding issues in PDFs where ₹ may not render correctly
+ * Uses standard ASCII characters only for maximum compatibility
  */
-export const formatCurrencyForPDF = (amount: number): string => formatINR(amount);
+export const formatCurrencyForPDF = (amount: number): string => {
+  // Format number in Indian style (lakhs, crores) without currency symbol
+  const formatted = new Intl.NumberFormat('en-IN', {
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+  }).format(Math.round(amount || 0));
+  
+  return `Rs. ${formatted}`;
+};
 
 /**
  * Get primary contact name from client data

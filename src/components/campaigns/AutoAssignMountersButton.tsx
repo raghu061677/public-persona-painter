@@ -39,6 +39,17 @@ export function AutoAssignMountersButton({
         throw error;
       }
 
+      // Business-level errors returned as 200 to avoid FunctionsHttpError in the client
+      if (data?.success === false) {
+        toast({
+          title: "Cannot Auto-Assign",
+          description:
+            data?.message || data?.error || "Auto-assignment could not be completed.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       if (data.skipped) {
         toast({
           title: "Already Assigned",

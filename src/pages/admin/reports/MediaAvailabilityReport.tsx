@@ -73,6 +73,7 @@ import {
 } from "@/lib/reports/generateAvailabilityExports";
 import { generateAvailabilityPPTWithImages } from "@/lib/reports/generateAvailabilityPPTWithImages";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
+import type { ExportSortOrder } from "@/lib/reports/vacantMediaExportUtils";
 
 // Column definitions for the availability tables
 const ALL_COLUMNS = [
@@ -185,6 +186,8 @@ export default function MediaAvailabilityReport() {
   const [availableSortConfig, setAvailableSortConfig] = useState<SortConfig>({ column: null, direction: null });
   const [bookedSortConfig, setBookedSortConfig] = useState<SortConfig>({ column: null, direction: null });
   const [soonSortConfig, setSoonSortConfig] = useState<SortConfig>({ column: null, direction: null });
+  // Export sorting (independent from UI table sorting)
+  const [exportSortOrder, setExportSortOrder] = useState<ExportSortOrder>('location');
   const [exporting, setExporting] = useState(false);
   const [showDialog, setShowDialog] = useState<DialogType>(null);
   
@@ -246,6 +249,7 @@ export default function MediaAvailabilityReport() {
           potential_revenue: summary.potential_revenue,
         },
         exportTab,
+        exportSortOrder,
         companyId: company?.id,
       };
       
@@ -656,14 +660,29 @@ export default function MediaAvailabilityReport() {
             </p>
           </div>
           {summary && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button disabled={exporting}>
-                  <Download className="h-4 w-4 mr-2" />
-                  {exporting ? "Exporting..." : "Export"}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64">
+            <div className="flex items-center gap-3">
+              <div className="hidden md:flex items-center gap-2">
+                <Label className="text-sm text-muted-foreground">Sort by</Label>
+                <Select value={exportSortOrder} onValueChange={(v) => setExportSortOrder(v as ExportSortOrder)}>
+                  <SelectTrigger className="w-[240px]">
+                    <SelectValue placeholder="Location (A–Z)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="location">Location (A–Z)</SelectItem>
+                    <SelectItem value="area">Area (A–Z)</SelectItem>
+                    <SelectItem value="city-area-location">City → Area → Location (A–Z)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button disabled={exporting}>
+                    <Download className="h-4 w-4 mr-2" />
+                    {exporting ? "Exporting..." : "Export"}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
                 <DropdownMenuLabel>Export Current Tab ({activeTab})</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => handleExport('excel', 'current')}>
                   <FileSpreadsheet className="h-4 w-4 mr-2" />
@@ -699,8 +718,9 @@ export default function MediaAvailabilityReport() {
                   <FileText className="h-4 w-4 mr-2" />
                   PDF (All)
                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           )}
         </div>
 

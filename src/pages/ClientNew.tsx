@@ -24,16 +24,24 @@ import { z } from "zod";
 import { StateSelect } from "@/components/clients/StateSelect";
 import { getStateCode } from "@/lib/stateCodeMapping";
 
-// Discriminated union schema for customer type
+// GST treatment types
+type GstTreatment = "registered" | "unregistered" | "consumer";
+
+// Base schema without GSTIN - GSTIN validation is conditional
 const baseSchema = z.object({
   // ID is auto-generated on submit, not required for validation
   email: z.string().trim().email("Invalid email").max(255, "Email must be less than 255 characters").optional().or(z.literal("")),
   phone: z.string().trim().regex(/^[0-9]{10}$/, "Phone must be 10 digits").optional().or(z.literal("")),
-  gst_number: z.string().trim().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST format").optional().or(z.literal("")),
+  gst_treatment: z.enum(["registered", "unregistered", "consumer"]),
+  // GSTIN is optional in base schema - we validate conditionally based on gst_treatment
+  gst_number: z.string().trim().optional().or(z.literal("")),
   state: z.string().min(1, "State is required"),
   city: z.string().trim().max(50, "City must be less than 50 characters").optional().or(z.literal("")),
   notes: z.string().trim().max(1000, "Notes must be less than 1000 characters").optional().or(z.literal("")),
 });
+
+// GSTIN regex for validation when required
+const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 
 const clientSchema = z.discriminatedUnion("customer_type", [
   // Business customer
@@ -83,6 +91,7 @@ export default function ClientNew() {
     // Common fields
     email: "",
     phone: "",
+    gst_treatment: "registered" as GstTreatment,
     gst_number: "",
     state: "",
     city: "",
@@ -284,6 +293,7 @@ export default function ClientNew() {
             }),
         email: formData.email,
         phone: formData.phone,
+        gst_treatment: formData.gst_treatment,
         gst_number: formData.gst_number,
         state: formData.state,
         city: formData.city,
@@ -303,6 +313,22 @@ export default function ClientNew() {
         toast.error("Please fix validation errors");
         setLoading(false);
         return;
+      }
+
+      // Conditional GSTIN validation - only required for registered business
+      if (formData.gst_treatment === "registered") {
+        if (!formData.gst_number || formData.gst_number.trim() === "") {
+          setErrors(prev => ({ ...prev, gst_number: "GSTIN is required for registered business" }));
+          toast.error("GSTIN is required for registered business");
+          setLoading(false);
+          return;
+        }
+        if (!GSTIN_REGEX.test(formData.gst_number.trim())) {
+          setErrors(prev => ({ ...prev, gst_number: "Invalid GST format (e.g., 22AAAAA0000A1Z5)" }));
+          toast.error("Invalid GSTIN format");
+          setLoading(false);
+          return;
+        }
       }
 
       // Prepare name field based on customer type
@@ -584,7 +610,20 @@ export default function ClientNew() {
               {/* GST Treatment */}
               <div className="space-y-2">
                 <Label>GST Treatment *</Label>
-                <Select defaultValue="registered">
+                <Select 
+                  value={formData.gst_treatment} 
+                  onValueChange={(value) => {
+                    updateField("gst_treatment", value);
+                    // Clear GSTIN error when switching away from registered
+                    if (value !== "registered" && errors.gst_number) {
+                      setErrors(prev => {
+                        const newErrors = { ...prev };
+                        delete newErrors.gst_number;
+                        return newErrors;
+                      });
+                    }
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -602,17 +641,19 @@ export default function ClientNew() {
                 <Input placeholder="ABCDE1234F" />
               </div>
 
-              {/* GST Number */}
-              <div className="space-y-2">
-                <Label>GSTIN</Label>
-                <Input
-                  value={formData.gst_number}
-                  onChange={(e) => updateField("gst_number", e.target.value)}
-                  placeholder="15 character GST number"
-                  className={errors.gst_number ? "border-destructive" : ""}
-                />
-                {errors.gst_number && <p className="text-xs text-destructive">{errors.gst_number}</p>}
-              </div>
+              {/* GST Number - Only show/require for registered business */}
+              {formData.gst_treatment === "registered" && (
+                <div className="space-y-2">
+                  <Label>GSTIN *</Label>
+                  <Input
+                    value={formData.gst_number}
+                    onChange={(e) => updateField("gst_number", e.target.value.toUpperCase())}
+                    placeholder="15 character GST number (e.g., 22AAAAA0000A1Z5)"
+                    className={errors.gst_number ? "border-destructive" : ""}
+                  />
+                  {errors.gst_number && <p className="text-xs text-destructive">{errors.gst_number}</p>}
+                </div>
+              )}
 
               {/* State */}
               <div className="space-y-2">

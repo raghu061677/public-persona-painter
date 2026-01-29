@@ -210,6 +210,36 @@ export function AssetSelectionTable({
     return { available: true, availableFrom: null };
   };
 
+  // Calculate asset counts by category
+  const assetCounts = useMemo(() => {
+    let availableNow = 0;
+    let booked = 0;
+    let availableByDate = 0;
+
+    assets.forEach(asset => {
+      const availability = getAssetAvailability(asset);
+      if (availability.available) {
+        availableNow++;
+      } else {
+        booked++;
+        // Check if will be available by selected date
+        if (availableFromDate && availability.availableFrom) {
+          if (isBefore(availability.availableFrom, availableFromDate) || 
+              format(availability.availableFrom, 'yyyy-MM-dd') === format(availableFromDate, 'yyyy-MM-dd')) {
+            availableByDate++;
+          }
+        }
+      }
+    });
+
+    return {
+      availableNow,
+      booked,
+      availableByDate: availableNow + availableByDate, // Total available by date = currently available + becoming available
+      total: assets.length,
+    };
+  }, [assets, assetBookings, availableFromDate]);
+
   const filteredAssets = useMemo(() => {
     return assets.filter(asset => {
       const matchesSearch = !searchTerm || 
@@ -245,6 +275,26 @@ export function AssetSelectionTable({
       return matchesSearch && matchesCity && matchesType && matchesAvailability;
     });
   }, [assets, searchTerm, cityFilter, mediaTypeFilter, availabilityFilter, availableFromDate, assetBookings]);
+
+  // Get current count to display based on filter
+  const getCurrentFilterCount = () => {
+    switch (availabilityFilter) {
+      case 'available_now':
+        return { count: assetCounts.availableNow, label: 'Available Now', color: 'bg-green-500' };
+      case 'available_by_date':
+        return { 
+          count: assetCounts.availableByDate, 
+          label: availableFromDate ? `Available by ${format(availableFromDate, 'MMM dd')}` : 'Available By Date',
+          color: 'bg-blue-500'
+        };
+      case 'booked':
+        return { count: assetCounts.booked, label: 'Currently Booked', color: 'bg-amber-500' };
+      case 'all':
+        return { count: assetCounts.total, label: 'All Assets', color: 'bg-slate-500' };
+      default:
+        return { count: assetCounts.total, label: 'Assets', color: 'bg-slate-500' };
+    }
+  };
 
   const sortedAssets = useMemo(() => {
     if (!sortConfig.column || !sortConfig.direction) {
@@ -338,8 +388,37 @@ export function AssetSelectionTable({
     return <div>Loading...</div>;
   }
 
+  const filterInfo = getCurrentFilterCount();
+
   return (
     <div className="space-y-4">
+      {/* Asset Count Banner */}
+      <div className="flex items-center justify-between bg-muted/50 rounded-lg px-4 py-3">
+        <div className="flex items-center gap-3">
+          <div className={cn("w-3 h-3 rounded-full", filterInfo.color)} />
+          <span className="text-sm font-medium">{filterInfo.label}</span>
+          <Badge variant="secondary" className="text-lg font-bold px-3">
+            {filterInfo.count}
+          </Badge>
+          {loadingBookings && (
+            <span className="text-xs text-muted-foreground">(Loading bookings...)</span>
+          )}
+        </div>
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-green-500" />
+            {assetCounts.availableNow} available now
+          </span>
+          <span className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-amber-500" />
+            {assetCounts.booked} booked
+          </span>
+          <span className="text-muted-foreground/60">
+            {assetCounts.total} total
+          </span>
+        </div>
+      </div>
+
       {/* Search and Filters Row */}
       <div className="flex flex-col gap-4">
         {/* Large Search Input */}

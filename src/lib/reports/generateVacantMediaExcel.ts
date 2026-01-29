@@ -79,7 +79,6 @@ export async function generateVacantMediaExcel(
   currentRow++;
   const totalAssets = assets.length;
   const totalSqft = assets.reduce((sum, a) => sum + (a.total_sqft || 0), 0);
-  const totalValue = assets.reduce((sum, a) => sum + a.card_rate, 0);
 
   worksheet.getRow(currentRow).values = [
     "Total Assets:",
@@ -87,9 +86,6 @@ export async function generateVacantMediaExcel(
     "",
     "Total Sq.Ft:",
     totalSqft.toFixed(2),
-    "",
-    "Potential Revenue:",
-    `₹${totalValue.toLocaleString("en-IN")}`,
   ];
   worksheet.getRow(currentRow).font = { bold: true };
   worksheet.getRow(currentRow).height = 25;

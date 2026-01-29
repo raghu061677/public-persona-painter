@@ -138,9 +138,7 @@ export async function generateAvailabilityExcel(data: ExportData): Promise<void>
 
     // Summary
     sheet.getRow(row).values = [
-      "Total:", assets.length, "",
-      type === 'available' ? "Potential Revenue:" : "Count:", 
-      type === 'available' ? `Rs. ${data.summary.potential_revenue.toLocaleString("en-IN")}` : assets.length,
+      "Total:", assets.length
     ];
     sheet.getRow(row).font = { bold: true };
     row += 2;
@@ -281,7 +279,6 @@ export async function generateAvailabilityPDF(data: ExportData): Promise<void> {
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.text(`Available: ${data.availableAssets.length}`, 15, 30);
-    doc.text(`Potential Revenue: Rs. ${data.summary.potential_revenue.toLocaleString("en-IN")}`, 80, 30);
 
     const availableTableData = data.availableAssets.map((asset, i) => [
       (i + 1).toString(),

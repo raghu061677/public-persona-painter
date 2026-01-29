@@ -43,6 +43,7 @@ interface VacantAsset {
   primary_photo_url?: string;
   latitude?: number;
   longitude?: number;
+  qr_code_url?: string;
 }
 
 export function VacantMediaReport() {

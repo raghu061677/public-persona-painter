@@ -382,11 +382,15 @@ serve(async (req) => {
       const bookedDays = item.booked_days || 
         Math.max(1, Math.ceil((new Date(assetEndDate).getTime() - new Date(assetStartDate).getTime()) / (1000 * 60 * 60 * 24)) + 1);
       
-      // Calculate daily_rate if not provided
-      const dailyRate = item.daily_rate || Math.round((effectivePrice / 30) * 100) / 100;
+      // Calculate rent using full precision formula to avoid floating-point errors
+      // Formula: (monthly_rate / 30) * booked_days, then round final result
+      // This prevents errors like 300000.60 instead of 300000.00
+      const rawDailyRate = effectivePrice / 30;
+      const rawRentAmount = rawDailyRate * bookedDays;
       
-      // Calculate rent_amount if not provided
-      const rentAmount = item.rent_amount || Math.round(dailyRate * bookedDays * 100) / 100;
+      // Daily rate for display (rounded) and rent amount (rounded only at the end)
+      const dailyRate = item.daily_rate || Math.round(rawDailyRate * 100) / 100;
+      const rentAmount = item.rent_amount || Math.round(rawRentAmount * 100) / 100;
       
       return {
         campaign_id: campaignId,

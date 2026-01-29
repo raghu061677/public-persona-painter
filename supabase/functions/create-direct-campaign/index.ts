@@ -313,12 +313,34 @@ Deno.serve(async (req) => {
     // Determine asset status based on historical or current
     const assetStatus = is_historical_entry ? 'Verified' : 'Pending';
 
-    // Insert campaign assets with booking dates
+    // Insert campaign assets with booking dates and proper rent calculations
+    const BILLING_CYCLE_DAYS = 30;
     const campaignAssets = assets.map(asset => {
       const assetDetail = assetMap.get(asset.asset_id);
       if (!assetDetail) {
         throw new Error(`Asset ${asset.asset_id} not found`);
       }
+
+      // Calculate per-asset dates (use asset-specific dates or campaign dates)
+      const assetStartDate = asset.display_from || start_date;
+      const assetEndDate = asset.display_to || end_date;
+      
+      // Calculate booked days (inclusive)
+      const startDateObj = new Date(assetStartDate);
+      const endDateObj = new Date(assetEndDate);
+      startDateObj.setHours(0, 0, 0, 0);
+      endDateObj.setHours(0, 0, 0, 0);
+      const bookedDays = Math.max(1, Math.ceil((endDateObj.getTime() - startDateObj.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      
+      // Use negotiated_price or sales_price as monthly rate
+      const monthlyRate = asset.negotiated_price || asset.sales_price || 0;
+      
+      // Calculate rent using full precision formula to avoid floating-point errors
+      // Formula: (monthly_rate / 30) * booked_days, then round final result
+      const rawDailyRate = monthlyRate / BILLING_CYCLE_DAYS;
+      const rawRentAmount = rawDailyRate * bookedDays;
+      const dailyRate = Math.round(rawDailyRate * 100) / 100;
+      const rentAmount = Math.round(rawRentAmount * 100) / 100;
 
       return {
         campaign_id: campaign.id,
@@ -328,14 +350,18 @@ Deno.serve(async (req) => {
         area: assetDetail.area,
         media_type: assetDetail.media_type,
         card_rate: asset.sales_price,
-        negotiated_rate: asset.negotiated_price || asset.sales_price,
+        negotiated_rate: monthlyRate,
         printing_charges: asset.printing_cost,
         mounting_charges: asset.mounting_cost,
-        total_price: (asset.negotiated_price || asset.sales_price) + asset.printing_cost + asset.mounting_cost,
+        total_price: monthlyRate + asset.printing_cost + asset.mounting_cost,
         latitude: assetDetail.latitude,
         longitude: assetDetail.longitude,
-        booking_start_date: start_date,
-        booking_end_date: end_date,
+        booking_start_date: assetStartDate,
+        booking_end_date: assetEndDate,
+        booked_days: bookedDays,
+        billing_mode: 'PRORATA_30',
+        daily_rate: dailyRate,
+        rent_amount: rentAmount,
         status: assetStatus,
       };
     });

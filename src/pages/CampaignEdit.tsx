@@ -280,6 +280,8 @@ export default function CampaignEdit() {
         const assetStartDate = asset.booking_start_date || campaign.start_date;
         const assetEndDate = asset.booking_end_date || campaign.end_date;
         const monthlyRate = Number(asset.negotiated_rate) || Number(asset.card_rate) || 0;
+        
+        // ALWAYS recalculate rent to avoid precision errors from stored rounded values
         const rentResult = assetStartDate && assetEndDate 
           ? computeRentAmount(monthlyRate, assetStartDate, assetEndDate, (asset.billing_mode as BillingMode) || 'PRORATA_30')
           : { booked_days: 0, daily_rate: 0, rent_amount: 0, billing_mode: 'PRORATA_30' as BillingMode };
@@ -309,10 +311,11 @@ export default function CampaignEdit() {
           status: asset.status || 'Pending',
           start_date: assetStartDate,
           end_date: assetEndDate,
-          booked_days: asset.booked_days || rentResult.booked_days,
+          // Always use freshly computed values to avoid precision errors
+          booked_days: rentResult.booked_days,
           billing_mode: (asset.billing_mode as BillingMode) || 'PRORATA_30',
-          daily_rate: asset.daily_rate || rentResult.daily_rate,
-          rent_amount: asset.rent_amount || rentResult.rent_amount,
+          daily_rate: rentResult.daily_rate,
+          rent_amount: rentResult.rent_amount,
           // New sqft-based fields
           total_sqft: totalSqft,
           printing_rate_per_sqft: printingRatePerSqft,
@@ -675,38 +678,39 @@ export default function CampaignEdit() {
   };
 
   const calculateTotals = () => {
-    let rentTotal = 0;
+    // Use FULL precision throughout accumulation, round only final results
+    // This prevents floating-point errors like 300000.60 instead of 300000.00
+    let rentTotalRaw = 0;
     let printingTotal = 0;
     let mountingTotal = 0;
 
     campaignAssets.forEach(asset => {
-      // Use per-asset rent_amount if available, otherwise calculate from campaign duration
-      const assetRent = asset.rent_amount > 0 
-        ? asset.rent_amount 
-        : (() => {
-            const monthlyRate = asset.negotiated_rate || asset.card_rate || 0;
-            const days = asset.booked_days || getDurationDays();
-            // Use full precision, round only at final result to avoid compounding errors
-            return Math.round((monthlyRate / PRICING_BILLING_CYCLE_DAYS) * days * 100) / 100;
-          })();
+      // Calculate rent using full precision formula: (monthly_rate / 30) * days
+      // NO rounding of individual asset rents - accumulate raw values
+      const monthlyRate = asset.negotiated_rate || asset.card_rate || 0;
+      const days = asset.booked_days || getDurationDays();
+      // Use raw calculation without rounding to avoid compounding errors
+      const assetRentRaw = (monthlyRate / PRICING_BILLING_CYCLE_DAYS) * days;
       
       const printing = asset.printing_charges || 0;
       const mounting = asset.mounting_charges || 0;
       
-      rentTotal += assetRent;
+      rentTotalRaw += assetRentRaw;
       printingTotal += printing;
       mountingTotal += mounting;
     });
 
-    const totalAmount = rentTotal + printingTotal + mountingTotal;
+    // Round ONLY the final totals
+    const rentTotal = Math.round(rentTotalRaw * 100) / 100;
+    const totalAmount = Math.round((rentTotal + printingTotal + mountingTotal) * 100) / 100;
     const effectiveGstPercent = isGstApplicable ? gstPercent : 0;
-    const gstAmount = (totalAmount * effectiveGstPercent) / 100;
-    const grandTotal = totalAmount + gstAmount;
+    const gstAmount = Math.round((totalAmount * effectiveGstPercent / 100) * 100) / 100;
+    const grandTotal = Math.round((totalAmount + gstAmount) * 100) / 100;
 
     return { 
       subtotal: rentTotal, 
-      printingTotal, 
-      mountingTotal, 
+      printingTotal: Math.round(printingTotal * 100) / 100, 
+      mountingTotal: Math.round(mountingTotal * 100) / 100, 
       totalAmount, 
       gstAmount, 
       grandTotal, 

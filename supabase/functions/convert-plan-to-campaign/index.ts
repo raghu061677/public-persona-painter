@@ -255,57 +255,83 @@ serve(async (req) => {
       );
     }
 
-    // 6) Generate Campaign ID
-    const { data: campaignIdData, error: campaignIdError } = await supabase
-      .rpc("generate_campaign_id", { p_user_id: user.id });
+    // 6) Generate Campaign ID with retry logic for duplicates
+    let campaignId: string = '';
+    let campaign: { id: string } | null = null;
+    const maxRetries = 5;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      // Generate a new ID each attempt
+      const { data: campaignIdData, error: campaignIdError } = await supabase
+        .rpc("generate_campaign_id", { p_user_id: user.id });
 
-    if (campaignIdError) {
-      console.error("[v9.0] Error generating campaign ID:", campaignIdError);
-      return jsonError("Failed to generate campaign ID", 500);
-    }
+      if (campaignIdError) {
+        console.error(`[v9.0] Error generating campaign ID (attempt ${attempt}):`, campaignIdError);
+        // Fallback ID generation
+        const now = new Date();
+        const month = now.toLocaleString('en-US', { month: 'long' });
+        const year = now.getFullYear();
+        const random = Math.floor(Math.random() * 9000) + 1000;
+        campaignId = `CAM-${year}-${month}-${random}`;
+      } else {
+        campaignId = campaignIdData as string;
+      }
+      
+      console.log(`[v9.0] Generated campaign ID (attempt ${attempt}):`, campaignId);
 
-    const campaignId = campaignIdData as string;
-    console.log("[v9.0] Generated campaign ID:", campaignId);
+      // 7) Insert Campaign - Use 'Draft' status, trigger will auto-update based on dates
+      const campaignInsertPayload = {
+        id: campaignId,
+        plan_id: plan.id,
+        company_id: companyId,
+        client_id: plan.client_id,
+        client_name: plan.client_name,
+        campaign_name: plan.plan_name,
+        status: 'Draft', // Will be auto-updated by trg_auto_set_campaign_status trigger
+        start_date: plan.start_date,
+        end_date: plan.end_date,
+        total_assets: planItems.length,
+        total_amount: plan.total_amount,
+        gst_percent: plan.gst_percent,
+        gst_amount: plan.gst_amount,
+        grand_total: plan.grand_total,
+        notes: plan.notes || "",
+        created_by: user.id,
+        created_from: 'plan',
+      };
 
-    // 7) Insert Campaign - Use 'Draft' status, trigger will auto-update based on dates
-    const campaignInsertPayload = {
-      id: campaignId,
-      plan_id: plan.id,
-      company_id: companyId,
-      client_id: plan.client_id,
-      client_name: plan.client_name,
-      campaign_name: plan.plan_name,
-      status: 'Draft', // Will be auto-updated by trg_auto_set_campaign_status trigger
-      start_date: plan.start_date,
-      end_date: plan.end_date,
-      total_assets: planItems.length,
-      total_amount: plan.total_amount,
-      gst_percent: plan.gst_percent,
-      gst_amount: plan.gst_amount,
-      grand_total: plan.grand_total,
-      notes: plan.notes || "",
-      created_by: user.id,
-      created_from: 'plan',
-    };
+      console.log("[v9.0] Campaign insert payload:", JSON.stringify(campaignInsertPayload, null, 2));
 
-    console.log("[v9.0] Campaign insert payload:", JSON.stringify(campaignInsertPayload, null, 2));
+      const { data: insertedCampaign, error: campaignError } = await supabase
+        .from("campaigns")
+        .insert(campaignInsertPayload)
+        .select("id")
+        .maybeSingle();
 
-    const { data: campaign, error: campaignError } = await supabase
-      .from("campaigns")
-      .insert(campaignInsertPayload)
-      .select("id")
-      .maybeSingle();
+      if (campaignError) {
+        // Check if it's a duplicate key error
+        if (campaignError.code === '23505' && attempt < maxRetries) {
+          console.warn(`[v9.0] Duplicate ID detected, retrying (attempt ${attempt}/${maxRetries}):`, campaignError.message);
+          // Add a small delay before retry
+          await new Promise(resolve => setTimeout(resolve, 100 * attempt));
+          continue;
+        }
+        console.error("[v9.0] Error inserting campaign:", campaignError);
+        return jsonError(`Failed to create campaign: ${campaignError.message}`, 500);
+      }
 
-    if (campaignError) {
-      console.error("[v9.0] Error inserting campaign:", campaignError);
-      return jsonError(`Failed to create campaign: ${campaignError.message}`, 500);
+      if (!insertedCampaign) {
+        return jsonError("Campaign insert did not return a record", 500);
+      }
+
+      campaign = insertedCampaign;
+      console.log("[v9.0] Campaign created successfully:", campaign.id);
+      break;
     }
 
     if (!campaign) {
-      return jsonError("Campaign insert did not return a record", 500);
+      return jsonError("Failed to create campaign after multiple attempts", 500);
     }
-
-    console.log("[v9.0] Campaign created successfully:", campaign.id);
 
     // 8) Insert campaign_items (for financial tracking)
     // Use getEffectivePrice helper for consistent pricing

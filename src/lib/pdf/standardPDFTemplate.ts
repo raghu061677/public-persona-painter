@@ -171,8 +171,11 @@ const PAGE_MARGINS = {
   top: 20,
   left: 14,
   right: 14,
-  bottom: 20,
+  bottom: 15, // Reduced from 20 for better space usage
 };
+
+// Minimum space needed for footer section (terms + signatory)
+const FOOTER_RESERVE = 80;
 
 // ============= MAIN PDF GENERATOR =============
 
@@ -257,8 +260,8 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
       locationDesc,
       sizeCell,
       bookingCell,
-      formatCurrencyForPDF(item.unitPrice).replace('₹', '₹ '),
-      formatCurrencyForPDF(item.subtotal).replace('₹', '₹ '),
+      formatCurrencyForPDF(item.unitPrice),
+      formatCurrencyForPDF(item.subtotal),
     ];
   });
 
@@ -415,41 +418,47 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   doc.setFontSize(9);
   doc.setFont('NotoSans', 'normal');
   doc.text(`Payment Terms: ${data.paymentTerms || '30 Net Days'}`, leftMargin, yPos);
-  yPos += 10;
+  yPos += 8;
 
   // ========== 7. TERMS & CONDITIONS ==========
-  if (yPos + 50 > pageHeight - PAGE_MARGINS.bottom - 40) {
+  // Calculate space needed for terms and signatory
+  const termsToUse = data.terms?.length
+    ? data.terms
+    : [
+        'Advance Payment & Purchase Order is Mandatory to start the campaign.',
+        'Printing & Mounting will be extra & GST @ 18% will be applicable extra.',
+        'Site available date may change in case of present display Renewal.',
+        'Site Availability changes every minute, please double check site available dates when you confirm the sites.',
+        'Campaign Execution takes 2 days in city and 4 days in upcountry. Please plan your campaign accordingly.',
+        'Kindly ensure that your artwork is ready before confirming the sites. In case Design or Flex is undelivered within 5 days of confirmation, we will release the site.',
+        'In case flex / vinyl / display material is damaged, torn or vandalised, it will be your responsibility to provide us with new flex.',
+        'Renewal of site will only be entertained before 10 days of site expiry. Last moment renewal is not possible.',
+      ];
+
+  // Estimate space needed for terms (approximately 4mm per term with line breaks)
+  const estimatedTermsHeight = termsToUse.length * 8 + 40; // terms + header + signatory
+  const spaceForTerms = pageHeight - yPos - PAGE_MARGINS.bottom;
+  
+  // If not enough space for terms + signatory, add new page
+  if (spaceForTerms < estimatedTermsHeight) {
     doc.addPage();
-    // Clear header area and render compact header
     doc.setFillColor(255, 255, 255);
     doc.rect(0, 0, pageWidth, 34, 'F');
     yPos = headerRenderers.compact(doc) + 10;
   }
 
-  const terms = data.terms?.length
-    ? data.terms
-    : [
-        'Blocking of media stands for 24 hrs, post which it becomes subject to availability.',
-        'Advance Payment & Purchase Order is Mandatory to start the campaign.',
-        'Printing & Mounting will be extra & GST @ 18% will be applicable extra.',
-        'Site available date may change in case of present display Renewal.',
-        'Campaign Execution takes 2 days in city and 4 days in upcountry.',
-        'In case flex/vinyl/display material is damaged, torn or vandalised, it will be your responsibility.',
-        'Renewal of site will only be entertained before 10 days of site expiry.',
-      ];
-
   doc.setFontSize(9);
   doc.setFont('NotoSans', 'bold');
   doc.text('Terms & Conditions:', leftMargin, yPos);
   
-  yPos += 5;
+  yPos += 6;
   doc.setFont('NotoSans', 'normal');
   doc.setFontSize(7.5);
   
-  terms.forEach((term, idx) => {
-    if (yPos + 8 > pageHeight - PAGE_MARGINS.bottom - 35) {
+  termsToUse.forEach((term, idx) => {
+    // Check if we need a page break mid-terms
+    if (yPos + 10 > pageHeight - PAGE_MARGINS.bottom - 30) {
       doc.addPage();
-      // Clear header area and render compact header
       doc.setFillColor(255, 255, 255);
       doc.rect(0, 0, pageWidth, 34, 'F');
       yPos = headerRenderers.compact(doc) + 10;
@@ -458,17 +467,17 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
     const lines = doc.splitTextToSize(termText, pageWidth - leftMargin - rightMargin);
     lines.forEach((line: string) => {
       doc.text(line, leftMargin, yPos);
-      yPos += 3.5;
+      yPos += 3.8;
     });
-    yPos += 1;
+    yPos += 1.5;
   });
 
-  yPos += 8;
+  yPos += 10;
 
   // ========== 8. FOOTER: AUTHORIZED SIGNATORY (RIGHT) ==========
-  if (yPos + 30 > pageHeight - 10) {
+  // Ensure minimum space for signatory block (25mm)
+  if (yPos + 28 > pageHeight - PAGE_MARGINS.bottom) {
     doc.addPage();
-    // Clear header area and render compact header
     doc.setFillColor(255, 255, 255);
     doc.rect(0, 0, pageWidth, 34, 'F');
     yPos = headerRenderers.compact(doc) + 10;

@@ -3934,6 +3934,8 @@ export type Database = {
           paid_amount: number | null
           parent_invoice_id: string | null
           payments: Json | null
+          pdf_template_key: string | null
+          pdf_template_version: number | null
           place_of_supply: string | null
           reference_plan_id: string | null
           sales_person: string | null
@@ -3978,6 +3980,8 @@ export type Database = {
           paid_amount?: number | null
           parent_invoice_id?: string | null
           payments?: Json | null
+          pdf_template_key?: string | null
+          pdf_template_version?: number | null
           place_of_supply?: string | null
           reference_plan_id?: string | null
           sales_person?: string | null
@@ -4022,6 +4026,8 @@ export type Database = {
           paid_amount?: number | null
           parent_invoice_id?: string | null
           payments?: Json | null
+          pdf_template_key?: string | null
+          pdf_template_version?: number | null
           place_of_supply?: string | null
           reference_plan_id?: string | null
           sales_person?: string | null

@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Image as ImageIcon, MapPin, CheckCircle, AlertCircle } from "lucide-react";
+import { Image as ImageIcon, MapPin, CheckCircle, AlertCircle, Search, ArrowUpDown, ArrowUp, ArrowDown, X, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -15,6 +17,8 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { QrCode, ExternalLink } from "lucide-react";
+import { useCompany } from "@/contexts/CompanyContext";
+import { format } from "date-fns";
 
 interface ProofAsset {
   id: string;
@@ -30,46 +34,74 @@ interface ProofAsset {
   completed_at: string | null;
   latitude?: number | null;
   longitude?: number | null;
-  qr_code_url?: string | null;
-  google_street_view_url?: string | null;
-  location_url?: string | null;
   campaigns: {
     campaign_name: string;
     client_name: string;
-  };
+    status: string;
+  } | null;
 }
+
+type SortField = 'asset_id' | 'location' | 'campaign_name' | 'mounter_name' | 'status' | 'completed_at' | 'photo_count';
+type SortDirection = 'asc' | 'desc' | null;
 
 export default function OperationsProofUploads() {
   const [assets, setAssets] = useState<ProofAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { company } = useCompany();
+  
+  // Filters & sorting state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [campaignFilter, setCampaignFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
   useEffect(() => {
-    loadProofUploads();
-  }, []);
+    if (company?.id) {
+      loadProofUploads();
+    }
+  }, [company?.id]);
 
   const loadProofUploads = async () => {
     try {
       setLoading(true);
+      
+      // Fetch campaign assets with photos or in photo-related statuses
       const { data, error } = await supabase
         .from("campaign_assets")
         .select(`
-          *,
-          campaigns (
+          id,
+          campaign_id,
+          asset_id,
+          city,
+          area,
+          location,
+          media_type,
+          status,
+          photos,
+          mounter_name,
+          completed_at,
+          latitude,
+          longitude,
+          campaigns!campaign_assets_campaign_id_fkey (
             campaign_name,
-            client_name
-          ),
-          media_assets!campaign_assets_asset_id_fkey (
-            qr_code_url,
-            google_street_view_url,
-            location_url
+            client_name,
+            status,
+            company_id
           )
         `)
-        .not("photos", "is", null)
+        .in("status", ["PhotoUploaded", "Verified", "Completed", "Mounted"])
         .order("completed_at", { ascending: false, nullsFirst: false });
 
       if (error) throw error;
-      setAssets(data || []);
+      
+      // Filter by company
+      const filteredData = (data || []).filter(asset => 
+        asset.campaigns && (asset.campaigns as any).company_id === company?.id
+      );
+      
+      setAssets(filteredData as ProofAsset[]);
     } catch (error: any) {
       console.error("Error loading proof uploads:", error);
       toast({
@@ -82,34 +114,188 @@ export default function OperationsProofUploads() {
     }
   };
 
-  const countPhotos = (photos: any) => {
+  const countPhotos = (photos: any): number => {
     if (!photos) return 0;
-    const photoObj = typeof photos === "string" ? JSON.parse(photos) : photos;
-    return Object.keys(photoObj).length;
+    if (typeof photos === "string") {
+      try {
+        const parsed = JSON.parse(photos);
+        return Object.keys(parsed).filter(k => parsed[k]).length;
+      } catch {
+        return 0;
+      }
+    }
+    if (typeof photos === "object") {
+      return Object.keys(photos).filter(k => photos[k]).length;
+    }
+    return 0;
   };
+
+  // Get unique campaigns for filter
+  const uniqueCampaigns = useMemo(() => {
+    const campaignMap = new Map<string, { id: string; name: string; status: string }>();
+    assets.forEach(a => {
+      if (a.campaigns && a.campaign_id) {
+        campaignMap.set(a.campaign_id, {
+          id: a.campaign_id,
+          name: a.campaigns.campaign_name,
+          status: a.campaigns.status
+        });
+      }
+    });
+    // Only show active/running campaigns
+    return Array.from(campaignMap.values()).filter(c => 
+      c.status === 'InProgress' || c.status === 'Planned' || c.status === 'Running'
+    );
+  }, [assets]);
+
+  // Get unique statuses for filter
+  const uniqueStatuses = useMemo(() => {
+    return Array.from(new Set(assets.map(a => a.status).filter(Boolean))).sort();
+  }, [assets]);
+
+  // Handle sort
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else if (sortDirection === 'desc') {
+        setSortField(null);
+        setSortDirection(null);
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />;
+    }
+    if (sortDirection === 'asc') {
+      return <ArrowUp className="ml-1 h-3 w-3" />;
+    }
+    return <ArrowDown className="ml-1 h-3 w-3" />;
+  };
+
+  // Filter and sort
+  const processedAssets = useMemo(() => {
+    let result = [...assets];
+
+    // Search
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(asset =>
+        asset.asset_id.toLowerCase().includes(query) ||
+        asset.location?.toLowerCase().includes(query) ||
+        asset.area?.toLowerCase().includes(query) ||
+        asset.city?.toLowerCase().includes(query) ||
+        (asset.mounter_name || '').toLowerCase().includes(query) ||
+        (asset.campaigns?.campaign_name || '').toLowerCase().includes(query) ||
+        (asset.campaigns?.client_name || '').toLowerCase().includes(query)
+      );
+    }
+
+    // Campaign filter
+    if (campaignFilter !== 'all') {
+      result = result.filter(asset => asset.campaign_id === campaignFilter);
+    }
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      result = result.filter(asset => asset.status === statusFilter);
+    }
+
+    // Sort
+    if (sortField && sortDirection) {
+      result.sort((a, b) => {
+        let aVal: any;
+        let bVal: any;
+
+        switch (sortField) {
+          case 'asset_id':
+            aVal = a.asset_id;
+            bVal = b.asset_id;
+            break;
+          case 'location':
+            aVal = a.location || '';
+            bVal = b.location || '';
+            break;
+          case 'campaign_name':
+            aVal = a.campaigns?.campaign_name || '';
+            bVal = b.campaigns?.campaign_name || '';
+            break;
+          case 'mounter_name':
+            aVal = a.mounter_name || '';
+            bVal = b.mounter_name || '';
+            break;
+          case 'status':
+            aVal = a.status || '';
+            bVal = b.status || '';
+            break;
+          case 'completed_at':
+            aVal = a.completed_at ? new Date(a.completed_at).getTime() : 0;
+            bVal = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+            break;
+          case 'photo_count':
+            aVal = countPhotos(a.photos);
+            bVal = countPhotos(b.photos);
+            break;
+          default:
+            return 0;
+        }
+
+        if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [assets, searchQuery, campaignFilter, statusFilter, sortField, sortDirection]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
+      case "Verified":
       case "verified":
         return (
-          <Badge variant="default" className="gap-1">
+          <Badge variant="default" className="gap-1 bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/50">
             <CheckCircle className="h-3 w-3" />
             Verified
           </Badge>
         );
+      case "PhotoUploaded":
       case "proof_uploaded":
         return (
-          <Badge variant="secondary" className="gap-1">
+          <Badge variant="secondary" className="gap-1 bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 border-cyan-500/50">
             <AlertCircle className="h-3 w-3" />
             Pending Review
           </Badge>
         );
+      case "Mounted":
       case "installed":
-        return <Badge variant="outline">Installed</Badge>;
+        return <Badge variant="outline" className="bg-orange-500/20 text-orange-700 border-orange-500/50">Mounted</Badge>;
+      case "Completed":
+        return (
+          <Badge variant="default" className="gap-1 bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/50">
+            <CheckCircle className="h-3 w-3" />
+            Completed
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setCampaignFilter("all");
+    setStatusFilter("all");
+    setSortField(null);
+    setSortDirection(null);
+  };
+
+  const hasActiveFilters = searchQuery || campaignFilter !== 'all' || statusFilter !== 'all';
 
   return (
     <div className="h-full flex flex-col space-y-6 p-8">
@@ -122,15 +308,70 @@ export default function OperationsProofUploads() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ImageIcon className="h-5 w-5" />
-            Proof Photo Gallery ({assets.length})
-          </CardTitle>
-          <CardDescription>
-            View all uploaded proof photos for campaigns
-          </CardDescription>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <ImageIcon className="h-5 w-5" />
+                Proof Photo Gallery ({processedAssets.length} of {assets.length})
+              </CardTitle>
+              <CardDescription>
+                View all uploaded proof photos for campaigns
+              </CardDescription>
+            </div>
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <X className="mr-1 h-3 w-3" />
+                Clear Filters
+              </Button>
+            )}
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Filters Row */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search asset, location, mounter, campaign..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            {/* Campaign Filter */}
+            <Select value={campaignFilter} onValueChange={setCampaignFilter}>
+              <SelectTrigger className="w-full sm:w-[250px]">
+                <Filter className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Filter by Campaign" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Campaigns</SelectItem>
+                {uniqueCampaigns.map((campaign) => (
+                  <SelectItem key={campaign.id} value={campaign.id}>
+                    {campaign.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Filter by Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                {uniqueStatuses.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status.replace(/([A-Z])/g, ' $1').trim()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {loading ? (
             <div className="space-y-2">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -142,100 +383,186 @@ export default function OperationsProofUploads() {
               <ImageIcon className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-lg font-medium">No proof photos uploaded yet</p>
               <p className="text-sm text-muted-foreground mt-2">
-                Installation proof photos will appear here
+                Installation proof photos will appear here once assets are mounted and photos are uploaded
               </p>
             </div>
+          ) : processedAssets.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Search className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-lg font-medium">No matching results</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Try adjusting your search or filters
+              </p>
+              <Button variant="outline" className="mt-4" onClick={clearFilters}>
+                Clear Filters
+              </Button>
+            </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Campaign</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Asset Location</TableHead>
-                  <TableHead>Photos</TableHead>
-                  <TableHead>Mounter</TableHead>
-                  <TableHead>Completed</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {assets.map((asset) => (
-                  <TableRow key={asset.id}>
-                    <TableCell className="font-medium">
-                      {asset.campaigns?.campaign_name}
-                    </TableCell>
-                    <TableCell>{asset.campaigns?.client_name}</TableCell>
-                    <TableCell>
-                      <div className="flex items-start gap-1">
-                        <MapPin className="h-3 w-3 text-muted-foreground mt-0.5" />
-                        <div className="text-sm">
-                          <div>{asset.location}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {asset.area}, {asset.city}
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="-ml-3 h-8"
+                        onClick={() => handleSort('asset_id')}
+                      >
+                        Asset Code
+                        {getSortIcon('asset_id')}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="-ml-3 h-8"
+                        onClick={() => handleSort('campaign_name')}
+                      >
+                        Campaign
+                        {getSortIcon('campaign_name')}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="-ml-3 h-8"
+                        onClick={() => handleSort('location')}
+                      >
+                        Location
+                        {getSortIcon('location')}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="-ml-3 h-8"
+                        onClick={() => handleSort('photo_count')}
+                      >
+                        Photos
+                        {getSortIcon('photo_count')}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="-ml-3 h-8"
+                        onClick={() => handleSort('mounter_name')}
+                      >
+                        Mounter
+                        {getSortIcon('mounter_name')}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="-ml-3 h-8"
+                        onClick={() => handleSort('completed_at')}
+                      >
+                        Completed
+                        {getSortIcon('completed_at')}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="-ml-3 h-8"
+                        onClick={() => handleSort('status')}
+                      >
+                        Status
+                        {getSortIcon('status')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {processedAssets.map((asset) => (
+                    <TableRow key={asset.id}>
+                      <TableCell className="font-medium">
+                        {asset.asset_id}
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-[180px]">
+                          <p className="truncate font-medium text-sm">
+                            {asset.campaigns?.campaign_name || '-'}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {asset.campaigns?.client_name || ''}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-start gap-1 max-w-[200px]">
+                          <MapPin className="h-3 w-3 text-muted-foreground mt-0.5 flex-shrink-0" />
+                          <div className="text-sm">
+                            <div className="truncate">{asset.location}</div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              {asset.area}, {asset.city}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="gap-1">
-                        <ImageIcon className="h-3 w-3" />
-                        {countPhotos(asset.photos)} photos
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {asset.mounter_name || "Unassigned"}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {asset.completed_at
-                        ? new Date(asset.completed_at).toLocaleDateString()
-                        : "Pending"}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(asset.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {asset.qr_code_url && (
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="gap-1">
+                          <ImageIcon className="h-3 w-3" />
+                          {countPhotos(asset.photos)}/4
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {asset.mounter_name || <span className="text-muted-foreground">Unassigned</span>}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {asset.completed_at
+                          ? format(new Date(asset.completed_at), 'dd MMM yyyy')
+                          : "Pending"}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(asset.status)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {asset.latitude && asset.longitude && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => {
+                                const url = `https://www.google.com/maps?q=${asset.latitude},${asset.longitude}`;
+                                window.open(url, '_blank');
+                              }}
+                              title="Open in Maps"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => window.open(asset.qr_code_url!, '_blank')}
-                            title="View QR Code"
+                            size="sm"
+                            onClick={() =>
+                              (window.location.href = `/admin/operations/${asset.campaign_id}/assets/${asset.asset_id}`)
+                            }
                           >
-                            <QrCode className="h-4 w-4" />
+                            View Photos
                           </Button>
-                        )}
-                        {(asset.latitude || asset.google_street_view_url || asset.location_url) && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => {
-                              const url = asset.google_street_view_url || 
-                                          asset.location_url || 
-                                          `https://www.google.com/maps?q=${asset.latitude},${asset.longitude}`;
-                              window.open(url, '_blank');
-                            }}
-                            title="Open in Maps"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            (window.location.href = `/admin/campaigns/${asset.campaign_id}`)
-                          }
-                        >
-                          View Details
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {/* Results count */}
+          {!loading && processedAssets.length > 0 && (
+            <p className="text-sm text-muted-foreground text-center">
+              Showing {processedAssets.length} of {assets.length} proof uploads
+            </p>
           )}
         </CardContent>
       </Card>

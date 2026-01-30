@@ -4,8 +4,9 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { InvoiceData, formatCurrency, formatDate, numberToWords, COMPANY_ADDRESS, HSN_SAC_CODE } from './types';
+import { renderPaymentQRSection } from './paymentQR';
 
-export function renderDefaultTemplate(data: InvoiceData): Blob {
+export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -414,13 +415,30 @@ export function renderDefaultTemplate(data: InvoiceData): Blob {
 
   yPos += 40;
 
-  // Check page space
-  if (yPos > pageHeight - 75) {
+  // Check page space for bank details + QR
+  if (yPos > pageHeight - 85) {
     doc.addPage();
     yPos = 20;
   }
 
-  // ========== BANK DETAILS ==========
+  // ========== PAYMENT QR CODE (Right side, above bank details) ==========
+  const upiId = data.orgSettings?.upi_id || data.company?.upi_id;
+  const upiName = data.orgSettings?.upi_name || data.company?.upi_name;
+  const invoiceStatus = data.invoice.status || 'Draft';
+  const qrX = pageWidth - rightMargin - 30;
+  const qrY = yPos;
+  
+  const qrHeight = await renderPaymentQRSection(doc, {
+    upiId,
+    upiName,
+    balanceDue,
+    invoiceNo: data.invoice.invoice_no || data.invoice.id,
+    invoiceStatus,
+    x: qrX,
+    y: qrY,
+  });
+
+  // ========== BANK DETAILS (Left side) ==========
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
@@ -446,7 +464,8 @@ export function renderDefaultTemplate(data: InvoiceData): Blob {
     yPos += 3.5;
   });
 
-  yPos += 4;
+  // Adjust Y position if QR is taller than bank details
+  yPos = Math.max(yPos, qrY + qrHeight) + 4;
 
   // ========== TERMS & CONDITIONS ==========
   doc.setTextColor(0, 0, 0);

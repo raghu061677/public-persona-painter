@@ -4,8 +4,9 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { InvoiceData, formatCurrency, formatDate, numberToWords, COMPANY_ADDRESS, HSN_SAC_CODE } from './types';
+import { renderPaymentQRSection } from './paymentQR';
 
-export function renderClassicTaxTemplate(data: InvoiceData): Blob {
+export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob> {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -334,17 +335,35 @@ export function renderClassicTaxTemplate(data: InvoiceData): Blob {
   yPos += 8;
 
   // Check page space
-  if (yPos > pageHeight - 55) {
+  if (yPos > pageHeight - 65) {
     doc.addPage();
     yPos = 20;
   }
 
-  // ========== BANK DETAILS BOX ==========
+  // ========== PAYMENT QR CODE (Far right) ==========
+  const upiId = data.orgSettings?.upi_id || data.company?.upi_id;
+  const upiName = data.orgSettings?.upi_name || data.company?.upi_name;
+  const invoiceStatus = data.invoice.status || 'Draft';
+  const qrX = pageWidth - rightMargin - 32;
+  const qrY = yPos;
+  
+  const qrHeight = await renderPaymentQRSection(doc, {
+    upiId,
+    upiName,
+    balanceDue,
+    invoiceNo: data.invoice.invoice_no || data.invoice.id,
+    invoiceStatus,
+    x: qrX,
+    y: qrY,
+  });
+
+  // ========== BANK DETAILS BOX (Left side, narrower to fit QR) ==========
+  const bankBoxWidth = contentWidth * 0.45;
   doc.setDrawColor(0, 0, 0);
-  doc.rect(leftMargin, yPos, contentWidth * 0.55, 22);
+  doc.rect(leftMargin, yPos, bankBoxWidth, 22);
   
   doc.setFillColor(230, 230, 230);
-  doc.rect(leftMargin, yPos, contentWidth * 0.55, 5, 'F');
+  doc.rect(leftMargin, yPos, bankBoxWidth, 5, 'F');
   
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
@@ -361,24 +380,27 @@ export function renderClassicTaxTemplate(data: InvoiceData): Blob {
   bankY += 3.5;
   doc.text('Branch: Karkhana Road, Secunderabad', leftMargin + 2, bankY);
 
-  // ========== SIGNATURE BOX ==========
-  const signBoxX = leftMargin + contentWidth * 0.58;
-  const signBoxWidth = contentWidth * 0.42;
+  // ========== SIGNATURE BOX (Middle) ==========
+  const signBoxX = leftMargin + bankBoxWidth + 3;
+  const signBoxWidth = qrX - signBoxX - 3;
   
-  doc.rect(signBoxX, yPos, signBoxWidth, 22);
-  
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.text('For ' + companyName, signBoxX + signBoxWidth / 2, yPos + 5, { align: 'center' });
+  if (signBoxWidth > 30) {
+    doc.rect(signBoxX, yPos, signBoxWidth, 22);
+    
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('For ' + companyName, signBoxX + signBoxWidth / 2, yPos + 5, { align: 'center' });
 
-  doc.setDrawColor(0, 0, 0);
-  doc.line(signBoxX + 8, yPos + 16, signBoxX + signBoxWidth - 8, yPos + 16);
+    doc.setDrawColor(0, 0, 0);
+    doc.line(signBoxX + 8, yPos + 16, signBoxX + signBoxWidth - 8, yPos + 16);
 
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Authorized Signatory', signBoxX + signBoxWidth / 2, yPos + 20, { align: 'center' });
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Authorized Signatory', signBoxX + signBoxWidth / 2, yPos + 20, { align: 'center' });
+  }
 
-  yPos += 25;
+  // Adjust Y for QR height
+  yPos = Math.max(yPos + 25, qrY + qrHeight);
 
   // ========== TERMS BOX ==========
   doc.rect(leftMargin, yPos, contentWidth, 18);

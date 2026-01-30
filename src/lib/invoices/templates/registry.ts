@@ -45,9 +45,9 @@ export function getTemplateRenderer(templateKey: string | null | undefined): Tem
 /**
  * Render invoice PDF using the specified template
  */
-export function renderInvoicePDF(data: InvoiceData, templateKey?: string | null): Blob {
+export async function renderInvoicePDF(data: InvoiceData, templateKey?: string | null): Promise<Blob> {
   const renderer = getTemplateRenderer(templateKey);
-  return renderer(data);
+  return await renderer(data);
 }
 
 /**

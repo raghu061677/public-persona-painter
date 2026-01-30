@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, ExternalLink, Pencil } from "lucide-react";
 import { parseDimensions } from "@/utils/mediaAssets";
 
 interface MediaAsset {
@@ -155,27 +156,43 @@ export default function MediaAssetsValidation() {
           const hasErrors = errors.length > 0;
 
           return (
-            <Card key={asset.id} className={hasErrors ? "border-red-500" : ""}>
+            <Card key={asset.id} className={hasErrors ? "border-destructive" : ""}>
               <CardHeader>
                 <CardTitle className="flex justify-between items-center">
                   <span>{asset.media_asset_code || asset.id}</span>
-                  {hasErrors ? (
-                    <Badge variant="destructive">
-                      <XCircle className="mr-1 h-4" /> {errors.length} Issues
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-green-600 border-green-600">
-                      <CheckCircle className="mr-1 h-4" /> OK
-                    </Badge>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {hasErrors ? (
+                      <Badge variant="destructive">
+                        <XCircle className="mr-1 h-4" /> {errors.length} Issues
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-green-600 border-green-600">
+                        <CheckCircle className="mr-1 h-4" /> OK
+                      </Badge>
+                    )}
+                    <Button asChild variant="outline" size="sm">
+                      <Link to={`/admin/media-assets/edit/${asset.id}`}>
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Edit
+                      </Link>
+                    </Button>
+                  </div>
                 </CardTitle>
               </CardHeader>
 
               {hasErrors && (
                 <CardContent>
-                  <ul className="list-disc pl-6 text-red-600 text-sm">
+                  <ul className="space-y-2">
                     {errors.map((err, i) => (
-                      <li key={i}>{err}</li>
+                      <li key={i} className="flex items-center justify-between text-sm">
+                        <span className="text-destructive">{err}</span>
+                        <Button asChild variant="ghost" size="sm" className="text-primary">
+                          <Link to={`/admin/media-assets/edit/${asset.id}`}>
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            Fix
+                          </Link>
+                        </Button>
+                      </li>
                     ))}
                   </ul>
                 </CardContent>

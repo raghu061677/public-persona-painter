@@ -37,6 +37,8 @@ interface MonthlyBillingScheduleTableProps {
   onGenerateInvoice: (period: BillingPeriod, includePrinting: boolean, includeMounting: boolean) => void;
   onViewInvoice: (invoiceId: string) => void;
   isGenerating?: boolean;
+  printingBilled?: boolean;
+  mountingBilled?: boolean;
 }
 
 export function MonthlyBillingScheduleTable({
@@ -49,6 +51,8 @@ export function MonthlyBillingScheduleTable({
   onGenerateInvoice,
   onViewInvoice,
   isGenerating = false,
+  printingBilled = false,
+  mountingBilled = false,
 }: MonthlyBillingScheduleTableProps) {
   const [selectedOneTimeCharges, setSelectedOneTimeCharges] = useState<{
     [monthKey: string]: { printing: boolean; mounting: boolean };
@@ -174,9 +178,14 @@ export function MonthlyBillingScheduleTable({
                           <Checkbox
                             checked={selection.printing}
                             onCheckedChange={() => toggleCharge(period.monthKey, 'printing')}
-                            disabled={hasInvoice}
+                            disabled={hasInvoice || printingBilled}
                           />
-                          <span>Printing</span>
+                          <span className={printingBilled ? 'line-through text-muted-foreground' : ''}>
+                            Printing
+                          </span>
+                          {printingBilled && (
+                            <Badge variant="outline" className="text-xs ml-1">Billed</Badge>
+                          )}
                         </label>
                       )}
                       {mountingTotal > 0 && (
@@ -184,9 +193,14 @@ export function MonthlyBillingScheduleTable({
                           <Checkbox
                             checked={selection.mounting}
                             onCheckedChange={() => toggleCharge(period.monthKey, 'mounting')}
-                            disabled={hasInvoice}
+                            disabled={hasInvoice || mountingBilled}
                           />
-                          <span>Mounting</span>
+                          <span className={mountingBilled ? 'line-through text-muted-foreground' : ''}>
+                            Mounting
+                          </span>
+                          {mountingBilled && (
+                            <Badge variant="outline" className="text-xs ml-1">Billed</Badge>
+                          )}
                         </label>
                       )}
                       {printingTotal === 0 && mountingTotal === 0 && (

@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft, Trash2, Lock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatINR, getInvoiceStatusColor } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
@@ -99,9 +100,23 @@ export default function InvoiceDetail() {
     );
   }
 
+  // Invoice is locked if status is not Draft
+  const isLocked = invoice.status !== 'Draft';
+  const canEdit = isAdmin && !isLocked;
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8 space-y-6">
+        {/* Finalize Lock Warning */}
+        {isLocked && (
+          <Alert>
+            <Lock className="h-4 w-4" />
+            <AlertDescription>
+              This invoice is finalized ({invoice.status}) and cannot be edited. To make changes, create a credit note or adjustment.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -109,7 +124,10 @@ export default function InvoiceDetail() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-3xl font-bold">{invoice.invoice_no || invoice.id}</h1>
+              <h1 className="text-3xl font-bold flex items-center gap-2">
+                {invoice.invoice_no || invoice.id}
+                {isLocked && <Lock className="h-5 w-5 text-muted-foreground" />}
+              </h1>
               <p className="text-muted-foreground mt-1">
                 {invoice.invoice_type === 'PROFORMA' ? 'Proforma Invoice' : 'Tax Invoice'} for {invoice.client_name}
               </p>
@@ -120,7 +138,7 @@ export default function InvoiceDetail() {
               {invoice.status}
             </Badge>
             <InvoicePDFExport invoiceId={invoice.id} />
-            {isAdmin && (
+            {isAdmin && invoice.status === 'Draft' && (
               <Button variant="destructive" onClick={handleDelete}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
@@ -145,12 +163,20 @@ export default function InvoiceDetail() {
           </TabsContent>
 
           <TabsContent value="settings" className="mt-6 space-y-6">
+            {isLocked && (
+              <Alert>
+                <Lock className="h-4 w-4" />
+                <AlertDescription>
+                  Settings are locked because this invoice has been finalized.
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="grid md:grid-cols-2 gap-6">
               <InvoiceTypeSelector
                 invoiceId={invoice.id}
                 currentType={invoice.invoice_type || 'TAX_INVOICE'}
                 onUpdate={() => fetchInvoice()}
-                readOnly={!isAdmin}
+                readOnly={!canEdit}
               />
               <PaymentTermsEditor
                 invoiceId={invoice.id}
@@ -160,7 +186,7 @@ export default function InvoiceDetail() {
                 dueDate={invoice.due_date}
                 invoiceType={invoice.invoice_type || 'TAX_INVOICE'}
                 onUpdate={() => fetchInvoice()}
-                readOnly={!isAdmin}
+                readOnly={!canEdit}
               />
             </div>
 

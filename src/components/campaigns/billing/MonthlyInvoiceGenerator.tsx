@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, AlertTriangle, Check, FileText, Calendar } from "lucide-react";
+import { Loader2, AlertTriangle, Check, FileText, Calendar, Lock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
@@ -52,6 +52,8 @@ interface CampaignAsset {
   printing_charges?: number;
   mounting_charges?: number;
   invoice_generated_months?: string[];
+  printing_billed?: boolean;
+  mounting_billed?: boolean;
   media_asset_code?: string;
   total_sqft?: number;
 }
@@ -78,7 +80,11 @@ interface AssetBillingPreview {
   monthlyRate: number;
   dailyRate: number;
   calculatedAmount: number;
+  printingCost: number;
+  mountingCost: number;
   alreadyInvoiced: boolean;
+  printingAlreadyBilled: boolean;
+  mountingAlreadyBilled: boolean;
 }
 
 interface MonthlyInvoiceGeneratorProps {
@@ -88,6 +94,11 @@ interface MonthlyInvoiceGeneratorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+}
+
+// Helper: Round to 2 decimal places consistently
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 function getAvailableMonths(startDate: string, endDate: string): string[] {
@@ -139,6 +150,10 @@ function calculateAssetBilling(
   const invoicedMonths = asset.invoice_generated_months || [];
   const alreadyInvoiced = invoicedMonths.includes(billingMonth);
   
+  // Check if one-time charges already billed
+  const printingAlreadyBilled = asset.printing_billed ?? false;
+  const mountingAlreadyBilled = asset.mounting_billed ?? false;
+  
   // Calculate rates
   const monthlyRate = asset.negotiated_rate || asset.card_rate || 0;
   const dailyRate = asset.daily_rate || (monthlyRate / 30);
@@ -156,7 +171,7 @@ function calculateAssetBilling(
   }
   
   // Round to 2 decimal places
-  calculatedAmount = Math.round(calculatedAmount * 100) / 100;
+  calculatedAmount = round2(calculatedAmount);
   
   const assetCode = formatAssetDisplayCode({
     mediaAssetCode: asset.media_asset_code,
@@ -175,7 +190,11 @@ function calculateAssetBilling(
     monthlyRate,
     dailyRate,
     calculatedAmount,
+    printingCost: round2(asset.printing_charges || 0),
+    mountingCost: round2(asset.mounting_charges || 0),
     alreadyInvoiced,
+    printingAlreadyBilled,
+    mountingAlreadyBilled,
   };
 }
 
@@ -190,6 +209,8 @@ export function MonthlyInvoiceGenerator({
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [includePrinting, setIncludePrinting] = useState(false);
   const [includeMounting, setIncludeMounting] = useState(false);
+  const [oneTimeOnly, setOneTimeOnly] = useState(true);
+  const [allowRebill, setAllowRebill] = useState(false);
   const [includeAlreadyInvoiced, setIncludeAlreadyInvoiced] = useState(false);
   const [generating, setGenerating] = useState(false);
   
@@ -213,48 +234,69 @@ export function MonthlyInvoiceGenerator({
     return billingPreviews.filter(p => !p.alreadyInvoiced);
   }, [billingPreviews, includeAlreadyInvoiced]);
   
-  // Calculate totals
+  // Calculate totals with one-time charge logic
   const totals = useMemo(() => {
     const baseTotal = filteredPreviews
       .filter(p => !p.alreadyInvoiced || includeAlreadyInvoiced)
       .reduce((sum, p) => sum + p.calculatedAmount, 0);
     
-    // One-time charges: only include if this is the first month being invoiced
-    const isFirstInvoice = billingPreviews.every(p => (p.campaignAsset.invoice_generated_months?.length || 0) === 0);
-    
+    // Calculate printing charges per asset
     let printingTotal = 0;
     let mountingTotal = 0;
     
-    if (includePrinting && isFirstInvoice) {
-      printingTotal = filteredPreviews.reduce(
-        (sum, p) => sum + (p.campaignAsset.printing_charges || 0), 
-        0
-      );
+    if (includePrinting) {
+      filteredPreviews.forEach(p => {
+        if (p.billableDays > 0) {
+          if (oneTimeOnly) {
+            // Only add if not already billed
+            if (!p.printingAlreadyBilled || allowRebill) {
+              printingTotal += p.printingCost;
+            }
+          } else {
+            // Recurring: always add
+            printingTotal += p.printingCost;
+          }
+        }
+      });
     }
     
-    if (includeMounting && isFirstInvoice) {
-      mountingTotal = filteredPreviews.reduce(
-        (sum, p) => sum + (p.campaignAsset.mounting_charges || 0), 
-        0
-      );
+    if (includeMounting) {
+      filteredPreviews.forEach(p => {
+        if (p.billableDays > 0) {
+          if (oneTimeOnly) {
+            // Only add if not already billed
+            if (!p.mountingAlreadyBilled || allowRebill) {
+              mountingTotal += p.mountingCost;
+            }
+          } else {
+            // Recurring: always add
+            mountingTotal += p.mountingCost;
+          }
+        }
+      });
     }
     
-    const subtotal = baseTotal + printingTotal + mountingTotal;
+    const subtotal = round2(baseTotal + printingTotal + mountingTotal);
     const gstPercent = campaign.gst_percent || 18;
-    const gstAmount = Math.round(subtotal * (gstPercent / 100) * 100) / 100;
-    const grandTotal = subtotal + gstAmount;
+    const gstAmount = round2(subtotal * (gstPercent / 100));
+    const grandTotal = round2(subtotal + gstAmount);
+    
+    // Count assets with pending one-time charges
+    const pendingPrintingCount = filteredPreviews.filter(p => !p.printingAlreadyBilled && p.printingCost > 0).length;
+    const pendingMountingCount = filteredPreviews.filter(p => !p.mountingAlreadyBilled && p.mountingCost > 0).length;
     
     return {
-      baseTotal: Math.round(baseTotal * 100) / 100,
-      printingTotal,
-      mountingTotal,
-      subtotal: Math.round(subtotal * 100) / 100,
+      baseTotal: round2(baseTotal),
+      printingTotal: round2(printingTotal),
+      mountingTotal: round2(mountingTotal),
+      subtotal,
       gstPercent,
       gstAmount,
-      grandTotal: Math.round(grandTotal * 100) / 100,
-      isFirstInvoice,
+      grandTotal,
+      pendingPrintingCount,
+      pendingMountingCount,
     };
-  }, [filteredPreviews, includePrinting, includeMounting, includeAlreadyInvoiced, billingPreviews, campaign.gst_percent]);
+  }, [filteredPreviews, includePrinting, includeMounting, oneTimeOnly, allowRebill, includeAlreadyInvoiced, campaign.gst_percent]);
   
   const alreadyInvoicedCount = billingPreviews.filter(p => p.alreadyInvoiced).length;
   const billableCount = billingPreviews.filter(p => !p.alreadyInvoiced).length;
@@ -282,14 +324,17 @@ export function MonthlyInvoiceGenerator({
           period: `${format(preview.billStartDate, 'dd MMM')} - ${format(preview.billEndDate, 'dd MMM yyyy')}`,
           days: preview.billableDays,
           rate: preview.monthlyRate,
-          amount: preview.calculatedAmount,
+          amount: round2(preview.calculatedAmount),
         }));
       
       // Add printing/mounting if applicable
       if (includePrinting && totals.printingTotal > 0) {
         items.push({
           sno: items.length + 1,
-          description: `Printing Charges (${filteredPreviews.length} assets)`,
+          description: `Printing Charges (${filteredPreviews.filter(p => {
+            if (oneTimeOnly && !allowRebill) return !p.printingAlreadyBilled && p.printingCost > 0;
+            return p.printingCost > 0;
+          }).length} assets)`,
           asset_code: '',
           asset_id: '',
           period: '',
@@ -302,7 +347,10 @@ export function MonthlyInvoiceGenerator({
       if (includeMounting && totals.mountingTotal > 0) {
         items.push({
           sno: items.length + 1,
-          description: `Mounting Charges (${filteredPreviews.length} assets)`,
+          description: `Mounting Charges (${filteredPreviews.filter(p => {
+            if (oneTimeOnly && !allowRebill) return !p.mountingAlreadyBilled && p.mountingCost > 0;
+            return p.mountingCost > 0;
+          }).length} assets)`,
           asset_code: '',
           asset_id: '',
           period: '',
@@ -350,22 +398,32 @@ export function MonthlyInvoiceGenerator({
       // Create detailed invoice_items
       const invoiceItems = filteredPreviews
         .filter(p => !p.alreadyInvoiced || includeAlreadyInvoiced)
-        .map(preview => ({
-          invoice_id: invoiceId,
-          campaign_asset_id: preview.campaignAsset.id,
-          asset_id: preview.campaignAsset.asset_id,
-          asset_code: preview.assetCode,
-          description: `${preview.campaignAsset.media_type} - ${preview.campaignAsset.location}`,
-          bill_start_date: format(preview.billStartDate, 'yyyy-MM-dd'),
-          bill_end_date: format(preview.billEndDate, 'yyyy-MM-dd'),
-          billable_days: preview.billableDays,
-          rate_type: preview.rateType,
-          rate_value: preview.monthlyRate,
-          base_amount: preview.calculatedAmount,
-          printing_cost: includePrinting && totals.isFirstInvoice ? (preview.campaignAsset.printing_charges || 0) : 0,
-          mounting_cost: includeMounting && totals.isFirstInvoice ? (preview.campaignAsset.mounting_charges || 0) : 0,
-          line_total: preview.calculatedAmount,
-        }));
+        .map(preview => {
+          // Determine if printing/mounting should be billed for this asset
+          const shouldBillPrinting = includePrinting && preview.printingCost > 0 && 
+            (oneTimeOnly ? (!preview.printingAlreadyBilled || allowRebill) : true);
+          const shouldBillMounting = includeMounting && preview.mountingCost > 0 && 
+            (oneTimeOnly ? (!preview.mountingAlreadyBilled || allowRebill) : true);
+          
+          return {
+            invoice_id: invoiceId,
+            campaign_asset_id: preview.campaignAsset.id,
+            asset_id: preview.campaignAsset.asset_id,
+            asset_code: preview.assetCode,
+            description: `${preview.campaignAsset.media_type} - ${preview.campaignAsset.location}`,
+            bill_start_date: format(preview.billStartDate, 'yyyy-MM-dd'),
+            bill_end_date: format(preview.billEndDate, 'yyyy-MM-dd'),
+            billable_days: preview.billableDays,
+            rate_type: preview.rateType,
+            rate_value: preview.monthlyRate,
+            base_amount: round2(preview.calculatedAmount),
+            printing_cost: shouldBillPrinting ? preview.printingCost : 0,
+            mounting_cost: shouldBillMounting ? preview.mountingCost : 0,
+            line_total: round2(preview.calculatedAmount + 
+              (shouldBillPrinting ? preview.printingCost : 0) + 
+              (shouldBillMounting ? preview.mountingCost : 0)),
+          };
+        });
       
       const { error: itemsError } = await supabase
         .from('invoice_items')
@@ -376,24 +434,39 @@ export function MonthlyInvoiceGenerator({
         // Don't fail the whole operation
       }
       
-      // Update campaign_assets with invoiced month
-      const assetIdsToUpdate = filteredPreviews
+      // Update campaign_assets with invoiced month AND one-time charge flags
+      const assetUpdates = filteredPreviews
         .filter(p => !p.alreadyInvoiced)
-        .map(p => p.campaignAsset.id);
-      
-      if (assetIdsToUpdate.length > 0) {
-        // Update each asset's invoice_generated_months array
-        for (const assetId of assetIdsToUpdate) {
-          const asset = campaignAssets.find(a => a.id === assetId);
+        .map(async (p) => {
+          const asset = campaignAssets.find(a => a.id === p.campaignAsset.id);
           const currentMonths = asset?.invoice_generated_months || [];
           const updatedMonths = [...new Set([...currentMonths, selectedMonth])];
           
-          await supabase
+          // Determine if printing/mounting was charged for this asset
+          const printingCharged = includePrinting && p.printingCost > 0 && 
+            (oneTimeOnly ? (!p.printingAlreadyBilled || allowRebill) : true);
+          const mountingCharged = includeMounting && p.mountingCost > 0 && 
+            (oneTimeOnly ? (!p.mountingAlreadyBilled || allowRebill) : true);
+          
+          const updateData: Record<string, any> = {
+            invoice_generated_months: updatedMonths,
+          };
+          
+          // Mark as billed if charges were included
+          if (printingCharged) {
+            updateData.printing_billed = true;
+          }
+          if (mountingCharged) {
+            updateData.mounting_billed = true;
+          }
+          
+          return supabase
             .from('campaign_assets')
-            .update({ invoice_generated_months: updatedMonths })
-            .eq('id', assetId);
-        }
-      }
+            .update(updateData)
+            .eq('id', p.campaignAsset.id);
+        });
+      
+      await Promise.all(assetUpdates);
       
       toast({
         title: "Invoice Generated",
@@ -413,6 +486,10 @@ export function MonthlyInvoiceGenerator({
       setGenerating(false);
     }
   };
+  
+  // Count assets with already-billed one-time charges
+  const printingBilledCount = billingPreviews.filter(p => p.printingAlreadyBilled).length;
+  const mountingBilledCount = billingPreviews.filter(p => p.mountingAlreadyBilled).length;
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -529,18 +606,54 @@ export function MonthlyInvoiceGenerator({
                 </Table>
               </div>
               
-              {/* One-time Charges */}
-              {totals.isFirstInvoice && (
-                <div className="flex items-center gap-6 p-4 bg-muted/50 rounded-lg">
-                  <span className="text-sm font-medium">Include One-time Charges:</span>
+              {/* One-time Charges Section */}
+              <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">One-time Charges</span>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="oneTimeOnly"
+                        checked={oneTimeOnly}
+                        onCheckedChange={(checked) => setOneTimeOnly(!!checked)}
+                      />
+                      <Label htmlFor="oneTimeOnly" className="text-sm cursor-pointer">
+                        One-time only
+                      </Label>
+                    </div>
+                    {oneTimeOnly && (printingBilledCount > 0 || mountingBilledCount > 0) && (
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="allowRebill"
+                          checked={allowRebill}
+                          onCheckedChange={(checked) => setAllowRebill(!!checked)}
+                        />
+                        <Label htmlFor="allowRebill" className="text-xs cursor-pointer text-muted-foreground">
+                          Allow re-bill (admin)
+                        </Label>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2">
                     <Checkbox
                       id="printing"
                       checked={includePrinting}
                       onCheckedChange={(checked) => setIncludePrinting(!!checked)}
                     />
-                    <Label htmlFor="printing" className="text-sm cursor-pointer">
-                      Printing ({formatCurrency(filteredPreviews.reduce((s, p) => s + (p.campaignAsset.printing_charges || 0), 0))})
+                    <Label htmlFor="printing" className="text-sm cursor-pointer flex items-center gap-2">
+                      Printing
+                      {oneTimeOnly && printingBilledCount > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          <Lock className="w-3 h-3 mr-1" />
+                          {printingBilledCount} already billed
+                        </Badge>
+                      )}
+                      <span className="text-muted-foreground">
+                        ({formatCurrency(filteredPreviews.reduce((s, p) => s + p.printingCost, 0))} total)
+                      </span>
                     </Label>
                   </div>
                   <div className="flex items-center gap-2">
@@ -549,20 +662,28 @@ export function MonthlyInvoiceGenerator({
                       checked={includeMounting}
                       onCheckedChange={(checked) => setIncludeMounting(!!checked)}
                     />
-                    <Label htmlFor="mounting" className="text-sm cursor-pointer">
-                      Mounting ({formatCurrency(filteredPreviews.reduce((s, p) => s + (p.campaignAsset.mounting_charges || 0), 0))})
+                    <Label htmlFor="mounting" className="text-sm cursor-pointer flex items-center gap-2">
+                      Mounting
+                      {oneTimeOnly && mountingBilledCount > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          <Lock className="w-3 h-3 mr-1" />
+                          {mountingBilledCount} already billed
+                        </Badge>
+                      )}
+                      <span className="text-muted-foreground">
+                        ({formatCurrency(filteredPreviews.reduce((s, p) => s + p.mountingCost, 0))} total)
+                      </span>
                     </Label>
                   </div>
                 </div>
-              )}
-              
-              {!totals.isFirstInvoice && (
-                <Alert>
-                  <AlertDescription>
-                    One-time charges (printing/mounting) are only included in the first month's invoice.
-                  </AlertDescription>
-                </Alert>
-              )}
+                
+                {oneTimeOnly && (totals.pendingPrintingCount > 0 || totals.pendingMountingCount > 0) && (
+                  <p className="text-xs text-muted-foreground">
+                    {totals.pendingPrintingCount > 0 && `${totals.pendingPrintingCount} assets pending printing. `}
+                    {totals.pendingMountingCount > 0 && `${totals.pendingMountingCount} assets pending mounting.`}
+                  </p>
+                )}
+              </div>
               
               {/* Totals */}
               <div className="border rounded-lg p-4 bg-card space-y-2">

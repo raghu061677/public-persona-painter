@@ -485,7 +485,7 @@ export default function ReportProofExecutionV2() {
     URL.revokeObjectURL(url);
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     const doc = new jsPDF();
     doc.setFontSize(18);
     doc.text("Proof Execution Report", 14, 22);
@@ -554,7 +554,19 @@ export default function ReportProofExecutionV2() {
             <h1 className="text-3xl font-bold tracking-tight">Proof-of-Execution Reports</h1>
             <p className="text-muted-foreground">Track installation and proof photo submission</p>
           </div>
-          <ReportExportMenu onExportExcel={handleExportExcel} onExportPDF={handleExportPDF} />
+          <ReportExportMenu 
+            onExportExcel={handleExportExcel} 
+            onExportPDF={handleExportPDF}
+            metadata={{
+              reportName: "Proof Execution Report",
+              generatedAt: new Date(),
+              dateRange: dateRange?.from && dateRange?.to ? { from: dateRange.from, to: dateRange.to } : undefined,
+              filtersApplied: [
+                searchValue && `Search: ${searchValue}`,
+                selectedFilters.statuses.length > 0 && `Statuses: ${selectedFilters.statuses.join(", ")}`,
+              ].filter(Boolean) as string[],
+            }}
+          />
         </div>
 
         <ReportKPICards kpis={kpis} />

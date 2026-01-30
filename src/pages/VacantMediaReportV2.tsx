@@ -442,7 +442,7 @@ export default function VacantMediaReportV2() {
     URL.revokeObjectURL(url);
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     const doc = new jsPDF({ orientation: "landscape" });
     doc.setFontSize(18);
     doc.text("Vacant Media Report", 14, 22);
@@ -506,7 +506,22 @@ export default function VacantMediaReportV2() {
             <h1 className="text-3xl font-bold tracking-tight">Vacant Media Report</h1>
             <p className="text-muted-foreground">Check asset availability for specific date ranges</p>
           </div>
-          <ReportExportMenu onExportExcel={handleExportExcel} onExportPDF={handleExportPDF} />
+          <ReportExportMenu 
+            onExportExcel={handleExportExcel} 
+            onExportPDF={handleExportPDF}
+            metadata={{
+              reportName: "Vacant Media Report",
+              generatedAt: new Date(),
+              dateRange: dateRange?.from && dateRange?.to ? { from: dateRange.from, to: dateRange.to } : undefined,
+              filtersApplied: [
+                searchValue && `Search: ${searchValue}`,
+                selectedFilters.cities.length > 0 && `Cities: ${selectedFilters.cities.join(", ")}`,
+                selectedFilters.areas.length > 0 && `Areas: ${selectedFilters.areas.join(", ")}`,
+                selectedFilters.mediaTypes.length > 0 && `Types: ${selectedFilters.mediaTypes.join(", ")}`,
+                selectedFilters.statuses.length > 0 && `Statuses: ${selectedFilters.statuses.join(", ")}`,
+              ].filter(Boolean) as string[],
+            }}
+          />
         </div>
 
         <ReportKPICards kpis={kpis} />

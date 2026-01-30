@@ -427,7 +427,7 @@ export default function ReportCampaignBookingsV2() {
         label: "Avg Proof Progress",
         value: `${avgProofProgress}%`,
         icon: <Camera className="h-5 w-5" />,
-        color: avgProofProgress >= 80 ? ("success" as const) : avgProofProgress >= 50 ? ("warning" as const) : ("destructive" as const),
+        color: avgProofProgress >= 80 ? ("success" as const) : avgProofProgress >= 50 ? ("warning" as const) : ("danger" as const),
       },
       {
         label: "Unique Clients",
@@ -502,7 +502,7 @@ export default function ReportCampaignBookingsV2() {
     URL.revokeObjectURL(url);
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     const doc = new jsPDF();
     doc.setFontSize(18);
     doc.text("Campaign Bookings Report", 14, 22);
@@ -572,7 +572,19 @@ export default function ReportCampaignBookingsV2() {
             <h1 className="text-3xl font-bold tracking-tight">Campaign-wise Bookings</h1>
             <p className="text-muted-foreground">Analyze bookings by campaign</p>
           </div>
-          <ReportExportMenu onExportExcel={handleExportExcel} onExportPDF={handleExportPDF} />
+          <ReportExportMenu 
+            onExportExcel={handleExportExcel} 
+            onExportPDF={handleExportPDF}
+            metadata={{
+              reportName: "Campaign Bookings Report",
+              generatedAt: new Date(),
+              dateRange: dateRange?.from && dateRange?.to ? { from: dateRange.from, to: dateRange.to } : undefined,
+              filtersApplied: [
+                searchValue && `Search: ${searchValue}`,
+                selectedFilters.statuses.length > 0 && `Statuses: ${selectedFilters.statuses.join(", ")}`,
+              ].filter(Boolean) as string[],
+            }}
+          />
         </div>
 
         <ReportKPICards kpis={kpis} />

@@ -4,8 +4,9 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { InvoiceData, formatCurrency, formatDate, numberToWords, COMPANY_ADDRESS, HSN_SAC_CODE } from './types';
+import { renderPaymentQRSection } from './paymentQR';
 
-export function renderModernCleanTemplate(data: InvoiceData): Blob {
+export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob> {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -278,12 +279,29 @@ export function renderModernCleanTemplate(data: InvoiceData): Blob {
   yPos += 50;
 
   // Check page space
-  if (yPos > pageHeight - 60) {
+  if (yPos > pageHeight - 70) {
     doc.addPage();
     yPos = 20;
   }
 
-  // ========== BANK DETAILS - Compact inline ==========
+  // ========== PAYMENT QR (Right side) ==========
+  const upiId = data.orgSettings?.upi_id || data.company?.upi_id;
+  const upiName = data.orgSettings?.upi_name || data.company?.upi_name;
+  const invoiceStatus = data.invoice.status || 'Draft';
+  const qrX = pageWidth - rightMargin - 30;
+  const qrY = yPos;
+  
+  const qrHeight = await renderPaymentQRSection(doc, {
+    upiId,
+    upiName,
+    balanceDue,
+    invoiceNo: data.invoice.invoice_no || data.invoice.id,
+    invoiceStatus,
+    x: qrX,
+    y: qrY,
+  });
+
+  // ========== BANK DETAILS - Compact inline (left side) ==========
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(100, 100, 100);
@@ -294,7 +312,8 @@ export function renderModernCleanTemplate(data: InvoiceData): Blob {
   doc.setTextColor(60, 60, 60);
   doc.text('HDFC Bank | A/C: 50200010727301 | IFSC: HDFC0001555 | Karkhana Road, Secunderabad', leftMargin, yPos);
 
-  yPos += 12;
+  // Adjust for QR height
+  yPos = Math.max(yPos + 8, qrY + qrHeight);
 
   // ========== TERMS - Single line compact ==========
   doc.setFontSize(7);

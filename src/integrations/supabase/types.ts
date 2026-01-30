@@ -5343,6 +5343,8 @@ export type Database = {
           state: string | null
           updated_at: string | null
           updated_by: string | null
+          upi_id: string | null
+          upi_name: string | null
           watermark_font_size: number | null
           watermark_include_logo: boolean | null
           watermark_include_timestamp: boolean | null
@@ -5382,6 +5384,8 @@ export type Database = {
           state?: string | null
           updated_at?: string | null
           updated_by?: string | null
+          upi_id?: string | null
+          upi_name?: string | null
           watermark_font_size?: number | null
           watermark_include_logo?: boolean | null
           watermark_include_timestamp?: boolean | null
@@ -5421,6 +5425,8 @@ export type Database = {
           state?: string | null
           updated_at?: string | null
           updated_by?: string | null
+          upi_id?: string | null
+          upi_name?: string | null
           watermark_font_size?: number | null
           watermark_include_logo?: boolean | null
           watermark_include_timestamp?: boolean | null

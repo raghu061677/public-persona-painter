@@ -18,7 +18,7 @@ export interface TemplateConfig {
   version: number;
 }
 
-export type TemplateRenderer = (data: InvoiceData) => Blob;
+export type TemplateRenderer = (data: InvoiceData) => Promise<Blob>;
 
 // PDF-safe currency formatter (avoids Unicode issues with jsPDF)
 export function formatCurrency(amount: number | null | undefined): string {

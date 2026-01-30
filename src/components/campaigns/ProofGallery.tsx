@@ -7,6 +7,7 @@ import { CheckCircle, XCircle, Image as ImageIcon, CheckCircle2, Download, Loade
 import { ProofApprovalDialog } from "./ProofApprovalDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { resolveAssetDisplayCode } from "@/lib/assets/getAssetDisplayCode";
 
 interface ProofGalleryProps {
   assets: any[];
@@ -137,7 +138,7 @@ export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
             <CardContent className="pt-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h3 className="font-semibold text-lg">{asset.asset_id}</h3>
+                  <h3 className="font-semibold text-lg">{resolveAssetDisplayCode(asset)}</h3>
                   <p className="text-sm text-muted-foreground">
                     {asset.location}, {asset.area}, {asset.city}
                   </p>

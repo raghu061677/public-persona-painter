@@ -14,12 +14,12 @@ export default function OperationsDashboard() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     
-    // Fetch all operations from campaign_assets with related data
+    // Fetch all operations from campaign_assets with related data including media_asset_code
     const { data: opsData, error: opsError } = await supabase
       .from('campaign_assets')
       .select(`
         *,
-        media_assets (id, location, city, area, qr_code_url, latitude, longitude),
+        media_assets (id, media_asset_code, location, city, area, qr_code_url, latitude, longitude),
         campaigns:campaign_id (id, campaign_name, client_name, status)
       `)
       .order('created_at', { ascending: false });

@@ -2,17 +2,24 @@
 
 /**
  * Generate campaign ID by calling database function
+ * Format: CAM-YYYYMM-#### (e.g., CAM-202601-0001)
+ * 
+ * NOTE: Uses atomic counter to prevent duplicates.
+ * Existing campaigns with old format are unchanged.
  */
 export async function generateCampaignId(supabase: any): Promise<string> {
-  const { data, error } = await supabase.rpc('generate_campaign_id');
+  // Use the new v2 function that generates CAM-YYYYMM-#### format
+  // Pass null explicitly for the p_user_id parameter
+  const { data, error } = await supabase.rpc('generate_campaign_id_v2', { p_user_id: null });
   
   if (error) {
     console.error('Error generating campaign ID via RPC:', error);
-    // Fallback to sequential client-side generation
+    // Fallback to client-side generation with new format
     const now = new Date();
     const year = now.getFullYear();
-    const month = now.toLocaleString('en-US', { month: 'long' });
-    const prefix = `CAM-${year}-${month}-`;
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const period = `${year}${month}`;
+    const prefix = `CAM-${period}-`;
     
     // Query existing campaigns to get next sequence number
     const { data: existingCampaigns } = await supabase
@@ -25,13 +32,13 @@ export async function generateCampaignId(supabase: any): Promise<string> {
     let nextSeq = 1;
     if (existingCampaigns && existingCampaigns.length > 0) {
       const lastId = existingCampaigns[0].id;
-      const match = lastId.match(/CAM-\d{4}-[A-Za-z]+-(\d+)$/);
+      const match = lastId.match(/CAM-\d{6}-(\d+)$/);
       if (match) {
         nextSeq = parseInt(match[1], 10) + 1;
       }
     }
     
-    return `${prefix}${String(nextSeq).padStart(3, '0')}`;
+    return `${prefix}${String(nextSeq).padStart(4, '0')}`;
   }
   
   return data;

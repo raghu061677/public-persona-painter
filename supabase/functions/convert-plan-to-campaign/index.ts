@@ -256,23 +256,25 @@ serve(async (req) => {
     }
 
     // 6) Generate Campaign ID with retry logic for duplicates
+    // NEW FORMAT: CAM-YYYYMM-#### (e.g., CAM-202601-0001)
     let campaignId: string = '';
     let campaign: { id: string } | null = null;
     const maxRetries = 5;
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      // Generate a new ID each attempt
+      // Generate a new ID each attempt using the v2 function (YYYYMM format)
       const { data: campaignIdData, error: campaignIdError } = await supabase
-        .rpc("generate_campaign_id", { p_user_id: user.id });
+        .rpc("generate_campaign_id_v2", { p_user_id: user.id });
 
       if (campaignIdError) {
         console.error(`[v9.0] Error generating campaign ID (attempt ${attempt}):`, campaignIdError);
-        // Fallback ID generation
+        // Fallback ID generation with NEW format
         const now = new Date();
-        const month = now.toLocaleString('en-US', { month: 'long' });
         const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const period = `${year}${month}`;
         const random = Math.floor(Math.random() * 9000) + 1000;
-        campaignId = `CAM-${year}-${month}-${random}`;
+        campaignId = `CAM-${period}-${String(random).padStart(4, '0')}`;
       } else {
         campaignId = campaignIdData as string;
       }

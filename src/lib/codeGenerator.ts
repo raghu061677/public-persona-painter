@@ -102,33 +102,52 @@ export async function generatePlanCode(): Promise<string> {
 
 /**
  * Generate Campaign Code
- * Format: CAM-YYYY-MonthName-###
- * Example: CAM-2026-January-001
+ * Format: CAM-YYYYMM-#### (sortable, collision-safe)
+ * Example: CAM-202601-0001
+ * 
+ * NOTE: Uses atomic database counter to prevent duplicates.
+ * Existing campaigns with old format (CAM-2026-January-001) are unchanged.
  */
 export async function generateCampaignCode(startDate?: Date): Promise<string> {
-  const date = startDate || new Date();
-  const year = date.getFullYear();
-  const monthName = date.toLocaleString('en-US', { month: 'long' });
-  const prefix = `CAM-${year}-${monthName}-`;
-  
-  // Query existing campaigns to get next sequence number
-  const { data: existingCampaigns } = await supabase
-    .from('campaigns')
-    .select('id')
-    .like('id', `${prefix}%`)
-    .order('id', { ascending: false })
-    .limit(1);
-  
-  let nextSeq = 1;
-  if (existingCampaigns && existingCampaigns.length > 0) {
-    const lastId = existingCampaigns[0].id;
-    const match = lastId.match(/CAM-\d{4}-[A-Za-z]+-(\d+)$/);
-    if (match) {
-      nextSeq = parseInt(match[1], 10) + 1;
+  try {
+    // Use the new v2 function that generates CAM-YYYYMM-#### format
+    // Pass null explicitly for the p_user_id parameter
+    const { data, error } = await supabase.rpc('generate_campaign_id_v2', { p_user_id: null });
+    
+    if (error) {
+      throw error;
     }
+    
+    return data as string;
+  } catch (error) {
+    console.error('Error generating campaign ID via RPC:', error);
+    
+    // Fallback to client-side generation (same format)
+    const date = startDate || new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const period = `${year}${month}`;
+    const prefix = `CAM-${period}-`;
+    
+    // Query existing campaigns to get next sequence number
+    const { data: existingCampaigns } = await supabase
+      .from('campaigns')
+      .select('id')
+      .like('id', `${prefix}%`)
+      .order('id', { ascending: false })
+      .limit(1);
+    
+    let nextSeq = 1;
+    if (existingCampaigns && existingCampaigns.length > 0) {
+      const lastId = existingCampaigns[0].id;
+      const match = lastId.match(/CAM-\d{6}-(\d+)$/);
+      if (match) {
+        nextSeq = parseInt(match[1], 10) + 1;
+      }
+    }
+    
+    return `${prefix}${String(nextSeq).padStart(4, '0')}`;
   }
-  
-  return `${prefix}${String(nextSeq).padStart(3, '0')}`;
 }
 
 /**

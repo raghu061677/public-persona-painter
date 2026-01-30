@@ -661,23 +661,29 @@ export default function CampaignsList() {
                 filteredCampaigns.map((campaign, index) => (
                   <TableRow 
                     key={campaign.id} 
-                    className={`transition-all duration-150 hover:bg-muted/80 cursor-pointer ${
+                    className={`transition-all duration-150 hover:bg-muted/50 ${
                       index % 2 === 0 ? 'bg-background' : 'bg-muted/30'
                     } ${getRowClassName()}`}
-                    onClick={() => navigate(`/admin/campaigns/edit/${campaign.id}`)}
                   >
                     <TableCell 
                       className={`sticky left-0 z-10 bg-inherit px-4 py-3 border-r ${getCellClassName()}`}
-                      onClick={(e) => e.stopPropagation()}
                     >
                       <Checkbox
                         checked={selectedCampaigns.has(campaign.id)}
                         onCheckedChange={() => toggleCampaignSelection(campaign.id)}
                       />
                     </TableCell>
-                    <TableCell className={`font-medium px-4 py-3 ${getCellClassName()}`}>{campaign.id}</TableCell>
+                    <TableCell 
+                      className={`font-medium px-4 py-3 text-primary hover:underline cursor-pointer ${getCellClassName()}`}
+                      onClick={() => navigate(`/admin/campaigns/${campaign.id}`)}
+                    >
+                      {campaign.id}
+                    </TableCell>
                     <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{campaign.client_name}</TableCell>
-                    <TableCell className={`px-4 py-3 font-medium text-primary hover:underline ${getCellClassName()}`}>
+                    <TableCell 
+                      className={`px-4 py-3 font-medium text-primary hover:underline cursor-pointer ${getCellClassName()}`}
+                      onClick={() => navigate(`/admin/campaigns/edit/${campaign.id}`)}
+                    >
                       {campaign.campaign_name}
                     </TableCell>
                     <TableCell className={`px-4 py-3 ${getCellClassName()}`}>
@@ -694,7 +700,6 @@ export default function CampaignsList() {
                     </TableCell>
                     <TableCell 
                       className={`px-4 py-3 text-right ${getCellClassName()}`}
-                      onClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex items-center justify-end gap-1">
                         <Button

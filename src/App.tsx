@@ -87,6 +87,8 @@ const ReportCampaignBookings = lazy(() => import("./pages/ReportCampaignBookings
 const ReportAssetRevenue = lazy(() => import("./pages/ReportAssetRevenue"));
 const ReportFinancialSummary = lazy(() => import("./pages/ReportFinancialSummary"));
 const ReportProofExecution = lazy(() => import("./pages/ReportProofExecution"));
+const ReportAging = lazy(() => import("./pages/ReportAging"));
+const ReportOutstanding = lazy(() => import("./pages/ReportOutstanding"));
 const PlatformReportCompanyUsage = lazy(() => import("./pages/PlatformReportCompanyUsage"));
 const PlatformReportBilling = lazy(() => import("./pages/PlatformReportBilling"));
 const PlatformReportMediaInventory = lazy(() => import("./pages/PlatformReportMediaInventory"));
@@ -331,6 +333,8 @@ const App = () => (
             <Route path="/admin/reports/revenue" element={<ModernAppLayout><ReportAssetRevenue /></ModernAppLayout>} />
             <Route path="/admin/reports/financial" element={<ModernAppLayout><ReportFinancialSummary /></ModernAppLayout>} />
             <Route path="/admin/reports/proof-execution" element={<ModernAppLayout><ReportProofExecution /></ModernAppLayout>} />
+            <Route path="/admin/reports/aging" element={<ModernAppLayout><ReportAging /></ModernAppLayout>} />
+            <Route path="/admin/reports/outstanding" element={<ModernAppLayout><ReportOutstanding /></ModernAppLayout>} />
             <Route path="/admin/platform-reports/company-usage" element={<ModernAppLayout><PlatformReportCompanyUsage /></ModernAppLayout>} />
             <Route path="/admin/platform-reports/billing" element={<ModernAppLayout><PlatformReportBilling /></ModernAppLayout>} />
             <Route path="/admin/platform-reports/media-inventory" element={<ModernAppLayout><PlatformReportMediaInventory /></ModernAppLayout>} />

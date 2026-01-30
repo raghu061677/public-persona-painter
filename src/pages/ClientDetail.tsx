@@ -38,6 +38,7 @@ import { ClientDocuments } from "@/components/clients/ClientDocuments";
 import { SendPortalInviteDialog } from "@/components/clients/SendPortalInviteDialog";
 import { EditClientDialog } from "@/components/clients/EditClientDialog";
 import { ClientContactsManager } from "@/components/clients/ClientContactsManager";
+import { ClientLedger } from "@/components/finance/ClientLedger";
 
 interface Client {
   id: string;
@@ -420,11 +421,12 @@ export default function ClientDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-4">
-              <TabsList>
+              <TabsList className="flex-wrap">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="plans">Plans ({plans.length})</TabsTrigger>
                 <TabsTrigger value="campaigns">Campaigns ({campaigns.length})</TabsTrigger>
                 <TabsTrigger value="invoices">Invoices ({invoices.length})</TabsTrigger>
+                <TabsTrigger value="ledger">Ledger</TabsTrigger>
                 <TabsTrigger value="documents">Documents</TabsTrigger>
                 <TabsTrigger value="activity">Activity Log</TabsTrigger>
               </TabsList>
@@ -866,6 +868,11 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Client Ledger Tab */}
+        <TabsContent value="ledger">
+          <ClientLedger clientId={id!} clientName={client?.name || ''} />
         </TabsContent>
 
         {/* Documents Tab */}

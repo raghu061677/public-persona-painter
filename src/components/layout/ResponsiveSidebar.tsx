@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Building2, Map, Layers, Briefcase, Users, TrendingUp,
   FileText, Receipt, Zap, UserCog, Palette, FileSpreadsheet,
   Shield, DollarSign, Smartphone, Image, Settings, FileCheck, 
-  CreditCard, Globe, ShoppingBag, BarChart3, Sparkles, Menu, CheckCircle2, History, ListChecks, UserPlus
+  CreditCard, Globe, ShoppingBag, BarChart3, Sparkles, Menu, CheckCircle2, History, ListChecks, UserPlus, Clock, Wallet
 } from "lucide-react";
 import {
   Sidebar,
@@ -292,6 +292,8 @@ export function ResponsiveSidebar() {
                     <MenuItem icon={TrendingUp} label="Asset Revenue" href="/admin/reports/revenue" />
                     <MenuItem icon={DollarSign} label="Financial Summary" href="/admin/reports/financial" />
                     <MenuItem icon={Image} label="Proof Execution" href="/admin/reports/proof-execution" />
+                    <MenuItem icon={Clock} label="Aging Report" href="/admin/reports/aging" />
+                    <MenuItem icon={Wallet} label="Outstanding" href="/admin/reports/outstanding" />
                   </MenuGroup>
                 )}
               </SidebarMenu>

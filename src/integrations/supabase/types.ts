@@ -2964,6 +2964,150 @@ export type Database = {
           },
         ]
       }
+      credit_note_items: {
+        Row: {
+          amount: number
+          campaign_asset_id: string | null
+          created_at: string | null
+          credit_note_id: string
+          description: string
+          id: string
+        }
+        Insert: {
+          amount?: number
+          campaign_asset_id?: string | null
+          created_at?: string | null
+          credit_note_id: string
+          description: string
+          id?: string
+        }
+        Update: {
+          amount?: number
+          campaign_asset_id?: string | null
+          created_at?: string | null
+          credit_note_id?: string
+          description?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_note_items_campaign_asset_id_fkey"
+            columns: ["campaign_asset_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_note_items_credit_note_id_fkey"
+            columns: ["credit_note_id"]
+            isOneToOne: false
+            referencedRelation: "credit_notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_notes: {
+        Row: {
+          cgst_amount: number | null
+          client_id: string
+          company_id: string
+          created_at: string | null
+          created_by: string | null
+          credit_date: string
+          credit_note_id: string
+          gst_amount: number
+          gst_mode: string | null
+          id: string
+          igst_amount: number | null
+          invoice_id: string
+          notes: string | null
+          reason: string
+          sgst_amount: number | null
+          status: string
+          subtotal: number
+          total_amount: number
+          updated_at: string | null
+        }
+        Insert: {
+          cgst_amount?: number | null
+          client_id: string
+          company_id: string
+          created_at?: string | null
+          created_by?: string | null
+          credit_date?: string
+          credit_note_id: string
+          gst_amount?: number
+          gst_mode?: string | null
+          id?: string
+          igst_amount?: number | null
+          invoice_id: string
+          notes?: string | null
+          reason: string
+          sgst_amount?: number | null
+          status?: string
+          subtotal?: number
+          total_amount?: number
+          updated_at?: string | null
+        }
+        Update: {
+          cgst_amount?: number | null
+          client_id?: string
+          company_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          credit_date?: string
+          credit_note_id?: string
+          gst_amount?: number
+          gst_mode?: string | null
+          id?: string
+          igst_amount?: number | null
+          invoice_id?: string
+          notes?: string | null
+          reason?: string
+          sgst_amount?: number | null
+          status?: string
+          subtotal?: number
+          total_amount?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_aging_report"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       csrf_tokens: {
         Row: {
           created_at: string | null
@@ -8021,6 +8165,10 @@ export type Database = {
         Returns: string
       }
       generate_company_slug: { Args: { company_name: string }; Returns: string }
+      generate_credit_note_id: {
+        Args: { p_company_id: string }
+        Returns: string
+      }
       generate_csrf_token: { Args: never; Returns: string }
       generate_estimation_id: { Args: never; Returns: string }
       generate_expense_id: { Args: never; Returns: string }

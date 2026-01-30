@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Trash2, Lock } from "lucide-react";
+import { ArrowLeft, Trash2, Lock, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatINR, getInvoiceStatusColor } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
@@ -14,6 +14,8 @@ import { PaymentRecordingPanel } from "@/components/finance/PaymentRecordingPane
 import { PaymentTermsEditor } from "@/components/invoices/PaymentTermsEditor";
 import { InvoiceTypeSelector } from "@/components/invoices/InvoiceTypeSelector";
 import { InvoiceTemplateZoho } from "@/components/invoices/InvoiceTemplateZoho";
+import { CreditNotesList } from "@/components/finance/CreditNotesList";
+import { CreateCreditNoteDialog } from "@/components/finance/CreateCreditNoteDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function InvoiceDetail() {
@@ -22,6 +24,7 @@ export default function InvoiceDetail() {
   const [invoice, setInvoice] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [creditNoteDialogOpen, setCreditNoteDialogOpen] = useState(false);
 
   useEffect(() => {
     checkAdminStatus();
@@ -144,6 +147,12 @@ export default function InvoiceDetail() {
                 Delete
               </Button>
             )}
+            {isAdmin && invoice.status !== 'Draft' && (
+              <Button variant="outline" onClick={() => setCreditNoteDialogOpen(true)}>
+                <FileText className="mr-2 h-4 w-4" />
+                Credit Note
+              </Button>
+            )}
           </div>
         </div>
 
@@ -152,6 +161,7 @@ export default function InvoiceDetail() {
             <TabsTrigger value="preview">Preview</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
             <TabsTrigger value="payments">Payments</TabsTrigger>
+            <TabsTrigger value="credits">Credit Notes</TabsTrigger>
           </TabsList>
 
           <TabsContent value="preview" className="mt-6">
@@ -214,7 +224,32 @@ export default function InvoiceDetail() {
               onPaymentAdded={fetchInvoice}
             />
           </TabsContent>
+
+          <TabsContent value="credits" className="mt-6">
+            <CreditNotesList 
+              invoiceId={invoice.id} 
+              onCreditNoteChange={fetchInvoice} 
+            />
+          </TabsContent>
         </Tabs>
+
+        {/* Credit Note Dialog */}
+        {invoice && invoice.status !== 'Draft' && (
+          <CreateCreditNoteDialog
+            open={creditNoteDialogOpen}
+            onOpenChange={setCreditNoteDialogOpen}
+            invoice={{
+              id: invoice.id,
+              invoice_no: invoice.invoice_no,
+              client_id: invoice.client_id,
+              company_id: invoice.company_id,
+              total_amount: invoice.total_amount,
+              balance_due: invoice.balance_due,
+              gst_mode: invoice.gst_mode,
+            }}
+            onCreditNoteCreated={fetchInvoice}
+          />
+        )}
       </div>
     </div>
   );

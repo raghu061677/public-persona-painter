@@ -82,6 +82,7 @@ export const ROUTES = {
   VACANT_MEDIA_REPORT: "/admin/reports/vacant-media",
   AGING_REPORT: "/admin/reports/aging",
   OUTSTANDING_REPORT: "/admin/reports/outstanding",
+  ASSET_PROFITABILITY_REPORT: "/admin/reports/profitability",
   
   // Users & Access
   USER_MANAGEMENT: "/admin/users",

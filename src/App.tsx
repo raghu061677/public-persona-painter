@@ -95,6 +95,7 @@ const PlatformReportMediaInventory = lazy(() => import("./pages/PlatformReportMe
 const PlatformRoles = lazy(() => import("./pages/PlatformRoles"));
 const ReportsDashboard = lazy(() => import("./pages/ReportsDashboard"));
 const VacantMediaReport = lazy(() => import("./pages/VacantMediaReport"));
+const AssetProfitabilityReport = lazy(() => import("./pages/AssetProfitabilityReport"));
 const MediaAvailabilityReport = lazy(() => import("./pages/admin/reports/MediaAvailabilityReport"));
 const PhotoGallery = lazy(() => import("./pages/PhotoGallery"));
 const ImportData = lazy(() => import("./pages/ImportData"));
@@ -355,6 +356,7 @@ const App = () => (
             <Route path="/reports/vacant-media" element={<ModernAppLayout><MediaAvailabilityReport /></ModernAppLayout>} />
             <Route path="/admin/reports/vacant-media" element={<ModernAppLayout><MediaAvailabilityReport /></ModernAppLayout>} />
             <Route path="/admin/reports/availability" element={<ModernAppLayout><MediaAvailabilityReport /></ModernAppLayout>} />
+            <Route path="/admin/reports/profitability" element={<ProtectedRoute requireAuth><ModernAppLayout><AssetProfitabilityReport /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/approvals" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalsQueue /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/approval-history" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalHistory /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/approvals/rules" element={<RoleGuard requireCompanyRole="company_admin"><ModernAppLayout><ApprovalRulesSettings /></ModernAppLayout></RoleGuard>} />

@@ -930,6 +930,50 @@ export type Database = {
           },
         ]
       }
+      auto_reminder_settings: {
+        Row: {
+          buckets_enabled: number[]
+          company_id: string
+          email_enabled: boolean
+          enabled: boolean
+          id: string
+          last_run_at: string | null
+          updated_at: string | null
+          updated_by: string | null
+          whatsapp_enabled: boolean
+        }
+        Insert: {
+          buckets_enabled?: number[]
+          company_id: string
+          email_enabled?: boolean
+          enabled?: boolean
+          id?: string
+          last_run_at?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          whatsapp_enabled?: boolean
+        }
+        Update: {
+          buckets_enabled?: number[]
+          company_id?: string
+          email_enabled?: boolean
+          enabled?: boolean
+          id?: string
+          last_run_at?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          whatsapp_enabled?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auto_reminder_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bill_reminders: {
         Row: {
           bill_id: string
@@ -4004,6 +4048,57 @@ export type Database = {
             columns: ["media_asset_id"]
             isOneToOne: false
             referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_reminders: {
+        Row: {
+          aging_bucket: number
+          created_at: string | null
+          error_message: string | null
+          id: string
+          invoice_id: string
+          message_content: string | null
+          reminder_type: string
+          sent_at: string
+          status: string
+        }
+        Insert: {
+          aging_bucket: number
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          invoice_id: string
+          message_content?: string | null
+          reminder_type: string
+          sent_at?: string
+          status?: string
+        }
+        Update: {
+          aging_bucket?: number
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          invoice_id?: string
+          message_content?: string | null
+          reminder_type?: string
+          sent_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_reminders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_aging_report"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "invoice_reminders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
         ]
@@ -8315,6 +8410,22 @@ export type Database = {
       get_invoice_terms_label: {
         Args: { p_terms_days: number; p_terms_mode: string }
         Returns: string
+      }
+      get_invoices_for_reminders: {
+        Args: { p_company_id: string }
+        Returns: {
+          aging_bucket: number
+          balance_due: number
+          client_email: string
+          client_id: string
+          client_name: string
+          client_phone: string
+          days_overdue: number
+          due_date: string
+          invoice_date: string
+          invoice_id: string
+          invoice_no: string
+        }[]
       }
       get_mounter_workload: {
         Args: { p_company_id: string }

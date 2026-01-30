@@ -541,7 +541,7 @@ export default function ReportAssetRevenueV2() {
     URL.revokeObjectURL(url);
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     const doc = new jsPDF();
     doc.setFontSize(18);
     doc.text("Asset Revenue Report", 14, 22);
@@ -613,7 +613,21 @@ export default function ReportAssetRevenueV2() {
             <h1 className="text-3xl font-bold tracking-tight">Asset-wise Revenue</h1>
             <p className="text-muted-foreground">Analyze revenue generation by media asset</p>
           </div>
-          <ReportExportMenu onExportExcel={handleExportExcel} onExportPDF={handleExportPDF} />
+          <ReportExportMenu 
+            onExportExcel={handleExportExcel} 
+            onExportPDF={handleExportPDF}
+            metadata={{
+              reportName: "Asset Revenue Report",
+              generatedAt: new Date(),
+              dateRange: dateRange?.from && dateRange?.to ? { from: dateRange.from, to: dateRange.to } : undefined,
+              filtersApplied: [
+                searchValue && `Search: ${searchValue}`,
+                selectedFilters.cities.length > 0 && `Cities: ${selectedFilters.cities.join(", ")}`,
+                selectedFilters.areas.length > 0 && `Areas: ${selectedFilters.areas.join(", ")}`,
+                selectedFilters.mediaTypes.length > 0 && `Types: ${selectedFilters.mediaTypes.join(", ")}`,
+              ].filter(Boolean) as string[],
+            }}
+          />
         </div>
 
         <ReportKPICards kpis={kpis} />

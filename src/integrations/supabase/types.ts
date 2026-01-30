@@ -3739,6 +3739,13 @@ export type Database = {
             foreignKeyName: "invoice_items_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
+            referencedRelation: "invoice_aging_report"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
             referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
@@ -3791,6 +3798,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "campaign_assets"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_aging_report"
+            referencedColumns: ["invoice_id"]
           },
           {
             foreignKeyName: "invoice_line_items_invoice_id_fkey"
@@ -3917,6 +3931,7 @@ export type Database = {
           is_monthly_split: boolean | null
           items: Json | null
           notes: string | null
+          paid_amount: number | null
           parent_invoice_id: string | null
           payments: Json | null
           place_of_supply: string | null
@@ -3960,6 +3975,7 @@ export type Database = {
           is_monthly_split?: boolean | null
           items?: Json | null
           notes?: string | null
+          paid_amount?: number | null
           parent_invoice_id?: string | null
           payments?: Json | null
           place_of_supply?: string | null
@@ -4003,6 +4019,7 @@ export type Database = {
           is_monthly_split?: boolean | null
           items?: Json | null
           notes?: string | null
+          paid_amount?: number | null
           parent_invoice_id?: string | null
           payments?: Json | null
           place_of_supply?: string | null
@@ -5408,6 +5425,62 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "organization_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_records: {
+        Row: {
+          amount: number
+          campaign_id: string | null
+          client_id: string | null
+          company_id: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          invoice_id: string
+          method: string
+          notes: string | null
+          payment_date: string
+          reference_no: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          campaign_id?: string | null
+          client_id?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          invoice_id: string
+          method?: string
+          notes?: string | null
+          payment_date?: string
+          reference_no?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          campaign_id?: string | null
+          client_id?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          invoice_id?: string
+          method?: string
+          notes?: string | null
+          payment_date?: string
+          reference_no?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_records_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -7446,6 +7519,28 @@ export type Database = {
           },
         ]
       }
+      client_outstanding_summary: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          company_id: string | null
+          invoice_count: number | null
+          overdue_amount: number | null
+          overdue_count: number | null
+          total_invoiced: number | null
+          total_outstanding: number | null
+          total_paid: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients_basic: {
         Row: {
           city: string | null
@@ -7505,6 +7600,83 @@ export type Database = {
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_aging_report: {
+        Row: {
+          aging_bucket: string | null
+          balance_due: number | null
+          campaign_id: string | null
+          client_id: string | null
+          client_name: string | null
+          company_id: string | null
+          days_overdue: number | null
+          due_date: string | null
+          invoice_date: string | null
+          invoice_id: string | null
+          paid_amount: number | null
+          status: Database["public"]["Enums"]["invoice_status"] | null
+          total_amount: number | null
+        }
+        Insert: {
+          aging_bucket?: never
+          balance_due?: never
+          campaign_id?: string | null
+          client_id?: string | null
+          client_name?: string | null
+          company_id?: string | null
+          days_overdue?: never
+          due_date?: string | null
+          invoice_date?: string | null
+          invoice_id?: string | null
+          paid_amount?: never
+          status?: Database["public"]["Enums"]["invoice_status"] | null
+          total_amount?: never
+        }
+        Update: {
+          aging_bucket?: never
+          balance_due?: never
+          campaign_id?: string | null
+          client_id?: string | null
+          client_name?: string | null
+          company_id?: string | null
+          days_overdue?: never
+          due_date?: string | null
+          invoice_date?: string | null
+          invoice_id?: string | null
+          paid_amount?: never
+          status?: Database["public"]["Enums"]["invoice_status"] | null
+          total_amount?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_forecast"
+            referencedColumns: ["campaign_id"]
+          },
+          {
+            foreignKeyName: "invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -8141,6 +8313,10 @@ export type Database = {
       }
       update_completed_campaigns: {
         Args: { p_today: string }
+        Returns: undefined
+      }
+      update_invoice_payment_status: {
+        Args: { p_invoice_id: string }
         Returns: undefined
       }
       update_running_campaigns: {

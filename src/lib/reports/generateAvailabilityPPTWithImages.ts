@@ -24,6 +24,7 @@ import {
   PPT_SAFE_FONTS 
 } from '../ppt/sanitizers';
 import { fetchImageAsBase64 } from '../qrWatermark';
+import { formatAssetDisplayCode } from '@/lib/assets/formatAssetDisplayCode';
 
 interface AvailableAsset {
   id: string;
@@ -745,8 +746,12 @@ export async function generateAvailabilityPPTWithImages(data: ExportData): Promi
       line: { color: brandColor, width: 6 },
     });
 
-    // Asset ID header
-    slide.addText(sanitizePptText(asset.media_asset_code || asset.id), {
+    // Asset ID header - ALWAYS use formatAssetDisplayCode to ensure UUID never leaks
+    const displayAssetCode = formatAssetDisplayCode({
+      mediaAssetCode: asset.media_asset_code,
+      fallbackId: asset.id,
+    });
+    slide.addText(sanitizePptText(displayAssetCode), {
       x: 0.3, y: 0.4, w: 7, h: 0.4,
       fontSize: 14, bold: true, color: '6B7280', align: 'left', fontFace: PPT_SAFE_FONTS.primary,
     });

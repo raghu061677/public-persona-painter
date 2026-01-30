@@ -14,6 +14,7 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { generatePlanPPT } from '@/lib/plans/generatePlanPPT';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { formatAssetDisplayCode } from '@/lib/assets/formatAssetDisplayCode';
 
 interface ExportPlanPPTDialogProps {
   planId: string;
@@ -119,28 +120,32 @@ export function ExportPlanPPTDialog({ planId, planName }: ExportPlanPPTDialogPro
         if (!latestPhotoByAsset.has(r.asset_id) && r.photo_url) latestPhotoByAsset.set(r.asset_id, r.photo_url);
       });
 
-      // Format assets for PPT - use company prefixed display code when enabled
+      // Format assets for PPT - ALWAYS use formatAssetDisplayCode for asset_id
+      // This ensures UUID never leaks into exports
       const assets = planItems.map((item: any) => {
-        const baseCode = item.asset.media_asset_code || item.asset.id;
-        const displayCode = (codeSettings?.use_custom_asset_codes && codeSettings?.asset_code_prefix)
-          ? `${codeSettings.asset_code_prefix}-${baseCode}`
-          : baseCode;
+        // Use centralized formatAssetDisplayCode utility
+        const displayCode = formatAssetDisplayCode({
+          mediaAssetCode: item.asset?.media_asset_code,
+          fallbackId: item.asset?.id,
+          companyPrefix: codeSettings?.asset_code_prefix,
+          // companyName will be derived from prefix if needed
+        });
 
         return {
-          asset_id: displayCode,
-          area: item.asset.area,
-          location: item.asset.location,
-          direction: item.asset.direction,
-          dimensions: item.asset.dimensions,
-          total_sqft: item.asset.total_sqft,
-          illumination_type: item.asset.illumination_type,
-          card_rate: item.card_rate || item.asset.card_rate,
-          media_type: item.asset.media_type,
-          latitude: item.asset.latitude,
-          longitude: item.asset.longitude,
-          google_street_view_url: item.asset.google_street_view_url,
-          primary_photo_url: item.asset.primary_photo_url || latestPhotoByAsset.get(item.asset.id) || undefined,
-          qr_code_url: item.asset.qr_code_url,
+          asset_id: displayCode, // Human-readable code, NEVER UUID
+          area: item.asset?.area || '',
+          location: item.asset?.location || '',
+          direction: item.asset?.direction || '',
+          dimensions: item.asset?.dimensions || '',
+          total_sqft: item.asset?.total_sqft || 0,
+          illumination_type: item.asset?.illumination_type || '',
+          card_rate: item.card_rate || item.asset?.card_rate || 0,
+          media_type: item.asset?.media_type || '',
+          latitude: item.asset?.latitude,
+          longitude: item.asset?.longitude,
+          google_street_view_url: item.asset?.google_street_view_url,
+          primary_photo_url: item.asset?.primary_photo_url || latestPhotoByAsset.get(item.asset?.id) || undefined,
+          qr_code_url: item.asset?.qr_code_url,
         };
       });
 

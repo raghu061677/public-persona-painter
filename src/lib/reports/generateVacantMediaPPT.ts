@@ -7,6 +7,7 @@ import {
   EXPORT_COLUMNS,
   StandardizedAssetRow 
 } from "./vacantMediaExportUtils";
+import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
 
 const DEFAULT_PLACEHOLDER = "https://via.placeholder.com/800x600/f3f4f6/6b7280?text=No+Image+Available";
 
@@ -234,8 +235,12 @@ export async function generateVacantMediaPPT(
       line: { color: brandColor, width: 8 },
     });
 
-    // Header with S.No
-    slide.addText(`#${asset.sNo} – ${asset.area} – ${asset.location.substring(0, 50)}`, {
+    // Header with S.No - use formatAssetDisplayCode to ensure UUID never leaks
+    const displayCode = formatAssetDisplayCode({
+      mediaAssetCode: (originalAsset as any).media_asset_code,
+      fallbackId: (originalAsset as any).id,
+    });
+    slide.addText(`#${asset.sNo} – ${displayCode} – ${asset.location.substring(0, 40)}`, {
       x: 0.5,
       y: 0.5,
       w: 8,

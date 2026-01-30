@@ -1,6 +1,7 @@
 export { CampaignBillingTab } from './CampaignBillingTab';
 export { BillingSummaryCard } from './BillingSummaryCard';
 export { MonthlyBillingScheduleTable } from './MonthlyBillingScheduleTable';
+export { MonthlyInvoiceGenerator } from './MonthlyInvoiceGenerator';
 export { BillingStatusBadge, mapInvoiceStatusToBillingStatus } from './BillingStatusBadge';
 export { useCampaignBillingPeriods, calculatePeriodAmount } from './useCampaignBillingPeriods';
 export type { BillingPeriod, CampaignBillingSummary } from './useCampaignBillingPeriods';

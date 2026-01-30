@@ -1210,6 +1210,7 @@ export type Database = {
           id: string
           illumination_type: string | null
           installation_status: string | null
+          invoice_generated_months: string[] | null
           latitude: number | null
           location: string
           longitude: number | null
@@ -1258,6 +1259,7 @@ export type Database = {
           id?: string
           illumination_type?: string | null
           installation_status?: string | null
+          invoice_generated_months?: string[] | null
           latitude?: number | null
           location: string
           longitude?: number | null
@@ -1306,6 +1308,7 @@ export type Database = {
           id?: string
           illumination_type?: string | null
           installation_status?: string | null
+          invoice_generated_months?: string[] | null
           latitude?: number | null
           location?: string
           longitude?: number | null
@@ -3663,6 +3666,78 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_items: {
+        Row: {
+          asset_code: string | null
+          asset_id: string | null
+          base_amount: number
+          bill_end_date: string
+          bill_start_date: string
+          billable_days: number
+          campaign_asset_id: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          invoice_id: string
+          line_total: number
+          mounting_cost: number | null
+          printing_cost: number | null
+          rate_type: string
+          rate_value: number
+        }
+        Insert: {
+          asset_code?: string | null
+          asset_id?: string | null
+          base_amount?: number
+          bill_end_date: string
+          bill_start_date: string
+          billable_days: number
+          campaign_asset_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          invoice_id: string
+          line_total?: number
+          mounting_cost?: number | null
+          printing_cost?: number | null
+          rate_type?: string
+          rate_value?: number
+        }
+        Update: {
+          asset_code?: string | null
+          asset_id?: string | null
+          base_amount?: number
+          bill_end_date?: string
+          bill_start_date?: string
+          billable_days?: number
+          campaign_asset_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          invoice_id?: string
+          line_total?: number
+          mounting_cost?: number | null
+          printing_cost?: number | null
+          rate_type?: string
+          rate_value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_items_campaign_asset_id_fkey"
+            columns: ["campaign_asset_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_line_items: {
         Row: {
           amount: number
@@ -3810,6 +3885,7 @@ export type Database = {
       invoices: {
         Row: {
           balance_due: number
+          billing_month: string | null
           billing_period_id: string | null
           campaign_id: string | null
           cgst_amount: number | null
@@ -3851,6 +3927,7 @@ export type Database = {
         }
         Insert: {
           balance_due: number
+          billing_month?: string | null
           billing_period_id?: string | null
           campaign_id?: string | null
           cgst_amount?: number | null
@@ -3892,6 +3969,7 @@ export type Database = {
         }
         Update: {
           balance_due?: number
+          billing_month?: string | null
           billing_period_id?: string | null
           campaign_id?: string | null
           cgst_amount?: number | null

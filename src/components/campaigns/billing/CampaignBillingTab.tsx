@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
-import { FileText, CalendarDays, Loader2, Info, Receipt } from "lucide-react";
+import { FileText, CalendarDays, Loader2, Info, Receipt, Calculator } from "lucide-react";
 import { BillingSummaryCard } from "./BillingSummaryCard";
 import { MonthlyBillingScheduleTable } from "./MonthlyBillingScheduleTable";
+import { MonthlyInvoiceGenerator } from "./MonthlyInvoiceGenerator";
 import { 
   useCampaignBillingPeriods, 
   BillingPeriod,
@@ -68,6 +69,7 @@ export function CampaignBillingTab({
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [showBulkDialog, setShowBulkDialog] = useState(false);
+  const [showAssetLevelDialog, setShowAssetLevelDialog] = useState(false);
   const [billingMode, setBillingMode] = useState<BillingMode>('monthly');
 
   // Fallback: some legacy campaigns may not have campaign-level totals populated.
@@ -437,10 +439,16 @@ export function CampaignBillingTab({
               </p>
             </div>
             {billingSummary.periods.length > 1 && (
-              <Button onClick={() => setShowBulkDialog(true)} variant="outline">
-                <FileText className="mr-2 h-4 w-4" />
-                Generate All Invoices
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => setShowAssetLevelDialog(true)} variant="default">
+                  <Calculator className="mr-2 h-4 w-4" />
+                  Asset-Level Monthly Invoice
+                </Button>
+                <Button onClick={() => setShowBulkDialog(true)} variant="outline">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Generate All Invoices
+                </Button>
+              </div>
             )}
           </div>
 
@@ -584,6 +592,27 @@ export function CampaignBillingTab({
           gst_amount: campaign.gst_amount,
         }}
         onGenerated={() => {
+          fetchExistingInvoices();
+          onRefresh?.();
+        }}
+      />
+
+      {/* Asset-Level Monthly Invoice Generator */}
+      <MonthlyInvoiceGenerator
+        campaign={{
+          id: campaign.id,
+          campaign_name: campaign.campaign_name,
+          client_id: campaign.client_id,
+          client_name: campaign.client_name,
+          start_date: campaign.start_date,
+          end_date: campaign.end_date,
+          company_id: campaign.company_id,
+          gst_percent: billingSummary.gstPercent,
+        }}
+        campaignAssets={campaignAssets}
+        open={showAssetLevelDialog}
+        onOpenChange={setShowAssetLevelDialog}
+        onSuccess={() => {
           fetchExistingInvoices();
           onRefresh?.();
         }}

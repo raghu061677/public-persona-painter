@@ -338,13 +338,25 @@ export default function InvoicesList() {
                     >
                       <TableCell className="sticky left-0 z-10 bg-inherit px-4 py-3 font-medium border-r">
                         <div className="flex items-center gap-2">
-                          {invoice.id}
+                          <button
+                            onClick={() => navigate(`/admin/invoices/${invoice.id}`)}
+                            className="text-primary hover:text-primary/80 hover:underline font-medium transition-colors"
+                          >
+                            {invoice.id}
+                          </button>
                           {isOverdue && (
                             <AlertCircle className="h-4 w-4 text-red-500" />
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="px-4 py-3">{invoice.client_name}</TableCell>
+                      <TableCell className="px-4 py-3">
+                        <button
+                          onClick={() => navigate(`/admin/clients/${invoice.client_id}`)}
+                          className="text-foreground hover:text-primary hover:underline transition-colors"
+                        >
+                          {invoice.client_name}
+                        </button>
+                      </TableCell>
                       <TableCell className="px-4 py-3">{formatDate(invoice.invoice_date)}</TableCell>
                       <TableCell className="px-4 py-3">{formatDate(invoice.due_date)}</TableCell>
                       <TableCell className="px-4 py-3">

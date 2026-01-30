@@ -3904,6 +3904,7 @@ export type Database = {
           due_date: string
           estimation_id: string | null
           gst_amount: number
+          gst_mode: string | null
           gst_percent: number
           id: string
           igst_amount: number | null
@@ -3946,6 +3947,7 @@ export type Database = {
           due_date: string
           estimation_id?: string | null
           gst_amount: number
+          gst_mode?: string | null
           gst_percent?: number
           id: string
           igst_amount?: number | null
@@ -3988,6 +3990,7 @@ export type Database = {
           due_date?: string
           estimation_id?: string | null
           gst_amount?: number
+          gst_mode?: string | null
           gst_percent?: number
           id?: string
           igst_amount?: number | null
@@ -7725,6 +7728,19 @@ export type Database = {
         }
         Returns: Json
       }
+      check_existing_monthly_invoice: {
+        Args: {
+          p_billing_month: string
+          p_campaign_id: string
+          p_company_id: string
+        }
+        Returns: {
+          created_at: string
+          invoice_id: string
+          status: string
+          total_amount: number
+        }[]
+      }
       check_media_asset_duplicate: {
         Args: {
           p_area: string
@@ -7959,6 +7975,10 @@ export type Database = {
       get_current_user_company_id: { Args: never; Returns: string }
       get_enum_values: { Args: { enum_name: string }; Returns: Json }
       get_financial_year: { Args: never; Returns: string }
+      get_gst_mode: {
+        Args: { p_client_state: string; p_company_state: string }
+        Returns: string
+      }
       get_invoice_terms_label: {
         Args: { p_terms_days: number; p_terms_mode: string }
         Returns: string

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -27,11 +27,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, AlertTriangle, Check, FileText, Calendar, Lock } from "lucide-react";
+import { Loader2, AlertTriangle, Check, FileText, Calendar, Lock, ExternalLink } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
-import { generateInvoiceId } from "@/utils/finance";
 import { format, getDaysInMonth, startOfMonth, endOfMonth, max, min, differenceInDays, parseISO } from "date-fns";
 
 interface CampaignAsset {
@@ -86,6 +85,15 @@ interface AssetBillingPreview {
   printingAlreadyBilled: boolean;
   mountingAlreadyBilled: boolean;
 }
+
+interface ExistingInvoice {
+  invoice_id: string;
+  status: string;
+  total_amount: number;
+  created_at: string;
+}
+
+type GSTMode = 'CGST_SGST' | 'IGST';
 
 interface MonthlyInvoiceGeneratorProps {
   campaign: Campaign;
@@ -213,6 +221,91 @@ export function MonthlyInvoiceGenerator({
   const [allowRebill, setAllowRebill] = useState(false);
   const [includeAlreadyInvoiced, setIncludeAlreadyInvoiced] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [checkingExisting, setCheckingExisting] = useState(false);
+  const [existingInvoice, setExistingInvoice] = useState<ExistingInvoice | null>(null);
+  const [gstMode, setGstMode] = useState<GSTMode>('CGST_SGST');
+  const [clientState, setClientState] = useState<string>('');
+  const [companyState, setCompanyState] = useState<string>('');
+  
+  // Fetch client and company states for GST mode determination
+  const fetchGSTInfo = useCallback(async () => {
+    try {
+      // Fetch client state
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('billing_state')
+        .eq('id', campaign.client_id)
+        .single();
+      
+      // Fetch company state
+      if (campaign.company_id) {
+        const { data: companyData } = await supabase
+          .from('companies')
+          .select('state')
+          .eq('id', campaign.company_id)
+          .single();
+        
+        const clientSt = clientData?.billing_state || '';
+        const companySt = companyData?.state || 'Telangana'; // Default company state
+        
+        setClientState(clientSt);
+        setCompanyState(companySt);
+        
+        // Determine GST mode
+        if (clientSt && companySt && 
+            clientSt.toLowerCase().trim() === companySt.toLowerCase().trim()) {
+          setGstMode('CGST_SGST');
+        } else if (clientSt) {
+          setGstMode('IGST');
+        } else {
+          // Default to CGST_SGST if client state unknown
+          setGstMode('CGST_SGST');
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching GST info:', err);
+    }
+  }, [campaign.client_id, campaign.company_id]);
+  
+  // Check for existing invoice when month changes
+  const checkExistingInvoice = useCallback(async (month: string) => {
+    if (!month || !campaign.company_id) return;
+    
+    setCheckingExisting(true);
+    setExistingInvoice(null);
+    
+    try {
+      const { data, error } = await supabase.rpc('check_existing_monthly_invoice', {
+        p_company_id: campaign.company_id,
+        p_campaign_id: campaign.id,
+        p_billing_month: month,
+      });
+      
+      if (error) {
+        console.error('Error checking existing invoice:', error);
+      } else if (data && data.length > 0) {
+        setExistingInvoice(data[0] as ExistingInvoice);
+      }
+    } catch (err) {
+      console.error('Error checking existing invoice:', err);
+    } finally {
+      setCheckingExisting(false);
+    }
+  }, [campaign.company_id, campaign.id]);
+  
+  // Fetch GST info on open
+  useEffect(() => {
+    if (open) {
+      fetchGSTInfo();
+    }
+  }, [open, fetchGSTInfo]);
+  
+  // Check existing invoice when month changes
+  useEffect(() => {
+    if (selectedMonth) {
+      checkExistingInvoice(selectedMonth);
+    }
+  }, [selectedMonth, checkExistingInvoice]);
   
   // Get available months
   const availableMonths = useMemo(() => {
@@ -234,7 +327,7 @@ export function MonthlyInvoiceGenerator({
     return billingPreviews.filter(p => !p.alreadyInvoiced);
   }, [billingPreviews, includeAlreadyInvoiced]);
   
-  // Calculate totals with one-time charge logic
+  // Calculate totals with one-time charge logic and GST mode
   const totals = useMemo(() => {
     const baseTotal = filteredPreviews
       .filter(p => !p.alreadyInvoiced || includeAlreadyInvoiced)
@@ -248,12 +341,10 @@ export function MonthlyInvoiceGenerator({
       filteredPreviews.forEach(p => {
         if (p.billableDays > 0) {
           if (oneTimeOnly) {
-            // Only add if not already billed
             if (!p.printingAlreadyBilled || allowRebill) {
               printingTotal += p.printingCost;
             }
           } else {
-            // Recurring: always add
             printingTotal += p.printingCost;
           }
         }
@@ -264,12 +355,10 @@ export function MonthlyInvoiceGenerator({
       filteredPreviews.forEach(p => {
         if (p.billableDays > 0) {
           if (oneTimeOnly) {
-            // Only add if not already billed
             if (!p.mountingAlreadyBilled || allowRebill) {
               mountingTotal += p.mountingCost;
             }
           } else {
-            // Recurring: always add
             mountingTotal += p.mountingCost;
           }
         }
@@ -280,6 +369,18 @@ export function MonthlyInvoiceGenerator({
     const gstPercent = campaign.gst_percent || 18;
     const gstAmount = round2(subtotal * (gstPercent / 100));
     const grandTotal = round2(subtotal + gstAmount);
+    
+    // Calculate CGST/SGST or IGST amounts
+    let cgstAmount = 0;
+    let sgstAmount = 0;
+    let igstAmount = 0;
+    
+    if (gstMode === 'CGST_SGST') {
+      cgstAmount = round2(gstAmount / 2);
+      sgstAmount = round2(gstAmount / 2);
+    } else {
+      igstAmount = round2(gstAmount);
+    }
     
     // Count assets with pending one-time charges
     const pendingPrintingCount = filteredPreviews.filter(p => !p.printingAlreadyBilled && p.printingCost > 0).length;
@@ -292,11 +393,14 @@ export function MonthlyInvoiceGenerator({
       subtotal,
       gstPercent,
       gstAmount,
+      cgstAmount,
+      sgstAmount,
+      igstAmount,
       grandTotal,
       pendingPrintingCount,
       pendingMountingCount,
     };
-  }, [filteredPreviews, includePrinting, includeMounting, oneTimeOnly, allowRebill, includeAlreadyInvoiced, campaign.gst_percent]);
+  }, [filteredPreviews, includePrinting, includeMounting, oneTimeOnly, allowRebill, includeAlreadyInvoiced, campaign.gst_percent, gstMode]);
   
   const alreadyInvoicedCount = billingPreviews.filter(p => p.alreadyInvoiced).length;
   const billableCount = billingPreviews.filter(p => !p.alreadyInvoiced).length;
@@ -304,14 +408,26 @@ export function MonthlyInvoiceGenerator({
   const handleGenerateInvoice = async () => {
     if (!selectedMonth || filteredPreviews.length === 0) return;
     
+    // If existing invoice found, don't create new one
+    if (existingInvoice && !includeAlreadyInvoiced) {
+      toast({
+        title: "Invoice Already Exists",
+        description: `Invoice ${existingInvoice.invoice_id} already exists for this month. View it in the invoices list.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setGenerating(true);
     
     try {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Not authenticated");
       
-      // Generate invoice ID
-      const invoiceId = await generateInvoiceId(supabase);
+      // Generate invoice ID using RPC
+      const { data: invoiceIdData, error: idError } = await supabase.rpc('generate_invoice_id');
+      if (idError) throw new Error('Failed to generate invoice ID');
+      const invoiceId = invoiceIdData as string;
       
       // Build items array for legacy compatibility
       const items = filteredPreviews
@@ -369,7 +485,10 @@ export function MonthlyInvoiceGenerator({
       const dueDate = new Date(periodStart);
       dueDate.setDate(dueDate.getDate() + 30);
       
-      // Create invoice
+      // Determine GST split rates
+      const gstHalfPercent = round2(totals.gstPercent / 2);
+      
+      // Create invoice with GST mode fields
       const { error: invoiceError } = await supabase.from('invoices').insert({
         id: invoiceId,
         campaign_id: campaign.id,
@@ -385,6 +504,13 @@ export function MonthlyInvoiceGenerator({
         sub_total: totals.subtotal,
         gst_percent: totals.gstPercent,
         gst_amount: totals.gstAmount,
+        gst_mode: gstMode,
+        cgst_percent: gstMode === 'CGST_SGST' ? gstHalfPercent : 0,
+        sgst_percent: gstMode === 'CGST_SGST' ? gstHalfPercent : 0,
+        igst_percent: gstMode === 'IGST' ? totals.gstPercent : 0,
+        cgst_amount: totals.cgstAmount,
+        sgst_amount: totals.sgstAmount,
+        igst_amount: totals.igstAmount,
         total_amount: totals.grandTotal,
         balance_due: totals.grandTotal,
         status: 'Draft',
@@ -526,7 +652,55 @@ export function MonthlyInvoiceGenerator({
             </Select>
           </div>
           
-          {selectedMonth && billingPreviews.length > 0 && (
+          {/* Existing Invoice Warning - DB Level Check */}
+          {checkingExisting && selectedMonth && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm">Checking for existing invoice...</span>
+            </div>
+          )}
+          
+          {existingInvoice && !checkingExisting && (
+            <Alert variant="destructive">
+              <Lock className="h-4 w-4" />
+              <AlertDescription className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="font-medium">Invoice Already Exists for this Month</p>
+                  <p className="text-sm">
+                    Invoice {existingInvoice.invoice_id} ({existingInvoice.status}) - 
+                    {formatCurrency(existingInvoice.total_amount)}
+                  </p>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => window.open(`/admin/invoices/${existingInvoice.invoice_id}`, '_blank')}
+                >
+                  <ExternalLink className="h-4 w-4 mr-1" />
+                  View Invoice
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {/* GST Mode Indicator */}
+          {selectedMonth && !existingInvoice && (
+            <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">GST Mode:</span>
+                <Badge variant={gstMode === 'CGST_SGST' ? 'secondary' : 'outline'}>
+                  {gstMode === 'CGST_SGST' ? 'CGST + SGST (Intra-State)' : 'IGST (Inter-State)'}
+                </Badge>
+              </div>
+              {clientState && companyState && (
+                <span className="text-xs text-muted-foreground">
+                  Company: {companyState} → Client: {clientState}
+                </span>
+              )}
+            </div>
+          )}
+          
+          {selectedMonth && billingPreviews.length > 0 && !existingInvoice && (
             <>
               {/* Already Invoiced Warning */}
               {alreadyInvoicedCount > 0 && (
@@ -707,10 +881,23 @@ export function MonthlyInvoiceGenerator({
                   <span>Subtotal</span>
                   <span>{formatCurrency(totals.subtotal)}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span>GST ({totals.gstPercent}%)</span>
-                  <span>{formatCurrency(totals.gstAmount)}</span>
-                </div>
+                {gstMode === 'CGST_SGST' ? (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span>CGST ({totals.gstPercent / 2}%)</span>
+                      <span>{formatCurrency(totals.cgstAmount)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>SGST ({totals.gstPercent / 2}%)</span>
+                      <span>{formatCurrency(totals.sgstAmount)}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex justify-between text-sm">
+                    <span>IGST ({totals.gstPercent}%)</span>
+                    <span>{formatCurrency(totals.igstAmount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-bold text-lg border-t pt-2">
                   <span>Grand Total</span>
                   <span className="text-primary">{formatCurrency(totals.grandTotal)}</span>
@@ -734,7 +921,7 @@ export function MonthlyInvoiceGenerator({
           </Button>
           <Button
             onClick={handleGenerateInvoice}
-            disabled={generating || !selectedMonth || filteredPreviews.filter(p => !p.alreadyInvoiced || includeAlreadyInvoiced).length === 0}
+            disabled={generating || !selectedMonth || !!existingInvoice || filteredPreviews.filter(p => !p.alreadyInvoiced || includeAlreadyInvoiced).length === 0}
           >
             {generating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             <FileText className="mr-2 h-4 w-4" />

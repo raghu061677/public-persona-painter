@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Image as ImageIcon, MapPin, CheckCircle, AlertCircle, Search, ArrowUpDown, ArrowUp, ArrowDown, X, Filter } from "lucide-react";
+import { Image as ImageIcon, MapPin, CheckCircle, AlertCircle, Search, ArrowUpDown, ArrowUp, ArrowDown, X, Filter, Images } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,7 @@ import { QrCode, ExternalLink } from "lucide-react";
 import { useCompany } from "@/contexts/CompanyContext";
 import { format } from "date-fns";
 import { resolveAssetDisplayCode } from "@/lib/assets/getAssetDisplayCode";
+import { ROUTES } from "@/lib/routes";
 
 interface ProofAsset {
   id: string;
@@ -50,6 +52,7 @@ type SortField = 'asset_code' | 'location' | 'campaign_name' | 'mounter_name' | 
 type SortDirection = 'asc' | 'desc' | null;
 
 export default function OperationsProofUploads() {
+  const navigate = useNavigate();
   const [assets, setAssets] = useState<ProofAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -325,15 +328,26 @@ export default function OperationsProofUploads() {
                 Proof Photo Gallery ({processedAssets.length} of {assets.length})
               </CardTitle>
               <CardDescription>
-                View all uploaded proof photos for campaigns
+                View all uploaded proof photos for campaigns.{" "}
+                <Link to={ROUTES.PHOTO_LIBRARY} className="text-primary hover:underline">
+                  Open Photo Library
+                </Link>
               </CardDescription>
             </div>
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters}>
-                <X className="mr-1 h-3 w-3" />
-                Clear Filters
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link to={ROUTES.PHOTO_LIBRARY}>
+                  <Images className="mr-2 h-4 w-4" />
+                  Open Gallery
+                </Link>
               </Button>
-            )}
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  <X className="mr-1 h-3 w-3" />
+                  Clear Filters
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -554,7 +568,7 @@ export default function OperationsProofUploads() {
                             variant="ghost"
                             size="sm"
                             onClick={() =>
-                              (window.location.href = `/admin/operations/${asset.campaign_id}/assets/${asset.asset_id}`)
+                              navigate(`/admin/operations/${asset.campaign_id}/assets/${asset.asset_id}`)
                             }
                           >
                             View Photos

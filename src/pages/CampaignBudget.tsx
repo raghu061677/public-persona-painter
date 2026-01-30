@@ -8,9 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowLeft, TrendingUp, TrendingDown, DollarSign, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getAssetDisplayCode } from "@/lib/assets/getAssetDisplayCode";
 
 interface AssetBudget {
   asset_id: string;
+  asset_display_code: string;
   location: string;
   area: string;
   planned_cost: number;
@@ -46,10 +48,16 @@ export default function CampaignBudget() {
       if (campaignData) {
         setCampaign(campaignData);
 
-        // Fetch campaign assets with costs
+        // Fetch campaign assets with costs and media_asset_code
         const { data: assetsData } = await supabase
           .from("campaign_assets")
-          .select("*")
+          .select(`
+            *,
+            media_assets!campaign_assets_asset_id_fkey (
+              id,
+              media_asset_code
+            )
+          `)
           .eq("campaign_id", id);
 
         if (assetsData) {
@@ -78,8 +86,15 @@ export default function CampaignBudget() {
             const variance = actualCost - plannedCost;
             const variance_percent = plannedCost > 0 ? (variance / plannedCost) * 100 : 0;
 
+            // Get display code from joined media_assets
+            const assetDisplayCode = getAssetDisplayCode(
+              (asset as any).media_assets,
+              asset.asset_id
+            );
+
             return {
               asset_id: asset.asset_id,
+              asset_display_code: assetDisplayCode,
               location: asset.location,
               area: asset.area,
               planned_cost: plannedCost,
@@ -252,7 +267,7 @@ export default function CampaignBudget() {
             <TableBody>
               {assetBudgets.map((budget) => (
                 <TableRow key={budget.asset_id}>
-                  <TableCell className="font-mono text-sm">{budget.asset_id}</TableCell>
+                  <TableCell className="font-mono text-sm">{budget.asset_display_code}</TableCell>
                   <TableCell>{budget.location}</TableCell>
                   <TableCell>{budget.area}</TableCell>
                   <TableCell className="text-right">{formatCurrency(budget.planned_cost)}</TableCell>

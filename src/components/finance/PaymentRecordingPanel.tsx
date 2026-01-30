@@ -10,10 +10,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { Plus, Trash2, DollarSign, CreditCard, Building2, Banknote, Smartphone, CircleDot } from "lucide-react";
+import { Plus, Trash2, DollarSign, CreditCard, Building2, Banknote, Smartphone, CircleDot, Download, FileText, Loader2 } from "lucide-react";
 import { formatINR } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
+import { useReceiptGeneration } from "@/hooks/useReceiptGeneration";
 
 interface PaymentRecord {
   id: string;
@@ -63,6 +65,7 @@ export function PaymentRecordingPanel({
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const { generating, downloadReceiptByPaymentId } = useReceiptGeneration();
   
   const [newPayment, setNewPayment] = useState({
     amount: "",
@@ -360,13 +363,36 @@ export function PaymentRecordingPanel({
                       {payment.notes || "-"}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeletePayment(payment.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => downloadReceiptByPaymentId(payment.id)}
+                                disabled={generating}
+                              >
+                                {generating ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Download className="h-4 w-4 text-primary" />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Download Receipt</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeletePayment(payment.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

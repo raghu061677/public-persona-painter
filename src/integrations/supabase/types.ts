@@ -6800,6 +6800,121 @@ export type Database = {
         }
         Relationships: []
       }
+      receipt_sequences: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          id: string
+          next_number: number
+          updated_at: string | null
+          year_month: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          id?: string
+          next_number?: number
+          updated_at?: string | null
+          year_month: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          next_number?: number
+          updated_at?: string | null
+          year_month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipt_sequences_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receipts: {
+        Row: {
+          amount_received: number
+          client_id: string | null
+          company_id: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          invoice_id: string | null
+          notes: string | null
+          payment_method: string | null
+          payment_record_id: string | null
+          pdf_url: string | null
+          receipt_date: string
+          receipt_no: string
+          reference_no: string | null
+        }
+        Insert: {
+          amount_received?: number
+          client_id?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          payment_record_id?: string | null
+          pdf_url?: string | null
+          receipt_date?: string
+          receipt_no: string
+          reference_no?: string | null
+        }
+        Update: {
+          amount_received?: number
+          client_id?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          payment_record_id?: string | null
+          pdf_url?: string | null
+          receipt_date?: string
+          receipt_no?: string
+          reference_no?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipts_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_aging_report"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "receipts_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipts_payment_record_id_fkey"
+            columns: ["payment_record_id"]
+            isOneToOne: true
+            referencedRelation: "payment_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recent_searches: {
         Row: {
           created_at: string
@@ -8290,6 +8405,10 @@ export type Database = {
         Returns: string
       }
       generate_plan_id: { Args: never; Returns: string }
+      generate_receipt_number: {
+        Args: { p_company_id: string; p_receipt_date: string }
+        Returns: string
+      }
       generate_share_token: { Args: never; Returns: string }
       get_active_subscription: {
         Args: { p_company_id: string }

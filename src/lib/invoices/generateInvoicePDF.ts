@@ -1,37 +1,9 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { supabase } from '@/integrations/supabase/client';
+import { InvoiceData } from './templates/types';
+import { renderInvoicePDF, INVOICE_TEMPLATES, getTemplateConfig } from './templates/registry';
 
-interface InvoiceData {
-  invoice: any;
-  client: any;
-  campaign: any;
-  items: any[];
-  company: any;
-  orgSettings?: any;
-  logoBase64?: string;
-}
-
-// PDF-safe currency formatter (avoids Unicode issues with jsPDF)
-function formatCurrency(amount: number | null | undefined): string {
-  if (amount == null || isNaN(amount)) return 'Rs. 0';
-  const formatted = new Intl.NumberFormat('en-IN', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount);
-  return `Rs. ${formatted}`;
-}
-
-// Default company address
-const COMPANY_ADDRESS = {
-  line1: 'H.No: 7-1-19/5/201, Jyothi Bhopal Apartments,',
-  line2: 'Near Begumpet Metro Station, Opp Country Club, Begumpet,',
-  cityLine: 'Hyderabad, Telangana 500016',
-  country: 'India',
-  phone: '+91-9666444888',
-  email: 'raghu@matrix-networksolutions.com',
-  website: 'www.matrixnetworksolutions.com',
-};
+// Re-export for external use
+export { INVOICE_TEMPLATES, getTemplateConfig };
 
 // Helper to load image as base64
 async function loadImageAsBase64(url: string): Promise<string | null> {
@@ -50,7 +22,7 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
   }
 }
 
-export async function generateInvoicePDF(invoiceId: string): Promise<Blob> {
+export async function generateInvoicePDF(invoiceId: string, templateKey?: string): Promise<Blob> {
   // Fetch invoice details
   const { data: invoice, error: invoiceError } = await supabase
     .from('invoices')
@@ -93,7 +65,7 @@ export async function generateInvoicePDF(invoiceId: string): Promise<Blob> {
     .select('*')
     .single();
 
-  // Enrich invoice items with asset dimensions from media_assets
+  // Enrich invoice items with asset dimensions
   let enrichedItems = Array.isArray(invoice.items) ? [...invoice.items] : [];
   if (enrichedItems.length > 0) {
     const assetIds = enrichedItems.map((item: any) => item.asset_id).filter(Boolean);
@@ -139,7 +111,10 @@ export async function generateInvoicePDF(invoiceId: string): Promise<Blob> {
     logoBase64: logoBase64 || undefined,
   };
 
-  return createInvoicePDF(data);
+  // Use template from invoice or passed parameter
+  const effectiveTemplate = templateKey || invoice.pdf_template_key || 'default_existing';
+  
+  return renderInvoicePDF(data, effectiveTemplate);
 }
 
 function createInvoicePDF(data: InvoiceData): Blob {

@@ -2904,6 +2904,57 @@ export type Database = {
           },
         ]
       }
+      cost_centers: {
+        Row: {
+          code: string | null
+          company_id: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          parent_id: string | null
+          type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          code?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          parent_id?: string | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          parent_id?: string | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cost_centers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cost_centers_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       csrf_tokens: {
         Row: {
           created_at: string | null
@@ -3132,62 +3183,351 @@ export type Database = {
           },
         ]
       }
+      expense_approvals_log: {
+        Row: {
+          action: string
+          created_at: string | null
+          expense_id: string | null
+          from_status: string | null
+          id: string
+          remarks: string | null
+          to_status: string | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          expense_id?: string | null
+          from_status?: string | null
+          id?: string
+          remarks?: string | null
+          to_status?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          expense_id?: string | null
+          from_status?: string | null
+          id?: string
+          remarks?: string | null
+          to_status?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_approvals_log_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_attachments: {
+        Row: {
+          expense_id: string | null
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          uploaded_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          expense_id?: string | null
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          expense_id?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_attachments_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_budgets: {
+        Row: {
+          budget_amount: number
+          category_id: string | null
+          company_id: string | null
+          cost_center_id: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          notes: string | null
+          period_end: string
+          period_start: string
+          updated_at: string | null
+        }
+        Insert: {
+          budget_amount?: number
+          category_id?: string | null
+          company_id?: string | null
+          cost_center_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          period_end: string
+          period_start: string
+          updated_at?: string | null
+        }
+        Update: {
+          budget_amount?: number
+          category_id?: string | null
+          company_id?: string | null
+          cost_center_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_budgets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_budgets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_budgets_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_categories: {
+        Row: {
+          color: string | null
+          company_id: string | null
+          created_at: string | null
+          default_gst_percent: number | null
+          default_gst_type: string | null
+          default_tds_percent: number | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          default_gst_percent?: number | null
+          default_gst_type?: string | null
+          default_tds_percent?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          default_gst_percent?: number | null
+          default_gst_type?: string | null
+          default_tds_percent?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_categories_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
+          allocation_type: string | null
           amount: number
+          amount_before_tax: number | null
+          approval_status: string | null
+          approved_by: string | null
+          asset_id: string | null
+          attachments_count: number | null
           bill_id: string | null
           bill_month: string | null
           campaign_id: string | null
           category: Database["public"]["Enums"]["expense_category"]
+          category_id: string | null
+          cgst: number | null
           company_id: string | null
+          cost_center_id: string | null
           created_at: string | null
+          created_by: string | null
+          expense_date: string | null
+          expense_no: string | null
           gst_amount: number
           gst_percent: number
+          gst_type_enum: string | null
           id: string
+          igst: number | null
+          invoice_date: string | null
+          invoice_no: string | null
           invoice_url: string | null
+          net_payable: number | null
           notes: string | null
           paid_date: string | null
+          payment_mode: string | null
           payment_status: Database["public"]["Enums"]["payment_status"]
+          plan_id: string | null
+          rejected_reason: string | null
+          sgst: number | null
+          subcategory: string | null
+          tags: string[] | null
+          tds_amount: number | null
+          tds_applicable: boolean | null
+          tds_percent: number | null
           total_amount: number
+          total_tax: number | null
           updated_at: string | null
+          vendor_gstin: string | null
+          vendor_id: string | null
           vendor_name: string
         }
         Insert: {
+          allocation_type?: string | null
           amount: number
+          amount_before_tax?: number | null
+          approval_status?: string | null
+          approved_by?: string | null
+          asset_id?: string | null
+          attachments_count?: number | null
           bill_id?: string | null
           bill_month?: string | null
           campaign_id?: string | null
           category: Database["public"]["Enums"]["expense_category"]
+          category_id?: string | null
+          cgst?: number | null
           company_id?: string | null
+          cost_center_id?: string | null
           created_at?: string | null
+          created_by?: string | null
+          expense_date?: string | null
+          expense_no?: string | null
           gst_amount: number
           gst_percent?: number
+          gst_type_enum?: string | null
           id: string
+          igst?: number | null
+          invoice_date?: string | null
+          invoice_no?: string | null
           invoice_url?: string | null
+          net_payable?: number | null
           notes?: string | null
           paid_date?: string | null
+          payment_mode?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
+          plan_id?: string | null
+          rejected_reason?: string | null
+          sgst?: number | null
+          subcategory?: string | null
+          tags?: string[] | null
+          tds_amount?: number | null
+          tds_applicable?: boolean | null
+          tds_percent?: number | null
           total_amount: number
+          total_tax?: number | null
           updated_at?: string | null
+          vendor_gstin?: string | null
+          vendor_id?: string | null
           vendor_name: string
         }
         Update: {
+          allocation_type?: string | null
           amount?: number
+          amount_before_tax?: number | null
+          approval_status?: string | null
+          approved_by?: string | null
+          asset_id?: string | null
+          attachments_count?: number | null
           bill_id?: string | null
           bill_month?: string | null
           campaign_id?: string | null
           category?: Database["public"]["Enums"]["expense_category"]
+          category_id?: string | null
+          cgst?: number | null
           company_id?: string | null
+          cost_center_id?: string | null
           created_at?: string | null
+          created_by?: string | null
+          expense_date?: string | null
+          expense_no?: string | null
           gst_amount?: number
           gst_percent?: number
+          gst_type_enum?: string | null
           id?: string
+          igst?: number | null
+          invoice_date?: string | null
+          invoice_no?: string | null
           invoice_url?: string | null
+          net_payable?: number | null
           notes?: string | null
           paid_date?: string | null
+          payment_mode?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
+          plan_id?: string | null
+          rejected_reason?: string | null
+          sgst?: number | null
+          subcategory?: string | null
+          tags?: string[] | null
+          tds_amount?: number | null
+          tds_applicable?: boolean | null
+          tds_percent?: number | null
           total_amount?: number
+          total_tax?: number | null
           updated_at?: string | null
+          vendor_gstin?: string | null
+          vendor_id?: string | null
           vendor_name?: string
         }
         Relationships: [
@@ -3224,6 +3564,20 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_expenses_category"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_expenses_cost_center"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
             referencedColumns: ["id"]
           },
         ]
@@ -7385,6 +7739,7 @@ export type Database = {
       generate_csrf_token: { Args: never; Returns: string }
       generate_estimation_id: { Args: never; Returns: string }
       generate_expense_id: { Args: never; Returns: string }
+      generate_expense_no: { Args: { p_company_id?: string }; Returns: string }
       generate_invoice_id: { Args: never; Returns: string }
       generate_invoice_number: {
         Args: { p_company_id: string; p_invoice_date?: string }
@@ -7767,12 +8122,20 @@ export type Database = {
         | "Invoice"
         | "Other"
       estimation_status: "Draft" | "Sent" | "Approved" | "Rejected"
+      expense_allocation_type: "General" | "Campaign" | "Plan" | "Asset"
+      expense_approval_status:
+        | "Draft"
+        | "Submitted"
+        | "Approved"
+        | "Rejected"
+        | "Paid"
       expense_category:
         | "Printing"
         | "Mounting"
         | "Transport"
         | "Electricity"
         | "Other"
+      gst_type: "None" | "IGST" | "CGST_SGST"
       invoice_status: "Draft" | "Sent" | "Paid" | "Overdue" | "Cancelled"
       media_asset_status:
         | "Available"
@@ -7783,6 +8146,7 @@ export type Database = {
         | "Expired"
       media_category: "OOH" | "DOOH" | "Transit"
       ownership_type: "own" | "rented"
+      payment_mode: "Cash" | "Bank Transfer" | "UPI" | "Cheque" | "Card"
       payment_status: "Pending" | "Paid"
       plan_status: "Draft" | "Sent" | "Approved" | "Rejected" | "Converted"
       plan_type: "Quotation" | "Proposal" | "Estimate"
@@ -7995,6 +8359,14 @@ export const Constants = {
         "Other",
       ],
       estimation_status: ["Draft", "Sent", "Approved", "Rejected"],
+      expense_allocation_type: ["General", "Campaign", "Plan", "Asset"],
+      expense_approval_status: [
+        "Draft",
+        "Submitted",
+        "Approved",
+        "Rejected",
+        "Paid",
+      ],
       expense_category: [
         "Printing",
         "Mounting",
@@ -8002,6 +8374,7 @@ export const Constants = {
         "Electricity",
         "Other",
       ],
+      gst_type: ["None", "IGST", "CGST_SGST"],
       invoice_status: ["Draft", "Sent", "Paid", "Overdue", "Cancelled"],
       media_asset_status: [
         "Available",
@@ -8013,6 +8386,7 @@ export const Constants = {
       ],
       media_category: ["OOH", "DOOH", "Transit"],
       ownership_type: ["own", "rented"],
+      payment_mode: ["Cash", "Bank Transfer", "UPI", "Cheque", "Card"],
       payment_status: ["Pending", "Paid"],
       plan_status: ["Draft", "Sent", "Approved", "Rejected", "Converted"],
       plan_type: ["Quotation", "Proposal", "Estimate"],

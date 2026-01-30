@@ -7831,6 +7831,7 @@ export type Database = {
       generate_campaign_id:
         | { Args: never; Returns: string }
         | { Args: { p_user_id?: string }; Returns: string }
+      generate_campaign_id_v2: { Args: { p_user_id?: string }; Returns: string }
       generate_client_id: {
         Args: { p_company_id: string; p_state_code: string }
         Returns: string

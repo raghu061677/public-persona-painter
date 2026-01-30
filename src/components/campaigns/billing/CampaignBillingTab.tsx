@@ -473,6 +473,8 @@ export function CampaignBillingTab({
             onGenerateInvoice={handleGenerateInvoice}
             onViewInvoice={handleViewInvoice}
             isGenerating={generating}
+            printingBilled={campaignAssets.some(a => a.printing_billed)}
+            mountingBilled={campaignAssets.some(a => a.mounting_billed)}
           />
         </>
       )}

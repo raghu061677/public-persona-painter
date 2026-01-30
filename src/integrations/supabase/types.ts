@@ -1216,6 +1216,7 @@ export type Database = {
           longitude: number | null
           media_type: string
           mounter_name: string | null
+          mounting_billed: boolean | null
           mounting_charges: number | null
           mounting_cost: number
           mounting_cost_default: number | null
@@ -1224,6 +1225,7 @@ export type Database = {
           municipal_id: string | null
           negotiated_rate: number | null
           photos: Json | null
+          printing_billed: boolean | null
           printing_charges: number | null
           printing_cost: number
           printing_cost_default: number | null
@@ -1265,6 +1267,7 @@ export type Database = {
           longitude?: number | null
           media_type: string
           mounter_name?: string | null
+          mounting_billed?: boolean | null
           mounting_charges?: number | null
           mounting_cost?: number
           mounting_cost_default?: number | null
@@ -1273,6 +1276,7 @@ export type Database = {
           municipal_id?: string | null
           negotiated_rate?: number | null
           photos?: Json | null
+          printing_billed?: boolean | null
           printing_charges?: number | null
           printing_cost?: number
           printing_cost_default?: number | null
@@ -1314,6 +1318,7 @@ export type Database = {
           longitude?: number | null
           media_type?: string
           mounter_name?: string | null
+          mounting_billed?: boolean | null
           mounting_charges?: number | null
           mounting_cost?: number
           mounting_cost_default?: number | null
@@ -1322,6 +1327,7 @@ export type Database = {
           municipal_id?: string | null
           negotiated_rate?: number | null
           photos?: Json | null
+          printing_billed?: boolean | null
           printing_charges?: number | null
           printing_cost?: number
           printing_cost_default?: number | null

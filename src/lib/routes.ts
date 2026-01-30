@@ -80,6 +80,8 @@ export const ROUTES = {
   // Reports
   REPORTS: "/admin/reports",
   VACANT_MEDIA_REPORT: "/admin/reports/vacant-media",
+  AGING_REPORT: "/admin/reports/aging",
+  OUTSTANDING_REPORT: "/admin/reports/outstanding",
   
   // Users & Access
   USER_MANAGEMENT: "/admin/users",

@@ -10,7 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { formatINR, getInvoiceStatusColor } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
 import { InvoicePDFExport } from "@/components/invoices/InvoicePDFExport";
-import { PaymentTracking } from "@/components/invoices/PaymentTracking";
+import { PaymentRecordingPanel } from "@/components/finance/PaymentRecordingPanel";
 import { PaymentTermsEditor } from "@/components/invoices/PaymentTermsEditor";
 import { InvoiceTypeSelector } from "@/components/invoices/InvoiceTypeSelector";
 import { InvoiceTemplateZoho } from "@/components/invoices/InvoiceTemplateZoho";
@@ -203,9 +203,14 @@ export default function InvoiceDetail() {
           </TabsContent>
 
           <TabsContent value="payments" className="mt-6">
-            <PaymentTracking 
+            <PaymentRecordingPanel 
               invoiceId={invoice.id} 
               totalAmount={invoice.total_amount}
+              balanceDue={invoice.balance_due}
+              paidAmount={invoice.paid_amount}
+              status={invoice.status}
+              clientId={invoice.client_id}
+              campaignId={invoice.campaign_id}
               onPaymentAdded={fetchInvoice}
             />
           </TabsContent>

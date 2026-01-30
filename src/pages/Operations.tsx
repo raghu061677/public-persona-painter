@@ -5,13 +5,12 @@ import { useCompany } from "@/contexts/CompanyContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Search, Filter, TrendingUp, AlertCircle, CheckCircle, Clock, Calendar } from "lucide-react";
+import { ArrowLeft, TrendingUp, AlertCircle, CheckCircle, Clock, Calendar, List, LayoutGrid } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { OperationsNotifications } from "@/components/operations/OperationsNotifications";
 import { OperationsTasksList } from "@/components/operations/OperationsTasksList";
+import { OperationsDataTable } from "@/components/operations/OperationsDataTable";
 
 interface Campaign {
   id: string;
@@ -26,22 +25,37 @@ interface Campaign {
 interface CampaignAsset {
   id: string;
   asset_id: string;
+  campaign_id: string;
   location: string;
+  area: string;
+  city: string;
+  media_type: string;
   status: string;
-  mounter_name?: string;
+  mounter_name: string | null;
+  assigned_at: string | null;
+  completed_at: string | null;
+  photos: any;
+  campaign?: {
+    id: string;
+    campaign_name: string;
+    client_name: string;
+    status: string;
+  };
 }
 
 export default function Operations() {
   const navigate = useNavigate();
   const { company } = useCompany();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [campaignAssets, setCampaignAssets] = useState<CampaignAsset[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [assetsLoading, setAssetsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("table");
 
   useEffect(() => {
     if (company?.id) {
       fetchCampaigns();
+      fetchCampaignAssets();
     }
 
     // Set up real-time subscription for campaign updates
@@ -53,11 +67,11 @@ export default function Operations() {
           event: "*",
           schema: "public",
           table: "campaigns",
-          filter: `status=in.(InProgress,Planned)`, // PascalCase statuses
+          filter: `status=in.(InProgress,Planned)`,
         },
-        (payload) => {
-          console.log("Campaign change detected:", payload);
-          fetchCampaigns(); // Refresh campaigns on any change
+        () => {
+          fetchCampaigns();
+          fetchCampaignAssets();
         }
       )
       .subscribe();
@@ -68,21 +82,13 @@ export default function Operations() {
       .on(
         "postgres_changes",
         {
-          event: "UPDATE",
+          event: "*",
           schema: "public",
           table: "campaign_assets",
         },
-        (payload) => {
-          console.log("Campaign asset updated:", payload);
-          // Refresh stats when asset status changes
+        () => {
+          fetchCampaignAssets();
           if (campaigns.length > 0) {
-            const loadStats = async () => {
-              const statsData: Record<string, any> = {};
-              for (const campaign of campaigns) {
-                statsData[campaign.id] = await getStatusStats(campaign.id);
-              }
-              setStats(statsData);
-            };
             loadStats();
           }
         }
@@ -93,7 +99,7 @@ export default function Operations() {
       supabase.removeChannel(channel);
       supabase.removeChannel(assetsChannel);
     };
-  }, []);
+  }, [company?.id]);
 
   const fetchCampaigns = async () => {
     if (!company?.id) return;
@@ -121,6 +127,44 @@ export default function Operations() {
     }
   };
 
+  const fetchCampaignAssets = async () => {
+    if (!company?.id) return;
+    
+    try {
+      setAssetsLoading(true);
+      const { data, error } = await supabase
+        .from("campaign_assets")
+        .select(`
+          *,
+          campaign:campaigns!campaign_assets_campaign_id_fkey (
+            id,
+            campaign_name,
+            client_name,
+            status
+          )
+        `)
+        .order("assigned_at", { ascending: false, nullsFirst: false });
+
+      if (error) throw error;
+      
+      // Filter by company's campaigns
+      const filteredAssets = (data || []).filter(
+        asset => asset.campaign?.id && campaigns.some(c => c.id === asset.campaign_id)
+      );
+      
+      setCampaignAssets(data || []);
+    } catch (error: any) {
+      console.error("Error fetching campaign assets:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch operations data",
+        variant: "destructive",
+      });
+    } finally {
+      setAssetsLoading(false);
+    }
+  };
+
   const getStatusStats = async (campaignId: string) => {
     const { data, error } = await supabase
       .from("campaign_assets")
@@ -138,38 +182,26 @@ export default function Operations() {
 
   const [stats, setStats] = useState<Record<string, any>>({});
 
+  const loadStats = async () => {
+    const statsData: Record<string, any> = {};
+    for (const campaign of campaigns) {
+      statsData[campaign.id] = await getStatusStats(campaign.id);
+    }
+    setStats(statsData);
+  };
+
   useEffect(() => {
-    const loadStats = async () => {
-      const statsData: Record<string, any> = {};
-      for (const campaign of campaigns) {
-        statsData[campaign.id] = await getStatusStats(campaign.id);
-      }
-      setStats(statsData);
-    };
     if (campaigns.length > 0) {
       loadStats();
     }
   }, [campaigns]);
 
-  const filteredCampaigns = campaigns.filter((campaign) => {
-    const matchesSearch =
-      campaign.campaign_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      campaign.client_name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || campaign.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "InProgress":
-        return "bg-green-500";
-      case "Planned":
-        return "bg-blue-500";
-      case "Completed":
-        return "bg-gray-500";
-      default:
-        return "bg-gray-400";
-    }
+  // Calculate overall stats from campaign assets
+  const overallStats = {
+    pending: campaignAssets.filter(a => a.status === "Pending" || a.status === "Assigned").length,
+    inProgress: campaignAssets.filter(a => a.status === "InProgress" || a.status === "Mounted").length,
+    photoUploaded: campaignAssets.filter(a => a.status === "PhotoUploaded").length,
+    verified: campaignAssets.filter(a => a.status === "Verified" || a.status === "Completed").length,
   };
 
   return (
@@ -217,177 +249,176 @@ export default function Operations() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-4">
+        <Card className="border-l-4 border-l-yellow-500 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending / Assigned</CardTitle>
+            <Clock className="h-4 w-4 text-yellow-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-400">
+              {overallStats.pending}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-purple-500 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+            <TrendingUp className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-700 dark:text-purple-400">
+              {overallStats.inProgress}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-cyan-500 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Photo Uploaded</CardTitle>
+            <AlertCircle className="h-4 w-4 text-cyan-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-cyan-700 dark:text-cyan-400">
+              {overallStats.photoUploaded}
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="border-l-4 border-l-green-500 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Campaigns</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium">Verified</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-700 dark:text-green-400">
-              {campaigns.filter((c) => c.status === "InProgress").length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-amber-500 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Installs</CardTitle>
-            <Clock className="h-4 w-4 text-amber-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">
-              {Object.values(stats).reduce((sum: number, s: any) => sum + (s.pending || 0), 0)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-orange-500 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Awaiting Approval</CardTitle>
-            <AlertCircle className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-700 dark:text-orange-400">
-              {Object.values(stats).reduce((sum: number, s: any) => sum + (s.installed || 0), 0)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-blue-500 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Verified</CardTitle>
-            <CheckCircle className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">
-              {Object.values(stats).reduce((sum: number, s: any) => sum + (s.verified || 0), 0)}
+              {overallStats.verified}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search campaigns..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="InProgress">In Progress</SelectItem>
-                <SelectItem value="Planned">Planned</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Tabs for different views */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="table" className="flex items-center gap-2">
+            <List className="h-4 w-4" />
+            All Operations
+          </TabsTrigger>
+          <TabsTrigger value="campaigns" className="flex items-center gap-2">
+            <LayoutGrid className="h-4 w-4" />
+            By Campaign
+          </TabsTrigger>
+          <TabsTrigger value="tasks">
+            Tasks
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Campaigns List */}
-      <div className="space-y-4">
-        {loading ? (
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">Loading campaigns...</p>
-            </CardContent>
-          </Card>
-        ) : filteredCampaigns.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">No campaigns found</p>
-            </CardContent>
-          </Card>
-        ) : (
-          filteredCampaigns.map((campaign) => {
-            const campaignStats = stats[campaign.id] || { pending: 0, installed: 0, verified: 0 };
-            const total = campaignStats.pending + campaignStats.installed + campaignStats.verified;
-            const progress = total > 0 ? Math.round((campaignStats.verified / total) * 100) : 0;
+        <TabsContent value="table" className="mt-4">
+          <OperationsDataTable
+            assets={campaignAssets}
+            campaigns={campaigns}
+            loading={assetsLoading}
+            onRefresh={fetchCampaignAssets}
+          />
+        </TabsContent>
 
-            return (
-              <Card key={campaign.id} className="hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => navigate(`/admin/campaigns/${campaign.id}`)}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="text-xl">{campaign.campaign_name}</CardTitle>
-                      <CardDescription>{campaign.client_name}</CardDescription>
+        <TabsContent value="campaigns" className="mt-4 space-y-4">
+          {loading ? (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-center text-muted-foreground">Loading campaigns...</p>
+              </CardContent>
+            </Card>
+          ) : campaigns.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-center text-muted-foreground">No active campaigns found</p>
+              </CardContent>
+            </Card>
+          ) : (
+            campaigns.map((campaign) => {
+              const campaignStats = stats[campaign.id] || { pending: 0, installed: 0, verified: 0 };
+              const total = campaignStats.pending + campaignStats.installed + campaignStats.verified;
+              const progress = total > 0 ? Math.round((campaignStats.verified / total) * 100) : 0;
+
+              return (
+                <Card key={campaign.id} className="hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => navigate(`/admin/campaigns/${campaign.id}`)}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <CardTitle className="text-xl">{campaign.campaign_name}</CardTitle>
+                        <CardDescription>{campaign.client_name}</CardDescription>
+                      </div>
+                      <Badge className={campaign.status === 'InProgress' ? 'bg-green-500' : 'bg-blue-500'}>
+                        {campaign.status}
+                      </Badge>
                     </div>
-                    <Badge className={getStatusColor(campaign.status)}>
-                      {campaign.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Start:</span>{" "}
-                        <span className="font-medium">
-                          {new Date(campaign.start_date).toLocaleDateString()}
-                        </span>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Start:</span>{" "}
+                          <span className="font-medium">
+                            {new Date(campaign.start_date).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">End:</span>{" "}
+                          <span className="font-medium">
+                            {new Date(campaign.end_date).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Assets:</span>{" "}
+                          <span className="font-medium">{campaign.total_assets}</span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-muted-foreground">End:</span>{" "}
-                        <span className="font-medium">
-                          {new Date(campaign.end_date).toLocaleDateString()}
-                        </span>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Progress</span>
+                          <span className="font-medium">{progress}%</span>
+                        </div>
+                        <div className="w-full bg-secondary rounded-full h-2">
+                          <div
+                            className="bg-primary h-2 rounded-full transition-all"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                        <div className="flex gap-4 text-xs">
+                          <span className="text-muted-foreground">
+                            Pending: {campaignStats.pending}
+                          </span>
+                          <span className="text-muted-foreground">
+                            Installed: {campaignStats.installed}
+                          </span>
+                          <span className="text-muted-foreground">
+                            Verified: {campaignStats.verified}
+                          </span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-muted-foreground">Assets:</span>{" "}
-                        <span className="font-medium">{campaign.total_assets}</span>
-                      </div>
+
+                      <Button variant="outline" className="w-full" onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/admin/campaigns/${campaign.id}`);
+                      }}>
+                        View Details
+                      </Button>
                     </div>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </TabsContent>
 
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Progress</span>
-                        <span className="font-medium">{progress}%</span>
-                      </div>
-                      <div className="w-full bg-secondary rounded-full h-2">
-                        <div
-                          className="bg-primary h-2 rounded-full transition-all"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                      <div className="flex gap-4 text-xs">
-                        <span className="text-muted-foreground">
-                          Pending: {campaignStats.pending}
-                        </span>
-                        <span className="text-muted-foreground">
-                          Installed: {campaignStats.installed}
-                        </span>
-                        <span className="text-muted-foreground">
-                          Verified: {campaignStats.verified}
-                        </span>
-                      </div>
-                    </div>
-
-                    <Button variant="outline" className="w-full" onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/admin/campaigns/${campaign.id}`);
-                    }}>
-                      View Details
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })
-        )}
-      </div>
-
-      {/* Tasks Section */}
-      <OperationsTasksList />
+        <TabsContent value="tasks" className="mt-4">
+          <OperationsTasksList />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

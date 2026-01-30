@@ -107,7 +107,7 @@ export function useExpenses() {
         query = query.eq('approval_status', filters.approval_status);
       }
       if (filters.payment_status) {
-        query = query.eq('payment_status', filters.payment_status);
+        query = query.eq('payment_status', filters.payment_status as any);
       }
       if (filters.search) {
         query = query.or(`expense_no.ilike.%${filters.search}%,vendor_name.ilike.%${filters.search}%,invoice_no.ilike.%${filters.search}%,notes.ilike.%${filters.search}%`);
@@ -250,7 +250,7 @@ export function useExpenses() {
 
       const { data, error } = await supabase
         .from('expenses')
-        .insert(insertData)
+        .insert(insertData as any)
         .select()
         .single();
 

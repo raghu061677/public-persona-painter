@@ -35,6 +35,16 @@ interface CampaignAsset {
   assigned_at: string | null;
   completed_at: string | null;
   photos: any;
+  media_assets?: {
+    id: string;
+    media_asset_code?: string | null;
+    location?: string;
+    city?: string;
+    area?: string;
+    qr_code_url?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+  } | null;
   campaign?: {
     id: string;
     campaign_name: string;
@@ -136,6 +146,16 @@ export default function Operations() {
         .from("campaign_assets")
         .select(`
           *,
+          media_assets!campaign_assets_asset_id_fkey (
+            id,
+            media_asset_code,
+            location,
+            city,
+            area,
+            qr_code_url,
+            latitude,
+            longitude
+          ),
           campaign:campaigns!campaign_assets_campaign_id_fkey (
             id,
             campaign_name,

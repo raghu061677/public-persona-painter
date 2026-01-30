@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { getAssetDisplayCode } from '@/lib/assets/getAssetDisplayCode';
 
 // Fix for default marker icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -30,6 +31,7 @@ interface OperationAsset {
   longitude: number | null;
   campaign_name?: string;
   client_name?: string;
+  media_asset_code?: string | null;
 }
 
 interface OperationsMapViewProps {
@@ -83,6 +85,10 @@ export function OperationsMapView({ campaignId }: OperationsMapViewProps) {
           mounter_name,
           latitude,
           longitude,
+          media_assets!campaign_assets_asset_id_fkey (
+            id,
+            media_asset_code
+          ),
           campaigns (campaign_name, client_name)
         `)
         .order('created_at', { ascending: false });
@@ -99,6 +105,7 @@ export function OperationsMapView({ campaignId }: OperationsMapViewProps) {
         ...item,
         campaign_name: item.campaigns?.campaign_name,
         client_name: item.campaigns?.client_name,
+        media_asset_code: item.media_assets?.media_asset_code,
       }));
 
       setAssets(enrichedAssets);
@@ -182,10 +189,11 @@ export function OperationsMapView({ campaignId }: OperationsMapViewProps) {
       const marker = L.marker([asset.latitude!, asset.longitude!], { icon })
         .addTo(mapRef.current!);
 
-      // Create popup content
+      // Create popup content - use display code instead of raw asset_id
+      const displayCode = getAssetDisplayCode({ media_asset_code: asset.media_asset_code }, asset.asset_id);
       const popupContent = `
         <div style="min-width: 200px; font-family: system-ui, sans-serif;">
-          <h4 style="margin: 0 0 8px 0; font-weight: 600;">${asset.asset_id}</h4>
+          <h4 style="margin: 0 0 8px 0; font-weight: 600;">${displayCode}</h4>
           <p style="margin: 0 0 4px 0; font-size: 0.875rem; color: #666;">${asset.location}</p>
           <p style="margin: 0 0 8px 0; font-size: 0.75rem; color: #888;">${asset.city}, ${asset.area}</p>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">

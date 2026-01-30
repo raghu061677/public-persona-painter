@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { QrCode, ExternalLink } from "lucide-react";
 import { useCompany } from "@/contexts/CompanyContext";
 import { format } from "date-fns";
+import { resolveAssetDisplayCode } from "@/lib/assets/getAssetDisplayCode";
 
 interface ProofAsset {
   id: string;
@@ -34,6 +35,10 @@ interface ProofAsset {
   completed_at: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  media_assets?: {
+    id: string;
+    media_asset_code?: string | null;
+  } | null;
   campaigns: {
     campaign_name: string;
     client_name: string;
@@ -41,7 +46,7 @@ interface ProofAsset {
   } | null;
 }
 
-type SortField = 'asset_id' | 'location' | 'campaign_name' | 'mounter_name' | 'status' | 'completed_at' | 'photo_count';
+type SortField = 'asset_code' | 'location' | 'campaign_name' | 'mounter_name' | 'status' | 'completed_at' | 'photo_count';
 type SortDirection = 'asc' | 'desc' | null;
 
 export default function OperationsProofUploads() {
@@ -67,7 +72,7 @@ export default function OperationsProofUploads() {
     try {
       setLoading(true);
       
-      // Fetch campaign assets with photos or in photo-related statuses
+      // Fetch campaign assets with photos or in photo-related statuses, including media_asset_code
       const { data, error } = await supabase
         .from("campaign_assets")
         .select(`
@@ -84,6 +89,10 @@ export default function OperationsProofUploads() {
           completed_at,
           latitude,
           longitude,
+          media_assets!campaign_assets_asset_id_fkey (
+            id,
+            media_asset_code
+          ),
           campaigns!campaign_assets_campaign_id_fkey (
             campaign_name,
             client_name,
@@ -182,18 +191,19 @@ export default function OperationsProofUploads() {
   const processedAssets = useMemo(() => {
     let result = [...assets];
 
-    // Search
+    // Search - use display code, not raw asset_id
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(asset =>
-        asset.asset_id.toLowerCase().includes(query) ||
-        asset.location?.toLowerCase().includes(query) ||
-        asset.area?.toLowerCase().includes(query) ||
-        asset.city?.toLowerCase().includes(query) ||
-        (asset.mounter_name || '').toLowerCase().includes(query) ||
-        (asset.campaigns?.campaign_name || '').toLowerCase().includes(query) ||
-        (asset.campaigns?.client_name || '').toLowerCase().includes(query)
-      );
+      result = result.filter(asset => {
+        const displayCode = resolveAssetDisplayCode(asset);
+        return displayCode.toLowerCase().includes(query) ||
+          asset.location?.toLowerCase().includes(query) ||
+          asset.area?.toLowerCase().includes(query) ||
+          asset.city?.toLowerCase().includes(query) ||
+          (asset.mounter_name || '').toLowerCase().includes(query) ||
+          (asset.campaigns?.campaign_name || '').toLowerCase().includes(query) ||
+          (asset.campaigns?.client_name || '').toLowerCase().includes(query);
+      });
     }
 
     // Campaign filter
@@ -213,9 +223,9 @@ export default function OperationsProofUploads() {
         let bVal: any;
 
         switch (sortField) {
-          case 'asset_id':
-            aVal = a.asset_id;
-            bVal = b.asset_id;
+          case 'asset_code':
+            aVal = resolveAssetDisplayCode(a);
+            bVal = resolveAssetDisplayCode(b);
             break;
           case 'location':
             aVal = a.location || '';
@@ -407,10 +417,10 @@ export default function OperationsProofUploads() {
                         variant="ghost"
                         size="sm"
                         className="-ml-3 h-8"
-                        onClick={() => handleSort('asset_id')}
+                        onClick={() => handleSort('asset_code')}
                       >
                         Asset Code
-                        {getSortIcon('asset_id')}
+                        {getSortIcon('asset_code')}
                       </Button>
                     </TableHead>
                     <TableHead>
@@ -486,7 +496,7 @@ export default function OperationsProofUploads() {
                   {processedAssets.map((asset) => (
                     <TableRow key={asset.id}>
                       <TableCell className="font-medium">
-                        {asset.asset_id}
+                        {resolveAssetDisplayCode(asset)}
                       </TableCell>
                       <TableCell>
                         <div className="max-w-[180px]">

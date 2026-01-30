@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowUpDown, ArrowUp, ArrowDown, Search, Filter, Camera, Eye, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { resolveAssetDisplayCode } from "@/lib/assets/getAssetDisplayCode";
 
 interface CampaignAsset {
   id: string;
@@ -23,6 +24,16 @@ interface CampaignAsset {
   assigned_at: string | null;
   completed_at: string | null;
   photos: any;
+  media_assets?: {
+    id: string;
+    media_asset_code?: string | null;
+    location?: string;
+    city?: string;
+    area?: string;
+    qr_code_url?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+  } | null;
   campaign?: {
     id: string;
     campaign_name: string;
@@ -45,7 +56,7 @@ interface OperationsDataTableProps {
   onRefresh?: () => void;
 }
 
-type SortField = 'asset_id' | 'location' | 'mounter_name' | 'status' | 'assigned_at' | 'completed_at' | 'campaign_name';
+type SortField = 'asset_code' | 'location' | 'mounter_name' | 'status' | 'assigned_at' | 'completed_at' | 'campaign_name';
 type SortDirection = 'asc' | 'desc' | null;
 
 export function OperationsDataTable({ assets, campaigns, loading, onRefresh }: OperationsDataTableProps) {
@@ -96,18 +107,19 @@ export function OperationsDataTable({ assets, campaigns, loading, onRefresh }: O
   const processedAssets = useMemo(() => {
     let result = [...assets];
 
-    // Search filter
+    // Search filter - search by display code, not raw asset_id
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(asset =>
-        asset.asset_id.toLowerCase().includes(query) ||
-        asset.location.toLowerCase().includes(query) ||
-        asset.area?.toLowerCase().includes(query) ||
-        asset.city?.toLowerCase().includes(query) ||
-        (asset.mounter_name || '').toLowerCase().includes(query) ||
-        (asset.campaign?.campaign_name || '').toLowerCase().includes(query) ||
-        (asset.campaign?.client_name || '').toLowerCase().includes(query)
-      );
+      result = result.filter(asset => {
+        const displayCode = resolveAssetDisplayCode(asset);
+        return displayCode.toLowerCase().includes(query) ||
+          asset.location.toLowerCase().includes(query) ||
+          asset.area?.toLowerCase().includes(query) ||
+          asset.city?.toLowerCase().includes(query) ||
+          (asset.mounter_name || '').toLowerCase().includes(query) ||
+          (asset.campaign?.campaign_name || '').toLowerCase().includes(query) ||
+          (asset.campaign?.client_name || '').toLowerCase().includes(query);
+      });
     }
 
     // Campaign filter
@@ -127,9 +139,9 @@ export function OperationsDataTable({ assets, campaigns, loading, onRefresh }: O
         let bVal: any;
 
         switch (sortField) {
-          case 'asset_id':
-            aVal = a.asset_id;
-            bVal = b.asset_id;
+          case 'asset_code':
+            aVal = resolveAssetDisplayCode(a);
+            bVal = resolveAssetDisplayCode(b);
             break;
           case 'location':
             aVal = a.location || '';
@@ -288,10 +300,10 @@ export function OperationsDataTable({ assets, campaigns, loading, onRefresh }: O
                     variant="ghost"
                     size="sm"
                     className="-ml-3 h-8 data-[state=open]:bg-accent"
-                    onClick={() => handleSort('asset_id')}
+                    onClick={() => handleSort('asset_code')}
                   >
                     Asset Code
-                    {getSortIcon('asset_id')}
+                    {getSortIcon('asset_code')}
                   </Button>
                 </TableHead>
                 <TableHead>
@@ -380,7 +392,7 @@ export function OperationsDataTable({ assets, campaigns, loading, onRefresh }: O
                 processedAssets.map((asset) => (
                   <TableRow key={asset.id} className="hover:bg-muted/50">
                     <TableCell className="font-medium">
-                      {asset.asset_id}
+                      {resolveAssetDisplayCode(asset)}
                     </TableCell>
                     <TableCell>
                       <div className="max-w-[200px]">

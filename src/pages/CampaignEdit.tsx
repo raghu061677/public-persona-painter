@@ -136,14 +136,15 @@ export default function CampaignEdit() {
       if (user) {
         const { data: companyUser } = await supabase
           .from('company_users')
-          .select('company_id, companies(asset_id_prefix, name)')
+          .select('company_id, companies(name)')
           .eq('user_id', user.id)
           .eq('status', 'active')
           .maybeSingle();
         
         if (companyUser?.companies) {
           const company = companyUser.companies as any;
-          setCompanyPrefix(company.asset_id_prefix || null);
+          // Use company name to generate prefix via formatAssetDisplayCode's getCompanyAcronym
+          setCompanyPrefix(company.name || null);
         }
       }
     } catch (error) {
@@ -1453,7 +1454,7 @@ export default function CampaignEdit() {
                           {formatAssetDisplayCode({
                             mediaAssetCode: asset.media_asset_code,
                             fallbackId: asset.asset_id,
-                            companyPrefix: companyPrefix
+                            companyName: companyPrefix
                           })}
                           {asset.isNew && <span className="ml-1 text-xs text-green-600">(new)</span>}
                         </TableCell>
@@ -1600,6 +1601,9 @@ export default function CampaignEdit() {
         onClose={() => setShowAddAssetsDialog(false)}
         existingAssetIds={existingAssetIds}
         onAddAssets={handleAddAssets}
+        campaignId={id}
+        campaignStartDate={startDate}
+        campaignEndDate={endDate}
       />
 
       {/* Delete Confirmation Dialog */}

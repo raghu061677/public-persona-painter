@@ -23,17 +23,40 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { format } from "date-fns";
+
+interface ConflictInfo {
+  campaign_id: string;
+  campaign_name: string;
+  client_name: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+}
 
 interface AddCampaignAssetsDialogProps {
   open: boolean;
   onClose: () => void;
   existingAssetIds: string[];
   onAddAssets: (assets: any[]) => void;
+  /** Campaign ID to exclude from conflict check */
+  campaignId?: string;
+  /** Campaign start date for conflict checking */
+  campaignStartDate?: Date | string;
+  /** Campaign end date for conflict checking */
+  campaignEndDate?: Date | string;
 }
 
 export function AddCampaignAssetsDialog({
@@ -41,6 +64,9 @@ export function AddCampaignAssetsDialog({
   onClose,
   existingAssetIds,
   onAddAssets,
+  campaignId,
+  campaignStartDate,
+  campaignEndDate,
 }: AddCampaignAssetsDialogProps) {
   const [assets, setAssets] = useState<any[]>([]);
   const [filteredAssets, setFilteredAssets] = useState<any[]>([]);
@@ -50,6 +76,8 @@ export function AddCampaignAssetsDialog({
   const [mediaTypeFilter, setMediaTypeFilter] = useState<string>("all");
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [companyPrefix, setCompanyPrefix] = useState<string | null>(null);
+  const [assetConflicts, setAssetConflicts] = useState<Map<string, ConflictInfo[]>>(new Map());
+  const [checkingConflicts, setCheckingConflicts] = useState(false);
 
   useEffect(() => {
     fetchCompanySettings();
@@ -61,14 +89,15 @@ export function AddCampaignAssetsDialog({
       if (user) {
         const { data: companyUser } = await supabase
           .from('company_users')
-          .select('company_id, companies(asset_id_prefix, name)')
+          .select('company_id, companies(name)')
           .eq('user_id', user.id)
           .eq('status', 'active')
           .maybeSingle();
         
         if (companyUser?.companies) {
           const company = companyUser.companies as any;
-          setCompanyPrefix(company.asset_id_prefix || null);
+          // Use company name to generate prefix via formatAssetDisplayCode's getCompanyAcronym
+          setCompanyPrefix(company.name || null);
         }
       }
     } catch (error) {
@@ -80,12 +109,19 @@ export function AddCampaignAssetsDialog({
     if (open) {
       fetchAvailableAssets();
       setSelectedAssets(new Set());
+      setAssetConflicts(new Map());
     }
   }, [open]);
 
   useEffect(() => {
     filterAssets();
-  }, [assets, searchTerm, cityFilter, mediaTypeFilter]);
+  }, [assets, searchTerm, cityFilter, mediaTypeFilter, assetConflicts]);
+
+  const formatDateForConflict = (date: Date | string | undefined): string | null => {
+    if (!date) return null;
+    if (typeof date === 'string') return date.split('T')[0];
+    return format(date, 'yyyy-MM-dd');
+  };
 
   const fetchAvailableAssets = async () => {
     setLoading(true);
@@ -104,6 +140,11 @@ export function AddCampaignAssetsDialog({
       ) || [];
 
       setAssets(availableAssets);
+
+      // Check conflicts for all assets if we have campaign dates
+      if (campaignStartDate && campaignEndDate && availableAssets.length > 0) {
+        await checkConflictsForAssets(availableAssets);
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -112,6 +153,49 @@ export function AddCampaignAssetsDialog({
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkConflictsForAssets = async (assetList: any[]) => {
+    setCheckingConflicts(true);
+    const conflictMap = new Map<string, ConflictInfo[]>();
+
+    const startDate = formatDateForConflict(campaignStartDate);
+    const endDate = formatDateForConflict(campaignEndDate);
+
+    if (!startDate || !endDate) {
+      setCheckingConflicts(false);
+      return;
+    }
+
+    try {
+      // Check conflicts in batches to avoid overwhelming the database
+      const batchSize = 10;
+      for (let i = 0; i < assetList.length; i += batchSize) {
+        const batch = assetList.slice(i, i + batchSize);
+        
+        await Promise.all(batch.map(async (asset) => {
+          const { data, error } = await supabase.rpc('check_asset_conflict', {
+            p_asset_id: asset.id,
+            p_start_date: startDate,
+            p_end_date: endDate,
+            p_exclude_campaign_id: campaignId || null,
+          });
+
+          if (!error && data) {
+            const result = data as unknown as { has_conflict: boolean; conflicting_campaigns: ConflictInfo[] };
+            if (result.has_conflict && result.conflicting_campaigns?.length > 0) {
+              conflictMap.set(asset.id, result.conflicting_campaigns);
+            }
+          }
+        }));
+      }
+
+      setAssetConflicts(conflictMap);
+    } catch (error) {
+      console.error('Error checking conflicts:', error);
+    } finally {
+      setCheckingConflicts(false);
     }
   };
 
@@ -143,7 +227,26 @@ export function AddCampaignAssetsDialog({
   const cities = Array.from(new Set(assets.map(a => a.city).filter(Boolean)));
   const mediaTypes = Array.from(new Set(assets.map(a => a.media_type).filter(Boolean)));
 
+  const hasConflict = (assetId: string): boolean => {
+    return assetConflicts.has(assetId);
+  };
+
+  const getConflicts = (assetId: string): ConflictInfo[] => {
+    return assetConflicts.get(assetId) || [];
+  };
+
   const toggleAssetSelection = (assetId: string) => {
+    // Prevent selection of conflicting assets
+    if (hasConflict(assetId)) {
+      const conflicts = getConflicts(assetId);
+      toast({
+        title: "Asset has booking conflict",
+        description: `This asset is already booked in: ${conflicts.map(c => c.campaign_name).join(', ')}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const newSelected = new Set(selectedAssets);
     if (newSelected.has(assetId)) {
       newSelected.delete(assetId);
@@ -160,11 +263,21 @@ export function AddCampaignAssetsDialog({
     onClose();
   };
 
+  const conflictCount = Array.from(assetConflicts.keys()).length;
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>Add Assets to Campaign</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            Add Assets to Campaign
+            {conflictCount > 0 && (
+              <Badge variant="outline" className="text-amber-600 border-amber-500">
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                {conflictCount} conflict(s)
+              </Badge>
+            )}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -216,49 +329,91 @@ export function AddCampaignAssetsDialog({
                   <TableHead>Area</TableHead>
                   <TableHead>Media Type</TableHead>
                   <TableHead className="text-right">Card Rate</TableHead>
+                  <TableHead className="w-16">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
+                {loading || checkingConflicts ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
-                      Loading assets...
+                    <TableCell colSpan={9} className="text-center py-8">
+                      {loading ? "Loading assets..." : "Checking availability..."}
                     </TableCell>
                   </TableRow>
                 ) : filteredAssets.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
+                    <TableCell colSpan={9} className="text-center py-8">
                       No available assets found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredAssets.map((asset, index) => (
-                    <TableRow key={asset.id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedAssets.has(asset.id)}
-                          onCheckedChange={() => toggleAssetSelection(asset.id)}
-                        />
-                      </TableCell>
-                      <TableCell className="text-center font-medium text-muted-foreground">
-                        {index + 1}
-                      </TableCell>
-                      <TableCell className="font-medium font-mono text-sm">
-                        {formatAssetDisplayCode({
-                          mediaAssetCode: asset.media_asset_code,
-                          fallbackId: asset.id,
-                          companyPrefix: companyPrefix
-                        })}
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate">{asset.location}</TableCell>
-                      <TableCell>{asset.city}</TableCell>
-                      <TableCell>{asset.area}</TableCell>
-                      <TableCell>{asset.media_type}</TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(asset.card_rate)}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  filteredAssets.map((asset, index) => {
+                    const conflicts = getConflicts(asset.id);
+                    const isConflicting = conflicts.length > 0;
+
+                    return (
+                      <TableRow 
+                        key={asset.id}
+                        className={isConflicting ? "bg-amber-50/50 dark:bg-amber-950/20" : ""}
+                      >
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedAssets.has(asset.id)}
+                            onCheckedChange={() => toggleAssetSelection(asset.id)}
+                            disabled={isConflicting}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center font-medium text-muted-foreground">
+                          {index + 1}
+                        </TableCell>
+                        <TableCell className="font-medium font-mono text-sm">
+                          {formatAssetDisplayCode({
+                            mediaAssetCode: asset.media_asset_code,
+                            fallbackId: asset.id,
+                            companyName: companyPrefix
+                          })}
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate">{asset.location}</TableCell>
+                        <TableCell>{asset.city}</TableCell>
+                        <TableCell>{asset.area}</TableCell>
+                        <TableCell>{asset.media_type}</TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(asset.card_rate)}
+                        </TableCell>
+                        <TableCell>
+                          {isConflicting ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="outline" className="text-amber-600 border-amber-500 cursor-help">
+                                    <AlertTriangle className="w-3 h-3 mr-1" />
+                                    Conflict
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <div className="text-sm">
+                                    <p className="font-semibold mb-1">Booked in:</p>
+                                    {conflicts.map((c, i) => (
+                                      <div key={i} className="mb-1">
+                                        <span className="font-medium">{c.campaign_name}</span>
+                                        <br />
+                                        <span className="text-xs text-muted-foreground">
+                                          {c.start_date} to {c.end_date}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <Badge variant="outline" className="text-green-600 border-green-500">
+                              Available
+                            </Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -267,6 +422,11 @@ export function AddCampaignAssetsDialog({
           <div className="flex justify-between items-center pt-4 border-t">
             <p className="text-sm text-muted-foreground">
               {selectedAssets.size} asset(s) selected
+              {conflictCount > 0 && (
+                <span className="ml-2 text-amber-600">
+                  • {conflictCount} asset(s) unavailable due to conflicts
+                </span>
+              )}
             </p>
             <div className="flex gap-3">
               <Button variant="outline" onClick={onClose}>

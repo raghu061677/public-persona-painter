@@ -7,9 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatINR, getInvoiceStatusColor, getDaysOverdue } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
-import { FileText, DollarSign, AlertCircle, CheckCircle, Clock, ExternalLink, Download } from "lucide-react";
+import { FileText, DollarSign, AlertCircle, CheckCircle, Clock, ExternalLink, Download, Loader2 } from "lucide-react";
+import { useReceiptGeneration } from "@/hooks/useReceiptGeneration";
 
 interface Invoice {
   id: string;
@@ -43,6 +45,7 @@ export function ClientLedger({ clientId, clientName }: ClientLedgerProps) {
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const { generating, downloadReceiptByPaymentId } = useReceiptGeneration();
 
   const [totals, setTotals] = useState({
     totalInvoiced: 0,
@@ -302,6 +305,7 @@ export function ClientLedger({ clientId, clientName }: ClientLedgerProps) {
                   <TableHead>Method</TableHead>
                   <TableHead>Reference</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">Receipt</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -322,6 +326,29 @@ export function ClientLedger({ clientId, clientName }: ClientLedgerProps) {
                     </TableCell>
                     <TableCell className="text-right font-medium text-green-600">
                       {formatINR(payment.amount)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => downloadReceiptByPaymentId(payment.id)}
+                              disabled={generating}
+                            >
+                              {generating ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Download className="h-4 w-4 text-primary" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Download Receipt</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </TableCell>
                   </TableRow>
                 ))}

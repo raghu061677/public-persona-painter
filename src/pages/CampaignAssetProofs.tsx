@@ -130,70 +130,87 @@ export default function CampaignAssetProofs() {
     if (!campaignId || !assetId) return;
 
     try {
-      // Check if assetId is a UUID or a media_asset_code
+      // Check if assetId is a UUID (36 chars with hyphens in specific positions)
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(assetId);
       
       let data;
       let error;
       
       if (isUUID) {
-        // assetId is a campaign_assets.id UUID
+        // assetId is a campaign_assets.id UUID - direct lookup
         const result = await supabase
           .from('campaign_assets')
           .select('*')
           .eq('campaign_id', campaignId)
           .eq('id', assetId)
-          .single();
+          .maybeSingle();
         data = result.data;
         error = result.error;
-      } else {
-        // assetId is a media_asset_code (like HYD-BQS-0045 or MNS-HYD-BQS-0045)
-        // First, try exact match on media_asset_code
-        let { data: mediaAsset, error: mediaError } = await supabase
-          .from('media_assets')
-          .select('id')
-          .eq('media_asset_code', assetId)
+      } 
+      
+      // If not found by UUID or assetId is not a UUID, try other lookup methods
+      if (!data && !error) {
+        // campaign_assets.asset_id may store legacy codes like HYD-BQS-0019
+        // Try direct match on campaign_assets.asset_id first
+        const directResult = await supabase
+          .from('campaign_assets')
+          .select('*')
+          .eq('campaign_id', campaignId)
+          .eq('asset_id', assetId)
           .maybeSingle();
         
-        if (mediaError) throw mediaError;
-        
-        // If no exact match, try matching the end of media_asset_code (for prefix-less URLs)
-        if (!mediaAsset) {
-          const { data: mediaAssets, error: iLikeError } = await supabase
+        if (directResult.data) {
+          data = directResult.data;
+        } else if (!directResult.error) {
+          // Try to find via media_assets lookup
+          // First check if assetId matches media_asset_code
+          let { data: mediaAsset } = await supabase
             .from('media_assets')
             .select('id, media_asset_code')
-            .ilike('media_asset_code', `%${assetId}`)
-            .limit(1);
-          
-          if (iLikeError) throw iLikeError;
-          if (mediaAssets && mediaAssets.length > 0) {
-            mediaAsset = mediaAssets[0];
-          }
-        }
-        
-        // Also try matching against the legacy id field (some old assets use id as the code)
-        if (!mediaAsset) {
-          const { data: legacyAsset, error: legacyError } = await supabase
-            .from('media_assets')
-            .select('id')
-            .eq('id', assetId)
+            .eq('media_asset_code', assetId)
             .maybeSingle();
           
-          if (!legacyError && legacyAsset) {
-            mediaAsset = legacyAsset;
+          // If no exact match, try suffix match (for prefix-less URLs like HYD-BQS-0019 vs MNS-HYD-BQS-0019)
+          if (!mediaAsset) {
+            const { data: mediaAssets } = await supabase
+              .from('media_assets')
+              .select('id, media_asset_code')
+              .ilike('media_asset_code', `%${assetId}`)
+              .limit(1);
+            
+            if (mediaAssets && mediaAssets.length > 0) {
+              mediaAsset = mediaAssets[0];
+            }
           }
-        }
-        
-        if (mediaAsset) {
-          // Now find the campaign_asset using the media asset's UUID/id
-          const result = await supabase
-            .from('campaign_assets')
-            .select('*')
-            .eq('campaign_id', campaignId)
-            .eq('asset_id', mediaAsset.id)
-            .maybeSingle();
-          data = result.data;
-          error = result.error;
+          
+          // Try matching against legacy id field (media_assets.id might be HYD-BQS-0019)
+          if (!mediaAsset) {
+            const { data: legacyAsset } = await supabase
+              .from('media_assets')
+              .select('id, media_asset_code')
+              .eq('id', assetId)
+              .maybeSingle();
+            
+            if (legacyAsset) {
+              mediaAsset = legacyAsset;
+            }
+          }
+          
+          if (mediaAsset) {
+            // Now find campaign_asset using both the original id and media_asset_code
+            // campaign_assets.asset_id might store either the legacy id OR the media_asset_code
+            const result = await supabase
+              .from('campaign_assets')
+              .select('*')
+              .eq('campaign_id', campaignId)
+              .or(`asset_id.eq.${mediaAsset.id},asset_id.eq.${mediaAsset.media_asset_code || 'NOMATCH'}`)
+              .maybeSingle();
+            
+            data = result.data;
+            error = result.error;
+          }
+        } else {
+          error = directResult.error;
         }
       }
 

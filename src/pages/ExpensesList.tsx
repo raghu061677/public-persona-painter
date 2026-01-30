@@ -31,6 +31,7 @@ import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { PowerBillExpenseDialog } from "@/components/expenses/PowerBillExpenseDialog";
 import { PageCustomization, PageCustomizationOption } from "@/components/ui/page-customization";
+import { getAssetDisplayCode } from "@/lib/assets/getAssetDisplayCode";
 
 export default function ExpensesList() {
   const { company } = useCompany();
@@ -98,7 +99,10 @@ export default function ExpensesList() {
     setLoading(true);
     const { data, error } = await supabase
       .from('asset_power_bills')
-      .select('*, media_assets!inner(id, location, city, area, company_id)')
+      .select(`
+        *, 
+        media_assets!inner(id, location, city, area, company_id, media_asset_code)
+      `)
       .eq('media_assets.company_id', company.id)
       .order('bill_month', { ascending: false });
 
@@ -393,7 +397,9 @@ export default function ExpensesList() {
                   ) : (
                     filteredPowerBills.map((bill) => (
                       <TableRow key={bill.id}>
-                        <TableCell className="font-medium">{bill.asset_id}</TableCell>
+                        <TableCell className="font-medium">
+                          {getAssetDisplayCode(bill.media_assets, bill.asset_id)}
+                        </TableCell>
                         <TableCell>
                           {bill.media_assets?.location}, {bill.media_assets?.city}
                         </TableCell>

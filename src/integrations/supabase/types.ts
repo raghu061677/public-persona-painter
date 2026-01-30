@@ -4037,6 +4037,7 @@ export type Database = {
           is_public: boolean | null
           last_maintenance_date: string | null
           latitude: number | null
+          legacy_codes: string[] | null
           location: string
           longitude: number | null
           maintenance: number | null
@@ -4108,6 +4109,7 @@ export type Database = {
           is_public?: boolean | null
           last_maintenance_date?: string | null
           latitude?: number | null
+          legacy_codes?: string[] | null
           location: string
           longitude?: number | null
           maintenance?: number | null
@@ -4179,6 +4181,7 @@ export type Database = {
           is_public?: boolean | null
           last_maintenance_date?: string | null
           latitude?: number | null
+          legacy_codes?: string[] | null
           location?: string
           longitude?: number | null
           maintenance?: number | null
@@ -7261,6 +7264,7 @@ export type Database = {
         Returns: Json
       }
       auto_update_campaign_status: { Args: never; Returns: undefined }
+      backfill_missing_asset_codes: { Args: never; Returns: number }
       calculate_subscription_usage: {
         Args: { p_company_id: string }
         Returns: Json
@@ -7454,6 +7458,7 @@ export type Database = {
           is_public: boolean | null
           last_maintenance_date: string | null
           latitude: number | null
+          legacy_codes: string[] | null
           location: string
           longitude: number | null
           maintenance: number | null
@@ -7497,6 +7502,7 @@ export type Database = {
         }
       }
       get_asset_code_health: { Args: never; Returns: Json }
+      get_asset_display_code: { Args: { p_asset_id: string }; Returns: string }
       get_asset_face_count: { Args: { p_asset_id: string }; Returns: number }
       get_asset_total_sqft: { Args: { p_asset_id: string }; Returns: number }
       get_campaign_billing_summary: {
@@ -7655,6 +7661,7 @@ export type Database = {
         Args: { p_company_id: string; p_user_id: string }
         Returns: Json
       }
+      resolve_asset_id: { Args: { p_identifier: string }; Returns: string }
       seed_demo_companies: { Args: never; Returns: Json }
       setup_platform_admin: {
         Args: { p_company_name?: string; p_user_email: string }

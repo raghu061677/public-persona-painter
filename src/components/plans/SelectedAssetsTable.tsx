@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2, Sparkles, Loader2, Settings2, History, ArrowUpDown, ArrowUp, ArrowDown, AlertCircle, CalendarDays } from "lucide-react";
+import { Trash2, Sparkles, Loader2, Settings2, History, ArrowUpDown, ArrowUp, ArrowDown, AlertCircle, CalendarDays, Printer, Hammer, ChevronDown } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -26,6 +26,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import { calculatePrintingCost, calculateMountingCost, getAssetSqft } from "@/utils/effectivePricing";
@@ -40,6 +46,8 @@ import {
   BillingMode,
   BILLING_CYCLE_DAYS,
 } from "@/utils/perAssetPricing";
+import { BulkPrintingDialog } from "./BulkPrintingDialog";
+import { BulkMountingDialog } from "./BulkMountingDialog";
 
 type SortDirection = 'asc' | 'desc' | null;
 type SortableColumn = 'asset_id' | 'location' | 'area';
@@ -138,6 +146,11 @@ export function SelectedAssetsTable({
   } | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ column: null, direction: null });
   
+  // Bulk selection state
+  const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
+  const [showBulkPrintingDialog, setShowBulkPrintingDialog] = useState(false);
+  const [showBulkMountingDialog, setShowBulkMountingDialog] = useState(false);
+  
   const { visibleKeys, setVisibleKeys } = useColumnPrefs(
     'plan-assets',
     ALL_COLUMNS,
@@ -211,6 +224,45 @@ export function SelectedAssetsTable({
     return <ArrowDown className="ml-1 h-3 w-3 text-primary" />;
   };
 
+  // Selection handlers
+  const isAllSelected = useMemo(() => {
+    return sortedAssets.length > 0 && sortedAssets.every((a) => selectedAssetIds.has(a.id));
+  }, [sortedAssets, selectedAssetIds]);
+
+  const isSomeSelected = useMemo(() => {
+    return sortedAssets.some((a) => selectedAssetIds.has(a.id)) && !isAllSelected;
+  }, [sortedAssets, selectedAssetIds, isAllSelected]);
+
+  const toggleSelectAll = useCallback(() => {
+    if (isAllSelected) {
+      setSelectedAssetIds(new Set());
+    } else {
+      setSelectedAssetIds(new Set(sortedAssets.map((a) => a.id)));
+    }
+  }, [isAllSelected, sortedAssets]);
+
+  const toggleSelectAsset = useCallback((assetId: string) => {
+    setSelectedAssetIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(assetId)) {
+        next.delete(assetId);
+      } else {
+        next.add(assetId);
+      }
+      return next;
+    });
+  }, []);
+
+  // Bulk update handler - applies multiple field updates at once
+  const handleBulkUpdate = useCallback(
+    (updates: Array<{ assetId: string; field: string; value: any }>) => {
+      updates.forEach(({ assetId, field, value }) => {
+        onPricingUpdate(assetId, field, value);
+      });
+    },
+    [onPricingUpdate]
+  );
+
   const getSuggestion = async (assetId: string, asset: any) => {
     setLoadingRates(prev => new Set(prev).add(assetId));
     
@@ -264,7 +316,46 @@ export function SelectedAssetsTable({
 
   return (
     <div className="space-y-2">
-      <div className="flex justify-end">
+      {/* Toolbar with Bulk Actions and View Options */}
+      <div className="flex items-center justify-between gap-2">
+        {/* Bulk Actions - Left side */}
+        <div className="flex items-center gap-2">
+          {selectedAssetIds.size > 0 && (
+            <>
+              <Badge variant="secondary" className="text-xs">
+                {selectedAssetIds.size} selected
+              </Badge>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    Bulk Update
+                    <ChevronDown className="h-4 w-4 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem onClick={() => setShowBulkPrintingDialog(true)}>
+                    <Printer className="h-4 w-4 mr-2" />
+                    Bulk Printing
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowBulkMountingDialog(true)}>
+                    <Hammer className="h-4 w-4 mr-2" />
+                    Bulk Mounting
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedAssetIds(new Set())}
+                className="text-muted-foreground"
+              >
+                Clear Selection
+              </Button>
+            </>
+          )}
+        </div>
+
+        {/* View Options - Right side */}
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm">
@@ -301,6 +392,16 @@ export function SelectedAssetsTable({
         <Table>
           <TableHeader>
             <TableRow>
+              {/* Selection checkbox header */}
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={isAllSelected}
+                  // @ts-ignore
+                  indeterminate={isSomeSelected}
+                  onCheckedChange={toggleSelectAll}
+                  aria-label="Select all assets"
+                />
+              </TableHead>
               {isColumnVisible('asset_id') && (
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-muted/50"
@@ -356,7 +457,7 @@ export function SelectedAssetsTable({
           <TableBody>
             {sortedAssets.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={20} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={22} className="text-center py-8 text-muted-foreground">
                   No assets selected. Add assets from the table below.
                 </TableCell>
               </TableRow>
@@ -474,7 +575,15 @@ export function SelectedAssetsTable({
                 };
 
                 return (
-                  <TableRow key={asset.id}>
+                  <TableRow key={asset.id} className={selectedAssetIds.has(asset.id) ? 'bg-primary/5' : ''}>
+                    {/* Row selection checkbox */}
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedAssetIds.has(asset.id)}
+                        onCheckedChange={() => toggleSelectAsset(asset.id)}
+                        aria-label={`Select ${asset.media_asset_code || asset.id}`}
+                      />
+                    </TableCell>
                     {isColumnVisible('asset_id') && (
                       <TableCell className="font-medium font-mono text-sm">{asset.media_asset_code || asset.id}</TableCell>
                     )}
@@ -893,6 +1002,26 @@ export function SelectedAssetsTable({
           currentCardRate={pricingHistoryAsset.cardRate}
         />
       )}
+
+      {/* Bulk Printing Dialog */}
+      <BulkPrintingDialog
+        open={showBulkPrintingDialog}
+        onOpenChange={setShowBulkPrintingDialog}
+        assets={assets}
+        selectedAssetIds={selectedAssetIds}
+        assetPricing={assetPricing}
+        onBulkUpdate={handleBulkUpdate}
+      />
+
+      {/* Bulk Mounting Dialog */}
+      <BulkMountingDialog
+        open={showBulkMountingDialog}
+        onOpenChange={setShowBulkMountingDialog}
+        assets={assets}
+        selectedAssetIds={selectedAssetIds}
+        assetPricing={assetPricing}
+        onBulkUpdate={handleBulkUpdate}
+      />
     </div>
   );
 }

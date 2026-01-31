@@ -227,12 +227,12 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
 
   // ========== ITEMS TABLE (Original OOH Format) ==========
   const tableData = data.items.map((item: any, index: number) => {
-    const assetId = item.asset_id || '';
-    const location = item.location || item.description || 'Media Display';
-    const area = item.area || item.zone || '';
-    const mediaType = item.media_type || 'Bus Shelter';
-    const direction = item.direction || '';
-    const illumination = item.illumination || item.illumination_type || 'NonLit';
+    const assetCode = item.asset_code || item.asset_id || item.id || '-';
+    const locationVal = item.location || item.description || '-';
+    const areaVal = item.area || item.zone || '-';
+    const directionVal = item.direction || '-';
+    const mediaTypeVal = item.media_type || '-';
+    const illuminationVal = item.illumination || item.illumination_type || '-';
     const dimensions = item.dimensions || item.dimension_text || '';
     const sqft = item.total_sqft || item.sqft || '';
     
@@ -250,15 +250,15 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
     }
     
     // Build rich description as multi-line (line-wise) text
+    const hsnSac = item.hsn_sac || HSN_SAC_CODE;
     const descLines: string[] = [];
-    const firstLine = [assetId ? `[${assetId}]` : '', location].filter(Boolean).join(' ');
-    descLines.push(firstLine || 'Media Display');
-    if (location) descLines.push(`Location: ${location}`);
-    if (area) descLines.push(`Area: ${area}`);
-    if (direction) descLines.push(`Direction: ${direction}`);
-    if (mediaType) descLines.push(`Media Type: ${mediaType}`);
-    if (illumination) descLines.push(`Illumination: ${illumination}`);
-    descLines.push(`HSN/SAC Code: ${HSN_SAC_CODE}`);
+    descLines.push(`[${assetCode}] ${locationVal}`);
+    descLines.push(`Location: ${locationVal || '-'}`);
+    descLines.push(`Direction: ${directionVal || '-'}`);
+    descLines.push(`Area: ${areaVal || '-'}`);
+    descLines.push(`Media Type: ${mediaTypeVal || '-'}`);
+    descLines.push(`Illumination: ${illuminationVal || '-'}`);
+    descLines.push(`HSN/SAC Code: ${hsnSac || '-'}`);
     const richDescription = descLines.join('\n');
 
     // Size column - line-wise display

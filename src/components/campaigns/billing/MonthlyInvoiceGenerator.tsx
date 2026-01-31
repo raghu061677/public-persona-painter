@@ -40,6 +40,9 @@ interface CampaignAsset {
   city: string;
   area: string;
   media_type: string;
+  direction?: string | null;
+  illumination_type?: string | null;
+  dimensions?: string | null;
   card_rate: number;
   negotiated_rate?: number;
   daily_rate?: number;
@@ -437,6 +440,14 @@ export function MonthlyInvoiceGenerator({
           description: `${preview.campaignAsset.media_type} - ${preview.campaignAsset.location}, ${preview.campaignAsset.area}`,
           asset_code: preview.assetCode,
           asset_id: preview.campaignAsset.asset_id,
+          // Snapshot fields for stable PDFs
+          location: preview.campaignAsset.location ?? null,
+          area: preview.campaignAsset.area ?? null,
+          direction: preview.campaignAsset.direction ?? null,
+          media_type: preview.campaignAsset.media_type ?? null,
+          illumination: preview.campaignAsset.illumination_type ?? null,
+          dimension_text: preview.campaignAsset.dimensions ?? null,
+          hsn_sac: '998361',
           period: `${format(preview.billStartDate, 'dd MMM')} - ${format(preview.billEndDate, 'dd MMM yyyy')}`,
           days: preview.billableDays,
           rate: preview.monthlyRate,
@@ -451,8 +462,15 @@ export function MonthlyInvoiceGenerator({
             if (oneTimeOnly && !allowRebill) return !p.printingAlreadyBilled && p.printingCost > 0;
             return p.printingCost > 0;
           }).length} assets)`,
-          asset_code: '',
-          asset_id: '',
+          asset_code: '-',
+          asset_id: '-',
+          location: null,
+          area: null,
+          direction: null,
+          media_type: null,
+          illumination: null,
+          dimension_text: null,
+          hsn_sac: '998361',
           period: '',
           days: 0,
           rate: totals.printingTotal,
@@ -467,8 +485,15 @@ export function MonthlyInvoiceGenerator({
             if (oneTimeOnly && !allowRebill) return !p.mountingAlreadyBilled && p.mountingCost > 0;
             return p.mountingCost > 0;
           }).length} assets)`,
-          asset_code: '',
-          asset_id: '',
+          asset_code: '-',
+          asset_id: '-',
+          location: null,
+          area: null,
+          direction: null,
+          media_type: null,
+          illumination: null,
+          dimension_text: null,
+          hsn_sac: '998361',
           period: '',
           days: 0,
           rate: totals.mountingTotal,
@@ -537,6 +562,16 @@ export function MonthlyInvoiceGenerator({
             asset_id: preview.campaignAsset.asset_id,
             asset_code: preview.assetCode,
             description: `${preview.campaignAsset.media_type} - ${preview.campaignAsset.location}`,
+
+            // Snapshot fields for stable PDFs (do not depend on lookups at render time)
+            location: preview.campaignAsset.location ?? null,
+            area: preview.campaignAsset.area ?? null,
+            direction: preview.campaignAsset.direction ?? null,
+            media_type: preview.campaignAsset.media_type ?? null,
+            illumination: preview.campaignAsset.illumination_type ?? null,
+            dimension_text: preview.campaignAsset.dimensions ?? null,
+            hsn_sac: '998361',
+
             bill_start_date: format(preview.billStartDate, 'yyyy-MM-dd'),
             bill_end_date: format(preview.billEndDate, 'yyyy-MM-dd'),
             billable_days: preview.billableDays,

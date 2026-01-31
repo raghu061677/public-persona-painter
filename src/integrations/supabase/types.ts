@@ -3865,6 +3865,7 @@ export type Database = {
       }
       invoice_items: {
         Row: {
+          area: string | null
           asset_code: string | null
           asset_id: string | null
           base_amount: number
@@ -3874,15 +3875,22 @@ export type Database = {
           campaign_asset_id: string | null
           created_at: string | null
           description: string | null
+          dimension_text: string | null
+          direction: string | null
+          hsn_sac: string | null
           id: string
+          illumination: string | null
           invoice_id: string
           line_total: number
+          location: string | null
+          media_type: string | null
           mounting_cost: number | null
           printing_cost: number | null
           rate_type: string
           rate_value: number
         }
         Insert: {
+          area?: string | null
           asset_code?: string | null
           asset_id?: string | null
           base_amount?: number
@@ -3892,15 +3900,22 @@ export type Database = {
           campaign_asset_id?: string | null
           created_at?: string | null
           description?: string | null
+          dimension_text?: string | null
+          direction?: string | null
+          hsn_sac?: string | null
           id?: string
+          illumination?: string | null
           invoice_id: string
           line_total?: number
+          location?: string | null
+          media_type?: string | null
           mounting_cost?: number | null
           printing_cost?: number | null
           rate_type?: string
           rate_value?: number
         }
         Update: {
+          area?: string | null
           asset_code?: string | null
           asset_id?: string | null
           base_amount?: number
@@ -3910,9 +3925,15 @@ export type Database = {
           campaign_asset_id?: string | null
           created_at?: string | null
           description?: string | null
+          dimension_text?: string | null
+          direction?: string | null
+          hsn_sac?: string | null
           id?: string
+          illumination?: string | null
           invoice_id?: string
           line_total?: number
+          location?: string | null
+          media_type?: string | null
           mounting_cost?: number | null
           printing_cost?: number | null
           rate_type?: string

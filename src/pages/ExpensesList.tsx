@@ -95,12 +95,19 @@ export default function ExpensesList() {
     const tdsAmount = formData.tds_applicable ? (formData.amount_before_tax * formData.tds_percent / 100) : 0;
     const netPayable = totalAmount - tdsAmount;
 
-    // Map category string to valid enum value
-    const validCategories = ['Printing', 'Mounting', 'Transport', 'Electricity', 'Other'] as const;
-    type ExpenseCategoryEnum = typeof validCategories[number];
-    const categoryValue: ExpenseCategoryEnum = validCategories.includes(formData.category as ExpenseCategoryEnum) 
-      ? (formData.category as ExpenseCategoryEnum)
-      : 'Other';
+    // Map category string to valid DB enum value
+    // DB allows only: Printing | Mounting | Transport | Electricity | Other
+    const categoryMap: Record<string, 'Printing' | 'Mounting' | 'Transport' | 'Electricity' | 'Other'> = {
+      'Printing': 'Printing',
+      'Mounting': 'Mounting',
+      'Transport': 'Transport',
+      'Electricity': 'Electricity',
+      'Power/Electricity': 'Electricity',
+      'Other': 'Other',
+      'Rent': 'Other',
+      'Maintenance': 'Other',
+    };
+    const categoryValue = categoryMap[formData.category] || 'Other';
 
     // Map payment status to valid enum value (DB only supports Pending | Paid)
     const validPaymentStatuses = ['Pending', 'Paid'] as const;
@@ -177,14 +184,18 @@ export default function ExpensesList() {
   };
 
   const handleExpenseUpdate = async (id: string, formData: Partial<ExpenseFormData>): Promise<boolean> => {
-    // Map category string to valid enum value if provided
-    const validCategories = ['Printing', 'Mounting', 'Transport', 'Electricity', 'Other'] as const;
-    type ExpenseCategoryEnum = typeof validCategories[number];
-    const categoryValue: ExpenseCategoryEnum | undefined = formData.category 
-      ? (validCategories.includes(formData.category as ExpenseCategoryEnum) 
-          ? (formData.category as ExpenseCategoryEnum)
-          : 'Other')
-      : undefined;
+    // Map category string to valid DB enum value if provided
+    const categoryMap: Record<string, 'Printing' | 'Mounting' | 'Transport' | 'Electricity' | 'Other'> = {
+      'Printing': 'Printing',
+      'Mounting': 'Mounting',
+      'Transport': 'Transport',
+      'Electricity': 'Electricity',
+      'Power/Electricity': 'Electricity',
+      'Other': 'Other',
+      'Rent': 'Other',
+      'Maintenance': 'Other',
+    };
+    const categoryValue = formData.category ? (categoryMap[formData.category] || 'Other') : undefined;
 
     const { error } = await supabase
       .from('expenses')

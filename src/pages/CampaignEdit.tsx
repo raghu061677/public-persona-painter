@@ -540,13 +540,27 @@ export default function CampaignEdit() {
   const handleDurationModeChange = (mode: DurationMode) => {
     setDurationMode(mode);
     
-    const currentDays = getDurationDays();
-    if (currentDays > 0) {
-      if (mode === 'MONTH') {
-        // Convert current days to months
-        setDurationValue(calculateMonthsFromDays(currentDays));
-      } else {
-        // Use current days
+    if (mode === 'MONTH') {
+      // When switching to Month-wise, default to 30 days (OOH industry standard)
+      const defaultMonthDays = 30;
+      setDurationValue(1); // 1 month
+      
+      // Update end date based on 30 days
+      if (startDate) {
+        const endDate = calculateEndDate(startDate, defaultMonthDays);
+        
+        // If there are assets, prompt user to apply dates
+        if (campaignAssets.length > 0) {
+          setPendingDatesUpdate({ start: startDate, end: endDate });
+          setShowApplyDatesDialog(true);
+        } else {
+          setEndDate(endDate);
+        }
+      }
+    } else {
+      // When switching to Days mode, use current calculated days
+      const currentDays = getDurationDays();
+      if (currentDays > 0) {
         setDurationValue(currentDays);
       }
     }

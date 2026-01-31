@@ -136,9 +136,27 @@ export function LineItemDurationControl({
   const handleDurationModeChange = (mode: DurationMode) => {
     if (disabled) return;
     
-    onDurationChange({
-      duration_mode: mode,
-    });
+    // When switching to Month-wise, default to 30 days (OOH industry standard)
+    if (mode === 'MONTH') {
+      const defaultMonthDays = 30; // 1 month = 30 days for OOH billing
+      const sync = syncDurationFromDays(localStartDate, defaultMonthDays);
+      
+      setLocalDurationDays(defaultMonthDays);
+      setLocalMonthsCount(1);
+      setLocalEndDate(sync.end_date);
+      
+      onDurationChange({
+        duration_mode: mode,
+        duration_days: defaultMonthDays,
+        months_count: 1,
+        end_date: sync.end_date,
+      });
+    } else {
+      // Keep current duration when switching to DAYS mode
+      onDurationChange({
+        duration_mode: mode,
+      });
+    }
   };
 
   const formatDate = (date: Date): string => {

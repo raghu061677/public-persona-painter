@@ -249,20 +249,22 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
       bookingDisplay = `From: ${formatDate(startDate)}\nTo: ${formatDate(endDate)}\n${days > 45 ? `Month: ${months}` : `Days: ${days}`}`;
     }
     
-    // Build rich description
-    const descParts = [];
-    if (assetId) descParts.push(`[${assetId}]`);
-    descParts.push(location);
-    if (zone) descParts.push(`Zone:${zone}`);
-    descParts.push(`Media:${mediaType}`);
-    if (direction) descParts.push(`Route:${direction}`);
-    descParts.push(`Lit:${illumination}`);
-    if (dimensions && sqft) {
-      descParts.push(`Size ${dimensions} Area(Sft):${sqft}`);
-    }
-    
-    const richDescription = descParts.join(' ');
-    const sizeDisplay = sqft ? `${sqft}` : (dimensions || 'N/A');
+    // Build rich description as multi-line (line-wise) text
+    const descLines: string[] = [];
+    const firstLine = [assetId ? `[${assetId}]` : '', location].filter(Boolean).join(' ');
+    descLines.push(firstLine || 'Media Display');
+    if (zone) descLines.push(`Zone: ${zone}`);
+    descLines.push(`Media: ${mediaType}`);
+    if (direction) descLines.push(`Route: ${direction}`);
+    descLines.push(`Lit: ${illumination}`);
+    descLines.push(`HSN/SAC Code: ${HSN_SAC_CODE}`);
+    const richDescription = descLines.join('\n');
+
+    // Size column - line-wise display
+    const sizeLines: string[] = [];
+    if (dimensions) sizeLines.push(`Dimension: ${dimensions}`);
+    if (sqft !== '' && sqft != null) sizeLines.push(`Area(Sft): ${sqft}`);
+    const sizeDisplay = sizeLines.length ? sizeLines.join('\n') : 'N/A';
     
     // Unit price with breakdown
     const baseRate = item.rate || item.unit_price || item.display_rate || item.negotiated_rate || 0;
@@ -275,7 +277,7 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
       const extras = [];
       if (printingCost > 0) extras.push(`P: ${formatCurrency(printingCost)}`);
       if (mountingCost > 0) extras.push(`M: ${formatCurrency(mountingCost)}`);
-      unitPriceDisplay = `${formatCurrency(baseRate)}\n${extras.join(' ')}`;
+      unitPriceDisplay = `${formatCurrency(baseRate)}\n${extras.join('\n')}`;
     }
 
     return [

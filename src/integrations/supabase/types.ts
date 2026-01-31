@@ -2498,6 +2498,7 @@ export type Database = {
           shipping_state: string | null
           state: string | null
           updated_at: string | null
+          whatsapp: string | null
         }
         Insert: {
           address?: string | null
@@ -2529,6 +2530,7 @@ export type Database = {
           shipping_state?: string | null
           state?: string | null
           updated_at?: string | null
+          whatsapp?: string | null
         }
         Update: {
           address?: string | null
@@ -2560,6 +2562,7 @@ export type Database = {
           shipping_state?: string | null
           state?: string | null
           updated_at?: string | null
+          whatsapp?: string | null
         }
         Relationships: [
           {
@@ -5679,6 +5682,153 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_confirmations: {
+        Row: {
+          approved_amount: number | null
+          approved_at: string | null
+          approved_by: string | null
+          approved_date: string | null
+          approved_method: string | null
+          approved_reference: string | null
+          claimed_amount: number
+          claimed_date: string | null
+          claimed_method: string | null
+          claimed_reference: string | null
+          client_id: string
+          company_id: string | null
+          created_at: string | null
+          created_by: string | null
+          email_send_error: string | null
+          email_send_status: string | null
+          email_sent_at: string | null
+          id: string
+          invoice_id: string | null
+          notes: string | null
+          payment_record_id: string | null
+          receipt_id: string | null
+          rejection_reason: string | null
+          send_email: boolean | null
+          send_whatsapp: boolean | null
+          status: string
+          submitted_at: string | null
+          updated_at: string | null
+          whatsapp_from: string | null
+          whatsapp_media_url: string | null
+          whatsapp_message: string | null
+          whatsapp_send_error: string | null
+          whatsapp_send_status: string | null
+          whatsapp_sent_at: string | null
+        }
+        Insert: {
+          approved_amount?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_date?: string | null
+          approved_method?: string | null
+          approved_reference?: string | null
+          claimed_amount: number
+          claimed_date?: string | null
+          claimed_method?: string | null
+          claimed_reference?: string | null
+          client_id: string
+          company_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email_send_error?: string | null
+          email_send_status?: string | null
+          email_sent_at?: string | null
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          payment_record_id?: string | null
+          receipt_id?: string | null
+          rejection_reason?: string | null
+          send_email?: boolean | null
+          send_whatsapp?: boolean | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string | null
+          whatsapp_from?: string | null
+          whatsapp_media_url?: string | null
+          whatsapp_message?: string | null
+          whatsapp_send_error?: string | null
+          whatsapp_send_status?: string | null
+          whatsapp_sent_at?: string | null
+        }
+        Update: {
+          approved_amount?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_date?: string | null
+          approved_method?: string | null
+          approved_reference?: string | null
+          claimed_amount?: number
+          claimed_date?: string | null
+          claimed_method?: string | null
+          claimed_reference?: string | null
+          client_id?: string
+          company_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email_send_error?: string | null
+          email_send_status?: string | null
+          email_sent_at?: string | null
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          payment_record_id?: string | null
+          receipt_id?: string | null
+          rejection_reason?: string | null
+          send_email?: boolean | null
+          send_whatsapp?: boolean | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string | null
+          whatsapp_from?: string | null
+          whatsapp_media_url?: string | null
+          whatsapp_message?: string | null
+          whatsapp_send_error?: string | null
+          whatsapp_send_status?: string | null
+          whatsapp_sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_confirmations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_confirmations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_aging_report"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "payment_confirmations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_confirmations_payment_record_id_fkey"
+            columns: ["payment_record_id"]
+            isOneToOne: false
+            referencedRelation: "payment_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_confirmations_receipt_id_fkey"
+            columns: ["receipt_id"]
+            isOneToOne: false
+            referencedRelation: "receipts"
             referencedColumns: ["id"]
           },
         ]

@@ -194,6 +194,7 @@ const CampaignAssetsRedirect = lazy(() => import("./pages/CampaignAssetsRedirect
 const InventoryUtilization = lazy(() => import("./pages/InventoryUtilization"));
 const RevenueForecast = lazy(() => import("./pages/RevenueForecast"));
 const MediaAssetDuplicates = lazy(() => import("./pages/admin/MediaAssetDuplicates"));
+const PaymentConfirmations = lazy(() => import("./pages/PaymentConfirmations"));
 
 // Optimized Query Client with caching
 const queryClient = new QueryClient({
@@ -350,6 +351,7 @@ const App = () => (
             <Route path="/admin/invoices/:id" element={<ModernAppLayout><InvoiceDetail /></ModernAppLayout>} />
             <Route path="/admin/invoices-import" element={<ModernAppLayout><ImportInvoices /></ModernAppLayout>} />
             <Route path="/admin/payment-reminders" element={<ModernAppLayout><Invoices /></ModernAppLayout>} />
+            <Route path="/admin/payment-confirmations" element={<ModernAppLayout><PaymentConfirmations /></ModernAppLayout>} />
             <Route path="/admin/expenses" element={<ModernAppLayout><ExpensesList /></ModernAppLayout>} />
             <Route path="/finance/expenses" element={<ModernAppLayout><ExpensesList /></ModernAppLayout>} />
             <Route path="/reports" element={<ModernAppLayout><ReportsDashboard /></ModernAppLayout>} />

@@ -24,7 +24,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Zap, Receipt, ExternalLink, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, Zap, Receipt, ExternalLink, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatINR } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
 import { format } from "date-fns";
@@ -57,6 +64,12 @@ export default function ExpensesList() {
   // Page customization state
   const [showSearch, setShowSearch] = useState(true);
   const [showSummaryCards, setShowSummaryCards] = useState(true);
+  
+  // Filters and sorting state
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortField, setSortField] = useState<string>("created_at");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   useEffect(() => {
     checkAdminStatus();
@@ -116,11 +129,22 @@ export default function ExpensesList() {
       ? (formData.payment_status as PaymentStatusEnum)
       : 'Pending';
 
-    // Generate a unique ID
+    // Generate a unique ID and expense number
     const expenseId = crypto.randomUUID();
+    const now = new Date();
+    const fy = now.getMonth() >= 3 ? `${now.getFullYear()}-${(now.getFullYear() + 1).toString().slice(-2)}` : `${now.getFullYear() - 1}-${now.getFullYear().toString().slice(-2)}`;
+    
+    // Get next sequence number for expense_no
+    const { count } = await supabase
+      .from('expenses')
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', company.id);
+    const seq = ((count || 0) + 1).toString().padStart(6, '0');
+    const expenseNo = `EXP-FY${fy}-${seq}`;
 
     const insertData = {
       id: expenseId,
+      expense_no: expenseNo,
       company_id: company.id,
       expense_date: format(formData.expense_date, 'yyyy-MM-dd'),
       vendor_id: formData.vendor_id || null,
@@ -278,15 +302,38 @@ export default function ExpensesList() {
     setLoading(false);
   };
 
-  const filteredExpenses = expenses.filter(exp => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      exp.id?.toLowerCase().includes(term) ||
-      exp.vendor_name?.toLowerCase().includes(term) ||
-      exp.category?.toLowerCase().includes(term)
-    );
-  });
+  const filteredExpenses = expenses
+    .filter(exp => {
+      // Search filter
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        const matchesSearch = (
+          exp.expense_no?.toLowerCase().includes(term) ||
+          exp.id?.toLowerCase().includes(term) ||
+          exp.vendor_name?.toLowerCase().includes(term) ||
+          exp.category?.toLowerCase().includes(term)
+        );
+        if (!matchesSearch) return false;
+      }
+      // Category filter
+      if (categoryFilter !== "all" && exp.category !== categoryFilter) return false;
+      // Status filter
+      if (statusFilter !== "all" && exp.payment_status !== statusFilter) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      let aVal = a[sortField];
+      let bVal = b[sortField];
+      if (sortField === "created_at" || sortField === "expense_date") {
+        aVal = new Date(aVal || 0).getTime();
+        bVal = new Date(bVal || 0).getTime();
+      }
+      if (typeof aVal === "string") aVal = aVal.toLowerCase();
+      if (typeof bVal === "string") bVal = bVal.toLowerCase();
+      if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
 
   const filteredPowerBills = powerBills.filter(bill => {
     if (!searchTerm) return true;
@@ -383,16 +430,62 @@ export default function ExpensesList() {
           )}
         </div>
 
-        <div className="mb-6">
-          <div className="relative max-w-md">
+        <div className="mb-6 flex flex-wrap gap-4 items-center">
+          <div className="relative flex-1 min-w-[200px] max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search expenses..."
+              placeholder="Search by ID, vendor, category..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
             />
           </div>
+          
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="Printing">Printing</SelectItem>
+              <SelectItem value="Mounting">Mounting</SelectItem>
+              <SelectItem value="Transport">Transport</SelectItem>
+              <SelectItem value="Electricity">Electricity</SelectItem>
+              <SelectItem value="Other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[130px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="Pending">Pending</SelectItem>
+              <SelectItem value="Paid">Paid</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select value={sortField} onValueChange={(value) => setSortField(value)}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="created_at">Date Created</SelectItem>
+              <SelectItem value="expense_date">Expense Date</SelectItem>
+              <SelectItem value="total_amount">Amount</SelectItem>
+              <SelectItem value="vendor_name">Vendor</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Button 
+            variant="outline" 
+            size="icon"
+            onClick={() => setSortDirection(prev => prev === "asc" ? "desc" : "asc")}
+            title={sortDirection === "asc" ? "Ascending" : "Descending"}
+          >
+            {sortDirection === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+          </Button>
         </div>
 
         {/* Summary Cards */}
@@ -499,12 +592,14 @@ export default function ExpensesList() {
                   ) : (
                     filteredExpenses.map((expense) => (
                       <TableRow key={expense.id}>
-                        <TableCell className="font-medium">{expense.id}</TableCell>
+                        <TableCell className="font-medium font-mono text-sm">
+                          {expense.expense_no || `EXP-${expense.id.slice(0, 8).toUpperCase()}`}
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline">{expense.category}</Badge>
                         </TableCell>
                         <TableCell>{expense.vendor_name}</TableCell>
-                        <TableCell>{formatDate(expense.created_at)}</TableCell>
+                        <TableCell>{formatDate(expense.expense_date || expense.created_at)}</TableCell>
                         <TableCell>
                           <Badge variant={expense.payment_status === 'Paid' ? 'default' : 'secondary'}>
                             {expense.payment_status}

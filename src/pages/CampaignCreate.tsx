@@ -359,13 +359,22 @@ export default function CampaignCreate() {
   const handleDurationModeChange = (mode: DurationMode) => {
     setDurationMode(mode);
     
-    const currentDays = getDurationDays();
-    if (currentDays > 0) {
-      if (mode === 'MONTH') {
-        // Convert current days to months
-        setDurationValue(calculateMonthsFromDays(currentDays));
-      } else {
-        // Use current days
+    if (mode === 'MONTH') {
+      // When switching to Month-wise, default to 30 days (OOH industry standard)
+      const defaultMonthDays = 30;
+      setDurationValue(1); // 1 month
+      
+      // Update end date based on 30 days
+      if (formData.start_date) {
+        const startDate = new Date(formData.start_date);
+        const endDate = calculateEndDate(startDate, defaultMonthDays);
+        const endDateStr = endDate.toISOString().split('T')[0];
+        setFormData(prev => ({ ...prev, end_date: endDateStr }));
+      }
+    } else {
+      // When switching to Days mode, use current calculated days
+      const currentDays = getDurationDays();
+      if (currentDays > 0) {
         setDurationValue(currentDays);
       }
     }

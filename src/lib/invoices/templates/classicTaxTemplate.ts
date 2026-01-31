@@ -244,50 +244,73 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
     yPos += 8;
   }
 
-  // ========== ITEMS TABLE (With Dimension + Illumination) ==========
+  // ========== ITEMS TABLE (Original OOH Format) ==========
   const tableData = data.items.map((item: any, index: number) => {
     const assetId = item.asset_id || '';
     const location = item.location || item.description || 'Media Display';
     const zone = item.area || item.zone || '';
-    const mediaType = item.media_type || '';
-    
-    const desc = [
-      `[${assetId}] ${location}`,
-      zone ? `Zone: ${zone}` : '',
-      mediaType ? `Media: ${mediaType}` : '',
-    ].filter(Boolean).join('\n');
-    
-    // Dimension + Sqft
-    const dimensions = item.dimensions || item.dimension_text || '-';
+    const mediaType = item.media_type || 'Bus Shelter';
+    const direction = item.direction || '';
+    const illumination = item.illumination || item.illumination_type || 'NonLit';
+    const dimensions = item.dimensions || item.dimension_text || '';
     const sqft = item.total_sqft || item.sqft || '';
-    const sizeDisplay = sqft ? `${dimensions}\n(${sqft} sft)` : dimensions;
     
-    // Illumination
-    const illumination = item.illumination || item.illumination_type || '-';
+    // Calculate period info
+    const startDate = item.start_date || item.booking_start_date || data.campaign?.start_date;
+    const endDate = item.end_date || item.booking_end_date || data.campaign?.end_date;
+    let bookingDisplay = '-';
     
-    // Period
-    const period = item.start_date && item.end_date 
-      ? `${formatDate(item.start_date)}\nto\n${formatDate(item.end_date)}`
-      : '-';
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      const months = Math.ceil(days / 30);
+      bookingDisplay = `From: ${formatDate(startDate)}\nTo: ${formatDate(endDate)}\n${days > 45 ? `Month: ${months}` : `Days: ${days}`}`;
+    }
     
-    const rate = item.rate || item.unit_price || item.negotiated_rate || 0;
-    const amount = item.amount || item.final_price || rate;
+    // Build rich description
+    const descParts = [];
+    if (assetId) descParts.push(`[${assetId}]`);
+    descParts.push(location);
+    if (zone) descParts.push(`Zone:${zone}`);
+    descParts.push(`Media:${mediaType}`);
+    if (direction) descParts.push(`Route:${direction}`);
+    descParts.push(`Lit:${illumination}`);
+    descParts.push(`HSN/SAC:${HSN_SAC_CODE}`);
+    if (dimensions && sqft) {
+      descParts.push(`Size ${dimensions} Area(Sft):${sqft}`);
+    }
+    
+    const richDescription = descParts.join(' ');
+    const sizeDisplay = sqft ? `${sqft}` : (dimensions || 'N/A');
+    
+    // Unit price with breakdown
+    const baseRate = item.rate || item.unit_price || item.display_rate || item.negotiated_rate || 0;
+    const printingCost = item.printing_charges || item.printing_cost || 0;
+    const mountingCost = item.mounting_charges || item.mounting_cost || 0;
+    const itemTotal = item.amount || item.final_price || item.total || (baseRate + printingCost + mountingCost);
+    
+    let unitPriceDisplay = formatCurrency(baseRate);
+    if (printingCost > 0 || mountingCost > 0) {
+      const extras = [];
+      if (printingCost > 0) extras.push(`P: ${formatCurrency(printingCost)}`);
+      if (mountingCost > 0) extras.push(`M: ${formatCurrency(mountingCost)}`);
+      unitPriceDisplay = `${formatCurrency(baseRate)}\n${extras.join('\n')}`;
+    }
 
     return [
       (index + 1).toString(),
-      desc,
+      richDescription,
       sizeDisplay,
-      illumination,
-      HSN_SAC_CODE,
-      period,
-      formatCurrency(rate),
-      formatCurrency(amount),
+      bookingDisplay,
+      unitPriceDisplay,
+      formatCurrency(itemTotal),
     ];
   });
 
   autoTable(doc, {
     startY: yPos,
-    head: [['S.No', 'Description', 'Size', 'Illum', 'HSN/SAC', 'Period', 'Rate', 'Amount']],
+    head: [['#', 'LOCATION & DESCRIPTION', 'SIZE', 'BOOKING', 'UNIT PRICE', 'SUBTOTAL']],
     body: tableData,
     theme: 'grid',
     headStyles: {
@@ -305,14 +328,12 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
       cellPadding: 2,
     },
     columnStyles: {
-      0: { cellWidth: 9, halign: 'center' },
-      1: { cellWidth: 46 },
-      2: { cellWidth: 20, halign: 'center' },
-      3: { cellWidth: 14, halign: 'center' },
-      4: { cellWidth: 16, halign: 'center' },
-      5: { cellWidth: 26, halign: 'center', fontSize: 6 },
-      6: { cellWidth: 22, halign: 'right' },
-      7: { cellWidth: 22, halign: 'right' },
+      0: { cellWidth: 8, halign: 'center' },
+      1: { cellWidth: 80, halign: 'left' },
+      2: { cellWidth: 14, halign: 'center' },
+      3: { cellWidth: 32, halign: 'left', fontSize: 6 },
+      4: { cellWidth: 24, halign: 'right' },
+      5: { cellWidth: 20, halign: 'right' },
     },
     margin: { left: leftMargin, right: rightMargin },
     tableLineColor: [0, 0, 0],

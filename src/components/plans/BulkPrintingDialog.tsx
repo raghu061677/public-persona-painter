@@ -210,12 +210,44 @@ export function BulkPrintingDialog({
 
           {/* Preview */}
           {preview.count > 0 && (
-            <div className="rounded-lg border bg-muted/50 p-3 space-y-2">
+            <div className="rounded-lg border bg-muted/50 p-3 space-y-3">
               <div className="text-sm font-medium">Preview</div>
               <div className="text-sm text-muted-foreground">
                 Will update <span className="font-semibold text-foreground">{preview.count}</span> asset(s)
               </div>
-              <div className="text-sm">
+              
+              {/* Mini table showing first 5 affected assets */}
+              {preview.details.length > 0 && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-1.5 pr-2 font-medium">Asset Code</th>
+                        <th className="text-right py-1.5 px-2 font-medium">SQFT</th>
+                        <th className="text-right py-1.5 pl-2 font-medium">New Cost</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {preview.details.slice(0, 5).map((detail) => (
+                        <tr key={detail.id} className="border-b border-muted">
+                          <td className="py-1.5 pr-2 font-mono">{detail.code}</td>
+                          <td className="text-right py-1.5 px-2">{detail.sqft.toLocaleString('en-IN')}</td>
+                          <td className="text-right py-1.5 pl-2 text-green-600 font-medium">
+                            ₹{detail.cost.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {preview.details.length > 5 && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      ...and {preview.details.length - 5} more
+                    </p>
+                  )}
+                </div>
+              )}
+              
+              <div className="text-sm pt-2 border-t">
                 Total printing cost:{" "}
                 <span className="font-semibold text-green-600 dark:text-green-400">
                   ₹{preview.totalCost.toLocaleString("en-IN", { maximumFractionDigits: 2 })}

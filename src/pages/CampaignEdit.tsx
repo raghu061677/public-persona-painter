@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, CalendarIcon, Plus, Trash2, Save, X, AlertCircle, Calculator } from "lucide-react";
+import { ArrowLeft, CalendarIcon, Plus, Trash2, Save, X, AlertCircle, Calculator, Printer, Hammer, ChevronDown, Settings2 } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -20,7 +20,6 @@ import { AddCampaignAssetsDialog } from "@/components/campaigns/AddCampaignAsset
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PrintingPricingBar } from "@/components/shared/PrintingPricingBar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { calculatePrintingCost, calculateMountingCost, getAssetSqft } from "@/utils/effectivePricing";
 import {
@@ -40,6 +39,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { 
   BillingMode, 
@@ -49,6 +54,8 @@ import {
 } from "@/utils/perAssetPricing";
 import { CampaignAssetDurationCell } from "@/components/campaigns/CampaignAssetDurationCell";
 import { ApplyDatesToAssetsDialog } from "@/components/campaigns/ApplyDatesToAssetsDialog";
+import { BulkPrintingDialog } from "@/components/plans/BulkPrintingDialog";
+import { BulkMountingDialog } from "@/components/plans/BulkMountingDialog";
 
 // Campaign asset interface
 interface CampaignAsset {
@@ -116,9 +123,9 @@ export default function CampaignEdit() {
   // Selection state for bulk operations
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
   
-  // Bulk pricing rates
-  const [bulkPrintingRate, setBulkPrintingRate] = useState<number>(17);
-  const [bulkMountingRate, setBulkMountingRate] = useState<number>(8);
+  // Bulk update dialogs state
+  const [showBulkPrintingDialog, setShowBulkPrintingDialog] = useState(false);
+  const [showBulkMountingDialog, setShowBulkMountingDialog] = useState(false);
 
   useEffect(() => {
     fetchClients();
@@ -793,117 +800,72 @@ export default function CampaignEdit() {
     }));
   };
 
-  // Bulk apply printing rate
-  const applyPrintingRateToSelected = () => {
-    if (selectedAssetIds.size === 0) {
-      toast({
-        title: "No assets selected",
-        description: "Select at least 1 asset to apply printing rate",
-        variant: "destructive",
+  // Bulk update handler - applies multiple field updates at once (used by BulkPrintingDialog and BulkMountingDialog)
+  const handleBulkUpdate = useCallback(
+    (updates: Array<{ assetId: string; field: string; value: any }>) => {
+      setCampaignAssets(prev => {
+        const assetUpdates = new Map<string, Record<string, any>>();
+        
+        // Group updates by asset ID
+        updates.forEach(({ assetId, field, value }) => {
+          if (!assetUpdates.has(assetId)) {
+            assetUpdates.set(assetId, {});
+          }
+          assetUpdates.get(assetId)![field] = value;
+        });
+        
+        // Apply updates
+        return prev.map(asset => {
+          const assetUpdate = assetUpdates.get(asset.id);
+          if (!assetUpdate) return asset;
+          
+          // Map from dialog field names to campaign asset field names
+          const mappedUpdate: Record<string, any> = {};
+          
+          if ('printing_rate' in assetUpdate) {
+            mappedUpdate.printing_rate_per_sqft = assetUpdate.printing_rate;
+          }
+          if ('printing_charges' in assetUpdate) {
+            mappedUpdate.printing_cost = assetUpdate.printing_charges;
+            mappedUpdate.printing_charges = assetUpdate.printing_charges;
+          }
+          if ('mounting_mode' in assetUpdate) {
+            // Store mounting mode if needed
+          }
+          if ('mounting_rate' in assetUpdate) {
+            mappedUpdate.mounting_rate_per_sqft = assetUpdate.mounting_rate;
+          }
+          if ('mounting_charges' in assetUpdate) {
+            mappedUpdate.mounting_cost = assetUpdate.mounting_charges;
+            mappedUpdate.mounting_charges = assetUpdate.mounting_charges;
+          }
+          
+          return { ...asset, ...mappedUpdate };
+        });
       });
-      return;
-    }
-    
-    setCampaignAssets(prev => prev.map(asset => {
-      if (!selectedAssetIds.has(asset.id)) return asset;
-      
-      const printingResult = calculatePrintingCost(
-        { total_sqft: asset.total_sqft, dimensions: asset.dimensions },
-        bulkPrintingRate
-      );
-      
-      return {
-        ...asset,
-        printing_rate_per_sqft: bulkPrintingRate,
-        printing_cost: printingResult.cost,
-        printing_charges: printingResult.cost,
-      };
-    }));
-    
-    toast({
-      title: "Printing rate applied",
-      description: `Applied ₹${bulkPrintingRate}/sqft to ${selectedAssetIds.size} asset(s)`,
-    });
-  };
+    },
+    []
+  );
 
-  const applyPrintingRateToAll = () => {
-    if (campaignAssets.length === 0) return;
-    
-    setCampaignAssets(prev => prev.map(asset => {
-      const printingResult = calculatePrintingCost(
-        { total_sqft: asset.total_sqft, dimensions: asset.dimensions },
-        bulkPrintingRate
-      );
-      
-      return {
-        ...asset,
-        printing_rate_per_sqft: bulkPrintingRate,
-        printing_cost: printingResult.cost,
-        printing_charges: printingResult.cost,
-      };
-    }));
-    
-    toast({
-      title: "Printing rate applied",
-      description: `Applied ₹${bulkPrintingRate}/sqft to ${campaignAssets.length} asset(s)`,
-    });
-  };
+  // Build assetPricing map for compatibility with BulkPrintingDialog and BulkMountingDialog
+  const assetPricing = campaignAssets.reduce((acc, asset) => {
+    acc[asset.id] = {
+      printing_rate: asset.printing_rate_per_sqft || 0,
+      printing_charges: asset.printing_charges || 0,
+      mounting_rate: asset.mounting_rate_per_sqft || 0,
+      mounting_charges: asset.mounting_charges || 0,
+    };
+    return acc;
+  }, {} as Record<string, any>);
 
-  // Bulk apply mounting rate
-  const applyMountingRateToSelected = () => {
-    if (selectedAssetIds.size === 0) {
-      toast({
-        title: "No assets selected",
-        description: "Select at least 1 asset to apply mounting rate",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setCampaignAssets(prev => prev.map(asset => {
-      if (!selectedAssetIds.has(asset.id)) return asset;
-      
-      const mountingResult = calculateMountingCost(
-        { total_sqft: asset.total_sqft, dimensions: asset.dimensions },
-        bulkMountingRate
-      );
-      
-      return {
-        ...asset,
-        mounting_rate_per_sqft: bulkMountingRate,
-        mounting_cost: mountingResult.cost,
-        mounting_charges: mountingResult.cost,
-      };
-    }));
-    
-    toast({
-      title: "Mounting rate applied",
-      description: `Applied ₹${bulkMountingRate}/sqft to ${selectedAssetIds.size} asset(s)`,
-    });
-  };
-
-  const applyMountingRateToAll = () => {
-    if (campaignAssets.length === 0) return;
-    
-    setCampaignAssets(prev => prev.map(asset => {
-      const mountingResult = calculateMountingCost(
-        { total_sqft: asset.total_sqft, dimensions: asset.dimensions },
-        bulkMountingRate
-      );
-      
-      return {
-        ...asset,
-        mounting_rate_per_sqft: bulkMountingRate,
-        mounting_cost: mountingResult.cost,
-        mounting_charges: mountingResult.cost,
-      };
-    }));
-    
-    toast({
-      title: "Mounting rate applied",
-      description: `Applied ₹${bulkMountingRate}/sqft to ${campaignAssets.length} asset(s)`,
-    });
-  };
+  // Convert campaignAssets to a format compatible with bulk dialogs
+  const assetsForBulkDialog = campaignAssets.map(asset => ({
+    id: asset.id,
+    media_asset_code: asset.media_asset_code,
+    total_sqft: asset.total_sqft,
+    dimensions: asset.dimensions,
+    areaSqft: asset.total_sqft,
+  }));
 
 
   const handleSave = async () => {
@@ -1399,28 +1361,59 @@ export default function CampaignEdit() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Campaign Assets ({campaignAssets.length})</CardTitle>
-              <Button onClick={() => setShowAddAssetsDialog(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Assets
-              </Button>
+              <div className="flex items-center gap-2">
+                {/* Selection indicator */}
+                {selectedAssetIds.size > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {selectedAssetIds.size} selected
+                  </Badge>
+                )}
+                
+                {/* Bulk Update Dropdown */}
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              disabled={selectedAssetIds.size === 0}
+                            >
+                              Bulk Update
+                              <ChevronDown className="h-4 w-4 ml-1" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setShowBulkPrintingDialog(true)}>
+                              <Printer className="h-4 w-4 mr-2" />
+                              Bulk Printing
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setShowBulkMountingDialog(true)}>
+                              <Hammer className="h-4 w-4 mr-2" />
+                              Bulk Mounting
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </span>
+                    </TooltipTrigger>
+                    {selectedAssetIds.size === 0 && (
+                      <TooltipContent>
+                        <p>Select at least one asset to bulk update.</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
+                
+                <Button onClick={() => setShowAddAssetsDialog(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Assets
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            {/* Bulk Pricing Controls */}
-            {campaignAssets.length > 0 && (
-              <PrintingPricingBar
-                printingRate={bulkPrintingRate}
-                mountingRate={bulkMountingRate}
-                onPrintingRateChange={setBulkPrintingRate}
-                onMountingRateChange={setBulkMountingRate}
-                onApplyPrintingToSelected={applyPrintingRateToSelected}
-                onApplyPrintingToAll={applyPrintingRateToAll}
-                onApplyMountingToSelected={applyMountingRateToSelected}
-                onApplyMountingToAll={applyMountingRateToAll}
-                selectedCount={selectedAssetIds.size}
-                totalCount={campaignAssets.length}
-              />
-            )}
             
             <div className="rounded-md border overflow-x-auto">
               <Table>
@@ -1654,6 +1647,26 @@ export default function CampaignEdit() {
           assetCount={campaignAssets.length}
         />
       )}
+
+      {/* Bulk Printing Dialog */}
+      <BulkPrintingDialog
+        open={showBulkPrintingDialog}
+        onOpenChange={setShowBulkPrintingDialog}
+        assets={assetsForBulkDialog}
+        selectedAssetIds={selectedAssetIds}
+        assetPricing={assetPricing}
+        onBulkUpdate={handleBulkUpdate}
+      />
+
+      {/* Bulk Mounting Dialog */}
+      <BulkMountingDialog
+        open={showBulkMountingDialog}
+        onOpenChange={setShowBulkMountingDialog}
+        assets={assetsForBulkDialog}
+        selectedAssetIds={selectedAssetIds}
+        assetPricing={assetPricing}
+        onBulkUpdate={handleBulkUpdate}
+      />
     </div>
   );
 }

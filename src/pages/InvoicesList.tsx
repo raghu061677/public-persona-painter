@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -21,14 +21,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Eye, Trash2, AlertCircle, FileText, DollarSign, Clock } from "lucide-react";
+import { Plus, Search, Eye, Trash2, AlertCircle, FileText, DollarSign, Clock, ArrowUpDown, ArrowUp, ArrowDown, X } from "lucide-react";
 import { getInvoiceStatusColor, formatINR, getDaysOverdue } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
 import { toast } from "@/hooks/use-toast";
 import { PageCustomization, PageCustomizationOption } from "@/components/ui/page-customization";
 import { useLayoutSettings } from "@/hooks/use-layout-settings";
+import { DateRangeFilter } from "@/components/common/date-range-filter";
+import { DateRange } from "react-day-picker";
 
 const INVOICE_STATUSES = ['Draft', 'Sent', 'Pending', 'Paid', 'Overdue', 'Cancelled'];
+
+type SortField = 'id' | 'client_name' | 'invoice_date' | 'due_date' | 'total_amount' | 'balance_due' | 'status';
+type SortDirection = 'asc' | 'desc';
 
 export default function InvoicesList() {
   const navigate = useNavigate();
@@ -37,6 +42,15 @@ export default function InvoicesList() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  
+  // Filter states
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [amountRange, setAmountRange] = useState<{ min: string; max: string }>({ min: "", max: "" });
+  
+  // Sort state
+  const [sortField, setSortField] = useState<SortField>('invoice_date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   
   // Layout settings with persistence
   const { getSetting, updateSetting, isReady } = useLayoutSettings('invoices');
@@ -82,14 +96,97 @@ export default function InvoicesList() {
     setLoading(false);
   };
 
-  const filteredInvoices = invoices.filter(inv => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      inv.id?.toLowerCase().includes(term) ||
-      inv.client_name?.toLowerCase().includes(term)
-    );
-  });
+  // Filter and sort logic
+  const filteredInvoices = useMemo(() => {
+    let result = [...invoices];
+    
+    // Search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(inv =>
+        inv.id?.toLowerCase().includes(term) ||
+        inv.client_name?.toLowerCase().includes(term)
+      );
+    }
+    
+    // Status filter
+    if (statusFilter !== "all") {
+      result = result.filter(inv => inv.status === statusFilter);
+    }
+    
+    // Date range filter
+    if (dateRange?.from) {
+      result = result.filter(inv => {
+        const invDate = new Date(inv.invoice_date);
+        if (dateRange.to) {
+          return invDate >= dateRange.from! && invDate <= dateRange.to;
+        }
+        return invDate >= dateRange.from!;
+      });
+    }
+    
+    // Amount range filter
+    if (amountRange.min) {
+      const min = parseFloat(amountRange.min);
+      if (!isNaN(min)) {
+        result = result.filter(inv => (inv.total_amount || 0) >= min);
+      }
+    }
+    if (amountRange.max) {
+      const max = parseFloat(amountRange.max);
+      if (!isNaN(max)) {
+        result = result.filter(inv => (inv.total_amount || 0) <= max);
+      }
+    }
+    
+    // Sort
+    result.sort((a, b) => {
+      let aVal: any, bVal: any;
+      switch (sortField) {
+        case 'invoice_date':
+        case 'due_date':
+          aVal = a[sortField] ? new Date(a[sortField]).getTime() : 0;
+          bVal = b[sortField] ? new Date(b[sortField]).getTime() : 0;
+          break;
+        case 'total_amount':
+        case 'balance_due':
+          aVal = a[sortField] || 0;
+          bVal = b[sortField] || 0;
+          break;
+        default:
+          aVal = (a[sortField] || '').toString().toLowerCase();
+          bVal = (b[sortField] || '').toString().toLowerCase();
+      }
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+    
+    return result;
+  }, [invoices, searchTerm, statusFilter, dateRange, amountRange, sortField, sortDirection]);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) return <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />;
+    return sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
+  };
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setDateRange(undefined);
+    setAmountRange({ min: "", max: "" });
+  };
+
+  const hasActiveFilters = searchTerm || statusFilter !== "all" || dateRange?.from || amountRange.min || amountRange.max;
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this invoice?")) return;
@@ -280,18 +377,68 @@ export default function InvoicesList() {
           </div>
         )}
 
-        {/* Search Bar */}
-        {getSetting('showFilters', false) && (
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search invoices..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+        {/* Filters Row */}
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-end gap-3">
+            {/* Search */}
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search invoices..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                {INVOICE_STATUSES.map((status) => (
+                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {/* Date Range Filter */}
+            <DateRangeFilter
+              label=""
+              value={dateRange}
+              onChange={setDateRange}
+              placeholder="Invoice date"
             />
+            
+            {/* Amount Range */}
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                placeholder="Min ₹"
+                value={amountRange.min}
+                onChange={(e) => setAmountRange(prev => ({ ...prev, min: e.target.value }))}
+                className="w-[100px]"
+              />
+              <span className="text-muted-foreground">-</span>
+              <Input
+                type="number"
+                placeholder="Max ₹"
+                value={amountRange.max}
+                onChange={(e) => setAmountRange(prev => ({ ...prev, max: e.target.value }))}
+                className="w-[100px]"
+              />
+            </div>
+            
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <X className="mr-1 h-3 w-3" />
+                Clear
+              </Button>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Invoices Table */}
         <div className="bg-card rounded-lg border shadow-sm overflow-hidden">
@@ -301,13 +448,41 @@ export default function InvoicesList() {
                 <Table className="min-w-max w-full table-auto whitespace-nowrap">
                   <TableHeader className="bg-muted sticky top-0 z-20">
                     <TableRow>
-                      <TableHead className="sticky left-0 z-30 bg-muted px-4 py-3 text-left font-semibold border-r">Invoice ID</TableHead>
-                      <TableHead className="px-4 py-3 text-left font-semibold">Client</TableHead>
-                      <TableHead className="px-4 py-3 text-left font-semibold">Date</TableHead>
-                      <TableHead className="px-4 py-3 text-left font-semibold">Due Date</TableHead>
-                      <TableHead className="px-4 py-3 text-left font-semibold">Status</TableHead>
-                      <TableHead className="px-4 py-3 text-right font-semibold">Total</TableHead>
-                      <TableHead className="px-4 py-3 text-right font-semibold">Balance</TableHead>
+                      <TableHead className="sticky left-0 z-30 bg-muted px-4 py-3 text-left font-semibold border-r">
+                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('id')}>
+                          Invoice ID {getSortIcon('id')}
+                        </Button>
+                      </TableHead>
+                      <TableHead className="px-4 py-3 text-left font-semibold">
+                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('client_name')}>
+                          Client {getSortIcon('client_name')}
+                        </Button>
+                      </TableHead>
+                      <TableHead className="px-4 py-3 text-left font-semibold">
+                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('invoice_date')}>
+                          Date {getSortIcon('invoice_date')}
+                        </Button>
+                      </TableHead>
+                      <TableHead className="px-4 py-3 text-left font-semibold">
+                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('due_date')}>
+                          Due Date {getSortIcon('due_date')}
+                        </Button>
+                      </TableHead>
+                      <TableHead className="px-4 py-3 text-left font-semibold">
+                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('status')}>
+                          Status {getSortIcon('status')}
+                        </Button>
+                      </TableHead>
+                      <TableHead className="px-4 py-3 text-right font-semibold">
+                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('total_amount')}>
+                          Total {getSortIcon('total_amount')}
+                        </Button>
+                      </TableHead>
+                      <TableHead className="px-4 py-3 text-right font-semibold">
+                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('balance_due')}>
+                          Balance {getSortIcon('balance_due')}
+                        </Button>
+                      </TableHead>
                       <TableHead className="px-4 py-3 text-right font-semibold">Actions</TableHead>
                     </TableRow>
                   </TableHeader>

@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Zap, Download, RefreshCw, Lightbulb, Sun, Flame, Settings, Upload, FileSpreadsheet, FileText, BarChart3, CreditCard, Calendar, Clock, Play } from "lucide-react";
+import { Zap, Download, RefreshCw, Lightbulb, Sun, Flame, Settings, Upload, FileSpreadsheet, FileText, BarChart3, CreditCard, Calendar, Clock, Play, Search, X } from "lucide-react";
 import { UploadReceiptDialog } from "@/components/power-bills/UploadReceiptDialog";
 import { PowerBillsAnalyticsChart } from "@/components/power-bills/PowerBillsAnalyticsChart";
 import { PowerBillFetchDialog } from "@/components/media-assets/PowerBillFetchDialog";
@@ -31,6 +32,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface MediaAssetWithBill {
   id: string;
@@ -72,6 +80,11 @@ export default function PowerBillsDashboard() {
   const [aggregates, setAggregates] = useState<any>(null);
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
   const [unpaidBills, setUnpaidBills] = useState<any[]>([]);
+  
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [areaFilter, setAreaFilter] = useState<string>("all");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("all");
   
   // Column visibility state
   const [showColumns, setShowColumns] = useState({
@@ -234,9 +247,58 @@ export default function PowerBillsDashboard() {
     }
   };
 
+  // Get unique areas and cities for filters
+  const uniqueAreas = useMemo(() => {
+    const areas = new Set(assets.map(a => a.area).filter(Boolean));
+    return Array.from(areas).sort();
+  }, [assets]);
+
+  // Filter assets based on search and filters
+  const filteredAssets = useMemo(() => {
+    let result = [...assets];
+    
+    // Search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(asset =>
+        asset.media_asset_code?.toLowerCase().includes(term) ||
+        asset.id?.toLowerCase().includes(term) ||
+        asset.location?.toLowerCase().includes(term) ||
+        asset.consumer_name?.toLowerCase().includes(term) ||
+        asset.service_number?.toLowerCase().includes(term) ||
+        asset.area?.toLowerCase().includes(term) ||
+        asset.city?.toLowerCase().includes(term)
+      );
+    }
+    
+    // Area filter
+    if (areaFilter !== "all") {
+      result = result.filter(asset => asset.area === areaFilter);
+    }
+    
+    // Payment status filter
+    if (paymentStatusFilter !== "all") {
+      if (paymentStatusFilter === "no_data") {
+        result = result.filter(asset => !asset.payment_status);
+      } else {
+        result = result.filter(asset => asset.payment_status === paymentStatusFilter);
+      }
+    }
+    
+    return result;
+  }, [assets, searchTerm, areaFilter, paymentStatusFilter]);
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setAreaFilter("all");
+    setPaymentStatusFilter("all");
+  };
+
+  const hasActiveFilters = searchTerm || areaFilter !== "all" || paymentStatusFilter !== "all";
+
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedAssets(new Set(assets.map(a => a.id)));
+      setSelectedAssets(new Set(filteredAssets.map(a => a.id)));
     } else {
       setSelectedAssets(new Set());
     }
@@ -577,7 +639,12 @@ export default function PowerBillsDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Assets with Power Connections</CardTitle>
-              <CardDescription>Select assets to fetch bills in bulk</CardDescription>
+              <CardDescription>
+                {hasActiveFilters 
+                  ? `Showing ${filteredAssets.length} of ${assets.length} assets`
+                  : `Select assets to fetch bills in bulk (${assets.length} total)`
+                }
+              </CardDescription>
             </div>
             <div className="flex gap-2">
               <DropdownMenu>
@@ -652,16 +719,68 @@ export default function PowerBillsDashboard() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Search and Filters Row */}
+          <div className="flex flex-wrap items-end gap-3">
+            {/* Search */}
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search asset, consumer, service no..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            {/* Area Filter */}
+            <Select value={areaFilter} onValueChange={setAreaFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Area" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Areas</SelectItem>
+                {uniqueAreas.map((area) => (
+                  <SelectItem key={area} value={area}>{area}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {/* Payment Status Filter */}
+            <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="Paid">Paid</SelectItem>
+                <SelectItem value="Pending">Pending</SelectItem>
+                <SelectItem value="no_data">No Data</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <X className="mr-1 h-3 w-3" />
+                Clear
+              </Button>
+            )}
+          </div>
+
+          {/* Table */}
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">Loading assets...</div>
+          ) : filteredAssets.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {hasActiveFilters ? "No assets match your filters" : "No assets with power connections found"}
+            </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[50px]">
                     <Checkbox
-                      checked={selectedAssets.size === assets.length && assets.length > 0}
+                      checked={selectedAssets.size === filteredAssets.length && filteredAssets.length > 0}
                       onCheckedChange={handleSelectAll}
                     />
                   </TableHead>
@@ -681,7 +800,7 @@ export default function PowerBillsDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assets.map((asset) => (
+                {filteredAssets.map((asset) => (
                   <TableRow key={asset.id}>
                     <TableCell>
                       <Checkbox

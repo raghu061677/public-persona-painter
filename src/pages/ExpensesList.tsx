@@ -129,18 +129,21 @@ export default function ExpensesList() {
       ? (formData.payment_status as PaymentStatusEnum)
       : 'Pending';
 
-    // Generate a unique ID and expense number
+    // Generate a unique ID and expense number in format EXP-YYYY-MM-XX
     const expenseId = crypto.randomUUID();
     const now = new Date();
-    const fy = now.getMonth() >= 3 ? `${now.getFullYear()}-${(now.getFullYear() + 1).toString().slice(-2)}` : `${now.getFullYear() - 1}-${now.getFullYear().toString().slice(-2)}`;
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
     
-    // Get next sequence number for expense_no
+    // Get next sequence number for this month
+    const monthStart = `${year}-${month}-01`;
     const { count } = await supabase
       .from('expenses')
       .select('*', { count: 'exact', head: true })
-      .eq('company_id', company.id);
-    const seq = ((count || 0) + 1).toString().padStart(6, '0');
-    const expenseNo = `EXP-FY${fy}-${seq}`;
+      .eq('company_id', company.id)
+      .gte('created_at', monthStart);
+    const seq = ((count || 0) + 1).toString().padStart(2, '0');
+    const expenseNo = `EXP-${year}-${month}-${seq}`;
 
     const insertData = {
       id: expenseId,
@@ -419,15 +422,13 @@ export default function ExpensesList() {
               Track operational expenses and power bills
             </p>
           </div>
-          {isAdmin && (
-            <div className="flex gap-2">
-              <PowerBillExpenseDialog onBillAdded={fetchPowerBills} />
-              <Button variant="gradient" size="lg" onClick={() => setIsExpenseDialogOpen(true)}>
-                <Plus className="mr-2 h-5 w-5" />
-                Add Expense
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            <PowerBillExpenseDialog onBillAdded={fetchPowerBills} />
+            <Button variant="gradient" size="lg" onClick={() => setIsExpenseDialogOpen(true)}>
+              <Plus className="mr-2 h-5 w-5" />
+              Add Expense
+            </Button>
+          </div>
         </div>
 
         <div className="mb-6 flex flex-wrap gap-4 items-center">
@@ -593,7 +594,10 @@ export default function ExpensesList() {
                     filteredExpenses.map((expense) => (
                       <TableRow key={expense.id}>
                         <TableCell className="font-medium font-mono text-sm">
-                          {expense.expense_no || `EXP-${expense.id.slice(0, 8).toUpperCase()}`}
+                          {expense.expense_no || (() => {
+                            const d = new Date(expense.created_at);
+                            return `EXP-${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${expense.id.slice(0,2).toUpperCase()}`;
+                          })()}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">{expense.category}</Badge>

@@ -318,31 +318,13 @@ export function SelectedAssetsTable({
     <div className="space-y-2">
       {/* Toolbar with Bulk Actions and View Options */}
       <div className="flex items-center justify-between gap-2">
-        {/* Bulk Actions - Left side */}
+        {/* Selection info - Left side */}
         <div className="flex items-center gap-2">
           {selectedAssetIds.size > 0 && (
             <>
               <Badge variant="secondary" className="text-xs">
                 {selectedAssetIds.size} selected
               </Badge>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    Bulk Update
-                    <ChevronDown className="h-4 w-4 ml-1" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem onClick={() => setShowBulkPrintingDialog(true)}>
-                    <Printer className="h-4 w-4 mr-2" />
-                    Bulk Printing
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowBulkMountingDialog(true)}>
-                    <Hammer className="h-4 w-4 mr-2" />
-                    Bulk Mounting
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
               <Button
                 variant="ghost"
                 size="sm"
@@ -355,37 +337,77 @@ export function SelectedAssetsTable({
           )}
         </div>
 
-        {/* View Options - Right side */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Settings2 className="h-4 w-4 mr-2" />
-              View Options
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80" align="end">
-            <div className="space-y-2">
-              <h4 className="font-medium text-sm mb-3">Select columns to display:</h4>
-              <div className="grid grid-cols-2 gap-2 max-h-96 overflow-y-auto">
-                {ALL_COLUMNS.map((col) => (
-                  <div key={col} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={col}
-                      checked={isColumnVisible(col)}
-                      onCheckedChange={() => toggleColumn(col)}
-                    />
-                    <label
-                      htmlFor={col}
-                      className="text-sm cursor-pointer select-none"
-                    >
-                      {COLUMN_LABELS[col]}
-                    </label>
-                  </div>
-                ))}
+        {/* Bulk Update + View Options - Right side */}
+        <div className="flex items-center gap-2">
+          {/* Bulk Update Dropdown */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        disabled={selectedAssetIds.size === 0}
+                      >
+                        Bulk Update
+                        <ChevronDown className="h-4 w-4 ml-1" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setShowBulkPrintingDialog(true)}>
+                        <Printer className="h-4 w-4 mr-2" />
+                        Bulk Printing
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setShowBulkMountingDialog(true)}>
+                        <Hammer className="h-4 w-4 mr-2" />
+                        Bulk Mounting
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </span>
+              </TooltipTrigger>
+              {selectedAssetIds.size === 0 && (
+                <TooltipContent>
+                  <p>Select at least one asset to bulk update.</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+
+          {/* View Options */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Settings2 className="h-4 w-4 mr-2" />
+                View Options
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80" align="end">
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm mb-3">Select columns to display:</h4>
+                <div className="grid grid-cols-2 gap-2 max-h-96 overflow-y-auto">
+                  {ALL_COLUMNS.map((col) => (
+                    <div key={col} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={col}
+                        checked={isColumnVisible(col)}
+                        onCheckedChange={() => toggleColumn(col)}
+                      />
+                      <label
+                        htmlFor={col}
+                        className="text-sm cursor-pointer select-none"
+                      >
+                        {COLUMN_LABELS[col]}
+                      </label>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          </PopoverContent>
-        </Popover>
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
       
       <div className="border rounded-lg">

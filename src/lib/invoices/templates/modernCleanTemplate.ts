@@ -225,42 +225,72 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
     yPos += 10;
   }
 
-  // ========== ITEMS TABLE (With Dimension + Illumination) ==========
+  // ========== ITEMS TABLE (Original OOH Format) ==========
   const tableData = data.items.map((item: any, index: number) => {
     const assetId = item.asset_id || '';
     const location = item.location || item.description || 'Media Display';
-    const desc = `${assetId ? `[${assetId}] ` : ''}${location}`;
-    
-    // Dimension + Sqft
-    const dimensions = item.dimensions || item.dimension_text || '-';
+    const zone = item.area || item.zone || '';
+    const mediaType = item.media_type || 'Bus Shelter';
+    const direction = item.direction || '';
+    const illumination = item.illumination || item.illumination_type || 'NonLit';
+    const dimensions = item.dimensions || item.dimension_text || '';
     const sqft = item.total_sqft || item.sqft || '';
-    const sizeDisplay = sqft ? `${dimensions} (${sqft} sft)` : dimensions;
     
-    // Illumination
-    const illumination = item.illumination || item.illumination_type || '-';
+    // Calculate period info
+    const startDate = item.start_date || item.booking_start_date || data.campaign?.start_date;
+    const endDate = item.end_date || item.booking_end_date || data.campaign?.end_date;
+    let bookingDisplay = '-';
     
-    // Period
-    const period = item.start_date && item.end_date 
-      ? `${formatDate(item.start_date)} to ${formatDate(item.end_date)}`
-      : '-';
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      const months = Math.ceil(days / 30);
+      bookingDisplay = `From: ${formatDate(startDate)}\nTo: ${formatDate(endDate)}\n${days > 45 ? `Month: ${months}` : `Days: ${days}`}`;
+    }
     
-    const rate = item.rate || item.unit_price || item.negotiated_rate || 0;
-    const amount = item.amount || item.final_price || rate;
+    // Build rich description
+    const descParts = [];
+    if (assetId) descParts.push(`[${assetId}]`);
+    descParts.push(location);
+    if (zone) descParts.push(`Zone:${zone}`);
+    descParts.push(`Media:${mediaType}`);
+    if (direction) descParts.push(`Route:${direction}`);
+    descParts.push(`Lit:${illumination}`);
+    if (dimensions && sqft) {
+      descParts.push(`Size ${dimensions} Area(Sft):${sqft}`);
+    }
+    
+    const richDescription = descParts.join(' ');
+    const sizeDisplay = sqft ? `${sqft}` : (dimensions || 'N/A');
+    
+    // Unit price with breakdown
+    const baseRate = item.rate || item.unit_price || item.display_rate || item.negotiated_rate || 0;
+    const printingCost = item.printing_charges || item.printing_cost || 0;
+    const mountingCost = item.mounting_charges || item.mounting_cost || 0;
+    const itemTotal = item.amount || item.final_price || item.total || (baseRate + printingCost + mountingCost);
+    
+    let unitPriceDisplay = formatCurrency(baseRate);
+    if (printingCost > 0 || mountingCost > 0) {
+      const extras = [];
+      if (printingCost > 0) extras.push(`P: ${formatCurrency(printingCost)}`);
+      if (mountingCost > 0) extras.push(`M: ${formatCurrency(mountingCost)}`);
+      unitPriceDisplay = `${formatCurrency(baseRate)}\n${extras.join(' ')}`;
+    }
 
     return [
       (index + 1).toString(),
-      desc,
+      richDescription,
       sizeDisplay,
-      illumination,
-      period,
-      formatCurrency(rate),
-      formatCurrency(amount),
+      bookingDisplay,
+      unitPriceDisplay,
+      formatCurrency(itemTotal),
     ];
   });
 
   autoTable(doc, {
     startY: yPos,
-    head: [['#', 'Description', 'Size', 'Illum', 'Period', 'Rate', 'Amount']],
+    head: [['#', 'LOCATION & DESCRIPTION', 'SIZE', 'BOOKING', 'UNIT PRICE', 'SUBTOTAL']],
     body: tableData,
     theme: 'plain',
     headStyles: {
@@ -272,21 +302,21 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
       cellPadding: 2.5,
     },
     bodyStyles: {
-      fontSize: 7,
+      fontSize: 6.5,
       textColor: [40, 40, 40],
       cellPadding: 2.5,
+      valign: 'top',
     },
     alternateRowStyles: {
       fillColor: [250, 251, 252],
     },
     columnStyles: {
       0: { cellWidth: 8, halign: 'center' },
-      1: { cellWidth: 50 },
-      2: { cellWidth: 28, halign: 'center' },
-      3: { cellWidth: 16, halign: 'center' },
-      4: { cellWidth: 36 },
+      1: { cellWidth: 74, halign: 'left' },
+      2: { cellWidth: 16, halign: 'center' },
+      3: { cellWidth: 32, halign: 'left', fontSize: 6 },
+      4: { cellWidth: 26, halign: 'right' },
       5: { cellWidth: 22, halign: 'right' },
-      6: { cellWidth: 22, halign: 'right' },
     },
     margin: { left: leftMargin, right: rightMargin },
     didDrawCell: function(cellData) {

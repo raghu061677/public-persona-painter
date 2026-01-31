@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { corsHeaders } from '../_shared/cors.ts';
 
 // Version 2.0 - Fixed to use campaign_id and proper asset descriptions
-console.log('Auto-generate invoice function v2.0 started');
+console.log('Auto-generate invoice function v2.1 started');
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -33,10 +33,15 @@ Deno.serve(async (req) => {
         *,
         campaign_assets(
           asset_id,
+          id,
           media_type,
           city,
           area,
           location,
+          direction,
+          illumination_type,
+          dimensions,
+          total_sqft,
           card_rate,
           printing_charges,
           mounting_charges
@@ -62,16 +67,56 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Calculate invoice items from campaign assets with proper descriptions
-    const items = campaign.campaign_assets.map((asset: any) => {
-      const description = `${asset.media_type || 'Display'} - ${asset.area || ''} - ${asset.location || ''}`.replace(/\s+/g, ' ').trim();
-      
+    // Resolve display asset_code from media_assets if possible
+    const assetIds = (campaign.campaign_assets || []).map((a: any) => a.asset_id).filter(Boolean);
+    const { data: mediaAssets } = assetIds.length
+      ? await supabaseClient
+          .from('media_assets')
+          .select('id, media_asset_code, asset_id_readable, location, area, direction, media_type, illumination_type, dimensions, total_sqft')
+          .in('id', assetIds)
+      : ({ data: [] } as any);
+
+    const mediaAssetMap = new Map((mediaAssets || []).map((a: any) => [a.id, a]));
+
+    // Calculate invoice items from campaign assets with full snapshot fields
+    const items = (campaign.campaign_assets || []).map((asset: any) => {
+      const mediaAsset: any = asset?.asset_id ? mediaAssetMap.get(asset.asset_id) : null;
+      const location = asset.location ?? mediaAsset?.location ?? '-';
+      const area = asset.area ?? mediaAsset?.area ?? '-';
+      const direction = asset.direction ?? mediaAsset?.direction ?? '-';
+      const mediaType = asset.media_type ?? mediaAsset?.media_type ?? '-';
+      const illumination = asset.illumination_type ?? mediaAsset?.illumination_type ?? '-';
+      const dimensions = asset.dimensions ?? mediaAsset?.dimensions ?? null;
+      const sqft = asset.total_sqft ?? mediaAsset?.total_sqft ?? null;
+      const assetCode = mediaAsset?.media_asset_code || mediaAsset?.asset_id_readable || asset.asset_id || '-';
+
+      const description = `${mediaType || 'Display'} - ${area || ''} - ${location || ''}`.replace(/\s+/g, ' ').trim();
+
+      const rate = asset.card_rate || 0;
+      const printing = asset.printing_charges || 0;
+      const mounting = asset.mounting_charges || 0;
+      const total = rate + printing + mounting;
+
       return {
-        description: description,
-        rate: asset.card_rate || 0,
-        printing_charges: asset.printing_charges || 0,
-        mounting_charges: asset.mounting_charges || 0,
-        total: (asset.card_rate || 0) + (asset.printing_charges || 0) + (asset.mounting_charges || 0)
+        // Existing fields used elsewhere
+        description,
+        rate,
+        printing_charges: printing,
+        mounting_charges: mounting,
+        total,
+
+        // Snapshot fields for stable PDF line rendering
+        asset_id: asset.asset_id,
+        asset_code: assetCode,
+        location,
+        area,
+        direction,
+        media_type: mediaType,
+        illumination,
+        dimension_text: dimensions,
+        total_sqft: sqft,
+        hsn_sac: '998361',
+        campaign_asset_id: asset.id,
       };
     });
 
@@ -102,6 +147,49 @@ Deno.serve(async (req) => {
       })
       .select()
       .single();
+    // Create stable snapshot rows in invoice_items as well
+    try {
+      const startDate = campaign.start_date;
+      const endDate = campaign.end_date;
+      const billableDays = startDate && endDate
+        ? Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1
+        : 0;
+
+      const invoiceItems = (campaign.campaign_assets || []).map((asset: any) => {
+        const item = items.find((i: any) => i.campaign_asset_id === asset.id) as any;
+        return {
+          invoice_id: invoiceId,
+          campaign_asset_id: asset.id,
+          asset_id: asset.asset_id,
+          asset_code: item?.asset_code || asset.asset_id || '-',
+          description: item?.description || null,
+          location: item?.location || null,
+          area: item?.area || null,
+          direction: item?.direction || null,
+          media_type: item?.media_type || null,
+          illumination: item?.illumination || null,
+          dimension_text: item?.dimension_text || null,
+          hsn_sac: item?.hsn_sac || '998361',
+          bill_start_date: startDate,
+          bill_end_date: endDate,
+          billable_days: billableDays,
+          rate_type: 'campaign',
+          rate_value: item?.rate || 0,
+          base_amount: item?.rate || 0,
+          printing_cost: item?.printing_charges || 0,
+          mounting_cost: item?.mounting_charges || 0,
+          line_total: item?.total || 0,
+        };
+      });
+
+      const { error: invItemsErr } = await supabaseClient
+        .from('invoice_items')
+        .insert(invoiceItems);
+      if (invItemsErr) console.warn('[v2.1] invoice_items insert warning:', invItemsErr);
+    } catch (e) {
+      console.warn('[v2.1] invoice_items snapshot generation skipped:', e);
+    }
+
 
     if (invoiceError) {
       console.error('[v2.0] Invoice creation error:', invoiceError);

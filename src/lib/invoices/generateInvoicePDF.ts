@@ -65,9 +65,65 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
     .select('*')
     .single();
 
+  // Fetch persisted invoice_items snapshots (preferred for stable PDFs)
+  const { data: invoiceItemsSnapshot } = await supabase
+    .from('invoice_items')
+    .select(
+      'invoice_id, campaign_asset_id, asset_id, asset_code, location, area, direction, media_type, illumination, dimension_text, hsn_sac, bill_start_date, bill_end_date'
+    )
+    .eq('invoice_id', invoiceId);
+
   // Enrich invoice items with OOH snapshot fields.
   // Important: We do NOT recalculate totals here; only hydrate display metadata.
   let enrichedItems = Array.isArray(invoice.items) ? [...invoice.items] : [];
+
+  // 1) First hydrate from invoice_items snapshot table (stable, generation-time)
+  if (enrichedItems.length > 0 && Array.isArray(invoiceItemsSnapshot) && invoiceItemsSnapshot.length > 0) {
+    const byCampaignAssetId = new Map(
+      invoiceItemsSnapshot
+        .filter((r: any) => r?.campaign_asset_id)
+        .map((r: any) => [r.campaign_asset_id, r])
+    );
+    const byAssetId = new Map(
+      invoiceItemsSnapshot
+        .filter((r: any) => r?.asset_id)
+        .map((r: any) => [r.asset_id, r])
+    );
+    const byAssetCode = new Map(
+      invoiceItemsSnapshot
+        .filter((r: any) => r?.asset_code)
+        .map((r: any) => [r.asset_code, r])
+    );
+
+    enrichedItems = enrichedItems.map((item: any) => {
+      const caId = item.campaign_asset_id || item.campaign_assets_id;
+      const snap: any =
+        (caId ? byCampaignAssetId.get(caId) : undefined) ||
+        (item.asset_id ? byAssetId.get(item.asset_id) : undefined) ||
+        (item.asset_code ? byAssetCode.get(item.asset_code) : undefined);
+
+      if (!snap) return item;
+
+      return {
+        ...item,
+        asset_id: item.asset_id ?? snap.asset_id,
+        asset_code: item.asset_code ?? snap.asset_code,
+        location: item.location ?? snap.location,
+        area: item.area ?? snap.area,
+        direction: item.direction ?? snap.direction,
+        media_type: item.media_type ?? snap.media_type,
+        illumination: item.illumination ?? snap.illumination,
+        dimension_text: item.dimension_text ?? snap.dimension_text,
+        hsn_sac: item.hsn_sac ?? snap.hsn_sac,
+        // Map billing dates to booking fields if missing
+        booking_start_date: item.booking_start_date ?? snap.bill_start_date,
+        booking_end_date: item.booking_end_date ?? snap.bill_end_date,
+        // Template compatibility
+        dimensions: item.dimensions ?? snap.dimension_text,
+      };
+    });
+  }
+
   if (enrichedItems.length > 0) {
     const assetIds = Array.from(
       new Set(enrichedItems.map((item: any) => item.asset_id).filter(Boolean))
@@ -122,7 +178,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
         media_type: item.media_type ?? source.media_type,
         illumination: item.illumination ?? source.illumination_type,
         illumination_type: item.illumination_type ?? source.illumination_type,
-        dimensions: item.dimensions ?? source.dimensions,
+        dimensions: item.dimensions ?? item.dimension_text ?? source.dimensions,
         total_sqft: item.total_sqft ?? source.total_sqft,
         // Booking dates (only if missing)
         booking_start_date: item.booking_start_date ?? campaignAsset?.booking_start_date,

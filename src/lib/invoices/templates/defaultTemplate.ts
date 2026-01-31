@@ -327,7 +327,7 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   const tableData = data.items.map((item: any, index: number) => {
     const assetId = item.asset_id || item.id || '';
     const location = item.location || item.description || 'Media Display';
-    const zone = item.area || item.zone || '';
+    const area = item.area || item.zone || '';
     const mediaType = item.media_type || 'Bus Shelter';
     const direction = item.direction || '';
     const illumination = item.illumination || item.illumination_type || 'NonLit';
@@ -346,31 +346,33 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
       const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
       const months = Math.ceil(days / 30);
       periodDesc = `(${formatDate(startDate)} to ${formatDate(endDate)})`;
-       bookingDisplay = `From: ${formatDate(startDate)} To: ${formatDate(endDate)}\n${days > 45 ? `Month: ${months}` : `Days: ${days}`}`;
+       bookingDisplay = `Start: ${formatDate(startDate)} - End: ${formatDate(endDate)}\n${days > 45 ? `Month: ${months}` : `Days: ${days}`}`;
     }
     
     // Build rich description as multi-line (line-wise) text
     // Example:
     // [A2-6] Ramanthpur Opp. Vishal Mart
-    // Zone: Ramanthapur
-    // Media: Bus Shelter
-    // Route: Towards Uppal X Road
-    // Lit: BackLit
+    // Location: ...
+    // Area: ...
+    // Direction: ...
+    // Media Type: ...
+    // Illumination: ...
     // HSN/SAC Code: 998361
     const descLines: string[] = [];
     const firstLine = [assetId ? `[${assetId}]` : '', location].filter(Boolean).join(' ');
     descLines.push(firstLine || 'Media Display');
-    if (zone) descLines.push(`Zone: ${zone}`);
-    descLines.push(`Media: ${mediaType}`);
-    if (direction) descLines.push(`Route: ${direction}`);
-    descLines.push(`Lit: ${illumination}`);
+    if (location) descLines.push(`Location: ${location}`);
+    if (area) descLines.push(`Area: ${area}`);
+    if (direction) descLines.push(`Direction: ${direction}`);
+    if (mediaType) descLines.push(`Media Type: ${mediaType}`);
+    if (illumination) descLines.push(`Illumination: ${illumination}`);
     descLines.push(`HSN/SAC Code: ${HSN_SAC_CODE}`);
     const richDescription = descLines.join('\n');
 
     // Size column - line-wise display
     const sizeLines: string[] = [];
     if (dimensions) sizeLines.push(`Dimension: ${dimensions}`);
-    if (sqft !== '' && sqft != null) sizeLines.push(`Area(Sft): ${sqft}`);
+    if (sqft !== '' && sqft != null) sizeLines.push(`Size(Sft): ${sqft}`);
     const sizeDisplay = sizeLines.length ? sizeLines.join('\n') : 'N/A';
     
     // Unit price and subtotal - include printing/mounting if present
@@ -419,9 +421,9 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     },
     columnStyles: {
       0: { cellWidth: 8, halign: 'center' },
-      1: { cellWidth: 70, halign: 'left' },
+      1: { cellWidth: 78, halign: 'left' },
       2: { cellWidth: 20, halign: 'left' },
-      3: { cellWidth: 32, halign: 'left', fontSize: 6 },
+      3: { cellWidth: 28, halign: 'left', fontSize: 6 },
       4: { cellWidth: 26, halign: 'right' },
       5: { cellWidth: 22, halign: 'right' },
     },

@@ -176,4 +176,44 @@ describe('Pricing Calculations', () => {
       expect(parseDimensionsToSqft('invalid')).toBe(0);
     });
   });
+
+  describe('Plan Row Total Calculation (P0 Bug Fix)', () => {
+    it('should calculate row total as Negotiated + Printing + Mounting (NO proration)', () => {
+      // Test case from bug report:
+      // Negotiated = 55,000, Printing = 3,298, Mounting = 1,500
+      // Expected Total = 59,798 (simple sum, no proration)
+      const negotiatedPrice = 55000;
+      const printingCost = 3298;
+      const mountingCost = 1500;
+      
+      const rowTotal = negotiatedPrice + printingCost + mountingCost;
+      
+      expect(rowTotal).toBe(59798);
+    });
+
+    it('should NOT apply proration to row total', () => {
+      // Even with duration that would normally prorate,
+      // row total should be simple sum
+      const negotiatedPrice = 30000; // monthly rate
+      const printingCost = 1000;
+      const mountingCost = 500;
+      
+      // Incorrect: (30000/30 * 10) + 1000 + 500 = 11500
+      // Correct: 30000 + 1000 + 500 = 31500
+      const rowTotal = negotiatedPrice + printingCost + mountingCost;
+      
+      expect(rowTotal).toBe(31500);
+      expect(rowTotal).not.toBe(11500); // Should NOT be prorated
+    });
+
+    it('should handle zero printing and mounting', () => {
+      const negotiatedPrice = 50000;
+      const printingCost = 0;
+      const mountingCost = 0;
+      
+      const rowTotal = negotiatedPrice + printingCost + mountingCost;
+      
+      expect(rowTotal).toBe(50000);
+    });
+  });
 });

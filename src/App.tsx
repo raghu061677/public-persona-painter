@@ -121,6 +121,10 @@ const ThemeSettings = lazy(() => import("./pages/ThemeSettings"));
 const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
 const ClientPortalAuth = lazy(() => import("./pages/ClientPortalAuth"));
 const MagicLinkAuth = lazy(() => import("./pages/portal/MagicLinkAuth"));
+const PortalDashboard = lazy(() => import("./pages/portal/PortalDashboard"));
+const PortalInvoices = lazy(() => import("./pages/portal/PortalInvoices"));
+const PortalInvoiceDetail = lazy(() => import("./pages/portal/PortalInvoiceDetail"));
+const PortalReceipts = lazy(() => import("./pages/portal/PortalReceipts"));
 const OrganizationSettings = lazy(() => import("./pages/OrganizationSettings"));
 const OperationsSettings = lazy(() => import("./pages/OperationsSettings"));
 const Operations = lazy(() => import("./pages/Operations"));
@@ -440,12 +444,14 @@ const App = () => (
             <Route path="/portal/auth" element={<MagicLinkAuth />} />
             <Route path="/portal/auth/verify" element={<MagicLinkAuth />} />
             <Route path="/portal" element={<ClientPortalProvider><ClientPortalLayout /></ClientPortalProvider>}>
-              <Route path="dashboard" element={<ClientPortalDashboard />} />
+              <Route path="dashboard" element={<PortalDashboard />} />
               <Route path="proofs" element={<ClientPortalProofs />} />
               <Route path="payments" element={<ClientPortalPayments />} />
               <Route path="downloads" element={<ClientPortalDownloads />} />
               <Route path="campaigns/:id" element={<ClientCampaignView />} />
-              <Route path="invoices" element={<ClientInvoices />} />
+              <Route path="invoices" element={<PortalInvoices />} />
+              <Route path="invoices/:invoiceId" element={<PortalInvoiceDetail />} />
+              <Route path="receipts" element={<PortalReceipts />} />
             </Route>
             
             {/* Access Denied */}

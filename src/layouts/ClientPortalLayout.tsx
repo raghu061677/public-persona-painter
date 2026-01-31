@@ -102,23 +102,23 @@ export function ClientPortalLayout() {
               <Button
                 variant="ghost"
                 className="text-primary-foreground hover:bg-primary-foreground/10"
+                onClick={() => navigate('/portal/invoices')}
+              >
+                Invoices
+              </Button>
+              <Button
+                variant="ghost"
+                className="text-primary-foreground hover:bg-primary-foreground/10"
+                onClick={() => navigate('/portal/receipts')}
+              >
+                Receipts
+              </Button>
+              <Button
+                variant="ghost"
+                className="text-primary-foreground hover:bg-primary-foreground/10"
                 onClick={() => navigate('/portal/proofs')}
               >
                 Proofs
-              </Button>
-              <Button
-                variant="ghost"
-                className="text-primary-foreground hover:bg-primary-foreground/10"
-                onClick={() => navigate('/portal/payments')}
-              >
-                Payments
-              </Button>
-              <Button
-                variant="ghost"
-                className="text-primary-foreground hover:bg-primary-foreground/10"
-                onClick={() => navigate('/portal/downloads')}
-              >
-                Downloads
               </Button>
               <Button
                 variant="ghost"

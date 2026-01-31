@@ -30,8 +30,10 @@ import { formatDate } from "@/utils/plans";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { PowerBillExpenseDialog } from "@/components/expenses/PowerBillExpenseDialog";
+import { ExpenseFormDialog } from "@/components/expenses/ExpenseFormDialog";
 import { PageCustomization, PageCustomizationOption } from "@/components/ui/page-customization";
 import { getAssetDisplayCode } from "@/lib/assets/getAssetDisplayCode";
+import type { ExpenseCategory, CostCenter, ExpenseFormData } from "@/types/expenses";
 
 export default function ExpensesList() {
   const { company } = useCompany();
@@ -47,6 +49,11 @@ export default function ExpensesList() {
   const [billToDelete, setBillToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
   
+  // Add Expense Dialog state
+  const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
+  const [categories, setCategories] = useState<ExpenseCategory[]>([]);
+  const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
+  
   // Page customization state
   const [showSearch, setShowSearch] = useState(true);
   const [showSummaryCards, setShowSummaryCards] = useState(true);
@@ -56,8 +63,150 @@ export default function ExpensesList() {
     if (company?.id) {
       fetchExpenses();
       fetchPowerBills();
+      fetchCategories();
+      fetchCostCenters();
     }
   }, [company]);
+
+  const fetchCategories = async () => {
+    const { data } = await supabase
+      .from('expense_categories')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order');
+    setCategories((data as ExpenseCategory[]) || []);
+  };
+
+  const fetchCostCenters = async () => {
+    if (!company?.id) return;
+    const { data } = await supabase
+      .from('cost_centers')
+      .select('*')
+      .eq('company_id', company.id)
+      .eq('is_active', true);
+    setCostCenters((data as CostCenter[]) || []);
+  };
+
+  const handleExpenseSubmit = async (formData: ExpenseFormData): Promise<string | null> => {
+    if (!company?.id) return null;
+    
+    const gstAmount = formData.cgst + formData.sgst + formData.igst;
+    const totalAmount = formData.amount_before_tax + gstAmount;
+    const tdsAmount = formData.tds_applicable ? (formData.amount_before_tax * formData.tds_percent / 100) : 0;
+    const netPayable = totalAmount - tdsAmount;
+
+    // Map category string to valid enum value
+    const validCategories = ['Printing', 'Mounting', 'Transport', 'Electricity', 'Other'] as const;
+    type ExpenseCategoryEnum = typeof validCategories[number];
+    const categoryValue: ExpenseCategoryEnum = validCategories.includes(formData.category as ExpenseCategoryEnum) 
+      ? (formData.category as ExpenseCategoryEnum)
+      : 'Other';
+
+    // Map payment status to valid enum value (DB only supports Pending | Paid)
+    const validPaymentStatuses = ['Pending', 'Paid'] as const;
+    type PaymentStatusEnum = typeof validPaymentStatuses[number];
+    const paymentStatus: PaymentStatusEnum = validPaymentStatuses.includes(formData.payment_status as PaymentStatusEnum)
+      ? (formData.payment_status as PaymentStatusEnum)
+      : 'Pending';
+
+    // Generate a unique ID
+    const expenseId = crypto.randomUUID();
+
+    const insertData = {
+      id: expenseId,
+      company_id: company.id,
+      expense_date: format(formData.expense_date, 'yyyy-MM-dd'),
+      vendor_id: formData.vendor_id || null,
+      vendor_name: formData.vendor_name,
+      vendor_gstin: formData.vendor_gstin || null,
+      invoice_no: formData.invoice_no || null,
+      invoice_date: formData.invoice_date ? format(formData.invoice_date, 'yyyy-MM-dd') : null,
+      payment_mode: formData.payment_mode,
+      payment_status: paymentStatus,
+      paid_date: formData.paid_date ? format(formData.paid_date, 'yyyy-MM-dd') : null,
+      amount: formData.amount_before_tax,
+      amount_before_tax: formData.amount_before_tax,
+      gst_type_enum: formData.gst_type_enum,
+      gst_percent: formData.cgst + formData.sgst + formData.igst > 0 ? 18 : 0,
+      cgst: formData.cgst,
+      sgst: formData.sgst,
+      igst: formData.igst,
+      gst_amount: gstAmount,
+      total_tax: gstAmount,
+      total_amount: totalAmount,
+      tds_applicable: formData.tds_applicable,
+      tds_percent: formData.tds_percent,
+      tds_amount: tdsAmount,
+      net_payable: netPayable,
+      category: categoryValue,
+      category_id: formData.category_id || null,
+      subcategory: formData.subcategory || null,
+      notes: formData.notes || null,
+      cost_center_id: formData.cost_center_id || null,
+      allocation_type: formData.allocation_type,
+      campaign_id: formData.campaign_id || null,
+      plan_id: formData.plan_id || null,
+      asset_id: formData.asset_id || null,
+      tags: formData.tags || [],
+      approval_status: 'Draft',
+    };
+
+    const { data, error } = await supabase
+      .from('expenses')
+      .insert(insertData as any)
+      .select('id')
+      .single();
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create expense",
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    toast({
+      title: "Success",
+      description: "Expense created successfully",
+    });
+    
+    fetchExpenses();
+    setIsExpenseDialogOpen(false);
+    return data?.id || null;
+  };
+
+  const handleExpenseUpdate = async (id: string, formData: Partial<ExpenseFormData>): Promise<boolean> => {
+    // Map category string to valid enum value if provided
+    const validCategories = ['Printing', 'Mounting', 'Transport', 'Electricity', 'Other'] as const;
+    type ExpenseCategoryEnum = typeof validCategories[number];
+    const categoryValue: ExpenseCategoryEnum | undefined = formData.category 
+      ? (validCategories.includes(formData.category as ExpenseCategoryEnum) 
+          ? (formData.category as ExpenseCategoryEnum)
+          : 'Other')
+      : undefined;
+
+    const { error } = await supabase
+      .from('expenses')
+      .update({
+        vendor_name: formData.vendor_name,
+        category: categoryValue,
+        notes: formData.notes,
+      })
+      .eq('id', id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update expense",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    fetchExpenses();
+    return true;
+  };
 
   const checkAdminStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -215,7 +364,7 @@ export default function ExpensesList() {
           {isAdmin && (
             <div className="flex gap-2">
               <PowerBillExpenseDialog onBillAdded={fetchPowerBills} />
-              <Button variant="gradient" size="lg">
+              <Button variant="gradient" size="lg" onClick={() => setIsExpenseDialogOpen(true)}>
                 <Plus className="mr-2 h-5 w-5" />
                 Add Expense
               </Button>
@@ -495,6 +644,16 @@ export default function ExpensesList() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Add Expense Dialog */}
+        <ExpenseFormDialog
+          open={isExpenseDialogOpen}
+          onOpenChange={setIsExpenseDialogOpen}
+          categories={categories}
+          costCenters={costCenters}
+          onSubmit={handleExpenseSubmit}
+          onUpdate={handleExpenseUpdate}
+        />
       </div>
     </div>
   );

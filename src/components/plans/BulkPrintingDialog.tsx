@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertTriangle, Printer } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { getAssetSqft, calculatePrintingCost } from "@/utils/effectivePricing";
@@ -135,8 +136,8 @@ export function BulkPrintingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Printer className="h-5 w-5" />
             Bulk Printing Update
@@ -146,7 +147,8 @@ export function BulkPrintingDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <ScrollArea className="flex-1 max-h-[55vh] pr-4">
+          <div className="space-y-4 py-4">
           {/* Printing Rate Input */}
           <div className="space-y-2">
             <Label htmlFor="printingRate">Printing Rate per SQFT (₹)</Label>
@@ -264,9 +266,10 @@ export function BulkPrintingDialog({
               will not be changed.
             </span>
           </div>
-        </div>
+          </div>
+        </ScrollArea>
 
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertTriangle, Hammer } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { getAssetSqft, calculateMountingCost } from "@/utils/effectivePricing";
@@ -153,8 +154,8 @@ export function BulkMountingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Hammer className="h-5 w-5" />
             Bulk Mounting Update
@@ -164,7 +165,8 @@ export function BulkMountingDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <ScrollArea className="flex-1 max-h-[55vh] pr-4">
+          <div className="space-y-4 py-4">
           {/* Mounting Mode Selection */}
           <div className="space-y-2">
             <Label>Mounting Cost Type</Label>
@@ -292,9 +294,10 @@ export function BulkMountingDialog({
               fields will not be changed.
             </span>
           </div>
-        </div>
+          </div>
+        </ScrollArea>
 
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

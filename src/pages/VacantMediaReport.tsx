@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,7 @@ import {
   Presentation,
   Loader2,
   ChevronDown,
+  Users,
 } from "lucide-react";
 import { formatCurrency, getStatusColor } from "@/utils/mediaAssets";
 import { useToast } from "@/hooks/use-toast";
@@ -74,6 +75,8 @@ interface AvailableAsset {
   card_rate: number;
   total_sqft: number | null;
   status: string;
+  direction?: string | null;
+  illumination_type?: string | null;
   availability_status: 'available' | 'available_soon';
   next_available_from: string | null;
 }
@@ -89,6 +92,8 @@ interface BookedAsset {
   card_rate: number;
   total_sqft: number | null;
   status: string;
+  direction?: string | null;
+  illumination_type?: string | null;
   availability_status: 'booked' | 'conflict';
   current_booking: BookingInfo | null;
   all_bookings: BookingInfo[];
@@ -104,6 +109,36 @@ interface AvailabilitySummary {
   total_sqft_available: number;
   potential_revenue: number;
 }
+
+// Combined Client View Asset type
+interface ClientViewAsset {
+  id: string;
+  media_asset_code: string | null;
+  city: string;
+  area: string;
+  location: string;
+  media_type: string;
+  dimensions: string | null;
+  card_rate: number;
+  total_sqft: number | null;
+  direction: string | null;
+  illumination_type: string | null;
+  status: 'Available' | 'Available Soon';
+  available_from: string;
+  originalAsset: AvailableAsset | BookedAsset;
+}
+
+// Default column order for tables
+const DEFAULT_COLUMNS = [
+  { key: 'area', label: 'Area' },
+  { key: 'location', label: 'Location' },
+  { key: 'direction', label: 'Direction' },
+  { key: 'dimensions', label: 'Dimensions' },
+  { key: 'sqft', label: 'Sq.Ft' },
+  { key: 'illumination', label: 'Illumination' },
+  { key: 'card_rate', label: 'Card Rate' },
+  { key: 'status', label: 'Status' },
+] as const;
 
 export default function VacantMediaReport() {
   const { company } = useCompany();
@@ -190,7 +225,7 @@ export default function VacantMediaReport() {
 
       toast({
         title: "Report Updated",
-        description: `Found ${data?.summary?.available_count || 0} available assets`,
+        description: `Found ${data?.summary?.available_count || 0} available, ${data?.summary?.available_soon_count || 0} available soon`,
       });
     } catch (error) {
       console.error('Error loading availability:', error);
@@ -199,7 +234,6 @@ export default function VacantMediaReport() {
         description: error instanceof Error ? error.message : "Failed to load availability report",
         variant: "destructive",
       });
-      // Set default empty state on error
       setAvailableAssets([]);
       setBookedAssets([]);
       setAvailableSoonAssets([]);
@@ -234,7 +268,69 @@ export default function VacantMediaReport() {
   const filteredBooked = filterAssets(bookedAssets);
   const filteredAvailableSoon = filterAssets(availableSoonAssets);
 
-  const getAssetDisplayId = (asset: AvailableAsset | BookedAsset) => {
+  // Build Client View combined list
+  const clientViewAssets = useMemo((): ClientViewAsset[] => {
+    const result: ClientViewAsset[] = [];
+    
+    // Add Available assets (available_from = rangeStart)
+    for (const asset of filteredAvailable) {
+      result.push({
+        id: asset.id,
+        media_asset_code: asset.media_asset_code,
+        city: asset.city,
+        area: asset.area,
+        location: asset.location,
+        media_type: asset.media_type,
+        dimensions: asset.dimensions,
+        card_rate: asset.card_rate,
+        total_sqft: asset.total_sqft,
+        direction: asset.direction || null,
+        illumination_type: asset.illumination_type || null,
+        status: 'Available',
+        available_from: startDate,
+        originalAsset: asset,
+      });
+    }
+    
+    // Add Available Soon assets (available_from = computed date)
+    for (const asset of filteredAvailableSoon) {
+      result.push({
+        id: asset.id,
+        media_asset_code: asset.media_asset_code,
+        city: asset.city,
+        area: asset.area,
+        location: asset.location,
+        media_type: asset.media_type,
+        dimensions: asset.dimensions,
+        card_rate: asset.card_rate,
+        total_sqft: asset.total_sqft,
+        direction: asset.direction || null,
+        illumination_type: asset.illumination_type || null,
+        status: 'Available Soon',
+        available_from: asset.available_from || startDate,
+        originalAsset: asset,
+      });
+    }
+    
+    // Sort: Available first, then Available Soon by available_from date, then by area/location
+    result.sort((a, b) => {
+      // Status sort (Available first)
+      if (a.status !== b.status) {
+        return a.status === 'Available' ? -1 : 1;
+      }
+      // Available_from sort (earliest first)
+      if (a.available_from !== b.available_from) {
+        return a.available_from.localeCompare(b.available_from);
+      }
+      // Area, then Location
+      if (a.area !== b.area) return a.area.localeCompare(b.area);
+      return a.location.localeCompare(b.location);
+    });
+    
+    return result;
+  }, [filteredAvailable, filteredAvailableSoon, startDate]);
+
+  const getAssetDisplayId = (asset: AvailableAsset | BookedAsset | ClientViewAsset) => {
     return asset.media_asset_code || asset.id;
   };
 
@@ -329,6 +425,7 @@ export default function VacantMediaReport() {
   };
 
   const hasAvailabilityData = summary && (summary.available_count > 0 || summary.available_soon_count > 0);
+  const clientViewCount = clientViewAssets.length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -463,7 +560,7 @@ export default function VacantMediaReport() {
 
         {/* Stats Cards */}
         {summary && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-2">
@@ -512,6 +609,20 @@ export default function VacantMediaReport() {
                 </div>
               </CardContent>
             </Card>
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  <div className="text-sm text-muted-foreground">Client View</div>
+                </div>
+                <div className="text-3xl font-bold mt-2 text-primary">
+                  {summary.available_count + summary.available_soon_count}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Total shareable assets
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
@@ -529,8 +640,12 @@ export default function VacantMediaReport() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="available" className="space-y-4">
+        <Tabs defaultValue="client" className="space-y-4">
           <TabsList>
+            <TabsTrigger value="client" className="gap-2">
+              <Users className="h-4 w-4" />
+              Client View ({clientViewCount})
+            </TabsTrigger>
             <TabsTrigger value="available" className="gap-2">
               <CheckCircle2 className="h-4 w-4" />
               Available ({filteredAvailable.length})
@@ -545,6 +660,80 @@ export default function VacantMediaReport() {
             </TabsTrigger>
           </TabsList>
 
+          {/* Client View Tab - Combined Available + Available Soon */}
+          <TabsContent value="client">
+            <Card>
+              <CardContent className="pt-6">
+                {clientViewAssets.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {summary ? "No assets available for client sharing" : "Click 'Check Availability' to load results"}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Area</TableHead>
+                          <TableHead>Location</TableHead>
+                          <TableHead>Direction</TableHead>
+                          <TableHead>Dimensions</TableHead>
+                          <TableHead className="text-right">Sq.Ft</TableHead>
+                          <TableHead>Illumination</TableHead>
+                          <TableHead className="text-right">Card Rate</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Available From</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {clientViewAssets.map((asset, index) => (
+                          <TableRow 
+                            key={asset.id}
+                            className={index % 2 === 0 ? 'bg-background' : 'bg-muted/30'}
+                          >
+                            <TableCell className="font-medium">{asset.area || '-'}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                <span className="truncate max-w-[200px]">{asset.location || '-'}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>{asset.direction || '-'}</TableCell>
+                            <TableCell>{asset.dimensions || '-'}</TableCell>
+                            <TableCell className="text-right">
+                              {asset.total_sqft ? asset.total_sqft.toFixed(0) : '-'}
+                            </TableCell>
+                            <TableCell>{asset.illumination_type || 'Non-lit'}</TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatCurrency(asset.card_rate)}
+                            </TableCell>
+                            <TableCell>
+                              {asset.status === 'Available' ? (
+                                <Badge className="bg-green-100 text-green-800 border-green-200">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  Available
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  Available Soon
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm font-medium">
+                                {format(new Date(asset.available_from), 'dd-MM-yyyy')}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Available Tab */}
           <TabsContent value="available">
             <Card>
@@ -558,13 +747,14 @@ export default function VacantMediaReport() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Asset ID</TableHead>
-                          <TableHead>Media Type</TableHead>
+                          <TableHead>Area</TableHead>
                           <TableHead>Location</TableHead>
-                          <TableHead>City</TableHead>
+                          <TableHead>Direction</TableHead>
                           <TableHead>Dimensions</TableHead>
-                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Sq.Ft</TableHead>
+                          <TableHead>Illumination</TableHead>
                           <TableHead className="text-right">Card Rate</TableHead>
+                          <TableHead>Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -573,26 +763,27 @@ export default function VacantMediaReport() {
                             key={asset.id}
                             className={index % 2 === 0 ? 'bg-background' : 'bg-muted/30'}
                           >
-                            <TableCell className="font-mono text-sm font-medium">
-                              {getAssetDisplayId(asset)}
-                            </TableCell>
-                            <TableCell>{asset.media_type}</TableCell>
+                            <TableCell className="font-medium">{asset.area || '-'}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4 text-muted-foreground" />
-                                {asset.location || asset.area}
+                                <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                <span className="truncate max-w-[200px]">{asset.location || '-'}</span>
                               </div>
                             </TableCell>
-                            <TableCell>{asset.city}</TableCell>
+                            <TableCell>{asset.direction || '-'}</TableCell>
                             <TableCell>{asset.dimensions || '-'}</TableCell>
+                            <TableCell className="text-right">
+                              {asset.total_sqft ? asset.total_sqft.toFixed(0) : '-'}
+                            </TableCell>
+                            <TableCell>{asset.illumination_type || 'Non-lit'}</TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatCurrency(asset.card_rate)}
+                            </TableCell>
                             <TableCell>
                               <Badge className="bg-green-100 text-green-800 border-green-200">
                                 <CheckCircle2 className="h-3 w-3 mr-1" />
                                 Available
                               </Badge>
-                            </TableCell>
-                            <TableCell className="text-right font-medium">
-                              {formatCurrency(asset.card_rate)}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -617,10 +808,10 @@ export default function VacantMediaReport() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Asset ID</TableHead>
-                          <TableHead>Media Type</TableHead>
+                          <TableHead>Area</TableHead>
                           <TableHead>Location</TableHead>
-                          <TableHead>City</TableHead>
+                          <TableHead>Direction</TableHead>
+                          <TableHead>Dimensions</TableHead>
                           <TableHead>Booked For</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Available From</TableHead>
@@ -632,17 +823,15 @@ export default function VacantMediaReport() {
                             key={asset.id}
                             className={index % 2 === 0 ? 'bg-background' : 'bg-muted/30'}
                           >
-                            <TableCell className="font-mono text-sm font-medium">
-                              {getAssetDisplayId(asset)}
-                            </TableCell>
-                            <TableCell>{asset.media_type}</TableCell>
+                            <TableCell className="font-medium">{asset.area || '-'}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4 text-muted-foreground" />
-                                {asset.location || asset.area}
+                                <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                <span className="truncate max-w-[200px]">{asset.location || '-'}</span>
                               </div>
                             </TableCell>
-                            <TableCell>{asset.city}</TableCell>
+                            <TableCell>{asset.direction || '-'}</TableCell>
+                            <TableCell>{asset.dimensions || '-'}</TableCell>
                             <TableCell>
                               {asset.current_booking ? (
                                 <div className="text-sm">
@@ -669,7 +858,7 @@ export default function VacantMediaReport() {
                             <TableCell>
                               {asset.available_from ? (
                                 <span className="text-sm text-muted-foreground">
-                                  {format(new Date(asset.available_from), 'MMM dd, yyyy')}
+                                  {format(new Date(asset.available_from), 'dd-MM-yyyy')}
                                 </span>
                               ) : '-'}
                             </TableCell>
@@ -696,13 +885,15 @@ export default function VacantMediaReport() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Asset ID</TableHead>
-                          <TableHead>Media Type</TableHead>
+                          <TableHead>Area</TableHead>
                           <TableHead>Location</TableHead>
-                          <TableHead>City</TableHead>
+                          <TableHead>Direction</TableHead>
+                          <TableHead>Dimensions</TableHead>
+                          <TableHead className="text-right">Sq.Ft</TableHead>
+                          <TableHead>Illumination</TableHead>
+                          <TableHead className="text-right">Card Rate</TableHead>
                           <TableHead>Current Booking</TableHead>
                           <TableHead>Available From</TableHead>
-                          <TableHead className="text-right">Card Rate</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -711,23 +902,28 @@ export default function VacantMediaReport() {
                             key={asset.id}
                             className={index % 2 === 0 ? 'bg-background' : 'bg-muted/30'}
                           >
-                            <TableCell className="font-mono text-sm font-medium">
-                              {getAssetDisplayId(asset)}
-                            </TableCell>
-                            <TableCell>{asset.media_type}</TableCell>
+                            <TableCell className="font-medium">{asset.area || '-'}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4 text-muted-foreground" />
-                                {asset.location || asset.area}
+                                <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                <span className="truncate max-w-[200px]">{asset.location || '-'}</span>
                               </div>
                             </TableCell>
-                            <TableCell>{asset.city}</TableCell>
+                            <TableCell>{asset.direction || '-'}</TableCell>
+                            <TableCell>{asset.dimensions || '-'}</TableCell>
+                            <TableCell className="text-right">
+                              {asset.total_sqft ? asset.total_sqft.toFixed(0) : '-'}
+                            </TableCell>
+                            <TableCell>{asset.illumination_type || 'Non-lit'}</TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatCurrency(asset.card_rate)}
+                            </TableCell>
                             <TableCell>
                               {asset.current_booking ? (
                                 <div className="text-sm">
                                   <div className="font-medium">{asset.current_booking.campaign_name}</div>
                                   <div className="text-muted-foreground">
-                                    Until: {format(new Date(asset.current_booking.end_date), 'MMM dd, yyyy')}
+                                    Until: {format(new Date(asset.current_booking.end_date), 'dd-MM-yyyy')}
                                   </div>
                                 </div>
                               ) : '-'}
@@ -736,12 +932,9 @@ export default function VacantMediaReport() {
                               {asset.available_from ? (
                                 <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
                                   <Clock className="h-3 w-3 mr-1" />
-                                  {format(new Date(asset.available_from), 'MMM dd, yyyy')}
+                                  {format(new Date(asset.available_from), 'dd-MM-yyyy')}
                                 </Badge>
                               ) : '-'}
-                            </TableCell>
-                            <TableCell className="text-right font-medium">
-                              {formatCurrency(asset.card_rate)}
                             </TableCell>
                           </TableRow>
                         ))}

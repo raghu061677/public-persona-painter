@@ -1,5 +1,6 @@
 // supabase/functions/get-media-availability/index.ts
-// v2.0 - Robust media availability checker with comprehensive date range overlap detection
+// v3.0 - Fixed availability engine with proper date-range overlap detection
+// Key fix: "Available Soon" properly computed based on booking end dates within range
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -30,6 +31,12 @@ interface BookingInfo {
   status: string;
 }
 
+interface BookingInterval {
+  start: Date;
+  end: Date;
+  info: BookingInfo;
+}
+
 interface BaseAsset {
   id: string;
   media_asset_code: string | null;
@@ -46,6 +53,7 @@ interface BaseAsset {
   latitude: number | null;
   longitude: number | null;
   primary_photo_url: string | null;
+  qr_code_url: string | null;
   is_public: boolean;
   booked_from: string | null;
   booked_to: string | null;
@@ -62,6 +70,212 @@ interface BookedAsset extends BaseAsset {
   current_booking: BookingInfo | null;
   all_bookings: BookingInfo[];
   available_from: string | null;
+}
+
+// Core availability computation result
+interface AvailabilityResult {
+  status: 'AVAILABLE' | 'AVAILABLE_SOON' | 'BOOKED' | 'CONFLICT';
+  available_from: string | null;
+  available_until: string | null;
+  reason?: string;
+  merged_bookings: BookingInterval[];
+}
+
+/**
+ * Parse date string to Date object (day only, no time)
+ */
+function parseDay(dateStr: string): Date {
+  const d = new Date(dateStr);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/**
+ * Format date to YYYY-MM-DD string
+ */
+function formatDay(date: Date): string {
+  return date.toISOString().split('T')[0];
+}
+
+/**
+ * Add days to a date
+ */
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+/**
+ * Check if two date ranges overlap (inclusive)
+ * Overlap exists if: start1 <= end2 AND end1 >= start2
+ */
+function rangesOverlap(start1: Date, end1: Date, start2: Date, end2: Date): boolean {
+  return start1 <= end2 && end1 >= start2;
+}
+
+/**
+ * Merge overlapping/adjacent booking intervals
+ * Returns sorted, merged intervals
+ */
+function mergeIntervals(intervals: BookingInterval[]): BookingInterval[] {
+  if (intervals.length === 0) return [];
+  
+  // Sort by start date
+  const sorted = [...intervals].sort((a, b) => a.start.getTime() - b.start.getTime());
+  
+  const merged: BookingInterval[] = [sorted[0]];
+  
+  for (let i = 1; i < sorted.length; i++) {
+    const current = sorted[i];
+    const last = merged[merged.length - 1];
+    
+    // Check if intervals overlap or are adjacent (end + 1 day = next start)
+    const lastEndPlus1 = addDays(last.end, 1);
+    if (current.start <= lastEndPlus1) {
+      // Merge: extend end if current ends later
+      if (current.end > last.end) {
+        last.end = current.end;
+      }
+    } else {
+      merged.push(current);
+    }
+  }
+  
+  return merged;
+}
+
+/**
+ * Core function: Compute availability for an asset within a date range
+ * 
+ * Status rules:
+ * - AVAILABLE: No booking overlap with [rangeStart, rangeEnd]
+ * - AVAILABLE_SOON: Has booking overlap but becomes free within the range
+ * - BOOKED: Booking covers the entire range (no free day)
+ * - CONFLICT: Multiple overlapping bookings or invalid data
+ */
+function computeAvailabilityForRange(
+  bookings: BookingInterval[],
+  rangeStart: Date,
+  rangeEnd: Date
+): AvailabilityResult {
+  // No bookings = AVAILABLE
+  if (bookings.length === 0) {
+    return {
+      status: 'AVAILABLE',
+      available_from: formatDay(rangeStart),
+      available_until: formatDay(rangeEnd),
+      merged_bookings: [],
+    };
+  }
+  
+  // Filter bookings that overlap with the search range
+  const overlappingBookings = bookings.filter(b => 
+    rangesOverlap(b.start, b.end, rangeStart, rangeEnd)
+  );
+  
+  // No overlap = AVAILABLE
+  if (overlappingBookings.length === 0) {
+    return {
+      status: 'AVAILABLE',
+      available_from: formatDay(rangeStart),
+      available_until: formatDay(rangeEnd),
+      merged_bookings: [],
+    };
+  }
+  
+  // Check for conflicts (true overlapping bookings, not just sequential)
+  const sortedByStart = [...overlappingBookings].sort((a, b) => 
+    a.start.getTime() - b.start.getTime()
+  );
+  
+  let hasConflict = false;
+  for (let i = 0; i < sortedByStart.length - 1; i++) {
+    const current = sortedByStart[i];
+    const next = sortedByStart[i + 1];
+    // Conflict if bookings truly overlap (not just adjacent)
+    if (next.start <= current.end) {
+      hasConflict = true;
+      break;
+    }
+  }
+  
+  // Merge intervals to compute coverage
+  const mergedBookings = mergeIntervals(overlappingBookings);
+  
+  // Find if asset becomes free within the range
+  // Check each merged booking to see if it ends before rangeEnd
+  let earliestFreeDate: Date | null = null;
+  
+  for (const booking of mergedBookings) {
+    // If booking ends before rangeEnd, asset becomes free on booking.end + 1 day
+    if (booking.end < rangeEnd) {
+      const freeDate = addDays(booking.end, 1);
+      // Only count if free date is within range
+      if (freeDate >= rangeStart && freeDate <= rangeEnd) {
+        if (!earliestFreeDate || freeDate < earliestFreeDate) {
+          earliestFreeDate = freeDate;
+        }
+      }
+    }
+  }
+  
+  // Check if booking fully covers the range (no free day)
+  // Asset is fully booked if merged coverage spans entire range
+  const firstMerged = mergedBookings[0];
+  const lastMerged = mergedBookings[mergedBookings.length - 1];
+  
+  // Check if there's any gap in coverage within the range
+  let hasGapInRange = false;
+  let gapStart: Date | null = null;
+  
+  // Check gap before first booking
+  if (firstMerged.start > rangeStart) {
+    hasGapInRange = true;
+    gapStart = rangeStart;
+  }
+  
+  // Check gaps between bookings
+  if (!hasGapInRange) {
+    for (let i = 0; i < mergedBookings.length - 1; i++) {
+      const gapStartDate = addDays(mergedBookings[i].end, 1);
+      const nextBookingStart = mergedBookings[i + 1].start;
+      if (gapStartDate < nextBookingStart && gapStartDate <= rangeEnd) {
+        hasGapInRange = true;
+        if (!gapStart || gapStartDate < gapStart) {
+          gapStart = gapStartDate;
+        }
+        break;
+      }
+    }
+  }
+  
+  // Check gap after last booking
+  if (!hasGapInRange && lastMerged.end < rangeEnd) {
+    hasGapInRange = true;
+    gapStart = addDays(lastMerged.end, 1);
+  }
+  
+  // If there's a free date within range = AVAILABLE_SOON
+  if (earliestFreeDate || hasGapInRange) {
+    const availableFrom = earliestFreeDate || gapStart || rangeStart;
+    return {
+      status: hasConflict ? 'CONFLICT' : 'AVAILABLE_SOON',
+      available_from: formatDay(availableFrom),
+      available_until: formatDay(rangeEnd),
+      reason: hasConflict ? 'Multiple overlapping bookings' : undefined,
+      merged_bookings: mergedBookings,
+    };
+  }
+  
+  // Fully booked
+  return {
+    status: hasConflict ? 'CONFLICT' : 'BOOKED',
+    available_from: null,
+    available_until: null,
+    reason: hasConflict ? 'Multiple overlapping bookings' : 'Fully booked during period',
+    merged_bookings: mergedBookings,
+  };
 }
 
 serve(async (req) => {
@@ -88,14 +302,16 @@ serve(async (req) => {
       return jsonError("Missing required fields: company_id, start_date, end_date", 400);
     }
 
-    console.log(`[get-media-availability] Checking availability for company ${company_id}, dates: ${start_date} to ${end_date}`);
+    const rangeStart = parseDay(start_date);
+    const rangeEnd = parseDay(end_date);
 
-    // First, update campaign statuses to ensure data is current
+    console.log(`[get-media-availability] v3.0 - Checking company ${company_id}, range: ${start_date} to ${end_date}`);
+
+    // Update campaign statuses
     try {
       await supabase.rpc('auto_update_campaign_status');
     } catch (rpcErr) {
-      console.warn('[get-media-availability] Warning: Could not update campaign status:', rpcErr);
-      // Continue anyway - status update is not critical
+      console.warn('[get-media-availability] Could not update campaign status:', rpcErr);
     }
 
     // 1) Get all media assets for the company
@@ -140,9 +356,8 @@ serve(async (req) => {
       return jsonError('Failed to fetch assets: ' + assetsError.message, 500);
     }
 
-    // Return empty but valid response if no assets
     if (!allAssets || allAssets.length === 0) {
-      console.log('[get-media-availability] No assets found for company');
+      console.log('[get-media-availability] No assets found');
       return jsonResponse({
         available_assets: [],
         booked_assets: [],
@@ -161,10 +376,7 @@ serve(async (req) => {
     }
 
     const assetIds = allAssets.map(a => a.id);
-    const searchStart = new Date(start_date);
-    const searchEnd = new Date(end_date);
-
-    console.log(`[get-media-availability] Found ${allAssets.length} assets, checking bookings...`);
+    console.log(`[get-media-availability] Found ${allAssets.length} assets`);
 
     // 2) Get all campaign bookings for these assets from active campaigns
     const { data: allBookings, error: bookingsError } = await supabase
@@ -187,158 +399,127 @@ serve(async (req) => {
 
     if (bookingsError) {
       console.error('[get-media-availability] Error fetching bookings:', bookingsError);
-      // Continue with available assets only
     }
 
-    // 3) Build a map of asset_id -> active bookings that overlap with search range
-    const assetOverlappingBookingsMap = new Map<string, BookingInfo[]>();
-    const assetAllBookingsMap = new Map<string, BookingInfo[]>();
-    const assetNextAvailableMap = new Map<string, string>();
+    // 3) Build asset -> bookings map
+    const assetBookingsMap = new Map<string, BookingInterval[]>();
+    const assetAllBookingsInfoMap = new Map<string, BookingInfo[]>();
 
     for (const booking of (allBookings || [])) {
       const campaign = booking.campaigns as any;
       if (!campaign) continue;
 
-      // Skip completed, cancelled, archived campaigns for availability check
+      // Only consider active campaigns
       const activeStatuses = ['Draft', 'Upcoming', 'Running'];
       const isActive = activeStatuses.includes(campaign.status);
 
       // Get booking dates, fallback to campaign dates
-      const bookingStart = booking.booking_start_date || campaign.start_date;
-      const bookingEnd = booking.booking_end_date || campaign.end_date;
+      const bookingStartStr = booking.booking_start_date || campaign.start_date;
+      const bookingEndStr = booking.booking_end_date || campaign.end_date;
 
-      // Handle null dates gracefully
-      if (!bookingStart || !bookingEnd) continue;
+      if (!bookingStartStr || !bookingEndStr) continue;
 
-      const bStart = new Date(bookingStart);
-      const bEnd = new Date(bookingEnd);
+      const bookingStart = parseDay(bookingStartStr);
+      const bookingEnd = parseDay(bookingEndStr);
+
+      // Validate dates
+      if (bookingEnd < bookingStart) {
+        console.warn(`[get-media-availability] Invalid booking dates for asset ${booking.asset_id}: ${bookingStartStr} to ${bookingEndStr}`);
+        continue;
+      }
 
       const bookingInfo: BookingInfo = {
         campaign_id: campaign.id,
         campaign_name: campaign.campaign_name || 'Unnamed Campaign',
         client_name: campaign.client_name || 'Unknown Client',
-        start_date: bookingStart,
-        end_date: bookingEnd,
+        start_date: bookingStartStr,
+        end_date: bookingEndStr,
         status: campaign.status || 'Unknown',
       };
 
-      // Store all bookings for reference
-      const allExisting = assetAllBookingsMap.get(booking.asset_id) || [];
-      allExisting.push(bookingInfo);
-      assetAllBookingsMap.set(booking.asset_id, allExisting);
+      // Store all booking info for reference
+      const allInfoList = assetAllBookingsInfoMap.get(booking.asset_id) || [];
+      allInfoList.push(bookingInfo);
+      assetAllBookingsInfoMap.set(booking.asset_id, allInfoList);
 
-      // Only consider active campaigns for overlap detection
+      // Only use active bookings for availability calculation
       if (!isActive) continue;
 
-      // Check date overlap: booking overlaps search range if
-      // bookingStart <= search_end AND bookingEnd >= search_start
-      const hasOverlap = bStart <= searchEnd && bEnd >= searchStart;
+      const interval: BookingInterval = {
+        start: bookingStart,
+        end: bookingEnd,
+        info: bookingInfo,
+      };
 
-      if (hasOverlap) {
-        const existing = assetOverlappingBookingsMap.get(booking.asset_id) || [];
-        existing.push(bookingInfo);
-        assetOverlappingBookingsMap.set(booking.asset_id, existing);
-      }
-
-      // Calculate next available date for assets that are currently booked
-      // but will be free during or before the end of search period
-      if (bEnd < searchEnd) {
-        const nextAvailableDate = new Date(bEnd);
-        nextAvailableDate.setDate(nextAvailableDate.getDate() + 1);
-        const nextAvailableStr = nextAvailableDate.toISOString().split('T')[0];
-
-        const existingNext = assetNextAvailableMap.get(booking.asset_id);
-        // Keep the latest "next available" date (after all bookings end)
-        if (!existingNext || nextAvailableStr > existingNext) {
-          assetNextAvailableMap.set(booking.asset_id, nextAvailableStr);
-        }
-      }
+      const intervals = assetBookingsMap.get(booking.asset_id) || [];
+      intervals.push(interval);
+      assetBookingsMap.set(booking.asset_id, intervals);
     }
 
     console.log(`[get-media-availability] Processed ${allBookings?.length || 0} booking records`);
 
-    // 4) Categorize assets
+    // 4) Categorize assets using the core availability function
     const availableAssets: AvailableAsset[] = [];
     const bookedAssets: BookedAsset[] = [];
     const availableSoonAssets: BookedAsset[] = [];
 
     for (const asset of allAssets) {
-      const overlappingCampaigns = assetOverlappingBookingsMap.get(asset.id) || [];
-      const allAssetBookings = assetAllBookingsMap.get(asset.id) || [];
-      const nextAvailable = assetNextAvailableMap.get(asset.id) || null;
+      const bookings = assetBookingsMap.get(asset.id) || [];
+      const allBookingsInfo = assetAllBookingsInfoMap.get(asset.id) || [];
+      
+      // Compute availability using core function
+      const result = computeAvailabilityForRange(bookings, rangeStart, rangeEnd);
 
-      // Asset with DB status check plus overlap detection
-      const isDbStatusBooked = asset.status === 'Booked';
-      const hasOverlappingBookings = overlappingCampaigns.length > 0;
+      // Sort bookings by start date for display
+      const sortedBookingsInfo = [...allBookingsInfo].sort((a, b) => 
+        new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
+      );
 
-      if (!hasOverlappingBookings && !isDbStatusBooked) {
-        // No overlapping bookings and status is not Booked - asset is available
-        availableAssets.push({
-          ...asset,
-          availability_status: 'available',
-          next_available_from: null,
-        });
-      } else if (!hasOverlappingBookings && isDbStatusBooked && asset.booked_to) {
-        // Status is Booked but no overlapping campaigns - check if it becomes available
-        const bookedToDate = new Date(asset.booked_to);
-        
-        if (bookedToDate < searchStart) {
-          // Booking ended before search period - should be available
-          // (This is a case where the trigger may not have fired yet)
+      // Find current/first booking for display
+      const currentBooking = sortedBookingsInfo.find(b => 
+        rangesOverlap(parseDay(b.start_date), parseDay(b.end_date), rangeStart, rangeEnd)
+      ) || null;
+
+      switch (result.status) {
+        case 'AVAILABLE':
           availableAssets.push({
             ...asset,
             availability_status: 'available',
-            next_available_from: null,
+            next_available_from: result.available_from,
           });
-        } else if (bookedToDate <= searchEnd) {
-          // Will become available during search period
-          const nextDate = new Date(bookedToDate);
-          nextDate.setDate(nextDate.getDate() + 1);
+          break;
           
-          const bookedAsset: BookedAsset = {
+        case 'AVAILABLE_SOON':
+          const availableSoonAsset: BookedAsset = {
             ...asset,
-            availability_status: 'booked',
-            current_booking: null,
-            all_bookings: allAssetBookings,
-            available_from: nextDate.toISOString().split('T')[0],
+            availability_status: 'booked', // Still technically booked now
+            current_booking: currentBooking,
+            all_bookings: sortedBookingsInfo,
+            available_from: result.available_from,
           };
-          bookedAssets.push(bookedAsset);
-          availableSoonAssets.push(bookedAsset);
-        } else {
-          // Booked beyond search period
+          bookedAssets.push(availableSoonAsset);
+          availableSoonAssets.push(availableSoonAsset);
+          break;
+          
+        case 'BOOKED':
           bookedAssets.push({
             ...asset,
             availability_status: 'booked',
-            current_booking: null,
-            all_bookings: allAssetBookings,
+            current_booking: currentBooking,
+            all_bookings: sortedBookingsInfo,
             available_from: null,
           });
-        }
-      } else {
-        // Has overlapping bookings - asset is booked
-        const sortedBookings = overlappingCampaigns.sort((a, b) => 
-          new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
-        );
-
-        const isConflict = overlappingCampaigns.length > 1;
-        
-        const bookedAsset: BookedAsset = {
-          ...asset,
-          availability_status: isConflict ? 'conflict' : 'booked',
-          current_booking: sortedBookings[0] || null,
-          all_bookings: sortedBookings,
-          available_from: nextAvailable,
-        };
-
-        bookedAssets.push(bookedAsset);
-
-        // Check if it becomes available during search period
-        if (nextAvailable) {
-          const availableDate = new Date(nextAvailable);
-          if (availableDate <= searchEnd) {
-            availableSoonAssets.push(bookedAsset);
-          }
-        }
+          break;
+          
+        case 'CONFLICT':
+          bookedAssets.push({
+            ...asset,
+            availability_status: 'conflict',
+            current_booking: currentBooking,
+            all_bookings: sortedBookingsInfo,
+            available_from: result.available_from,
+          });
+          break;
       }
     }
 
@@ -346,14 +527,14 @@ serve(async (req) => {
     const summary = {
       total_assets: allAssets.length,
       available_count: availableAssets.length,
-      booked_count: bookedAssets.length,
+      booked_count: bookedAssets.filter(a => a.availability_status === 'booked' && !availableSoonAssets.includes(a)).length,
       available_soon_count: availableSoonAssets.length,
       conflict_count: bookedAssets.filter(a => a.availability_status === 'conflict').length,
       total_sqft_available: availableAssets.reduce((sum, a) => sum + (Number(a.total_sqft) || 0), 0),
       potential_revenue: availableAssets.reduce((sum, a) => sum + (Number(a.card_rate) || 0), 0),
     };
 
-    console.log(`[get-media-availability] Results: ${availableAssets.length} available, ${bookedAssets.length} booked, ${availableSoonAssets.length} available soon`);
+    console.log(`[get-media-availability] Results: available=${availableAssets.length}, booked=${bookedAssets.length - availableSoonAssets.length}, soon=${availableSoonAssets.length}, conflicts=${summary.conflict_count}`);
 
     return jsonResponse({
       available_assets: availableAssets,

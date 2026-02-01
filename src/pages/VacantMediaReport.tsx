@@ -21,6 +21,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { 
   Search, 
@@ -30,11 +37,22 @@ import {
   Clock, 
   AlertTriangle,
   RefreshCw,
-  Calendar
+  Calendar,
+  Download,
+  FileSpreadsheet,
+  Presentation,
+  Loader2,
+  ChevronDown,
 } from "lucide-react";
 import { formatCurrency, getStatusColor } from "@/utils/mediaAssets";
 import { useToast } from "@/hooks/use-toast";
 import { format, addMonths } from "date-fns";
+import { 
+  generateClientAvailabilityExcel, 
+  generateClientAvailabilityPPT,
+  validateExportData,
+  type ClientAvailabilityExportData 
+} from "@/lib/reports/generateClientAvailabilityExports";
 
 interface BookingInfo {
   campaign_id: string;
@@ -105,6 +123,9 @@ export default function VacantMediaReport() {
   
   const [cities, setCities] = useState<string[]>([]);
   const [mediaTypes, setMediaTypes] = useState<string[]>([]);
+  
+  // Export state
+  const [exporting, setExporting] = useState<string | null>(null);
 
   useEffect(() => {
     if (company?.id) {
@@ -217,14 +238,149 @@ export default function VacantMediaReport() {
     return asset.media_asset_code || asset.id;
   };
 
+  // Prepare export data from current availability results
+  const prepareExportData = (): ClientAvailabilityExportData | null => {
+    if (!summary) {
+      toast({
+        title: "No Data",
+        description: "Run Check Availability first to load assets",
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    const exportData: ClientAvailabilityExportData = {
+      availableAssets,
+      availableSoonAssets,
+      summary,
+      filters: {
+        startDate,
+        endDate,
+        city: selectedCity,
+        mediaType: selectedMediaType,
+      },
+      companyId: company?.id,
+    };
+
+    // Validate counts match
+    const validation = validateExportData(exportData);
+    if (!validation.valid) {
+      toast({
+        title: "Data Mismatch",
+        description: validation.error,
+        variant: "destructive",
+      });
+      console.error("Export validation failed:", {
+        availableCount: availableAssets.length,
+        availableSoonCount: availableSoonAssets.length,
+        summaryAvailable: summary.available_count,
+        summaryAvailableSoon: summary.available_soon_count,
+      });
+      return null;
+    }
+
+    return exportData;
+  };
+
+  const handleClientExcelExport = async () => {
+    const exportData = prepareExportData();
+    if (!exportData) return;
+
+    setExporting('excel');
+    try {
+      await generateClientAvailabilityExcel(exportData);
+      toast({
+        title: "Export Complete",
+        description: "Client Availability Excel has been downloaded",
+      });
+    } catch (error) {
+      console.error('Excel export error:', error);
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Failed to generate Excel",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const handleClientPPTExport = async () => {
+    const exportData = prepareExportData();
+    if (!exportData) return;
+
+    setExporting('ppt');
+    try {
+      await generateClientAvailabilityPPT(exportData);
+      toast({
+        title: "Export Complete",
+        description: "Client Availability PPT has been downloaded",
+      });
+    } catch (error) {
+      console.error('PPT export error:', error);
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Failed to generate PPT",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const hasAvailabilityData = summary && (summary.available_count > 0 || summary.available_soon_count > 0);
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">Vacant Media Report</h1>
-          <p className="text-muted-foreground mt-1">
-            Check asset availability for specific date ranges
-          </p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Vacant Media Report</h1>
+            <p className="text-muted-foreground mt-1">
+              Check asset availability for specific date ranges
+            </p>
+          </div>
+          
+          {/* Client Availability Export Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                disabled={!hasAvailabilityData || !!exporting}
+                title={!hasAvailabilityData ? "Run Check Availability first" : "Export for client"}
+              >
+                {exporting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Client Export
+                    <ChevronDown className="h-4 w-4 ml-1" />
+                  </>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[220px]">
+              <DropdownMenuItem onClick={handleClientExcelExport} disabled={!!exporting}>
+                <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-600" />
+                Client Availability (Excel)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleClientPPTExport} disabled={!!exporting}>
+                <Presentation className="h-4 w-4 mr-2 text-orange-600" />
+                Client Availability (PPT)
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                <p>Includes: Available + Available Soon</p>
+                <p className="mt-0.5">
+                  {summary ? `${summary.available_count + summary.available_soon_count} assets` : 'Run availability check'}
+                </p>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Filters */}

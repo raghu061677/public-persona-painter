@@ -92,17 +92,16 @@ export interface ClientAvailabilityExportData {
 }
 
 // Column definitions for Client Availability Export
+// Order: Area | Location | Direction | Dimensions | Sq.Ft | Illumination | Card Rate | Status | Available From
 const CLIENT_EXPORT_COLUMNS = [
   'S.No',
-  'Asset Code',
-  'City',
-  'Location',
   'Area',
+  'Location',
   'Direction',
-  'Media Type',
-  'Dimension',
+  'Dimensions',
+  'Sq.Ft',
   'Illumination',
-  'Monthly Rate (₹)',
+  'Card Rate (₹)',
   'Status',
   'Available From',
   'Available Until',
@@ -111,32 +110,28 @@ const CLIENT_EXPORT_COLUMNS = [
 
 const EXCEL_COLUMN_WIDTHS = [
   6,   // S.No
-  15,  // Asset Code
-  12,  // City
-  30,  // Location
   15,  // Area
+  35,  // Location
   12,  // Direction
-  15,  // Media Type
-  14,  // Dimension
+  14,  // Dimensions
+  10,  // Sq.Ft
   12,  // Illumination
-  15,  // Monthly Rate
+  14,  // Card Rate
   15,  // Status
-  15,  // Available From
-  15,  // Available Until
+  14,  // Available From
+  14,  // Available Until
   20,  // Notes
 ];
 
 interface StandardizedClientAsset {
   sNo: number;
-  assetCode: string;
-  city: string;
-  location: string;
   area: string;
+  location: string;
   direction: string;
-  mediaType: string;
-  dimension: string;
+  dimensions: string;
+  sqft: number;
   illumination: string;
-  monthlyRate: number;
+  cardRate: number;
   status: 'Available' | 'Available Soon';
   availableFrom: string;
   availableUntil: string;
@@ -191,15 +186,13 @@ function standardizeClientAssets(data: ClientAvailabilityExportData): Standardiz
   for (const asset of availableSorted) {
     result.push({
       sNo: sNo++,
-      assetCode: asset.media_asset_code || asset.id,
-      city: asset.city || '',
-      location: asset.location || '',
       area: asset.area || '',
+      location: asset.location || '',
       direction: asset.direction || 'N/A',
-      mediaType: asset.media_type || '',
-      dimension: asset.dimensions || 'N/A',
+      dimensions: asset.dimensions || 'N/A',
+      sqft: asset.total_sqft || 0,
       illumination: asset.illumination_type || 'Non-lit',
-      monthlyRate: asset.card_rate || 0,
+      cardRate: asset.card_rate || 0,
       status: 'Available',
       availableFrom: format(new Date(data.filters.startDate), 'dd-MM-yyyy'),
       availableUntil: format(new Date(data.filters.endDate), 'dd-MM-yyyy'),
@@ -225,15 +218,13 @@ function standardizeClientAssets(data: ClientAvailabilityExportData): Standardiz
     
     result.push({
       sNo: sNo++,
-      assetCode: asset.media_asset_code || asset.id,
-      city: asset.city || '',
-      location: asset.location || '',
       area: asset.area || '',
+      location: asset.location || '',
       direction: asset.direction || 'N/A',
-      mediaType: asset.media_type || '',
-      dimension: asset.dimensions || 'N/A',
+      dimensions: asset.dimensions || 'N/A',
+      sqft: asset.total_sqft || 0,
       illumination: asset.illumination_type || 'Non-lit',
-      monthlyRate: asset.card_rate || 0,
+      cardRate: asset.card_rate || 0,
       status: 'Available Soon',
       availableFrom: availableFrom,
       availableUntil: format(new Date(data.filters.endDate), 'dd-MM-yyyy'),
@@ -357,27 +348,25 @@ export async function generateClientAvailabilityExcel(data: ClientAvailabilityEx
     const dataRow = worksheet.getRow(row);
     dataRow.values = [
       asset.sNo,
-      asset.assetCode,
-      asset.city,
-      asset.location,
       asset.area,
+      asset.location,
       asset.direction,
-      asset.mediaType,
-      asset.dimension,
+      asset.dimensions,
+      asset.sqft,
       asset.illumination,
-      asset.monthlyRate,
+      asset.cardRate,
       asset.status,
       asset.availableFrom,
       asset.availableUntil,
       asset.notes,
     ];
 
-    // Format Monthly Rate as currency
-    const rateCell = dataRow.getCell(10);
+    // Format Card Rate as currency
+    const rateCell = dataRow.getCell(8);
     rateCell.numFmt = '₹#,##0';
 
     // Style status cell with color
-    const statusCell = dataRow.getCell(11);
+    const statusCell = dataRow.getCell(9);
     if (asset.status === 'Available') {
       statusCell.font = { bold: true, color: { argb: "FF22C55E" } };
     } else {
@@ -387,9 +376,9 @@ export async function generateClientAvailabilityExcel(data: ClientAvailabilityEx
     // Borders and alignment
     dataRow.eachCell((cell, colNumber) => {
       cell.alignment = {
-        horizontal: [4, 14].includes(colNumber) ? "left" : "center",
+        horizontal: [3, 12].includes(colNumber) ? "left" : "center",
         vertical: "middle",
-        wrapText: colNumber === 4 || colNumber === 14, // Wrap location and notes
+        wrapText: colNumber === 3 || colNumber === 12, // Wrap location and notes
       };
       cell.border = {
         top: { style: "thin", color: { argb: "FFD1D5DB" } },
@@ -851,17 +840,16 @@ export async function generateClientAvailabilityPPT(data: ClientAvailabilityExpo
       line: { color: 'E5E7EB', width: 1 },
     });
 
-    // Details table
+    // Details table - use originalAsset for city/mediaType
+    const originalAssetData = asset.originalAsset as any;
     const detailsTableData = [
-      [{ text: sanitizePptText('City'), options: { bold: true } }, { text: sanitizePptText(asset.city) }],
       [{ text: sanitizePptText('Area'), options: { bold: true } }, { text: sanitizePptText(asset.area) }],
       [{ text: sanitizePptText('Location'), options: { bold: true } }, { text: sanitizePptText(asset.location) }],
       [{ text: sanitizePptText('Direction'), options: { bold: true } }, { text: sanitizePptText(asset.direction) }],
       [{ text: sanitizePptText('Dimensions'), options: { bold: true } }, { text: sanitizePptText(formattedDimensions) }],
-      [{ text: sanitizePptText('Sq.Ft'), options: { bold: true } }, { text: sanitizePptText(originalAsset.total_sqft?.toString() || 'N/A') }],
+      [{ text: sanitizePptText('Sq.Ft'), options: { bold: true } }, { text: sanitizePptText(asset.sqft?.toString() || 'N/A') }],
       [{ text: sanitizePptText('Illumination'), options: { bold: true } }, { text: sanitizePptText(asset.illumination) }],
-      [{ text: sanitizePptText('Media Type'), options: { bold: true } }, { text: sanitizePptText(asset.mediaType) }],
-      [{ text: sanitizePptText('Monthly Rate'), options: { bold: true } }, { text: sanitizePptText(`Rs. ${asset.monthlyRate.toLocaleString('en-IN')}/month`) }],
+      [{ text: sanitizePptText('Card Rate'), options: { bold: true } }, { text: sanitizePptText(`Rs. ${asset.cardRate.toLocaleString('en-IN')}/month`) }],
       [{ text: sanitizePptText('Available From'), options: { bold: true } }, { text: sanitizePptText(asset.availableFrom) }],
     ];
 

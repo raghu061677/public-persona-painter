@@ -166,18 +166,50 @@ export function validateExportData(data: ClientAvailabilityExportData): { valid:
 }
 
 /**
+ * Deduplicate assets by ID
+ */
+function deduplicateById<T extends { id: string }>(assets: T[]): T[] {
+  const seen = new Map<string, T>();
+  const duplicates: string[] = [];
+  
+  for (const asset of assets) {
+    if (seen.has(asset.id)) {
+      duplicates.push(asset.id);
+    } else {
+      seen.set(asset.id, asset);
+    }
+  }
+  
+  if (duplicates.length > 0) {
+    console.warn(`[ClientAvailabilityExport] Detected ${duplicates.length} duplicate assets:`, duplicates.slice(0, 5));
+  }
+  
+  return Array.from(seen.values());
+}
+
+/**
  * Combine and standardize assets for client export
+ * Now includes deduplication
  */
 function standardizeClientAssets(data: ClientAvailabilityExportData): StandardizedClientAsset[] {
   const result: StandardizedClientAsset[] = [];
+  
+  // CRITICAL: Deduplicate each category first
+  const dedupedAvailable = deduplicateById(data.availableAssets);
+  const dedupedAvailableSoon = deduplicateById(data.availableSoonAssets);
+  
+  // Log if dedup removed any
+  if (dedupedAvailable.length !== data.availableAssets.length) {
+    console.warn(`[standardizeClientAssets] Removed ${data.availableAssets.length - dedupedAvailable.length} duplicate Available assets`);
+  }
+  if (dedupedAvailableSoon.length !== data.availableSoonAssets.length) {
+    console.warn(`[standardizeClientAssets] Removed ${data.availableSoonAssets.length - dedupedAvailableSoon.length} duplicate Available Soon assets`);
+  }
+  
   let sNo = 1;
 
-  // Add Available assets first
-  const availableSorted = [...data.availableAssets].sort((a, b) => {
-    // Sort by Available From date (earliest first), then city, area, location
-    const dateA = data.filters.startDate;
-    const dateB = data.filters.startDate;
-    if (dateA !== dateB) return dateA.localeCompare(dateB);
+  // Add Available assets first (sorted by city, area, location)
+  const availableSorted = [...dedupedAvailable].sort((a, b) => {
     if (a.city !== b.city) return a.city.localeCompare(b.city);
     if (a.area !== b.area) return a.area.localeCompare(b.area);
     return a.location.localeCompare(b.location);
@@ -201,8 +233,8 @@ function standardizeClientAssets(data: ClientAvailabilityExportData): Standardiz
     });
   }
 
-  // Add Available Soon assets (sorted by next_available_from date)
-  const availableSoonSorted = [...data.availableSoonAssets].sort((a, b) => {
+  // Add Available Soon assets (sorted by available_from date, then city, area, location)
+  const availableSoonSorted = [...dedupedAvailableSoon].sort((a, b) => {
     const dateA = a.available_from || '';
     const dateB = b.available_from || '';
     if (dateA !== dateB) return dateA.localeCompare(dateB);
@@ -234,6 +266,8 @@ function standardizeClientAssets(data: ClientAvailabilityExportData): Standardiz
       originalAsset: asset,
     });
   }
+
+  console.log(`[standardizeClientAssets] Final: ${result.length} unique assets (${availableSorted.length} Available + ${availableSoonSorted.length} Soon)`);
 
   return result;
 }

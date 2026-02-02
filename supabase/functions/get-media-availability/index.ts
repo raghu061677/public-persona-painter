@@ -395,6 +395,7 @@ serve(async (req) => {
     // 4) Categorize assets using the core availability function
     const availableAssets: AvailableAsset[] = [];
     const bookedAssets: BookedAsset[] = [];
+    const availableSoonAssets: BookedAsset[] = []; // Booked now but free within range
 
     // Track unique asset IDs to prevent duplicates
     const processedAssetIds = new Set<string>();
@@ -430,14 +431,23 @@ serve(async (req) => {
           available_from: result.available_from || formatDay(rangeStart),
         });
       } else {
-        // BOOKED
-        bookedAssets.push({
+        // BOOKED - check if it becomes available within range
+        const bookedAsset: BookedAsset = {
           ...asset,
           availability_status: 'booked',
           current_booking: currentBooking,
           all_bookings: sortedBookingsInfo,
           available_from: result.available_from, // May be null if fully booked through rangeEnd
-        });
+        };
+        
+        // Categorize: if asset has available_from within range, it's "Available Soon" (pre-bookable)
+        if (result.available_from) {
+          // Asset becomes free during the selected period
+          availableSoonAssets.push(bookedAsset);
+        } else {
+          // Asset is fully booked through the entire range
+          bookedAssets.push(bookedAsset);
+        }
       }
     }
 
@@ -445,16 +455,19 @@ serve(async (req) => {
     const summary = {
       total_assets: processedAssetIds.size,
       available_count: availableAssets.length,
-      booked_count: bookedAssets.length,
+      booked_count: bookedAssets.length + availableSoonAssets.length, // Include "soon" in booked total for backward compat
+      available_soon_count: availableSoonAssets.length,
+      conflict_count: 0, // Conflicts are filtered out upstream
       total_sqft_available: availableAssets.reduce((sum, a) => sum + (Number(a.total_sqft) || 0), 0),
       potential_revenue: availableAssets.reduce((sum, a) => sum + (Number(a.card_rate) || 0), 0),
     };
 
-    console.log(`[get-media-availability] v4.0 Results: available=${availableAssets.length}, booked=${bookedAssets.length}, total_unique=${processedAssetIds.size}`);
+    console.log(`[get-media-availability] v4.0 Results: available=${availableAssets.length}, available_soon=${availableSoonAssets.length}, booked=${bookedAssets.length}, total_unique=${processedAssetIds.size}`);
 
     return jsonResponse({
       available_assets: availableAssets,
       booked_assets: bookedAssets,
+      available_soon_assets: availableSoonAssets,
       summary,
       search_params: {
         start_date,

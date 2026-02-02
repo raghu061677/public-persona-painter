@@ -75,12 +75,14 @@ import { generateAvailabilityPPTWithImages } from "@/lib/reports/generateAvailab
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import type { ExportSortOrder } from "@/lib/reports/vacantMediaExportUtils";
 
-// Column definitions for the availability tables
+// Column definitions for the availability tables - Client View order
+// Area | Location | Direction | Dimensions | Sq.Ft | Illumination | Card Rate | Available From
 const ALL_COLUMNS = [
-  'asset_id', 'type', 'location', 'area', 'city', 'dimensions', 'sqft', 
-  'direction', 'illumination', 'status', 'card_rate', 'booking', 'available_from'
+  'area', 'location', 'direction', 'dimensions', 'sqft', 
+  'illumination', 'card_rate', 'available_from', 'asset_id', 'type', 'city', 'status', 'booking'
 ] as const;
-const DEFAULT_VISIBLE = ['asset_id', 'type', 'location', 'area', 'status', 'card_rate', 'booking', 'available_from'];
+// Default Client View columns (user requested order)
+const DEFAULT_VISIBLE = ['area', 'location', 'direction', 'dimensions', 'sqft', 'illumination', 'card_rate', 'available_from'];
 const COLUMN_LABELS: Record<string, string> = {
   asset_id: 'Asset ID',
   type: 'Type',
@@ -186,8 +188,8 @@ export default function MediaAvailabilityReport() {
   const [availableSortConfig, setAvailableSortConfig] = useState<SortConfig>({ column: null, direction: null });
   const [bookedSortConfig, setBookedSortConfig] = useState<SortConfig>({ column: null, direction: null });
   const [soonSortConfig, setSoonSortConfig] = useState<SortConfig>({ column: null, direction: null });
-  // Export sorting (independent from UI table sorting)
-  const [exportSortOrder, setExportSortOrder] = useState<ExportSortOrder>('location');
+  // Export sorting (independent from UI table sorting) - default to available-from for client-ready exports
+  const [exportSortOrder, setExportSortOrder] = useState<ExportSortOrder>('available-from');
   const [exporting, setExporting] = useState(false);
   const [showDialog, setShowDialog] = useState<DialogType>(null);
   
@@ -665,9 +667,10 @@ export default function MediaAvailabilityReport() {
                 <Label className="text-sm text-muted-foreground">Sort by</Label>
                 <Select value={exportSortOrder} onValueChange={(v) => setExportSortOrder(v as ExportSortOrder)}>
                   <SelectTrigger className="w-[240px]">
-                    <SelectValue placeholder="Location (A–Z)" />
+                    <SelectValue placeholder="Available From ↑" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="available-from">Available From (earliest first)</SelectItem>
                     <SelectItem value="location">Location (A–Z)</SelectItem>
                     <SelectItem value="area">Area (A–Z)</SelectItem>
                     <SelectItem value="city-area-location">City → Area → Location (A–Z)</SelectItem>
@@ -818,9 +821,10 @@ export default function MediaAvailabilityReport() {
           </CardContent>
         </Card>
 
-        {/* Summary Cards - All Clickable */}
+        {/* Summary Cards - Date-Driven (Client View) */}
         {summary && (
           <div className="grid gap-4 md:grid-cols-4 mb-6">
+            {/* Available Now = Available From equals Start Date */}
             <Card 
               className="cursor-pointer hover:border-green-400 transition-colors"
               onClick={() => setShowDialog('available')}
@@ -828,14 +832,31 @@ export default function MediaAvailabilityReport() {
               <CardContent className="pt-6">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  <div className="text-sm text-muted-foreground">Available</div>
+                  <div className="text-sm text-muted-foreground">Available Now</div>
                 </div>
                 <div className="text-3xl font-bold mt-2 text-green-600">{summary.available_count}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  {formatCurrency(summary.potential_revenue)} potential • Click to view
+                  {formatCurrency(summary.potential_revenue)} potential • Vacant from {format(new Date(startDate), 'dd MMM')}
                 </div>
               </CardContent>
             </Card>
+            {/* Available In Range = Available Soon (Available From between Start–End) */}
+            <Card 
+              className="cursor-pointer hover:border-yellow-400 transition-colors"
+              onClick={() => setShowDialog('soon')}
+            >
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-yellow-600" />
+                  <div className="text-sm text-muted-foreground">Available In Range</div>
+                </div>
+                <div className="text-3xl font-bold mt-2 text-yellow-600">{summary.available_soon_count}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Pre-bookable • Free before {format(new Date(endDate), 'dd MMM')}
+                </div>
+              </CardContent>
+            </Card>
+            {/* Booked = No free day in range */}
             <Card 
               className="cursor-pointer hover:border-red-400 transition-colors"
               onClick={() => setShowDialog('booked')}
@@ -847,22 +868,7 @@ export default function MediaAvailabilityReport() {
                 </div>
                 <div className="text-3xl font-bold mt-2 text-red-600">{summary.booked_count - summary.conflict_count}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  During selected period • Click to view
-                </div>
-              </CardContent>
-            </Card>
-            <Card 
-              className="cursor-pointer hover:border-yellow-400 transition-colors"
-              onClick={() => setShowDialog('soon')}
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-yellow-600" />
-                  <div className="text-sm text-muted-foreground">Available Soon</div>
-                </div>
-                <div className="text-3xl font-bold mt-2 text-yellow-600">{summary.available_soon_count}</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Becomes free during period • Click to view
+                  No availability in selected period
                 </div>
               </CardContent>
             </Card>
@@ -940,15 +946,15 @@ export default function MediaAvailabilityReport() {
           <TabsList>
             <TabsTrigger value="available" className="gap-2">
               <CheckCircle2 className="h-4 w-4" />
-              Available ({filteredAvailable.length})
+              Available Now ({filteredAvailable.length})
+            </TabsTrigger>
+            <TabsTrigger value="soon" className="gap-2">
+              <Clock className="h-4 w-4" />
+              Available In Range ({filteredAvailableSoon.length})
             </TabsTrigger>
             <TabsTrigger value="booked" className="gap-2">
               <XCircle className="h-4 w-4" />
               Booked ({filteredBooked.length})
-            </TabsTrigger>
-            <TabsTrigger value="soon" className="gap-2">
-              <Clock className="h-4 w-4" />
-              Available Soon ({filteredAvailableSoon.length})
             </TabsTrigger>
           </TabsList>
 
@@ -964,6 +970,43 @@ export default function MediaAvailabilityReport() {
                     <Table className="min-w-[1200px]">
                       <TableHeader>
                         <TableRow>
+                          {/* Client View column order: Area | Location | Direction | Dimensions | Sq.Ft | Illumination | Card Rate | Available From */}
+                          {isColumnVisible('area') && (
+                            <TableHead
+                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
+                              onClick={() => handleSort('area', availableSortConfig, setAvailableSortConfig)}
+                            >
+                              <div className="flex items-center">
+                                Area {getSortIcon('area', availableSortConfig)}
+                              </div>
+                            </TableHead>
+                          )}
+                          {isColumnVisible('location') && (
+                            <TableHead
+                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap min-w-[200px]"
+                              onClick={() => handleSort('location', availableSortConfig, setAvailableSortConfig)}
+                            >
+                              <div className="flex items-center">
+                                Location {getSortIcon('location', availableSortConfig)}
+                              </div>
+                            </TableHead>
+                          )}
+                          {isColumnVisible('direction') && <TableHead className="whitespace-nowrap">Direction</TableHead>}
+                          {isColumnVisible('dimensions') && <TableHead className="whitespace-nowrap">Dimensions</TableHead>}
+                          {isColumnVisible('sqft') && <TableHead className="whitespace-nowrap">Sq.Ft</TableHead>}
+                          {isColumnVisible('illumination') && <TableHead className="whitespace-nowrap">Illumination</TableHead>}
+                          {isColumnVisible('card_rate') && <TableHead className="text-right whitespace-nowrap">Card Rate</TableHead>}
+                          {isColumnVisible('available_from') && (
+                            <TableHead
+                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
+                              onClick={() => handleSort('available_from', availableSortConfig, setAvailableSortConfig)}
+                            >
+                              <div className="flex items-center">
+                                Available From {getSortIcon('available_from', availableSortConfig)}
+                              </div>
+                            </TableHead>
+                          )}
+                          {/* Hidden by default in Client View, but available via column toggle */}
                           {isColumnVisible('asset_id') && (
                             <TableHead 
                               className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
@@ -976,37 +1019,50 @@ export default function MediaAvailabilityReport() {
                           )}
                           {isColumnVisible('type') && <TableHead className="whitespace-nowrap">Type</TableHead>}
                           {isColumnVisible('city') && <TableHead className="whitespace-nowrap">City</TableHead>}
-                          {isColumnVisible('location') && (
-                            <TableHead
-                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap min-w-[200px]"
-                              onClick={() => handleSort('location', availableSortConfig, setAvailableSortConfig)}
-                            >
-                              <div className="flex items-center">
-                                Location {getSortIcon('location', availableSortConfig)}
-                              </div>
-                            </TableHead>
-                          )}
-                          {isColumnVisible('area') && (
-                            <TableHead
-                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
-                              onClick={() => handleSort('area', availableSortConfig, setAvailableSortConfig)}
-                            >
-                              <div className="flex items-center">
-                                Area {getSortIcon('area', availableSortConfig)}
-                              </div>
-                            </TableHead>
-                          )}
-                          {isColumnVisible('dimensions') && <TableHead className="whitespace-nowrap">Dimensions</TableHead>}
-                          {isColumnVisible('sqft') && <TableHead className="whitespace-nowrap">Sq.Ft</TableHead>}
-                          {isColumnVisible('direction') && <TableHead className="whitespace-nowrap">Direction</TableHead>}
-                          {isColumnVisible('illumination') && <TableHead className="whitespace-nowrap">Illumination</TableHead>}
                           {isColumnVisible('status') && <TableHead className="whitespace-nowrap">Status</TableHead>}
-                          {isColumnVisible('card_rate') && <TableHead className="text-right whitespace-nowrap">Card Rate</TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {sortedAvailable.map((asset) => (
                           <TableRow key={asset.id}>
+                            {/* Client View column order: Area | Location | Direction | Dimensions | Sq.Ft | Illumination | Card Rate | Available From */}
+                            {isColumnVisible('area') && (
+                              <TableCell className="whitespace-nowrap">{asset.area}</TableCell>
+                            )}
+                            {isColumnVisible('location') && (
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                  <span className="min-w-[150px]">{asset.location}</span>
+                                </div>
+                              </TableCell>
+                            )}
+                            {isColumnVisible('direction') && (
+                              <TableCell className="whitespace-nowrap">{asset.direction || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('dimensions') && (
+                              <TableCell className="whitespace-nowrap">{asset.dimensions || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('sqft') && (
+                              <TableCell className="whitespace-nowrap">{asset.total_sqft || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('illumination') && (
+                              <TableCell className="whitespace-nowrap">{asset.illumination_type || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('card_rate') && (
+                              <TableCell className="text-right font-medium whitespace-nowrap">
+                                {formatCurrency(asset.card_rate)}
+                              </TableCell>
+                            )}
+                            {isColumnVisible('available_from') && (
+                              <TableCell>
+                                {/* For available assets, Available From = Start Date */}
+                                <Badge className="bg-green-100 text-green-800 border-green-200">
+                                  {format(new Date(startDate), 'dd-MM-yyyy')}
+                                </Badge>
+                              </TableCell>
+                            )}
+                            {/* Hidden by default, togglable columns */}
                             {isColumnVisible('asset_id') && (
                               <TableCell className="font-mono text-sm whitespace-nowrap">
                                 {asset.media_asset_code || asset.id}
@@ -1020,36 +1076,8 @@ export default function MediaAvailabilityReport() {
                             {isColumnVisible('city') && (
                               <TableCell className="whitespace-nowrap">{asset.city}</TableCell>
                             )}
-                            {isColumnVisible('location') && (
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                  <span className="min-w-[150px]">{asset.location}</span>
-                                </div>
-                              </TableCell>
-                            )}
-                            {isColumnVisible('area') && (
-                              <TableCell className="whitespace-nowrap">{asset.area}</TableCell>
-                            )}
-                            {isColumnVisible('dimensions') && (
-                              <TableCell className="whitespace-nowrap">{asset.dimensions || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('sqft') && (
-                              <TableCell className="whitespace-nowrap">{asset.total_sqft || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('direction') && (
-                              <TableCell className="whitespace-nowrap">{asset.direction || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('illumination') && (
-                              <TableCell className="whitespace-nowrap">{asset.illumination_type || '-'}</TableCell>
-                            )}
                             {isColumnVisible('status') && (
                               <TableCell>{getAvailableStatusBadge(asset)}</TableCell>
-                            )}
-                            {isColumnVisible('card_rate') && (
-                              <TableCell className="text-right font-medium whitespace-nowrap">
-                                {formatCurrency(asset.card_rate)}
-                              </TableCell>
                             )}
                           </TableRow>
                         ))}
@@ -1073,6 +1101,43 @@ export default function MediaAvailabilityReport() {
                     <Table className="min-w-[1200px]">
                       <TableHeader>
                         <TableRow>
+                          {/* Client View column order: Area | Location | Direction | Dimensions | Sq.Ft | Illumination | Card Rate | Available From */}
+                          {isColumnVisible('area') && (
+                            <TableHead
+                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
+                              onClick={() => handleSort('area', bookedSortConfig, setBookedSortConfig)}
+                            >
+                              <div className="flex items-center">
+                                Area {getSortIcon('area', bookedSortConfig)}
+                              </div>
+                            </TableHead>
+                          )}
+                          {isColumnVisible('location') && (
+                            <TableHead
+                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap min-w-[200px]"
+                              onClick={() => handleSort('location', bookedSortConfig, setBookedSortConfig)}
+                            >
+                              <div className="flex items-center">
+                                Location {getSortIcon('location', bookedSortConfig)}
+                              </div>
+                            </TableHead>
+                          )}
+                          {isColumnVisible('direction') && <TableHead className="whitespace-nowrap">Direction</TableHead>}
+                          {isColumnVisible('dimensions') && <TableHead className="whitespace-nowrap">Dimensions</TableHead>}
+                          {isColumnVisible('sqft') && <TableHead className="whitespace-nowrap">Sq.Ft</TableHead>}
+                          {isColumnVisible('illumination') && <TableHead className="whitespace-nowrap">Illumination</TableHead>}
+                          {isColumnVisible('card_rate') && <TableHead className="text-right whitespace-nowrap">Card Rate</TableHead>}
+                          {isColumnVisible('available_from') && (
+                            <TableHead
+                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
+                              onClick={() => handleSort('available_from', bookedSortConfig, setBookedSortConfig)}
+                            >
+                              <div className="flex items-center">
+                                Available From {getSortIcon('available_from', bookedSortConfig)}
+                              </div>
+                            </TableHead>
+                          )}
+                          {/* Hidden by default, togglable columns */}
                           {isColumnVisible('asset_id') && (
                             <TableHead
                               className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
@@ -1085,47 +1150,48 @@ export default function MediaAvailabilityReport() {
                           )}
                           {isColumnVisible('type') && <TableHead className="whitespace-nowrap">Type</TableHead>}
                           {isColumnVisible('city') && <TableHead className="whitespace-nowrap">City</TableHead>}
-                          {isColumnVisible('location') && (
-                            <TableHead
-                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap min-w-[200px]"
-                              onClick={() => handleSort('location', bookedSortConfig, setBookedSortConfig)}
-                            >
-                              <div className="flex items-center">
-                                Location {getSortIcon('location', bookedSortConfig)}
-                              </div>
-                            </TableHead>
-                          )}
-                          {isColumnVisible('area') && (
-                            <TableHead
-                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
-                              onClick={() => handleSort('area', bookedSortConfig, setBookedSortConfig)}
-                            >
-                              <div className="flex items-center">
-                                Area {getSortIcon('area', bookedSortConfig)}
-                              </div>
-                            </TableHead>
-                          )}
-                          {isColumnVisible('dimensions') && <TableHead className="whitespace-nowrap">Dimensions</TableHead>}
-                          {isColumnVisible('sqft') && <TableHead className="whitespace-nowrap">Sq.Ft</TableHead>}
-                          {isColumnVisible('direction') && <TableHead className="whitespace-nowrap">Direction</TableHead>}
-                          {isColumnVisible('illumination') && <TableHead className="whitespace-nowrap">Illumination</TableHead>}
                           {isColumnVisible('booking') && <TableHead className="whitespace-nowrap min-w-[180px]">Current Booking</TableHead>}
-                          {isColumnVisible('available_from') && (
-                            <TableHead
-                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
-                              onClick={() => handleSort('available_from', bookedSortConfig, setBookedSortConfig)}
-                            >
-                              <div className="flex items-center">
-                                Available From {getSortIcon('available_from', bookedSortConfig)}
-                              </div>
-                            </TableHead>
-                          )}
-                          {isColumnVisible('card_rate') && <TableHead className="text-right whitespace-nowrap">Card Rate</TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {sortedBooked.map((asset) => (
                           <TableRow key={asset.id}>
+                            {/* Client View column order */}
+                            {isColumnVisible('area') && (
+                              <TableCell className="whitespace-nowrap">{asset.area}</TableCell>
+                            )}
+                            {isColumnVisible('location') && (
+                              <TableCell>
+                                <span className="min-w-[150px] block">{asset.location}</span>
+                              </TableCell>
+                            )}
+                            {isColumnVisible('direction') && (
+                              <TableCell className="whitespace-nowrap">{asset.direction || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('dimensions') && (
+                              <TableCell className="whitespace-nowrap">{asset.dimensions || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('sqft') && (
+                              <TableCell className="whitespace-nowrap">{asset.total_sqft || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('illumination') && (
+                              <TableCell className="whitespace-nowrap">{asset.illumination_type || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('card_rate') && (
+                              <TableCell className="text-right font-medium whitespace-nowrap">
+                                {formatCurrency(asset.card_rate)}
+                              </TableCell>
+                            )}
+                            {isColumnVisible('available_from') && (
+                              <TableCell>
+                                {asset.available_from ? (
+                                  <Badge variant="outline" className="bg-green-50 text-green-700">
+                                    {format(new Date(asset.available_from), 'dd-MM-yyyy')}
+                                  </Badge>
+                                ) : <span className="text-muted-foreground">-</span>}
+                              </TableCell>
+                            )}
+                            {/* Hidden by default, togglable columns */}
                             {isColumnVisible('asset_id') && (
                               <TableCell className="font-mono text-sm whitespace-nowrap">
                                 {asset.media_asset_code || asset.id}
@@ -1138,26 +1204,6 @@ export default function MediaAvailabilityReport() {
                             )}
                             {isColumnVisible('city') && (
                               <TableCell className="whitespace-nowrap">{asset.city}</TableCell>
-                            )}
-                            {isColumnVisible('location') && (
-                              <TableCell>
-                                <span className="min-w-[150px] block">{asset.location}</span>
-                              </TableCell>
-                            )}
-                            {isColumnVisible('area') && (
-                              <TableCell className="whitespace-nowrap">{asset.area}</TableCell>
-                            )}
-                            {isColumnVisible('dimensions') && (
-                              <TableCell className="whitespace-nowrap">{asset.dimensions || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('sqft') && (
-                              <TableCell className="whitespace-nowrap">{asset.total_sqft || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('direction') && (
-                              <TableCell className="whitespace-nowrap">{asset.direction || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('illumination') && (
-                              <TableCell className="whitespace-nowrap">{asset.illumination_type || '-'}</TableCell>
                             )}
                             {isColumnVisible('booking') && (
                               <TableCell>
@@ -1172,20 +1218,6 @@ export default function MediaAvailabilityReport() {
                                     </div>
                                   </div>
                                 ) : '-'}
-                              </TableCell>
-                            )}
-                            {isColumnVisible('available_from') && (
-                              <TableCell>
-                                {asset.available_from ? (
-                                  <Badge variant="outline" className="bg-green-50">
-                                    {format(new Date(asset.available_from), 'dd MMM yyyy')}
-                                  </Badge>
-                                ) : '-'}
-                              </TableCell>
-                            )}
-                            {isColumnVisible('card_rate') && (
-                              <TableCell className="text-right font-medium whitespace-nowrap">
-                                {formatCurrency(asset.card_rate)}
                               </TableCell>
                             )}
                           </TableRow>
@@ -1210,6 +1242,43 @@ export default function MediaAvailabilityReport() {
                     <Table className="min-w-[1200px]">
                       <TableHeader>
                         <TableRow>
+                          {/* Client View column order: Area | Location | Direction | Dimensions | Sq.Ft | Illumination | Card Rate | Available From */}
+                          {isColumnVisible('area') && (
+                            <TableHead
+                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
+                              onClick={() => handleSort('area', soonSortConfig, setSoonSortConfig)}
+                            >
+                              <div className="flex items-center">
+                                Area {getSortIcon('area', soonSortConfig)}
+                              </div>
+                            </TableHead>
+                          )}
+                          {isColumnVisible('location') && (
+                            <TableHead
+                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap min-w-[200px]"
+                              onClick={() => handleSort('location', soonSortConfig, setSoonSortConfig)}
+                            >
+                              <div className="flex items-center">
+                                Location {getSortIcon('location', soonSortConfig)}
+                              </div>
+                            </TableHead>
+                          )}
+                          {isColumnVisible('direction') && <TableHead className="whitespace-nowrap">Direction</TableHead>}
+                          {isColumnVisible('dimensions') && <TableHead className="whitespace-nowrap">Dimensions</TableHead>}
+                          {isColumnVisible('sqft') && <TableHead className="whitespace-nowrap">Sq.Ft</TableHead>}
+                          {isColumnVisible('illumination') && <TableHead className="whitespace-nowrap">Illumination</TableHead>}
+                          {isColumnVisible('card_rate') && <TableHead className="text-right whitespace-nowrap">Card Rate</TableHead>}
+                          {isColumnVisible('available_from') && (
+                            <TableHead
+                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
+                              onClick={() => handleSort('available_from', soonSortConfig, setSoonSortConfig)}
+                            >
+                              <div className="flex items-center">
+                                Available From {getSortIcon('available_from', soonSortConfig)}
+                              </div>
+                            </TableHead>
+                          )}
+                          {/* Hidden by default, togglable columns */}
                           {isColumnVisible('asset_id') && (
                             <TableHead
                               className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
@@ -1222,47 +1291,48 @@ export default function MediaAvailabilityReport() {
                           )}
                           {isColumnVisible('type') && <TableHead className="whitespace-nowrap">Type</TableHead>}
                           {isColumnVisible('city') && <TableHead className="whitespace-nowrap">City</TableHead>}
-                          {isColumnVisible('location') && (
-                            <TableHead
-                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap min-w-[200px]"
-                              onClick={() => handleSort('location', soonSortConfig, setSoonSortConfig)}
-                            >
-                              <div className="flex items-center">
-                                Location {getSortIcon('location', soonSortConfig)}
-                              </div>
-                            </TableHead>
-                          )}
-                          {isColumnVisible('area') && (
-                            <TableHead
-                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
-                              onClick={() => handleSort('area', soonSortConfig, setSoonSortConfig)}
-                            >
-                              <div className="flex items-center">
-                                Area {getSortIcon('area', soonSortConfig)}
-                              </div>
-                            </TableHead>
-                          )}
-                          {isColumnVisible('dimensions') && <TableHead className="whitespace-nowrap">Dimensions</TableHead>}
-                          {isColumnVisible('sqft') && <TableHead className="whitespace-nowrap">Sq.Ft</TableHead>}
-                          {isColumnVisible('direction') && <TableHead className="whitespace-nowrap">Direction</TableHead>}
-                          {isColumnVisible('illumination') && <TableHead className="whitespace-nowrap">Illumination</TableHead>}
                           {isColumnVisible('booking') && <TableHead className="whitespace-nowrap">Booking Ends</TableHead>}
-                          {isColumnVisible('available_from') && (
-                            <TableHead
-                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
-                              onClick={() => handleSort('available_from', soonSortConfig, setSoonSortConfig)}
-                            >
-                              <div className="flex items-center">
-                                Available From {getSortIcon('available_from', soonSortConfig)}
-                              </div>
-                            </TableHead>
-                          )}
-                          {isColumnVisible('card_rate') && <TableHead className="text-right whitespace-nowrap">Card Rate</TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {sortedAvailableSoon.map((asset) => (
                           <TableRow key={asset.id}>
+                            {/* Client View column order */}
+                            {isColumnVisible('area') && (
+                              <TableCell className="whitespace-nowrap">{asset.area}</TableCell>
+                            )}
+                            {isColumnVisible('location') && (
+                              <TableCell>
+                                <span className="min-w-[150px] block">{asset.location}</span>
+                              </TableCell>
+                            )}
+                            {isColumnVisible('direction') && (
+                              <TableCell className="whitespace-nowrap">{asset.direction || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('dimensions') && (
+                              <TableCell className="whitespace-nowrap">{asset.dimensions || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('sqft') && (
+                              <TableCell className="whitespace-nowrap">{asset.total_sqft || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('illumination') && (
+                              <TableCell className="whitespace-nowrap">{asset.illumination_type || '-'}</TableCell>
+                            )}
+                            {isColumnVisible('card_rate') && (
+                              <TableCell className="text-right font-medium whitespace-nowrap">
+                                {formatCurrency(asset.card_rate)}
+                              </TableCell>
+                            )}
+                            {isColumnVisible('available_from') && (
+                              <TableCell>
+                                {asset.available_from ? (
+                                  <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                                    {format(new Date(asset.available_from), 'dd-MM-yyyy')}
+                                  </Badge>
+                                ) : '-'}
+                              </TableCell>
+                            )}
+                            {/* Hidden by default, togglable columns */}
                             {isColumnVisible('asset_id') && (
                               <TableCell className="font-mono text-sm whitespace-nowrap">
                                 {asset.media_asset_code || asset.id}
@@ -1276,45 +1346,11 @@ export default function MediaAvailabilityReport() {
                             {isColumnVisible('city') && (
                               <TableCell className="whitespace-nowrap">{asset.city}</TableCell>
                             )}
-                            {isColumnVisible('location') && (
-                              <TableCell>
-                                <span className="min-w-[150px] block">{asset.location}</span>
-                              </TableCell>
-                            )}
-                            {isColumnVisible('area') && (
-                              <TableCell className="whitespace-nowrap">{asset.area}</TableCell>
-                            )}
-                            {isColumnVisible('dimensions') && (
-                              <TableCell className="whitespace-nowrap">{asset.dimensions || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('sqft') && (
-                              <TableCell className="whitespace-nowrap">{asset.total_sqft || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('direction') && (
-                              <TableCell className="whitespace-nowrap">{asset.direction || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('illumination') && (
-                              <TableCell className="whitespace-nowrap">{asset.illumination_type || '-'}</TableCell>
-                            )}
                             {isColumnVisible('booking') && (
                               <TableCell>
                                 {asset.current_booking ? (
                                   <span>{format(new Date(asset.current_booking.end_date), 'dd MMM yyyy')}</span>
                                 ) : '-'}
-                              </TableCell>
-                            )}
-                            {isColumnVisible('available_from') && (
-                              <TableCell>
-                                {asset.available_from ? (
-                                  <Badge className="bg-green-100 text-green-800">
-                                    {format(new Date(asset.available_from), 'dd MMM yyyy')}
-                                  </Badge>
-                                ) : '-'}
-                              </TableCell>
-                            )}
-                            {isColumnVisible('card_rate') && (
-                              <TableCell className="text-right font-medium whitespace-nowrap">
-                                {formatCurrency(asset.card_rate)}
                               </TableCell>
                             )}
                           </TableRow>

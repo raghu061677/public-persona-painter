@@ -94,7 +94,7 @@ function getSortLabel(sortOrder: ExportSortOrder): string {
 function toVacantExportAsset(
   asset: AvailableAsset | BookedAsset,
   statusOverride?: string,
-  nextAvailableFrom?: string | null
+  availableFrom?: string | null
 ): VacantAssetExportData {
   const anyAsset = asset as any;
   return {
@@ -107,7 +107,8 @@ function toVacantExportAsset(
     card_rate: asset.card_rate ?? 0,
     total_sqft: asset.total_sqft ?? null,
     status: statusOverride ?? asset.status,
-    next_available_from: nextAvailableFrom ?? anyAsset.next_available_from ?? undefined,
+    available_from: availableFrom ?? anyAsset.available_from ?? undefined,
+    availability_status: statusOverride === 'available' ? 'available' : 'booked',
     direction: anyAsset.direction ?? anyAsset.facing ?? undefined,
     illumination_type: anyAsset.illumination_type ?? anyAsset.illumination ?? anyAsset.lit_type ?? undefined,
     primary_photo_url: anyAsset.primary_photo_url ?? undefined,
@@ -126,7 +127,7 @@ function getAssetsForExport(data: ExportData): VacantAssetExportData[] {
     toVacantExportAsset(
       a,
       'available',
-      a.availability_status === 'available_soon' ? a.next_available_from : null
+      (a as any).available_from ?? null
     )
   );
   const bookedRows = nonConflictBooked.map((a) => toVacantExportAsset(a, 'booked', a.available_from));
@@ -211,7 +212,8 @@ export async function generateAvailabilityExcel(data: ExportData): Promise<void>
       asset.sqft,
       asset.illumination,
       asset.cardRate,
-      asset.status,
+      asset.availableFrom,
+      asset.availability,
     ];
 
     r.getCell(10).numFmt = '₹#,##0';
@@ -295,7 +297,8 @@ export async function generateAvailabilityPDF(data: ExportData): Promise<void> {
     a.sqft.toFixed(2),
     a.illumination,
     `Rs. ${Math.round(a.cardRate).toLocaleString("en-IN")}`,
-    a.status,
+    a.availableFrom || '-',
+    a.availability,
   ]);
 
   autoTable(doc, {
@@ -372,7 +375,8 @@ export async function generateAvailabilityPPT(data: ExportData): Promise<void> {
     { text: Number(a.sqft).toFixed(2), options: { align: "right" } },
     { text: a.illumination, options: { align: "center" } },
     { text: `Rs. ${Math.round(a.cardRate).toLocaleString("en-IN")}`, options: { align: "right" } },
-    { text: a.status, options: { align: "center" } },
+    { text: a.availableFrom || '-', options: { align: "center" } },
+    { text: a.availability, options: { align: "center" } },
   ] as any);
 
   for (let i = 0; i < standardized.length; i += rowsPerSlide) {
@@ -394,7 +398,7 @@ export async function generateAvailabilityPPT(data: ExportData): Promise<void> {
       fontSize: 8,
       fontFace: "Arial",
       border: { pt: 0.5, color: "D1D5DB" },
-      colW: [0.45, 1.0, 0.8, 0.9, 2.2, 0.9, 0.9, 0.7, 0.9, 0.9, 0.75],
+      colW: [0.4, 0.9, 0.7, 0.8, 2.0, 0.8, 0.8, 0.6, 0.8, 0.8, 0.7, 0.7],
     });
   }
 

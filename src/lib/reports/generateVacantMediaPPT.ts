@@ -136,7 +136,8 @@ export async function generateVacantMediaPPT(
         { text: asset.sqft.toFixed(0), options: { fontSize: 7 } },
         { text: asset.illumination, options: { fontSize: 7 } },
         { text: `₹${asset.cardRate.toLocaleString("en-IN")}`, options: { fontSize: 7 } },
-        { text: asset.status, options: { fontSize: 7 } },
+        { text: asset.availableFrom || '-', options: { fontSize: 7 } },
+        { text: asset.availability, options: { fontSize: 7 } },
       ]);
     });
 
@@ -149,7 +150,7 @@ export async function generateVacantMediaPPT(
       border: { pt: 0.5, color: "D1D5DB" },
       align: "center",
       valign: "middle",
-      colW: [0.5, 0.9, 0.7, 0.9, 1.8, 0.7, 0.7, 0.6, 0.7, 0.8, 0.7],
+      colW: [0.4, 0.8, 0.6, 0.8, 1.6, 0.6, 0.6, 0.5, 0.6, 0.7, 0.7, 0.6],
     });
 
     // Footer
@@ -301,7 +302,8 @@ export async function generateVacantMediaPPT(
     const detailsText = [
       `Media Type: ${asset.mediaType}        City: ${asset.city}        Area: ${asset.area}`,
       `Dimensions: ${asset.dimensions}        Sq.Ft: ${asset.sqft.toFixed(2)}        Direction: ${asset.direction}`,
-      `Illumination: ${asset.illumination}        Card Rate: Rs. ${asset.cardRate.toLocaleString("en-IN")}        Status: ${asset.status}`,
+      `Illumination: ${asset.illumination}        Card Rate: Rs. ${asset.cardRate.toLocaleString("en-IN")}        Status: ${asset.availability}`,
+      ...(asset.availableFrom ? [`Available From: ${asset.availableFrom}`] : []),
     ].join("\n");
 
     slide.addText(detailsText, {

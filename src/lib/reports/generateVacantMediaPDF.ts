@@ -11,10 +11,13 @@ import {
 export async function generateVacantMediaPDF(
   assets: VacantAssetExportData[],
   dateFilter: string,
-  sortOrder: ExportSortOrder = 'location'
+  sortOrder: ExportSortOrder = 'available-from',
+  defaultAvailableFrom?: string
 ): Promise<void> {
-  // Standardize and sort assets
-  const standardizedAssets = standardizeAssets(assets, sortOrder);
+  // Standardize, deduplicate, and sort assets
+  const standardizedAssets = standardizeAssets(assets, sortOrder, defaultAvailableFrom);
+  
+  console.log(`[generateVacantMediaPDF] Exporting ${standardizedAssets.length} unique assets`);
   
   const doc = new jsPDF({
     orientation: "landscape",
@@ -32,18 +35,22 @@ export async function generateVacantMediaPDF(
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
-  doc.text("GO-ADS 360° – VACANT MEDIA REPORT", pageWidth / 2, 12, { align: "center" });
+  doc.text("GO-ADS 360° – MEDIA AVAILABILITY REPORT", pageWidth / 2, 12, { align: "center" });
 
   doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
   const sortLabel = sortOrder === 'location' ? 'Location A-Z' : 
-                    sortOrder === 'area' ? 'Area A-Z' : 'City → Area → Location';
+                    sortOrder === 'area' ? 'Area A-Z' : 
+                    sortOrder === 'available-from' ? 'Available From' :
+                    'City → Area → Location';
   doc.text(`${dateFilter} | Sorted: ${sortLabel} | Generated: ${format(new Date(), "dd MMM yyyy")}`, pageWidth / 2, 20, {
     align: "center",
   });
 
   // Summary Stats
   const totalAssets = standardizedAssets.length;
+  const availableCount = standardizedAssets.filter(a => a.availability === 'Available').length;
+  const bookedCount = standardizedAssets.filter(a => a.availability === 'Booked').length;
   const totalSqft = standardizedAssets.reduce((sum, a) => sum + a.sqft, 0);
 
   doc.setTextColor(0, 0, 0);
@@ -52,9 +59,11 @@ export async function generateVacantMediaPDF(
   let yPos = 35;
 
   doc.text(`Total Assets: ${totalAssets}`, 20, yPos);
-  doc.text(`Total Sq.Ft: ${totalSqft.toFixed(2)}`, 120, yPos);
+  doc.text(`Available: ${availableCount}`, 80, yPos);
+  doc.text(`Booked: ${bookedCount}`, 140, yPos);
+  doc.text(`Total Sq.Ft: ${totalSqft.toFixed(2)}`, 200, yPos);
 
-  // Table
+  // Table data (12 columns)
   const tableData = standardizedAssets.map((asset) => [
     asset.sNo.toString(),
     asset.mediaType,
@@ -65,8 +74,9 @@ export async function generateVacantMediaPDF(
     asset.dimensions,
     asset.sqft.toFixed(2),
     asset.illumination,
-    `Rs. ${asset.cardRate.toLocaleString("en-IN")}`,
-    asset.status,
+    `₹${asset.cardRate.toLocaleString("en-IN")}`,
+    asset.availableFrom || '-',
+    asset.availability,
   ]);
 
   autoTable(doc, {
@@ -77,31 +87,32 @@ export async function generateVacantMediaPDF(
     headStyles: {
       fillColor: [30, 58, 138],
       textColor: [255, 255, 255],
-      fontSize: 8,
+      fontSize: 7,
       fontStyle: "bold",
       halign: "center",
     },
     bodyStyles: {
-      fontSize: 7,
+      fontSize: 6,
       textColor: [31, 41, 55],
     },
     alternateRowStyles: {
       fillColor: [249, 250, 251],
     },
     columnStyles: {
-      0: { cellWidth: 10, halign: "center" },  // S.No
-      1: { cellWidth: 22, halign: "center" },  // Media Type
-      2: { cellWidth: 18, halign: "center" },  // City
-      3: { cellWidth: 22, halign: "left" },    // Area
-      4: { cellWidth: 40, halign: "left" },    // Location
-      5: { cellWidth: 18, halign: "center" },  // Direction
-      6: { cellWidth: 18, halign: "center" },  // Dimensions
-      7: { cellWidth: 15, halign: "right" },   // Sq.Ft
-      8: { cellWidth: 18, halign: "center" },  // Illumination
-      9: { cellWidth: 22, halign: "right" },   // Card Rate
-      10: { cellWidth: 20, halign: "center" }, // Status
+      0: { cellWidth: 8, halign: "center" },   // S.No
+      1: { cellWidth: 18, halign: "center" },  // Media Type
+      2: { cellWidth: 15, halign: "center" },  // City
+      3: { cellWidth: 20, halign: "left" },    // Area
+      4: { cellWidth: 35, halign: "left" },    // Location
+      5: { cellWidth: 15, halign: "center" },  // Direction
+      6: { cellWidth: 16, halign: "center" },  // Dimensions
+      7: { cellWidth: 12, halign: "right" },   // Sq.Ft
+      8: { cellWidth: 15, halign: "center" },  // Illumination
+      9: { cellWidth: 18, halign: "right" },   // Card Rate
+      10: { cellWidth: 18, halign: "center" }, // Available From
+      11: { cellWidth: 15, halign: "center" }, // Availability
     },
-    margin: { left: 10, right: 10 },
+    margin: { left: 8, right: 8 },
     didDrawPage: (data) => {
       // Footer on each page
       const pageCount = (doc as any).internal.getNumberOfPages();
@@ -122,5 +133,5 @@ export async function generateVacantMediaPDF(
   });
 
   // Save PDF
-  doc.save(`vacant-media-${dateFilter.toLowerCase().replace(/\s/g, "-")}-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+  doc.save(`media-availability-${dateFilter.toLowerCase().replace(/\s/g, "-")}-${format(new Date(), "yyyy-MM-dd")}.pdf`);
 }

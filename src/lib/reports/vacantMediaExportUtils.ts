@@ -13,8 +13,7 @@ export interface VacantAssetExportData {
   card_rate: number;
   total_sqft: number | null;
   status: string;
-  available_from?: string; // YYYY-MM-DD format
-  next_available_from?: string; // Legacy alias for available_from
+  available_from?: string; // YYYY-MM-DD format (from edge function)
   direction?: string;
   illumination_type?: string;
   primary_photo_url?: string;
@@ -38,7 +37,6 @@ export interface StandardizedAssetRow {
   cardRate: number;
   availableFrom: string; // dd-MM-yyyy format
   availability: string; // "Available" or "Booked"
-  status: string; // Legacy alias for availability (backward compat)
   // Original data for PPT image/QR needs
   originalAsset: VacantAssetExportData;
 }
@@ -276,7 +274,6 @@ function formatAvailableFromDate(dateStr: string | undefined | null): string {
 export function standardizeAssets(
   assets: VacantAssetExportData[],
   sortOrder: ExportSortOrder,
-  defaultAvailableFrom?: string
 ): StandardizedAssetRow[] {
   // CRITICAL: Deduplicate first by asset_id
   const deduped = deduplicateAssets(assets);
@@ -291,12 +288,8 @@ export function standardizeAssets(
   
   // Map to standardized rows with sequential S.No
   return sorted.map((asset, index) => {
-    // Available From logic:
-    // - Available assets: use provided available_from or defaultAvailableFrom
-    // - Booked assets: blank (no available_from)
-    const availableFromRaw = asset.availability_status === 'available' 
-      ? (asset.available_from || defaultAvailableFrom)
-      : asset.available_from; // For booked assets with future availability
+    // Available From: use the value computed by edge function
+    const availableFromRaw = asset.available_from || null;
     
     const availabilityValue = mapAvailability(asset);
     return {
@@ -312,7 +305,6 @@ export function standardizeAssets(
       cardRate: asset.card_rate || 0,
       availableFrom: formatAvailableFromDate(availableFromRaw),
       availability: availabilityValue,
-      status: availabilityValue, // Legacy alias for backward compat
       originalAsset: asset,
     };
   });
@@ -320,7 +312,7 @@ export function standardizeAssets(
 
 /**
  * Export column labels in exact order for "Export All Data" (Available + Booked)
- * Order: S.No, Media Type, City, Area, Location, Direction, Dimensions, Sq.Ft, Illumination, Card Rate, Available From, Availability
+ * Order: S.No, Media Type, City, Area, Location, Direction, Dimensions, Sq.Ft, Illumination, Card Rate, Available From, Status
  */
 export const EXPORT_COLUMNS = [
   'S.No',
@@ -334,7 +326,7 @@ export const EXPORT_COLUMNS = [
   'Illumination',
   'Card Rate',
   'Available From',
-  'Availability',
+  'Status',
 ] as const;
 
 /**
@@ -352,5 +344,5 @@ export const EXCEL_COLUMN_WIDTHS = [
   12,  // Illumination
   14,  // Card Rate
   14,  // Available From
-  12,  // Availability
+  12,  // Status
 ];

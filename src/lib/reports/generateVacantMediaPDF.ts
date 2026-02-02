@@ -12,10 +12,9 @@ export async function generateVacantMediaPDF(
   assets: VacantAssetExportData[],
   dateFilter: string,
   sortOrder: ExportSortOrder = 'available-from',
-  defaultAvailableFrom?: string
 ): Promise<void> {
   // Standardize, deduplicate, and sort assets
-  const standardizedAssets = standardizeAssets(assets, sortOrder, defaultAvailableFrom);
+  const standardizedAssets = standardizeAssets(assets, sortOrder);
   
   console.log(`[generateVacantMediaPDF] Exporting ${standardizedAssets.length} unique assets`);
   
@@ -76,7 +75,7 @@ export async function generateVacantMediaPDF(
     asset.illumination,
     `₹${asset.cardRate.toLocaleString("en-IN")}`,
     asset.availableFrom || '-',
-    asset.availability,
+    asset.availability, // "Available" or "Booked"
   ]);
 
   autoTable(doc, {
@@ -110,7 +109,7 @@ export async function generateVacantMediaPDF(
       8: { cellWidth: 15, halign: "center" },  // Illumination
       9: { cellWidth: 18, halign: "right" },   // Card Rate
       10: { cellWidth: 18, halign: "center" }, // Available From
-      11: { cellWidth: 15, halign: "center" }, // Availability
+      11: { cellWidth: 15, halign: "center" }, // Status
     },
     margin: { left: 8, right: 8 },
     didDrawPage: (data) => {

@@ -198,7 +198,7 @@ function sortExportAssets<T extends { location: string; area: string; city: stri
 function toVacantExportAsset(
   asset: AvailableAsset | BookedAsset,
   statusOverride?: string,
-  nextAvailableFrom?: string | null
+  availableFrom?: string | null
 ): VacantAssetExportData {
   const anyAsset = asset as any;
   return {
@@ -211,7 +211,8 @@ function toVacantExportAsset(
     card_rate: asset.card_rate ?? 0,
     total_sqft: asset.total_sqft ?? null,
     status: statusOverride ?? asset.status,
-    next_available_from: nextAvailableFrom ?? anyAsset.next_available_from ?? undefined,
+    available_from: availableFrom ?? anyAsset.available_from ?? undefined,
+    availability_status: statusOverride === 'available' ? 'available' : 'booked',
     direction: anyAsset.direction ?? anyAsset.facing ?? undefined,
     illumination_type: anyAsset.illumination_type ?? anyAsset.illumination ?? anyAsset.lit_type ?? undefined,
     primary_photo_url: anyAsset.primary_photo_url ?? undefined,
@@ -230,7 +231,7 @@ function getAssetsForExport(data: ExportData): VacantAssetExportData[] {
     toVacantExportAsset(
       a,
       'available',
-      a.availability_status === 'available_soon' ? a.next_available_from : null
+      (a as any).available_from ?? null
     )
   );
   const bookedRows = nonConflictBooked.map((a) => toVacantExportAsset(a, 'booked', a.available_from));

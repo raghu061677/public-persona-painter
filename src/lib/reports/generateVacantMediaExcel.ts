@@ -12,13 +12,12 @@ export async function generateVacantMediaExcel(
   assets: VacantAssetExportData[],
   dateFilter: string,
   sortOrder: ExportSortOrder = 'available-from',
-  defaultAvailableFrom?: string
 ): Promise<void> {
   // Log original count
   console.log(`[generateVacantMediaExcel] Input: ${assets.length} assets`);
   
   // Standardize, deduplicate, and sort assets
-  const standardizedAssets = standardizeAssets(assets, sortOrder, defaultAvailableFrom);
+  const standardizedAssets = standardizeAssets(assets, sortOrder);
   
   console.log(`[generateVacantMediaExcel] After dedupe: ${standardizedAssets.length} unique assets`);
   
@@ -130,7 +129,7 @@ export async function generateVacantMediaExcel(
       asset.illumination,
       asset.cardRate,
       asset.availableFrom,
-      asset.availability,
+      asset.availability, // "Available" or "Booked"
     ];
 
     // Format Card Rate as currency (column 10)
@@ -141,7 +140,7 @@ export async function generateVacantMediaExcel(
     const sqftCell = dataRow.getCell(8);
     sqftCell.numFmt = '#,##0.00';
 
-    // Style availability cell with color (column 12)
+    // Style status cell with color (column 12)
     const availabilityCell = dataRow.getCell(12);
     if (asset.availability === 'Available') {
       availabilityCell.font = { bold: true, color: { argb: "FF22C55E" } };

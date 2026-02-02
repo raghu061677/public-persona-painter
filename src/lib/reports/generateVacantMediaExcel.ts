@@ -11,10 +11,16 @@ import {
 export async function generateVacantMediaExcel(
   assets: VacantAssetExportData[],
   dateFilter: string,
-  sortOrder: ExportSortOrder = 'location'
+  sortOrder: ExportSortOrder = 'location',
+  defaultAvailableFrom?: string
 ): Promise<void> {
-  // Standardize and sort assets
-  const standardizedAssets = standardizeAssets(assets, sortOrder);
+  // Log original count
+  console.log(`[generateVacantMediaExcel] Input: ${assets.length} assets`);
+  
+  // Standardize, deduplicate, and sort assets
+  const standardizedAssets = standardizeAssets(assets, sortOrder, defaultAvailableFrom);
+  
+  console.log(`[generateVacantMediaExcel] After dedupe: ${standardizedAssets.length} unique assets`);
   
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Vacant Media", {
@@ -25,14 +31,14 @@ export async function generateVacantMediaExcel(
     },
   });
 
-  // Set column widths
+  // Set column widths (12 columns now)
   worksheet.columns = EXCEL_COLUMN_WIDTHS.map(width => ({ width }));
 
   let currentRow = 1;
 
   // Header
   const headerRow = worksheet.getRow(currentRow);
-  worksheet.mergeCells(`A${currentRow}:K${currentRow}`);
+  worksheet.mergeCells(`A${currentRow}:L${currentRow}`); // Now 12 columns (A-L)
   headerRow.getCell(1).value = "GO-ADS 360° – VACANT MEDIA REPORT";
   headerRow.getCell(1).font = { size: 18, bold: true, color: { argb: "FFFFFFFF" } };
   headerRow.getCell(1).fill = {
@@ -45,10 +51,12 @@ export async function generateVacantMediaExcel(
   currentRow++;
 
   // Report Info
-  worksheet.mergeCells(`A${currentRow}:K${currentRow}`);
+  worksheet.mergeCells(`A${currentRow}:L${currentRow}`);
   const infoRow = worksheet.getRow(currentRow);
   const sortLabel = sortOrder === 'location' ? 'Location A-Z' : 
-                    sortOrder === 'area' ? 'Area A-Z' : 'City → Area → Location';
+                    sortOrder === 'area' ? 'Area A-Z' : 
+                    sortOrder === 'available-from' ? 'Available From (earliest first)' :
+                    'City → Area → Location';
   infoRow.getCell(1).value = `Generated: ${format(new Date(), "dd MMM yyyy")} | Filter: ${dateFilter} | Sorted by: ${sortLabel}`;
   infoRow.getCell(1).font = { size: 11, italic: true };
   infoRow.getCell(1).alignment = { horizontal: "center" };
@@ -71,7 +79,7 @@ export async function generateVacantMediaExcel(
   worksheet.getRow(currentRow).height = 25;
   currentRow += 2;
 
-  // Column Headers
+  // Column Headers (12 columns)
   const colHeaderRow = worksheet.getRow(currentRow);
   colHeaderRow.values = [...EXPORT_COLUMNS];
   colHeaderRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -92,7 +100,7 @@ export async function generateVacantMediaExcel(
   });
   currentRow++;
 
-  // Data Rows
+  // Data Rows (now 12 columns with Available From)
   standardizedAssets.forEach((asset, index) => {
     const dataRow = worksheet.getRow(currentRow);
     dataRow.values = [
@@ -106,14 +114,15 @@ export async function generateVacantMediaExcel(
       asset.sqft,
       asset.illumination,
       asset.cardRate,
+      asset.availableFrom, // New column
       asset.status,
     ];
 
-    // Format Card Rate as currency
+    // Format Card Rate as currency (column 10)
     const cardRateCell = dataRow.getCell(10);
     cardRateCell.numFmt = '₹#,##0';
 
-    // Format Sq.Ft as number with 2 decimals
+    // Format Sq.Ft as number with 2 decimals (column 8)
     const sqftCell = dataRow.getCell(8);
     sqftCell.numFmt = '#,##0.00';
 
@@ -143,7 +152,7 @@ export async function generateVacantMediaExcel(
 
   // Footer
   currentRow++;
-  worksheet.mergeCells(`A${currentRow}:K${currentRow}`);
+  worksheet.mergeCells(`A${currentRow}:L${currentRow}`);
   const footerRow = worksheet.getRow(currentRow);
   footerRow.getCell(1).value = "Go-Ads 360° | OOH Media Management Platform";
   footerRow.getCell(1).font = { size: 10, italic: true, color: { argb: "FF6B7280" } };

@@ -1,6 +1,6 @@
 // Shared utilities for Vacant Media Report exports
 
-export type ExportSortOrder = 'location' | 'area' | 'city-area-location';
+export type ExportSortOrder = 'location' | 'area' | 'city-area-location' | 'available-from';
 
 export interface VacantAssetExportData {
   id: string;
@@ -13,6 +13,7 @@ export interface VacantAssetExportData {
   total_sqft: number | null;
   status: string;
   next_available_from?: string;
+  available_from?: string; // Added for explicit available from date
   direction?: string;
   illumination_type?: string;
   primary_photo_url?: string;
@@ -32,6 +33,7 @@ export interface StandardizedAssetRow {
   sqft: number;
   illumination: string;
   cardRate: number;
+  availableFrom: string; // Added
   status: string;
   // Original data for PPT image/QR needs
   originalAsset: VacantAssetExportData;
@@ -42,6 +44,54 @@ export interface StandardizedAssetRow {
  */
 function normalizeString(val: string | null | undefined): string {
   return (val || '').trim().toLowerCase();
+}
+
+/**
+ * Generate unique key for asset deduplication
+ * Uses asset id as primary key, falls back to composite key
+ */
+export function getAssetUniqueKey(asset: VacantAssetExportData): string {
+  // Primary: use asset ID
+  if (asset.id) {
+    return asset.id;
+  }
+  // Fallback: composite key
+  return `${normalizeString(asset.city)}|${normalizeString(asset.area)}|${normalizeString(asset.location)}|${normalizeString(asset.direction)}|${normalizeString(asset.dimensions)}|${asset.total_sqft || 0}|${normalizeString(asset.illumination_type)}|${asset.card_rate || 0}`;
+}
+
+/**
+ * Deduplicate assets by ID (or composite key as fallback)
+ * Logs duplicates for debugging
+ */
+export function deduplicateAssets(assets: VacantAssetExportData[]): VacantAssetExportData[] {
+  const seen = new Map<string, VacantAssetExportData>();
+  const duplicates: { key: string; count: number; ids: string[] }[] = [];
+  
+  for (const asset of assets) {
+    const key = getAssetUniqueKey(asset);
+    if (seen.has(key)) {
+      // Track duplicate
+      const existing = duplicates.find(d => d.key === key);
+      if (existing) {
+        existing.count++;
+        existing.ids.push(asset.id);
+      } else {
+        duplicates.push({ key, count: 2, ids: [seen.get(key)!.id, asset.id] });
+      }
+    } else {
+      seen.set(key, asset);
+    }
+  }
+  
+  // Log duplicates if found
+  if (duplicates.length > 0) {
+    console.warn('[vacantMediaExport] Duplicates detected:', {
+      totalDuplicateKeys: duplicates.length,
+      duplicates: duplicates.slice(0, 10), // First 10
+    });
+  }
+  
+  return Array.from(seen.values());
 }
 
 /**
@@ -73,6 +123,13 @@ export function sortAssets(
         if (comparison === 0) {
           comparison = normalizeString(a.location).localeCompare(normalizeString(b.location));
         }
+        break;
+        
+      case 'available-from':
+        // Sort by available_from date (earliest first)
+        const dateA = a.available_from || a.next_available_from || '';
+        const dateB = b.available_from || b.next_available_from || '';
+        comparison = dateA.localeCompare(dateB);
         break;
     }
     
@@ -192,9 +249,9 @@ function mapStatus(asset: VacantAssetExportData): string {
   const status = (asset.status || '').toLowerCase();
   
   // Check for "Available Soon" first
-  if (asset.next_available_from) {
-    const nextAvailable = new Date(asset.next_available_from);
-    if (nextAvailable > new Date()) {
+  if (asset.next_available_from || asset.available_from) {
+    const nextAvailable = new Date(asset.next_available_from || asset.available_from || '');
+    if (!isNaN(nextAvailable.getTime()) && nextAvailable > new Date()) {
       return 'Available Soon';
     }
   }
@@ -212,17 +269,49 @@ function mapStatus(asset: VacantAssetExportData): string {
 }
 
 /**
+ * Format date to dd-MM-yyyy
+ */
+function formatAvailableFromDate(asset: VacantAssetExportData, defaultDate?: string): string {
+  const dateStr = asset.available_from || asset.next_available_from || defaultDate;
+  if (!dateStr) return '';
+  
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '';
+    
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  } catch {
+    return '';
+  }
+}
+
+/**
  * Standardize asset data for export with consistent fields
+ * Now includes deduplication and Available From
  */
 export function standardizeAssets(
   assets: VacantAssetExportData[],
-  sortOrder: ExportSortOrder
+  sortOrder: ExportSortOrder,
+  defaultAvailableFrom?: string
 ): StandardizedAssetRow[] {
-  const sorted = sortAssets(assets, sortOrder);
+  // CRITICAL: Deduplicate first
+  const deduped = deduplicateAssets(assets);
   
+  // Log if counts differ
+  if (assets.length !== deduped.length) {
+    console.warn(`[standardizeAssets] Deduplication reduced ${assets.length} rows to ${deduped.length}`);
+  }
+  
+  // Sort
+  const sorted = sortAssets(deduped, sortOrder);
+  
+  // Map to standardized rows with sequential S.No
   return sorted.map((asset, index) => ({
-    sNo: index + 1,
-    mediaType: asset.media_type || asset.city || 'N/A',
+    sNo: index + 1, // Reset S.No after dedup
+    mediaType: asset.media_type || 'N/A',
     city: asset.city || 'N/A',
     area: asset.area || 'N/A',
     location: asset.location || 'N/A',
@@ -231,13 +320,14 @@ export function standardizeAssets(
     sqft: calculateSqft(asset),
     illumination: getIllumination(asset),
     cardRate: asset.card_rate || 0,
+    availableFrom: formatAvailableFromDate(asset, defaultAvailableFrom),
     status: mapStatus(asset),
     originalAsset: asset,
   }));
 }
 
 /**
- * Export column labels in exact order
+ * Export column labels in exact order (now includes Available From before Status)
  */
 export const EXPORT_COLUMNS = [
   'S.No',
@@ -250,11 +340,12 @@ export const EXPORT_COLUMNS = [
   'Sq.Ft',
   'Illumination',
   'Card Rate',
+  'Available From',
   'Status',
 ] as const;
 
 /**
- * Get column widths for Excel export
+ * Get column widths for Excel export (updated for 12 columns)
  */
 export const EXCEL_COLUMN_WIDTHS = [
   6,   // S.No
@@ -267,5 +358,6 @@ export const EXCEL_COLUMN_WIDTHS = [
   10,  // Sq.Ft
   12,  // Illumination
   14,  // Card Rate
+  14,  // Available From
   12,  // Status
 ];

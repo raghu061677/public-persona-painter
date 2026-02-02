@@ -1,6 +1,7 @@
 // supabase/functions/get-media-availability/index.ts
-// v3.0 - Fixed availability engine with proper date-range overlap detection
-// Key fix: "Available Soon" properly computed based on booking end dates within range
+// v4.0 - Simplified availability engine with strict Available/Booked logic
+// Key: AVAILABLE = no overlap, BOOKED = any overlap within range
+// available_from = booking_end + 1 day for assets that become free
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -61,22 +62,21 @@ interface BaseAsset {
 }
 
 interface AvailableAsset extends BaseAsset {
-  availability_status: 'available' | 'available_soon';
-  next_available_from: string | null;
+  availability_status: 'available';
+  available_from: string; // Always set to rangeStart for available assets
 }
 
 interface BookedAsset extends BaseAsset {
-  availability_status: 'booked' | 'conflict';
+  availability_status: 'booked';
   current_booking: BookingInfo | null;
   all_bookings: BookingInfo[];
-  available_from: string | null;
+  available_from: string | null; // Date when asset becomes free (booking_end + 1 day)
 }
 
 // Core availability computation result
 interface AvailabilityResult {
-  status: 'AVAILABLE' | 'AVAILABLE_SOON' | 'BOOKED' | 'CONFLICT';
+  status: 'AVAILABLE' | 'BOOKED';
   available_from: string | null;
-  available_until: string | null;
   reason?: string;
   merged_bookings: BookingInterval[];
 }
@@ -148,23 +148,23 @@ function mergeIntervals(intervals: BookingInterval[]): BookingInterval[] {
 /**
  * Core function: Compute availability for an asset within a date range
  * 
- * Status rules:
- * - AVAILABLE: No booking overlap with [rangeStart, rangeEnd]
- * - AVAILABLE_SOON: Has booking overlap but becomes free within the range
- * - BOOKED: Booking covers the entire range (no free day)
- * - CONFLICT: Multiple overlapping bookings or invalid data
+ * SIMPLIFIED LOGIC (v4.0):
+ * - AVAILABLE: No booking overlaps with [rangeStart, rangeEnd]
+ * - BOOKED: Any booking overlaps with [rangeStart, rangeEnd]
+ * 
+ * For BOOKED assets, compute available_from = last_booking_end + 1 day
+ * if that date falls within the selected range, include in client view
  */
 function computeAvailabilityForRange(
   bookings: BookingInterval[],
   rangeStart: Date,
   rangeEnd: Date
 ): AvailabilityResult {
-  // No bookings = AVAILABLE
+  // No bookings = AVAILABLE from rangeStart
   if (bookings.length === 0) {
     return {
       status: 'AVAILABLE',
       available_from: formatDay(rangeStart),
-      available_until: formatDay(rangeEnd),
       merged_bookings: [],
     };
   }
@@ -174,106 +174,43 @@ function computeAvailabilityForRange(
     rangesOverlap(b.start, b.end, rangeStart, rangeEnd)
   );
   
-  // No overlap = AVAILABLE
+  // No overlap = AVAILABLE from rangeStart
   if (overlappingBookings.length === 0) {
     return {
       status: 'AVAILABLE',
       available_from: formatDay(rangeStart),
-      available_until: formatDay(rangeEnd),
       merged_bookings: [],
     };
   }
   
-  // Check for conflicts (true overlapping bookings, not just sequential)
-  const sortedByStart = [...overlappingBookings].sort((a, b) => 
-    a.start.getTime() - b.start.getTime()
-  );
-  
-  let hasConflict = false;
-  for (let i = 0; i < sortedByStart.length - 1; i++) {
-    const current = sortedByStart[i];
-    const next = sortedByStart[i + 1];
-    // Conflict if bookings truly overlap (not just adjacent)
-    if (next.start <= current.end) {
-      hasConflict = true;
-      break;
-    }
-  }
-  
-  // Merge intervals to compute coverage
+  // Has overlap = BOOKED
+  // Merge intervals to find when asset becomes free
   const mergedBookings = mergeIntervals(overlappingBookings);
   
-  // Find if asset becomes free within the range
-  // Check each merged booking to see if it ends before rangeEnd
-  let earliestFreeDate: Date | null = null;
+  // Find the last booking that ends within or before rangeEnd
+  // available_from = last_booking_end + 1 day
+  let latestEndDate: Date | null = null;
   
   for (const booking of mergedBookings) {
-    // If booking ends before rangeEnd, asset becomes free on booking.end + 1 day
-    if (booking.end < rangeEnd) {
-      const freeDate = addDays(booking.end, 1);
-      // Only count if free date is within range
-      if (freeDate >= rangeStart && freeDate <= rangeEnd) {
-        if (!earliestFreeDate || freeDate < earliestFreeDate) {
-          earliestFreeDate = freeDate;
-        }
-      }
+    if (!latestEndDate || booking.end > latestEndDate) {
+      latestEndDate = booking.end;
     }
   }
   
-  // Check if booking fully covers the range (no free day)
-  // Asset is fully booked if merged coverage spans entire range
-  const firstMerged = mergedBookings[0];
-  const lastMerged = mergedBookings[mergedBookings.length - 1];
-  
-  // Check if there's any gap in coverage within the range
-  let hasGapInRange = false;
-  let gapStart: Date | null = null;
-  
-  // Check gap before first booking
-  if (firstMerged.start > rangeStart) {
-    hasGapInRange = true;
-    gapStart = rangeStart;
-  }
-  
-  // Check gaps between bookings
-  if (!hasGapInRange) {
-    for (let i = 0; i < mergedBookings.length - 1; i++) {
-      const gapStartDate = addDays(mergedBookings[i].end, 1);
-      const nextBookingStart = mergedBookings[i + 1].start;
-      if (gapStartDate < nextBookingStart && gapStartDate <= rangeEnd) {
-        hasGapInRange = true;
-        if (!gapStart || gapStartDate < gapStart) {
-          gapStart = gapStartDate;
-        }
-        break;
-      }
+  // Calculate available_from date
+  let availableFrom: string | null = null;
+  if (latestEndDate) {
+    const freeDate = addDays(latestEndDate, 1);
+    // Only set if free date is within or at the end of range
+    if (freeDate <= rangeEnd) {
+      availableFrom = formatDay(freeDate);
     }
   }
   
-  // Check gap after last booking
-  if (!hasGapInRange && lastMerged.end < rangeEnd) {
-    hasGapInRange = true;
-    gapStart = addDays(lastMerged.end, 1);
-  }
-  
-  // If there's a free date within range = AVAILABLE_SOON
-  if (earliestFreeDate || hasGapInRange) {
-    const availableFrom = earliestFreeDate || gapStart || rangeStart;
-    return {
-      status: hasConflict ? 'CONFLICT' : 'AVAILABLE_SOON',
-      available_from: formatDay(availableFrom),
-      available_until: formatDay(rangeEnd),
-      reason: hasConflict ? 'Multiple overlapping bookings' : undefined,
-      merged_bookings: mergedBookings,
-    };
-  }
-  
-  // Fully booked
   return {
-    status: hasConflict ? 'CONFLICT' : 'BOOKED',
-    available_from: null,
-    available_until: null,
-    reason: hasConflict ? 'Multiple overlapping bookings' : 'Fully booked during period',
+    status: 'BOOKED',
+    available_from: availableFrom,
+    reason: 'Booking exists during selected period',
     merged_bookings: mergedBookings,
   };
 }
@@ -305,7 +242,7 @@ serve(async (req) => {
     const rangeStart = parseDay(start_date);
     const rangeEnd = parseDay(end_date);
 
-    console.log(`[get-media-availability] v3.0 - Checking company ${company_id}, range: ${start_date} to ${end_date}`);
+    console.log(`[get-media-availability] v4.0 - Checking company ${company_id}, range: ${start_date} to ${end_date}`);
 
     // Update campaign statuses
     try {
@@ -361,13 +298,10 @@ serve(async (req) => {
       return jsonResponse({
         available_assets: [],
         booked_assets: [],
-        available_soon_assets: [],
         summary: {
           total_assets: 0,
           available_count: 0,
           booked_count: 0,
-          available_soon_count: 0,
-          conflict_count: 0,
           total_sqft_available: 0,
           potential_revenue: 0,
         },
@@ -461,9 +395,18 @@ serve(async (req) => {
     // 4) Categorize assets using the core availability function
     const availableAssets: AvailableAsset[] = [];
     const bookedAssets: BookedAsset[] = [];
-    const availableSoonAssets: BookedAsset[] = [];
+
+    // Track unique asset IDs to prevent duplicates
+    const processedAssetIds = new Set<string>();
 
     for (const asset of allAssets) {
+      // CRITICAL: Skip if already processed (deduplication)
+      if (processedAssetIds.has(asset.id)) {
+        console.warn(`[get-media-availability] Duplicate asset detected: ${asset.id}`);
+        continue;
+      }
+      processedAssetIds.add(asset.id);
+
       const bookings = assetBookingsMap.get(asset.id) || [];
       const allBookingsInfo = assetAllBookingsInfoMap.get(asset.id) || [];
       
@@ -480,66 +423,38 @@ serve(async (req) => {
         rangesOverlap(parseDay(b.start_date), parseDay(b.end_date), rangeStart, rangeEnd)
       ) || null;
 
-      switch (result.status) {
-        case 'AVAILABLE':
-          availableAssets.push({
-            ...asset,
-            availability_status: 'available',
-            next_available_from: result.available_from,
-          });
-          break;
-          
-        case 'AVAILABLE_SOON':
-          const availableSoonAsset: BookedAsset = {
-            ...asset,
-            availability_status: 'booked', // Still technically booked now
-            current_booking: currentBooking,
-            all_bookings: sortedBookingsInfo,
-            available_from: result.available_from,
-          };
-          bookedAssets.push(availableSoonAsset);
-          availableSoonAssets.push(availableSoonAsset);
-          break;
-          
-        case 'BOOKED':
-          bookedAssets.push({
-            ...asset,
-            availability_status: 'booked',
-            current_booking: currentBooking,
-            all_bookings: sortedBookingsInfo,
-            available_from: null,
-          });
-          break;
-          
-        case 'CONFLICT':
-          bookedAssets.push({
-            ...asset,
-            availability_status: 'conflict',
-            current_booking: currentBooking,
-            all_bookings: sortedBookingsInfo,
-            available_from: result.available_from,
-          });
-          break;
+      if (result.status === 'AVAILABLE') {
+        availableAssets.push({
+          ...asset,
+          availability_status: 'available',
+          available_from: result.available_from || formatDay(rangeStart),
+        });
+      } else {
+        // BOOKED
+        bookedAssets.push({
+          ...asset,
+          availability_status: 'booked',
+          current_booking: currentBooking,
+          all_bookings: sortedBookingsInfo,
+          available_from: result.available_from, // May be null if fully booked through rangeEnd
+        });
       }
     }
 
     // 5) Build summary
     const summary = {
-      total_assets: allAssets.length,
+      total_assets: processedAssetIds.size,
       available_count: availableAssets.length,
-      booked_count: bookedAssets.filter(a => a.availability_status === 'booked' && !availableSoonAssets.includes(a)).length,
-      available_soon_count: availableSoonAssets.length,
-      conflict_count: bookedAssets.filter(a => a.availability_status === 'conflict').length,
+      booked_count: bookedAssets.length,
       total_sqft_available: availableAssets.reduce((sum, a) => sum + (Number(a.total_sqft) || 0), 0),
       potential_revenue: availableAssets.reduce((sum, a) => sum + (Number(a.card_rate) || 0), 0),
     };
 
-    console.log(`[get-media-availability] Results: available=${availableAssets.length}, booked=${bookedAssets.length - availableSoonAssets.length}, soon=${availableSoonAssets.length}, conflicts=${summary.conflict_count}`);
+    console.log(`[get-media-availability] v4.0 Results: available=${availableAssets.length}, booked=${bookedAssets.length}, total_unique=${processedAssetIds.size}`);
 
     return jsonResponse({
       available_assets: availableAssets,
       booked_assets: bookedAssets,
-      available_soon_assets: availableSoonAssets,
       summary,
       search_params: {
         start_date,
@@ -572,13 +487,10 @@ function jsonError(message: string, status = 400): Response {
       error: message,
       available_assets: [],
       booked_assets: [],
-      available_soon_assets: [],
       summary: {
         total_assets: 0,
         available_count: 0,
         booked_count: 0,
-        available_soon_count: 0,
-        conflict_count: 0,
         total_sqft_available: 0,
         potential_revenue: 0,
       }

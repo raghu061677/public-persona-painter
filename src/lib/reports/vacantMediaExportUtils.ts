@@ -1,4 +1,5 @@
-// Shared utilities for Vacant Media Report exports
+// Unified export utilities for Vacant Media Report (v2.0)
+// Single source of truth for standardization, deduplication, and column ordering
 
 export type ExportSortOrder = 'location' | 'area' | 'city-area-location' | 'available-from';
 
@@ -12,14 +13,16 @@ export interface VacantAssetExportData {
   card_rate: number;
   total_sqft: number | null;
   status: string;
-  next_available_from?: string;
-  available_from?: string; // Added for explicit available from date
+  available_from?: string; // YYYY-MM-DD format
+  next_available_from?: string; // Legacy alias for available_from
   direction?: string;
   illumination_type?: string;
   primary_photo_url?: string;
   latitude?: number;
   longitude?: number;
   qr_code_url?: string;
+  // Original availability status
+  availability_status?: 'available' | 'booked';
 }
 
 export interface StandardizedAssetRow {
@@ -33,8 +36,9 @@ export interface StandardizedAssetRow {
   sqft: number;
   illumination: string;
   cardRate: number;
-  availableFrom: string; // Added
-  status: string;
+  availableFrom: string; // dd-MM-yyyy format
+  availability: string; // "Available" or "Booked"
+  status: string; // Legacy alias for availability (backward compat)
   // Original data for PPT image/QR needs
   originalAsset: VacantAssetExportData;
 }
@@ -47,48 +51,38 @@ function normalizeString(val: string | null | undefined): string {
 }
 
 /**
- * Generate unique key for asset deduplication
- * Uses asset id as primary key, falls back to composite key
+ * Generate unique key for asset deduplication (STRICT: by asset_id only)
  */
 export function getAssetUniqueKey(asset: VacantAssetExportData): string {
-  // Primary: use asset ID
-  if (asset.id) {
-    return asset.id;
-  }
-  // Fallback: composite key
-  return `${normalizeString(asset.city)}|${normalizeString(asset.area)}|${normalizeString(asset.location)}|${normalizeString(asset.direction)}|${normalizeString(asset.dimensions)}|${asset.total_sqft || 0}|${normalizeString(asset.illumination_type)}|${asset.card_rate || 0}`;
+  // CRITICAL: Use asset ID as unique key - this is the ONLY dedup method
+  return asset.id;
 }
 
 /**
- * Deduplicate assets by ID (or composite key as fallback)
+ * Deduplicate assets strictly by asset_id
  * Logs duplicates for debugging
  */
 export function deduplicateAssets(assets: VacantAssetExportData[]): VacantAssetExportData[] {
   const seen = new Map<string, VacantAssetExportData>();
-  const duplicates: { key: string; count: number; ids: string[] }[] = [];
+  const duplicateIds: string[] = [];
   
   for (const asset of assets) {
-    const key = getAssetUniqueKey(asset);
+    const key = asset.id;
+    if (!key) {
+      console.warn('[deduplicateAssets] Asset missing ID, skipping:', asset);
+      continue;
+    }
+    
     if (seen.has(key)) {
-      // Track duplicate
-      const existing = duplicates.find(d => d.key === key);
-      if (existing) {
-        existing.count++;
-        existing.ids.push(asset.id);
-      } else {
-        duplicates.push({ key, count: 2, ids: [seen.get(key)!.id, asset.id] });
-      }
+      duplicateIds.push(key);
     } else {
       seen.set(key, asset);
     }
   }
   
   // Log duplicates if found
-  if (duplicates.length > 0) {
-    console.warn('[vacantMediaExport] Duplicates detected:', {
-      totalDuplicateKeys: duplicates.length,
-      duplicates: duplicates.slice(0, 10), // First 10
-    });
+  if (duplicateIds.length > 0) {
+    console.warn(`[deduplicateAssets] Removed ${duplicateIds.length} duplicate assets:`, duplicateIds.slice(0, 10));
   }
   
   return Array.from(seen.values());
@@ -105,6 +99,13 @@ export function sortAssets(
   
   sorted.sort((a, b) => {
     let comparison = 0;
+    
+    // Primary sort by availability status (Available first, Booked last)
+    const statusA = a.availability_status === 'available' ? 0 : 1;
+    const statusB = b.availability_status === 'available' ? 0 : 1;
+    if (statusA !== statusB) {
+      return statusA - statusB;
+    }
     
     switch (sortOrder) {
       case 'location':
@@ -127,18 +128,18 @@ export function sortAssets(
         
       case 'available-from':
         // Sort by available_from date (earliest first)
-        const dateA = a.available_from || a.next_available_from || '';
-        const dateB = b.available_from || b.next_available_from || '';
+        const dateA = a.available_from || '';
+        const dateB = b.available_from || '';
         comparison = dateA.localeCompare(dateB);
         break;
     }
     
-    // Tie-breaker: Location, then Media Type
+    // Tie-breaker: Location, then Area
     if (comparison === 0 && sortOrder !== 'location') {
       comparison = normalizeString(a.location).localeCompare(normalizeString(b.location));
     }
     if (comparison === 0) {
-      comparison = normalizeString(a.media_type).localeCompare(normalizeString(b.media_type));
+      comparison = normalizeString(a.area).localeCompare(normalizeString(b.area));
     }
     
     return comparison;
@@ -149,8 +150,6 @@ export function sortAssets(
 
 /**
  * Parse dimensions string to extract all faces (supports multi-face formats)
- * Single face: "20x10", "20 x 10", "20X10"
- * Multi-face: "25X5 - 12X3", "40x20-30x10", "25x5 - 12x3"
  */
 function parseAllDimensions(dimensions: string | null | undefined): Array<{ width: number; height: number }> {
   if (!dimensions) return [];
@@ -197,7 +196,6 @@ function calculateSqft(asset: VacantAssetExportData): number {
 
 /**
  * Format dimensions string - PRESERVE ORIGINAL FORMAT for multi-face
- * Only normalize single-face dimensions
  */
 function formatDimensions(asset: VacantAssetExportData): string {
   if (!asset.dimensions) return 'N/A';
@@ -228,14 +226,14 @@ function formatDimensions(asset: VacantAssetExportData): string {
  */
 function getIllumination(asset: VacantAssetExportData): string {
   const illum = asset.illumination_type;
-  if (!illum) return 'N/A';
+  if (!illum) return 'Non-lit';
   
   // Handle boolean-like values
   if (illum.toLowerCase() === 'yes' || illum.toLowerCase() === 'true') {
-    return 'Yes';
+    return 'Lit';
   }
   if (illum.toLowerCase() === 'no' || illum.toLowerCase() === 'false') {
-    return 'No';
+    return 'Non-lit';
   }
   
   // Return as-is for Frontlit/Backlit/Non-lit etc.
@@ -243,36 +241,19 @@ function getIllumination(asset: VacantAssetExportData): string {
 }
 
 /**
- * Map asset status to display status
+ * Map asset availability status to display label
  */
-function mapStatus(asset: VacantAssetExportData): string {
-  const status = (asset.status || '').toLowerCase();
-  
-  // Check for "Available Soon" first
-  if (asset.next_available_from || asset.available_from) {
-    const nextAvailable = new Date(asset.next_available_from || asset.available_from || '');
-    if (!isNaN(nextAvailable.getTime()) && nextAvailable > new Date()) {
-      return 'Available Soon';
-    }
-  }
-  
-  // Standard mappings
-  if (status === 'available' || status === 'vacant') {
+function mapAvailability(asset: VacantAssetExportData): string {
+  if (asset.availability_status === 'available') {
     return 'Available';
   }
-  if (status === 'booked' || status === 'occupied') {
-    return 'Booked';
-  }
-  
-  // Fallback to readable status
-  return asset.status || 'Available';
+  return 'Booked';
 }
 
 /**
- * Format date to dd-MM-yyyy
+ * Format date from YYYY-MM-DD to dd-MM-yyyy
  */
-function formatAvailableFromDate(asset: VacantAssetExportData, defaultDate?: string): string {
-  const dateStr = asset.available_from || asset.next_available_from || defaultDate;
+function formatAvailableFromDate(dateStr: string | undefined | null): string {
   if (!dateStr) return '';
   
   try {
@@ -290,14 +271,14 @@ function formatAvailableFromDate(asset: VacantAssetExportData, defaultDate?: str
 
 /**
  * Standardize asset data for export with consistent fields
- * Now includes deduplication and Available From
+ * Includes deduplication and proper Available From handling
  */
 export function standardizeAssets(
   assets: VacantAssetExportData[],
   sortOrder: ExportSortOrder,
   defaultAvailableFrom?: string
 ): StandardizedAssetRow[] {
-  // CRITICAL: Deduplicate first
+  // CRITICAL: Deduplicate first by asset_id
   const deduped = deduplicateAssets(assets);
   
   // Log if counts differ
@@ -309,25 +290,37 @@ export function standardizeAssets(
   const sorted = sortAssets(deduped, sortOrder);
   
   // Map to standardized rows with sequential S.No
-  return sorted.map((asset, index) => ({
-    sNo: index + 1, // Reset S.No after dedup
-    mediaType: asset.media_type || 'N/A',
-    city: asset.city || 'N/A',
-    area: asset.area || 'N/A',
-    location: asset.location || 'N/A',
-    direction: asset.direction || 'N/A',
-    dimensions: formatDimensions(asset),
-    sqft: calculateSqft(asset),
-    illumination: getIllumination(asset),
-    cardRate: asset.card_rate || 0,
-    availableFrom: formatAvailableFromDate(asset, defaultAvailableFrom),
-    status: mapStatus(asset),
-    originalAsset: asset,
-  }));
+  return sorted.map((asset, index) => {
+    // Available From logic:
+    // - Available assets: use provided available_from or defaultAvailableFrom
+    // - Booked assets: blank (no available_from)
+    const availableFromRaw = asset.availability_status === 'available' 
+      ? (asset.available_from || defaultAvailableFrom)
+      : asset.available_from; // For booked assets with future availability
+    
+    const availabilityValue = mapAvailability(asset);
+    return {
+      sNo: index + 1,
+      mediaType: asset.media_type || 'N/A',
+      city: asset.city || 'N/A',
+      area: asset.area || 'N/A',
+      location: asset.location || 'N/A',
+      direction: asset.direction || 'N/A',
+      dimensions: formatDimensions(asset),
+      sqft: calculateSqft(asset),
+      illumination: getIllumination(asset),
+      cardRate: asset.card_rate || 0,
+      availableFrom: formatAvailableFromDate(availableFromRaw),
+      availability: availabilityValue,
+      status: availabilityValue, // Legacy alias for backward compat
+      originalAsset: asset,
+    };
+  });
 }
 
 /**
- * Export column labels in exact order (now includes Available From before Status)
+ * Export column labels in exact order for "Export All Data" (Available + Booked)
+ * Order: S.No, Media Type, City, Area, Location, Direction, Dimensions, Sq.Ft, Illumination, Card Rate, Available From, Availability
  */
 export const EXPORT_COLUMNS = [
   'S.No',
@@ -341,11 +334,11 @@ export const EXPORT_COLUMNS = [
   'Illumination',
   'Card Rate',
   'Available From',
-  'Status',
+  'Availability',
 ] as const;
 
 /**
- * Get column widths for Excel export (updated for 12 columns)
+ * Get column widths for Excel export (12 columns)
  */
 export const EXCEL_COLUMN_WIDTHS = [
   6,   // S.No
@@ -354,10 +347,10 @@ export const EXCEL_COLUMN_WIDTHS = [
   15,  // Area
   30,  // Location
   12,  // Direction
-  12,  // Dimensions
+  14,  // Dimensions
   10,  // Sq.Ft
   12,  // Illumination
   14,  // Card Rate
   14,  // Available From
-  12,  // Status
+  12,  // Availability
 ];

@@ -60,6 +60,14 @@ import { ApprovalHistoryTimeline } from "@/components/plans/ApprovalHistoryTimel
 import { Checkbox } from "@/components/ui/checkbox";
 import { PageCustomization } from "@/components/ui/page-customization";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Settings2, CalendarDays } from "lucide-react";
+import { formatBillingMode } from "@/utils/perAssetPricing";
+import { format } from "date-fns";
 
 export default function PlanDetail() {
   const { id } = useParams();
@@ -97,6 +105,11 @@ export default function PlanDetail() {
     notes: "",
   });
   const [showDiscount, setShowDiscount] = useState(true);
+  
+  // View Options for Selected Assets table - per-asset dates
+  const [showAssetDates, setShowAssetDates] = useState(true);
+  const [showBookedDays, setShowBookedDays] = useState(true);
+  const [showBillingMode, setShowBillingMode] = useState(false);
 
   const loadPendingApprovals = async () => {
     if (!id) return;
@@ -1491,6 +1504,53 @@ export default function PlanDetail() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Selected Assets ({planItems.length})</CardTitle>
             <div className="flex gap-2">
+              {/* View Options Popover for per-asset dates */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Settings2 className="h-4 w-4 mr-2" />
+                    View Options
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64" align="end">
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-sm mb-3">Column Visibility</h4>
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="show-asset-dates"
+                          checked={showAssetDates}
+                          onCheckedChange={(checked) => setShowAssetDates(!!checked)}
+                        />
+                        <label htmlFor="show-asset-dates" className="text-sm cursor-pointer select-none">
+                          Asset Dates (Start/End)
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="show-booked-days"
+                          checked={showBookedDays}
+                          onCheckedChange={(checked) => setShowBookedDays(!!checked)}
+                        />
+                        <label htmlFor="show-booked-days" className="text-sm cursor-pointer select-none">
+                          Booked Days
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="show-billing-mode"
+                          checked={showBillingMode}
+                          onCheckedChange={(checked) => setShowBillingMode(!!checked)}
+                        />
+                        <label htmlFor="show-billing-mode" className="text-sm cursor-pointer select-none">
+                          Billing Mode
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              
               {selectedItems.size > 0 && ['pending', 'approved'].includes(plan.status?.toLowerCase()) && (
                 <>
                   <Button
@@ -1538,6 +1598,10 @@ export default function PlanDetail() {
                   <TableHead>Asset ID</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>City</TableHead>
+                  {showAssetDates && <TableHead>Start Date</TableHead>}
+                  {showAssetDates && <TableHead>End Date</TableHead>}
+                  {showBookedDays && <TableHead className="text-center">Days</TableHead>}
+                  {showBillingMode && <TableHead>Billing Mode</TableHead>}
                   <TableHead className="text-right">Card Rate</TableHead>
                   <TableHead className="text-right">Negotiated</TableHead>
                   <TableHead className="text-right">Pro-Rata</TableHead>
@@ -1595,6 +1659,33 @@ export default function PlanDetail() {
                       <TableCell className="font-medium font-mono">{item.display_asset_id || item.asset_id}</TableCell>
                       <TableCell>{item.location}</TableCell>
                       <TableCell>{item.city}</TableCell>
+                      {/* Per-asset dates columns */}
+                      {showAssetDates && (
+                        <TableCell className="text-sm">
+                          {item.start_date 
+                            ? format(new Date(item.start_date), 'dd/MM/yy') 
+                            : format(new Date(plan.start_date), 'dd/MM/yy')}
+                        </TableCell>
+                      )}
+                      {showAssetDates && (
+                        <TableCell className="text-sm">
+                          {item.end_date 
+                            ? format(new Date(item.end_date), 'dd/MM/yy') 
+                            : format(new Date(plan.end_date), 'dd/MM/yy')}
+                        </TableCell>
+                      )}
+                      {showBookedDays && (
+                        <TableCell className="text-center">
+                          <Badge variant="secondary" className="font-mono">
+                            {item.booked_days || plan.duration_days}d
+                          </Badge>
+                        </TableCell>
+                      )}
+                      {showBillingMode && (
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatBillingMode(item.billing_mode || 'PRORATA_30')}
+                        </TableCell>
+                      )}
                       <TableCell className="text-right">{formatCurrency(item.card_rate)}</TableCell>
                       <TableCell className="text-right font-medium">{formatCurrency(effectivePrice)}</TableCell>
                       <TableCell className="text-right text-purple-600">{formatCurrency(proRataAmount)}</TableCell>

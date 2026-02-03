@@ -356,6 +356,31 @@ export function SelectedAssetsTable({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      {/* Apply Plan Dates to All */}
+                      {planStartDate && planEndDate && (
+                        <DropdownMenuItem 
+                          onClick={() => {
+                            const updates: Array<{ assetId: string; field: string; value: any }> = [];
+                            const startDateStr = planStartDate.toISOString().split('T')[0];
+                            const endDateStr = planEndDate.toISOString().split('T')[0];
+                            const days = Math.max(1, Math.ceil((planEndDate.getTime() - planStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+                            
+                            selectedAssetIds.forEach(assetId => {
+                              updates.push({ assetId, field: 'start_date', value: startDateStr });
+                              updates.push({ assetId, field: 'end_date', value: endDateStr });
+                              updates.push({ assetId, field: 'booked_days', value: days });
+                            });
+                            handleBulkUpdate(updates);
+                            toast({
+                              title: "Dates Applied",
+                              description: `Plan dates applied to ${selectedAssetIds.size} asset(s)`,
+                            });
+                          }}
+                        >
+                          <CalendarDays className="h-4 w-4 mr-2" />
+                          Apply Plan Dates
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onClick={() => setShowBulkPrintingDialog(true)}>
                         <Printer className="h-4 w-4 mr-2" />
                         Bulk Printing

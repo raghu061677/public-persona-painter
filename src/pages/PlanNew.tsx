@@ -700,6 +700,8 @@ export default function PlanNew() {
                 onRemove={removeAsset}
                 onPricingUpdate={updateAssetPricing}
                 durationDays={formData.duration_days}
+                planStartDate={formData.start_date}
+                planEndDate={formData.end_date}
               />
             </CardContent>
           </Card>

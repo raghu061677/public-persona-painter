@@ -182,8 +182,17 @@ export default function PlanEdit() {
             sales_price: effectivePrice,      // Keep in sync for compatibility
             printing_charges: item.printing_charges || 0,
             mounting_charges: item.mounting_charges || 0,
+            printing_rate: item.printing_rate || 0,
+            mounting_rate: item.installation_rate || 0,
             discount_value: item.discount_value || 0,
             discount_amount: item.discount_amount || 0,
+            // Per-asset duration fields
+            start_date: item.start_date || null,
+            end_date: item.end_date || null,
+            booked_days: item.booked_days || null,
+            billing_mode: item.billing_mode || 'PRORATA_30',
+            daily_rate: item.daily_rate || null,
+            rent_amount: item.rent_amount || null,
           };
         });
         setAssetPricing(pricing);
@@ -448,7 +457,7 @@ export default function PlanEdit() {
       // Create new plan items with FULL media asset snapshot
       const items = Array.from(selectedAssets).map(assetId => {
         const asset = availableAssets.find(a => a.id === assetId);
-        const pricing = assetPricing[assetId];
+        const pricing = assetPricing[assetId] || {};
         
         const cardRate = asset?.card_rate || 0;
         const baseRate = asset?.base_rate || 0;
@@ -459,12 +468,32 @@ export default function PlanEdit() {
         const printing = pricing?.printing_charges || 0;
         const mounting = pricing?.mounting_charges || 0;
         
-        // Calculate pro-rata
-        const proRata = calcProRata(negotiatedPrice, durationDays);
+        // Per-asset dates: use asset-level dates if set, otherwise fallback to plan dates
+        const assetStartDate = pricing.start_date 
+          ? (typeof pricing.start_date === 'string' ? pricing.start_date : new Date(pricing.start_date).toISOString().split('T')[0])
+          : formatForSupabase(toDateOnly(formData.start_date));
+        const assetEndDate = pricing.end_date 
+          ? (typeof pricing.end_date === 'string' ? pricing.end_date : new Date(pricing.end_date).toISOString().split('T')[0])
+          : formatForSupabase(toDateOnly(formData.end_date));
+        
+        // Calculate booked days for this asset
+        const startD = new Date(assetStartDate);
+        const endD = new Date(assetEndDate);
+        const assetBookedDays = pricing.booked_days || Math.max(1, Math.ceil((endD.getTime() - startD.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+        
+        // Per-asset billing mode
+        const billingMode = pricing.billing_mode || 'PRORATA_30';
+        
+        // Calculate daily rate and rent amount
+        const dailyRate = pricing.daily_rate || (negotiatedPrice / BILLING_CYCLE_DAYS);
+        const rentAmount = pricing.rent_amount || (dailyRate * assetBookedDays);
+        
+        // Calculate pro-rata using asset-specific days
+        const proRata = calcProRata(negotiatedPrice, assetBookedDays);
         
         // Calculate discount (monthly and pro-rated)
         const discountMonthly = cardRate - negotiatedPrice;
-        const discountAmount = calcProRata(discountMonthly, durationDays);
+        const discountAmount = calcProRata(discountMonthly, assetBookedDays);
         
         // Calculate subtotal
         const subtotal = proRata + printing + mounting;
@@ -503,6 +532,13 @@ export default function PlanEdit() {
           subtotal,
           gst_amount: itemGst,
           total_with_gst: totalWithGst,
+          // Per-asset duration fields (preserved on conversion to campaign)
+          start_date: assetStartDate,
+          end_date: assetEndDate,
+          booked_days: assetBookedDays,
+          billing_mode: billingMode,
+          daily_rate: Math.round(dailyRate * 100) / 100,
+          rent_amount: Math.round(rentAmount * 100) / 100,
         };
       });
 

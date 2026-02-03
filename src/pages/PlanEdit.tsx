@@ -36,7 +36,7 @@ import {
   BILLING_CYCLE_DAYS,
 } from "@/utils/billingEngine";
 import { LineItemDurationControl } from "@/components/plans/LineItemDurationControl";
-import { ArrowLeft, Calendar as CalendarIcon, FileText, CalendarDays, DollarSign, Info } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, FileText, CalendarDays, DollarSign, Info, FileSpreadsheet, Loader2 } from "lucide-react";
 import { ClientSelect } from "@/components/shared/ClientSelect";
 import { cn } from "@/lib/utils";
 import { AssetSelectionTable } from "@/components/plans/AssetSelectionTable";
@@ -44,6 +44,7 @@ import { SelectedAssetsTable } from "@/components/plans/SelectedAssetsTable";
 import { PlanSummaryCard } from "@/components/plans/PlanSummaryCard";
 import { calcProRata, calcDiscount, calcProfit } from "@/utils/pricing";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { generateProposalExcel } from "@/lib/exports/proposalExcelExport";
 
 type TaxType = 'CGST_SGST' | 'IGST';
 
@@ -51,6 +52,7 @@ export default function PlanEdit() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [exportingProposal, setExportingProposal] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
   const [availableAssets, setAvailableAssets] = useState<any[]>([]);
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
@@ -597,6 +599,55 @@ export default function PlanEdit() {
     .map(id => availableAssets.find(a => a.id === id))
     .filter(Boolean);
 
+  // Proposal Excel export handler (READ-ONLY - no DB writes)
+  const handleExportProposalExcel = async () => {
+    if (selectedAssetsArray.length === 0) {
+      toast({
+        title: "No Assets Selected",
+        description: "Please select at least one asset to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setExportingProposal(true);
+    try {
+      const blob = await generateProposalExcel({
+        planId: formData.id || id || 'PLAN',
+        planName: formData.plan_name || 'Plan',
+        clientName: formData.client_name || '',
+        assets: selectedAssetsArray,
+        assetPricing,
+        planStartDate: formData.start_date instanceof Date ? formData.start_date : new Date(formData.start_date),
+        planEndDate: formData.end_date instanceof Date ? formData.end_date : new Date(formData.end_date),
+        durationDays,
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Proposal_${formData.plan_name || 'Plan'}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export Successful",
+        description: "Proposal Excel downloaded successfully.",
+      });
+    } catch (error: any) {
+      console.error('Export error:', error);
+      toast({
+        title: "Export Failed",
+        description: error.message || "Failed to generate proposal Excel.",
+        variant: "destructive",
+      });
+    } finally {
+      setExportingProposal(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-7xl">
@@ -867,6 +918,19 @@ export default function PlanEdit() {
 
           {/* Actions */}
           <div className="flex justify-end gap-4 pt-4 pb-8">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleExportProposalExcel}
+              disabled={exportingProposal || selectedAssets.size === 0}
+            >
+              {exportingProposal ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+              )}
+              Download Proposal Excel
+            </Button>
             <Button
               type="button"
               variant="outline"

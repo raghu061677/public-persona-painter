@@ -246,6 +246,12 @@ export default function PlanEdit() {
       const discount = calcDiscount(cardRate, cardRate);
       const profit = calcProfit(baseRate, cardRate);
       
+      // Initialize with plan-level dates for per-asset duration
+      const planStart = formatForSupabase(toDateOnly(formData.start_date));
+      const planEnd = formatForSupabase(toDateOnly(formData.end_date));
+      const dailyRate = cardRate / BILLING_CYCLE_DAYS;
+      const rentAmount = dailyRate * days;
+      
       setAssetPricing(prev => ({
         ...prev,
         [assetId]: {
@@ -257,6 +263,13 @@ export default function PlanEdit() {
           profit_percent: profit.percent,
           printing_charges: asset.printing_charges || 0,
           mounting_charges: asset.mounting_charges || 0,
+          // Per-asset duration fields initialized from plan
+          start_date: planStart,
+          end_date: planEnd,
+          booked_days: days,
+          billing_mode: 'PRORATA_30',
+          daily_rate: dailyRate,
+          rent_amount: rentAmount,
         }
       }));
     }
@@ -268,6 +281,10 @@ export default function PlanEdit() {
     const newPricing = { ...assetPricing };
     const days = calculateDurationDays(new Date(formData.start_date), new Date(formData.end_date));
 
+    // Plan-level dates for initialization
+    const planStart = formatForSupabase(toDateOnly(formData.start_date));
+    const planEnd = formatForSupabase(toDateOnly(formData.end_date));
+
     assets.forEach(asset => {
       newSelected.add(asset.id);
       const cardRate = asset.card_rate || 0;
@@ -276,6 +293,8 @@ export default function PlanEdit() {
       const proRata = calcProRata(cardRate, days);
       const discount = calcDiscount(cardRate, cardRate);
       const profit = calcProfit(baseRate, cardRate);
+      const dailyRate = cardRate / BILLING_CYCLE_DAYS;
+      const rentAmount = dailyRate * days;
       
       newPricing[asset.id] = {
         negotiated_price: cardRate,
@@ -286,6 +305,13 @@ export default function PlanEdit() {
         profit_percent: profit.percent,
         printing_charges: asset.printing_charges || 0,
         mounting_charges: asset.mounting_charges || 0,
+        // Per-asset duration fields initialized from plan
+        start_date: planStart,
+        end_date: planEnd,
+        booked_days: days,
+        billing_mode: 'PRORATA_30',
+        daily_rate: dailyRate,
+        rent_amount: rentAmount,
       };
     });
 
@@ -325,36 +351,37 @@ export default function PlanEdit() {
     let totalProfit = 0;
     let totalBaseRent = 0;
 
-    const days = calculateDurationDays(new Date(formData.start_date), new Date(formData.end_date));
-
     selectedAssets.forEach(assetId => {
       const pricing = assetPricing[assetId];
       const asset = availableAssets.find(a => a.id === assetId);
       
       if (pricing && asset) {
+        // Use per-asset booked_days if available, fallback to plan duration
+        const assetDays = pricing.booked_days || formData.duration_days;
+        
         const cardRate = asset.card_rate || 0;
         const baseRate = asset.base_rate || 0;
         const negotiatedPrice = pricing.negotiated_price || cardRate;
         const printing = pricing.printing_charges || 0;
         const mounting = pricing.mounting_charges || 0;
         
-        // Calculate pro-rata based on negotiated price
-        const proRata = calcProRata(negotiatedPrice, days);
+        // Calculate pro-rata based on negotiated price using per-asset days
+        const proRata = calcProRata(negotiatedPrice, assetDays);
         
         // Calculate discount: (Card Rate - Negotiated Price) pro-rated
         const discountMonthly = cardRate - negotiatedPrice;
-        const discountProRata = calcProRata(discountMonthly, days);
+        const discountProRata = calcProRata(discountMonthly, assetDays);
         
         // Calculate profit: (Negotiated Price - Base Rate) pro-rated
         const profitMonthly = negotiatedPrice - baseRate;
-        const profitProRata = calcProRata(profitMonthly, days);
+        const profitProRata = calcProRata(profitMonthly, assetDays);
         
         displayCost += proRata;
         printingCost += printing;
         mountingCost += mounting;
         totalDiscount += discountProRata;
         totalProfit += profitProRata;
-        totalBaseRent += calcProRata(baseRate, days);  // Pro-rate the base rate
+        totalBaseRent += calcProRata(baseRate, assetDays);  // Pro-rate the base rate
       }
     });
 

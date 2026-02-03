@@ -661,7 +661,7 @@ export function SelectedAssetsTable({
                     {isColumnVisible('asset_dates') && (
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Popover>
+                          <Popover modal={true}>
                             <PopoverTrigger asChild>
                               <Button
                                 variant="outline"
@@ -674,18 +674,17 @@ export function SelectedAssetsTable({
                                 {format(assetStartDate, "dd/MM/yy")}
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
+                            <PopoverContent className="w-auto p-0 pointer-events-auto" align="start" side="bottom" sideOffset={4}>
                               <Calendar
                                 mode="single"
                                 selected={assetStartDate}
                                 onSelect={(date) => handleAssetDateChange('start_date', date)}
                                 initialFocus
-                                className="pointer-events-auto"
                               />
                             </PopoverContent>
                           </Popover>
                           <span className="text-muted-foreground text-xs">-</span>
-                          <Popover>
+                          <Popover modal={true}>
                             <PopoverTrigger asChild>
                               <Button
                                 variant="outline"
@@ -698,13 +697,12 @@ export function SelectedAssetsTable({
                                 {format(assetEndDate, "dd/MM/yy")}
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
+                            <PopoverContent className="w-auto p-0 pointer-events-auto" align="start" side="bottom" sideOffset={4}>
                               <Calendar
                                 mode="single"
                                 selected={assetEndDate}
                                 onSelect={(date) => handleAssetDateChange('end_date', date)}
                                 initialFocus
-                                className="pointer-events-auto"
                               />
                             </PopoverContent>
                           </Popover>

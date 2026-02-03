@@ -37,7 +37,7 @@ import {
 } from "@/utils/billingEngine";
 import { LineItemDurationControl } from "@/components/plans/LineItemDurationControl";
 import { generatePlanCode } from "@/lib/codeGenerator";
-import { ArrowLeft, Calendar as CalendarIcon, Info, Sparkles, FileText } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Info, Sparkles, FileText, FileSpreadsheet, Loader2 } from "lucide-react";
 import { ClientSelect } from "@/components/shared/ClientSelect";
 import { cn } from "@/lib/utils";
 import { AssetSelectionTable } from "@/components/plans/AssetSelectionTable";
@@ -45,11 +45,13 @@ import { SelectedAssetsTable } from "@/components/plans/SelectedAssetsTable";
 import { PlanSummaryCard } from "@/components/plans/PlanSummaryCard";
 import { AIVacantAssetsDialog } from "@/components/plans/AIVacantAssetsDialog";
 import { StartFromTemplateDialog } from "@/components/plans/StartFromTemplateDialog";
+import { generateProposalExcel } from "@/lib/exports/proposalExcelExport";
 
 export default function PlanNew() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [exportingProposal, setExportingProposal] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
   const [availableAssets, setAvailableAssets] = useState<any[]>([]);
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
@@ -564,6 +566,55 @@ export default function PlanNew() {
     formData.months_count
   );
 
+  // Proposal Excel export handler (READ-ONLY - no DB writes)
+  const handleExportProposalExcel = async () => {
+    if (selectedAssetsArray.length === 0) {
+      toast({
+        title: "No Assets Selected",
+        description: "Please select at least one asset to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setExportingProposal(true);
+    try {
+      const blob = await generateProposalExcel({
+        planId: formData.id || 'NEW-PLAN',
+        planName: formData.plan_name || 'New Plan',
+        clientName: formData.client_name || '',
+        assets: selectedAssetsArray,
+        assetPricing,
+        planStartDate: formData.start_date,
+        planEndDate: formData.end_date,
+        durationDays: formData.duration_days,
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Proposal_${formData.plan_name || 'Plan'}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export Successful",
+        description: "Proposal Excel downloaded successfully.",
+      });
+    } catch (error: any) {
+      console.error('Export error:', error);
+      toast({
+        title: "Export Failed",
+        description: error.message || "Failed to generate proposal Excel.",
+        variant: "destructive",
+      });
+    } finally {
+      setExportingProposal(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8 max-w-7xl">
@@ -771,6 +822,19 @@ export default function PlanNew() {
 
           {/* Actions */}
           <div className="flex justify-end gap-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleExportProposalExcel}
+              disabled={exportingProposal || selectedAssets.size === 0}
+            >
+              {exportingProposal ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+              )}
+              Download Proposal Excel
+            </Button>
             <Button
               type="button"
               variant="outline"

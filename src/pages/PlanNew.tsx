@@ -233,12 +233,26 @@ export default function PlanNew() {
       // Store MONTHLY rate as negotiated price (defaults to card rate)
       const monthlyCardRate = asset.card_rate || 0;
       
+      // Initialize with plan-level dates for per-asset duration
+      const planStart = formatForSupabase(toDateOnly(formData.start_date));
+      const planEnd = formatForSupabase(toDateOnly(formData.end_date));
+      const bookedDays = formData.duration_days;
+      const dailyRate = monthlyCardRate / BILLING_CYCLE_DAYS;
+      const rentAmount = dailyRate * bookedDays;
+      
       setAssetPricing(prev => ({
         ...prev,
         [assetId]: {
           negotiated_price: monthlyCardRate,  // Store monthly rate
           printing_charges: asset.printing_charges || 0,
           mounting_charges: asset.mounting_charges || 0,
+          // Per-asset duration fields initialized from plan
+          start_date: planStart,
+          end_date: planEnd,
+          booked_days: bookedDays,
+          billing_mode: 'PRORATA_30',
+          daily_rate: dailyRate,
+          rent_amount: rentAmount,
         }
       }));
     }
@@ -249,14 +263,28 @@ export default function PlanNew() {
     const newSelected = new Set(selectedAssets);
     const newPricing = { ...assetPricing };
 
+    // Plan-level dates for initialization
+    const planStart = formatForSupabase(toDateOnly(formData.start_date));
+    const planEnd = formatForSupabase(toDateOnly(formData.end_date));
+    const bookedDays = formData.duration_days;
+
     assets.forEach(asset => {
       newSelected.add(asset.id);
       const monthlyCardRate = asset.card_rate || 0;
+      const dailyRate = monthlyCardRate / BILLING_CYCLE_DAYS;
+      const rentAmount = dailyRate * bookedDays;
       
       newPricing[asset.id] = {
         negotiated_price: monthlyCardRate,  // Store monthly rate
         printing_charges: asset.printing_charges || 0,
         mounting_charges: asset.mounting_charges || 0,
+        // Per-asset duration fields initialized from plan
+        start_date: planStart,
+        end_date: planEnd,
+        booked_days: bookedDays,
+        billing_mode: 'PRORATA_30',
+        daily_rate: dailyRate,
+        rent_amount: rentAmount,
       };
     });
 
@@ -296,24 +324,25 @@ export default function PlanNew() {
     let totalProfit = 0;
     let totalBaseRent = 0;
 
-    const days = formData.duration_days;
-
     selectedAssets.forEach(assetId => {
       const pricing = assetPricing[assetId];
       const asset = availableAssets.find(a => a.id === assetId);
       
       if (pricing && asset) {
-        // All rates are monthly - apply pro-rata factor
+        // Use per-asset booked_days if available, fallback to plan duration
+        const assetDays = pricing.booked_days || formData.duration_days;
+        
+        // All rates are monthly - apply pro-rata factor using per-asset days
         const negotiatedMonthly = pricing.negotiated_price || asset.card_rate || 0;
         const cardRateMonthly = asset.card_rate || 0;
         const baseRateMonthly = asset.base_rate || 0;
         const printing = pricing.printing_charges || 0;
         const mounting = pricing.mounting_charges || 0;
         
-        // Calculate pro-rated amounts
-        const negotiatedProRata = calculateProRata(negotiatedMonthly, days);
-        const cardRateProRata = calculateProRata(cardRateMonthly, days);
-        const baseRateProRata = calculateProRata(baseRateMonthly, days);
+        // Calculate pro-rated amounts using per-asset duration
+        const negotiatedProRata = calculateProRata(negotiatedMonthly, assetDays);
+        const cardRateProRata = calculateProRata(cardRateMonthly, assetDays);
+        const baseRateProRata = calculateProRata(baseRateMonthly, assetDays);
         
         // Calculate discount (card rate - negotiated, both pro-rated)
         const discountAmount = cardRateProRata - negotiatedProRata;

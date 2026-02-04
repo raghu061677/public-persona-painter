@@ -625,9 +625,9 @@ export function SelectedAssetsTable({
                 const printing = printingResult.cost;
                 const mounting = mountingMode === 'fixed' ? mountingRate : mountingResult.cost;
                 
-                // P0 FIX: Row Total = Negotiated + Printing + Mounting (NO proration, NO GST)
-                // This is the display total for the plan row, not the pro-rated rent amount
-                const rowTotal = negotiatedPrice + printing + mounting;
+                // FIXED: Row Total (Line Total) = Rent Amount + Printing + Mounting
+                // This is the pro-rated line total for the plan row
+                const lineTotal = Math.round((rentAmount + printing + mounting) * 100) / 100;
 
                 const formatNumberWithCommas = (num: number) => {
                   return num.toLocaleString('en-IN');
@@ -1146,7 +1146,7 @@ export function SelectedAssetsTable({
                     )}
                     {isColumnVisible('total') && (
                       <TableCell className="text-right font-medium">
-                        {formatCurrency(rowTotal)}
+                        {formatCurrency(lineTotal)}
                       </TableCell>
                     )}
                     <TableCell>

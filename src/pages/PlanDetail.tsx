@@ -1498,15 +1498,19 @@ export default function PlanDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {/* Display Cost */}
+              {/* Display Cost (Rent) */}
               <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">Display Cost</span>
+                <span className="text-xs text-muted-foreground">Display Cost (Rent)</span>
                 <span className="font-semibold text-orange-600 dark:text-orange-400">
                   {formatCurrency(planItems.reduce((sum, item) => {
-                    // Display cost is the sum of pro-rata amounts (monthly rate adjusted for actual days)
-                    const effectivePrice = item.sales_price || item.card_rate;
-                    const proRata = calcProRata(effectivePrice, plan.duration_days);
-                    return sum + proRata;
+                    // Display cost is the sum of pro-rata amounts using PER-ASSET dates
+                    // Use negotiated_price (priority) > sales_price > card_rate
+                    const effectivePrice = item.negotiated_price || item.sales_price || item.card_rate;
+                    // Use per-asset booked_days if available, otherwise fall back to plan duration
+                    const assetDays = item.booked_days || plan.duration_days;
+                    // Use pre-calculated rent_amount if available, otherwise calculate
+                    const rentAmount = item.rent_amount ?? calcProRata(effectivePrice, assetDays);
+                    return sum + rentAmount;
                   }, 0))}
                 </span>
               </div>
@@ -1547,19 +1551,19 @@ export default function PlanDetail() {
               
               {/* Profit - Green */}
               {(() => {
-                // Profit = Sum of (Negotiated Price - Base Rent) for each item, pro-rated for duration
-                // Each item's profit = calcProRata(sales_price - base_rent, duration_days)
+                // Profit = Sum of (Negotiated Price - Base Rent) as monthly figures
+                // Not pro-rated - shows the margin per asset per month
                 const totalProfit = planItems.reduce((sum, item) => {
-                  const effectivePrice = item.sales_price || item.card_rate;
+                  const effectivePrice = item.negotiated_price || item.sales_price || item.card_rate;
                   const baseRent = item.base_rent || 0;
-                  // Pro-rate the profit margin for the actual campaign duration
-                  const itemProfit = calcProRata(effectivePrice - baseRent, plan.duration_days);
+                  // Monthly margin (not pro-rated)
+                  const itemProfit = effectivePrice - baseRent;
                   return sum + itemProfit;
                 }, 0);
                 if (totalProfit > 0) {
                   return (
                     <div className="flex justify-between items-center">
-                      <span className="text-xs font-medium text-green-600 dark:text-green-400">Profit</span>
+                      <span className="text-xs font-medium text-green-600 dark:text-green-400">Profit (Monthly)</span>
                       <span className="font-semibold text-green-600 dark:text-green-400">
                         {formatCurrency(totalProfit)}
                       </span>
@@ -1806,33 +1810,48 @@ export default function PlanDetail() {
                   <TableHead className="text-right">Printing</TableHead>
                   {showMountingCost && <TableHead className="text-right">Mounting</TableHead>}
                   <TableHead className="text-right">Installation</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">GST</TableHead>
                   <TableHead className="text-right">Total + GST</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {planItems.map((item) => {
                   // Use pre-calculated values from the database for consistency
-                  const effectivePrice = item.sales_price || item.card_rate;
+                  // Negotiated rate: prioritize negotiated_price > sales_price > card_rate
+                  const effectivePrice = item.negotiated_price || item.sales_price || item.card_rate;
                   const printingCost = item.printing_charges || item.printing_cost || 0;
                   const mountingCost = item.mounting_charges || item.installation_cost || 0;
                   
-                  // Pro-rata: Calculate the display cost based on monthly rate and duration
-                  // Formula: (monthly_rate / 30) × days
-                  const proRataAmount = calcProRata(effectivePrice, plan.duration_days);
+                  // Use per-asset booked_days if available, otherwise fall back to plan duration
+                  const assetBookedDays = item.booked_days || plan.duration_days;
                   
-                  // Discount: Use stored discount_amount from DB, or calculate pro-rata discount
-                  // The discount is the difference between card_rate and sales_price, pro-rated
-                  const discountAmount = item.discount_amount || calcProRata(item.card_rate - effectivePrice, plan.duration_days);
+                  // Pro-rata: Calculate the rent amount based on negotiated rate and per-asset days
+                  // Formula: (monthly_rate / 30) × booked_days (using NEGOTIATED rate, not card rate)
+                  const proRataAmount = item.rent_amount ?? calcProRata(effectivePrice, assetBookedDays);
+                  
+                  // Discount: Difference between card_rate and negotiated rate (monthly, not pro-rated)
+                  const discountAmount = item.discount_amount ?? Math.round((item.card_rate - effectivePrice) * 100) / 100;
                   const discountPercent = item.card_rate > 0 
                     ? ((item.card_rate - effectivePrice) / item.card_rate) * 100 
                     : 0;
                   
-                  // Profit: Difference between negotiated price and base cost, pro-rated
+                  // Profit: Difference between negotiated price and base cost (monthly, not pro-rated)
                   const baseRent = item.base_rent || 0;
-                  const profitAmount = calcProRata(effectivePrice - baseRent, plan.duration_days);
+                  const profitAmount = item.profit_value ?? Math.round((effectivePrice - baseRent) * 100) / 100;
                   const profitPercent = baseRent > 0 
                     ? ((effectivePrice - baseRent) / baseRent) * 100 
                     : (effectivePrice > 0 ? 100 : 0);
+                  
+                  // Line Total = Rent + Printing + Mounting (WITHOUT GST)
+                  const lineTotal = Math.round((proRataAmount + printingCost + mountingCost) * 100) / 100;
+                  
+                  // GST Amount for this row
+                  const gstPercent = plan.gst_percent || 0;
+                  const rowGstAmount = Math.round((lineTotal * gstPercent / 100) * 100) / 100;
+                  
+                  // Total with GST
+                  const rowTotalWithGst = Math.round((lineTotal + rowGstAmount) * 100) / 100;
                   
                   return (
                     <TableRow key={item.id}>
@@ -1903,8 +1922,14 @@ export default function PlanDetail() {
                       <TableCell className="text-right">{formatCurrency(printingCost)}</TableCell>
                       {showMountingCost && <TableCell className="text-right">{formatCurrency(item.installation_rate || 0)}</TableCell>}
                       <TableCell className="text-right">{formatCurrency(mountingCost)}</TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatCurrency(lineTotal)}
+                      </TableCell>
+                      <TableCell className="text-right text-red-600">
+                        {gstPercent > 0 ? formatCurrency(rowGstAmount) : '₹0'}
+                      </TableCell>
                       <TableCell className="text-right font-semibold text-lg">
-                        {formatCurrency(item.total_with_gst)}
+                        {formatCurrency(rowTotalWithGst)}
                       </TableCell>
                     </TableRow>
                   );

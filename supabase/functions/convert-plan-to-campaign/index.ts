@@ -1,5 +1,5 @@
 // supabase/functions/convert-plan-to-campaign/index.ts
-// v9.0 - Schema-validated conversion with proper error handling
+// v10.0 - Fixed conflict detection: per-asset dates, campaign_assets source, timezone-safe
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -12,6 +12,39 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+/**
+ * Normalize a date to YYYY-MM-DD string (date-only, no timezone issues)
+ */
+function toDateString(d: string | Date | null | undefined): string {
+  if (!d) return '';
+  const str = typeof d === 'string' ? d : d.toISOString();
+  // Extract just YYYY-MM-DD part
+  return str.substring(0, 10);
+}
+
+/**
+ * Check if two date ranges overlap (INCLUSIVE dates)
+ * Uses string comparison (YYYY-MM-DD) to avoid timezone issues
+ * Overlap: existingStart <= newEnd AND existingEnd >= newStart
+ */
+function datesOverlap(
+  existingStart: string,
+  existingEnd: string,
+  newStart: string,
+  newEnd: string
+): boolean {
+  // Normalize all to YYYY-MM-DD strings
+  const es = toDateString(existingStart);
+  const ee = toDateString(existingEnd);
+  const ns = toDateString(newStart);
+  const ne = toDateString(newEnd);
+  
+  if (!es || !ee || !ns || !ne) return false;
+  
+  // String comparison works for YYYY-MM-DD format
+  return es <= ne && ee >= ns;
+}
 
 /**
  * Get effective selling price - Single source of truth for pricing
@@ -46,7 +79,7 @@ serve(async (req) => {
       return jsonError("Missing required field: plan_id or planId", 400);
     }
 
-    console.log("[v9.0] Converting plan to campaign:", planId);
+    console.log("[v10.0] Converting plan to campaign:", planId);
 
     // 1) Get current user
     const authHeader = req.headers.get("Authorization");
@@ -58,7 +91,7 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
 
     if (userError || !user) {
-      console.error("[v9.0] Auth error:", userError);
+      console.error("[v10.0] Auth error:", userError);
       return jsonError("Unauthorized – could not load current user", 401);
     }
 
@@ -71,7 +104,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (companyError) {
-      console.error("[v9.0] Error loading company:", companyError);
+      console.error("[v10.0] Error loading company:", companyError);
       return jsonError("Could not determine company for current user", 400);
     }
 
@@ -80,7 +113,7 @@ serve(async (req) => {
     }
 
     const companyId: string = companyRow.company_id;
-    console.log("[v9.0] User company ID:", companyId);
+    console.log("[v10.0] User company ID:", companyId);
 
     // 3) Load Plan (must be Approved)
     const { data: plan, error: planError } = await supabase
@@ -107,7 +140,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (planError) {
-      console.error("[v9.0] Error loading plan:", planError);
+      console.error("[v10.0] Error loading plan:", planError);
       return jsonError("Could not load plan", 500);
     }
 
@@ -115,37 +148,43 @@ serve(async (req) => {
       return jsonError("Plan not found for this company", 404);
     }
 
-    // Check if already converted - return success with existing campaign (idempotent)
+    // IDEMPOTENT: Check if already converted - return success with existing campaign
     if (plan.converted_to_campaign_id) {
-      console.log("[v9.0] Plan already converted to campaign:", plan.converted_to_campaign_id);
+      console.log("[v10.0] Plan already converted to campaign:", plan.converted_to_campaign_id);
+      
+      // Verify the campaign still exists
       const { data: existingCampaign } = await supabase
         .from('campaigns')
-        .select('status')
+        .select('id, status, campaign_name')
         .eq('id', plan.converted_to_campaign_id)
-        .single();
+        .maybeSingle();
       
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: "Plan was already converted to campaign",
-          campaign_id: plan.converted_to_campaign_id,
-          campaign_code: plan.converted_to_campaign_id,
-          plan_id: plan.id,
-          already_converted: true,
-          status: existingCampaign?.status || 'Draft',
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      if (existingCampaign) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: "Plan was already converted to campaign",
+            campaign_id: plan.converted_to_campaign_id,
+            campaign_code: plan.converted_to_campaign_id,
+            plan_id: plan.id,
+            already_converted: true,
+            status: existingCampaign.status || 'Draft',
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+      // If campaign was deleted, allow re-conversion by clearing the field
+      console.log("[v10.0] Previous campaign not found, allowing re-conversion");
     }
 
     if (plan.status !== "Approved") {
       return jsonError(`Plan status is "${plan.status}" - must be "Approved" to convert`, 400);
     }
 
-    console.log("[v9.0] Plan validated:", plan.id, "Status:", plan.status);
+    console.log("[v10.0] Plan validated:", plan.id, "Status:", plan.status);
 
     // 4) Load Plan Items (including per-asset duration fields)
     const { data: planItems, error: itemsError } = await supabase
@@ -185,7 +224,7 @@ serve(async (req) => {
       .eq("plan_id", planId);
 
     if (itemsError) {
-      console.error("[v9.0] Error loading plan items:", itemsError);
+      console.error("[v10.0] Error loading plan items:", itemsError);
       return jsonError("Could not load plan items", 500);
     }
 
@@ -193,83 +232,144 @@ serve(async (req) => {
       return jsonError("Plan has no items to convert", 400);
     }
 
-    console.log(`[v9.0] Loaded ${planItems.length} plan items`);
+    console.log(`[v10.0] Loaded ${planItems.length} plan items`);
     
     // Log pricing for each item to debug negotiated price issues
     planItems.forEach((item, idx) => {
       const effectivePrice = getEffectivePrice(item.sales_price, item.card_rate);
-      console.log(`[v9.0] Item ${idx + 1}: asset=${item.asset_id}, card_rate=${item.card_rate}, sales_price=${item.sales_price}, effective_price=${effectivePrice}`);
+      console.log(`[v10.0] Item ${idx + 1}: asset=${item.asset_id}, card_rate=${item.card_rate}, sales_price=${item.sales_price}, effective_price=${effectivePrice}`);
     });
 
-    // 5) Check for booking conflicts with detailed information
-    // IMPORTANT: Use per-asset dates from plan_items, not plan-level dates
+    // 5) Check for booking conflicts using campaign_assets (SINGLE SOURCE OF TRUTH)
+    // Query campaign_assets for each asset with proper date overlap using per-asset dates
     const assetIds = planItems.map(item => item.asset_id);
-    const { data: bookedAssets } = await supabase
-      .from("media_assets")
-      .select("id, location, area, city, status, booked_from, booked_to, current_campaign_id")
-      .in("id", assetIds)
-      .eq("status", "Booked");
-
+    
     // Build a map of asset_id -> per-asset dates from plan_items
     const assetDateMap = new Map(planItems.map(item => [
       item.asset_id,
       {
-        start_date: item.start_date || plan.start_date,
-        end_date: item.end_date || plan.end_date,
+        start_date: toDateString(item.start_date || plan.start_date),
+        end_date: toDateString(item.end_date || plan.end_date),
       }
     ]));
 
+    // Query existing campaign_assets for these asset IDs with their campaigns
+    // Exclude campaigns that are Completed, Cancelled, or Archived
+    const { data: existingBookings, error: bookingError } = await supabase
+      .from("campaign_assets")
+      .select(`
+        id,
+        campaign_id,
+        asset_id,
+        booking_start_date,
+        booking_end_date,
+        start_date,
+        end_date,
+        campaigns!inner(
+          id,
+          campaign_name,
+          client_name,
+          status,
+          plan_id
+        )
+      `)
+      .in("asset_id", assetIds)
+      .not("campaigns.status", "in", '("Completed","Cancelled","Archived")');
+
+    if (bookingError) {
+      console.error("[v10.0] Error checking existing bookings:", bookingError);
+      // Continue anyway - we'll rely on DB constraints as fallback
+    }
+
     // Filter for actual date overlaps using PER-ASSET dates
-    // Overlap condition: booked_from <= asset_end AND booked_to >= asset_start
-    const conflicts = (bookedAssets || []).filter(asset => {
-      if (!asset.booked_from || !asset.booked_to) return false;
-      const bookedFrom = new Date(asset.booked_from);
-      const bookedTo = new Date(asset.booked_to);
-      
-      // Get per-asset dates from the plan items
-      const assetDates = assetDateMap.get(asset.id);
-      if (!assetDates) return false;
-      
-      const assetStart = new Date(assetDates.start_date);
-      const assetEnd = new Date(assetDates.end_date);
-      
-      console.log(`[v9.0] Conflict check for ${asset.id}: booked ${asset.booked_from} to ${asset.booked_to}, plan item ${assetDates.start_date} to ${assetDates.end_date}`);
-      
-      return bookedFrom <= assetEnd && bookedTo >= assetStart;
-    });
+    const conflicts: Array<{
+      asset_id: string;
+      existing_start: string;
+      existing_end: string;
+      new_start: string;
+      new_end: string;
+      campaign_id: string;
+      campaign_name: string;
+      client_name: string;
+      campaign_status: string;
+    }> = [];
+
+    for (const booking of (existingBookings || [])) {
+      const assetDates = assetDateMap.get(booking.asset_id);
+      if (!assetDates) continue;
+
+      // Use booking_start_date/booking_end_date if available, else fall back to start_date/end_date
+      const existingStart = toDateString(booking.booking_start_date || booking.start_date);
+      const existingEnd = toDateString(booking.booking_end_date || booking.end_date);
+      const newStart = assetDates.start_date;
+      const newEnd = assetDates.end_date;
+
+      // Skip if this booking belongs to a campaign created from THIS plan (self-conflict prevention)
+      const campaign = booking.campaigns as any;
+      if (campaign?.plan_id === planId) {
+        console.log(`[v10.0] Skipping self-conflict for asset ${booking.asset_id} (same plan: ${planId})`);
+        continue;
+      }
+
+      // Check for date overlap using timezone-safe string comparison
+      if (datesOverlap(existingStart, existingEnd, newStart, newEnd)) {
+        console.log(`[v10.0] CONFLICT: Asset ${booking.asset_id} - existing ${existingStart} to ${existingEnd}, new ${newStart} to ${newEnd}`);
+        conflicts.push({
+          asset_id: booking.asset_id,
+          existing_start: existingStart,
+          existing_end: existingEnd,
+          new_start: newStart,
+          new_end: newEnd,
+          campaign_id: campaign?.id || booking.campaign_id,
+          campaign_name: campaign?.campaign_name || 'Unknown',
+          client_name: campaign?.client_name || 'Unknown',
+          campaign_status: campaign?.status || 'Unknown',
+        });
+      } else {
+        console.log(`[v10.0] NO conflict: Asset ${booking.asset_id} - existing ${existingStart} to ${existingEnd}, new ${newStart} to ${newEnd}`);
+      }
+    }
 
     if (conflicts.length > 0) {
-      console.warn("[v9.0] Booking conflicts found:", conflicts);
+      console.warn("[v10.0] Booking conflicts found:", conflicts.length);
       
-      // Fetch campaign details for conflicting assets
-      const campaignIds = [...new Set(conflicts.map(c => c.current_campaign_id).filter(Boolean))];
-      const { data: campaignDetails } = await supabase
-        .from("campaigns")
-        .select("id, campaign_name, client_name")
-        .in("id", campaignIds);
+      // Deduplicate conflicts by asset_id (keep first conflict per asset)
+      const uniqueConflicts = Array.from(
+        conflicts.reduce((map, c) => {
+          if (!map.has(c.asset_id)) {
+            map.set(c.asset_id, c);
+          }
+          return map;
+        }, new Map<string, typeof conflicts[0]>())
+      ).map(([_, c]) => c);
       
-      const campaignMap = new Map((campaignDetails || []).map(c => [c.id, c]));
-      
-      const conflictDetails = conflicts.map(asset => {
-        const assetDates = assetDateMap.get(asset.id);
-        return {
-          asset_id: asset.id,
-          location: asset.location || asset.area || '',
-          city: asset.city || '',
-          booked_from: asset.booked_from,
-          booked_to: asset.booked_to,
-          plan_item_start: assetDates?.start_date,
-          plan_item_end: assetDates?.end_date,
-          campaign_id: asset.current_campaign_id,
-          campaign_name: campaignMap.get(asset.current_campaign_id)?.campaign_name || 'Unknown',
-          client_name: campaignMap.get(asset.current_campaign_id)?.client_name || 'Unknown',
-        };
-      });
+      // Format conflict details for response
+      const conflictDetails = uniqueConflicts.map(c => ({
+        asset_id: c.asset_id,
+        location: '',  // Will be filled from plan_items below
+        city: '',
+        booked_from: c.existing_start,
+        booked_to: c.existing_end,
+        plan_item_start: c.new_start,
+        plan_item_end: c.new_end,
+        campaign_id: c.campaign_id,
+        campaign_name: c.campaign_name,
+        client_name: c.client_name,
+      }));
+
+      // Enrich with location info from plan_items
+      for (const detail of conflictDetails) {
+        const planItem = planItems.find(i => i.asset_id === detail.asset_id);
+        if (planItem) {
+          detail.location = planItem.location || planItem.area || '';
+          detail.city = planItem.city || '';
+        }
+      }
       
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: `${conflicts.length} asset(s) already booked during this period`,
+          error: `${uniqueConflicts.length} asset(s) already booked during this period`,
           conflicts: conflictDetails,
         }),
         {
@@ -278,6 +378,8 @@ serve(async (req) => {
         }
       );
     }
+
+    console.log("[v10.0] No booking conflicts found, proceeding with conversion");
 
     // 6) Generate Campaign ID with retry logic for duplicates
     // NEW FORMAT: CAM-YYYYMM-#### (e.g., CAM-202601-0001)

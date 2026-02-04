@@ -202,6 +202,7 @@ serve(async (req) => {
     });
 
     // 5) Check for booking conflicts with detailed information
+    // IMPORTANT: Use per-asset dates from plan_items, not plan-level dates
     const assetIds = planItems.map(item => item.asset_id);
     const { data: bookedAssets } = await supabase
       .from("media_assets")
@@ -209,14 +210,32 @@ serve(async (req) => {
       .in("id", assetIds)
       .eq("status", "Booked");
 
-    // Filter for actual date overlaps (booked_from <= plan.end_date AND booked_to >= plan.start_date)
+    // Build a map of asset_id -> per-asset dates from plan_items
+    const assetDateMap = new Map(planItems.map(item => [
+      item.asset_id,
+      {
+        start_date: item.start_date || plan.start_date,
+        end_date: item.end_date || plan.end_date,
+      }
+    ]));
+
+    // Filter for actual date overlaps using PER-ASSET dates
+    // Overlap condition: booked_from <= asset_end AND booked_to >= asset_start
     const conflicts = (bookedAssets || []).filter(asset => {
       if (!asset.booked_from || !asset.booked_to) return false;
       const bookedFrom = new Date(asset.booked_from);
       const bookedTo = new Date(asset.booked_to);
-      const planStart = new Date(plan.start_date);
-      const planEnd = new Date(plan.end_date);
-      return bookedFrom <= planEnd && bookedTo >= planStart;
+      
+      // Get per-asset dates from the plan items
+      const assetDates = assetDateMap.get(asset.id);
+      if (!assetDates) return false;
+      
+      const assetStart = new Date(assetDates.start_date);
+      const assetEnd = new Date(assetDates.end_date);
+      
+      console.log(`[v9.0] Conflict check for ${asset.id}: booked ${asset.booked_from} to ${asset.booked_to}, plan item ${assetDates.start_date} to ${assetDates.end_date}`);
+      
+      return bookedFrom <= assetEnd && bookedTo >= assetStart;
     });
 
     if (conflicts.length > 0) {
@@ -231,16 +250,21 @@ serve(async (req) => {
       
       const campaignMap = new Map((campaignDetails || []).map(c => [c.id, c]));
       
-      const conflictDetails = conflicts.map(asset => ({
-        asset_id: asset.id,
-        location: asset.location || asset.area || '',
-        city: asset.city || '',
-        booked_from: asset.booked_from,
-        booked_to: asset.booked_to,
-        campaign_id: asset.current_campaign_id,
-        campaign_name: campaignMap.get(asset.current_campaign_id)?.campaign_name || 'Unknown',
-        client_name: campaignMap.get(asset.current_campaign_id)?.client_name || 'Unknown',
-      }));
+      const conflictDetails = conflicts.map(asset => {
+        const assetDates = assetDateMap.get(asset.id);
+        return {
+          asset_id: asset.id,
+          location: asset.location || asset.area || '',
+          city: asset.city || '',
+          booked_from: asset.booked_from,
+          booked_to: asset.booked_to,
+          plan_item_start: assetDates?.start_date,
+          plan_item_end: assetDates?.end_date,
+          campaign_id: asset.current_campaign_id,
+          campaign_name: campaignMap.get(asset.current_campaign_id)?.campaign_name || 'Unknown',
+          client_name: campaignMap.get(asset.current_campaign_id)?.client_name || 'Unknown',
+        };
+      });
       
       return new Response(
         JSON.stringify({ 

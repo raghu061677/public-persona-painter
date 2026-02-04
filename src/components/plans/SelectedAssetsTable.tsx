@@ -615,6 +615,35 @@ export function SelectedAssetsTable({
                   onPricingUpdate(asset.id, 'booked_days', newRentResult.booked_days);
                 };
 
+                // Handler for changing Days directly - updates end_date based on start_date + days
+                const handleDaysChange = (newDays: number) => {
+                  if (!pricing.start_date && !planStartDate) {
+                    toast({
+                      title: "Set Start Date First",
+                      description: "Please set a start date before modifying days.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  // Clamp days to valid range
+                  const clampedDays = Math.max(1, Math.min(365, newDays));
+                  
+                  // Calculate new end date = start_date + (days - 1)
+                  const startDate = assetStartDate;
+                  const newEndDate = new Date(startDate);
+                  newEndDate.setDate(newEndDate.getDate() + clampedDays - 1);
+                  
+                  // Update end_date and booked_days
+                  onPricingUpdate(asset.id, 'end_date', newEndDate.toISOString().split('T')[0]);
+                  onPricingUpdate(asset.id, 'booked_days', clampedDays);
+                  
+                  // Recalculate rent with new duration
+                  const newRentResult = computeRentAmount(negotiatedPrice, startDate, newEndDate, billingMode);
+                  onPricingUpdate(asset.id, 'rent_amount', newRentResult.rent_amount);
+                  onPricingUpdate(asset.id, 'daily_rate', newRentResult.daily_rate);
+                };
+
                 const handleBillingModeChange = (mode: BillingMode) => {
                   onPricingUpdate(asset.id, 'billing_mode', mode);
                   
@@ -709,18 +738,26 @@ export function SelectedAssetsTable({
                         </div>
                       </TableCell>
                     )}
-                    {/* Days Column */}
+                    {/* Days Column - Editable */}
                     {isColumnVisible('days') && (
                       <TableCell className="text-center">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Badge variant="secondary" className="font-mono">
-                                {assetBookedDays}d
-                              </Badge>
+                              <Input
+                                type="number"
+                                min={1}
+                                max={365}
+                                value={assetBookedDays}
+                                onChange={(e) => {
+                                  const newDays = parseInt(e.target.value) || 1;
+                                  handleDaysChange(newDays);
+                                }}
+                                className="h-8 w-16 text-center text-sm font-mono"
+                              />
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p className="text-xs">Booked for {assetBookedDays} days</p>
+                              <p className="text-xs">Edit days to auto-update End Date</p>
                               <p className="text-xs text-muted-foreground">
                                 Pro-rata factor: {(assetBookedDays / BILLING_CYCLE_DAYS).toFixed(2)}
                               </p>

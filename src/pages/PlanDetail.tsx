@@ -28,7 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Share2, Trash2, Copy, Rocket, MoreVertical, Ban, Activity, ExternalLink, Download, FileText, Plus, X, FileSpreadsheet, FileImage, Save, Wand2, Edit, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowLeft, Share2, Trash2, Copy, Rocket, MoreVertical, Ban, Activity, ExternalLink, Download, FileText, Plus, X, FileSpreadsheet, FileImage, Save, Wand2, Edit, CheckCircle2, Sparkles, Loader2 } from "lucide-react";
 import { AIProposalGeneratorDialog } from "@/components/plans/AIProposalGeneratorDialog";
 import {
   DropdownMenu,
@@ -68,6 +68,7 @@ import {
 import { Settings2, CalendarDays } from "lucide-react";
 import { formatBillingMode } from "@/utils/perAssetPricing";
 import { format } from "date-fns";
+import { generateProposalExcel } from "@/lib/exports/proposalExcelExport";
 
 export default function PlanDetail() {
   const { id } = useParams();
@@ -97,6 +98,7 @@ export default function PlanDetail() {
   const [exportingPPT, setExportingPPT] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportingImagesPdf, setExportingImagesPdf] = useState(false);
+  const [exportingProposalExcel, setExportingProposalExcel] = useState(false);
   const [existingCampaignId, setExistingCampaignId] = useState<string | null>(null);
   const [campaignData, setCampaignData] = useState({
     campaign_name: "",
@@ -106,10 +108,19 @@ export default function PlanDetail() {
   });
   const [showDiscount, setShowDiscount] = useState(true);
   
-  // View Options for Selected Assets table - per-asset dates
+  // View Options for Selected Assets table - column visibility
   const [showAssetDates, setShowAssetDates] = useState(true);
   const [showBookedDays, setShowBookedDays] = useState(true);
   const [showBillingMode, setShowBillingMode] = useState(false);
+  const [showDirection, setShowDirection] = useState(false);
+  const [showDimensions, setShowDimensions] = useState(false);
+  const [showSqft, setShowSqft] = useState(false);
+  const [showIllumination, setShowIllumination] = useState(false);
+  const [showMediaType, setShowMediaType] = useState(false);
+  const [showArea, setShowArea] = useState(false);
+  const [showBaseRate, setShowBaseRate] = useState(false);
+  const [showPrintingRate, setShowPrintingRate] = useState(false);
+  const [showMountingCost, setShowMountingCost] = useState(false);
 
   const loadPendingApprovals = async () => {
     if (!id) return;
@@ -601,6 +612,82 @@ export default function PlanDetail() {
         description: "Failed to export document",
         variant: "destructive",
       });
+    }
+  };
+
+  // Proposal Excel export handler (READ-ONLY - no DB writes)
+  const handleExportProposalExcel = async () => {
+    if (!plan || planItems.length === 0) {
+      toast({
+        title: "No Assets",
+        description: "No assets to export in this plan.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setExportingProposalExcel(true);
+    try {
+      // Build asset pricing from plan items
+      const assetPricing: Record<string, any> = {};
+      const assets = planItems.map(item => {
+        assetPricing[item.asset_id] = {
+          negotiated_price: item.sales_price || item.card_rate,
+          start_date: item.start_date,
+          end_date: item.end_date,
+          booked_days: item.booked_days || plan.duration_days,
+          printing_charges: item.printing_charges || item.printing_cost || 0,
+          printing_cost: item.printing_charges || item.printing_cost || 0,
+          printing_rate: item.printing_rate || 0,
+          mounting_charges: item.mounting_charges || item.installation_cost || 0,
+          mounting_cost: item.mounting_charges || item.installation_cost || 0,
+          mounting_rate: item.installation_rate || 0,
+          mounting_mode: item.mounting_mode || 'sqft',
+        };
+        return {
+          id: item.asset_id,
+          location: item.location,
+          direction: item.direction,
+          dimensions: item.dimensions,
+          total_sqft: item.total_sqft,
+          illumination_type: item.illumination_type,
+          card_rate: item.card_rate,
+        };
+      });
+
+      const blob = await generateProposalExcel({
+        planId: plan.id,
+        planName: plan.plan_name || 'Plan',
+        clientName: plan.client_name || '',
+        assets,
+        assetPricing,
+        planStartDate: new Date(plan.start_date),
+        planEndDate: new Date(plan.end_date),
+        durationDays: plan.duration_days,
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Proposal_${plan.plan_name || 'Plan'}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export Successful",
+        description: "Proposal Excel downloaded successfully.",
+      });
+    } catch (error: any) {
+      console.error('Proposal Excel export error:', error);
+      toast({
+        title: "Export Failed",
+        description: error.message || "Failed to generate proposal Excel.",
+        variant: "destructive",
+      });
+    } finally {
+      setExportingProposalExcel(false);
     }
   };
 
@@ -1181,6 +1268,10 @@ export default function PlanDetail() {
                   <Save className="mr-2 h-4 w-4" />
                   {exportingImagesPdf ? "Uploading..." : "Download Plan Images (PDF)"}
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportProposalExcel} disabled={exportingProposalExcel}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  {exportingProposalExcel ? "Generating..." : "Download Proposal Excel"}
+                </DropdownMenuItem>
                 
                 <DropdownMenuSeparator />
                 
@@ -1512,10 +1603,11 @@ export default function PlanDetail() {
                     View Options
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-64" align="end">
+                <PopoverContent className="w-80" align="end">
                   <div className="space-y-3">
                     <h4 className="font-medium text-sm mb-3">Column Visibility</h4>
-                    <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2 max-h-80 overflow-y-auto">
+                      {/* Duration/Dates */}
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="show-asset-dates"
@@ -1523,7 +1615,7 @@ export default function PlanDetail() {
                           onCheckedChange={(checked) => setShowAssetDates(!!checked)}
                         />
                         <label htmlFor="show-asset-dates" className="text-sm cursor-pointer select-none">
-                          Asset Dates (Start/End)
+                          Asset Dates
                         </label>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -1533,7 +1625,7 @@ export default function PlanDetail() {
                           onCheckedChange={(checked) => setShowBookedDays(!!checked)}
                         />
                         <label htmlFor="show-booked-days" className="text-sm cursor-pointer select-none">
-                          Booked Days
+                          Days
                         </label>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -1544,6 +1636,102 @@ export default function PlanDetail() {
                         />
                         <label htmlFor="show-billing-mode" className="text-sm cursor-pointer select-none">
                           Billing Mode
+                        </label>
+                      </div>
+                      
+                      {/* Location/Asset Info */}
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="show-area"
+                          checked={showArea}
+                          onCheckedChange={(checked) => setShowArea(!!checked)}
+                        />
+                        <label htmlFor="show-area" className="text-sm cursor-pointer select-none">
+                          Area
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="show-direction"
+                          checked={showDirection}
+                          onCheckedChange={(checked) => setShowDirection(!!checked)}
+                        />
+                        <label htmlFor="show-direction" className="text-sm cursor-pointer select-none">
+                          Direction
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="show-media-type"
+                          checked={showMediaType}
+                          onCheckedChange={(checked) => setShowMediaType(!!checked)}
+                        />
+                        <label htmlFor="show-media-type" className="text-sm cursor-pointer select-none">
+                          Media Type
+                        </label>
+                      </div>
+                      
+                      {/* Specifications */}
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="show-dimensions"
+                          checked={showDimensions}
+                          onCheckedChange={(checked) => setShowDimensions(!!checked)}
+                        />
+                        <label htmlFor="show-dimensions" className="text-sm cursor-pointer select-none">
+                          Dimensions
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="show-sqft"
+                          checked={showSqft}
+                          onCheckedChange={(checked) => setShowSqft(!!checked)}
+                        />
+                        <label htmlFor="show-sqft" className="text-sm cursor-pointer select-none">
+                          Sqft
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="show-illumination"
+                          checked={showIllumination}
+                          onCheckedChange={(checked) => setShowIllumination(!!checked)}
+                        />
+                        <label htmlFor="show-illumination" className="text-sm cursor-pointer select-none">
+                          Illumination
+                        </label>
+                      </div>
+                      
+                      {/* Pricing */}
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="show-base-rate"
+                          checked={showBaseRate}
+                          onCheckedChange={(checked) => setShowBaseRate(!!checked)}
+                        />
+                        <label htmlFor="show-base-rate" className="text-sm cursor-pointer select-none">
+                          Base Rate
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="show-printing-rate"
+                          checked={showPrintingRate}
+                          onCheckedChange={(checked) => setShowPrintingRate(!!checked)}
+                        />
+                        <label htmlFor="show-printing-rate" className="text-sm cursor-pointer select-none">
+                          Printing Rate
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="show-mounting-cost"
+                          checked={showMountingCost}
+                          onCheckedChange={(checked) => setShowMountingCost(!!checked)}
+                        />
+                        <label htmlFor="show-mounting-cost" className="text-sm cursor-pointer select-none">
+                          Mounting Cost
                         </label>
                       </div>
                     </div>
@@ -1596,18 +1784,27 @@ export default function PlanDetail() {
                   </TableHead>
                   {isAdmin && ['pending', 'approved'].includes(plan.status?.toLowerCase()) && <TableHead className="w-12"></TableHead>}
                   <TableHead>Asset ID</TableHead>
+                  {showArea && <TableHead>Area</TableHead>}
                   <TableHead>Location</TableHead>
+                  {showDirection && <TableHead>Direction</TableHead>}
                   <TableHead>City</TableHead>
+                  {showMediaType && <TableHead>Media Type</TableHead>}
+                  {showDimensions && <TableHead>Dimensions</TableHead>}
+                  {showSqft && <TableHead className="text-right">Sqft</TableHead>}
+                  {showIllumination && <TableHead>Illumination</TableHead>}
                   {showAssetDates && <TableHead>Start Date</TableHead>}
                   {showAssetDates && <TableHead>End Date</TableHead>}
                   {showBookedDays && <TableHead className="text-center">Days</TableHead>}
                   {showBillingMode && <TableHead>Billing Mode</TableHead>}
                   <TableHead className="text-right">Card Rate</TableHead>
+                  {showBaseRate && <TableHead className="text-right">Base Rate</TableHead>}
                   <TableHead className="text-right">Negotiated</TableHead>
                   <TableHead className="text-right">Pro-Rata</TableHead>
                   <TableHead className="text-right">Discount</TableHead>
                   <TableHead className="text-right">Profit</TableHead>
+                  {showPrintingRate && <TableHead className="text-right">Print Rate</TableHead>}
                   <TableHead className="text-right">Printing</TableHead>
+                  {showMountingCost && <TableHead className="text-right">Mounting</TableHead>}
                   <TableHead className="text-right">Installation</TableHead>
                   <TableHead className="text-right">Total + GST</TableHead>
                 </TableRow>
@@ -1657,8 +1854,14 @@ export default function PlanDetail() {
                         </TableCell>
                       )}
                       <TableCell className="font-medium font-mono">{item.display_asset_id || item.asset_id}</TableCell>
+                      {showArea && <TableCell>{item.area || '-'}</TableCell>}
                       <TableCell>{item.location}</TableCell>
+                      {showDirection && <TableCell>{item.direction || '-'}</TableCell>}
                       <TableCell>{item.city}</TableCell>
+                      {showMediaType && <TableCell>{item.media_type || '-'}</TableCell>}
+                      {showDimensions && <TableCell>{item.dimensions || '-'}</TableCell>}
+                      {showSqft && <TableCell className="text-right">{item.total_sqft || '-'}</TableCell>}
+                      {showIllumination && <TableCell>{item.illumination_type || '-'}</TableCell>}
                       {/* Per-asset dates columns */}
                       {showAssetDates && (
                         <TableCell className="text-sm">
@@ -1687,6 +1890,7 @@ export default function PlanDetail() {
                         </TableCell>
                       )}
                       <TableCell className="text-right">{formatCurrency(item.card_rate)}</TableCell>
+                      {showBaseRate && <TableCell className="text-right">{formatCurrency(baseRent)}</TableCell>}
                       <TableCell className="text-right font-medium">{formatCurrency(effectivePrice)}</TableCell>
                       <TableCell className="text-right text-purple-600">{formatCurrency(proRataAmount)}</TableCell>
                       <TableCell className="text-right text-blue-600 font-medium">
@@ -1695,7 +1899,9 @@ export default function PlanDetail() {
                       <TableCell className="text-right text-green-600 font-medium">
                         {formatCurrency(profitAmount)} ({profitPercent.toFixed(1)}%)
                       </TableCell>
+                      {showPrintingRate && <TableCell className="text-right">{formatCurrency(item.printing_rate || 0)}/sqft</TableCell>}
                       <TableCell className="text-right">{formatCurrency(printingCost)}</TableCell>
+                      {showMountingCost && <TableCell className="text-right">{formatCurrency(item.installation_rate || 0)}</TableCell>}
                       <TableCell className="text-right">{formatCurrency(mountingCost)}</TableCell>
                       <TableCell className="text-right font-semibold text-lg">
                         {formatCurrency(item.total_with_gst)}

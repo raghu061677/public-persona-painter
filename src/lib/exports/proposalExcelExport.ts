@@ -120,9 +120,31 @@ export async function generateProposalExcel(data: ProposalExportData): Promise<B
     // Display Cost = Monthly Rate × booked_days / 30 (READ-ONLY calculation for Excel only)
     const displayCost = roundToTwo((monthlyRate * bookedDays) / 30);
     
-    // Printing and Mounting costs
-    const printingCost = roundToTwo(pricing.printing_cost || 0);
-    const mountingCost = roundToTwo(pricing.mounting_cost || 0);
+    // Printing cost: use pricing.printing_charges > pricing.printing_cost > (sqft * printing_rate) > 0
+    const sqft = asset.total_sqft || 0;
+    const printingRate = pricing.printing_rate || 0;
+    let printingCost = 0;
+    if (pricing.printing_charges && pricing.printing_charges > 0) {
+      printingCost = roundToTwo(pricing.printing_charges);
+    } else if (pricing.printing_cost && pricing.printing_cost > 0) {
+      printingCost = roundToTwo(pricing.printing_cost);
+    } else if (sqft > 0 && printingRate > 0) {
+      printingCost = roundToTwo(sqft * printingRate);
+    }
+    
+    // Mounting cost: use pricing.mounting_charges > pricing.mounting_cost > (sqft * mounting_rate if mode is sqft) > 0
+    const mountingRate = pricing.mounting_rate || 0;
+    const mountingMode = pricing.mounting_mode || 'sqft';
+    let mountingCost = 0;
+    if (pricing.mounting_charges && pricing.mounting_charges > 0) {
+      mountingCost = roundToTwo(pricing.mounting_charges);
+    } else if (pricing.mounting_cost && pricing.mounting_cost > 0) {
+      mountingCost = roundToTwo(pricing.mounting_cost);
+    } else if (mountingMode === 'fixed' && mountingRate > 0) {
+      mountingCost = roundToTwo(mountingRate);
+    } else if (sqft > 0 && mountingRate > 0) {
+      mountingCost = roundToTwo(sqft * mountingRate);
+    }
     
     // Final Amount = Display Cost + Printing + Mounting
     const finalAmount = roundToTwo(displayCost + printingCost + mountingCost);

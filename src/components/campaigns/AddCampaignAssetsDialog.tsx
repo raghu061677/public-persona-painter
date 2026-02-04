@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -23,7 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Search, AlertTriangle } from "lucide-react";
+import { Plus, Search, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -44,6 +44,14 @@ interface ConflictInfo {
   start_date: string;
   end_date: string;
   status: string;
+}
+
+type SortField = 'media_asset_code' | 'location' | 'city' | 'area' | 'media_type' | 'card_rate' | 'status';
+type SortDirection = 'asc' | 'desc' | null;
+
+interface SortConfig {
+  field: SortField | null;
+  direction: SortDirection;
 }
 
 interface AddCampaignAssetsDialogProps {
@@ -69,15 +77,17 @@ export function AddCampaignAssetsDialog({
   campaignEndDate,
 }: AddCampaignAssetsDialogProps) {
   const [assets, setAssets] = useState<any[]>([]);
-  const [filteredAssets, setFilteredAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [cityFilter, setCityFilter] = useState<string>("all");
+  const [areaFilter, setAreaFilter] = useState<string>("all");
   const [mediaTypeFilter, setMediaTypeFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [companyPrefix, setCompanyPrefix] = useState<string | null>(null);
   const [assetConflicts, setAssetConflicts] = useState<Map<string, ConflictInfo[]>>(new Map());
   const [checkingConflicts, setCheckingConflicts] = useState(false);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ field: null, direction: null });
 
   useEffect(() => {
     fetchCompanySettings();
@@ -96,7 +106,6 @@ export function AddCampaignAssetsDialog({
         
         if (companyUser?.companies) {
           const company = companyUser.companies as any;
-          // Use company name to generate prefix via formatAssetDisplayCode's getCompanyAcronym
           setCompanyPrefix(company.name || null);
         }
       }
@@ -107,15 +116,11 @@ export function AddCampaignAssetsDialog({
 
   useEffect(() => {
     if (open) {
-      fetchAvailableAssets();
+      fetchAllAssets();
       setSelectedAssets(new Set());
       setAssetConflicts(new Map());
     }
   }, [open]);
-
-  useEffect(() => {
-    filterAssets();
-  }, [assets, searchTerm, cityFilter, mediaTypeFilter, assetConflicts]);
 
   const formatDateForConflict = (date: Date | string | undefined): string | null => {
     if (!date) return null;
@@ -123,32 +128,32 @@ export function AddCampaignAssetsDialog({
     return format(date, 'yyyy-MM-dd');
   };
 
-  const fetchAvailableAssets = async () => {
+  const fetchAllAssets = async () => {
     setLoading(true);
     try {
+      // Fetch ALL assets regardless of status for filtering
       const { data, error } = await supabase
         .from('media_assets')
         .select('*')
-        .eq('status', 'Available')
         .order('city', { ascending: true });
 
       if (error) throw error;
 
       // Filter out assets already in the campaign
-      const availableAssets = data?.filter(
+      const filteredAssets = data?.filter(
         asset => !existingAssetIds.includes(asset.id)
       ) || [];
 
-      setAssets(availableAssets);
+      setAssets(filteredAssets);
 
       // Check conflicts for all assets if we have campaign dates
-      if (campaignStartDate && campaignEndDate && availableAssets.length > 0) {
-        await checkConflictsForAssets(availableAssets);
+      if (campaignStartDate && campaignEndDate && filteredAssets.length > 0) {
+        await checkConflictsForAssets(filteredAssets);
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to fetch available assets",
+        description: "Failed to fetch assets",
         variant: "destructive",
       });
     } finally {
@@ -169,7 +174,6 @@ export function AddCampaignAssetsDialog({
     }
 
     try {
-      // Check conflicts in batches to avoid overwhelming the database
       const batchSize = 10;
       for (let i = 0; i < assetList.length; i += batchSize) {
         const batch = assetList.slice(i, i + batchSize);
@@ -199,9 +203,45 @@ export function AddCampaignAssetsDialog({
     }
   };
 
-  const filterAssets = () => {
+  // Derive unique filter options from assets
+  const cities = useMemo(() => 
+    Array.from(new Set(assets.map(a => a.city).filter(Boolean))).sort(),
+    [assets]
+  );
+  
+  const areas = useMemo(() => {
+    let filteredAreas = assets;
+    if (cityFilter !== "all") {
+      filteredAreas = assets.filter(a => a.city === cityFilter);
+    }
+    return Array.from(new Set(filteredAreas.map(a => a.area).filter(Boolean))).sort();
+  }, [assets, cityFilter]);
+  
+  const mediaTypes = useMemo(() => 
+    Array.from(new Set(assets.map(a => a.media_type).filter(Boolean))).sort(),
+    [assets]
+  );
+
+  const hasConflict = (assetId: string): boolean => {
+    return assetConflicts.has(assetId);
+  };
+
+  const getConflicts = (assetId: string): ConflictInfo[] => {
+    return assetConflicts.get(assetId) || [];
+  };
+
+  // Determine effective status for display and filtering
+  const getEffectiveStatus = (asset: any): 'available' | 'booked' | 'conflict' => {
+    if (hasConflict(asset.id)) return 'conflict';
+    if (asset.status === 'Available') return 'available';
+    return 'booked';
+  };
+
+  // Filter and sort assets
+  const filteredAndSortedAssets = useMemo(() => {
     let filtered = [...assets];
 
+    // Search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -213,35 +253,103 @@ export function AddCampaignAssetsDialog({
       );
     }
 
+    // City filter
     if (cityFilter !== "all") {
       filtered = filtered.filter(asset => asset.city === cityFilter);
     }
 
+    // Area filter
+    if (areaFilter !== "all") {
+      filtered = filtered.filter(asset => asset.area === areaFilter);
+    }
+
+    // Media type filter
     if (mediaTypeFilter !== "all") {
       filtered = filtered.filter(asset => asset.media_type === mediaTypeFilter);
     }
 
-    setFilteredAssets(filtered);
+    // Status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(asset => {
+        const effectiveStatus = getEffectiveStatus(asset);
+        if (statusFilter === "available") return effectiveStatus === 'available';
+        if (statusFilter === "booked") return effectiveStatus === 'booked' || effectiveStatus === 'conflict';
+        return true;
+      });
+    }
+
+    // Apply sorting
+    if (sortConfig.field && sortConfig.direction) {
+      filtered.sort((a, b) => {
+        let aValue: any;
+        let bValue: any;
+
+        if (sortConfig.field === 'status') {
+          aValue = getEffectiveStatus(a);
+          bValue = getEffectiveStatus(b);
+        } else if (sortConfig.field === 'media_asset_code') {
+          aValue = a.media_asset_code || a.id || '';
+          bValue = b.media_asset_code || b.id || '';
+        } else {
+          aValue = a[sortConfig.field] ?? '';
+          bValue = b[sortConfig.field] ?? '';
+        }
+
+        // Numeric comparison for card_rate
+        if (sortConfig.field === 'card_rate') {
+          aValue = Number(aValue) || 0;
+          bValue = Number(bValue) || 0;
+          return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+        }
+
+        // String comparison
+        const comparison = String(aValue).localeCompare(String(bValue));
+        return sortConfig.direction === 'asc' ? comparison : -comparison;
+      });
+    }
+
+    return filtered;
+  }, [assets, searchTerm, cityFilter, areaFilter, mediaTypeFilter, statusFilter, sortConfig, assetConflicts]);
+
+  const handleSort = (field: SortField) => {
+    setSortConfig(current => {
+      if (current.field === field) {
+        // Cycle: null -> asc -> desc -> null
+        if (current.direction === null) return { field, direction: 'asc' };
+        if (current.direction === 'asc') return { field, direction: 'desc' };
+        return { field: null, direction: null };
+      }
+      return { field, direction: 'asc' };
+    });
   };
 
-  const cities = Array.from(new Set(assets.map(a => a.city).filter(Boolean)));
-  const mediaTypes = Array.from(new Set(assets.map(a => a.media_type).filter(Boolean)));
-
-  const hasConflict = (assetId: string): boolean => {
-    return assetConflicts.has(assetId);
-  };
-
-  const getConflicts = (assetId: string): ConflictInfo[] => {
-    return assetConflicts.get(assetId) || [];
+  const getSortIcon = (field: SortField) => {
+    if (sortConfig.field !== field) {
+      return <ArrowUpDown className="ml-1 h-3 w-3 text-muted-foreground/50" />;
+    }
+    if (sortConfig.direction === 'asc') {
+      return <ArrowUp className="ml-1 h-3 w-3 text-primary" />;
+    }
+    return <ArrowDown className="ml-1 h-3 w-3 text-primary" />;
   };
 
   const toggleAssetSelection = (assetId: string) => {
-    // Prevent selection of conflicting assets
     if (hasConflict(assetId)) {
       const conflicts = getConflicts(assetId);
       toast({
         title: "Asset has booking conflict",
         description: `This asset is already booked in: ${conflicts.map(c => c.campaign_name).join(', ')}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if asset is not available
+    const asset = assets.find(a => a.id === assetId);
+    if (asset && asset.status !== 'Available') {
+      toast({
+        title: "Asset not available",
+        description: `This asset is currently ${asset.status}`,
         variant: "destructive",
       });
       return;
@@ -263,7 +371,26 @@ export function AddCampaignAssetsDialog({
     onClose();
   };
 
+  const clearFilters = () => {
+    setSearchTerm("");
+    setCityFilter("all");
+    setAreaFilter("all");
+    setMediaTypeFilter("all");
+    setStatusFilter("all");
+    setSortConfig({ field: null, direction: null });
+  };
+
+  const activeFilterCount = [
+    searchTerm ? 1 : 0,
+    cityFilter !== "all" ? 1 : 0,
+    areaFilter !== "all" ? 1 : 0,
+    mediaTypeFilter !== "all" ? 1 : 0,
+    statusFilter !== "all" ? 1 : 0,
+  ].reduce((a, b) => a + b, 0);
+
   const conflictCount = Array.from(assetConflicts.keys()).length;
+  const availableCount = filteredAndSortedAssets.filter(a => getEffectiveStatus(a) === 'available').length;
+  const bookedCount = filteredAndSortedAssets.filter(a => getEffectiveStatus(a) !== 'available').length;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -281,9 +408,9 @@ export function AddCampaignAssetsDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Filters */}
-          <div className="flex gap-3">
-            <div className="relative flex-1">
+          {/* Filters Row 1: Search + Status + Clear */}
+          <div className="flex gap-3 flex-wrap items-center">
+            <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by ID, location, or area..."
@@ -292,14 +419,55 @@ export function AddCampaignAssetsDialog({
                 className="pl-9"
               />
             </div>
-            <Select value={cityFilter} onValueChange={setCityFilter}>
-              <SelectTrigger className="w-[180px]">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="available">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                    Available ({assets.filter(a => getEffectiveStatus(a) === 'available').length})
+                  </span>
+                </SelectItem>
+                <SelectItem value="booked">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                    Booked ({assets.filter(a => getEffectiveStatus(a) !== 'available').length})
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            {activeFilterCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
+                <X className="h-4 w-4 mr-1" />
+                Clear ({activeFilterCount})
+              </Button>
+            )}
+          </div>
+
+          {/* Filters Row 2: City, Area, Media Type */}
+          <div className="flex gap-3 flex-wrap">
+            <Select value={cityFilter} onValueChange={(v) => { setCityFilter(v); setAreaFilter("all"); }}>
+              <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="City" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Cities</SelectItem>
                 {cities.map(city => (
                   <SelectItem key={city} value={city}>{city}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={areaFilter} onValueChange={setAreaFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Area" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Areas</SelectItem>
+                {areas.map(area => (
+                  <SelectItem key={area} value={area}>{area}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -314,22 +482,83 @@ export function AddCampaignAssetsDialog({
                 ))}
               </SelectContent>
             </Select>
+            <div className="flex items-center gap-2 ml-auto text-sm text-muted-foreground">
+              <Badge variant="secondary">{filteredAndSortedAssets.length} assets</Badge>
+              <Badge variant="outline" className="text-green-600 border-green-500">{availableCount} available</Badge>
+              <Badge variant="outline" className="text-amber-600 border-amber-500">{bookedCount} booked</Badge>
+            </div>
           </div>
 
           {/* Assets table */}
-          <div className="border rounded-lg max-h-[500px] overflow-auto">
+          <div className="border rounded-lg max-h-[400px] overflow-auto">
             <Table>
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
                   <TableHead className="w-12"></TableHead>
                   <TableHead className="w-[50px] text-center">S.No</TableHead>
-                  <TableHead>Asset ID</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>City</TableHead>
-                  <TableHead>Area</TableHead>
-                  <TableHead>Media Type</TableHead>
-                  <TableHead className="text-right">Card Rate</TableHead>
-                  <TableHead className="w-16">Status</TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => handleSort('media_asset_code')}
+                  >
+                    <div className="flex items-center">
+                      Asset ID
+                      {getSortIcon('media_asset_code')}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => handleSort('location')}
+                  >
+                    <div className="flex items-center">
+                      Location
+                      {getSortIcon('location')}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => handleSort('city')}
+                  >
+                    <div className="flex items-center">
+                      City
+                      {getSortIcon('city')}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => handleSort('area')}
+                  >
+                    <div className="flex items-center">
+                      Area
+                      {getSortIcon('area')}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => handleSort('media_type')}
+                  >
+                    <div className="flex items-center">
+                      Media Type
+                      {getSortIcon('media_type')}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50 select-none text-right"
+                    onClick={() => handleSort('card_rate')}
+                  >
+                    <div className="flex items-center justify-end">
+                      Card Rate
+                      {getSortIcon('card_rate')}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="w-24 cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => handleSort('status')}
+                  >
+                    <div className="flex items-center">
+                      Status
+                      {getSortIcon('status')}
+                    </div>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -339,27 +568,28 @@ export function AddCampaignAssetsDialog({
                       {loading ? "Loading assets..." : "Checking availability..."}
                     </TableCell>
                   </TableRow>
-                ) : filteredAssets.length === 0 ? (
+                ) : filteredAndSortedAssets.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-8">
-                      No available assets found
+                      No assets found matching filters
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredAssets.map((asset, index) => {
+                  filteredAndSortedAssets.map((asset, index) => {
                     const conflicts = getConflicts(asset.id);
-                    const isConflicting = conflicts.length > 0;
+                    const effectiveStatus = getEffectiveStatus(asset);
+                    const isSelectable = effectiveStatus === 'available';
 
                     return (
                       <TableRow 
                         key={asset.id}
-                        className={isConflicting ? "bg-amber-50/50 dark:bg-amber-950/20" : ""}
+                        className={effectiveStatus !== 'available' ? "bg-amber-50/50 dark:bg-amber-950/20" : ""}
                       >
                         <TableCell>
                           <Checkbox
                             checked={selectedAssets.has(asset.id)}
                             onCheckedChange={() => toggleAssetSelection(asset.id)}
-                            disabled={isConflicting}
+                            disabled={!isSelectable}
                           />
                         </TableCell>
                         <TableCell className="text-center font-medium text-muted-foreground">
@@ -372,7 +602,9 @@ export function AddCampaignAssetsDialog({
                             companyName: companyPrefix
                           })}
                         </TableCell>
-                        <TableCell className="max-w-[200px] truncate">{asset.location}</TableCell>
+                        <TableCell className="max-w-[200px] truncate" title={asset.location}>
+                          {asset.location}
+                        </TableCell>
                         <TableCell>{asset.city}</TableCell>
                         <TableCell>{asset.area}</TableCell>
                         <TableCell>{asset.media_type}</TableCell>
@@ -380,7 +612,7 @@ export function AddCampaignAssetsDialog({
                           {formatCurrency(asset.card_rate)}
                         </TableCell>
                         <TableCell>
-                          {isConflicting ? (
+                          {effectiveStatus === 'conflict' ? (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -405,6 +637,10 @@ export function AddCampaignAssetsDialog({
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
+                          ) : effectiveStatus === 'booked' ? (
+                            <Badge variant="outline" className="text-amber-600 border-amber-500">
+                              {asset.status}
+                            </Badge>
                           ) : (
                             <Badge variant="outline" className="text-green-600 border-green-500">
                               Available

@@ -36,8 +36,35 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import { calculatePrintingCost, calculateMountingCost, getAssetSqft } from "@/utils/effectivePricing";
 import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, differenceInDays, addDays as addDaysFns } from "date-fns";
 import { cn } from "@/lib/utils";
+
+/**
+ * Parse YYYY-MM-DD string to local Date at noon (avoids timezone shift)
+ */
+const parseDateOnly = (dateStr: string): Date => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day, 12, 0, 0);
+};
+
+/**
+ * Convert Date to YYYY-MM-DD string in local time (no timezone shift)
+ */
+const toDateOnlyString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+/**
+ * Calculate inclusive days between two dates
+ * Formula: (end - start) + 1
+ */
+const calcInclusiveDays = (startDate: Date, endDate: Date): number => {
+  const diffDays = differenceInDays(endDate, startDate);
+  return Math.max(1, diffDays + 1);
+};
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -361,9 +388,11 @@ export function SelectedAssetsTable({
                         <DropdownMenuItem 
                           onClick={() => {
                             const updates: Array<{ assetId: string; field: string; value: any }> = [];
-                            const startDateStr = planStartDate.toISOString().split('T')[0];
-                            const endDateStr = planEndDate.toISOString().split('T')[0];
-                            const days = Math.max(1, Math.ceil((planEndDate.getTime() - planStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+                            // Use local-safe date string conversion
+                            const startDateStr = toDateOnlyString(planStartDate);
+                            const endDateStr = toDateOnlyString(planEndDate);
+                            // Calculate inclusive days
+                            const days = calcInclusiveDays(planStartDate, planEndDate);
                             
                             selectedAssetIds.forEach(assetId => {
                               updates.push({ assetId, field: 'start_date', value: startDateStr });
@@ -518,12 +547,13 @@ export function SelectedAssetsTable({
                 const negotiatedPrice = pricing.negotiated_price || cardRate;
                 
                 // Per-asset dates (default to plan dates if not set)
+                // Use local-safe parsing to prevent timezone shift (-1 day bug)
                 const assetStartDate = pricing.start_date 
-                  ? new Date(pricing.start_date) 
+                  ? parseDateOnly(pricing.start_date) 
                   : (planStartDate || new Date());
                 const assetEndDate = pricing.end_date 
-                  ? new Date(pricing.end_date) 
-                  : (planEndDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
+                  ? parseDateOnly(pricing.end_date) 
+                  : (planEndDate || addDaysFns(new Date(), 29));
                 
                 // Per-asset billing mode
                 const billingMode: BillingMode = pricing.billing_mode || 'PRORATA_30';
@@ -603,16 +633,21 @@ export function SelectedAssetsTable({
                 const handleAssetDateChange = (field: 'start_date' | 'end_date', date: Date | undefined) => {
                   if (!date) return;
                   
-                  onPricingUpdate(asset.id, field, date.toISOString().split('T')[0]);
+                  // Use local-safe date string conversion (no timezone shift)
+                  const dateStr = toDateOnlyString(date);
+                  onPricingUpdate(asset.id, field, dateStr);
                   
                   // Recalculate rent based on new dates
                   const newStart = field === 'start_date' ? date : assetStartDate;
                   const newEnd = field === 'end_date' ? date : assetEndDate;
-                  const newRentResult = computeRentAmount(negotiatedPrice, newStart, newEnd, billingMode);
                   
+                  // Update booked_days using inclusive calculation
+                  const newBookedDays = calcInclusiveDays(newStart, newEnd);
+                  onPricingUpdate(asset.id, 'booked_days', newBookedDays);
+                  
+                  const newRentResult = computeRentAmount(negotiatedPrice, newStart, newEnd, billingMode);
                   onPricingUpdate(asset.id, 'rent_amount', newRentResult.rent_amount);
                   onPricingUpdate(asset.id, 'daily_rate', newRentResult.daily_rate);
-                  onPricingUpdate(asset.id, 'booked_days', newRentResult.booked_days);
                 };
 
                 // Handler for changing Days directly - updates end_date based on start_date + days
@@ -629,17 +664,16 @@ export function SelectedAssetsTable({
                   // Clamp days to valid range
                   const clampedDays = Math.max(1, Math.min(365, newDays));
                   
-                  // Calculate new end date = start_date + (days - 1)
-                  const startDate = assetStartDate;
-                  const newEndDate = new Date(startDate);
-                  newEndDate.setDate(newEndDate.getDate() + clampedDays - 1);
+                  // Calculate new end date = start_date + (days - 1) for INCLUSIVE counting
+                  // e.g., Days=10 means start + 9 days = end
+                  const newEndDate = addDaysFns(assetStartDate, clampedDays - 1);
                   
-                  // Update end_date and booked_days
-                  onPricingUpdate(asset.id, 'end_date', newEndDate.toISOString().split('T')[0]);
+                  // Update end_date using local-safe string conversion and booked_days
+                  onPricingUpdate(asset.id, 'end_date', toDateOnlyString(newEndDate));
                   onPricingUpdate(asset.id, 'booked_days', clampedDays);
                   
                   // Recalculate rent with new duration
-                  const newRentResult = computeRentAmount(negotiatedPrice, startDate, newEndDate, billingMode);
+                  const newRentResult = computeRentAmount(negotiatedPrice, assetStartDate, newEndDate, billingMode);
                   onPricingUpdate(asset.id, 'rent_amount', newRentResult.rent_amount);
                   onPricingUpdate(asset.id, 'daily_rate', newRentResult.daily_rate);
                 };

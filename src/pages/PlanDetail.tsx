@@ -60,15 +60,9 @@ import { ApprovalHistoryTimeline } from "@/components/plans/ApprovalHistoryTimel
 import { Checkbox } from "@/components/ui/checkbox";
 import { PageCustomization } from "@/components/ui/page-customization";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Settings2, CalendarDays } from "lucide-react";
-import { formatBillingMode } from "@/utils/perAssetPricing";
-import { format } from "date-fns";
 import { generateProposalExcel } from "@/lib/exports/proposalExcelExport";
+import { PlanAssetsTable } from "@/components/plans/PlanAssetsTable";
 
 export default function PlanDetail() {
   const { id } = useParams();
@@ -107,20 +101,6 @@ export default function PlanDetail() {
     notes: "",
   });
   const [showDiscount, setShowDiscount] = useState(true);
-  
-  // View Options for Selected Assets table - column visibility
-  const [showAssetDates, setShowAssetDates] = useState(true);
-  const [showBookedDays, setShowBookedDays] = useState(true);
-  const [showBillingMode, setShowBillingMode] = useState(false);
-  const [showDirection, setShowDirection] = useState(false);
-  const [showDimensions, setShowDimensions] = useState(false);
-  const [showSqft, setShowSqft] = useState(false);
-  const [showIllumination, setShowIllumination] = useState(false);
-  const [showMediaType, setShowMediaType] = useState(false);
-  const [showArea, setShowArea] = useState(false);
-  const [showBaseRate, setShowBaseRate] = useState(false);
-  const [showPrintingRate, setShowPrintingRate] = useState(false);
-  const [showMountingCost, setShowMountingCost] = useState(false);
 
   const loadPendingApprovals = async () => {
     if (!id) return;
@@ -1596,346 +1576,22 @@ export default function PlanDetail() {
 
         {/* Plan Items */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <CardTitle>Selected Assets ({planItems.length})</CardTitle>
-            <div className="flex gap-2">
-              {/* View Options Popover for per-asset dates */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Settings2 className="h-4 w-4 mr-2" />
-                    View Options
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80" align="end">
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-sm mb-3">Column Visibility</h4>
-                    <div className="grid grid-cols-2 gap-2 max-h-80 overflow-y-auto">
-                      {/* Duration/Dates */}
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="show-asset-dates"
-                          checked={showAssetDates}
-                          onCheckedChange={(checked) => setShowAssetDates(!!checked)}
-                        />
-                        <label htmlFor="show-asset-dates" className="text-sm cursor-pointer select-none">
-                          Asset Dates
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="show-booked-days"
-                          checked={showBookedDays}
-                          onCheckedChange={(checked) => setShowBookedDays(!!checked)}
-                        />
-                        <label htmlFor="show-booked-days" className="text-sm cursor-pointer select-none">
-                          Days
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="show-billing-mode"
-                          checked={showBillingMode}
-                          onCheckedChange={(checked) => setShowBillingMode(!!checked)}
-                        />
-                        <label htmlFor="show-billing-mode" className="text-sm cursor-pointer select-none">
-                          Billing Mode
-                        </label>
-                      </div>
-                      
-                      {/* Location/Asset Info */}
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="show-area"
-                          checked={showArea}
-                          onCheckedChange={(checked) => setShowArea(!!checked)}
-                        />
-                        <label htmlFor="show-area" className="text-sm cursor-pointer select-none">
-                          Area
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="show-direction"
-                          checked={showDirection}
-                          onCheckedChange={(checked) => setShowDirection(!!checked)}
-                        />
-                        <label htmlFor="show-direction" className="text-sm cursor-pointer select-none">
-                          Direction
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="show-media-type"
-                          checked={showMediaType}
-                          onCheckedChange={(checked) => setShowMediaType(!!checked)}
-                        />
-                        <label htmlFor="show-media-type" className="text-sm cursor-pointer select-none">
-                          Media Type
-                        </label>
-                      </div>
-                      
-                      {/* Specifications */}
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="show-dimensions"
-                          checked={showDimensions}
-                          onCheckedChange={(checked) => setShowDimensions(!!checked)}
-                        />
-                        <label htmlFor="show-dimensions" className="text-sm cursor-pointer select-none">
-                          Dimensions
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="show-sqft"
-                          checked={showSqft}
-                          onCheckedChange={(checked) => setShowSqft(!!checked)}
-                        />
-                        <label htmlFor="show-sqft" className="text-sm cursor-pointer select-none">
-                          Sqft
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="show-illumination"
-                          checked={showIllumination}
-                          onCheckedChange={(checked) => setShowIllumination(!!checked)}
-                        />
-                        <label htmlFor="show-illumination" className="text-sm cursor-pointer select-none">
-                          Illumination
-                        </label>
-                      </div>
-                      
-                      {/* Pricing */}
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="show-base-rate"
-                          checked={showBaseRate}
-                          onCheckedChange={(checked) => setShowBaseRate(!!checked)}
-                        />
-                        <label htmlFor="show-base-rate" className="text-sm cursor-pointer select-none">
-                          Base Rate
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="show-printing-rate"
-                          checked={showPrintingRate}
-                          onCheckedChange={(checked) => setShowPrintingRate(!!checked)}
-                        />
-                        <label htmlFor="show-printing-rate" className="text-sm cursor-pointer select-none">
-                          Printing Rate
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="show-mounting-cost"
-                          checked={showMountingCost}
-                          onCheckedChange={(checked) => setShowMountingCost(!!checked)}
-                        />
-                        <label htmlFor="show-mounting-cost" className="text-sm cursor-pointer select-none">
-                          Mounting Cost
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-              
-              {selectedItems.size > 0 && ['pending', 'approved'].includes(plan.status?.toLowerCase()) && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowPrintingInstallationDialog(true)}
-                    className="bg-primary/5 hover:bg-primary/10"
-                  >
-                    <Wand2 className="mr-2 h-4 w-4" />
-                    Printing & Installation
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowBulkPrintingDialog(true)}
-                  >
-                    <Wand2 className="mr-2 h-4 w-4" />
-                    Bulk P&M (Legacy)
-                  </Button>
-                </>
-              )}
-              {isAdmin && ['pending', 'approved'].includes(plan.status?.toLowerCase()) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAddAssetsDialog(true)}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Assets
-                </Button>
-              )}
-            </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={selectedItems.size === planItems.length && planItems.length > 0}
-                      onCheckedChange={toggleAllItems}
-                    />
-                  </TableHead>
-                  {isAdmin && ['pending', 'approved'].includes(plan.status?.toLowerCase()) && <TableHead className="w-12"></TableHead>}
-                  <TableHead>Asset ID</TableHead>
-                  {showArea && <TableHead>Area</TableHead>}
-                  <TableHead>Location</TableHead>
-                  {showDirection && <TableHead>Direction</TableHead>}
-                  <TableHead>City</TableHead>
-                  {showMediaType && <TableHead>Media Type</TableHead>}
-                  {showDimensions && <TableHead>Dimensions</TableHead>}
-                  {showSqft && <TableHead className="text-right">Sqft</TableHead>}
-                  {showIllumination && <TableHead>Illumination</TableHead>}
-                  {showAssetDates && <TableHead>Start Date</TableHead>}
-                  {showAssetDates && <TableHead>End Date</TableHead>}
-                  {showBookedDays && <TableHead className="text-center">Days</TableHead>}
-                  {showBillingMode && <TableHead>Billing Mode</TableHead>}
-                  <TableHead className="text-right">Card Rate</TableHead>
-                  {showBaseRate && <TableHead className="text-right">Base Rate</TableHead>}
-                  <TableHead className="text-right">Negotiated</TableHead>
-                  <TableHead className="text-right">Pro-Rata</TableHead>
-                  <TableHead className="text-right">Discount</TableHead>
-                  <TableHead className="text-right">Profit</TableHead>
-                  {showPrintingRate && <TableHead className="text-right">Print Rate</TableHead>}
-                  <TableHead className="text-right">Printing</TableHead>
-                  {showMountingCost && <TableHead className="text-right">Mounting</TableHead>}
-                  <TableHead className="text-right">Installation</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">GST</TableHead>
-                  <TableHead className="text-right">Total + GST</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {planItems.map((item) => {
-                  // Use pre-calculated values from the database for consistency
-                  // Negotiated rate: prioritize negotiated_price > sales_price > card_rate
-                  const effectivePrice = item.negotiated_price || item.sales_price || item.card_rate;
-                  const printingCost = item.printing_charges || item.printing_cost || 0;
-                  const mountingCost = item.mounting_charges || item.installation_cost || 0;
-                  
-                  // Use per-asset booked_days if available, otherwise fall back to plan duration
-                  const assetBookedDays = item.booked_days || plan.duration_days;
-                  
-                  // Pro-rata: Calculate the rent amount based on negotiated rate and per-asset days
-                  // Formula: (monthly_rate / 30) × booked_days (using NEGOTIATED rate, not card rate)
-                  const proRataAmount = item.rent_amount ?? calcProRata(effectivePrice, assetBookedDays);
-                  
-                  // Discount: Difference between card_rate and negotiated rate (monthly, not pro-rated)
-                  const discountAmount = item.discount_amount ?? Math.round((item.card_rate - effectivePrice) * 100) / 100;
-                  const discountPercent = item.card_rate > 0 
-                    ? ((item.card_rate - effectivePrice) / item.card_rate) * 100 
-                    : 0;
-                  
-                  // Profit: Difference between negotiated price and base cost (monthly, not pro-rated)
-                  const baseRent = item.base_rent || 0;
-                  const profitAmount = item.profit_value ?? Math.round((effectivePrice - baseRent) * 100) / 100;
-                  const profitPercent = baseRent > 0 
-                    ? ((effectivePrice - baseRent) / baseRent) * 100 
-                    : (effectivePrice > 0 ? 100 : 0);
-                  
-                  // Line Total = Rent + Printing + Mounting (WITHOUT GST)
-                  const lineTotal = Math.round((proRataAmount + printingCost + mountingCost) * 100) / 100;
-                  
-                  // GST Amount for this row
-                  const gstPercent = plan.gst_percent || 0;
-                  const rowGstAmount = Math.round((lineTotal * gstPercent / 100) * 100) / 100;
-                  
-                  // Total with GST
-                  const rowTotalWithGst = Math.round((lineTotal + rowGstAmount) * 100) / 100;
-                  
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedItems.has(item.asset_id)}
-                          onCheckedChange={() => toggleItemSelection(item.asset_id)}
-                        />
-                      </TableCell>
-                      {isAdmin && ['pending', 'approved'].includes(plan.status?.toLowerCase()) && (
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveAsset(item.id, item.asset_id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      )}
-                      <TableCell className="font-medium font-mono">{item.display_asset_id || item.asset_id}</TableCell>
-                      {showArea && <TableCell>{item.area || '-'}</TableCell>}
-                      <TableCell>{item.location}</TableCell>
-                      {showDirection && <TableCell>{item.direction || '-'}</TableCell>}
-                      <TableCell>{item.city}</TableCell>
-                      {showMediaType && <TableCell>{item.media_type || '-'}</TableCell>}
-                      {showDimensions && <TableCell>{item.dimensions || '-'}</TableCell>}
-                      {showSqft && <TableCell className="text-right">{item.total_sqft || '-'}</TableCell>}
-                      {showIllumination && <TableCell>{item.illumination_type || '-'}</TableCell>}
-                      {/* Per-asset dates columns */}
-                      {showAssetDates && (
-                        <TableCell className="text-sm">
-                          {item.start_date 
-                            ? format(new Date(item.start_date), 'dd/MM/yy') 
-                            : format(new Date(plan.start_date), 'dd/MM/yy')}
-                        </TableCell>
-                      )}
-                      {showAssetDates && (
-                        <TableCell className="text-sm">
-                          {item.end_date 
-                            ? format(new Date(item.end_date), 'dd/MM/yy') 
-                            : format(new Date(plan.end_date), 'dd/MM/yy')}
-                        </TableCell>
-                      )}
-                      {showBookedDays && (
-                        <TableCell className="text-center">
-                          <Badge variant="secondary" className="font-mono">
-                            {item.booked_days || plan.duration_days}d
-                          </Badge>
-                        </TableCell>
-                      )}
-                      {showBillingMode && (
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatBillingMode(item.billing_mode || 'PRORATA_30')}
-                        </TableCell>
-                      )}
-                      <TableCell className="text-right">{formatCurrency(item.card_rate)}</TableCell>
-                      {showBaseRate && <TableCell className="text-right">{formatCurrency(baseRent)}</TableCell>}
-                      <TableCell className="text-right font-medium">{formatCurrency(effectivePrice)}</TableCell>
-                      <TableCell className="text-right text-purple-600">{formatCurrency(proRataAmount)}</TableCell>
-                      <TableCell className="text-right text-blue-600 font-medium">
-                        -{formatCurrency(discountAmount)} ({discountPercent.toFixed(1)}%)
-                      </TableCell>
-                      <TableCell className="text-right text-green-600 font-medium">
-                        {formatCurrency(profitAmount)} ({profitPercent.toFixed(1)}%)
-                      </TableCell>
-                      {showPrintingRate && <TableCell className="text-right">{formatCurrency(item.printing_rate || 0)}/sqft</TableCell>}
-                      <TableCell className="text-right">{formatCurrency(printingCost)}</TableCell>
-                      {showMountingCost && <TableCell className="text-right">{formatCurrency(item.installation_rate || 0)}</TableCell>}
-                      <TableCell className="text-right">{formatCurrency(mountingCost)}</TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatCurrency(lineTotal)}
-                      </TableCell>
-                      <TableCell className="text-right text-red-600">
-                        {gstPercent > 0 ? formatCurrency(rowGstAmount) : '₹0'}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold text-lg">
-                        {formatCurrency(rowTotalWithGst)}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <PlanAssetsTable
+              planItems={planItems}
+              plan={plan}
+              isAdmin={isAdmin}
+              selectedItems={selectedItems}
+              onToggleItem={toggleItemSelection}
+              onToggleAll={toggleAllItems}
+              onRemoveAsset={handleRemoveAsset}
+              onAddAssets={() => setShowAddAssetsDialog(true)}
+              onBulkPrintingMounting={() => setShowBulkPrintingDialog(true)}
+              onPrintingInstallation={() => setShowPrintingInstallationDialog(true)}
+            />
           </CardContent>
         </Card>
 

@@ -75,6 +75,8 @@ import {
 } from "@/utils/perAssetPricing";
 import { BulkPrintingDialog } from "./BulkPrintingDialog";
 import { BulkMountingDialog } from "./BulkMountingDialog";
+import { BulkAssetDatesDialog } from "./BulkAssetDatesDialog";
+import { BulkAssetDaysDialog } from "./BulkAssetDaysDialog";
 
 type SortDirection = 'asc' | 'desc' | null;
 type SortableColumn = 'asset_id' | 'location' | 'area';
@@ -96,9 +98,11 @@ interface SelectedAssetsTableProps {
 
 const ALL_COLUMNS = [
   'asset_id',
+  'city',
   'area',
   'location',
   'direction',
+  'media_type',
   'dimensions',
   'total_sqft',
   'illumination',
@@ -108,9 +112,11 @@ const ALL_COLUMNS = [
   'card_rate',
   'base_rate',
   'negotiated_price',
+  'daily_rate',
   'rent_amount',
   'discount',
   'profit',
+  'printing_rate',
   'printing',
   'mounting',
   'total',
@@ -133,25 +139,29 @@ const DEFAULT_VISIBLE = [
 ];
 
 const COLUMN_LABELS: Record<string, string> = {
-  asset_id: 'Asset ID',
+  asset_id: 'Asset Code',
+  city: 'City',
   area: 'Area',
   location: 'Location',
   direction: 'Direction',
+  media_type: 'Media Type',
   dimensions: 'Dimensions',
-  total_sqft: 'Total Sq.Ft',
+  total_sqft: 'Sqft',
   illumination: 'Illumination',
-  asset_dates: 'Asset Dates',
+  asset_dates: 'Start / End Dates',
   days: 'Days',
   billing_mode: 'Billing Mode',
   card_rate: 'Card Rate (₹/Mo)',
   base_rate: 'Base Rate (₹/Mo)',
-  negotiated_price: 'Negotiated (₹/Mo)',
+  negotiated_price: 'Negotiated Rate (₹/Mo)',
+  daily_rate: 'Daily Rate (₹)',
   rent_amount: 'Rent Amount (₹)',
   discount: 'Discount',
   profit: 'Profit',
-  printing: 'Printing (Rate/Cost)',
-  mounting: 'Mounting (Rate/Cost)',
-  total: 'Total (₹)',
+  printing_rate: 'Printing Rate (₹/sqft)',
+  printing: 'Printing Cost',
+  mounting: 'Mounting Cost',
+  total: 'Line Total (₹)',
 };
 
 export function SelectedAssetsTable({
@@ -177,6 +187,8 @@ export function SelectedAssetsTable({
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
   const [showBulkPrintingDialog, setShowBulkPrintingDialog] = useState(false);
   const [showBulkMountingDialog, setShowBulkMountingDialog] = useState(false);
+  const [showBulkDatesDialog, setShowBulkDatesDialog] = useState(false);
+  const [showBulkDaysDialog, setShowBulkDaysDialog] = useState(false);
   
   const { visibleKeys, setVisibleKeys } = useColumnPrefs(
     'plan-assets',
@@ -383,7 +395,17 @@ export function SelectedAssetsTable({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      {/* Apply Plan Dates to All */}
+                      {/* Bulk Asset Dates */}
+                      <DropdownMenuItem onClick={() => setShowBulkDatesDialog(true)}>
+                        <CalendarDays className="h-4 w-4 mr-2" />
+                        Bulk Asset Dates
+                      </DropdownMenuItem>
+                      {/* Bulk Asset Days */}
+                      <DropdownMenuItem onClick={() => setShowBulkDaysDialog(true)}>
+                        <CalendarDays className="h-4 w-4 mr-2" />
+                        Bulk Asset Days
+                      </DropdownMenuItem>
+                      {/* Apply Plan Dates to Selected (quick action) */}
                       {planStartDate && planEndDate && (
                         <DropdownMenuItem 
                           onClick={() => {
@@ -407,7 +429,7 @@ export function SelectedAssetsTable({
                           }}
                         >
                           <CalendarDays className="h-4 w-4 mr-2" />
-                          Apply Plan Dates
+                          Apply Plan Dates (Quick)
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem onClick={() => setShowBulkPrintingDialog(true)}>
@@ -489,6 +511,7 @@ export function SelectedAssetsTable({
                   </div>
                 </TableHead>
               )}
+              {isColumnVisible('city') && <TableHead>City</TableHead>}
               {isColumnVisible('area') && (
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-muted/50"
@@ -512,21 +535,24 @@ export function SelectedAssetsTable({
                 </TableHead>
               )}
               {isColumnVisible('direction') && <TableHead>Direction</TableHead>}
+              {isColumnVisible('media_type') && <TableHead>Media Type</TableHead>}
               {isColumnVisible('dimensions') && <TableHead>Dimensions</TableHead>}
-              {isColumnVisible('total_sqft') && <TableHead>Sq.Ft</TableHead>}
+              {isColumnVisible('total_sqft') && <TableHead>Sqft</TableHead>}
               {isColumnVisible('illumination') && <TableHead>Illumination</TableHead>}
-              {isColumnVisible('asset_dates') && <TableHead className="w-56">Asset Dates</TableHead>}
+              {isColumnVisible('asset_dates') && <TableHead className="w-56">Start / End Dates</TableHead>}
               {isColumnVisible('days') && <TableHead className="w-20">Days</TableHead>}
               {isColumnVisible('billing_mode') && <TableHead className="w-36">Billing Mode</TableHead>}
               {isColumnVisible('card_rate') && <TableHead>Card Rate</TableHead>}
               {isColumnVisible('base_rate') && <TableHead>Base Rate</TableHead>}
-              {isColumnVisible('negotiated_price') && <TableHead className="w-48">Negotiated (₹/Mo)</TableHead>}
+              {isColumnVisible('negotiated_price') && <TableHead className="w-48">Negotiated Rate</TableHead>}
+              {isColumnVisible('daily_rate') && <TableHead>Daily Rate</TableHead>}
               {isColumnVisible('rent_amount') && <TableHead>Rent Amount</TableHead>}
               {isColumnVisible('discount') && <TableHead>Discount</TableHead>}
               {isColumnVisible('profit') && <TableHead>Profit</TableHead>}
-              {isColumnVisible('printing') && <TableHead className="w-48">Printing</TableHead>}
-              {isColumnVisible('mounting') && <TableHead className="w-48">Mounting</TableHead>}
-              {isColumnVisible('total') && <TableHead className="text-right">Total</TableHead>}
+              {isColumnVisible('printing_rate') && <TableHead>Print Rate</TableHead>}
+              {isColumnVisible('printing') && <TableHead className="w-48">Printing Cost</TableHead>}
+              {isColumnVisible('mounting') && <TableHead className="w-48">Mounting Cost</TableHead>}
+              {isColumnVisible('total') && <TableHead className="text-right">Line Total</TableHead>}
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
@@ -700,6 +726,9 @@ export function SelectedAssetsTable({
                     {isColumnVisible('asset_id') && (
                       <TableCell className="font-medium font-mono text-sm">{asset.media_asset_code || asset.id}</TableCell>
                     )}
+                    {isColumnVisible('city') && (
+                      <TableCell className="text-sm">{asset.city || '-'}</TableCell>
+                    )}
                     {isColumnVisible('area') && (
                       <TableCell className="text-sm">{asset.area}</TableCell>
                     )}
@@ -708,6 +737,9 @@ export function SelectedAssetsTable({
                     )}
                     {isColumnVisible('direction') && (
                       <TableCell className="text-sm">{asset.direction || '-'}</TableCell>
+                    )}
+                    {isColumnVisible('media_type') && (
+                      <TableCell className="text-sm">{asset.media_type || '-'}</TableCell>
                     )}
                     {isColumnVisible('dimensions') && (
                       <TableCell className="text-sm">
@@ -905,6 +937,11 @@ export function SelectedAssetsTable({
                         </div>
                       </TableCell>
                     )}
+                    {isColumnVisible('daily_rate') && (
+                      <TableCell className="text-right text-sm text-muted-foreground">
+                        {formatCurrency(rentResult.daily_rate || 0)}
+                      </TableCell>
+                    )}
                     {isColumnVisible('rent_amount') && (
                       <TableCell className="text-right bg-muted/30">
                         <TooltipProvider>
@@ -963,6 +1000,11 @@ export function SelectedAssetsTable({
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
+                      </TableCell>
+                    )}
+                    {isColumnVisible('printing_rate') && (
+                      <TableCell className="text-right text-sm">
+                        {formatCurrency(printingRate)}/sqft
                       </TableCell>
                     )}
                     {isColumnVisible('printing') && (
@@ -1139,6 +1181,27 @@ export function SelectedAssetsTable({
         assets={assets}
         selectedAssetIds={selectedAssetIds}
         assetPricing={assetPricing}
+        onBulkUpdate={handleBulkUpdate}
+      />
+
+      {/* Bulk Asset Dates Dialog */}
+      <BulkAssetDatesDialog
+        open={showBulkDatesDialog}
+        onOpenChange={setShowBulkDatesDialog}
+        assets={assets}
+        selectedAssetIds={selectedAssetIds}
+        assetPricing={assetPricing}
+        onBulkUpdate={handleBulkUpdate}
+      />
+
+      {/* Bulk Asset Days Dialog */}
+      <BulkAssetDaysDialog
+        open={showBulkDaysDialog}
+        onOpenChange={setShowBulkDaysDialog}
+        assets={assets}
+        selectedAssetIds={selectedAssetIds}
+        assetPricing={assetPricing}
+        planStartDate={planStartDate}
         onBulkUpdate={handleBulkUpdate}
       />
     </div>

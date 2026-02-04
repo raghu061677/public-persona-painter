@@ -10,16 +10,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, CalendarIcon, Plus, Trash2, Save, X, AlertCircle, Calculator, Printer, Hammer, ChevronDown, Settings2 } from "lucide-react";
+import { ArrowLeft, CalendarIcon, Save, X } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { AddCampaignAssetsDialog } from "@/components/campaigns/AddCampaignAssetsDialog";
-import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
+import { CampaignAssetsTable } from "@/components/campaigns/CampaignAssetsTable";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { calculatePrintingCost, calculateMountingCost, getAssetSqft } from "@/utils/effectivePricing";
 import {
@@ -1358,224 +1356,24 @@ export default function CampaignEdit() {
 
         {/* Campaign Assets Table */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Campaign Assets ({campaignAssets.length})</CardTitle>
-              <div className="flex items-center gap-2">
-                {/* Selection indicator */}
-                {selectedAssetIds.size > 0 && (
-                  <Badge variant="secondary" className="text-xs">
-                    {selectedAssetIds.size} selected
-                  </Badge>
-                )}
-                
-                {/* Bulk Update Dropdown */}
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              disabled={selectedAssetIds.size === 0}
-                            >
-                              Bulk Update
-                              <ChevronDown className="h-4 w-4 ml-1" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setShowBulkPrintingDialog(true)}>
-                              <Printer className="h-4 w-4 mr-2" />
-                              Bulk Printing
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setShowBulkMountingDialog(true)}>
-                              <Hammer className="h-4 w-4 mr-2" />
-                              Bulk Mounting
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </span>
-                    </TooltipTrigger>
-                    {selectedAssetIds.size === 0 && (
-                      <TooltipContent>
-                        <p>Select at least one asset to bulk update.</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
-                
-                <Button onClick={() => setShowAddAssetsDialog(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Assets
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            
-            <div className="rounded-md border overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[40px]">
-                      <Checkbox
-                        checked={selectedAssetIds.size === campaignAssets.length && campaignAssets.length > 0}
-                        onCheckedChange={toggleSelectAll}
-                      />
-                    </TableHead>
-                    <TableHead className="w-[50px] text-center">S.No</TableHead>
-                    <TableHead className="w-[140px]">Asset ID</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead className="text-right w-[80px]">Sqft</TableHead>
-                    <TableHead className="min-w-[180px]">Duration</TableHead>
-                    <TableHead className="text-right">Negotiated</TableHead>
-                    <TableHead className="text-right">Rent</TableHead>
-                    <TableHead className="w-[160px]">Printing (Rate→Cost)</TableHead>
-                    <TableHead className="w-[160px]">Mounting (Rate→Cost)</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {campaignAssets.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
-                        No assets in this campaign. Click "Add Assets" to add media assets.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    campaignAssets.map((asset, index) => (
-                      <TableRow key={asset.id} className={cn(asset.isNew && "bg-green-50/50", selectedAssetIds.has(asset.id) && "bg-primary/5")}>
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedAssetIds.has(asset.id)}
-                            onCheckedChange={() => toggleAssetSelection(asset.id)}
-                          />
-                        </TableCell>
-                        <TableCell className="text-center font-medium text-muted-foreground">
-                          {index + 1}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {formatAssetDisplayCode({
-                            mediaAssetCode: asset.media_asset_code,
-                            fallbackId: asset.asset_id,
-                            companyName: companyPrefix
-                          })}
-                          {asset.isNew && <span className="ml-1 text-xs text-green-600">(new)</span>}
-                        </TableCell>
-                        <TableCell className="min-w-[180px] max-w-[250px] text-sm">
-                          <div className="break-words whitespace-normal" title={asset.location}>
-                            {asset.location}
-                          </div>
-                          <span className="block text-xs text-muted-foreground">{asset.area}</span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {asset.total_sqft > 0 ? (
-                            <span className="font-medium">{asset.total_sqft}</span>
-                          ) : (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Badge variant="destructive" className="text-xs cursor-help">
-                                    <AlertCircle className="h-3 w-3 mr-1" />
-                                    N/A
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent>Area missing - cannot calculate printing cost</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <CampaignAssetDurationCell
-                            startDate={asset.start_date}
-                            endDate={asset.end_date}
-                            billingMode={asset.billing_mode}
-                            monthlyRate={asset.negotiated_rate || asset.card_rate}
-                            campaignStartDate={startDate}
-                            campaignEndDate={endDate}
-                            onChange={(updates) => handleAssetDurationChange(index, updates)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            value={asset.negotiated_rate}
-                            onChange={(e) => updateCampaignAsset(index, 'negotiated_rate', Number(e.target.value))}
-                            className="h-8 w-24 text-right"
-                          />
-                        </TableCell>
-                        <TableCell className="text-right font-semibold text-primary">
-                          {formatCurrency(asset.rent_amount || 0)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Input
-                              type="number"
-                              value={asset.printing_rate_per_sqft || ''}
-                              onChange={(e) => updateAssetPrintingRate(asset.id, Number(e.target.value))}
-                              className="h-8 w-16 text-right text-xs"
-                              placeholder="₹/sqft"
-                              step="0.5"
-                            />
-                            <span className="text-muted-foreground">→</span>
-                            <span className="font-medium text-green-600 min-w-[60px] text-right">
-                              {formatCurrency(asset.printing_charges || 0)}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Input
-                              type="number"
-                              value={asset.mounting_rate_per_sqft || ''}
-                              onChange={(e) => updateAssetMountingRate(asset.id, Number(e.target.value))}
-                              className="h-8 w-16 text-right text-xs"
-                              placeholder="₹/sqft"
-                              step="0.5"
-                            />
-                            <span className="text-muted-foreground">→</span>
-                            <span className="font-medium text-green-600 min-w-[60px] text-right">
-                              {formatCurrency(asset.mounting_charges || 0)}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={asset.status}
-                            onValueChange={(value) => updateCampaignAsset(index, 'status', value)}
-                          >
-                            <SelectTrigger className="h-8 w-28">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Pending">Pending</SelectItem>
-                              <SelectItem value="Assigned">Assigned</SelectItem>
-                              <SelectItem value="Installed">Installed</SelectItem>
-                              <SelectItem value="Mounted">Mounted</SelectItem>
-                              <SelectItem value="PhotoUploaded">Photo Uploaded</SelectItem>
-                              <SelectItem value="Verified">Verified</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => confirmDeleteAsset(asset)}
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+          <CardContent className="pt-6">
+            <CampaignAssetsTable
+              assets={campaignAssets}
+              selectedAssetIds={selectedAssetIds}
+              companyPrefix={companyPrefix}
+              campaignStartDate={startDate}
+              campaignEndDate={endDate}
+              onToggleSelectAll={toggleSelectAll}
+              onToggleAssetSelection={toggleAssetSelection}
+              onUpdateAsset={updateCampaignAsset}
+              onAssetDurationChange={handleAssetDurationChange}
+              onUpdatePrintingRate={updateAssetPrintingRate}
+              onUpdateMountingRate={updateAssetMountingRate}
+              onDeleteAsset={confirmDeleteAsset}
+              onAddAssets={() => setShowAddAssetsDialog(true)}
+              onBulkPrinting={() => setShowBulkPrintingDialog(true)}
+              onBulkMounting={() => setShowBulkMountingDialog(true)}
+            />
             
             {/* Totals Row */}
             {campaignAssets.length > 0 && (

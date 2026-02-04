@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2, Sparkles, Loader2, Settings2, History, ArrowUpDown, ArrowUp, ArrowDown, AlertCircle, CalendarDays, Printer, Hammer, ChevronDown } from "lucide-react";
+import { Trash2, Sparkles, Loader2, Settings2, History, ArrowUpDown, ArrowUp, ArrowDown, AlertCircle, CalendarDays, Printer, Hammer, ChevronDown, DollarSign, Calculator } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -77,6 +77,8 @@ import { BulkPrintingDialog } from "./BulkPrintingDialog";
 import { BulkMountingDialog } from "./BulkMountingDialog";
 import { BulkAssetDatesDialog } from "./BulkAssetDatesDialog";
 import { BulkAssetDaysDialog } from "./BulkAssetDaysDialog";
+import { BulkNegotiatedRateDialog } from "./BulkNegotiatedRateDialog";
+import { BulkBillingModeDialog } from "./BulkBillingModeDialog";
 
 type SortDirection = 'asc' | 'desc' | null;
 type SortableColumn = 'asset_id' | 'location' | 'area';
@@ -189,6 +191,8 @@ export function SelectedAssetsTable({
   const [showBulkMountingDialog, setShowBulkMountingDialog] = useState(false);
   const [showBulkDatesDialog, setShowBulkDatesDialog] = useState(false);
   const [showBulkDaysDialog, setShowBulkDaysDialog] = useState(false);
+  const [showBulkNegotiatedRateDialog, setShowBulkNegotiatedRateDialog] = useState(false);
+  const [showBulkBillingModeDialog, setShowBulkBillingModeDialog] = useState(false);
   
   const { visibleKeys, setVisibleKeys } = useColumnPrefs(
     'plan-assets',
@@ -432,6 +436,16 @@ export function SelectedAssetsTable({
                           Apply Plan Dates (Quick)
                         </DropdownMenuItem>
                       )}
+                      {/* Bulk Negotiated Rate */}
+                      <DropdownMenuItem onClick={() => setShowBulkNegotiatedRateDialog(true)}>
+                        <DollarSign className="h-4 w-4 mr-2" />
+                        Bulk Negotiated Rate
+                      </DropdownMenuItem>
+                      {/* Bulk Billing Mode */}
+                      <DropdownMenuItem onClick={() => setShowBulkBillingModeDialog(true)}>
+                        <Calculator className="h-4 w-4 mr-2" />
+                        Bulk Billing Mode
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setShowBulkPrintingDialog(true)}>
                         <Printer className="h-4 w-4 mr-2" />
                         Bulk Printing
@@ -1202,6 +1216,30 @@ export function SelectedAssetsTable({
         selectedAssetIds={selectedAssetIds}
         assetPricing={assetPricing}
         planStartDate={planStartDate}
+        onBulkUpdate={handleBulkUpdate}
+      />
+
+      {/* Bulk Negotiated Rate Dialog */}
+      <BulkNegotiatedRateDialog
+        open={showBulkNegotiatedRateDialog}
+        onOpenChange={setShowBulkNegotiatedRateDialog}
+        assets={assets}
+        selectedAssetIds={selectedAssetIds}
+        assetPricing={assetPricing}
+        planStartDate={planStartDate}
+        planEndDate={planEndDate}
+        onBulkUpdate={handleBulkUpdate}
+      />
+
+      {/* Bulk Billing Mode Dialog */}
+      <BulkBillingModeDialog
+        open={showBulkBillingModeDialog}
+        onOpenChange={setShowBulkBillingModeDialog}
+        assets={assets}
+        selectedAssetIds={selectedAssetIds}
+        assetPricing={assetPricing}
+        planStartDate={planStartDate}
+        planEndDate={planEndDate}
         onBulkUpdate={handleBulkUpdate}
       />
     </div>

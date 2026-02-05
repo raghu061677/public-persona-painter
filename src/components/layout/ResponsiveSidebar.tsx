@@ -256,7 +256,7 @@ export function ResponsiveSidebar() {
 
       {/* Main Content */}
       <SidebarContent>
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 ios-scroll">
           {/* Platform Administration */}
           {isPlatformAdmin && company?.type === 'platform_admin' && (
             <>

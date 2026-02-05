@@ -126,7 +126,7 @@ export default function CampaignDetail() {
       const enrichedAssets = assets.map(a => ({
         ...a,
         total_sqft: mediaAssetsMap[a.asset_id]?.total_sqft || 0,
-        media_asset_code: mediaAssetsMap[a.asset_id]?.media_asset_code || a.asset_id
+        media_asset_code: mediaAssetsMap[a.asset_id]?.media_asset_code || null
       }));
       
       setCampaignAssets(enrichedAssets);

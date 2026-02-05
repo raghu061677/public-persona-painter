@@ -15,6 +15,7 @@ import PptxGenJS from "pptxgenjs";
 import JSZip from "jszip";
 import { fetchImageAsDataUri } from "@/lib/exports/imageData";
 import { getCampaignAssetProofPhotos } from "@/lib/exports/proofPhotos";
+import { getAssetDisplayCode } from "@/lib/assets/getAssetDisplayCode";
 
 interface ExportProofDialogProps {
   campaignId: string;
@@ -118,7 +119,7 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
       const assetIds = campaignAssets.map((a) => a.asset_id).filter(Boolean);
       const { data: masterAssets, error: masterError } = await supabase
         .from("media_assets")
-        .select("id, area, city, location, direction, media_type, dimensions, total_sqft, illumination_type")
+        .select("id, media_asset_code, area, city, location, direction, media_type, dimensions, total_sqft, illumination_type")
         .in("id", assetIds);
 
       if (masterError) throw masterError;
@@ -132,6 +133,7 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
         const master = masterAssetMap.get(ca.asset_id) || {};
         return {
           ...ca,
+          media_asset_code: master.media_asset_code || null,
           area: ca.area || master.area || "Unknown",
           city: ca.city || master.city || "Unknown",
           location: ca.location || master.location || "Unknown",
@@ -257,7 +259,11 @@ export function ExportProofDialog({ campaignId, campaignName, assets }: ExportPr
       // ========== ASSET SLIDES: Each asset with 2 photos per slide ==========
       for (const asset of enrichedAssets) {
         const assetPhotos = photosByAsset[asset.id] || [];
-        const assetCode = asset.asset_id || asset.id;
+        // Use media_asset_code from master table, fallback to getAssetDisplayCode utility
+        const assetCode = getAssetDisplayCode(
+          { media_asset_code: asset.media_asset_code, asset_code: null },
+          asset.asset_id
+        );
         
         // Header Line 1: Asset: HYD-BQS-0059 – City, Area, Location
         const headerLine1 = `Asset: ${assetCode} – ${asset.city}, ${asset.area}, ${asset.location}`;

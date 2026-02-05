@@ -60,8 +60,13 @@
        );
      }
  
-     // Generate invoice ID
-     const { data: invoiceId, error: idError } = await supabaseClient.rpc('generate_invoice_id');
+      // Calculate GST rate to determine invoice series prefix
+      const gstPercent = Number(campaign.gst_percent) || 0;
+      
+      // Generate invoice ID with GST-based prefix (INV for taxable, INV-Z for 0% GST)
+      const { data: invoiceId, error: idError } = await supabaseClient.rpc('generate_invoice_id', {
+        p_gst_rate: gstPercent
+      });
      
      if (idError || !invoiceId) {
        return new Response(
@@ -158,9 +163,8 @@
        };
      });
  
-     // Calculate totals
-     const subTotal = Math.round(items.reduce((sum: number, item: any) => sum + item.total, 0) * 100) / 100;
-     const gstPercent = Number(campaign.gst_percent) || 0;
+      // Calculate totals (gstPercent already calculated above)
+      const subTotal = Math.round(items.reduce((sum: number, item: any) => sum + item.total, 0) * 100) / 100;
      const gstAmount = Math.round(subTotal * (gstPercent / 100) * 100) / 100;
      const totalAmount = Math.round((subTotal + gstAmount) * 100) / 100;
  
@@ -183,6 +187,7 @@
          balance_due: totalAmount,
          status: 'Sent',
          created_by: campaign.created_by,
+          invoice_series_prefix: gstPercent === 0 ? 'INV-Z' : 'INV',
          notes: `Auto-generated from campaign: ${campaign.campaign_name}`
        })
        .select()

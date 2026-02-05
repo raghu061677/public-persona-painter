@@ -35,15 +35,31 @@ export async function generateEstimationId(supabase: any): Promise<string> {
 
 /**
  * Generate invoice ID
+ * @param supabase - Supabase client
+ * @param gstRate - GST rate (0 for zero-rated invoices, uses INV-Z prefix)
+ * @returns Invoice ID with appropriate prefix (INV or INV-Z)
  */
-export async function generateInvoiceId(supabase: any): Promise<string> {
-  const { data, error } = await supabase.rpc('generate_invoice_id');
+export async function generateInvoiceId(supabase: any, gstRate?: number): Promise<string> {
+  const { data, error } = await supabase.rpc('generate_invoice_id', { 
+    p_gst_rate: gstRate ?? 18 
+  });
   if (error) {
     console.error('Error generating invoice ID:', error);
     const fy = getFinancialYear();
-    return `INV-${fy}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+    // Use appropriate prefix based on GST rate
+    const prefix = gstRate === 0 ? 'INV-Z' : 'INV';
+    const period = new Date().toISOString().slice(0, 7).replace('-', '');
+    return `${prefix}-${period}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
   }
   return data;
+}
+
+/**
+ * Determine invoice prefix based on GST rate
+ * INV for taxable (GST > 0), INV-Z for zero-rated (GST = 0)
+ */
+export function getInvoicePrefix(gstRate: number): 'INV' | 'INV-Z' {
+  return gstRate === 0 ? 'INV-Z' : 'INV';
 }
 
 /**

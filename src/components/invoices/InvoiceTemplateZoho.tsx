@@ -93,7 +93,15 @@
    const grandTotal = parseFloat(invoice.total_amount) || subtotal;
    const balanceDue = parseFloat(invoice.balance_due) || grandTotal;
    const clientName = client?.name || 'Client';
-   const clientAddress = [client?.billing_address_line1 || '', [client?.billing_city, client?.billing_state].filter(Boolean).join(', ')].filter(Boolean).join('\n');
+   // Build complete billing address with all parts
+   const billingAddressParts = [
+     client?.billing_address_line1 || client?.address || '',
+     client?.billing_address_line2 || '',
+     [client?.billing_city || client?.city || '', client?.billing_state || client?.state || ''].filter(Boolean).join(', '),
+     client?.billing_pincode || client?.pincode || '',
+     'India'
+   ].filter(Boolean);
+   const clientAddress = billingAddressParts.join('\n');
    const clientGstin = client?.gstin || '';
  
    return (
@@ -172,8 +180,11 @@
                    </td>
                    <td className="p-2 text-center align-top text-[10px]"><div>Dim: {item.dimensions || '-'}</div><div>Sqft: {item.total_sqft || '-'}</div></td>
                    <td className="p-2 text-center align-top text-[10px]">{item.start_date && <div>{formatDate(item.start_date)}</div>}{item.end_date && <div>to {formatDate(item.end_date)}</div>}<div className="font-medium">{billableDays} Days</div></td>
-                   <td className="p-2 text-right align-top text-[10px]"><div>Display: {formatINR(rentAmount)}</div>{printingCharges > 0 && <div>P: {formatINR(printingCharges)}</div>}{mountingCharges > 0 && <div>M: {formatINR(mountingCharges)}</div>}</td>
-++ <td className="p-2 text-right align-top text-[10px]"><div>Display: {formatINR(rentAmount)}</div>{printingCharges > 0 && <div>Printing : {formatINR(printingCharges)}</div>}{mountingCharges > 0 && <div>Installation : {formatINR(mountingCharges)}</div>}</td>
+                   <td className="p-2 text-right align-top text-[10px]">
+                     <div>Display: {formatINR(rentAmount)}</div>
+                     {printingCharges > 0 && <div>Printing: {formatINR(printingCharges)}</div>}
+                     {mountingCharges > 0 && <div>Installation: {formatINR(mountingCharges)}</div>}
+                   </td>
                    <td className="p-2 text-right align-top font-medium">{formatINR(lineTotal)}</td>
                  </tr>
                );

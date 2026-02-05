@@ -382,12 +382,12 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     const itemTotal = item.amount || item.final_price || item.total || (baseRate + printingCost + mountingCost);
     
     // Format unit price with breakdown if printing/mounting exist
-    let unitPriceDisplay = formatCurrency(baseRate);
+    let unitPriceDisplay = `Display: ${formatCurrency(baseRate)}`;
     if (printingCost > 0 || mountingCost > 0) {
       const extras = [];
-      if (printingCost > 0) extras.push(`P: ${formatCurrency(printingCost)}`);
-      if (mountingCost > 0) extras.push(`M: ${formatCurrency(mountingCost)}`);
-      unitPriceDisplay = `${formatCurrency(baseRate)}\n${extras.join('\n')}`;
+      if (printingCost > 0) extras.push(`Printing: ${formatCurrency(printingCost)}`);
+      if (mountingCost > 0) extras.push(`Installation: ${formatCurrency(mountingCost)}`);
+      unitPriceDisplay = `Display: ${formatCurrency(baseRate)}\n${extras.join('\n')}`;
     }
 
     return [

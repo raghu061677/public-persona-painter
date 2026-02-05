@@ -2824,6 +2824,7 @@ export type Database = {
           current_value: number
           id: string
           period: string
+          prefix: string | null
           updated_at: string | null
         }
         Insert: {
@@ -2833,6 +2834,7 @@ export type Database = {
           current_value?: number
           id?: string
           period: string
+          prefix?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -2842,6 +2844,7 @@ export type Database = {
           current_value?: number
           id?: string
           period?: string
+          prefix?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -4196,6 +4199,7 @@ export type Database = {
           invoice_no: string | null
           invoice_period_end: string | null
           invoice_period_start: string | null
+          invoice_series_prefix: string | null
           invoice_type: string
           is_monthly_split: boolean | null
           items: Json | null
@@ -4242,6 +4246,7 @@ export type Database = {
           invoice_no?: string | null
           invoice_period_end?: string | null
           invoice_period_start?: string | null
+          invoice_series_prefix?: string | null
           invoice_type?: string
           is_monthly_split?: boolean | null
           items?: Json | null
@@ -4288,6 +4293,7 @@ export type Database = {
           invoice_no?: string | null
           invoice_period_end?: string | null
           invoice_period_start?: string | null
+          invoice_series_prefix?: string | null
           invoice_type?: string
           is_monthly_split?: boolean | null
           items?: Json | null
@@ -8560,11 +8566,22 @@ export type Database = {
       generate_estimation_id: { Args: never; Returns: string }
       generate_expense_id: { Args: never; Returns: string }
       generate_expense_no: { Args: { p_company_id?: string }; Returns: string }
-      generate_invoice_id: { Args: never; Returns: string }
-      generate_invoice_number: {
-        Args: { p_company_id: string; p_invoice_date?: string }
-        Returns: string
-      }
+      generate_invoice_id:
+        | { Args: never; Returns: string }
+        | { Args: { p_gst_rate?: number }; Returns: string }
+      generate_invoice_number:
+        | {
+            Args: { p_company_id: string; p_invoice_date?: string }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_company_id: string
+              p_gst_rate?: number
+              p_invoice_date?: string
+            }
+            Returns: string
+          }
       generate_invoice_number_zoho: {
         Args: { p_company_id: string; p_invoice_date: string }
         Returns: string

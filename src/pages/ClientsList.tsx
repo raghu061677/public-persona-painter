@@ -131,6 +131,8 @@ export default function ClientsList() {
   // Filtering states (kept for backward compatibility)
   const [filterState, setFilterState] = useState<string>("");
   const [filterCity, setFilterCity] = useState<string>("");
+  const [filterGst, setFilterGst] = useState<string>("");
+  const [filterClientType, setFilterClientType] = useState<string>("");
   const [sortField, setSortField] = useState<string>("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
@@ -404,6 +406,7 @@ export default function ClientsList() {
   // Get unique states and cities for filters
   const uniqueStates = Array.from(new Set(clients.map(c => c.state).filter(Boolean))).sort();
   const uniqueCities = Array.from(new Set(clients.map(c => c.city).filter(Boolean))).sort();
+  const uniqueClientTypes = Array.from(new Set(clients.map(c => c.client_type).filter(Boolean))).sort();
 
   // Filter and sort clients
   const filteredAndSortedClients = clients
@@ -415,7 +418,9 @@ export default function ClientsList() {
           client.name?.toLowerCase().includes(term) ||
           client.email?.toLowerCase().includes(term) ||
           client.company?.toLowerCase().includes(term) ||
-          client.id?.toLowerCase().includes(term);
+          client.id?.toLowerCase().includes(term) ||
+          client.gst_number?.toLowerCase().includes(term) ||
+          client.phone?.toLowerCase().includes(term);
         if (!matchesSearch) return false;
       }
       
@@ -424,6 +429,13 @@ export default function ClientsList() {
       
       // City filter
       if (filterCity && client.city !== filterCity) return false;
+      
+      // GST filter (has GST / no GST)
+      if (filterGst === "has_gst" && !client.gst_number) return false;
+      if (filterGst === "no_gst" && client.gst_number) return false;
+      
+      // Client type filter
+      if (filterClientType && client.client_type !== filterClientType) return false;
       
       return true;
     })
@@ -449,7 +461,7 @@ export default function ClientsList() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterState, filterCity]);
+  }, [searchTerm, filterState, filterCity, filterGst, filterClientType]);
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -667,7 +679,7 @@ export default function ClientsList() {
               key: "search",
               label: "Search",
               type: "text",
-              placeholder: "Search clients by name, email, company, ID...",
+              placeholder: "Search by name, email, company, ID, GST, phone...",
             },
             {
               key: "state",
@@ -684,21 +696,42 @@ export default function ClientsList() {
               type: "select",
               options: uniqueCities.map(city => ({ value: city, label: city })),
             },
+            {
+              key: "gst",
+              label: "GST Status",
+              type: "select",
+              options: [
+                { value: "has_gst", label: "Has GST" },
+                { value: "no_gst", label: "No GST" },
+              ],
+            },
+            {
+              key: "clientType",
+              label: "Client Type",
+              type: "select",
+              options: uniqueClientTypes.map(type => ({ value: type, label: type })),
+            },
           ]}
           filterValues={{
             search: searchTerm,
             state: filterState,
             city: filterCity,
+            gst: filterGst,
+            clientType: filterClientType,
           }}
           onFilterChange={(key, value) => {
             if (key === "search") setSearchTerm(value);
             else if (key === "state") setFilterState(value);
             else if (key === "city") setFilterCity(value);
+            else if (key === "gst") setFilterGst(value);
+            else if (key === "clientType") setFilterClientType(value);
           }}
           onClearFilters={() => {
             setSearchTerm("");
             setFilterState("");
             setFilterCity("");
+            setFilterGst("");
+            setFilterClientType("");
           }}
           allColumns={allColumns}
           visibleColumns={visibleColumns}
@@ -718,11 +751,15 @@ export default function ClientsList() {
             search: searchTerm,
             state: filterState,
             city: filterCity,
+            gst: filterGst,
+            clientType: filterClientType,
           }}
           onApplyPreset={(filters) => {
             setSearchTerm(filters.search || "");
             setFilterState(filters.state || "");
             setFilterCity(filters.city || "");
+            setFilterGst(filters.gst || "");
+            setFilterClientType(filters.clientType || "");
           }}
         />
 
@@ -730,7 +767,7 @@ export default function ClientsList() {
           <CardContent className="p-4 flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
               Showing {paginatedClients.length} of {filteredAndSortedClients.length} clients
-              {(searchTerm || filterState || filterCity) && ` (filtered from ${clients.length} total)`}
+              {(searchTerm || filterState || filterCity || filterGst || filterClientType) && ` (filtered from ${clients.length} total)`}
             </div>
             <Button 
               variant="outline" 
@@ -792,10 +829,26 @@ export default function ClientsList() {
                         </TableHead>
                       )}
                       {visibleColumns.includes("email") && (
-                        <TableHead className={`px-4 py-3 text-left font-semibold ${getCellClassName()}`}>Email</TableHead>
+                        <TableHead 
+                          className={`cursor-pointer hover:bg-muted/50 px-4 py-3 text-left font-semibold ${getCellClassName()}`}
+                          onClick={() => handleSort('email')}
+                        >
+                          <div className="flex items-center gap-2">
+                            Email
+                            {sortField === 'email' && <ArrowUpDown className="h-4 w-4" />}
+                          </div>
+                        </TableHead>
                       )}
                       {visibleColumns.includes("phone") && (
-                        <TableHead className={`px-4 py-3 text-left font-semibold ${getCellClassName()}`}>Phone</TableHead>
+                        <TableHead 
+                          className={`cursor-pointer hover:bg-muted/50 px-4 py-3 text-left font-semibold ${getCellClassName()}`}
+                          onClick={() => handleSort('phone')}
+                        >
+                          <div className="flex items-center gap-2">
+                            Phone
+                            {sortField === 'phone' && <ArrowUpDown className="h-4 w-4" />}
+                          </div>
+                        </TableHead>
                       )}
                       {visibleColumns.includes("city") && (
                         <TableHead 
@@ -809,10 +862,26 @@ export default function ClientsList() {
                         </TableHead>
                       )}
                       {visibleColumns.includes("state") && (
-                        <TableHead className={`px-4 py-3 text-left font-semibold ${getCellClassName()}`}>State</TableHead>
+                        <TableHead 
+                          className={`cursor-pointer hover:bg-muted/50 px-4 py-3 text-left font-semibold ${getCellClassName()}`}
+                          onClick={() => handleSort('state')}
+                        >
+                          <div className="flex items-center gap-2">
+                            State
+                            {sortField === 'state' && <ArrowUpDown className="h-4 w-4" />}
+                          </div>
+                        </TableHead>
                       )}
                       {visibleColumns.includes("gst") && (
-                        <TableHead className={`px-4 py-3 text-left font-semibold ${getCellClassName()}`}>GST</TableHead>
+                        <TableHead 
+                          className={`cursor-pointer hover:bg-muted/50 px-4 py-3 text-left font-semibold ${getCellClassName()}`}
+                          onClick={() => handleSort('gst_number')}
+                        >
+                          <div className="flex items-center gap-2">
+                            GST
+                            {sortField === 'gst_number' && <ArrowUpDown className="h-4 w-4" />}
+                          </div>
+                        </TableHead>
                       )}
                       {visibleColumns.includes("actions") && isAdmin && (
                         <TableHead className={`text-right px-4 py-3 font-semibold ${getCellClassName()}`}>Actions</TableHead>

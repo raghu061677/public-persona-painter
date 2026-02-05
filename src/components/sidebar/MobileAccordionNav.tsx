@@ -1,4 +1,5 @@
  import { useState, useEffect, useCallback } from "react";
+import { useRef } from "react";
  import { Link, useLocation } from "react-router-dom";
  import { ChevronDown } from "lucide-react";
  import { cn } from "@/lib/utils";
@@ -30,6 +31,10 @@ import { useSidebar } from "@/components/ui/sidebar";
  
    const isCompanyAdmin = companyUser?.role === "admin" || isAdmin || isPlatformAdmin;
  
+  // Track if this is the initial mount to prevent immediate drawer close
+  const isInitialMount = useRef(true);
+  const previousPathname = useRef(location.pathname);
+
    // Initialize accordion state from localStorage or active route
    const [openSections, setOpenSections] = useState<string[]>(() => {
      try {
@@ -39,13 +44,26 @@ import { useSidebar } from "@/components/ui/sidebar";
      return findActiveSections(location.pathname);
    });
  
-  // Close drawer on ANY route change (back/forward/programmatic)
+  // Close drawer on route change (but not on initial mount)
    useEffect(() => {
-    // Close the mobile drawer whenever the route changes
-    setOpenMobile(false);
-   }, [location.pathname]);
+    // Skip the initial mount - don't close the drawer on first render
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      previousPathname.current = location.pathname;
+      return;
+    }
+    
+    // Only close if the pathname actually changed (not just a re-render)
+    if (previousPathname.current !== location.pathname) {
+      previousPathname.current = location.pathname;
+      // Small delay to let the navigation complete before closing
+      requestAnimationFrame(() => {
+        setOpenMobile(false);
+      });
+    }
+  }, [location.pathname, setOpenMobile]);
  
-  // Update accordion state when route changes - active route wins (no accumulation)
+  // Update accordion state when route changes - active route wins
   useEffect(() => {
     const activeSections = findActiveSections(location.pathname);
     if (activeSections.length > 0) {

@@ -70,29 +70,14 @@ export function CampaignBillingTab({
   const [showAssetLevelDialog, setShowAssetLevelDialog] = useState(false);
   const [billingMode, setBillingMode] = useState<BillingMode>('monthly');
    
-   // Calculate derived discount the same way as Financial Summary in CampaignDetail.tsx
-   // This ensures both summaries show the same discount
-   const BILLING_CYCLE_DAYS = 30;
-   const durationDays = Math.ceil(
-     (new Date(campaign.end_date).getTime() - new Date(campaign.start_date).getTime()) / (1000 * 60 * 60 * 24)
-   ) + 1;
+   // Only use actual manual_discount_amount from database - no auto-derivation
+   const storedDiscount = Number(campaign.manual_discount_amount) || 0;
+   const [localDiscount, setLocalDiscount] = useState(storedDiscount);
    
-   const calculatedDisplayCost = campaignAssets.reduce((sum, a) => {
-     const monthlyRate = Number(a.negotiated_rate) || Number(a.card_rate) || 0;
-     return sum + (monthlyRate / BILLING_CYCLE_DAYS) * durationDays;
-   }, 0);
-   const calculatedPrinting = campaignAssets.reduce((sum, a) => sum + (Number(a.printing_charges) || 0), 0);
-   const calculatedMounting = campaignAssets.reduce((sum, a) => sum + (Number(a.mounting_charges) || 0), 0);
-   const calculatedSubtotal = calculatedDisplayCost + calculatedPrinting + calculatedMounting;
-   
-   // Derive discount from stored total_amount (same as CampaignDetail Financial Summary)
-   const derivedDiscount = calculatedSubtotal > (campaign.total_amount || 0) 
-     ? Math.round((calculatedSubtotal - (campaign.total_amount || 0)) * 100) / 100 
-     : 0;
-   
-   // Use manual_discount_amount if set, otherwise use derived discount
-   const effectiveDiscount = campaign.manual_discount_amount || derivedDiscount;
-   const [localDiscount, setLocalDiscount] = useState(effectiveDiscount);
+   // Sync local discount with campaign changes
+   useEffect(() => {
+     setLocalDiscount(storedDiscount);
+   }, [storedDiscount]);
 
   // Use single source of truth calculator
   const totals = computeCampaignTotals({

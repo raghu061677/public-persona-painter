@@ -20,6 +20,11 @@ import { SidebarFooter } from "@/components/sidebar/SidebarFooter";
 import { CompanySwitcher } from "@/components/sidebar/CompanySwitcher";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { DesktopNavFromConfig } from "@/components/sidebar/DesktopNavFromConfig";
+
+// Feature flag: Toggle between config-driven and hardcoded desktop menu
+// Set to false to revert to original hardcoded menu as fallback
+const USE_NAV_CONFIG_DESKTOP = true;
 
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const { open, toggle } = useSidebarStore();
@@ -86,7 +91,20 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         {/* Main Content */}
         <ScrollArea className="flex-1">
           <div className="pb-4">
-            {/* PLATFORM ADMINISTRATION - Only show when active company is platform_admin */}
+            {/* CONFIG-DRIVEN DESKTOP NAV for tenant companies */}
+            {USE_NAV_CONFIG_DESKTOP && company && company.type !== 'platform_admin' && (
+              <DesktopNavFromConfig
+                collapsed={collapsed}
+                badges={{
+                  pendingApprovals: 0, // Wire to actual data later
+                  proofUploads: 0,
+                  outstanding: 0,
+                }}
+                onLogout={handleLogout}
+              />
+            )}
+
+            {/* PLATFORM ADMINISTRATION - Only show when active company is platform_admin (unchanged) */}
             {isPlatformAdmin && company?.type === 'platform_admin' && (
               <>
                 <SidebarSection label="Platform Administration" collapsed={collapsed}>
@@ -188,8 +206,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               </>
             )}
 
-            {/* COMPANY WORKSPACE - Tenant Companies */}
-            {company && company.type !== 'platform_admin' && (
+            {/* LEGACY HARDCODED COMPANY WORKSPACE - Fallback when feature flag is off */}
+            {!USE_NAV_CONFIG_DESKTOP && company && company.type !== 'platform_admin' && (
               <>
                 <SidebarSection label="Company Workspace" collapsed={collapsed}>
                   <SidebarItem
@@ -353,8 +371,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               </>
             )}
 
-            {/* TOOLS & UTILITIES */}
-            {company && company.type !== 'platform_admin' && (
+            {/* LEGACY TOOLS & UTILITIES - Fallback when feature flag is off */}
+            {!USE_NAV_CONFIG_DESKTOP && company && company.type !== 'platform_admin' && (
               <>
                 <SidebarSection label="Tools" collapsed={collapsed}>
                   <SidebarItem
@@ -392,8 +410,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               </>
             )}
 
-            {/* COMPANY SETTINGS */}
-            {company && company.type !== 'platform_admin' && (isCompanyAdmin || isPlatformAdmin) && (
+            {/* LEGACY COMPANY SETTINGS - Fallback when feature flag is off */}
+            {!USE_NAV_CONFIG_DESKTOP && company && company.type !== 'platform_admin' && (isCompanyAdmin || isPlatformAdmin) && (
               <>
                 <SidebarSection label="Company Settings" collapsed={collapsed}>
                   {/* Organization Settings */}
@@ -539,7 +557,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               </>
             )}
 
-            {/* USER PERSONAL MENU */}
+            {/* LEGACY USER PERSONAL MENU - Only show when feature flag is off OR platform admin */}
+            {(!USE_NAV_CONFIG_DESKTOP || (company && company.type === 'platform_admin')) && (
             <SidebarSection label="My Account" collapsed={collapsed}>
               <SidebarItem
                 icon={User}
@@ -572,6 +591,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                 {!collapsed && <span className="truncate">Logout</span>}
               </button>
             </SidebarSection>
+            )}
           </div>
         </ScrollArea>
 

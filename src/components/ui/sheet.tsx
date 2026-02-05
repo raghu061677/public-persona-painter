@@ -20,7 +20,7 @@ const SheetOverlay = React.forwardRef<
   <SheetPrimitive.Overlay
     className={cn(
       "fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-      "touch-manipulation cursor-pointer",
+      "touch-manipulation cursor-pointer pointer-events-auto",
       className,
     )}
     {...props}
@@ -56,23 +56,33 @@ interface SheetContentProps
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
   ({ side = "right", className, children, showCloseButton = true, ...props }, ref) => {
-    // Lock body scroll when sheet is open
+    const scrollYRef = React.useRef(0);
+
+    // Lock body scroll when sheet is open - iOS-safe pattern
     React.useEffect(() => {
-      const scrollY = window.scrollY;
+      // Store current scroll position
+      scrollYRef.current = window.scrollY;
       const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
       
+      // Apply scroll lock using position:fixed pattern for iOS
       document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
+      document.body.style.top = `-${scrollYRef.current}px`;
       document.body.style.left = '0';
       document.body.style.right = '0';
       document.body.style.overflow = 'hidden';
       document.body.style.width = '100%';
+      
+      // Prevent layout shift from scrollbar disappearing
       if (scrollbarWidth > 0) {
         document.body.style.paddingRight = `${scrollbarWidth}px`;
       }
+      
+      // iOS Safari specific
       document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.height = '100%';
       
       return () => {
+        // Restore all styles
         document.body.style.position = '';
         document.body.style.top = '';
         document.body.style.left = '';
@@ -81,7 +91,10 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
         document.body.style.width = '';
         document.body.style.paddingRight = '';
         document.documentElement.style.overflow = '';
-        window.scrollTo(0, scrollY);
+        document.documentElement.style.height = '';
+        
+        // Restore scroll position
+        window.scrollTo(0, scrollYRef.current);
       };
     }, []);
 
@@ -90,13 +103,13 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
         <SheetOverlay />
         <SheetPrimitive.Content 
           ref={ref} 
-          className={cn(sheetVariants({ side }), className)} 
+          className={cn(sheetVariants({ side }), "pointer-events-auto", className)} 
           {...props}
         >
           {children}
           {showCloseButton && (
             <SheetPrimitive.Close 
-              className="absolute right-4 top-4 z-10 flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-muted/80 backdrop-blur-sm opacity-90 ring-offset-background transition-all hover:opacity-100 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none touch-manipulation active:scale-95"
+              className="absolute right-4 top-4 z-10 flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-muted/80 backdrop-blur-sm opacity-90 ring-offset-background transition-all hover:opacity-100 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none touch-manipulation active:scale-95 pointer-events-auto"
               aria-label="Close"
             >
               <X className="h-5 w-5" />

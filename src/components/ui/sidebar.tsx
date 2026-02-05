@@ -167,12 +167,13 @@ const Sidebar = React.forwardRef<
         >
           {/* Custom close button with larger touch target */}
           <button
-            onClick={() => setOpenMobile(false)}
-            onTouchEnd={(e) => {
+            type="button"
+            onPointerUp={(e) => {
               e.preventDefault();
+              e.stopPropagation();
               setOpenMobile(false);
             }}
-            className="absolute right-3 top-3 z-20 flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-muted/80 backdrop-blur-sm transition-all hover:bg-muted active:scale-95 touch-manipulation select-none"
+            className="absolute right-3 top-3 z-20 flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-muted/80 backdrop-blur-sm transition-all hover:bg-muted active:scale-95 touch-manipulation select-none pointer-events-auto"
             aria-label="Close menu"
           >
             <X className="h-5 w-5" aria-hidden="true" />
@@ -235,23 +236,16 @@ const SidebarTrigger = React.forwardRef<React.ElementRef<typeof Button>, React.C
   ({ className, onClick, ...props }, ref) => {
     const { toggleSidebar } = useSidebar();
 
-    const handleInteraction = React.useCallback(
-      (event: React.MouseEvent<HTMLButtonElement> | React.TouchEvent<HTMLButtonElement>) => {
+    // Single pointer event handler - works for both touch and mouse
+    const handlePointerUp = React.useCallback(
+      (event: React.PointerEvent<HTMLButtonElement>) => {
         event.preventDefault();
         event.stopPropagation();
-        
-        // For mouse events, call the onClick prop
-        if ('button' in event) {
-          onClick?.(event as React.MouseEvent<HTMLButtonElement>);
-        }
-        
+        onClick?.(event as unknown as React.MouseEvent<HTMLButtonElement>);
         toggleSidebar();
       },
       [onClick, toggleSidebar]
     );
-
-    // Track if touch event fired to prevent duplicate handling
-    const touchHandled = React.useRef(false);
 
     return (
       <Button
@@ -259,26 +253,15 @@ const SidebarTrigger = React.forwardRef<React.ElementRef<typeof Button>, React.C
         data-sidebar="trigger"
         variant="ghost"
         size="icon"
+        type="button"
         className={cn(
-          "h-11 w-11 min-h-[44px] min-w-[44px] touch-manipulation z-[101]",
+          "h-11 w-11 min-h-[44px] min-w-[44px] z-[101]",
+          "touch-manipulation select-none pointer-events-auto",
           "active:scale-95 transition-transform",
           "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          "select-none",
           className
         )}
-        onClick={(e) => {
-          // Skip if touch already handled this interaction
-          if (touchHandled.current) {
-            touchHandled.current = false;
-            return;
-          }
-          handleInteraction(e);
-        }}
-        onTouchEnd={(e) => {
-          e.preventDefault();
-          touchHandled.current = true;
-          handleInteraction(e);
-        }}
+        onPointerUp={handlePointerUp}
         aria-label="Toggle navigation menu"
         {...props}
       >

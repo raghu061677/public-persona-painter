@@ -32,17 +32,17 @@ export function ModernAppLayout({ children }: { children: React.ReactNode }) {
       <OnboardingGate>
         <BreadcrumbProvider>
           <SidebarProvider defaultOpen={true}>
-            <div className="flex min-h-[100dvh] w-full bg-background transition-colors duration-300 overflow-x-hidden">
+            <div className="flex min-h-[100dvh] w-full bg-background transition-colors duration-300 overflow-x-hidden pointer-events-auto">
               {/* Responsive Sidebar */}
               <ResponsiveSidebar />
 
               {/* Main Content Area */}
-              <div className="flex flex-col flex-1 min-w-0 overflow-x-hidden">
+              <div className="flex flex-col flex-1 min-w-0 overflow-x-hidden pointer-events-auto">
                 {/* Top Navigation */}
                 <ModernTopNav />
 
                 {/* Page Content */}
-                <main className="flex-1 p-2 sm:p-4 md:p-6 lg:p-8 overflow-x-hidden overflow-y-auto pb-safe">
+                <main className="flex-1 p-2 sm:p-4 md:p-6 lg:p-8 overflow-x-hidden overflow-y-auto pb-safe pointer-events-auto">
                   <div className="w-full max-w-[1800px] mx-auto overflow-x-hidden">
                     <BreadcrumbNav />
                     <div className="mt-2 sm:mt-4">
@@ -59,7 +59,7 @@ export function ModernAppLayout({ children }: { children: React.ReactNode }) {
                 trigger={
                   <Button
                     size="lg"
-                    className="h-14 w-14 min-h-[56px] min-w-[56px] rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 touch-manipulation"
+                    className="h-14 w-14 min-h-[56px] min-w-[56px] rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 touch-manipulation pointer-events-auto"
                     aria-label="Quick create menu"
                   >
                     <Plus className="w-6 h-6" aria-hidden="true" />

@@ -42,7 +42,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className="flex h-[100dvh] w-full bg-background overflow-hidden app-viewport">
       {/* Overlay for mobile */}
       {open && (
         <div
@@ -54,7 +54,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       {/* Sidebar - Fixed on Left */}
       <aside
         className={cn(
-          "fixed lg:sticky top-0 inset-y-0 left-0 z-50 flex flex-col bg-card border-r border-border shadow-sm transition-all duration-300 ease-in-out h-screen",
+          "fixed lg:sticky top-0 inset-y-0 left-0 z-50 flex flex-col bg-card border-r border-border shadow-sm transition-all duration-300 ease-in-out h-[100dvh]",
           collapsed ? "w-16" : "w-[280px]"
         )}
       >
@@ -601,7 +601,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main Content Area - Full page scroll */}
       <div className={cn(
-        "flex-1 min-w-0 transition-all duration-300",
+        "flex-1 min-w-0 min-h-0 overflow-hidden transition-all duration-300",
         collapsed ? "lg:ml-16" : "lg:ml-[280px]"
       )}>
         {children}

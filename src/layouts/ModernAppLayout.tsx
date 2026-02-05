@@ -9,10 +9,13 @@ import CommandPalette from "@/components/CommandPalette";
 import { QuickAddDrawer } from "@/components/ui/quick-add-drawer";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 
 export function ModernAppLayout({ children }: { children: React.ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false);
+  const location = useLocation();
+  const mainContentRef = useRef<HTMLElement>(null);
 
   // Keyboard shortcut for Command Palette
   useEffect(() => {
@@ -27,23 +30,52 @@ export function ModernAppLayout({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
+  // Safety scroll unlock on route change - ensures no stuck scroll state
+  useEffect(() => {
+    // Reset body scroll state on route change (safety net)
+    const resetBodyScroll = () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.overflow = '';
+      document.body.style.width = '';
+      document.body.style.paddingRight = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.height = '';
+    };
+    
+    // Small delay to let any closing animations complete
+    const timer = setTimeout(resetBodyScroll, 100);
+    
+    // Scroll main content to top on route change
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTop = 0;
+    }
+    
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
+
   return (
     <ThemeContextProvider>
       <OnboardingGate>
         <BreadcrumbProvider>
           <SidebarProvider defaultOpen={true}>
-            <div className="flex min-h-[100dvh] w-full bg-background transition-colors duration-300 overflow-x-hidden pointer-events-auto">
+            <div className="flex h-[100dvh] w-full bg-background transition-colors duration-300 overflow-hidden pointer-events-auto app-viewport">
               {/* Responsive Sidebar */}
               <ResponsiveSidebar />
 
               {/* Main Content Area */}
-              <div className="flex flex-col flex-1 min-w-0 overflow-x-hidden pointer-events-auto">
+              <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden pointer-events-auto">
                 {/* Top Navigation */}
                 <ModernTopNav />
 
                 {/* Page Content */}
-                <main className="flex-1 p-2 sm:p-4 md:p-6 lg:p-8 overflow-x-hidden overflow-y-auto pb-safe pointer-events-auto">
-                  <div className="w-full max-w-[1800px] mx-auto overflow-x-hidden">
+                <main 
+                  ref={mainContentRef}
+                  className="flex-1 min-h-0 p-2 sm:p-4 md:p-6 lg:p-8 overflow-y-auto overflow-x-hidden pb-safe pointer-events-auto app-scroll ios-scroll"
+                >
+                  <div className="w-full max-w-[1800px] mx-auto">
                     <BreadcrumbNav />
                     <div className="mt-2 sm:mt-4">
                       {children}

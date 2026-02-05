@@ -18,6 +18,7 @@ const maxWidthClasses = {
 /**
  * A standardized page container that ensures consistent width, padding, and spacing
  * across all pages in the application.
+ * NOTE: This container should NOT add vertical scrolling - let the parent handle it.
  */
 export const PageContainer = React.forwardRef<HTMLDivElement, PageContainerProps>(
   ({ className, maxWidth = "2xl", noPadding = false, children, ...props }, ref) => {

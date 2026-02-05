@@ -3,9 +3,16 @@
  /**
   * Custom hook to lock body scroll when a modal/drawer is open
   * Prevents background scrolling on mobile devices
+  * IMPORTANT: This uses the position:fixed pattern which is iOS Safari compatible
   */
  export function useBodyScrollLock(isLocked: boolean) {
    const scrollPositionRef = useRef(0);
+  const isLockedRef = useRef(false);
+
+  // Store lock state in ref to avoid stale closures
+  useEffect(() => {
+    isLockedRef.current = isLocked;
+  }, [isLocked]);
  
    useEffect(() => {
      if (isLocked) {
@@ -33,37 +40,48 @@
        document.documentElement.style.height = '100%';
      } else {
        // Restore styles
-       document.body.style.position = '';
-       document.body.style.top = '';
-       document.body.style.left = '';
-       document.body.style.right = '';
-       document.body.style.overflow = '';
-       document.body.style.width = '';
-       document.body.style.paddingRight = '';
-       document.documentElement.style.overflow = '';
-       document.documentElement.style.height = '';
-       
-       // Restore scroll position
-       if (scrollPositionRef.current > 0) {
-         window.scrollTo(0, scrollPositionRef.current);
-       }
+        restoreBodyScroll(scrollPositionRef.current);
+        scrollPositionRef.current = 0;
      }
  
      return () => {
-       // Cleanup on unmount
-       document.body.style.position = '';
-       document.body.style.top = '';
-       document.body.style.left = '';
-       document.body.style.right = '';
-       document.body.style.overflow = '';
-       document.body.style.width = '';
-       document.body.style.paddingRight = '';
-       document.documentElement.style.overflow = '';
-       document.documentElement.style.height = '';
+        // Cleanup on unmount - always restore
+        if (isLockedRef.current) {
+          restoreBodyScroll(scrollPositionRef.current);
+        }
      };
    }, [isLocked]);
  }
  
+/**
+ * Restores body scroll state to normal
+ * Used by multiple hooks for consistency
+ */
+function restoreBodyScroll(scrollY: number = 0) {
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.overflow = '';
+  document.body.style.width = '';
+  document.body.style.paddingRight = '';
+  document.documentElement.style.overflow = '';
+  document.documentElement.style.height = '';
+  
+  // Restore scroll position
+  if (scrollY > 0) {
+    window.scrollTo(0, scrollY);
+  }
+}
+
+/**
+ * Emergency scroll unlock - call this to force-reset body scroll state
+ * Useful for route change cleanup
+ */
+export function forceUnlockBodyScroll() {
+  restoreBodyScroll(0);
+}
+
  /**
   * Hook that returns functions to manually lock/unlock scroll
   */
@@ -86,21 +104,12 @@
      }
      
      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.height = '100%';
    }, []);
  
    const unlock = useCallback(() => {
-     document.body.style.position = '';
-     document.body.style.top = '';
-     document.body.style.left = '';
-     document.body.style.right = '';
-     document.body.style.overflow = '';
-     document.body.style.width = '';
-     document.body.style.paddingRight = '';
-     document.documentElement.style.overflow = '';
-     
-     if (scrollPositionRef.current > 0) {
-       window.scrollTo(0, scrollPositionRef.current);
-     }
+      restoreBodyScroll(scrollPositionRef.current);
+      scrollPositionRef.current = 0;
    }, []);
  
    return { lock, unlock };

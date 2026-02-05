@@ -3,9 +3,9 @@ import { SettingsSidebar } from "@/components/settings/zoho-style/SettingsSideba
 
 export function SettingsLayout() {
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-muted/30">
+    <div className="flex h-full min-h-0 bg-muted/30 overflow-hidden">
       <SettingsSidebar />
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden ios-scroll">
         <div className="max-w-7xl mx-auto px-10 py-8">
           <Outlet />
         </div>

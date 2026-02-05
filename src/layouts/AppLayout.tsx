@@ -9,9 +9,12 @@ import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
 import { BreadcrumbProvider } from "@/contexts/BreadcrumbContext";
+import { useLocation } from "react-router-dom";
+import { forceUnlockBodyScroll } from "@/hooks/useBodyScrollLock";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false);
+  const location = useLocation();
 
   // Keyboard shortcut for Command Palette
   useEffect(() => {
@@ -26,22 +29,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
+  // Safety scroll unlock on route change
+  useEffect(() => {
+    // Force unlock body scroll on route change (safety net for stuck scroll)
+    const timer = setTimeout(() => {
+      forceUnlockBodyScroll();
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
+
   return (
     <OnboardingGate>
       <BreadcrumbProvider>
-        <div className="min-h-screen w-full bg-background">
+        <div className="h-[100dvh] w-full bg-background overflow-hidden app-viewport">
           <div className="fixed top-4 right-4 z-[60] flex items-center gap-2">
             <NotificationCenter />
           </div>
           <SidebarLayout>
-            <div className="flex flex-col min-h-screen w-full">
+            <div className="flex flex-col h-full w-full min-h-0 overflow-hidden">
               {/* Sticky Topbar - Frozen while scrolling */}
-              <div className="sticky top-0 z-[100] w-full">
+              <div className="shrink-0 z-[100] w-full">
                 <Topbar onSearchOpen={() => setCommandOpen(true)} />
               </div>
               
               {/* Scrollable Main Content */}
-              <main className="flex-1 bg-muted/30 p-3 sm:p-4 md:p-6 lg:p-8 pb-20 md:pb-6">
+              <main className="flex-1 min-h-0 bg-muted/30 p-3 sm:p-4 md:p-6 lg:p-8 pb-20 md:pb-6 overflow-y-auto overflow-x-hidden app-scroll ios-scroll">
                 <div className="w-full max-w-[1600px] mx-auto">
                   <BreadcrumbNav />
                   {children}

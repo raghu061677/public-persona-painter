@@ -569,6 +569,11 @@ All colors MUST be HSL.
 }
 
 @layer base {
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+  
   * {
     @apply border-border;
   }
@@ -585,9 +590,10 @@ All colors MUST be HSL.
     font-family: var(--font-family);
     font-size: var(--base-font-size);
     min-height: 100vh;
+    min-height: 100dvh;
     min-height: -webkit-fill-available;
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overscroll-behavior: none;
@@ -600,7 +606,9 @@ All colors MUST be HSL.
   #root {
     min-height: 100vh;
     min-height: 100dvh;
-    overflow-x: hidden;
+    overflow: hidden;
+    height: 100%;
+    height: 100dvh;
   }
 }
 
@@ -845,6 +853,30 @@ input[type="number"] {
   /* Fix for mobile viewport height */
   .min-h-dvh {
     min-height: 100dvh;
+  }
+  
+  /* App viewport - use for root app shells */
+  .app-viewport {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: hidden;
+  }
+  
+  /* App scroll container - THE main scrollable area */
+  .app-scroll {
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* iOS momentum scrolling */
+  .ios-scroll {
+    -webkit-overflow-scrolling: touch;
   }
   
   /* Touch optimization for interactive elements */

@@ -89,21 +89,42 @@
    campaignAssets,
    manualDiscountAmount = 0,
  }: ComputeCampaignTotalsParams): CampaignTotalsResult {
-   const startDate = new Date(campaign.start_date);
-   const endDate = new Date(campaign.end_date);
+   // Use campaign dates as fallback, but prefer asset-level dates
+   const campaignStartDate = new Date(campaign.start_date);
+   const campaignEndDate = new Date(campaign.end_date);
    
-   // Calculate campaign duration in days (inclusive)
-   const durationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-   
-   // Calculate display cost using pro-rata formula per asset
-   // Formula: (monthly_rate / 30) × duration_days for each asset
+   // Calculate display cost using pro-rata formula per asset with ASSET-LEVEL dates
+   // Formula: (monthly_rate / 30) × asset_duration_days for each asset
    let displayCostRaw = 0;
+   let minStartDate = campaignStartDate;
+   let maxEndDate = campaignEndDate;
+   
    for (const asset of campaignAssets) {
+     // Use asset-level dates, falling back to campaign dates
+     const assetStart = asset.booking_start_date 
+       ? new Date(asset.booking_start_date) 
+       : (asset.start_date ? new Date(asset.start_date) : campaignStartDate);
+     const assetEnd = asset.booking_end_date 
+       ? new Date(asset.booking_end_date) 
+       : (asset.end_date ? new Date(asset.end_date) : campaignEndDate);
+     
+     // Calculate this asset's duration in days (inclusive)
+     const assetDurationDays = Math.ceil((assetEnd.getTime() - assetStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+     
      const monthlyRate = Number(asset.negotiated_rate) || Number(asset.card_rate) || 0;
-     const proRataAmount = (monthlyRate / BILLING_CYCLE_DAYS) * durationDays;
+     const proRataAmount = (monthlyRate / BILLING_CYCLE_DAYS) * assetDurationDays;
      displayCostRaw += proRataAmount;
+     
+     // Track min/max dates for campaign period
+     if (assetStart < minStartDate) minStartDate = assetStart;
+     if (assetEnd > maxEndDate) maxEndDate = assetEnd;
    }
    const displayCost = Math.round(displayCostRaw * 100) / 100;
+   
+   // Campaign period is the span of all asset dates
+   const campaignPeriodStart = minStartDate;
+   const campaignPeriodEnd = maxEndDate;
+   const durationDays = Math.ceil((campaignPeriodEnd.getTime() - campaignPeriodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
    
    // Sum printing and mounting from campaign_assets
    const printingCost = campaignAssets.reduce((sum, a) => sum + (Number(a.printing_charges) || 0), 0);
@@ -135,7 +156,7 @@
    
    // Monthly billing info (if billing mode is monthly)
    const isMonthlyBilling = (campaign.billing_cycle || '').toLowerCase() === 'monthly';
-   const billingPeriods = calculateBillingPeriods(startDate, endDate);
+   const billingPeriods = calculateBillingPeriods(campaignPeriodStart, campaignPeriodEnd);
    const totalMonths = billingPeriods.length;
    
    // Monthly display rent = displayCost / totalMonths (simple division, no reverse engineering)
@@ -152,8 +173,8 @@
      gstAmount,
      grandTotal,
      oneTimeCharges,
-     campaignPeriodStart: startDate,
-     campaignPeriodEnd: endDate,
+     campaignPeriodStart,
+     campaignPeriodEnd,
      durationDays,
      totalMonths,
      monthlyDisplayRent,

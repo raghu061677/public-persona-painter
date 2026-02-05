@@ -241,8 +241,20 @@
    includePrinting: boolean = false,
    includeMounting: boolean = false,
  ) {
-   // Calculate rent for this period as a proportion of total display cost
-   const baseRent = Math.round(totals.monthlyDisplayRent * period.proRataFactor * 100) / 100;
+   // For single-period campaigns, the displayCost IS the period rent (already pro-rated)
+   // For multi-month campaigns, divide displayCost across periods by their pro-rata factor share
+   let baseRent: number;
+   
+   if (totals.totalMonths <= 1) {
+     // Single period: displayCost is already the full pro-rated amount
+     baseRent = totals.displayCost;
+   } else {
+     // Multi-period: calculate this period's share based on pro-rata factor
+     // Sum of all proRataFactors should equal totalMonths for proper distribution
+     const totalProRata = totals.billingPeriods.reduce((sum, p) => sum + p.proRataFactor, 0);
+     baseRent = Math.round((totals.displayCost * period.proRataFactor / totalProRata) * 100) / 100;
+   }
+   
    const printing = includePrinting ? totals.printingCost : 0;
    const mounting = includeMounting ? totals.mountingCost : 0;
    

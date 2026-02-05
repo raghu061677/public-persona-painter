@@ -414,9 +414,16 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   doc.setFont('NotoSans', 'normal');
   doc.setFontSize(8);
   const totalWords = amountToWords(data.totalInr);
-  doc.text(`Total (In Words): ${totalWords}`, summaryStartX, summaryEndY);
+  // Calculate available width for amount in words (from summaryStartX to right margin)
+  const amountWordsWidth = pageWidth - summaryStartX - rightMargin;
+  const amountWordsText = `Total (In Words): ${totalWords}`;
+  const wrappedAmountWords = doc.splitTextToSize(amountWordsText, amountWordsWidth);
+  wrappedAmountWords.forEach((line: string) => {
+    doc.text(line, summaryStartX, summaryEndY);
+    summaryEndY += 4;
+  });
 
-  yPos = Math.max(bankY, summaryEndY) + 12;
+  yPos = Math.max(bankY, summaryEndY) + 8;
 
   // ========== 6. PAYMENT TERMS ==========
   doc.setFontSize(9);

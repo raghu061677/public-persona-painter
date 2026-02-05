@@ -328,9 +328,16 @@ function createSalesOrderPDF(data: SalesOrderData): Blob {
   doc.text('Amount in Words:', 15, yPos);
   yPos += 6;
   doc.setFont('helvetica', 'normal');
-  doc.text(numberToWords(grandTotal), 15, yPos);
+  // Wrap amount in words to prevent overflow
+  const amountWordsText = numberToWords(grandTotal);
+  const maxWidth = pageWidth - 30; // 15mm left + 15mm right margin
+  const wrappedAmountWords = doc.splitTextToSize(amountWordsText, maxWidth);
+  wrappedAmountWords.forEach((line: string) => {
+    doc.text(line, 15, yPos);
+    yPos += 5;
+  });
 
-  yPos += 15;
+  yPos += 10;
 
   // ========== BANK DETAILS ==========
   doc.setFont('helvetica', 'bold');

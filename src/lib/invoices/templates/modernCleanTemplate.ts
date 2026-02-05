@@ -385,7 +385,15 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
   doc.text('Amount in Words:', leftMargin, yPos + 5);
   doc.setTextColor(40, 40, 40);
   const words = numberToWords(Math.round(grandTotal));
-  doc.text(`Indian Rupees ${words} Only`, leftMargin, yPos + 10);
+  // Wrap amount in words to prevent overflow (max width ~100mm)
+  const amountWordsMaxWidth = 100;
+  const amountWordsText = `Indian Rupees ${words} Only`;
+  const wrappedAmountWords = doc.splitTextToSize(amountWordsText, amountWordsMaxWidth);
+  let amountWordsY = yPos + 10;
+  wrappedAmountWords.forEach((line: string) => {
+    doc.text(line, leftMargin, amountWordsY);
+    amountWordsY += 4;
+  });
 
   yPos += 48;
 

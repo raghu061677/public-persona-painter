@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -84,6 +84,33 @@ interface ContactPerson {
 const getDraftStorageKey = (companyId?: string) => 
   companyId ? `client_new_draft:${companyId}` : "client_new_draft";
 
+const getInitialFormData = () => ({
+  id: "",
+  customer_type: "business" as "business" | "individual",
+  salutation: "Mr.",
+  first_name: "",
+  last_name: "",
+  company: "",
+  email: "",
+  phone: "",
+  gst_treatment: "registered" as GstTreatment,
+  gst_number: "",
+  state: "",
+  city: "",
+  notes: "",
+  billing_address_line1: "",
+  billing_address_line2: "",
+  billing_city: "",
+  billing_state: "",
+  billing_pincode: "",
+  shipping_address_line1: "",
+  shipping_address_line2: "",
+  shipping_city: "",
+  shipping_state: "",
+  shipping_pincode: "",
+  shipping_same_as_billing: false,
+});
+
 export default function ClientNew() {
   const navigate = useNavigate();
   const { company, isLoading: companyLoading } = useCompany();
@@ -93,80 +120,101 @@ export default function ClientNew() {
   const [showClearDraftDialog, setShowClearDraftDialog] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
   
-  const [formData, setFormData] = useState({
-    id: "",
-    customer_type: "business" as "business" | "individual",
-    // Individual fields
-    salutation: "Mr.",
-    first_name: "",
-    last_name: "",
-    // Business field
-    company: "",
-    // Common fields
-    email: "",
-    phone: "",
-    gst_treatment: "registered" as GstTreatment,
-    gst_number: "",
-    state: "",
-    city: "",
-    notes: "",
-    // Billing Address
-    billing_address_line1: "",
-    billing_address_line2: "",
-    billing_city: "",
-    billing_state: "",
-    billing_pincode: "",
-    // Shipping Address
-    shipping_address_line1: "",
-    shipping_address_line2: "",
-    shipping_city: "",
-    shipping_state: "",
-    shipping_pincode: "",
-    shipping_same_as_billing: false,
+  // Track if the form has been initialized to prevent resets
+  const formInitializedRef = useRef(false);
+  // Track if user has started typing (dirty form)
+  const formTouchedRef = useRef(false);
+  
+  // Initialize form with draft from sessionStorage immediately (before company loads)
+  const [formData, setFormData] = useState(() => {
+    // Try to load draft immediately on initial render
+    const keys = Object.keys(sessionStorage).filter(k => k.startsWith('client_new_draft'));
+    if (keys.length > 0) {
+      try {
+        const saved = sessionStorage.getItem(keys[0]);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.formData) {
+            formInitializedRef.current = true;
+            console.log("✅ Form initialized with draft from sessionStorage");
+            return parsed.formData;
+          }
+        }
+      } catch (error) {
+        console.error("Failed to parse draft on init:", error);
+      }
+    }
+    return getInitialFormData();
   });
 
-  const [contactPersons, setContactPersons] = useState<ContactPerson[]>([]);
+  const [contactPersons, setContactPersons] = useState<ContactPerson[]>(() => {
+    // Try to load contacts draft immediately
+    const keys = Object.keys(sessionStorage).filter(k => k.startsWith('client_new_draft'));
+    if (keys.length > 0) {
+      try {
+        const saved = sessionStorage.getItem(keys[0]);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.contactPersons && Array.isArray(parsed.contactPersons)) {
+            return parsed.contactPersons;
+          }
+        }
+      } catch (error) {
+        console.error("Failed to parse contacts draft on init:", error);
+      }
+    }
+    return [];
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Get storage key based on company
   const storageKey = getDraftStorageKey(company?.id);
 
-  // Load saved draft from sessionStorage on mount
+  // Show draft banner if we loaded a draft on initial render
   useEffect(() => {
-    // Only load draft once after company is available
-    if (draftLoaded || !company?.id) return;
+    // Only check once
+    if (draftLoaded) return;
     
-    const key = getDraftStorageKey(company.id);
-    const saved = sessionStorage.getItem(key);
+    // Check if we have a draft (from initial state or sessionStorage)
+    const hasData = formData.company || formData.first_name || formData.email || 
+                    formData.gst_number || formData.billing_address_line1 ||
+                    contactPersons.some(c => c.firstName || c.lastName || c.email);
     
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        console.log("✅ Restored draft from sessionStorage:", {
-          company: parsed.formData?.company,
-          first_name: parsed.formData?.first_name,
-          state: parsed.formData?.state,
-        });
-        
-        if (parsed.formData) {
-          setFormData(parsed.formData);
-        }
-        if (parsed.contactPersons && Array.isArray(parsed.contactPersons)) {
-          setContactPersons(parsed.contactPersons);
-        }
-        setShowDraftBanner(true);
-      } catch (error) {
-        console.error("❌ Failed to restore draft:", error);
-        sessionStorage.removeItem(key);
-      }
+    if (hasData && formInitializedRef.current) {
+      console.log("✅ Showing draft banner - data found on mount");
+      setShowDraftBanner(true);
     }
     
     setDraftLoaded(true);
-  }, [company?.id, draftLoaded]);
+  }, [draftLoaded, formData, contactPersons]);
+
+  // Migrate draft to company-specific key once company is available
+  useEffect(() => {
+    if (!company?.id) return;
+    
+    const companyKey = getDraftStorageKey(company.id);
+    const genericKey = "client_new_draft";
+    
+    // If we have data in generic key but not in company key, migrate it
+    const genericDraft = sessionStorage.getItem(genericKey);
+    const companyDraft = sessionStorage.getItem(companyKey);
+    
+    if (genericDraft && !companyDraft) {
+      try {
+        // Migrate to company-specific key
+        sessionStorage.setItem(companyKey, genericDraft);
+        sessionStorage.removeItem(genericKey);
+        console.log("✅ Migrated draft to company-specific key");
+      } catch (error) {
+        console.error("Failed to migrate draft:", error);
+      }
+    }
+  }, [company?.id]);
 
   // Auto-save draft to sessionStorage whenever form changes (debounced)
   useEffect(() => {
-    if (!draftLoaded || !company?.id) return;
+    // Don't save if we haven't loaded yet or no company
+    if (!draftLoaded) return;
     
     // Check if form has meaningful data
     const hasData = formData.company || formData.first_name || formData.email || 
@@ -174,44 +222,33 @@ export default function ClientNew() {
                     contactPersons.some(c => c.firstName || c.lastName || c.email);
     
     if (hasData) {
+      // Mark as touched once we have data
+      formTouchedRef.current = true;
+      formInitializedRef.current = true;
+      
       const draftData = {
         formData,
         contactPersons,
         savedAt: new Date().toISOString(),
       };
-      sessionStorage.setItem(storageKey, JSON.stringify(draftData));
+      
+      // Use company-specific key if available, otherwise generic key
+      const key = company?.id ? getDraftStorageKey(company.id) : "client_new_draft";
+      sessionStorage.setItem(key, JSON.stringify(draftData));
     }
-  }, [formData, contactPersons, draftLoaded, company?.id, storageKey]);
+  }, [formData, contactPersons, draftLoaded, company?.id]);
 
   // Clear draft and reset form
   const handleClearDraft = () => {
+    // Clear all possible draft keys
     sessionStorage.removeItem(storageKey);
-    setFormData({
-      id: "",
-      customer_type: "business",
-      salutation: "Mr.",
-      first_name: "",
-      last_name: "",
-      company: "",
-      email: "",
-      phone: "",
-      gst_treatment: "registered",
-      gst_number: "",
-      state: "",
-      city: "",
-      notes: "",
-      billing_address_line1: "",
-      billing_address_line2: "",
-      billing_city: "",
-      billing_state: "",
-      billing_pincode: "",
-      shipping_address_line1: "",
-      shipping_address_line2: "",
-      shipping_city: "",
-      shipping_state: "",
-      shipping_pincode: "",
-      shipping_same_as_billing: false,
-    });
+    sessionStorage.removeItem("client_new_draft");
+    
+    // Reset refs
+    formInitializedRef.current = false;
+    formTouchedRef.current = false;
+    
+    setFormData(getInitialFormData());
     setContactPersons([]);
     setErrors({});
     setShowDraftBanner(false);
@@ -229,11 +266,19 @@ export default function ClientNew() {
     if (formData.state) {
       const stateCode = getStateCode(formData.state);
       // Show preview ID format (actual ID will be generated on submit)
-      setFormData(prev => ({ ...prev, id: `${stateCode}-XXXX (auto)` }));
+      // Only update if this specific field hasn't been set yet to avoid loops
+      setFormData(prev => {
+        const newId = `${stateCode}-XXXX (auto)`;
+        if (prev.id === newId) return prev;
+        return { ...prev, id: newId };
+      });
     }
   }, [formData.state]);
 
   const updateField = (field: string, value: any) => {
+    // Mark form as touched
+    formTouchedRef.current = true;
+    
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
       
@@ -261,7 +306,6 @@ export default function ClientNew() {
       });
     }
   };
-
   const copyBillingToShipping = () => {
     setFormData(prev => ({
       ...prev,
@@ -448,6 +492,11 @@ export default function ClientNew() {
 
       // Clear saved form draft after successful creation
       sessionStorage.removeItem(storageKey);
+      sessionStorage.removeItem("client_new_draft"); // Also clear generic key
+      
+      // Reset refs
+      formInitializedRef.current = false;
+      formTouchedRef.current = false;
       
       toast.success(`Client created successfully with ID: ${newClientId}`);
       
@@ -468,7 +517,8 @@ export default function ClientNew() {
     }
   };
 
-  if (companyLoading) {
+  // Only show loading on initial load, not on re-renders when form has data
+  if (companyLoading && !formTouchedRef.current && !formInitializedRef.current) {
     return (
       <div className="p-8">
         <p>Loading...</p>
@@ -476,7 +526,8 @@ export default function ClientNew() {
     );
   }
 
-  if (!company?.id) {
+  // Only show error if company truly not available and form not touched
+  if (!company?.id && !companyLoading && !formTouchedRef.current && !formInitializedRef.current) {
     return (
       <div className="p-8">
         <p className="text-destructive">Company information not available. Please refresh the page.</p>

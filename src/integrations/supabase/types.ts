@@ -2056,6 +2056,8 @@ export type Database = {
           is_deleted: boolean | null
           is_historical_entry: boolean | null
           is_recurring: boolean | null
+          manual_discount_amount: number | null
+          manual_discount_reason: string | null
           mounting_total: number | null
           notes: string | null
           notification_settings: Json | null
@@ -2091,6 +2093,8 @@ export type Database = {
           is_deleted?: boolean | null
           is_historical_entry?: boolean | null
           is_recurring?: boolean | null
+          manual_discount_amount?: number | null
+          manual_discount_reason?: string | null
           mounting_total?: number | null
           notes?: string | null
           notification_settings?: Json | null
@@ -2126,6 +2130,8 @@ export type Database = {
           is_deleted?: boolean | null
           is_historical_entry?: boolean | null
           is_recurring?: boolean | null
+          manual_discount_amount?: number | null
+          manual_discount_reason?: string | null
           mounting_total?: number | null
           notes?: string | null
           notification_settings?: Json | null

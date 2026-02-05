@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { format } from "date-fns";
 import { FileText, Eye, Loader2, Plus, CalendarDays } from "lucide-react";
-import { BillingPeriod, calculatePeriodAmount } from "./useCampaignBillingPeriods";
+import { BillingPeriodInfo } from "@/utils/computeCampaignTotals";
 import { BillingStatusBadge, BillingStatus, mapInvoiceStatusToBillingStatus } from "./BillingStatusBadge";
 import { cn } from "@/lib/utils";
 
@@ -28,13 +28,13 @@ interface InvoiceRecord {
 }
 
 interface MonthlyBillingScheduleTableProps {
-  periods: BillingPeriod[];
+  periods: BillingPeriodInfo[];
   monthlyBaseRent: number;
   gstPercent: number;
   printingTotal: number;
   mountingTotal: number;
   existingInvoices: InvoiceRecord[];
-  onGenerateInvoice: (period: BillingPeriod, includePrinting: boolean, includeMounting: boolean) => void;
+  onGenerateInvoice: (period: BillingPeriodInfo, includePrinting: boolean, includeMounting: boolean) => void;
   onViewInvoice: (invoiceId: string) => void;
   isGenerating?: boolean;
   printingBilled?: boolean;

@@ -173,6 +173,7 @@
                    <td className="p-2 text-center align-top text-[10px]"><div>Dim: {item.dimensions || '-'}</div><div>Sqft: {item.total_sqft || '-'}</div></td>
                    <td className="p-2 text-center align-top text-[10px]">{item.start_date && <div>{formatDate(item.start_date)}</div>}{item.end_date && <div>to {formatDate(item.end_date)}</div>}<div className="font-medium">{billableDays} Days</div></td>
                    <td className="p-2 text-right align-top text-[10px]"><div>Display: {formatINR(rentAmount)}</div>{printingCharges > 0 && <div>P: {formatINR(printingCharges)}</div>}{mountingCharges > 0 && <div>M: {formatINR(mountingCharges)}</div>}</td>
+++ <td className="p-2 text-right align-top text-[10px]"><div>Display: {formatINR(rentAmount)}</div>{printingCharges > 0 && <div>Printing : {formatINR(printingCharges)}</div>}{mountingCharges > 0 && <div>Installation : {formatINR(mountingCharges)}</div>}</td>
                    <td className="p-2 text-right align-top font-medium">{formatINR(lineTotal)}</td>
                  </tr>
                );

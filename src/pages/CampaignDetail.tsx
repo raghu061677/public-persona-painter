@@ -6,18 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, Trash2, Upload, RefreshCw, Info, Pencil, TrendingUp, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Trash2, RefreshCw, Info, Pencil, TrendingUp, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
-import { getCampaignStatusColor, getAssetStatusColor, calculateProgress } from "@/utils/campaigns";
+import { getCampaignStatusColor, calculateProgress } from "@/utils/campaigns";
 import { formatDate } from "@/utils/plans";
 import { toast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -38,9 +30,9 @@ import { AutoAssignMountersButton } from "@/components/campaigns/AutoAssignMount
 import { ShareTrackingLinkDialog } from "@/components/campaigns/ShareTrackingLinkDialog";
 import { useCompany } from "@/contexts/CompanyContext";
 import { CampaignTimelineView } from "@/components/campaigns/CampaignTimelineView";
-import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
 import { DeleteCampaignDialog } from "@/components/campaigns/DeleteCampaignDialog";
 import { CampaignBillingTab } from "@/components/campaigns/billing";
+import { CampaignDetailAssetsTable } from "@/components/campaigns/CampaignDetailAssetsTable";
 
 export default function CampaignDetail() {
   const { id } = useParams();
@@ -664,46 +656,15 @@ export default function CampaignDetail() {
             <TabsContent value="assets" className="mt-4">
               <Card className="border">
                 <CardContent className="pt-6">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Asset ID</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>City</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Mounter</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {campaignAssets.map((asset) => (
-                      <TableRow key={asset.id}>
-                        <TableCell className="font-medium font-mono text-sm">{formatAssetDisplayCode({ mediaAssetCode: asset.media_asset_code, fallbackId: asset.asset_id, companyPrefix: assetCodePrefix, companyName: company?.name })}</TableCell>
-                        <TableCell>{asset.location}</TableCell>
-                        <TableCell>{asset.city}</TableCell>
-                        <TableCell>
-                          <Badge className={getAssetStatusColor(asset.status)}>
-                            {asset.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{asset.mounter_name || '-'}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/mobile/upload/${id}/${asset.id}`)}
-                          >
-                            <Upload className="mr-2 h-4 w-4" />
-                            Upload
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  <CampaignDetailAssetsTable
+                    assets={campaignAssets}
+                    campaignId={campaign.id}
+                    companyPrefix={assetCodePrefix}
+                    companyName={company?.name}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             <TabsContent value="creatives" className="mt-4">
               <Card className="border">

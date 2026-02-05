@@ -9,11 +9,7 @@ import { FileText, CalendarDays, Loader2, Info, Receipt, Calculator } from "luci
 import { BillingSummaryCard } from "./BillingSummaryCard";
 import { MonthlyBillingScheduleTable } from "./MonthlyBillingScheduleTable";
 import { MonthlyInvoiceGenerator } from "./MonthlyInvoiceGenerator";
-import { 
-  useCampaignBillingPeriods, 
-  BillingPeriod,
-  calculatePeriodAmount 
-} from "./useCampaignBillingPeriods";
+import { computeCampaignTotals, calculatePeriodAmountFromTotals, BillingPeriodInfo } from "@/utils/computeCampaignTotals";
 import { GenerateMonthlyInvoicesDialog } from "../GenerateMonthlyInvoicesDialog";
 import { generateInvoiceId } from "@/utils/finance";
 import { formatCurrency } from "@/utils/mediaAssets";
@@ -39,6 +35,8 @@ interface CampaignBillingTabProps {
     subtotal?: number;
     billing_cycle?: string;
     company_id?: string;
+    manual_discount_amount?: number;
+    manual_discount_reason?: string;
   };
   campaignAssets: any[];
   displayCost: number;
@@ -71,24 +69,19 @@ export function CampaignBillingTab({
   const [showBulkDialog, setShowBulkDialog] = useState(false);
   const [showAssetLevelDialog, setShowAssetLevelDialog] = useState(false);
   const [billingMode, setBillingMode] = useState<BillingMode>('monthly');
+  const [localDiscount, setLocalDiscount] = useState(campaign.manual_discount_amount || 0);
 
-  // Fallback: some legacy campaigns may not have campaign-level totals populated.
-  // In that case, compute from campaign_assets snapshots so billing shows the correct one-time charges.
-  const computedPrintingTotal = campaignAssets.reduce((sum, a) => sum + (Number(a?.printing_charges) || 0), 0);
-  const computedMountingTotal = campaignAssets.reduce((sum, a) => sum + (Number(a?.mounting_charges) || 0), 0);
-
-  const printingTotal = Number(campaign.printing_total ?? computedPrintingTotal) || 0;
-  const mountingTotal = Number(campaign.mounting_total ?? computedMountingTotal) || 0;
-
-  // Calculate billing periods
-  const billingSummary = useCampaignBillingPeriods({
-    startDate: campaign.start_date,
-    endDate: campaign.end_date,
-    totalAmount: displayCost,
-    printingTotal,
-    mountingTotal,
-    // Respect campaign tax config. If GST wasn't set, keep it 0.
-    gstPercent: Number(campaign.gst_percent ?? 0) || 0,
+  // Use single source of truth calculator
+  const totals = computeCampaignTotals({
+    campaign: {
+      start_date: campaign.start_date,
+      end_date: campaign.end_date,
+      gst_percent: campaign.gst_percent,
+      billing_cycle: campaign.billing_cycle,
+      manual_discount_amount: localDiscount,
+    },
+    campaignAssets,
+    manualDiscountAmount: localDiscount,
   });
 
   // Fetch existing invoices for this campaign (both monthly split and single)
@@ -122,6 +115,36 @@ export function CampaignBillingTab({
     }
   };
 
+  // Handle discount change
+  const handleDiscountChange = async (amount: number, reason?: string) => {
+    setLocalDiscount(amount);
+    
+    try {
+      const { error } = await supabase
+        .from('campaigns')
+        .update({
+          manual_discount_amount: amount,
+          manual_discount_reason: reason || null,
+        })
+        .eq('id', campaign.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Discount Updated",
+        description: `Manual discount of ${formatCurrency(amount)} saved.`,
+      });
+      onRefresh?.();
+    } catch (err: any) {
+      console.error('Error saving discount:', err);
+      toast({
+        title: "Error",
+        description: "Failed to save discount",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Separate invoices by type
   const monthlyInvoices = existingInvoices.filter(inv => inv.is_monthly_split === true);
   const singleInvoices = existingInvoices.filter(inv => inv.is_monthly_split === false || inv.is_monthly_split === null);
@@ -140,47 +163,47 @@ export function CampaignBillingTab({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Not authenticated");
 
-      // Calculate total amount for entire campaign
-      const subtotal = displayCost + printingTotal + mountingTotal;
-      const gstAmount = Math.round(subtotal * (billingSummary.gstPercent / 100) * 100) / 100;
-      const total = subtotal + gstAmount;
-
       // Generate invoice ID
       const invoiceId = await generateInvoiceId(supabase);
 
       // Build items array
       const items: any[] = [];
       
-      // Add display rent for entire period
-      const startDate = new Date(campaign.start_date);
-      const endDate = new Date(campaign.end_date);
-      const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      
       items.push({
         sno: 1,
-        description: `Display Rent - ${format(startDate, "dd MMM yyyy")} to ${format(endDate, "dd MMM yyyy")} (${totalDays} days)`,
+        description: `Display Rent - ${format(totals.campaignPeriodStart, "dd MMM yyyy")} to ${format(totals.campaignPeriodEnd, "dd MMM yyyy")} (${totals.durationDays} days)`,
         quantity: 1,
-        rate: displayCost,
-        amount: displayCost,
+        rate: totals.displayCost,
+        amount: totals.displayCost,
       });
 
-      if (printingTotal > 0) {
+      if (totals.printingCost > 0) {
         items.push({
           sno: items.length + 1,
           description: `Printing Charges (${campaignAssets.length} assets)`,
           quantity: 1,
-          rate: printingTotal,
-          amount: printingTotal,
+          rate: totals.printingCost,
+          amount: totals.printingCost,
         });
       }
 
-      if (mountingTotal > 0) {
+      if (totals.mountingCost > 0) {
         items.push({
           sno: items.length + 1,
           description: `Mounting Charges (${campaignAssets.length} assets)`,
           quantity: 1,
-          rate: mountingTotal,
-          amount: mountingTotal,
+          rate: totals.mountingCost,
+          amount: totals.mountingCost,
+        });
+      }
+
+      if (totals.manualDiscountAmount > 0) {
+        items.push({
+          sno: items.length + 1,
+          description: `Discount (Before GST)`,
+          quantity: 1,
+          rate: -totals.manualDiscountAmount,
+          amount: -totals.manualDiscountAmount,
         });
       }
 
@@ -200,11 +223,11 @@ export function CampaignBillingTab({
         invoice_period_start: campaign.start_date,
         invoice_period_end: campaign.end_date,
         is_monthly_split: false,
-        sub_total: subtotal,
-        gst_percent: billingSummary.gstPercent,
-        gst_amount: gstAmount,
-        total_amount: total,
-        balance_due: total,
+        sub_total: totals.taxableAmount,
+        gst_percent: totals.gstRate,
+        gst_amount: totals.gstAmount,
+        total_amount: totals.grandTotal,
+        balance_due: totals.grandTotal,
         status: 'Draft',
         items,
         notes: `Single invoice for campaign: ${campaign.campaign_name}`,
@@ -235,7 +258,7 @@ export function CampaignBillingTab({
 
   // Generate invoice for a single period
   const handleGenerateInvoice = async (
-    period: BillingPeriod, 
+    period: BillingPeriodInfo, 
     includePrinting: boolean, 
     includeMounting: boolean
   ) => {
@@ -245,16 +268,8 @@ export function CampaignBillingTab({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Not authenticated");
 
-      // Calculate amounts
-      const amounts = calculatePeriodAmount(
-        period,
-        billingSummary.monthlyBaseRent,
-        billingSummary.gstPercent,
-        includePrinting,
-        includeMounting,
-        printingTotal,
-        mountingTotal
-      );
+      // Calculate amounts using new calculator
+      const amounts = calculatePeriodAmountFromTotals(period, totals, includePrinting, includeMounting);
 
       // Generate invoice ID
       const invoiceId = await generateInvoiceId(supabase);
@@ -270,23 +285,33 @@ export function CampaignBillingTab({
         },
       ];
 
-      if (includePrinting && printingTotal > 0) {
+      if (includePrinting && totals.printingCost > 0) {
         items.push({
           sno: items.length + 1,
           description: `Printing Charges (${campaignAssets.length} assets)`,
           quantity: 1,
-          rate: printingTotal,
-          amount: printingTotal,
+          rate: totals.printingCost,
+          amount: totals.printingCost,
         });
       }
 
-      if (includeMounting && mountingTotal > 0) {
+      if (includeMounting && totals.mountingCost > 0) {
         items.push({
           sno: items.length + 1,
           description: `Mounting Charges (${campaignAssets.length} assets)`,
           quantity: 1,
-          rate: mountingTotal,
-          amount: mountingTotal,
+          rate: totals.mountingCost,
+          amount: totals.mountingCost,
+        });
+      }
+
+      if (amounts.discount > 0) {
+        items.push({
+          sno: items.length + 1,
+          description: `Discount (Before GST)`,
+          quantity: 1,
+          rate: -amounts.discount,
+          amount: -amounts.discount,
         });
       }
 
@@ -307,7 +332,7 @@ export function CampaignBillingTab({
         invoice_period_end: format(period.periodEnd, 'yyyy-MM-dd'),
         is_monthly_split: true,
         sub_total: amounts.subtotal,
-        gst_percent: billingSummary.gstPercent,
+        gst_percent: totals.gstRate,
         gst_amount: amounts.gstAmount,
         total_amount: amounts.total,
         balance_due: amounts.total,
@@ -352,7 +377,7 @@ export function CampaignBillingTab({
   }
 
   // Empty state
-  if (billingSummary.periods.length === 0) {
+  if (totals.billingPeriods.length === 0) {
     return (
       <Card>
         <CardContent className="py-12">
@@ -368,27 +393,20 @@ export function CampaignBillingTab({
     );
   }
 
-  // Calculate single invoice totals
-  const singleInvoiceSubtotal = displayCost + printingTotal + mountingTotal;
-  const singleInvoiceGst = Math.round(singleInvoiceSubtotal * (billingSummary.gstPercent / 100) * 100) / 100;
-  const singleInvoiceTotal = singleInvoiceSubtotal + singleInvoiceGst;
-
   return (
     <div className="space-y-6">
-      {/* Billing Summary */}
+      {/* Billing Summary - Now uses single source of truth */}
       <BillingSummaryCard
         campaign={campaign}
-        totalMonths={billingSummary.totalMonths}
-        monthlyBaseRent={billingSummary.monthlyBaseRent}
-        printingTotal={printingTotal}
-        mountingTotal={mountingTotal}
-        gstPercent={billingSummary.gstPercent}
+        totals={totals}
         totalInvoiced={totalInvoiced}
         totalPaid={totalPaid}
+        onDiscountChange={handleDiscountChange}
+        isEditable={true}
       />
 
       {/* Billing Mode Selector */}
-      {billingSummary.periods.length > 1 && (
+      {totals.billingPeriods.length > 1 && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Invoice Generation Mode</CardTitle>
@@ -430,15 +448,15 @@ export function CampaignBillingTab({
             <div>
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <CalendarDays className="h-5 w-5" />
-                {billingSummary.periods.length > 1 ? 'Monthly Billing Schedule' : 'Billing Schedule'}
+                {totals.billingPeriods.length > 1 ? 'Monthly Billing Schedule' : 'Billing Schedule'}
               </h3>
               <p className="text-sm text-muted-foreground">
-                {billingSummary.periods.length > 1
+                {totals.billingPeriods.length > 1
                   ? 'Generate invoices for each billing period individually or all at once.'
                   : 'Generate a single pro-rata invoice for this short campaign.'}
               </p>
             </div>
-            {billingSummary.periods.length > 1 && (
+            {totals.billingPeriods.length > 1 && (
               <div className="flex gap-2">
                 <Button onClick={() => setShowAssetLevelDialog(true)} variant="default">
                   <Calculator className="mr-2 h-4 w-4" />
@@ -453,7 +471,7 @@ export function CampaignBillingTab({
           </div>
 
           {/* Info Alert */}
-          {(printingTotal > 0 || mountingTotal > 0) && (
+          {totals.oneTimeCharges > 0 && (
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
@@ -464,11 +482,11 @@ export function CampaignBillingTab({
 
           {/* Monthly Schedule Table */}
           <MonthlyBillingScheduleTable
-            periods={billingSummary.periods}
-            monthlyBaseRent={billingSummary.monthlyBaseRent}
-            gstPercent={billingSummary.gstPercent}
-            printingTotal={printingTotal}
-            mountingTotal={mountingTotal}
+            periods={totals.billingPeriods}
+            monthlyBaseRent={totals.monthlyDisplayRent}
+            gstPercent={totals.gstRate}
+            printingTotal={totals.printingCost}
+            mountingTotal={totals.mountingCost}
             existingInvoices={monthlyInvoices}
             onGenerateInvoice={handleGenerateInvoice}
             onViewInvoice={handleViewInvoice}
@@ -494,20 +512,20 @@ export function CampaignBillingTab({
               <div>
                 <div className="text-xs text-muted-foreground">Campaign Period</div>
                 <div className="font-medium text-sm">
-                  {format(new Date(campaign.start_date), "dd MMM yyyy")} - {format(new Date(campaign.end_date), "dd MMM yyyy")}
+                  {format(totals.campaignPeriodStart, "dd MMM yyyy")} - {format(totals.campaignPeriodEnd, "dd MMM yyyy")}
                 </div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground">Display Rent</div>
-                <div className="font-medium">{formatCurrency(displayCost)}</div>
+                <div className="font-medium">{formatCurrency(totals.displayCost)}</div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground">Printing + Mounting</div>
-                <div className="font-medium">{formatCurrency(printingTotal + mountingTotal)}</div>
+                <div className="font-medium">{formatCurrency(totals.oneTimeCharges)}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">GST ({billingSummary.gstPercent}%)</div>
-                <div className="font-medium">{formatCurrency(singleInvoiceGst)}</div>
+                <div className="text-xs text-muted-foreground">GST ({totals.gstRate}%)</div>
+                <div className="font-medium">{formatCurrency(totals.gstAmount)}</div>
               </div>
             </div>
 
@@ -521,7 +539,7 @@ export function CampaignBillingTab({
                 </div>
               </div>
               <div className="text-2xl font-bold text-primary">
-                {formatCurrency(singleInvoiceTotal)}
+                {formatCurrency(totals.grandTotal)}
               </div>
             </div>
 
@@ -609,7 +627,7 @@ export function CampaignBillingTab({
           start_date: campaign.start_date,
           end_date: campaign.end_date,
           company_id: campaign.company_id,
-          gst_percent: billingSummary.gstPercent,
+          gst_percent: totals.gstRate,
         }}
         campaignAssets={campaignAssets}
         open={showAssetLevelDialog}

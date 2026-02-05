@@ -156,15 +156,18 @@ const Sidebar = React.forwardRef<
         <SheetContent
           data-sidebar="sidebar"
           data-mobile="true"
-          className="w-[--sidebar-width] bg-sidebar backdrop-blur-2xl p-0 text-sidebar-foreground [&>button]:hidden border-r border-border/50 shadow-[0_8px_32px_rgba(0,0,0,0.12)] z-[9999] touch-manipulation"
+          className="w-[--sidebar-width] bg-sidebar backdrop-blur-2xl p-0 text-sidebar-foreground border-r border-border/50 shadow-[0_8px_32px_rgba(0,0,0,0.12)] z-[9999] touch-manipulation"
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
             } as React.CSSProperties
           }
           side={side}
+          showCloseButton={true}
         >
-          <div className="flex h-full w-full flex-col overflow-y-auto overscroll-contain">{children}</div>
+          <div className="flex h-full w-full flex-col overflow-y-auto overscroll-contain pt-12">
+            {children}
+          </div>
         </SheetContent>
       </Sheet>
     );
@@ -220,14 +223,12 @@ const SidebarTrigger = React.forwardRef<React.ElementRef<typeof Button>, React.C
   ({ className, onClick, ...props }, ref) => {
     const { toggleSidebar } = useSidebar();
 
-    const handleInteraction = (event: React.MouseEvent<HTMLButtonElement> | React.TouchEvent<HTMLButtonElement>) => {
+    const handleClick = React.useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
       event.preventDefault();
       event.stopPropagation();
-      if ('onClick' in event) {
-        onClick?.(event as React.MouseEvent<HTMLButtonElement>);
-      }
+      onClick?.(event);
       toggleSidebar();
-    };
+    }, [onClick, toggleSidebar]);
 
     return (
       <Button
@@ -235,12 +236,17 @@ const SidebarTrigger = React.forwardRef<React.ElementRef<typeof Button>, React.C
         data-sidebar="trigger"
         variant="ghost"
         size="icon"
-        className={cn("h-9 w-9 touch-manipulation z-[9999]", className)}
-        onClick={handleInteraction}
-        onTouchStart={handleInteraction}
+        className={cn(
+          "h-11 w-11 min-h-[44px] min-w-[44px] touch-manipulation z-[101]",
+          "active:scale-95 transition-transform",
+          "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          className
+        )}
+        onClick={handleClick}
+        aria-label="Toggle navigation menu"
         {...props}
       >
-        <PanelLeft className="h-5 w-5" />
+        <PanelLeft className="h-5 w-5" aria-hidden="true" />
         <span className="sr-only">Toggle Sidebar</span>
       </Button>
     );

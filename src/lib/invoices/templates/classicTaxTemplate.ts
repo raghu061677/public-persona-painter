@@ -430,9 +430,18 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
   doc.text('Amount in Words:', leftMargin, yPos);
   doc.setFont('helvetica', 'normal');
   const words = numberToWords(Math.round(grandTotal));
-  doc.text(`Indian Rupees ${words} Only`, leftMargin + 28, yPos);
+  // Wrap amount in words to prevent overflow
+  const amountWordsMaxWidth = pageWidth - leftMargin - rightMargin - 30;
+  const amountWordsText = `Indian Rupees ${words} Only`;
+  const wrappedAmountWords = doc.splitTextToSize(amountWordsText, amountWordsMaxWidth);
+  let amountWordsY = yPos;
+  wrappedAmountWords.forEach((line: string, idx: number) => {
+    doc.text(line, idx === 0 ? leftMargin + 28 : leftMargin, amountWordsY);
+    amountWordsY += 3.5;
+  });
+  yPos = amountWordsY - 3.5; // Adjust yPos based on lines rendered
 
-  yPos += 6;
+  yPos += 8;
 
   // Check page space
   if (yPos > pageHeight - 60) {

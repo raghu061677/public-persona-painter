@@ -441,6 +441,10 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   const grandTotal = parseFloat(data.invoice.total_amount) || (subtotal + gstAmount);
   const balanceDue = parseFloat(data.invoice.balance_due) || grandTotal;
 
+  // Totals box dimensions (declare first for use in amount words width calculation)
+  const totalsBoxWidth = 68;
+  const totalsBoxX = pageWidth - rightMargin - totalsBoxWidth;
+
   // Amount in words on left
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'bold');
@@ -450,12 +454,18 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   const amountInWords = numberToWords(Math.round(grandTotal));
-  doc.text(`Indian Rupees ${amountInWords} Only`, leftMargin, yPos + 4);
+  // Calculate available width for wrapping (left margin to totals box with some padding)
+  const amountWordsMaxWidth = totalsBoxX - leftMargin - 5;
+  const amountWordsText = `Indian Rupees ${amountInWords} Only`;
+  const wrappedAmountWords = doc.splitTextToSize(amountWordsText, amountWordsMaxWidth);
+  let amountWordsY = yPos + 4;
+  wrappedAmountWords.forEach((line: string) => {
+    doc.text(line, leftMargin, amountWordsY);
+    amountWordsY += 3.5;
+  });
 
   // Totals box on right
-  const totalsBoxWidth = 68;
-  const totalsBoxX = pageWidth - rightMargin - totalsBoxWidth;
-  const totalsBoxY = yPos - 3;
+  const totalsBoxY = yPos - 3;  
   
   doc.setDrawColor(200, 200, 200);
   doc.setFillColor(250, 250, 250);

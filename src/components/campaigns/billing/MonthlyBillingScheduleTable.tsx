@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
   TableBody,
@@ -14,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { format } from "date-fns";
 import { FileText, Eye, Loader2, Plus, CalendarDays } from "lucide-react";
-import { BillingPeriodInfo } from "@/utils/computeCampaignTotals";
+ import { BillingPeriodInfo, CampaignTotalsResult, calculatePeriodAmountFromTotals } from "@/utils/computeCampaignTotals";
 import { BillingStatusBadge, BillingStatus, mapInvoiceStatusToBillingStatus } from "./BillingStatusBadge";
 import { cn } from "@/lib/utils";
 
@@ -29,10 +28,7 @@ interface InvoiceRecord {
 
 interface MonthlyBillingScheduleTableProps {
   periods: BillingPeriodInfo[];
-  monthlyBaseRent: number;
-  gstPercent: number;
-  printingTotal: number;
-  mountingTotal: number;
+   totals: CampaignTotalsResult;
   existingInvoices: InvoiceRecord[];
   onGenerateInvoice: (period: BillingPeriodInfo, includePrinting: boolean, includeMounting: boolean) => void;
   onViewInvoice: (invoiceId: string) => void;
@@ -43,10 +39,7 @@ interface MonthlyBillingScheduleTableProps {
 
 export function MonthlyBillingScheduleTable({
   periods,
-  monthlyBaseRent,
-  gstPercent,
-  printingTotal,
-  mountingTotal,
+   totals,
   existingInvoices,
   onGenerateInvoice,
   onViewInvoice,
@@ -64,8 +57,8 @@ export function MonthlyBillingScheduleTable({
     return false; // Placeholder - would need invoice items check
   });
 
-  // Find invoice for a specific period
-  const getInvoiceForPeriod = (period: BillingPeriod): InvoiceRecord | undefined => {
+   // Find invoice for a specific period
+   const getInvoiceForPeriod = (period: BillingPeriodInfo): InvoiceRecord | undefined => {
     return existingInvoices.find(inv => {
       const invStart = new Date(inv.invoice_period_start);
       const invEnd = new Date(inv.invoice_period_end);
@@ -117,14 +110,11 @@ export function MonthlyBillingScheduleTable({
             const invoice = getInvoiceForPeriod(period);
             const hasInvoice = !!invoice;
             const selection = getChargeSelection(period.monthKey);
-            const amounts = calculatePeriodAmount(
+             const amounts = calculatePeriodAmountFromTotals(
               period,
-              monthlyBaseRent,
-              gstPercent,
-              selection.printing,
-              selection.mounting,
-              printingTotal,
-              mountingTotal
+               totals,
+               selection.printing && !printingBilled,
+               selection.mounting && !mountingBilled
             );
 
             const status: BillingStatus = hasInvoice
@@ -173,7 +163,7 @@ export function MonthlyBillingScheduleTable({
                 <TableCell>
                   {!hasInvoice ? (
                     <div className="flex items-center justify-center gap-4">
-                      {printingTotal > 0 && (
+                       {totals.printingCost > 0 && (
                         <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                           <Checkbox
                             checked={selection.printing}
@@ -188,7 +178,7 @@ export function MonthlyBillingScheduleTable({
                           )}
                         </label>
                       )}
-                      {mountingTotal > 0 && (
+                       {totals.mountingCost > 0 && (
                         <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                           <Checkbox
                             checked={selection.mounting}
@@ -203,7 +193,7 @@ export function MonthlyBillingScheduleTable({
                           )}
                         </label>
                       )}
-                      {printingTotal === 0 && mountingTotal === 0 && (
+                       {totals.printingCost === 0 && totals.mountingCost === 0 && (
                         <span className="text-muted-foreground text-xs">—</span>
                       )}
                     </div>
@@ -220,7 +210,7 @@ export function MonthlyBillingScheduleTable({
 
                 {/* GST */}
                 <TableCell className="text-right text-sm">
-                  {gstPercent > 0 ? formatCurrency(amounts.gstAmount) : "—"}
+                   {totals.gstRate > 0 ? formatCurrency(amounts.gstAmount) : "—"}
                 </TableCell>
 
                 {/* Total */}

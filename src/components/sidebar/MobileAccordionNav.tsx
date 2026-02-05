@@ -2,7 +2,7 @@
  import { Link, useLocation } from "react-router-dom";
  import { ChevronDown } from "lucide-react";
  import { cn } from "@/lib/utils";
- import { useSidebar } from "@/components/ui/sidebar";
+import { useSidebar } from "@/components/ui/sidebar";
  import {
    Accordion,
    AccordionContent,
@@ -23,7 +23,7 @@
  
  export function MobileAccordionNav({ badges = {}, onLogout }: MobileAccordionNavProps) {
    const location = useLocation();
-   const { setOpenMobile } = useSidebar();
+  const { setOpenMobile, openMobile } = useSidebar();
    const rbac = useRBAC();
    const { companyUser, isPlatformAdmin } = useCompany();
    const { isAdmin } = useAuth();
@@ -39,26 +39,28 @@
      return findActiveSections(location.pathname);
    });
  
-   // Update accordion state when route changes
+  // Close drawer on ANY route change (back/forward/programmatic)
    useEffect(() => {
-     const activeSections = findActiveSections(location.pathname);
-     setOpenSections((prev) => {
-       const combined = [...new Set([...prev, ...activeSections])];
-       return combined;
-     });
+    // Close the mobile drawer whenever the route changes
+    setOpenMobile(false);
    }, [location.pathname]);
  
+  // Update accordion state when route changes - active route wins (no accumulation)
+  useEffect(() => {
+    const activeSections = findActiveSections(location.pathname);
+    if (activeSections.length > 0) {
+      // Active route wins - replace, don't merge
+      setOpenSections(activeSections);
+    }
+    // If no active sections found, keep current state (persisted)
+  }, [location.pathname]);
+
    // Persist accordion state
    useEffect(() => {
      try {
        localStorage.setItem(ACCORDION_STATE_KEY, JSON.stringify(openSections));
      } catch {}
    }, [openSections]);
- 
-   // Close mobile drawer on navigation - using pointer events
-   const handleNavigate = useCallback(() => {
-     setOpenMobile(false);
-   }, [setOpenMobile]);
  
    const handleLogout = useCallback(() => {
      setOpenMobile(false);
@@ -86,10 +88,6 @@
        <Link
          key={item.href}
          to={item.href}
-         onPointerUp={(e) => {
-           e.stopPropagation();
-           handleNavigate();
-         }}
          className={cn(
            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
            "min-h-[44px] touch-manipulation select-none pointer-events-auto",

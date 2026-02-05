@@ -114,6 +114,7 @@ const ALL_COLUMNS = [
   { id: "rent_amount", label: "Rent", defaultVisible: true },
   { id: "printing", label: "Printing", defaultVisible: true },
   { id: "mounting", label: "Mounting", defaultVisible: true },
+  { id: "line_total", label: "Line Total", defaultVisible: true },
   { id: "status", label: "Status", defaultVisible: true },
 ];
 
@@ -617,6 +618,12 @@ export function CampaignAssetsTable({
                 </TableHead>
               )}
 
+              {isColumnVisible("line_total") && (
+                <TableHead className="text-right">
+                  Line Total
+                </TableHead>
+              )}
+
               {isColumnVisible("status") && (
                 <TableHead
                   className="cursor-pointer hover:bg-muted/50 select-none"
@@ -802,6 +809,16 @@ export function CampaignAssetsTable({
                             {formatCurrency(asset.mounting_charges || 0)}
                           </span>
                         </div>
+                      </TableCell>
+                    )}
+
+                    {isColumnVisible("line_total") && (
+                      <TableCell className="text-right font-semibold">
+                        {formatCurrency(
+                          (asset.rent_amount || 0) + 
+                          (asset.printing_charges || 0) + 
+                          (asset.mounting_charges || 0)
+                        )}
                       </TableCell>
                     )}
 

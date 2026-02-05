@@ -483,10 +483,7 @@ export function CampaignBillingTab({
           {/* Monthly Schedule Table */}
           <MonthlyBillingScheduleTable
             periods={totals.billingPeriods}
-            monthlyBaseRent={totals.monthlyDisplayRent}
-            gstPercent={totals.gstRate}
-            printingTotal={totals.printingCost}
-            mountingTotal={totals.mountingCost}
+             totals={totals}
             existingInvoices={monthlyInvoices}
             onGenerateInvoice={handleGenerateInvoice}
             onViewInvoice={handleViewInvoice}

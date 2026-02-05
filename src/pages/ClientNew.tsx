@@ -18,11 +18,21 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Plus, X } from "lucide-react";
+import { ArrowLeft, Plus, X, AlertTriangle, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { StateSelect } from "@/components/clients/StateSelect";
 import { getStateCode } from "@/lib/stateCodeMapping";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // GST treatment types
 type GstTreatment = "registered" | "unregistered" | "consumer";
@@ -71,13 +81,17 @@ interface ContactPerson {
   mobile: string;
 }
 
-const FORM_STORAGE_KEY = "client-new-form-draft";
+const getDraftStorageKey = (companyId?: string) => 
+  companyId ? `client_new_draft:${companyId}` : "client_new_draft";
 
 export default function ClientNew() {
   const navigate = useNavigate();
   const { company, isLoading: companyLoading } = useCompany();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+  const [showClearDraftDialog, setShowClearDraftDialog] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
   
   const [formData, setFormData] = useState({
     id: "",
@@ -111,83 +125,104 @@ export default function ClientNew() {
     shipping_same_as_billing: false,
   });
 
-  // Aggressively prevent page refresh/reload when tab visibility changes
+  const [contactPersons, setContactPersons] = useState<ContactPerson[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Get storage key based on company
+  const storageKey = getDraftStorageKey(company?.id);
+
+  // Load saved draft from sessionStorage on mount
   useEffect(() => {
-    const preventReload = (e: Event) => {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      return false;
-    };
-
-    const preventVisibilityReload = () => {
-      // Prevent service worker from reloading the page
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(registrations => {
-          registrations.forEach(registration => {
-            // Don't unregister, just prevent updates during form editing
-            registration.update = async () => registration;
-          });
-        });
-      }
-    };
-
-    // Prevent various events that could trigger reload
-    document.addEventListener("visibilitychange", preventVisibilityReload);
-    window.addEventListener("beforeunload", preventReload);
-    window.addEventListener("pageshow", preventReload);
-    window.addEventListener("focus", preventReload);
+    // Only load draft once after company is available
+    if (draftLoaded || !company?.id) return;
     
-    // Mark that we're editing a form (used by service worker)
-    sessionStorage.setItem("editing-form", "true");
+    const key = getDraftStorageKey(company.id);
+    const saved = sessionStorage.getItem(key);
     
-    return () => {
-      document.removeEventListener("visibilitychange", preventVisibilityReload);
-      window.removeEventListener("beforeunload", preventReload);
-      window.removeEventListener("pageshow", preventReload);
-      window.removeEventListener("focus", preventReload);
-      sessionStorage.removeItem("editing-form");
-    };
-  }, []);
-
-  // Load saved form from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem(FORM_STORAGE_KEY);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        console.log("✅ Restored form data from localStorage:", {
-          id: parsed.id,
-          customer_type: parsed.customer_type,
-          company: parsed.company,
-          first_name: parsed.first_name,
+        console.log("✅ Restored draft from sessionStorage:", {
+          company: parsed.formData?.company,
+          first_name: parsed.formData?.first_name,
+          state: parsed.formData?.state,
         });
-        setFormData(parsed);
+        
+        if (parsed.formData) {
+          setFormData(parsed.formData);
+        }
+        if (parsed.contactPersons && Array.isArray(parsed.contactPersons)) {
+          setContactPersons(parsed.contactPersons);
+        }
+        setShowDraftBanner(true);
       } catch (error) {
-        console.error("❌ Failed to restore form data:", error);
+        console.error("❌ Failed to restore draft:", error);
+        sessionStorage.removeItem(key);
       }
-    } else {
-      console.log("ℹ️ No saved form data found in localStorage");
     }
-  }, []);
+    
+    setDraftLoaded(true);
+  }, [company?.id, draftLoaded]);
 
-  // Auto-save form to localStorage whenever formData changes
+  // Auto-save draft to sessionStorage whenever form changes (debounced)
   useEffect(() => {
-    if (formData.id || formData.company || formData.first_name || formData.email) {
-      localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(formData));
-      console.log("💾 Form auto-saved to localStorage");
+    if (!draftLoaded || !company?.id) return;
+    
+    // Check if form has meaningful data
+    const hasData = formData.company || formData.first_name || formData.email || 
+                    formData.gst_number || formData.billing_address_line1 ||
+                    contactPersons.some(c => c.firstName || c.lastName || c.email);
+    
+    if (hasData) {
+      const draftData = {
+        formData,
+        contactPersons,
+        savedAt: new Date().toISOString(),
+      };
+      sessionStorage.setItem(storageKey, JSON.stringify(draftData));
     }
-  }, [formData]);
-  
-  // Log when component mounts/unmounts to detect reload issues
-  useEffect(() => {
-    console.log("🚀 ClientNew component mounted");
-    return () => {
-      console.log("💥 ClientNew component unmounted");
-    };
-  }, []);
+  }, [formData, contactPersons, draftLoaded, company?.id, storageKey]);
 
-  const [contactPersons, setContactPersons] = useState<ContactPerson[]>([]);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  // Clear draft and reset form
+  const handleClearDraft = () => {
+    sessionStorage.removeItem(storageKey);
+    setFormData({
+      id: "",
+      customer_type: "business",
+      salutation: "Mr.",
+      first_name: "",
+      last_name: "",
+      company: "",
+      email: "",
+      phone: "",
+      gst_treatment: "registered",
+      gst_number: "",
+      state: "",
+      city: "",
+      notes: "",
+      billing_address_line1: "",
+      billing_address_line2: "",
+      billing_city: "",
+      billing_state: "",
+      billing_pincode: "",
+      shipping_address_line1: "",
+      shipping_address_line2: "",
+      shipping_city: "",
+      shipping_state: "",
+      shipping_pincode: "",
+      shipping_same_as_billing: false,
+    });
+    setContactPersons([]);
+    setErrors({});
+    setShowDraftBanner(false);
+    setShowClearDraftDialog(false);
+    toast.success("Draft cleared");
+  };
+
+  // Dismiss banner without clearing
+  const handleDismissBanner = () => {
+    setShowDraftBanner(false);
+  };
 
   // Generate preview ID when state changes (just for display - actual ID is generated atomically on submit)
   useEffect(() => {
@@ -412,7 +447,7 @@ export default function ClientNew() {
       }
 
       // Clear saved form draft after successful creation
-      localStorage.removeItem(FORM_STORAGE_KEY);
+      sessionStorage.removeItem(storageKey);
       
       toast.success(`Client created successfully with ID: ${newClientId}`);
       
@@ -462,6 +497,55 @@ export default function ClientNew() {
         showBackButton
         backPath={ROUTES.CLIENTS}
       />
+
+      {/* Draft Restored Banner */}
+      {showDraftBanner && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500 shrink-0" />
+            <span className="text-sm text-amber-800 dark:text-amber-200">
+              Draft restored from your previous session
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowClearDraftDialog(true)}
+              className="text-amber-700 hover:text-amber-900 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-800/30"
+            >
+              <RotateCcw className="h-4 w-4 mr-1" />
+              Clear Draft
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDismissBanner}
+              className="text-amber-700 hover:text-amber-900 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-800/30"
+            >
+              Keep
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Clear Draft Confirmation Dialog */}
+      <AlertDialog open={showClearDraftDialog} onOpenChange={setShowClearDraftDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard Draft?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will clear all entered client details and start fresh. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearDraft} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Discard Draft
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>

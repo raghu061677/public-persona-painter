@@ -1,5 +1,5 @@
-import { Link, useLocation } from "react-router-dom";
-import { useState, useEffect } from "react";
+ import { Link, useLocation, useNavigate } from "react-router-dom";
+ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useRBAC } from "@/hooks/useRBAC";
@@ -29,19 +29,22 @@ import { CompanySwitcher } from "@/components/sidebar/CompanySwitcher";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+ import { useIsMobile } from "@/hooks/use-mobile";
+ import { NAV_CONFIG, findActiveSections, type NavSection, type NavItem } from "@/config/navigation";
+ import { MobileAccordionNav } from "@/components/sidebar/MobileAccordionNav";
 
 export function ResponsiveSidebar() {
   const location = useLocation();
-  const { state } = useSidebar();
+   const { state, isMobile, setOpenMobile } = useSidebar();
   const { company, isPlatformAdmin, companyUser } = useCompany();
   const rbac = useRBAC();
   const navigate = useNavigate();
   const { isAdmin, user } = useAuth();
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
-  
+   const [proofUploadsCount, setProofUploadsCount] = useState(0);
+ 
   const isCompanyAdmin = companyUser?.role === 'admin' || isAdmin;
   const collapsed = state === "collapsed";
   const isActive = (path: string) => location.pathname === path;
@@ -76,7 +79,15 @@ export function ResponsiveSidebar() {
     }
   };
 
+   // Close mobile drawer on navigation
+   const handleMobileNavigate = useCallback(() => {
+     if (isMobile) {
+       setOpenMobile(false);
+     }
+   }, [isMobile, setOpenMobile]);
+ 
   const handleLogout = async () => {
+     handleMobileNavigate();
     await supabase.auth.signOut();
     navigate('/auth');
   };
@@ -160,8 +171,51 @@ export function ResponsiveSidebar() {
     );
   };
 
-  return (
-    <Sidebar collapsible="icon" className="border-r border-border">
+   // Mobile header with company logo/branding
+   const mobileHeader = (
+     <div className="px-4 pb-2 border-b border-border/40 mb-2">
+       <Link 
+         to="/admin/dashboard" 
+         className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+         onPointerUp={handleMobileNavigate}
+       >
+         {company?.logo_url ? (
+           <img 
+             src={company.logo_url} 
+             alt={company.name}
+             className="h-8 w-auto object-contain max-w-[140px] rounded"
+           />
+         ) : (
+           <>
+             <Shield className="h-5 w-5 text-primary" />
+             <span className="font-semibold text-foreground">
+               {company?.name || 'Go-Ads 360°'}
+             </span>
+           </>
+         )}
+       </Link>
+       <p className="text-xs text-muted-foreground mt-1">Company Workspace</p>
+     </div>
+   );
+ 
+   // Badge counts for mobile accordion
+   const badges: Record<string, number> = {
+     pendingApprovals: pendingApprovalsCount,
+     proofUploads: proofUploadsCount,
+   };
+ 
+   return (
+     <Sidebar 
+       collapsible="icon" 
+       className="border-r border-border"
+       mobileContent={
+         <MobileAccordionNav 
+           badges={badges} 
+           onLogout={handleLogout} 
+         />
+       }
+       mobileHeader={mobileHeader}
+     >
       {/* Header with Logo and Toggle */}
       <SidebarHeader className="border-b border-border/40 p-4">
         <div className="flex items-center justify-between">

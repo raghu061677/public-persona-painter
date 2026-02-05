@@ -134,8 +134,10 @@ const Sidebar = React.forwardRef<
     side?: "left" | "right";
     variant?: "sidebar" | "floating" | "inset";
     collapsible?: "offcanvas" | "icon" | "none";
+     mobileContent?: React.ReactNode;
+     mobileHeader?: React.ReactNode;
   }
->(({ side = "left", variant = "sidebar", collapsible = "offcanvas", className, children, ...props }, ref) => {
+ >(({ side = "left", variant = "sidebar", collapsible = "offcanvas", className, children, mobileContent, mobileHeader, ...props }, ref) => {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
 
   if (collapsible === "none") {
@@ -179,7 +181,8 @@ const Sidebar = React.forwardRef<
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
           <div className="flex h-full w-full flex-col overflow-y-auto overscroll-contain pt-14">
-            {children}
+             {mobileHeader}
+             {mobileContent || children}
           </div>
         </SheetContent>
       </Sheet>

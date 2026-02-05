@@ -7,7 +7,7 @@ import { CheckCircle, XCircle, Image as ImageIcon, CheckCircle2, Download, Loade
 import { ProofApprovalDialog } from "./ProofApprovalDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { resolveAssetDisplayCode } from "@/lib/assets/getAssetDisplayCode";
+import { getAssetDisplayCode } from "@/lib/assets/getAssetDisplayCode";
 
 interface ProofGalleryProps {
   assets: any[];
@@ -30,6 +30,7 @@ export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
   const [approvalAsset, setApprovalAsset] = useState<any>(null);
   const [mediaPhotos, setMediaPhotos] = useState<MediaPhoto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [assetCodeMap, setAssetCodeMap] = useState<Map<string, string>>(new Map());
 
   // Get campaign ID from assets
   const campaignId = assets[0]?.campaign_id;
@@ -37,10 +38,30 @@ export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
   useEffect(() => {
     if (campaignId) {
       fetchMediaPhotos();
+      fetchAssetCodes();
     } else {
       setLoading(false);
     }
   }, [campaignId]);
+
+  const fetchAssetCodes = async () => {
+    // Get unique asset_ids from assets
+    const assetIds = [...new Set(assets.map(a => a.asset_id).filter(Boolean))];
+    if (assetIds.length === 0) return;
+
+    const { data: mediaAssets } = await supabase
+      .from('media_assets')
+      .select('id, media_asset_code')
+      .in('id', assetIds);
+
+    const codeMap = new Map<string, string>();
+    (mediaAssets || []).forEach(ma => {
+      if (ma.media_asset_code) {
+        codeMap.set(ma.id, ma.media_asset_code);
+      }
+    });
+    setAssetCodeMap(codeMap);
+  };
 
   const fetchMediaPhotos = async () => {
     try {
@@ -86,6 +107,17 @@ export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
   // Group photos by asset
   const getPhotosForAsset = (assetId: string) => {
     return mediaPhotos.filter(p => p.asset_id === assetId);
+  };
+
+  // Helper to get display code for an asset
+  const getDisplayCode = (asset: any): string => {
+    // First try the enriched media_asset_code from parent
+    if (asset.media_asset_code) return asset.media_asset_code;
+    // Then try our fetched map
+    const fromMap = assetCodeMap.get(asset.asset_id);
+    if (fromMap) return fromMap;
+    // Finally use the utility
+    return getAssetDisplayCode({ media_asset_code: null }, asset.asset_id);
   };
 
   if (loading) {
@@ -138,7 +170,7 @@ export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
             <CardContent className="pt-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h3 className="font-semibold text-lg">{resolveAssetDisplayCode(asset)}</h3>
+                  <h3 className="font-semibold text-lg">{getDisplayCode(asset)}</h3>
                   <p className="text-sm text-muted-foreground">
                     {asset.location}, {asset.area}, {asset.city}
                   </p>

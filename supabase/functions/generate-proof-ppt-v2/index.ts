@@ -92,6 +92,7 @@ Deno.serve(async (req) => {
         *,
         media_assets(
           id,
+          media_asset_code,
           google_street_view_url,
           qr_code_url
         )
@@ -127,9 +128,12 @@ Deno.serve(async (req) => {
         ? `https://api.qrserver.com/v1/create-qr-code/?size=512x512&data=${encodeURIComponent(googleStreetViewUrl)}`
         : null;
 
+      // Use media_asset_code from media_assets table for proper display code
+      const displayCode = asset.media_assets?.media_asset_code || asset.asset_id;
+
       return {
         asset_id: asset.asset_id,
-        asset_code: asset.asset_id, // Use asset_id as code (snapshot from campaign)
+        asset_code: displayCode, // Use media_asset_code from media_assets table
         media_type: asset.media_type || 'Unknown',
         direction: asset.direction || 'N/A',
         illumination_type: asset.illumination_type || 'N/A',

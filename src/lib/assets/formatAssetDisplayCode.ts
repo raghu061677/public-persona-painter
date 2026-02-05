@@ -1,3 +1,5 @@
+import { getAssetDisplayCode } from './getAssetDisplayCode';
+
 export function getCompanyAcronym(companyName?: string | null): string | null {
   const name = (companyName || '').trim();
   if (!name) return null;
@@ -28,7 +30,11 @@ export function formatAssetDisplayCode(params: {
   /** Used only if companyPrefix is missing */
   companyName?: string | null;
 }): string {
-  const base = (params.mediaAssetCode || params.fallbackId || '').trim();
+  // Use getAssetDisplayCode utility to properly handle UUID fallbacks
+  const base = getAssetDisplayCode(
+    { media_asset_code: params.mediaAssetCode || null, asset_code: null },
+    params.fallbackId
+  );
   if (!base) return '';
 
   const prefix = (params.companyPrefix || getCompanyAcronym(params.companyName) || '').trim();

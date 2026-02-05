@@ -934,3 +934,51 @@ input[type="number"] {
   }
 }
 
+/* Additional mobile-specific improvements */
+@layer utilities {
+  /* Ensure touch targets are accessible */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  /* Mobile menu button specific styles */
+  [data-sidebar="trigger"] {
+    @apply relative;
+    isolation: isolate;
+  }
+  
+  /* Prevent pointer-events issues on overlays */
+  [data-radix-dialog-content] {
+    pointer-events: auto !important;
+  }
+  
+  /* Mobile drawer specific fixes */
+  [data-sidebar="sidebar"][data-mobile="true"] {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  
+  /* Ensure header doesn't block touches */
+  header {
+    pointer-events: auto;
+  }
+  
+  header > * {
+    pointer-events: auto;
+  }
+}
+
+/* Mobile responsive table container */
+@layer components {
+  .table-scroll-container {
+    @apply overflow-x-auto -mx-4 px-4;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  @media (min-width: 768px) {
+    .table-scroll-container {
+      @apply mx-0 px-0 overflow-x-visible;
+    }
+  }
+}
+

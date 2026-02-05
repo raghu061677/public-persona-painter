@@ -4,7 +4,6 @@ import { X } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
-import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 const Sheet = SheetPrimitive.Root;
 
@@ -31,7 +30,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 
 const sheetVariants = cva(
-  "fixed z-[9999] gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500 touch-manipulation overscroll-contain",
+  "fixed z-[9999] gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500 touch-manipulation overscroll-contain will-change-transform",
   {
     variants: {
       side: {
@@ -57,6 +56,35 @@ interface SheetContentProps
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
   ({ side = "right", className, children, showCloseButton = true, ...props }, ref) => {
+    // Lock body scroll when sheet is open
+    React.useEffect(() => {
+      const scrollY = window.scrollY;
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.overflow = 'hidden';
+      document.body.style.width = '100%';
+      if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+      }
+      document.documentElement.style.overflow = 'hidden';
+      
+      return () => {
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.overflow = '';
+        document.body.style.width = '';
+        document.body.style.paddingRight = '';
+        document.documentElement.style.overflow = '';
+        window.scrollTo(0, scrollY);
+      };
+    }, []);
+
     return (
       <SheetPortal>
         <SheetOverlay />
@@ -68,7 +96,7 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
           {children}
           {showCloseButton && (
             <SheetPrimitive.Close 
-              className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-muted/80 backdrop-blur-sm opacity-90 ring-offset-background transition-all hover:opacity-100 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none touch-manipulation active:scale-95"
+              className="absolute right-4 top-4 z-10 flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-muted/80 backdrop-blur-sm opacity-90 ring-offset-background transition-all hover:opacity-100 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none touch-manipulation active:scale-95"
               aria-label="Close"
             >
               <X className="h-5 w-5" />

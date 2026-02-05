@@ -258,10 +258,17 @@
    const printing = includePrinting ? totals.printingCost : 0;
    const mounting = includeMounting ? totals.mountingCost : 0;
    
-   // Apply proportional discount for monthly invoices
-   const periodDiscountShare = totals.totalMonths > 0 
-     ? Math.round((totals.manualDiscountAmount / totals.totalMonths) * period.proRataFactor * 100) / 100
-     : 0;
+   // Apply discount - for single period, apply full discount; for multi-period, distribute proportionally
+   let periodDiscountShare: number;
+   
+   if (totals.totalMonths <= 1) {
+     // Single period: apply full discount
+     periodDiscountShare = totals.manualDiscountAmount;
+   } else {
+     // Multi-period: distribute discount proportionally across periods
+     const totalProRata = totals.billingPeriods.reduce((sum, p) => sum + p.proRataFactor, 0);
+     periodDiscountShare = Math.round((totals.manualDiscountAmount * period.proRataFactor / totalProRata) * 100) / 100;
+   }
    
    const subtotalBeforeDiscount = baseRent + printing + mounting;
    const subtotal = Math.round((subtotalBeforeDiscount - periodDiscountShare) * 100) / 100;

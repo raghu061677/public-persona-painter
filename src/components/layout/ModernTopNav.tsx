@@ -57,10 +57,10 @@ export function ModernTopNav() {
   };
 
   return (
-    <header className="sticky top-0 z-[100] flex items-center justify-between bg-card/98 backdrop-blur-lg border-b border-border h-14 sm:h-16 px-2 sm:px-4 lg:px-6 shadow-sm transition-colors duration-300 pt-safe">
+    <header className="sticky top-0 z-[100] flex items-center justify-between bg-card/98 backdrop-blur-lg border-b border-border h-14 sm:h-16 px-2 sm:px-4 lg:px-6 shadow-sm transition-colors duration-300 pt-safe pointer-events-auto">
       {/* Left: Sidebar Toggle + Brand */}
       <div className="flex items-center gap-1 sm:gap-3">
-        <SidebarTrigger className="relative">
+        <SidebarTrigger className="relative pointer-events-auto">
           <Menu className="h-5 w-5" aria-hidden="true" />
         </SidebarTrigger>
       </div>
@@ -71,7 +71,7 @@ export function ModernTopNav() {
       </div>
 
       {/* Right: Actions */}
-      <div className="flex items-center gap-1 sm:gap-2">
+      <div className="flex items-center gap-1 sm:gap-2 pointer-events-auto">
         {/* Notifications */}
         <NotificationCenter />
         

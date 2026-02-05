@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { VariantProps, cva } from "class-variance-authority";
-import { PanelLeft } from "lucide-react";
+import { PanelLeft, X } from "lucide-react";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -156,16 +156,28 @@ const Sidebar = React.forwardRef<
         <SheetContent
           data-sidebar="sidebar"
           data-mobile="true"
-          className="w-[--sidebar-width] bg-sidebar backdrop-blur-2xl p-0 text-sidebar-foreground border-r border-border/50 shadow-[0_8px_32px_rgba(0,0,0,0.12)] z-[9999] touch-manipulation"
+          className="w-[--sidebar-width] bg-sidebar backdrop-blur-2xl p-0 text-sidebar-foreground border-r border-border/50 shadow-[0_8px_32px_rgba(0,0,0,0.12)] z-[9999] touch-manipulation select-none"
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
             } as React.CSSProperties
           }
           side={side}
-          showCloseButton={true}
+          showCloseButton={false}
         >
-          <div className="flex h-full w-full flex-col overflow-y-auto overscroll-contain pt-12">
+          {/* Custom close button with larger touch target */}
+          <button
+            onClick={() => setOpenMobile(false)}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              setOpenMobile(false);
+            }}
+            className="absolute right-3 top-3 z-20 flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-muted/80 backdrop-blur-sm transition-all hover:bg-muted active:scale-95 touch-manipulation select-none"
+            aria-label="Close menu"
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
+          <div className="flex h-full w-full flex-col overflow-y-auto overscroll-contain pt-14">
             {children}
           </div>
         </SheetContent>
@@ -223,12 +235,23 @@ const SidebarTrigger = React.forwardRef<React.ElementRef<typeof Button>, React.C
   ({ className, onClick, ...props }, ref) => {
     const { toggleSidebar } = useSidebar();
 
-    const handleClick = React.useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
-      event.preventDefault();
-      event.stopPropagation();
-      onClick?.(event);
-      toggleSidebar();
-    }, [onClick, toggleSidebar]);
+    const handleInteraction = React.useCallback(
+      (event: React.MouseEvent<HTMLButtonElement> | React.TouchEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        // For mouse events, call the onClick prop
+        if ('button' in event) {
+          onClick?.(event as React.MouseEvent<HTMLButtonElement>);
+        }
+        
+        toggleSidebar();
+      },
+      [onClick, toggleSidebar]
+    );
+
+    // Track if touch event fired to prevent duplicate handling
+    const touchHandled = React.useRef(false);
 
     return (
       <Button
@@ -240,9 +263,22 @@ const SidebarTrigger = React.forwardRef<React.ElementRef<typeof Button>, React.C
           "h-11 w-11 min-h-[44px] min-w-[44px] touch-manipulation z-[101]",
           "active:scale-95 transition-transform",
           "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          "select-none",
           className
         )}
-        onClick={handleClick}
+        onClick={(e) => {
+          // Skip if touch already handled this interaction
+          if (touchHandled.current) {
+            touchHandled.current = false;
+            return;
+          }
+          handleInteraction(e);
+        }}
+        onTouchEnd={(e) => {
+          e.preventDefault();
+          touchHandled.current = true;
+          handleInteraction(e);
+        }}
         aria-label="Toggle navigation menu"
         {...props}
       >

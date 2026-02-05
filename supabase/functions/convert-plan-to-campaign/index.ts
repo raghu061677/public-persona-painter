@@ -408,6 +408,12 @@ serve(async (req) => {
       console.log(`[v9.0] Generated campaign ID (attempt ${attempt}):`, campaignId);
 
       // 7) Insert Campaign - Use 'Draft' status, trigger will auto-update based on dates
+      // CRITICAL: Carry GST percent from plan - if plan.gst_percent is 0, campaign must be 0
+      // Only default to 0 if plan.gst_percent is null/undefined (never default to 18)
+      const effectiveGstPercent = (plan.gst_percent !== null && plan.gst_percent !== undefined) 
+        ? plan.gst_percent 
+        : 0;
+      
       const campaignInsertPayload = {
         id: campaignId,
         plan_id: plan.id,
@@ -420,8 +426,8 @@ serve(async (req) => {
         end_date: plan.end_date,
         total_assets: planItems.length,
         total_amount: plan.total_amount,
-        gst_percent: plan.gst_percent,
-        gst_amount: plan.gst_amount,
+        gst_percent: effectiveGstPercent,
+        gst_amount: plan.gst_amount || 0,
         grand_total: plan.grand_total,
         notes: plan.notes || "",
         created_by: user.id,
@@ -506,19 +512,40 @@ serve(async (req) => {
       const assetStartDate = item.start_date || plan.start_date;
       const assetEndDate = item.end_date || plan.end_date;
       
-      // Calculate booked_days if not provided
-      const bookedDays = item.booked_days || 
-        Math.max(1, Math.ceil((new Date(assetEndDate).getTime() - new Date(assetStartDate).getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      // Calculate booked_days (inclusive) - ALWAYS recalculate to ensure accuracy
+      const startMs = new Date(assetStartDate).setHours(0, 0, 0, 0);
+      const endMs = new Date(assetEndDate).setHours(0, 0, 0, 0);
+      const bookedDays = Math.max(1, Math.floor((endMs - startMs) / (1000 * 60 * 60 * 24)) + 1);
       
-      // Calculate rent using full precision formula to avoid floating-point errors
-      // Formula: (monthly_rate / 30) * booked_days, then round final result
-      // This prevents errors like 300000.60 instead of 300000.00
-      const rawDailyRate = effectivePrice / 30;
-      const rawRentAmount = rawDailyRate * bookedDays;
+      // Get billing mode from plan item
+      const billingMode = item.billing_mode || 'PRORATA_30';
       
-      // Daily rate for display (rounded) and rent amount (rounded only at the end)
-      const dailyRate = item.daily_rate || Math.round(rawDailyRate * 100) / 100;
-      const rentAmount = item.rent_amount || Math.round(rawRentAmount * 100) / 100;
+      // Calculate rent using CANONICAL formula to match Plans:
+      // PRORATA_30: (monthly_rate / 30) * booked_days (use raw calculation, round final result)
+      // FULL_MONTH: monthly_rate * ceil(booked_days / 30)
+      // DAILY: daily_rate * booked_days
+      let rawRentAmount: number;
+      let displayDailyRate: number;
+      
+      if (billingMode === 'FULL_MONTH') {
+        const fullMonths = Math.ceil(bookedDays / 30);
+        rawRentAmount = effectivePrice * fullMonths;
+        displayDailyRate = Math.round((effectivePrice / 30) * 100) / 100;
+      } else if (billingMode === 'DAILY' && item.daily_rate && item.daily_rate > 0) {
+        rawRentAmount = item.daily_rate * bookedDays;
+        displayDailyRate = item.daily_rate;
+      } else {
+        // PRORATA_30 (default): Use raw calculation to avoid precision errors
+        const rawDailyRate = effectivePrice / 30;
+        rawRentAmount = rawDailyRate * bookedDays;
+        displayDailyRate = Math.round(rawDailyRate * 100) / 100;
+      }
+      
+      // Round final rent amount only at the end
+      const rentAmount = Math.round(rawRentAmount * 100) / 100;
+      
+      // Calculate line total (without GST) = rent + printing + mounting
+      const lineTotal = Math.round((rentAmount + printingCost + mountingCost) * 100) / 100;
       
       return {
         campaign_id: campaignId,
@@ -549,7 +576,7 @@ serve(async (req) => {
         end_date: assetEndDate,
         booked_days: bookedDays,
         billing_mode: item.billing_mode || 'PRORATA_30',
-        daily_rate: dailyRate,
+        daily_rate: displayDailyRate,
         rent_amount: rentAmount,
         // Status
         status: "Pending" as const,

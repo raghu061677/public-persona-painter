@@ -252,7 +252,17 @@ export default function CampaignEdit() {
     
     setStatus(correctStatus);
     setNotes(campaign.notes || "");
-    setGstPercent(gstApplicable ? (campaign.gst_percent || 18) : 0);
+    // Use campaign.gst_percent directly - if 0, it should stay 0 (do NOT default to 18)
+    // Only if gst_percent is null/undefined AND gstApplicable, we default to 18
+    const campaignGstPercent = campaign.gst_percent;
+    if (!gstApplicable) {
+      setGstPercent(0);
+    } else if (campaignGstPercent !== null && campaignGstPercent !== undefined) {
+      setGstPercent(campaignGstPercent);
+    } else {
+      // Only default to 18 if truly undefined/null and client is GST applicable
+      setGstPercent(18);
+    }
 
     // Fetch campaign_assets (primary source for both direct campaigns and plan-converted)
     const { data: assets, error: assetsError } = await supabase

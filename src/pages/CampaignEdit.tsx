@@ -109,6 +109,8 @@ export default function CampaignEdit() {
   const [gstPercent, setGstPercent] = useState(18);
   const [isGstApplicable, setIsGstApplicable] = useState(true);
   const [companyPrefix, setCompanyPrefix] = useState<string | null>(null);
+  const [manualDiscountAmount, setManualDiscountAmount] = useState(0);
+  const [manualDiscountReason, setManualDiscountReason] = useState("");
   
   // Duration settings
   const [durationMode, setDurationMode] = useState<DurationMode>('MONTH');
@@ -252,6 +254,9 @@ export default function CampaignEdit() {
     
     setStatus(correctStatus);
     setNotes(campaign.notes || "");
+    // Load manual discount from database
+    setManualDiscountAmount(Number(campaign.manual_discount_amount) || 0);
+    setManualDiscountReason(campaign.manual_discount_reason || "");
     // Use campaign.gst_percent directly - if 0, it should stay 0 (do NOT default to 18)
     // Only if gst_percent is null/undefined AND gstApplicable, we default to 18
     const campaignGstPercent = campaign.gst_percent;
@@ -732,16 +737,23 @@ export default function CampaignEdit() {
 
     // Round ONLY the final totals
     const rentTotal = Math.round(rentTotalRaw * 100) / 100;
-    const totalAmount = Math.round((rentTotal + printingTotal + mountingTotal) * 100) / 100;
+    const grossAmount = Math.round((rentTotal + printingTotal + mountingTotal) * 100) / 100;
+    
+    // Apply manual discount (before GST)
+    const clampedDiscount = Math.min(Math.max(manualDiscountAmount, 0), grossAmount);
+    const taxableAmount = Math.round((grossAmount - clampedDiscount) * 100) / 100;
+    
     const effectiveGstPercent = isGstApplicable ? gstPercent : 0;
-    const gstAmount = Math.round((totalAmount * effectiveGstPercent / 100) * 100) / 100;
-    const grandTotal = Math.round((totalAmount + gstAmount) * 100) / 100;
+    const gstAmount = Math.round((taxableAmount * effectiveGstPercent / 100) * 100) / 100;
+    const grandTotal = Math.round((taxableAmount + gstAmount) * 100) / 100;
 
     return { 
       subtotal: rentTotal, 
       printingTotal: Math.round(printingTotal * 100) / 100, 
       mountingTotal: Math.round(mountingTotal * 100) / 100, 
-      totalAmount, 
+      grossAmount,
+      manualDiscount: clampedDiscount,
+      totalAmount: taxableAmount, 
       gstAmount, 
       grandTotal, 
       effectiveGstPercent,
@@ -915,6 +927,8 @@ export default function CampaignEdit() {
           subtotal: subtotal,
           printing_total: printingTotal,
           mounting_total: mountingTotal,
+          manual_discount_amount: manualDiscountAmount,
+          manual_discount_reason: manualDiscountReason || null,
           total_amount: totalAmount,
           gst_percent: gstPercent,
           gst_amount: gstAmount,
@@ -1029,7 +1043,7 @@ export default function CampaignEdit() {
     );
   }
 
-  const { subtotal, printingTotal, mountingTotal, totalAmount, gstAmount, grandTotal, effectiveGstPercent, durationDays } = calculateTotals();
+  const { subtotal, printingTotal, mountingTotal, grossAmount, totalAmount, gstAmount, grandTotal, effectiveGstPercent, durationDays } = calculateTotals();
   const existingAssetIds = campaignAssets.map(a => a.asset_id);
 
   return (
@@ -1296,7 +1310,7 @@ export default function CampaignEdit() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Display Cost (Subtotal)</span>
+                <span className="text-muted-foreground">Display Cost</span>
                 <span className="font-medium">{formatCurrency(subtotal)}</span>
               </div>
               
@@ -1310,8 +1324,30 @@ export default function CampaignEdit() {
                 <span className="font-medium">{formatCurrency(mountingTotal)}</span>
               </div>
               
+              <div className="flex justify-between text-sm font-medium border-t pt-2">
+                <span>Gross Amount</span>
+                <span>{formatCurrency(grossAmount)}</span>
+              </div>
+              
+              {/* Manual Discount Input */}
+              <div className="flex justify-between items-center text-sm bg-muted/30 rounded px-2 py-2 -mx-2">
+                <span className="text-green-600 font-medium">Discount (Before GST)</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm text-green-600">₹</span>
+                  <Input
+                    type="number"
+                    value={manualDiscountAmount || ''}
+                    onChange={(e) => setManualDiscountAmount(Number(e.target.value) || 0)}
+                    className="w-24 h-8 text-right text-green-600"
+                    min="0"
+                    max={grossAmount}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              
               <div className="flex justify-between text-sm border-t pt-2">
-                <span className="text-muted-foreground">Taxable Amount</span>
+                <span className="font-medium">Taxable Amount</span>
                 <span className="font-medium">{formatCurrency(totalAmount)}</span>
               </div>
               

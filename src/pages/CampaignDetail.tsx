@@ -33,6 +33,7 @@ import { CampaignTimelineView } from "@/components/campaigns/CampaignTimelineVie
 import { DeleteCampaignDialog } from "@/components/campaigns/DeleteCampaignDialog";
 import { CampaignBillingTab } from "@/components/campaigns/billing";
 import { CampaignDetailAssetsTable } from "@/components/campaigns/CampaignDetailAssetsTable";
+import { computeCampaignTotals } from "@/utils/computeCampaignTotals";
 
 export default function CampaignDetail() {
   const { id } = useParams();
@@ -207,37 +208,28 @@ export default function CampaignDetail() {
   const totalAssets = campaignAssets.length || campaign.total_assets || 0;
   const progress = calculateProgress(totalAssets, verifiedAssets);
 
-  // Calculate campaign duration
-  const startDate = new Date(campaign.start_date);
-  const endDate = new Date(campaign.end_date);
-  const durationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  // Use Single Source of Truth calculator for all financial data
+  const totals = computeCampaignTotals({
+    campaign: {
+      start_date: campaign.start_date,
+      end_date: campaign.end_date,
+      gst_percent: campaign.gst_percent,
+      billing_cycle: campaign.billing_cycle,
+      manual_discount_amount: campaign.manual_discount_amount,
+      manual_discount_reason: campaign.manual_discount_reason,
+    },
+    campaignAssets,
+  });
+  
+  // Duration info from calculator
+  const durationDays = totals.durationDays;
   const durationMonths = Math.round(durationDays / 30);
-
-  // Use campaign_assets pricing which is locked from Plan
-  // Display cost from negotiated_rate (final price) with pro-rata for campaign duration
-  // Formula: (monthly_rate / 30) × duration_days
-  const BILLING_CYCLE_DAYS = 30;
-  const displayCost = campaignAssets.reduce((sum, a) => {
-    const monthlyRate = a.negotiated_rate || a.card_rate || 0;
-    // Apply pro-rata with full precision, round only the final sum
-    // Formula: (monthly_rate / 30) * actual_days (single multiplication to avoid compounding errors)
-    const proRataAmount = (monthlyRate / BILLING_CYCLE_DAYS) * durationDays;
-    return sum + proRataAmount;
-  }, 0);
-  // Round the final displayCost sum
-  const roundedDisplayCost = Math.round(displayCost * 100) / 100;
   
-  // Printing and mounting from campaign_assets
-  const printingTotal = campaignAssets.reduce((sum, a) => {
-    return sum + (a.printing_charges || 0);
-  }, 0);
-  
-  const mountingTotal = campaignAssets.reduce((sum, a) => {
-    return sum + (a.mounting_charges || 0);
-  }, 0);
-  
-  const subtotal = roundedDisplayCost + printingTotal + mountingTotal;
-  const discount = subtotal > campaign.total_amount ? subtotal - campaign.total_amount : 0;
+  // Use calculator values for display
+  const roundedDisplayCost = totals.displayCost;
+  const printingTotal = totals.printingCost;
+  const mountingTotal = totals.mountingCost;
+  const manualDiscount = totals.manualDiscountAmount;
 
   return (
     <div className="min-h-screen bg-background">
@@ -300,7 +292,7 @@ export default function CampaignDetail() {
                   displayCost={roundedDisplayCost}
                   printingTotal={printingTotal}
                   mountingTotal={mountingTotal}
-                  discount={discount}
+                  discount={manualDiscount}
                 />
                 <CampaignPDFReport campaign={campaign} campaignAssets={campaignAssets} />
                 <CampaignComparisonDialog currentCampaignId={campaign.id} />
@@ -551,37 +543,37 @@ export default function CampaignDetail() {
                     <span>{formatCurrency(mountingTotal)}</span>
                   </div>
                   
-                  {discount > 0 && (
+                  {manualDiscount > 0 && (
                     <div className="flex justify-between text-sm text-green-600 dark:text-green-400 items-center">
                       <div className="flex items-center gap-1">
-                        <span className="font-medium">Discount</span>
+                        <span className="font-medium">Discount (Before GST)</span>
                         <Tooltip>
                           <TooltipTrigger>
                             <Info className="h-3.5 w-3.5" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
-                            <p className="font-semibold mb-1">Discount Applied:</p>
+                            <p className="font-semibold mb-1">Manual Discount:</p>
                             <p className="text-xs">
-                              Subtotal - Campaign Total Amount
+                              Applied before GST calculation
                             </p>
                             <p className="text-xs mt-1 text-muted-foreground">
-                              {formatCurrency(subtotal)} - {formatCurrency(campaign.total_amount)}
+                              Gross: {formatCurrency(totals.grossAmount)} - Discount: {formatCurrency(manualDiscount)}
                             </p>
                           </TooltipContent>
                         </Tooltip>
                       </div>
-                      <span className="font-medium">- {formatCurrency(discount)}</span>
+                      <span className="font-medium">- {formatCurrency(manualDiscount)}</span>
                     </div>
                   )}
                   
                   <div className="flex justify-between pt-2 border-t border-border">
                     <span className="text-sm font-semibold">Taxable Amount</span>
-                    <span className="font-semibold">{formatCurrency(campaign.total_amount)}</span>
+                    <span className="font-semibold">{formatCurrency(totals.taxableAmount)}</span>
                   </div>
                   
                   <div className="flex justify-between text-sm items-center">
                     <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground">GST ({campaign.gst_percent}%)</span>
+                      <span className="text-muted-foreground">GST ({totals.gstRate}%)</span>
                       <Tooltip>
                         <TooltipTrigger>
                           <Info className="h-3.5 w-3.5 text-muted-foreground" />
@@ -589,15 +581,15 @@ export default function CampaignDetail() {
                         <TooltipContent className="max-w-xs">
                           <p className="font-semibold mb-1">GST Calculation:</p>
                           <p className="text-xs">
-                            Taxable Amount × {campaign.gst_percent}%
+                            Taxable Amount × {totals.gstRate}%
                           </p>
                           <p className="text-xs mt-1 text-muted-foreground">
-                            {formatCurrency(campaign.total_amount)} × {campaign.gst_percent}% = {formatCurrency(campaign.gst_amount)}
+                            {formatCurrency(totals.taxableAmount)} × {totals.gstRate}% = {formatCurrency(totals.gstAmount)}
                           </p>
                         </TooltipContent>
                       </Tooltip>
                     </div>
-                    <span>{formatCurrency(campaign.gst_amount)}</span>
+                    <span>{formatCurrency(totals.gstAmount)}</span>
                   </div>
                   
                   <div className="flex justify-between pt-3 border-t-2 border-border items-center">
@@ -613,12 +605,12 @@ export default function CampaignDetail() {
                             Taxable Amount + GST
                           </p>
                           <p className="text-xs mt-1 text-muted-foreground">
-                            {formatCurrency(campaign.total_amount)} + {formatCurrency(campaign.gst_amount)}
+                            {formatCurrency(totals.taxableAmount)} + {formatCurrency(totals.gstAmount)}
                           </p>
                         </TooltipContent>
                       </Tooltip>
                     </div>
-                    <span className="text-lg font-bold text-orange-600 dark:text-orange-400">{formatCurrency(campaign.grand_total)}</span>
+                    <span className="text-lg font-bold text-orange-600 dark:text-orange-400">{formatCurrency(totals.grandTotal)}</span>
                   </div>
                 </div>
               </TooltipProvider>

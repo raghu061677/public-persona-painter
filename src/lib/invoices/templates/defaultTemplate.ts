@@ -1,5 +1,6 @@
 // Default Existing Template - Improved Layout with Ship To + Dimension/Illumination
 // This is the DEFAULT template with full shipping address and OOH-specific columns
+// Updated: Fixed location line, added HSN/SAC Summary at end, fixed totals alignment
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -323,7 +324,12 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     yPos += 5;
   }
 
-  // ========== ITEMS TABLE (Original OOH Format) ==========
+  // ========== ITEMS TABLE - FIXED LOCATION LINE ==========
+  // Collect HSN/SAC data for summary
+  const hsnSummary: Record<string, { taxable: number; cgstRate: number; cgstAmount: number; sgstRate: number; sgstAmount: number; igstRate: number; igstAmount: number }> = {};
+  const gstPercent = parseFloat(data.invoice.gst_percent) || 0;
+  const isInterState = data.invoice.tax_type === 'igst';
+
   const tableData = data.items.map((item: any, index: number) => {
     const assetCode = item.asset_code || item.asset_id || item.id || '-';
     const locationVal = item.location || item.description || '-';
@@ -333,11 +339,11 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     const illuminationVal = item.illumination || item.illumination_type || '-';
     const dimensions = item.dimensions || item.dimension_text || '';
     const sqft = item.total_sqft || item.sqft || '';
+    const hsnSac = item.hsn_sac || HSN_SAC_CODE;
     
     // Calculate period info
     const startDate = item.start_date || item.booking_start_date || data.campaign?.start_date;
     const endDate = item.end_date || item.booking_end_date || data.campaign?.end_date;
-    let periodDesc = '';
     let bookingDisplay = 'N/A';
     
     if (startDate && endDate) {
@@ -345,28 +351,18 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
       const end = new Date(endDate);
       const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
       const months = Math.ceil(days / 30);
-      periodDesc = `(${formatDate(startDate)} to ${formatDate(endDate)})`;
-       bookingDisplay = `Start: ${formatDate(startDate)} - End: ${formatDate(endDate)}\n${days > 45 ? `Month: ${months}` : `Days: ${days}`}`;
+      bookingDisplay = `Start: ${formatDate(startDate)} - End: ${formatDate(endDate)}\n${days > 45 ? `Month: ${months}` : `Days: ${days}`}`;
     }
     
-    // Build rich description as multi-line (line-wise) text
-    // Example:
-    // [A2-6] Ramanthpur Opp. Vishal Mart
-    // Location: ...
-    // Area: ...
-    // Direction: ...
-    // Media Type: ...
-    // Illumination: ...
-    // HSN/SAC Code: 998361
-    const hsnSac = item.hsn_sac || HSN_SAC_CODE;
+    // FIXED: Build rich description - Asset ID only on first line
     const descLines: string[] = [];
-    descLines.push(`[${assetCode}] ${locationVal}`);
-    descLines.push(`Location: ${locationVal || '-'}`);
-    descLines.push(`Direction: ${directionVal || '-'}`);
-    descLines.push(`Area: ${areaVal || '-'}`);
-    descLines.push(`Media Type: ${mediaTypeVal || '-'}`);
-    descLines.push(`Illumination: ${illuminationVal || '-'}`);
-    descLines.push(`HSN/SAC Code: ${hsnSac || '-'}`);
+    descLines.push(`[${assetCode}]`);  // Asset ID only on first line
+    descLines.push(`Location: ${locationVal}`);  // Location on second line
+    descLines.push(`Direction: ${directionVal}`);
+    descLines.push(`Area: ${areaVal}`);
+    descLines.push(`Media Type: ${mediaTypeVal}`);
+    descLines.push(`Illumination: ${illuminationVal}`);
+    descLines.push(`HSN/SAC Code: ${hsnSac}`);
     const richDescription = descLines.join('\n');
 
     // Size column - line-wise display
@@ -381,13 +377,28 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     const mountingCost = item.mounting_charges || item.mounting_cost || 0;
     const itemTotal = item.amount || item.final_price || item.total || (baseRate + printingCost + mountingCost);
     
-    // Format unit price with breakdown if printing/mounting exist
-    let unitPriceDisplay = `Display: ${formatCurrency(baseRate)}`;
-    if (printingCost > 0 || mountingCost > 0) {
-      const extras = [];
-      if (printingCost > 0) extras.push(`Printing: ${formatCurrency(printingCost)}`);
-      if (mountingCost > 0) extras.push(`Installation: ${formatCurrency(mountingCost)}`);
-      unitPriceDisplay = `Display: ${formatCurrency(baseRate)}\n${extras.join('\n')}`;
+    // FIXED: Format unit price with full labels
+    let unitPriceLines: string[] = [`Display: ${formatCurrency(baseRate)}`];
+    if (printingCost > 0) unitPriceLines.push(`Printing: ${formatCurrency(printingCost)}`);
+    if (mountingCost > 0) unitPriceLines.push(`Installation: ${formatCurrency(mountingCost)}`);
+    const unitPriceDisplay = unitPriceLines.join('\n');
+
+    // Aggregate HSN/SAC summary data
+    const taxableForItem = itemTotal;
+    
+    if (!hsnSummary[hsnSac]) {
+      hsnSummary[hsnSac] = { taxable: 0, cgstRate: 0, cgstAmount: 0, sgstRate: 0, sgstAmount: 0, igstRate: 0, igstAmount: 0 };
+    }
+    hsnSummary[hsnSac].taxable += taxableForItem;
+    
+    if (isInterState) {
+      hsnSummary[hsnSac].igstRate = gstPercent;
+      hsnSummary[hsnSac].igstAmount += taxableForItem * (gstPercent / 100);
+    } else {
+      hsnSummary[hsnSac].cgstRate = gstPercent / 2;
+      hsnSummary[hsnSac].sgstRate = gstPercent / 2;
+      hsnSummary[hsnSac].cgstAmount += taxableForItem * (gstPercent / 2 / 100);
+      hsnSummary[hsnSac].sgstAmount += taxableForItem * (gstPercent / 2 / 100);
     }
 
     return [
@@ -433,28 +444,29 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY + 6;
 
-  // ========== TOTALS SECTION ==========
+  // ========== TOTALS SECTION - FIXED ALIGNMENT ==========
   const subtotal = parseFloat(data.invoice.sub_total) || 0;
   const gstAmount = parseFloat(data.invoice.gst_amount) || 0;
-  const cgst = gstAmount / 2;
-  const sgst = gstAmount / 2;
+  const cgstAmount = isInterState ? 0 : gstAmount / 2;
+  const sgstAmount = isInterState ? 0 : gstAmount / 2;
+  const igstAmount = isInterState ? gstAmount : 0;
   const grandTotal = parseFloat(data.invoice.total_amount) || (subtotal + gstAmount);
   const balanceDue = parseFloat(data.invoice.balance_due) || grandTotal;
 
-  // Totals box dimensions (declare first for use in amount words width calculation)
-  const totalsBoxWidth = 68;
+  // Totals box dimensions
+  const totalsBoxWidth = 70;
   const totalsBoxX = pageWidth - rightMargin - totalsBoxWidth;
 
   // Amount in words on left
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
-  doc.text('Amount in Words:', leftMargin, yPos);
+  doc.text('Total In Words:', leftMargin, yPos);
   
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   const amountInWords = numberToWords(Math.round(grandTotal));
-  // Calculate available width for wrapping (left margin to totals box with some padding)
+  // Calculate available width for wrapping
   const amountWordsMaxWidth = totalsBoxX - leftMargin - 5;
   const amountWordsText = `Indian Rupees ${amountInWords} Only`;
   const wrappedAmountWords = doc.splitTextToSize(amountWordsText, amountWordsMaxWidth);
@@ -464,49 +476,56 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     amountWordsY += 3.5;
   });
 
-  // Totals box on right
-  const totalsBoxY = yPos - 3;  
+  // Totals box on right - FIXED ALIGNMENT
+  const totalsBoxY = yPos - 3;
+  const totalsBoxHeight = isInterState ? 36 : 40;
   
   doc.setDrawColor(200, 200, 200);
   doc.setFillColor(250, 250, 250);
-  doc.rect(totalsBoxX, totalsBoxY, totalsBoxWidth, 33, 'FD');
+  doc.rect(totalsBoxX, totalsBoxY, totalsBoxWidth, totalsBoxHeight, 'FD');
 
-  const labelX = totalsBoxX + 3;
-  const valueX = pageWidth - rightMargin - 3;
-  let rowY = totalsBoxY + 5;
+  const labelX = totalsBoxX + 4;
+  const valueX = totalsBoxX + totalsBoxWidth - 4;
+  let rowY = totalsBoxY + 6;
 
-  doc.setFontSize(7.5);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(60, 60, 60);
   doc.text('Sub Total', labelX, rowY);
   doc.text(formatCurrency(subtotal), valueX, rowY, { align: 'right' });
 
   rowY += 5;
-  doc.text('CGST (9%)', labelX, rowY);
-  doc.text(formatCurrency(cgst), valueX, rowY, { align: 'right' });
+  if (isInterState) {
+    doc.text(`IGST (${gstPercent}%)`, labelX, rowY);
+    doc.text(formatCurrency(igstAmount), valueX, rowY, { align: 'right' });
+    rowY += 5;
+  } else {
+    doc.text(`CGST (${gstPercent / 2}%)`, labelX, rowY);
+    doc.text(formatCurrency(cgstAmount), valueX, rowY, { align: 'right' });
+    rowY += 5;
+    doc.text(`SGST (${gstPercent / 2}%)`, labelX, rowY);
+    doc.text(formatCurrency(sgstAmount), valueX, rowY, { align: 'right' });
+    rowY += 5;
+  }
 
-  rowY += 5;
-  doc.text('SGST (9%)', labelX, rowY);
-  doc.text(formatCurrency(sgst), valueX, rowY, { align: 'right' });
-
-  rowY += 5;
   doc.setDrawColor(180, 180, 180);
-  doc.line(totalsBoxX + 2, rowY - 1, pageWidth - rightMargin - 2, rowY - 1);
+  doc.line(totalsBoxX + 2, rowY - 1, totalsBoxX + totalsBoxWidth - 2, rowY - 1);
   
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
-  doc.text('Total', labelX, rowY);
-  doc.text(formatCurrency(grandTotal), valueX, rowY, { align: 'right' });
+  doc.setFontSize(9);
+  doc.text('Total', labelX, rowY + 2);
+  doc.text(formatCurrency(grandTotal), valueX, rowY + 2, { align: 'right' });
 
-  rowY += 5;
+  rowY += 7;
   doc.setTextColor(220, 38, 38);
   doc.text('Balance Due', labelX, rowY);
   doc.text(formatCurrency(balanceDue), valueX, rowY, { align: 'right' });
 
-  yPos += 38;
+  yPos = Math.max(amountWordsY, rowY) + 8;
 
   // Check page space for bank details + QR
-  if (yPos > pageHeight - 75) {
+  if (yPos > pageHeight - 90) {
     doc.addPage();
     yPos = 20;
   }
@@ -579,22 +598,142 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     yPos += 3;
   });
 
+  yPos += 4;
+
+  // ========== HSN/SAC SUMMARY TABLE - AT END ==========
+  // Check if need new page
+  if (yPos > pageHeight - 45) {
+    doc.addPage();
+    yPos = 20;
+  }
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(30, 30, 30);
+  doc.text('HSN/SAC Summary:', leftMargin, yPos);
+  yPos += 3;
+
+  // Build HSN summary table data
+  const hsnTableBody: any[] = [];
+  let totalTaxable = 0;
+  let totalCgst = 0;
+  let totalSgst = 0;
+  let totalIgst = 0;
+  let totalTax = 0;
+
+  Object.entries(hsnSummary).forEach(([hsn, values]) => {
+    totalTaxable += values.taxable;
+    totalCgst += values.cgstAmount;
+    totalSgst += values.sgstAmount;
+    totalIgst += values.igstAmount;
+    const lineTax = values.cgstAmount + values.sgstAmount + values.igstAmount;
+    totalTax += lineTax;
+    
+    if (isInterState) {
+      hsnTableBody.push([
+        hsn,
+        formatCurrency(values.taxable),
+        `${values.igstRate}%`,
+        formatCurrency(values.igstAmount),
+        formatCurrency(lineTax),
+      ]);
+    } else {
+      hsnTableBody.push([
+        hsn,
+        formatCurrency(values.taxable),
+        `${values.cgstRate}%`,
+        formatCurrency(values.cgstAmount),
+        `${values.sgstRate}%`,
+        formatCurrency(values.sgstAmount),
+        formatCurrency(lineTax),
+      ]);
+    }
+  });
+
+  // Total row
+  if (isInterState) {
+    hsnTableBody.push([
+      { content: 'Total', styles: { fontStyle: 'bold' } },
+      { content: formatCurrency(totalTaxable), styles: { fontStyle: 'bold' } },
+      '',
+      { content: formatCurrency(totalIgst), styles: { fontStyle: 'bold' } },
+      { content: formatCurrency(totalTax), styles: { fontStyle: 'bold' } },
+    ]);
+  } else {
+    hsnTableBody.push([
+      { content: 'Total', styles: { fontStyle: 'bold' } },
+      { content: formatCurrency(totalTaxable), styles: { fontStyle: 'bold' } },
+      '',
+      { content: formatCurrency(totalCgst), styles: { fontStyle: 'bold' } },
+      '',
+      { content: formatCurrency(totalSgst), styles: { fontStyle: 'bold' } },
+      { content: formatCurrency(totalTax), styles: { fontStyle: 'bold' } },
+    ]);
+  }
+
+  // HSN table columns based on tax type
+  const hsnHead = isInterState
+    ? [['HSN/SAC', 'Taxable Amount', 'IGST Rate', 'IGST Amount', 'Total Tax']]
+    : [['HSN/SAC', 'Taxable Amount', 'CGST Rate', 'CGST Amount', 'SGST Rate', 'SGST Amount', 'Total Tax']];
+
+  autoTable(doc, {
+    startY: yPos,
+    head: hsnHead,
+    body: hsnTableBody,
+    theme: 'grid',
+    headStyles: {
+      fillColor: [30, 64, 130],
+      textColor: 255,
+      fontStyle: 'bold',
+      fontSize: 7,
+      halign: 'center',
+    },
+    bodyStyles: {
+      fontSize: 7,
+      textColor: [40, 40, 40],
+      halign: 'center',
+    },
+    columnStyles: isInterState ? {
+      0: { halign: 'left', cellWidth: 28 },
+      1: { halign: 'right', cellWidth: 35 },
+      2: { halign: 'center', cellWidth: 22 },
+      3: { halign: 'right', cellWidth: 30 },
+      4: { halign: 'right', cellWidth: 32 },
+    } : {
+      0: { halign: 'left', cellWidth: 22 },
+      1: { halign: 'right', cellWidth: 28 },
+      2: { halign: 'center', cellWidth: 18 },
+      3: { halign: 'right', cellWidth: 24 },
+      4: { halign: 'center', cellWidth: 18 },
+      5: { halign: 'right', cellWidth: 24 },
+      6: { halign: 'right', cellWidth: 28 },
+    },
+    margin: { left: leftMargin, right: rightMargin },
+  });
+
+  // @ts-ignore
+  yPos = doc.lastAutoTable.finalY + 10;
+
   // ========== AUTHORIZED SIGNATORY (Bottom-right) ==========
-  const signY = Math.max(yPos + 8, pageHeight - 28);
+  if (yPos > pageHeight - 30) {
+    doc.addPage();
+    yPos = 20;
+  }
+
   const signX = pageWidth - rightMargin - 50;
 
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
-  doc.text('For Matrix Network Solutions', signX, signY);
+  doc.text('For Matrix Network Solutions', signX, yPos);
 
   doc.setDrawColor(100, 100, 100);
   doc.setLineWidth(0.3);
-  doc.line(signX, signY + 10, signX + 48, signY + 10);
+  doc.line(signX, yPos + 10, signX + 48, yPos + 10);
 
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
-  doc.text('Authorized Signatory', signX, signY + 14);
+  doc.text('Authorized Signatory', signX, yPos + 14);
 
   return doc.output('blob');
 }

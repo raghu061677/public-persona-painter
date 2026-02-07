@@ -30,7 +30,7 @@ export default function CampaignBudget() {
   const [totalPlanned, setTotalPlanned] = useState(0);
   const [totalActual, setTotalActual] = useState(0);
   const [totalVariance, setTotalVariance] = useState(0);
-
+  const [sharedExpenseTotal, setSharedExpenseTotal] = useState(0);
   useEffect(() => {
     if (id) loadBudgetData();
   }, [id]);
@@ -52,7 +52,10 @@ export default function CampaignBudget() {
         const { data: assetsData } = await supabase
           .from("campaign_assets")
           .select(`
-            *,
+            asset_id, location, area, card_rate, negotiated_rate,
+            printing_charges, mounting_charges,
+            booking_start_date, booking_end_date,
+            start_date, end_date,
             media_assets!campaign_assets_asset_id_fkey (
               id,
               media_asset_code
@@ -61,34 +64,53 @@ export default function CampaignBudget() {
           .eq("campaign_id", id);
 
         if (assetsData) {
-          // Fetch actual expenses per asset
+          // Fetch expenses for this campaign (only needed columns)
           const { data: expensesData } = await supabase
             .from("expenses")
-            .select("*, campaign_id")
-            .eq("campaign_id", id);
+            .select("id, asset_id, total_amount")
+            .eq("campaign_id", id!);
 
-          const budgets: AssetBudget[] = assetsData.map(asset => {
-            // Use per-asset booking dates, falling back to campaign dates
+          const expenses = expensesData || [];
+
+          // Separate direct (asset-linked) vs shared (no asset_id) expenses
+          const directExpenseMap = new Map<string, number>();
+          let sharedTotal = 0;
+
+          for (const exp of expenses) {
+            const amt = exp.total_amount || 0;
+            if (exp.asset_id) {
+              directExpenseMap.set(exp.asset_id, (directExpenseMap.get(exp.asset_id) || 0) + amt);
+            } else {
+              sharedTotal += amt;
+            }
+          }
+
+          // Step 1: Compute planned costs for all assets
+          const assetPlannedCosts: { asset: typeof assetsData[0]; plannedCost: number }[] = assetsData.map(asset => {
             const assetStart = asset.booking_start_date || asset.start_date || campaignData.start_date;
             const assetEnd = asset.booking_end_date || asset.end_date || campaignData.end_date;
             const assetDuration = assetStart && assetEnd
               ? Math.ceil((new Date(assetEnd).getTime() - new Date(assetStart).getTime()) / (1000 * 60 * 60 * 24)) + 1
               : 30;
-            
-            // Planned cost: pro-rata using per-asset duration + printing + mounting
-            const monthlyRate = asset.card_rate || 0;
-            const proRataRate = (monthlyRate / 30) * assetDuration;
-            const plannedCost = proRataRate + (asset.printing_charges || 0) + (asset.mounting_charges || 0);
 
-            // Actual cost: sum of expenses for this asset
-            const actualCost = expensesData
-              ?.filter(exp => exp.campaign_id === id)
-              .reduce((sum, exp) => sum + (exp.total_amount || 0), 0) / (assetsData.length || 1) || plannedCost;
+            const monthlyRate = asset.negotiated_rate ?? asset.card_rate ?? 0;
+            const plannedRent = (monthlyRate / 30) * assetDuration;
+            const plannedCost = plannedRent + (asset.printing_charges || 0) + (asset.mounting_charges || 0);
+            return { asset, plannedCost };
+          });
+
+          const totalPlannedCostRaw = assetPlannedCosts.reduce((s, x) => s + x.plannedCost, 0);
+
+          // Step 2: Build budgets with direct + shared allocation
+          const budgets: AssetBudget[] = assetPlannedCosts.map(({ asset, plannedCost }) => {
+            const directActual = directExpenseMap.get(asset.asset_id) || 0;
+            const plannedShare = totalPlannedCostRaw > 0 ? plannedCost / totalPlannedCostRaw : 0;
+            const sharedAllocated = sharedTotal * plannedShare;
+            const actualCost = directActual + sharedAllocated;
 
             const variance = actualCost - plannedCost;
             const variance_percent = plannedCost > 0 ? (variance / plannedCost) * 100 : 0;
 
-            // Get display code from joined media_assets
             const assetDisplayCode = getAssetDisplayCode(
               (asset as any).media_assets,
               asset.asset_id
@@ -107,8 +129,8 @@ export default function CampaignBudget() {
           });
 
           setAssetBudgets(budgets);
+          setSharedExpenseTotal(sharedTotal);
 
-          // Calculate totals
           const planned = budgets.reduce((sum, b) => sum + b.planned_cost, 0);
           const actual = budgets.reduce((sum, b) => sum + b.actual_cost, 0);
           setTotalPlanned(planned);
@@ -282,6 +304,11 @@ export default function CampaignBudget() {
               ))}
             </TableBody>
           </Table>
+          {sharedExpenseTotal > 0 && (
+            <p className="text-xs text-muted-foreground mt-3">
+              Shared campaign expenses allocated proportionally: {formatCurrency(sharedExpenseTotal)}
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

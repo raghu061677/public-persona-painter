@@ -142,6 +142,9 @@ export function CampaignBillingTab({
         title: "Discount Updated",
         description: `Manual discount of ${formatCurrency(amount)} saved.`,
       });
+      
+      // Refresh invoices and parent campaign data
+      await fetchExistingInvoices();
       onRefresh?.();
     } catch (err: any) {
       console.error('Error saving discount:', err);

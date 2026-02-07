@@ -118,7 +118,7 @@ export function MonthlyBillingScheduleTable({
             );
 
             const status: BillingStatus = hasInvoice
-              ? mapInvoiceStatusToBillingStatus(invoice.status, invoice.due_date)
+              ? (invoice.status === 'Draft' ? 'not_invoiced' : mapInvoiceStatusToBillingStatus(invoice.status, invoice.due_date))
               : 'not_invoiced';
 
             const isCurrentPeriod = period.isCurrentMonth;
@@ -215,12 +215,19 @@ export function MonthlyBillingScheduleTable({
 
                 {/* Total */}
                 <TableCell className="text-right font-semibold">
-                  {hasInvoice ? formatCurrency(invoice.total_amount) : formatCurrency(amounts.total)}
+                  {hasInvoice && invoice.status !== 'Draft'
+                    ? formatCurrency(invoice.total_amount)
+                    : formatCurrency(amounts.total)}
                 </TableCell>
 
                 {/* Status */}
                 <TableCell>
-                  <BillingStatusBadge status={status} />
+                  <div className="flex items-center gap-1">
+                    <BillingStatusBadge status={status} />
+                    {hasInvoice && invoice.status === 'Draft' && (
+                      <Badge variant="outline" className="text-[10px] px-1">Draft</Badge>
+                    )}
+                  </div>
                 </TableCell>
 
                 {/* Actions */}

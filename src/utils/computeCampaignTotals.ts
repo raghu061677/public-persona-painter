@@ -84,11 +84,11 @@
   * Compute all campaign financial totals from campaign_assets
   * This is the SINGLE SOURCE OF TRUTH for all financial calculations
   */
- export function computeCampaignTotals({
-   campaign,
-   campaignAssets,
-   manualDiscountAmount = 0,
- }: ComputeCampaignTotalsParams): CampaignTotalsResult {
+export function computeCampaignTotals({
+  campaign,
+  campaignAssets,
+  manualDiscountAmount,
+}: ComputeCampaignTotalsParams): CampaignTotalsResult {
    // Use campaign dates as fallback, but prefer asset-level dates
    const campaignStartDate = new Date(campaign.start_date);
    const campaignEndDate = new Date(campaign.end_date);
@@ -133,10 +133,10 @@
    // Calculate gross amount (before discount)
    const grossAmount = Math.round((displayCost + printingCost + mountingCost) * 100) / 100;
    
-   // Use campaign's manual discount or provided override
-   const effectiveDiscount = manualDiscountAmount !== undefined 
-     ? manualDiscountAmount 
-     : (Number(campaign.manual_discount_amount) || 0);
+    // Use explicit override if provided, otherwise fall back to DB value
+    const effectiveDiscount = typeof manualDiscountAmount === 'number'
+      ? manualDiscountAmount
+      : (Number(campaign.manual_discount_amount) || 0);
    
    // Clamp discount to not exceed gross amount
    const clampedDiscount = Math.min(Math.max(effectiveDiscount, 0), grossAmount);

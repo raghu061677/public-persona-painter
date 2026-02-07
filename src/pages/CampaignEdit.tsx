@@ -52,6 +52,7 @@ import {
 } from "@/utils/perAssetPricing";
 import { CampaignAssetDurationCell } from "@/components/campaigns/CampaignAssetDurationCell";
 import { ApplyDatesToAssetsDialog } from "@/components/campaigns/ApplyDatesToAssetsDialog";
+import { computeCampaignTotals } from "@/utils/computeCampaignTotals";
 import { BulkPrintingDialog } from "@/components/plans/BulkPrintingDialog";
 import { BulkMountingDialog } from "@/components/plans/BulkMountingDialog";
 
@@ -713,51 +714,53 @@ export default function CampaignEdit() {
   };
 
   const calculateTotals = () => {
-    // Use FULL precision throughout accumulation, round only final results
-    // This prevents floating-point errors like 300000.60 instead of 300000.00
-    let rentTotalRaw = 0;
-    let printingTotal = 0;
-    let mountingTotal = 0;
+    // SSoT: Delegate ALL financial math to computeCampaignTotals
+    // This ensures Edit page numbers match View + Billing exactly
+    const effectiveGstPercent = isGstApplicable ? gstPercent : 0;
 
-    campaignAssets.forEach(asset => {
-      // Calculate rent using full precision formula: (monthly_rate / 30) * days
-      // NO rounding of individual asset rents - accumulate raw values
-      const monthlyRate = asset.negotiated_rate || asset.card_rate || 0;
-      const days = asset.booked_days || getDurationDays();
-      // Use raw calculation without rounding to avoid compounding errors
-      const assetRentRaw = (monthlyRate / PRICING_BILLING_CYCLE_DAYS) * days;
-      
-      const printing = asset.printing_charges || 0;
-      const mounting = asset.mounting_charges || 0;
-      
-      rentTotalRaw += assetRentRaw;
-      printingTotal += printing;
-      mountingTotal += mounting;
+    const totals = computeCampaignTotals({
+      campaign: {
+        start_date: startDate ? format(startDate, 'yyyy-MM-dd') : '',
+        end_date: endDate ? format(endDate, 'yyyy-MM-dd') : '',
+        gst_percent: effectiveGstPercent,
+        billing_cycle: durationMode === 'DAYS' ? 'DAILY' : 'MONTHLY',
+        manual_discount_amount: manualDiscountAmount,
+      },
+      campaignAssets: campaignAssets.map(a => ({
+        id: a.id,
+        asset_id: a.asset_id,
+        negotiated_rate: a.negotiated_rate,
+        card_rate: a.card_rate,
+        printing_charges: a.printing_charges,
+        mounting_charges: a.mounting_charges,
+        booking_start_date: a.start_date
+          ? (typeof a.start_date === 'string' ? a.start_date : format(a.start_date as Date, 'yyyy-MM-dd'))
+          : null,
+        booking_end_date: a.end_date
+          ? (typeof a.end_date === 'string' ? a.end_date : format(a.end_date as Date, 'yyyy-MM-dd'))
+          : null,
+        start_date: a.start_date
+          ? (typeof a.start_date === 'string' ? a.start_date : format(a.start_date as Date, 'yyyy-MM-dd'))
+          : null,
+        end_date: a.end_date
+          ? (typeof a.end_date === 'string' ? a.end_date : format(a.end_date as Date, 'yyyy-MM-dd'))
+          : null,
+        total_sqft: a.total_sqft,
+      })),
+      manualDiscountAmount,
     });
 
-    // Round ONLY the final totals
-    const rentTotal = Math.round(rentTotalRaw * 100) / 100;
-    const grossAmount = Math.round((rentTotal + printingTotal + mountingTotal) * 100) / 100;
-    
-    // Apply manual discount (before GST)
-    const clampedDiscount = Math.min(Math.max(manualDiscountAmount, 0), grossAmount);
-    const taxableAmount = Math.round((grossAmount - clampedDiscount) * 100) / 100;
-    
-    const effectiveGstPercent = isGstApplicable ? gstPercent : 0;
-    const gstAmount = Math.round((taxableAmount * effectiveGstPercent / 100) * 100) / 100;
-    const grandTotal = Math.round((taxableAmount + gstAmount) * 100) / 100;
-
     return { 
-      subtotal: rentTotal, 
-      printingTotal: Math.round(printingTotal * 100) / 100, 
-      mountingTotal: Math.round(mountingTotal * 100) / 100, 
-      grossAmount,
-      manualDiscount: clampedDiscount,
-      totalAmount: taxableAmount, 
-      gstAmount, 
-      grandTotal, 
-      effectiveGstPercent,
-      durationDays: getDurationDays(),
+      subtotal: totals.displayCost, 
+      printingTotal: totals.printingCost, 
+      mountingTotal: totals.mountingCost, 
+      grossAmount: totals.grossAmount,
+      manualDiscount: totals.manualDiscountAmount,
+      totalAmount: totals.taxableAmount, 
+      gstAmount: totals.gstAmount, 
+      grandTotal: totals.grandTotal, 
+      effectiveGstPercent: totals.gstRate,
+      durationDays: totals.durationDays,
     };
   };
 

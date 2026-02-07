@@ -61,11 +61,6 @@ export default function CampaignBudget() {
           .eq("campaign_id", id);
 
         if (assetsData) {
-          // Calculate campaign duration for pro-rata
-          const startDate = new Date(campaignData.start_date);
-          const endDate = new Date(campaignData.end_date);
-          const campaignDuration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-
           // Fetch actual expenses per asset
           const { data: expensesData } = await supabase
             .from("expenses")
@@ -73,9 +68,16 @@ export default function CampaignBudget() {
             .eq("campaign_id", id);
 
           const budgets: AssetBudget[] = assetsData.map(asset => {
-            // Planned cost: pro-rata + printing + mounting
+            // Use per-asset booking dates, falling back to campaign dates
+            const assetStart = asset.booking_start_date || asset.start_date || campaignData.start_date;
+            const assetEnd = asset.booking_end_date || asset.end_date || campaignData.end_date;
+            const assetDuration = assetStart && assetEnd
+              ? Math.ceil((new Date(assetEnd).getTime() - new Date(assetStart).getTime()) / (1000 * 60 * 60 * 24)) + 1
+              : 30;
+            
+            // Planned cost: pro-rata using per-asset duration + printing + mounting
             const monthlyRate = asset.card_rate || 0;
-            const proRataRate = (monthlyRate / 30) * campaignDuration;
+            const proRataRate = (monthlyRate / 30) * assetDuration;
             const plannedCost = proRataRate + (asset.printing_charges || 0) + (asset.mounting_charges || 0);
 
             // Actual cost: sum of expenses for this asset

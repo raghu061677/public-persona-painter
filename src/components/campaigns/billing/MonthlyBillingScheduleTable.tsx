@@ -117,8 +117,11 @@ export function MonthlyBillingScheduleTable({
                selection.mounting && !mountingBilled
             );
 
+            const isDraftInvoice = hasInvoice && invoice.status === 'Draft';
+            const isLockedInvoice = hasInvoice && !isDraftInvoice;
+
             const status: BillingStatus = hasInvoice
-              ? (invoice.status === 'Draft' ? 'not_invoiced' : mapInvoiceStatusToBillingStatus(invoice.status, invoice.due_date))
+              ? (isDraftInvoice ? 'not_invoiced' : mapInvoiceStatusToBillingStatus(invoice.status, invoice.due_date))
               : 'not_invoiced';
 
             const isCurrentPeriod = period.isCurrentMonth;
@@ -161,14 +164,14 @@ export function MonthlyBillingScheduleTable({
 
                 {/* One-Time Charges */}
                 <TableCell>
-                  {!hasInvoice ? (
+                  {!isLockedInvoice ? (
                     <div className="flex items-center justify-center gap-4">
                        {totals.printingCost > 0 && (
                         <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                           <Checkbox
                             checked={selection.printing}
                             onCheckedChange={() => toggleCharge(period.monthKey, 'printing')}
-                            disabled={hasInvoice || printingBilled}
+                            disabled={isLockedInvoice || printingBilled}
                           />
                           <span className={printingBilled ? 'line-through text-muted-foreground' : ''}>
                             Printing
@@ -183,7 +186,7 @@ export function MonthlyBillingScheduleTable({
                           <Checkbox
                             checked={selection.mounting}
                             onCheckedChange={() => toggleCharge(period.monthKey, 'mounting')}
-                            disabled={hasInvoice || mountingBilled}
+                            disabled={isLockedInvoice || mountingBilled}
                           />
                           <span className={mountingBilled ? 'line-through text-muted-foreground' : ''}>
                             Mounting
@@ -232,30 +235,33 @@ export function MonthlyBillingScheduleTable({
 
                 {/* Actions */}
                 <TableCell className="text-right">
-                  {hasInvoice ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onViewInvoice(invoice.id)}
-                    >
-                      <Eye className="mr-1 h-4 w-4" />
-                      View
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onGenerateInvoice(period, selection.printing, selection.mounting)}
-                      disabled={isGenerating}
-                    >
-                      {isGenerating ? (
-                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Plus className="mr-1 h-4 w-4" />
-                      )}
-                      Generate
-                    </Button>
-                  )}
+                  <div className="flex items-center justify-end gap-1">
+                    {hasInvoice && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onViewInvoice(invoice.id)}
+                      >
+                        <Eye className="mr-1 h-4 w-4" />
+                        View
+                      </Button>
+                    )}
+                    {!isLockedInvoice && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onGenerateInvoice(period, selection.printing, selection.mounting)}
+                        disabled={isGenerating}
+                      >
+                        {isGenerating ? (
+                          <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Plus className="mr-1 h-4 w-4" />
+                        )}
+                        {isDraftInvoice ? 'Regenerate' : 'Generate'}
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             );

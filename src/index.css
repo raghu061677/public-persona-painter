@@ -568,17 +568,29 @@ All colors MUST be HSL.
   background: hsl(var(--muted-foreground) / 0.5);
 }
 
+/*
+ * IMPORTANT: DaisyUI v5 sets :root:not(span){overflow:var(--page-overflow)}
+ * which blocks vertical scroll when --page-overflow is unset.
+ * We override OUTSIDE @layer so it wins over DaisyUI's rule.
+ */
+:root {
+  --page-overflow: visible !important;
+}
+
+html {
+  min-height: 100% !important;
+  min-height: -webkit-fill-available !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
 @layer base {
   * {
     @apply border-border;
   }
 
   html {
-    min-height: 100%;
-    min-height: -webkit-fill-available;
     font-size: 16px;
-    /* Allow natural scroll — app-viewport class handles containment for dashboard */
-    overflow-x: hidden;
   }
 
   body {

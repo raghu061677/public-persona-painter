@@ -23,38 +23,138 @@ const DEFAULT_ASSET_COLS = [
   { key: "illumination", label: "Illumination" },
 ];
 
+// ===== Branding Constants =====
+const BRAND = {
+  primary: "#1E40AF",
+  primaryLight: "#3B82F6",
+  accent: "#10B981",
+  accentLight: "#34D399",
+  bg: "#F8FAFC",
+  cardBg: "#FFFFFF",
+  border: "#E2E8F0",
+  borderLight: "#F1F5F9",
+  textDark: "#0F172A",
+  textMuted: "#64748B",
+  textLight: "#94A3B8",
+  warning: "#F59E0B",
+  warningBg: "#FFFBEB",
+  warningBorder: "#FDE68A",
+  danger: "#DC2626",
+  dangerBg: "#FEF2F2",
+  dangerBorder: "#FECACA",
+  successBg: "#F0FDF4",
+  successBorder: "#BBF7D0",
+  logoUrl: "https://go-ads.lovable.app/lovable-uploads/d210e070-5f7e-41e4-a17a-2c9d3a4f74be.png",
+};
+
 function esc(s: unknown): string {
   const str = String(s ?? "—");
   return str.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 }
 
-function renderTable(title: string, rows: any[], cols: { key: string; label: string }[]): string {
+function renderSectionCard(title: string, count: number, icon: string, accentColor: string, content: string): string {
+  return `
+  <div style="background:${BRAND.cardBg};border-radius:12px;border:1px solid ${BRAND.border};margin-bottom:24px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+    <div style="display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid ${BRAND.borderLight};background:${BRAND.bg};">
+      <span style="font-size:20px;margin-right:10px;">${icon}</span>
+      <div style="flex:1;">
+        <h3 style="margin:0;font-size:15px;font-weight:700;color:${BRAND.textDark};">${esc(title)}</h3>
+      </div>
+      <span style="background:${accentColor};color:white;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;">${count}</span>
+    </div>
+    <div style="padding:16px 20px;">
+      ${content}
+    </div>
+  </div>`;
+}
+
+function renderTable(rows: any[], cols: { key: string; label: string }[]): string {
   if (!rows?.length) {
-    return `<h3 style="color:#1e40af;margin:24px 0 8px;">${esc(title)}</h3><p style="color:#64748b;">No records.</p>`;
+    return `<p style="color:${BRAND.textMuted};font-size:13px;text-align:center;padding:16px 0;margin:0;">No records found.</p>`;
   }
-  const thead = cols.map(c => `<th style="padding:8px 12px;background:#f1f5f9;border:1px solid #e2e8f0;text-align:left;font-size:12px;white-space:nowrap;">${esc(c.label)}</th>`).join("");
+  const thead = cols.map(c =>
+    `<th style="padding:10px 14px;background:${BRAND.primary};color:white;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">${esc(c.label)}</th>`
+  ).join("");
   const tbody = rows.map((r, i) => {
-    const bg = i % 2 === 0 ? "#ffffff" : "#f8fafc";
-    const tds = cols.map(c => `<td style="padding:6px 12px;border:1px solid #e2e8f0;font-size:12px;background:${bg};">${esc(r[c.key])}</td>`).join("");
+    const bg = i % 2 === 0 ? BRAND.cardBg : BRAND.borderLight;
+    const tds = cols.map(c =>
+      `<td style="padding:8px 14px;border-bottom:1px solid ${BRAND.border};font-size:12px;color:${BRAND.textDark};background:${bg};white-space:nowrap;">${esc(r[c.key])}</td>`
+    ).join("");
     return `<tr>${tds}</tr>`;
   }).join("");
-  return `<h3 style="color:#1e40af;margin:24px 0 8px;">${esc(title)} (${rows.length})</h3><div style="overflow-x:auto;"><table style="border-collapse:collapse;min-width:900px;width:100%;"><tr>${thead}</tr>${tbody}</table></div>`;
+  return `<div style="overflow-x:auto;border-radius:8px;border:1px solid ${BRAND.border};">
+    <table style="border-collapse:collapse;min-width:900px;width:100%;"><tr>${thead}</tr>${tbody}</table>
+  </div>`;
+}
+
+function renderInfoBanner(items: { label: string; value: string }[], bgColor: string, borderColor: string): string {
+  const rows = items.map(item =>
+    `<tr><td style="padding:4px 0;font-size:13px;color:${BRAND.textMuted};width:140px;font-weight:600;">${esc(item.label)}</td><td style="padding:4px 0;font-size:13px;color:${BRAND.textDark};">${esc(item.value)}</td></tr>`
+  ).join("");
+  return `<div style="background:${bgColor};border:1px solid ${borderColor};border-radius:10px;padding:16px 20px;margin-bottom:16px;">
+    <table style="border-collapse:collapse;">${rows}</table>
+  </div>`;
+}
+
+function renderKPIBar(items: { label: string; value: string; color: string }[]): string {
+  const cells = items.map(item =>
+    `<td style="text-align:center;padding:12px 16px;">
+      <div style="font-size:24px;font-weight:800;color:${item.color};line-height:1;">${esc(item.value)}</div>
+      <div style="font-size:11px;color:${BRAND.textMuted};margin-top:4px;text-transform:uppercase;letter-spacing:0.5px;">${esc(item.label)}</div>
+    </td>`
+  ).join("");
+  return `<div style="background:${BRAND.bg};border-radius:10px;border:1px solid ${BRAND.border};margin-bottom:24px;overflow:hidden;">
+    <table style="width:100%;border-collapse:collapse;"><tr>${cells}</tr></table>
+  </div>`;
 }
 
 function wrapEmail(title: string, subtitle: string, inner: string): string {
-  return `<!DOCTYPE html><html><body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;">
-<div style="max-width:1200px;margin:0 auto;padding:20px;">
-<div style="background:#1e40af;color:white;padding:24px;border-radius:12px 12px 0 0;">
-<h1 style="margin:0;font-size:22px;">${esc(title)}</h1>
-<p style="margin:8px 0 0;opacity:0.85;font-size:14px;">${esc(subtitle)}</p>
-</div>
-<div style="background:white;padding:24px;border:1px solid #e2e8f0;border-top:none;">
-${inner}
-</div>
-<div style="padding:16px;text-align:center;color:#94a3b8;font-size:11px;">
-Automated GO-ADS daily digest. Configure recipients in Settings.
-</div>
-</div></body></html>`;
+  const year = new Date().getFullYear();
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${esc(title)}</title>
+</head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:${BRAND.bg};-webkit-font-smoothing:antialiased;">
+  <div style="max-width:1200px;margin:0 auto;padding:24px 16px;">
+
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg, ${BRAND.primary} 0%, ${BRAND.primaryLight} 100%);border-radius:16px 16px 0 0;padding:28px 32px;text-align:left;">
+      <table style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="vertical-align:middle;">
+            <img src="${BRAND.logoUrl}" alt="GO-ADS 360°" style="height:42px;display:block;" />
+          </td>
+          <td style="text-align:right;vertical-align:middle;">
+            <div style="color:rgba(255,255,255,0.7);font-size:12px;text-transform:uppercase;letter-spacing:1px;">Daily Alert System</div>
+          </td>
+        </tr>
+      </table>
+      <div style="margin-top:20px;">
+        <h1 style="margin:0;font-size:22px;font-weight:700;color:white;letter-spacing:-0.3px;">${esc(title)}</h1>
+        <p style="margin:6px 0 0;color:rgba(255,255,255,0.8);font-size:13px;">${esc(subtitle)}</p>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div style="background:${BRAND.cardBg};border-left:1px solid ${BRAND.border};border-right:1px solid ${BRAND.border};padding:28px 24px;">
+      ${inner}
+    </div>
+
+    <!-- Footer -->
+    <div style="background:${BRAND.bg};border:1px solid ${BRAND.border};border-top:none;border-radius:0 0 16px 16px;padding:20px 24px;text-align:center;">
+      <p style="margin:0 0 4px;font-size:12px;color:${BRAND.textLight};">
+        Automated alert from <strong style="color:${BRAND.primary};">GO-ADS 360°</strong> · OOH Media Management Platform
+      </p>
+      <p style="margin:0;font-size:11px;color:${BRAND.textLight};">
+        © ${year} Matrix Network Solutions · Hyderabad, India · Configure recipients in Settings
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
 }
 
 async function logOnce(supabase: any, today: string, alertType: string, entityType: string, entityId: string): Promise<boolean> {
@@ -126,19 +226,49 @@ Deno.serve(async (req) => {
       { key: "paid_amount", label: "Paid" }, { key: "outstanding", label: "Outstanding" }, { key: "due_bucket", label: "Status" },
     ];
 
-    const digestInner =
-      renderTable("Available Assets (Vacant Today)", vacant ?? [], vacantCols) +
-      renderTable("Assets Ending Today", endingTodayRows, endingCols) +
-      endingBuckets.map(b => renderTable(`Assets Ending in Next ${b.days} Days`, b.rows, endingCols)).join("") +
-      `<hr style="border:none;border-top:2px solid #e2e8f0;margin:32px 0;">` +
-      renderTable("Invoices Due Today", dueToday, invoiceCols) +
-      renderTable("Invoices Due in Next 7 Days", dueNext7, invoiceCols) +
-      renderTable("Overdue Invoices", overdue, invoiceCols);
+    // KPI summary bar
+    const vacantCount = vacant?.length ?? 0;
+    const endingTodayCount = endingTodayRows.length;
+    const overdueCount = overdue.length;
+    const totalDuesCount = (dues ?? []).length;
 
-    const digestHtml = wrapEmail("GO-ADS | Daily Availability + Dues Digest", `Date: ${today}`, digestInner);
+    const kpiBar = renderKPIBar([
+      { label: "Vacant Assets", value: String(vacantCount), color: BRAND.accent },
+      { label: "Ending Today", value: String(endingTodayCount), color: BRAND.warning },
+      { label: "Overdue Invoices", value: String(overdueCount), color: BRAND.danger },
+      { label: "Total Dues", value: String(totalDuesCount), color: BRAND.primary },
+    ]);
+
+    // Build sections
+    const vacantSection = renderSectionCard("Available Assets (Vacant Today)", vacantCount, "🟢", BRAND.accent,
+      renderTable(vacant ?? [], vacantCols));
+
+    const endingTodaySection = renderSectionCard("Assets Ending Today", endingTodayCount, "⚠️", BRAND.warning,
+      renderTable(endingTodayRows, endingCols));
+
+    const endingBucketSections = endingBuckets.map(b =>
+      renderSectionCard(`Assets Ending in Next ${b.days} Days`, b.rows.length, "📅", BRAND.primaryLight,
+        renderTable(b.rows, endingCols))
+    ).join("");
+
+    const divider = `<div style="border-top:2px solid ${BRAND.border};margin:32px 0;position:relative;">
+      <span style="position:absolute;top:-12px;left:20px;background:${BRAND.cardBg};padding:0 12px;font-size:12px;font-weight:700;color:${BRAND.textMuted};text-transform:uppercase;letter-spacing:1px;">💰 Finance</span>
+    </div>`;
+
+    const dueTodaySection = renderSectionCard("Invoices Due Today", dueToday.length, "📋", BRAND.warning,
+      renderTable(dueToday, invoiceCols));
+
+    const dueNext7Section = renderSectionCard("Invoices Due in Next 7 Days", dueNext7.length, "📆", BRAND.primaryLight,
+      renderTable(dueNext7, invoiceCols));
+
+    const overdueSection = renderSectionCard("Overdue Invoices", overdueCount, "🔴", BRAND.danger,
+      renderTable(overdue, invoiceCols));
+
+    const digestInner = kpiBar + vacantSection + endingTodaySection + endingBucketSections + divider + dueTodaySection + dueNext7Section + overdueSection;
+    const digestHtml = wrapEmail("Daily Availability + Dues Digest", `Report Date: ${today} · Generated automatically at 09:00 IST`, digestInner);
 
     try {
-      await resend.emails.send({ from: ALERT_FROM, to: settings.recipients_to, cc, subject: `GO-ADS | Daily Digest – ${today}`, html: digestHtml });
+      await resend.emails.send({ from: ALERT_FROM, to: settings.recipients_to, cc, subject: `GO-ADS 360° | Daily Digest – ${today}`, html: digestHtml });
       results.push("Daily digest sent");
       console.log("Daily digest sent successfully");
     } catch (e: any) {
@@ -160,17 +290,20 @@ Deno.serve(async (req) => {
     const { data: assets } = await supabase.rpc("fn_assets_for_campaign", { p_campaign_id: c.campaign_id });
     const assetCols = [...DEFAULT_ASSET_COLS, { key: "booking_start_date", label: "Start" }, { key: "booking_end_date", label: "End" }];
 
-    const inner = `<div style="background:#fef3c7;padding:16px;border-radius:8px;margin-bottom:16px;">
-<p><strong>Campaign:</strong> ${esc(c.campaign_name)}</p>
-<p><strong>Client:</strong> ${esc(c.client_name)}</p>
-<p><strong>End Date:</strong> ${esc(c.end_date)}</p>
-<p><strong>Total Assets:</strong> ${esc(c.total_assets)}</p>
-</div>` + renderTable("Assets in this Campaign", assets ?? [], assetCols);
+    const banner = renderInfoBanner([
+      { label: "Campaign", value: c.campaign_name },
+      { label: "Client", value: c.client_name },
+      { label: "End Date", value: c.end_date },
+      { label: "Total Assets", value: String(c.total_assets) },
+    ], BRAND.warningBg, BRAND.warningBorder);
 
-    const html = wrapEmail(`GO-ADS | Campaign Ending Soon – ${c.campaign_id}`, `Ends: ${c.end_date} | Client: ${c.client_name}`, inner);
+    const inner = banner + renderSectionCard("Assets in this Campaign", (assets ?? []).length, "📍", BRAND.primary,
+      renderTable(assets ?? [], assetCols));
+
+    const html = wrapEmail(`Campaign Ending Soon – ${c.campaign_id}`, `Ends: ${c.end_date} · Client: ${c.client_name}`, inner);
 
     try {
-      await resend.emails.send({ from: ALERT_FROM, to: settings.recipients_to, cc, subject: `GO-ADS | Campaign Ending – ${c.campaign_id} (${c.end_date})`, html });
+      await resend.emails.send({ from: ALERT_FROM, to: settings.recipients_to, cc, subject: `GO-ADS 360° | Campaign Ending – ${c.campaign_id} (${c.end_date})`, html });
       results.push(`Campaign alert: ${c.campaign_id}`);
     } catch (e: any) { console.error(`Campaign ${c.campaign_id} send error:`, e.message); }
   }
@@ -186,21 +319,27 @@ Deno.serve(async (req) => {
     const { data: assets } = await supabase.rpc("fn_assets_for_invoice", { p_invoice_id: inv.invoice_id });
     const assetCols = [...DEFAULT_ASSET_COLS, { key: "booking_start_date", label: "Start" }, { key: "booking_end_date", label: "End" }];
     const statusLabel = inv.due_bucket === "OVERDUE" ? "OVERDUE" : "DUE TODAY";
-    const bgColor = inv.due_bucket === "OVERDUE" ? "#fef2f2" : "#fef3c7";
+    const bgColor = inv.due_bucket === "OVERDUE" ? BRAND.dangerBg : BRAND.warningBg;
+    const borderColor = inv.due_bucket === "OVERDUE" ? BRAND.dangerBorder : BRAND.warningBorder;
 
-    const inner = `<div style="background:${bgColor};padding:16px;border-radius:8px;margin-bottom:16px;">
-<p><strong>Invoice:</strong> ${esc(inv.invoice_id)}</p>
-<p><strong>Client:</strong> ${esc(inv.client_name)}</p>
-<p><strong>Campaign:</strong> ${esc(inv.campaign_id)}</p>
-<p><strong>Due Date:</strong> ${esc(inv.due_date)}</p>
-<p><strong>Total:</strong> ₹${esc(inv.total_amount)} | <strong>Paid:</strong> ₹${esc(inv.paid_amount)} | <strong>Outstanding:</strong> ₹${esc(inv.outstanding)}</p>
-<p><strong>Status:</strong> <span style="color:${inv.due_bucket === 'OVERDUE' ? '#dc2626' : '#d97706'};font-weight:bold;">${esc(statusLabel)}</span></p>
-</div>` + renderTable("Campaign Assets (Context)", assets ?? [], assetCols);
+    const banner = renderInfoBanner([
+      { label: "Invoice", value: inv.invoice_id },
+      { label: "Client", value: inv.client_name },
+      { label: "Campaign", value: inv.campaign_id },
+      { label: "Due Date", value: inv.due_date },
+      { label: "Total", value: `₹${inv.total_amount}` },
+      { label: "Paid", value: `₹${inv.paid_amount}` },
+      { label: "Outstanding", value: `₹${inv.outstanding}` },
+      { label: "Status", value: statusLabel },
+    ], bgColor, borderColor);
 
-    const html = wrapEmail(`GO-ADS | Invoice ${statusLabel} – ${inv.invoice_id}`, `Client: ${inv.client_name} | Outstanding: ₹${inv.outstanding}`, inner);
+    const inner = banner + renderSectionCard("Campaign Assets (Context)", (assets ?? []).length, "📍", BRAND.primary,
+      renderTable(assets ?? [], assetCols));
+
+    const html = wrapEmail(`Invoice ${statusLabel} – ${inv.invoice_id}`, `Client: ${inv.client_name} · Outstanding: ₹${inv.outstanding}`, inner);
 
     try {
-      await resend.emails.send({ from: ALERT_FROM, to: settings.recipients_to, cc, subject: `GO-ADS | Invoice ${statusLabel} – ${inv.invoice_id} | ₹${inv.outstanding}`, html });
+      await resend.emails.send({ from: ALERT_FROM, to: settings.recipients_to, cc, subject: `GO-ADS 360° | Invoice ${statusLabel} – ${inv.invoice_id} | ₹${inv.outstanding}`, html });
       results.push(`Invoice alert: ${inv.invoice_id}`);
     } catch (e: any) { console.error(`Invoice ${inv.invoice_id} send error:`, e.message); }
   }

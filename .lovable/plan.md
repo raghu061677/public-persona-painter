@@ -1,118 +1,94 @@
 
-# Fix Campaign Delete Functionality on Detail Page
 
-## Problem Analysis
+## Fix Landing Page Scroll + Mobile Navigation
 
-The Campaign Detail page (`/admin/campaigns/[id]`) has two critical issues:
+### Problem
+The landing page stops scrolling after the "Why Go-Ads Exists" section. On mobile Safari, the menu buttons are not visible/accessible.
 
-1. **Uses hard delete instead of soft delete** - The `handleDelete` function uses `supabase.delete()` instead of the `soft_delete_campaign` RPC function
-2. **Shows deleted campaigns** - No check prevents viewing/interacting with already-deleted campaigns
-3. **CAM-2026-1394** is already soft-deleted (deleted on 2026-01-22 with reason "assets are not fetching")
+### Root Causes
 
-## Implementation Plan
+1. **DaisyUI overflow variable**: The override sets `--page-overflow: visible`, but `overflow: visible` on the root element does NOT produce a scrollbar -- it must be `auto` or `scroll` to allow the user to scroll through overflowing content.
 
-### Phase 1: Replace Hard Delete with Soft Delete
+2. **Nested scroll trap**: The Landing page wrapper `<div className="overflow-x-hidden">` implicitly converts `overflow-y` from `visible` to `auto` (CSS spec behavior). This creates a second scroll container inside the document, which can fight with the browser's viewport scroll and cause content to appear stuck.
 
-Update `src/pages/CampaignDetail.tsx` to use the `DeleteCampaignDialog` component:
+3. **Mobile nav clipping**: The hamburger menu button lacks explicit width/height constraints, and on very small screens the nav items can get pushed off-screen.
 
-**Changes:**
-- Import `DeleteCampaignDialog` component
-- Add state for delete dialog visibility
-- Replace inline `handleDelete` with dialog-based soft delete
-- Pass proper callback to navigate after successful deletion
+### Plan
 
-```text
-File: src/pages/CampaignDetail.tsx
+#### 1. Fix `src/index.css` -- DaisyUI overflow override (lines 576-585)
 
-1. Add import:
-   import { DeleteCampaignDialog } from "@/components/campaigns/DeleteCampaignDialog";
+Change `--page-overflow` from `visible` to `auto` so the root element actually enables scrolling:
 
-2. Add state:
-   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+```css
+:root {
+  --page-overflow: auto !important;
+}
 
-3. Replace handleDelete function:
-   - Remove the current implementation (lines 142-163)
-   - Add simple handler: const openDeleteDialog = () => setShowDeleteDialog(true);
-
-4. Update delete button onClick to use openDeleteDialog
-
-5. Add DeleteCampaignDialog component to JSX:
-   <DeleteCampaignDialog
-     open={showDeleteDialog}
-     onOpenChange={setShowDeleteDialog}
-     campaignId={campaign.id}
-     campaignName={campaign.campaign_name}
-     onDeleted={() => navigate('/admin/campaigns')}
-   />
-```
-
-### Phase 2: Handle Already-Deleted Campaigns
-
-Add a check in the campaign fetch to detect and handle soft-deleted campaigns:
-
-**Option A: Redirect away from deleted campaigns**
-```text
-In fetchCampaign, after setting campaign data:
-if (data.is_deleted) {
-  toast({
-    title: "Campaign Deleted",
-    description: "This campaign has been deleted and is no longer accessible",
-    variant: "destructive"
-  });
-  navigate('/admin/campaigns');
-  return;
+html {
+  min-height: 100% !important;
+  min-height: -webkit-fill-available !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
 }
 ```
 
-**Option B: Show read-only archive view (better for audit)**
-```text
-- Add a banner at the top indicating campaign is deleted
-- Show deletion details (who, when, why)
-- Disable all action buttons (delete, edit, export)
-- Keep data visible for reference/audit purposes
+Also add explicit `body` and `#root` overrides outside `@layer` to guarantee no scroll blocking:
+
+```css
+body {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  min-height: 100% !important;
+}
+
+#root {
+  min-height: 100% !important;
+  overflow: visible !important;
+}
 ```
 
-I recommend **Option B** for audit compliance.
+#### 2. Fix `src/pages/Landing.tsx` -- Remove nested scroll container
 
-### Phase 3: UI for Deleted Campaign State
+Remove `overflow-x-hidden` from the Landing page wrapper div. The html/body already handle `overflow-x: hidden`, so the Landing page does not need its own. This eliminates the nested scroll trap:
 
-Add a visual indicator when viewing a deleted campaign:
-
-```text
-{campaign.is_deleted && (
-  <Alert variant="destructive" className="mb-4">
-    <AlertTriangle className="h-4 w-4" />
-    <AlertTitle>Archived Campaign</AlertTitle>
-    <AlertDescription>
-      This campaign was deleted on {formatDate(campaign.deleted_at)}.
-      Reason: {campaign.deletion_reason || 'No reason provided'}
-    </AlertDescription>
-  </Alert>
-)}
+```diff
+- <div className="min-h-screen bg-background overflow-x-hidden">
++ <div className="min-h-screen bg-background">
 ```
 
-Disable action buttons when `campaign.is_deleted` is true.
+#### 3. Fix `src/layouts/PublicLayout.tsx` -- Same nested scroll fix
 
-## Files to Modify
+Remove `overflow-x-hidden` from the PublicLayout wrapper for the same reason:
 
-| File | Changes |
-|------|---------|
-| `src/pages/CampaignDetail.tsx` | Import DeleteCampaignDialog, add state, replace hard delete, add deleted campaign banner, disable actions for deleted campaigns |
+```diff
+- <div className="min-h-screen flex flex-col bg-background overflow-x-hidden">
++ <div className="min-h-screen flex flex-col bg-background">
+```
 
-## Technical Notes
+#### 4. Fix mobile nav in `src/pages/Landing.tsx` -- Ensure menu button visibility
 
-- The `soft_delete_campaign` RPC function already:
-  - Validates campaign is not already deleted
-  - Checks for invoices/payments that block deletion
-  - Releases booked media assets
-  - Records audit trail (who/when/why)
-  
-- The CORS error mentioned is a Lovable platform issue unrelated to this functionality
+Add explicit sizing and flex-shrink-0 to the mobile hamburger menu button so it never gets clipped:
 
-## Testing Checklist
+```tsx
+<button className="p-2 hover:bg-muted rounded-lg transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center">
+  <Menu className="h-6 w-6" />
+</button>
+```
 
-1. Navigate to an active campaign - Delete button should open dialog
-2. Enter reason and confirm - Campaign should soft-delete, assets released, redirect to list
-3. Navigate to a deleted campaign (via direct URL) - Should show deleted banner, actions disabled
-4. Deleted campaigns should not appear in main campaigns list
-5. Audit trail should be preserved
+Also ensure the mobile nav container doesn't overflow:
+
+```tsx
+<div className="md:hidden flex items-center gap-2 flex-shrink-0">
+```
+
+### Files Changed
+- `src/index.css` -- Fix DaisyUI overflow variable and add body/#root overrides outside @layer
+- `src/pages/Landing.tsx` -- Remove overflow-x-hidden, fix mobile menu button sizing
+- `src/layouts/PublicLayout.tsx` -- Remove overflow-x-hidden
+
+### What This Does NOT Touch
+- No database/Supabase changes
+- No business logic changes
+- No billing, invoices, campaigns, or plan logic
+- No component refactoring outside of these 3 files
+

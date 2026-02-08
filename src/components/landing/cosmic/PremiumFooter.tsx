@@ -64,17 +64,17 @@ export const PremiumFooter = () => {
             <h4 className="font-bold text-foreground mb-4">About</h4>
             <ul className="space-y-3">
               <li>
-                <button className="text-muted-foreground hover:text-[#F4C542] transition-colors">
+                <button onClick={() => navigate("/our-story")} className="text-muted-foreground hover:text-[#F4C542] transition-colors">
                   Our Story
                 </button>
               </li>
               <li>
-                <button className="text-muted-foreground hover:text-[#F4C542] transition-colors">
+                <button onClick={() => navigate("/team")} className="text-muted-foreground hover:text-[#F4C542] transition-colors">
                   Team
                 </button>
               </li>
               <li>
-                <button className="text-muted-foreground hover:text-[#F4C542] transition-colors">
+                <button onClick={() => navigate("/careers")} className="text-muted-foreground hover:text-[#F4C542] transition-colors">
                   Careers
                 </button>
               </li>
@@ -85,17 +85,17 @@ export const PremiumFooter = () => {
             <h4 className="font-bold text-foreground mb-4">Features</h4>
             <ul className="space-y-3">
               <li>
-                <button className="text-muted-foreground hover:text-[#F4C542] transition-colors">
+                <button onClick={() => navigate("/campaign-planning")} className="text-muted-foreground hover:text-[#F4C542] transition-colors">
                   Campaign Planning
                 </button>
               </li>
               <li>
-                <button className="text-muted-foreground hover:text-[#F4C542] transition-colors">
+                <button onClick={() => navigate("/asset-management")} className="text-muted-foreground hover:text-[#F4C542] transition-colors">
                   Asset Management
                 </button>
               </li>
               <li>
-                <button className="text-muted-foreground hover:text-[#F4C542] transition-colors">
+                <button onClick={() => navigate("/proof-collection")} className="text-muted-foreground hover:text-[#F4C542] transition-colors">
                   Proof Collection
                 </button>
               </li>
@@ -114,12 +114,12 @@ export const PremiumFooter = () => {
                 </button>
               </li>
               <li>
-                <button className="text-muted-foreground hover:text-[#F4C542] transition-colors">
+                <button onClick={() => navigate("/partners")} className="text-muted-foreground hover:text-[#F4C542] transition-colors">
                   List Your Media
                 </button>
               </li>
               <li>
-                <button className="text-muted-foreground hover:text-[#F4C542] transition-colors">
+                <button onClick={() => navigate("/sales")} className="text-muted-foreground hover:text-[#F4C542] transition-colors">
                   Pricing
                 </button>
               </li>
@@ -130,17 +130,17 @@ export const PremiumFooter = () => {
             <h4 className="font-bold text-foreground mb-4">Contact</h4>
             <ul className="space-y-3">
               <li>
-                <button className="text-muted-foreground hover:text-[#F4C542] transition-colors">
+                <button onClick={() => navigate("/support")} className="text-muted-foreground hover:text-[#F4C542] transition-colors">
                   Support
                 </button>
               </li>
               <li>
-                <button className="text-muted-foreground hover:text-[#F4C542] transition-colors">
+                <button onClick={() => navigate("/sales")} className="text-muted-foreground hover:text-[#F4C542] transition-colors">
                   Sales
                 </button>
               </li>
               <li>
-                <button className="text-muted-foreground hover:text-[#F4C542] transition-colors">
+                <button onClick={() => navigate("/partners")} className="text-muted-foreground hover:text-[#F4C542] transition-colors">
                   Partners
                 </button>
               </li>

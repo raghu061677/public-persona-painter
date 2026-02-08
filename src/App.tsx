@@ -200,6 +200,18 @@ const RevenueForecast = lazy(() => import("./pages/RevenueForecast"));
 const MediaAssetDuplicates = lazy(() => import("./pages/admin/MediaAssetDuplicates"));
 const PaymentConfirmations = lazy(() => import("./pages/PaymentConfirmations"));
 
+// Public website pages
+const PublicAbout = lazy(() => import("./pages/public/About"));
+const PublicOurStory = lazy(() => import("./pages/public/OurStory"));
+const PublicTeam = lazy(() => import("./pages/public/Team"));
+const PublicCareersAndFeatures = lazy(() => import("./pages/public/CareersAndFeatures"));
+const PublicCampaignPlanning = lazy(() => import("./pages/public/CampaignPlanning"));
+const PublicAssetManagement = lazy(() => import("./pages/public/AssetManagement"));
+const PublicProofAndContact = lazy(() => import("./pages/public/ProofAndContact"));
+const PublicSupport = lazy(() => import("./pages/public/Support"));
+const PublicSales = lazy(() => import("./pages/public/Sales"));
+const PublicPartners = lazy(() => import("./pages/public/Partners"));
+
 // Optimized Query Client with caching
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -254,6 +266,18 @@ const App = () => (
             <Route path="/campaign-track/:token" element={<PublicLayout><PublicCampaignTracking /></PublicLayout>} />
             <Route path="/mounter/tasks" element={<ProtectedRoute requireAuth><PublicLayout><MounterTasks /></PublicLayout></ProtectedRoute>} />
             <Route path="/mobile/*" element={<MobilePage />} />
+            
+            {/* Public website pages */}
+            <Route path="/about" element={<PublicLayout><PublicAbout /></PublicLayout>} />
+            <Route path="/our-story" element={<PublicLayout><PublicOurStory /></PublicLayout>} />
+            <Route path="/team" element={<PublicLayout><PublicTeam /></PublicLayout>} />
+            <Route path="/careers" element={<PublicLayout><PublicCareersAndFeatures /></PublicLayout>} />
+            <Route path="/campaign-planning" element={<PublicLayout><PublicCampaignPlanning /></PublicLayout>} />
+            <Route path="/asset-management" element={<PublicLayout><PublicAssetManagement /></PublicLayout>} />
+            <Route path="/proof-collection" element={<PublicLayout><PublicProofAndContact /></PublicLayout>} />
+            <Route path="/support" element={<PublicLayout><PublicSupport /></PublicLayout>} />
+            <Route path="/sales" element={<PublicLayout><PublicSales /></PublicLayout>} />
+            <Route path="/partners" element={<PublicLayout><PublicPartners /></PublicLayout>} />
             
             {/* Redirect /admin to /admin/dashboard */}
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />

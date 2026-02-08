@@ -3459,6 +3459,8 @@ export type Database = {
           recipients_to: string[]
           timezone: string
           updated_at: string
+          whatsapp_enabled: boolean
+          whatsapp_recipients: string[]
           windows_days: number[]
         }
         Insert: {
@@ -3470,6 +3472,8 @@ export type Database = {
           recipients_to?: string[]
           timezone?: string
           updated_at?: string
+          whatsapp_enabled?: boolean
+          whatsapp_recipients?: string[]
           windows_days?: number[]
         }
         Update: {
@@ -3481,6 +3485,8 @@ export type Database = {
           recipients_to?: string[]
           timezone?: string
           updated_at?: string
+          whatsapp_enabled?: boolean
+          whatsapp_recipients?: string[]
           windows_days?: number[]
         }
         Relationships: []

@@ -11,6 +11,8 @@ type DigestSettings = {
   recipients_to: string[];
   recipients_cc: string[];
   windows_days: number[];
+  whatsapp_enabled: boolean;
+  whatsapp_recipients: string[];
 };
 
 const DEFAULT_ASSET_COLS = [
@@ -162,6 +164,136 @@ async function logOnce(supabase: any, today: string, alertType: string, entityTy
   return !error;
 }
 
+// ===== WhatsApp Formatting =====
+function formatWhatsAppDigest(
+  vacant: any[],
+  endingTodayRows: any[],
+  endingBuckets: { days: number; rows: any[] }[],
+  dueToday: any[],
+  dueNext7: any[],
+  overdue: any[],
+  today: string,
+): string {
+  const lines: string[] = [];
+  lines.push(`📊 *GO-ADS 360° Daily Digest*`);
+  lines.push(`📅 ${today}`);
+  lines.push(`━━━━━━━━━━━━━━━━━━━━━`);
+  lines.push(``);
+
+  // KPI summary
+  lines.push(`📈 *Summary*`);
+  lines.push(`🟢 Vacant Assets: *${vacant.length}*`);
+  lines.push(`⚠️ Ending Today: *${endingTodayRows.length}*`);
+  lines.push(`🔴 Overdue Invoices: *${overdue.length}*`);
+  lines.push(`💰 Total Dues: *${dueToday.length + dueNext7.length + overdue.length}*`);
+  lines.push(``);
+
+  // Vacant assets (top 10)
+  if (vacant.length > 0) {
+    lines.push(`━━━━━━━━━━━━━━━━━━━━━`);
+    lines.push(`🟢 *Available Assets (${vacant.length})*`);
+    const showVacant = vacant.slice(0, 10);
+    for (const a of showVacant) {
+      lines.push(`  • ${a.asset_id} — ${a.area}, ${a.location} (${a.dimension || "—"})`);
+    }
+    if (vacant.length > 10) lines.push(`  _...and ${vacant.length - 10} more_`);
+    lines.push(``);
+  }
+
+  // Ending today
+  if (endingTodayRows.length > 0) {
+    lines.push(`━━━━━━━━━━━━━━━━━━━━━`);
+    lines.push(`⚠️ *Assets Ending Today (${endingTodayRows.length})*`);
+    for (const a of endingTodayRows.slice(0, 10)) {
+      lines.push(`  • ${a.asset_id} — ${a.client_name || "—"} / ${a.campaign_name || "—"}`);
+    }
+    if (endingTodayRows.length > 10) lines.push(`  _...and ${endingTodayRows.length - 10} more_`);
+    lines.push(``);
+  }
+
+  // Ending buckets
+  for (const b of endingBuckets) {
+    if (b.rows.length > 0) {
+      lines.push(`📅 *Ending in ${b.days} Days (${b.rows.length})*`);
+      for (const a of b.rows.slice(0, 8)) {
+        lines.push(`  • ${a.asset_id} — ${a.client_name || "—"} (End: ${a.booking_end_date || "—"})`);
+      }
+      if (b.rows.length > 8) lines.push(`  _...and ${b.rows.length - 8} more_`);
+      lines.push(``);
+    }
+  }
+
+  // Finance section
+  lines.push(`━━━━━━━━━━━━━━━━━━━━━`);
+  lines.push(`💰 *Finance*`);
+  lines.push(``);
+
+  if (overdue.length > 0) {
+    lines.push(`🔴 *Overdue Invoices (${overdue.length})*`);
+    for (const inv of overdue.slice(0, 8)) {
+      lines.push(`  • ${inv.invoice_id} — ${inv.client_name} | ₹${inv.outstanding} (Due: ${inv.due_date})`);
+    }
+    if (overdue.length > 8) lines.push(`  _...and ${overdue.length - 8} more_`);
+    lines.push(``);
+  }
+
+  if (dueToday.length > 0) {
+    lines.push(`📋 *Due Today (${dueToday.length})*`);
+    for (const inv of dueToday.slice(0, 8)) {
+      lines.push(`  • ${inv.invoice_id} — ${inv.client_name} | ₹${inv.outstanding}`);
+    }
+    if (dueToday.length > 8) lines.push(`  _...and ${dueToday.length - 8} more_`);
+    lines.push(``);
+  }
+
+  if (dueNext7.length > 0) {
+    lines.push(`📆 *Due Next 7 Days (${dueNext7.length})*`);
+    for (const inv of dueNext7.slice(0, 8)) {
+      lines.push(`  • ${inv.invoice_id} — ${inv.client_name} | ₹${inv.outstanding} (Due: ${inv.due_date})`);
+    }
+    if (dueNext7.length > 8) lines.push(`  _...and ${dueNext7.length - 8} more_`);
+    lines.push(``);
+  }
+
+  if (overdue.length === 0 && dueToday.length === 0 && dueNext7.length === 0) {
+    lines.push(`  ✅ No pending dues`);
+    lines.push(``);
+  }
+
+  lines.push(`━━━━━━━━━━━━━━━━━━━━━`);
+  lines.push(`_Automated alert from GO-ADS 360°_`);
+  lines.push(`_Matrix Network Solutions_`);
+  return lines.join("\n");
+}
+
+async function sendWhatsAppMessage(phoneNumber: string, message: string): Promise<void> {
+  const accessToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+  const phoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+  if (!accessToken || !phoneNumberId) throw new Error("WhatsApp credentials not configured");
+
+  const url = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: phoneNumber,
+      type: "text",
+      text: { preview_url: false, body: message },
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`WhatsApp API error [${res.status}]: ${err}`);
+  }
+  await res.text(); // consume body
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -179,15 +311,15 @@ Deno.serve(async (req) => {
   const resend = new Resend(RESEND_API_KEY);
 
   // Load settings
-  const { data: settingsRow, error: setErr } = await supabase.from("daily_digest_settings").select("enabled, recipients_to, recipients_cc, windows_days").limit(1).maybeSingle();
+  const { data: settingsRow, error: setErr } = await supabase.from("daily_digest_settings").select("enabled, recipients_to, recipients_cc, windows_days, whatsapp_enabled, whatsapp_recipients").limit(1).maybeSingle();
   if (setErr) {
     console.error("Settings error:", setErr.message);
     return new Response(JSON.stringify({ error: setErr.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
-  const settings: DigestSettings = settingsRow ?? { enabled: true, recipients_to: [], recipients_cc: [], windows_days: [3, 7, 15] };
+  const settings: DigestSettings = settingsRow ?? { enabled: true, recipients_to: [], recipients_cc: [], windows_days: [3, 7, 15], whatsapp_enabled: false, whatsapp_recipients: [] };
   if (!settings.enabled) return new Response(JSON.stringify({ message: "Alerts disabled" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  if (!settings.recipients_to?.length) return new Response(JSON.stringify({ message: "No recipients configured" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  if (!settings.recipients_to?.length && !settings.whatsapp_recipients?.length) return new Response(JSON.stringify({ message: "No recipients configured" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   const today = new Date().toISOString().slice(0, 10);
   const cc = settings.recipients_cc?.length ? settings.recipients_cc : undefined;
@@ -267,13 +399,31 @@ Deno.serve(async (req) => {
     const digestInner = kpiBar + vacantSection + endingTodaySection + endingBucketSections + divider + dueTodaySection + dueNext7Section + overdueSection;
     const digestHtml = wrapEmail("Daily Availability + Dues Digest", `Report Date: ${today} · Generated automatically at 09:00 IST`, digestInner);
 
-    try {
-      await resend.emails.send({ from: ALERT_FROM, to: settings.recipients_to, cc, subject: `GO-ADS 360° | Daily Digest – ${today}`, html: digestHtml });
-      results.push("Daily digest sent");
-      console.log("Daily digest sent successfully");
-    } catch (e: any) {
-      console.error("Digest send error:", e.message);
-      results.push(`Digest error: ${e.message}`);
+    // Send email digest
+    if (settings.recipients_to?.length) {
+      try {
+        await resend.emails.send({ from: ALERT_FROM, to: settings.recipients_to, cc, subject: `GO-ADS 360° | Daily Digest – ${today}`, html: digestHtml });
+        results.push("Daily digest email sent");
+        console.log("Daily digest email sent successfully");
+      } catch (e: any) {
+        console.error("Digest email send error:", e.message);
+        results.push(`Digest email error: ${e.message}`);
+      }
+    }
+
+    // Send WhatsApp digest
+    if (settings.whatsapp_enabled && settings.whatsapp_recipients?.length) {
+      const waMessage = formatWhatsAppDigest(vacant ?? [], endingTodayRows, endingBuckets, dueToday, dueNext7, overdue, today);
+      for (const phone of settings.whatsapp_recipients) {
+        try {
+          await sendWhatsAppMessage(phone, waMessage);
+          results.push(`WhatsApp digest sent to ${phone}`);
+          console.log(`WhatsApp digest sent to ${phone}`);
+        } catch (e: any) {
+          console.error(`WhatsApp send error (${phone}):`, e.message);
+          results.push(`WhatsApp error (${phone}): ${e.message}`);
+        }
+      }
     }
   } else {
     results.push("Daily digest already sent today");

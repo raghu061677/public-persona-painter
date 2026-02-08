@@ -30,7 +30,7 @@ const Landing = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Announcement Banner */}
       <AnnouncementBanner />
 

@@ -10,7 +10,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background overflow-x-hidden">
       {/* Announcement Banner */}
       <AnnouncementBanner />
 
@@ -71,7 +71,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
             <div className="md:hidden flex items-center gap-2">
               <DarkModeToggle />
-              <button className="p-2">
+              <button className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center" onClick={() => navigate("/auth")}>
                 <Menu className="h-6 w-6" />
               </button>
             </div>

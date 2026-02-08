@@ -459,7 +459,7 @@ export default function Marketplace() {
   };
 
   return (
-    <div className="flex-1 space-y-6 p-4 sm:p-8 pt-6">
+    <div className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8 pt-6 overflow-x-hidden">
       <div className="flex flex-col gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Marketplace</h2>
@@ -525,79 +525,83 @@ export default function Marketplace() {
         </div>
       ) : (
         <>
-          {/* Selection toolbar */}
-          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between p-4 bg-muted/50 rounded-lg border">
-            <div className="flex items-center gap-4">
+           {/* Selection toolbar */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 items-start sm:items-center justify-between p-3 sm:p-4 bg-muted/50 rounded-lg border">
+            <div className="flex items-center gap-3">
               <Checkbox
                 checked={selectedAssets.size === filteredAssets.length && filteredAssets.length > 0}
                 onCheckedChange={handleSelectAll}
                 id="select-all"
               />
-              <Label htmlFor="select-all" className="cursor-pointer">
+              <Label htmlFor="select-all" className="cursor-pointer text-sm">
                 Select All ({selectedAssets.size} of {filteredAssets.length})
               </Label>
             </div>
             
             {selectedAssets.size > 0 && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full sm:w-auto">
                 <Button
                   variant="outline"
+                  size="sm"
+                  className="flex-1 sm:flex-none text-xs sm:text-sm"
                   onClick={handleDownloadPPT}
                   disabled={isDownloading}
                 >
                   {isDownloading ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                       Generating...
                     </>
                   ) : (
                     <>
-                      <FileDown className="mr-2 h-4 w-4" />
+                      <FileDown className="mr-1.5 h-3.5 w-3.5" />
                       Download Proposal
                     </>
                   )}
                 </Button>
-                <Button onClick={() => setQuoteDialog(true)}>
-                  <Send className="mr-2 h-4 w-4" />
+                <Button size="sm" className="flex-1 sm:flex-none text-xs sm:text-sm" onClick={() => setQuoteDialog(true)}>
+                  <Send className="mr-1.5 h-3.5 w-3.5" />
                   Request Quote
                 </Button>
               </div>
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
           {filteredAssets.map((asset) => (
-            <Card key={asset.id} className="hover:shadow-lg transition-shadow relative group">
+            <Card key={asset.id} className="hover:shadow-lg transition-shadow relative group overflow-hidden">
               {/* Selection checkbox */}
               <div className="absolute top-3 left-3 z-10">
                 <Checkbox
                   checked={selectedAssets.has(asset.id)}
                   onCheckedChange={() => toggleAssetSelection(asset.id)}
-                  className="bg-white border-2 shadow-sm"
+                  className="bg-background border-2 shadow-sm"
                 />
               </div>
               
               <CardHeader className="p-0">
-                <div 
-                  className="w-full h-36 bg-muted flex items-center justify-center rounded-t-lg bg-cover bg-center"
-                  style={{
-                    backgroundImage: asset.primary_photo_url 
-                      ? `url(${asset.primary_photo_url})`
-                      : 'none'
-                  }}
-                >
-                  {!asset.primary_photo_url && (
-                    <Building2 className="h-12 w-12 text-muted-foreground" />
+                <div className="relative w-full aspect-[16/9] bg-muted rounded-t-lg overflow-hidden">
+                  {asset.primary_photo_url ? (
+                    <img
+                      src={asset.primary_photo_url}
+                      alt={asset.media_asset_code || asset.id}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Building2 className="h-10 w-10 text-muted-foreground/50" />
+                    </div>
                   )}
                 </div>
               </CardHeader>
-              <CardContent className="p-3 space-y-2">
+              <CardContent className="p-3 sm:p-4 space-y-2.5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-bold text-base leading-tight truncate">{asset.media_asset_code || asset.id}</h3>
+                    <h3 className="font-semibold text-sm sm:text-base leading-tight truncate">{asset.media_asset_code || asset.id}</h3>
                     <p className="text-xs text-muted-foreground font-medium truncate">{asset.media_type}</p>
                   </div>
-                  <Badge variant={asset.status === 'Available' ? 'default' : 'secondary'} className="text-xs flex-shrink-0">
+                  <Badge variant={asset.status === 'Available' ? 'default' : 'secondary'} className="text-[10px] sm:text-xs flex-shrink-0">
                     {asset.status}
                   </Badge>
                 </div>
@@ -614,8 +618,13 @@ export default function Marketplace() {
                     </span>
                   </div>
                   <p className="text-muted-foreground line-clamp-1">{asset.location}</p>
-                  <p className="font-semibold text-xs">Dimensions: {asset.dimensions}</p>
-                  <Badge variant="secondary" className="text-xs">
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    <Badge variant="outline" className="text-[10px] font-normal">{asset.dimensions}</Badge>
+                    {asset.illumination_type && (
+                      <Badge variant="outline" className="text-[10px] font-normal">{asset.illumination_type}</Badge>
+                    )}
+                  </div>
+                  <Badge variant="secondary" className="text-[10px] mt-1">
                     Contact for Pricing
                   </Badge>
                 </div>
@@ -624,7 +633,7 @@ export default function Marketplace() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 text-xs h-8"
+                    className="flex-1 text-xs h-9 min-h-[36px]"
                     onClick={() => navigate(`/marketplace/asset/${asset.media_asset_code || asset.id}`)}
                   >
                     View Details
@@ -632,7 +641,7 @@ export default function Marketplace() {
                   {canRequestBooking && asset.status === 'Available' && asset.company_id !== company?.id && (
                     <Button
                       size="sm"
-                      className="flex-1 text-xs h-8"
+                      className="flex-1 text-xs h-9 min-h-[36px]"
                       onClick={() => {
                         setSelectedAsset(asset);
                         setBookingForm(prev => ({

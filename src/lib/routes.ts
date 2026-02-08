@@ -118,6 +118,18 @@ export const ROUTES = {
   CLIENT_PORTAL_DASHBOARD: "/portal/dashboard",
   CLIENT_PORTAL_CAMPAIGNS: "/portal/campaigns",
   CLIENT_PORTAL_INVOICES: "/portal/invoices",
+  
+  // Public Website Pages
+  ABOUT: "/about",
+  OUR_STORY: "/our-story",
+  TEAM: "/team",
+  CAREERS: "/careers",
+  CAMPAIGN_PLANNING: "/campaign-planning",
+  ASSET_MANAGEMENT_PUBLIC: "/asset-management",
+  PROOF_COLLECTION: "/proof-collection",
+  SUPPORT: "/support",
+  SALES: "/sales",
+  PARTNERS: "/partners",
 } as const;
 
 /**

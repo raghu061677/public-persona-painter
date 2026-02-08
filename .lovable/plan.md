@@ -1,94 +1,132 @@
 
 
-## Fix Landing Page Scroll + Mobile Navigation
+## Create GO-ADS Public Website Pages
 
-### Problem
-The landing page stops scrolling after the "Why Go-Ads Exists" section. On mobile Safari, the menu buttons are not visible/accessible.
+### Overview
+Create 8 new public-facing pages (mapped to 10 content sections) for the GO-ADS platform. All pages will use the existing `PublicLayout` wrapper (which provides the nav bar, announcement banner, and footer) and follow the same design language as the Landing page -- Tailwind + shadcn/ui, framer-motion animations, enterprise-grade aesthetic.
 
-### Root Causes
+### Route Structure
 
-1. **DaisyUI overflow variable**: The override sets `--page-overflow: visible`, but `overflow: visible` on the root element does NOT produce a scrollbar -- it must be `auto` or `scroll` to allow the user to scroll through overflowing content.
+| Route | Page Component | Content Sections |
+|-------|---------------|-----------------|
+| `/about` | About.tsx | About GO-ADS |
+| `/our-story` | OurStory.tsx | Origin story |
+| `/team` | Team.tsx | Team overview |
+| `/careers` | CareersAndFeatures.tsx | Careers + Features (combined) |
+| `/campaign-planning` | CampaignPlanning.tsx | Campaign planning feature |
+| `/asset-management` | AssetManagement.tsx | Asset management feature |
+| `/proof-collection` | ProofAndContact.tsx | Proof collection + Contact (combined) |
+| `/support` | Support.tsx | Support offerings |
+| `/sales` | Sales.tsx | Sales / demo requests |
+| `/partners` | Partners.tsx | Partnership opportunities |
 
-2. **Nested scroll trap**: The Landing page wrapper `<div className="overflow-x-hidden">` implicitly converts `overflow-y` from `visible` to `auto` (CSS spec behavior). This creates a second scroll container inside the document, which can fight with the browser's viewport scroll and cause content to appear stuck.
+### Files to Create (10 new page files)
 
-3. **Mobile nav clipping**: The hamburger menu button lacks explicit width/height constraints, and on very small screens the nav items can get pushed off-screen.
+1. **`src/pages/public/About.tsx`** -- Mission statement, what GO-ADS is, key value props
+2. **`src/pages/public/OurStory.tsx`** -- Timeline-style narrative of how GO-ADS was born
+3. **`src/pages/public/Team.tsx`** -- Multidisciplinary team description (no individual names, role-based)
+4. **`src/pages/public/CareersAndFeatures.tsx`** -- Two-section page: open positions invite + feature summary grid
+5. **`src/pages/public/CampaignPlanning.tsx`** -- Feature deep-dive: asset discovery, flexible durations, pricing, exports
+6. **`src/pages/public/AssetManagement.tsx`** -- Feature deep-dive: inventory, availability, history, QR codes
+7. **`src/pages/public/ProofAndContact.tsx`** -- Two-section: proof collection workflow + Matrix Network Solutions contact details
+8. **`src/pages/public/Support.tsx`** -- Support tiers: onboarding, guidance, issue resolution
+9. **`src/pages/public/Sales.tsx`** -- Demo request section, consultative sales messaging
+10. **`src/pages/public/Partners.tsx`** -- Partnership types + Matrix Network Solutions as strategic partner
 
-### Plan
+### Files to Modify (3 existing files)
 
-#### 1. Fix `src/index.css` -- DaisyUI overflow override (lines 576-585)
+1. **`src/App.tsx`** -- Add lazy imports for all 10 new pages; add 10 new `<Route>` entries wrapped in `<PublicLayout>`
+2. **`src/lib/routes.ts`** -- Add route constants for all new public pages
+3. **`src/components/landing/cosmic/PremiumFooter.tsx`** -- Wire all footer link buttons to navigate to the new routes
 
-Change `--page-overflow` from `visible` to `auto` so the root element actually enables scrolling:
+### Design Approach
 
-```css
-:root {
-  --page-overflow: auto !important;
-}
+Each page will follow this consistent structure:
 
-html {
-  min-height: 100% !important;
-  min-height: -webkit-fill-available !important;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-}
+```text
++----------------------------------------------+
+|  Hero Banner (gradient bg, title, subtitle)  |
++----------------------------------------------+
+|  Content Sections (cards, grids, or lists)   |
+|  using motion.div for scroll-in animations   |
++----------------------------------------------+
+|  CTA Section (Get Started / Contact)         |
++----------------------------------------------+
 ```
 
-Also add explicit `body` and `#root` overrides outside `@layer` to guarantee no scroll blocking:
+- Use `framer-motion` for `whileInView` entrance animations (matching Landing page sections)
+- Use Lucide icons for visual anchors in feature/benefit cards
+- Use the existing color palette: Deep Blue (#1E40AF), Gold (#F4C542), gradients from Landing
+- Enterprise tone throughout, no emojis, short paragraphs, scannable headings
+- Responsive: desktop-first grid layouts that stack on mobile
+- All pages wrapped in `PublicLayout` so they get the shared nav + footer automatically
 
-```css
-body {
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-  min-height: 100% !important;
-}
+### Content Details per Page
 
-#root {
-  min-height: 100% !important;
-  overflow: visible !important;
-}
-```
+**About** -- 3 sections: Hero with mission, "What We Do" grid (4 cards), "Built for Scale" metrics strip
 
-#### 2. Fix `src/pages/Landing.tsx` -- Remove nested scroll container
+**Our Story** -- Timeline with 4 milestones: The Challenge, The Idea, Building the Platform, Where We Are Today
 
-Remove `overflow-x-hidden` from the Landing page wrapper div. The html/body already handle `overflow-x: hidden`, so the Landing page does not need its own. This eliminates the nested scroll trap:
+**Team** -- 4 role-based cards: OOH Domain Experts, Technology & Engineering, Campaign Operations, Strategic Leadership. Each with icon, title, description. No names.
 
-```diff
-- <div className="min-h-screen bg-background overflow-x-hidden">
-+ <div className="min-h-screen bg-background">
-```
+**Careers + Features** -- Split page. Top half: careers invitation with "Why Join Us" benefits. Bottom half: 6-card feature grid (Campaign Planning, Asset Management, Proof of Execution, Reporting & Exports, GST & Finance, AI Assistant)
 
-#### 3. Fix `src/layouts/PublicLayout.tsx` -- Same nested scroll fix
+**Campaign Planning** -- Feature hero + 4-step workflow cards (Discover Assets, Plan Campaigns, Manage Pricing, Generate Proposals)
 
-Remove `overflow-x-hidden` from the PublicLayout wrapper for the same reason:
+**Asset Management** -- Feature hero + 4 capability cards (Centralized Inventory, Availability Tracking, Historical Performance, QR-Based Identification)
 
-```diff
-- <div className="min-h-screen flex flex-col bg-background overflow-x-hidden">
-+ <div className="min-h-screen flex flex-col bg-background">
-```
+**Proof & Contact** -- Two distinct sections. Proof: 4 capability cards (Mobile Uploads, Geo-tagged Images, Campaign Galleries, Auto-generated PPTs). Contact: Matrix Network Solutions address card with map placeholder and phone number.
 
-#### 4. Fix mobile nav in `src/pages/Landing.tsx` -- Ensure menu button visibility
+**Support** -- 4 support pillars as cards (Onboarding, Product Guidance, Issue Resolution, Ongoing Assistance)
 
-Add explicit sizing and flex-shrink-0 to the mobile hamburger menu button so it never gets clipped:
+**Sales** -- Hero with "See GO-ADS in Action" + 3 benefit cards + CTA to navigate to `/auth`
 
+**Partners** -- 3 partnership types (Media Owners, Agencies, Enterprise) + Matrix Network Solutions highlighted as principal strategic partner
+
+### Technical Details
+
+**Route Registration in App.tsx:**
 ```tsx
-<button className="p-2 hover:bg-muted rounded-lg transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center">
-  <Menu className="h-6 w-6" />
-</button>
+// New public page lazy imports
+const About = lazy(() => import("./pages/public/About"));
+const OurStory = lazy(() => import("./pages/public/OurStory"));
+// ... (8 more)
+
+// Inside <Routes>, after existing public routes:
+<Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
+<Route path="/our-story" element={<PublicLayout><OurStory /></PublicLayout>} />
+<Route path="/team" element={<PublicLayout><Team /></PublicLayout>} />
+<Route path="/careers" element={<PublicLayout><CareersAndFeatures /></PublicLayout>} />
+<Route path="/campaign-planning" element={<PublicLayout><CampaignPlanning /></PublicLayout>} />
+<Route path="/asset-management" element={<PublicLayout><AssetManagement /></PublicLayout>} />
+<Route path="/proof-collection" element={<PublicLayout><ProofAndContact /></PublicLayout>} />
+<Route path="/support" element={<PublicLayout><Support /></PublicLayout>} />
+<Route path="/sales" element={<PublicLayout><Sales /></PublicLayout>} />
+<Route path="/partners" element={<PublicLayout><Partners /></PublicLayout>} />
 ```
 
-Also ensure the mobile nav container doesn't overflow:
+**Footer Link Wiring in PremiumFooter.tsx:**
+Each existing footer button (Our Story, Team, Careers, Campaign Planning, etc.) will get an `onClick={() => navigate("/route")}` handler pointing to the correct new page.
 
-```tsx
-<div className="md:hidden flex items-center gap-2 flex-shrink-0">
+**Route Constants in routes.ts:**
+```typescript
+// Public Website Pages
+ABOUT: "/about",
+OUR_STORY: "/our-story",
+TEAM: "/team",
+CAREERS: "/careers",
+CAMPAIGN_PLANNING: "/campaign-planning",
+ASSET_MANAGEMENT: "/asset-management",
+PROOF_COLLECTION: "/proof-collection",
+SUPPORT: "/support",
+SALES: "/sales",
+PARTNERS: "/partners",
 ```
-
-### Files Changed
-- `src/index.css` -- Fix DaisyUI overflow variable and add body/#root overrides outside @layer
-- `src/pages/Landing.tsx` -- Remove overflow-x-hidden, fix mobile menu button sizing
-- `src/layouts/PublicLayout.tsx` -- Remove overflow-x-hidden
 
 ### What This Does NOT Touch
-- No database/Supabase changes
-- No business logic changes
-- No billing, invoices, campaigns, or plan logic
-- No component refactoring outside of these 3 files
+- No database or backend changes
+- No authentication changes
+- No admin/dashboard pages
+- No existing Landing page content
+- No business logic modifications
 

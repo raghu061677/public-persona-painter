@@ -189,6 +189,33 @@ export type Database = {
           },
         ]
       }
+      alert_log: {
+        Row: {
+          alert_date: string
+          alert_type: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+        }
+        Insert: {
+          alert_date: string
+          alert_type: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+        }
+        Update: {
+          alert_date?: string
+          alert_type?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+        }
+        Relationships: []
+      }
       alert_settings: {
         Row: {
           budget_variance_threshold: number
@@ -504,6 +531,34 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "asset_bookings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_availability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_bookings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_booking_windows"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_bookings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_default"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_bookings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_vacant_today"
+            referencedColumns: ["asset_id"]
+          },
+          {
             foreignKeyName: "asset_bookings_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
@@ -632,6 +687,34 @@ export type Database = {
             referencedRelation: "public_media_assets_safe"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_availability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_booking_windows"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_default"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_vacant_today"
+            referencedColumns: ["asset_id"]
+          },
         ]
       }
       asset_maintenance: {
@@ -729,6 +812,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_media_assets_safe"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_maintenance_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_availability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_maintenance_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_booking_windows"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_maintenance_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_default"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_maintenance_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_vacant_today"
+            referencedColumns: ["asset_id"]
           },
         ]
       }
@@ -920,6 +1031,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_media_assets_safe"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_power_bills_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_availability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_power_bills_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_booking_windows"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_power_bills_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_default"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_power_bills_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_vacant_today"
+            referencedColumns: ["asset_id"]
           },
           {
             foreignKeyName: "asset_power_bills_primary_bill_id_fkey"
@@ -1128,6 +1267,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_media_assets_safe"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_requests_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_availability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "booking_requests_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_booking_windows"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "booking_requests_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_default"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "booking_requests_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_vacant_today"
+            referencedColumns: ["asset_id"]
           },
           {
             foreignKeyName: "booking_requests_owner_company_id_fkey"
@@ -1435,6 +1602,34 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "campaign_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_availability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_booking_windows"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_default"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_vacant_today"
+            referencedColumns: ["asset_id"]
+          },
+          {
             foreignKeyName: "campaign_assets_assigned_mounter_id_fkey"
             columns: ["assigned_mounter_id"]
             isOneToOne: false
@@ -1732,6 +1927,34 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "campaign_item_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_availability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "campaign_item_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_booking_windows"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "campaign_item_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_default"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "campaign_item_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_vacant_today"
+            referencedColumns: ["asset_id"]
+          },
+          {
             foreignKeyName: "campaign_item_faces_campaign_item_id_fkey"
             columns: ["campaign_item_id"]
             isOneToOne: false
@@ -1838,6 +2061,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_media_assets_safe"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_availability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "campaign_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_booking_windows"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "campaign_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_default"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "campaign_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_vacant_today"
+            referencedColumns: ["asset_id"]
           },
           {
             foreignKeyName: "campaign_items_campaign_id_fkey"
@@ -3162,6 +3413,13 @@ export type Database = {
             referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "v_invoice_dues"
+            referencedColumns: ["invoice_id"]
+          },
         ]
       }
       csrf_tokens: {
@@ -3188,6 +3446,42 @@ export type Database = {
           token?: string
           used?: boolean | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      daily_digest_settings: {
+        Row: {
+          created_at: string
+          daily_time: string
+          enabled: boolean
+          id: string
+          recipients_cc: string[]
+          recipients_to: string[]
+          timezone: string
+          updated_at: string
+          windows_days: number[]
+        }
+        Insert: {
+          created_at?: string
+          daily_time?: string
+          enabled?: boolean
+          id?: string
+          recipients_cc?: string[]
+          recipients_to?: string[]
+          timezone?: string
+          updated_at?: string
+          windows_days?: number[]
+        }
+        Update: {
+          created_at?: string
+          daily_time?: string
+          enabled?: boolean
+          id?: string
+          recipients_cc?: string[]
+          recipients_to?: string[]
+          timezone?: string
+          updated_at?: string
+          windows_days?: number[]
         }
         Relationships: []
       }
@@ -3970,6 +4264,13 @@ export type Database = {
             referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "v_invoice_dues"
+            referencedColumns: ["invoice_id"]
+          },
         ]
       }
       invoice_line_items: {
@@ -4035,6 +4336,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "v_invoice_dues"
+            referencedColumns: ["invoice_id"]
+          },
+          {
             foreignKeyName: "invoice_line_items_media_asset_id_fkey"
             columns: ["media_asset_id"]
             isOneToOne: false
@@ -4082,6 +4390,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_media_assets_safe"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_availability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_booking_windows"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_default"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_vacant_today"
+            referencedColumns: ["asset_id"]
           },
         ]
       }
@@ -4133,6 +4469,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "invoices"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_reminders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "v_invoice_dues"
+            referencedColumns: ["invoice_id"]
           },
         ]
       }
@@ -4609,6 +4952,34 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "marketplace_inquiry_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_availability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "marketplace_inquiry_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_booking_windows"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "marketplace_inquiry_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_default"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "marketplace_inquiry_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_vacant_today"
+            referencedColumns: ["asset_id"]
+          },
+          {
             foreignKeyName: "marketplace_inquiry_assets_inquiry_id_fkey"
             columns: ["inquiry_id"]
             isOneToOne: false
@@ -4709,6 +5080,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_media_assets_safe"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_asset_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_availability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "media_asset_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_booking_windows"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "media_asset_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_default"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "media_asset_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_vacant_today"
+            referencedColumns: ["asset_id"]
           },
         ]
       }
@@ -5358,6 +5757,34 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "operations_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_availability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "operations_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_booking_windows"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "operations_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_default"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "operations_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_vacant_today"
+            referencedColumns: ["asset_id"]
+          },
+          {
             foreignKeyName: "operations_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
@@ -5851,6 +6278,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "payment_confirmations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "v_invoice_dues"
+            referencedColumns: ["invoice_id"]
+          },
+          {
             foreignKeyName: "payment_confirmations_payment_record_id_fkey"
             columns: ["payment_record_id"]
             isOneToOne: false
@@ -6217,6 +6651,34 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "plan_item_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_availability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "plan_item_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_booking_windows"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "plan_item_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_default"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "plan_item_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_vacant_today"
+            referencedColumns: ["asset_id"]
+          },
+          {
             foreignKeyName: "plan_item_faces_plan_item_id_fkey"
             columns: ["plan_item_id"]
             isOneToOne: false
@@ -6418,6 +6880,34 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "plan_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_availability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "plan_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_booking_windows"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "plan_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_default"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "plan_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_vacant_today"
+            referencedColumns: ["asset_id"]
+          },
+          {
             foreignKeyName: "plan_items_plan_id_fkey"
             columns: ["plan_id"]
             isOneToOne: false
@@ -6509,6 +6999,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_media_assets_safe"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_template_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_availability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "plan_template_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_booking_windows"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "plan_template_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_default"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "plan_template_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_vacant_today"
+            referencedColumns: ["asset_id"]
           },
           {
             foreignKeyName: "plan_template_items_company_id_fkey"
@@ -7088,6 +7606,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "invoices"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipts_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "v_invoice_dues"
+            referencedColumns: ["invoice_id"]
           },
           {
             foreignKeyName: "receipts_payment_record_id_fkey"
@@ -7933,6 +8458,34 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_availability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_booking_windows"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_default"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_vacant_today"
+            referencedColumns: ["asset_id"]
+          },
+          {
             foreignKeyName: "media_assets_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
@@ -8404,6 +8957,291 @@ export type Database = {
         }
         Relationships: []
       }
+      v_asset_availability: {
+        Row: {
+          area: string | null
+          asset_id: string | null
+          availability_status: string | null
+          available_from: string | null
+          dimension: string | null
+          direction: string | null
+          illumination: string | null
+          live_campaign_id: string | null
+          live_campaign_name: string | null
+          live_client_name: string | null
+          live_end_date: string | null
+          live_start_date: string | null
+          location: string | null
+          next_campaign_id: string | null
+          next_campaign_name: string | null
+          next_client_name: string | null
+          next_end_date: string | null
+          next_start_date: string | null
+          sqft: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["live_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["next_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["live_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["next_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["live_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_forecast"
+            referencedColumns: ["campaign_id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["next_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_forecast"
+            referencedColumns: ["campaign_id"]
+          },
+        ]
+      }
+      v_asset_booking_windows: {
+        Row: {
+          asset_id: string | null
+          last_end_date: string | null
+          live_campaign_id: string | null
+          live_campaign_name: string | null
+          live_client_name: string | null
+          live_end_date: string | null
+          live_start_date: string | null
+          next_campaign_id: string | null
+          next_campaign_name: string | null
+          next_client_name: string | null
+          next_end_date: string | null
+          next_start_date: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["live_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["next_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["live_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["next_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["live_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_forecast"
+            referencedColumns: ["campaign_id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["next_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_forecast"
+            referencedColumns: ["campaign_id"]
+          },
+        ]
+      }
+      v_assets_default: {
+        Row: {
+          area: string | null
+          asset_id: string | null
+          dimension: string | null
+          direction: string | null
+          illumination: string | null
+          location: string | null
+          sqft: number | null
+        }
+        Insert: {
+          area?: string | null
+          asset_id?: string | null
+          dimension?: string | null
+          direction?: string | null
+          illumination?: string | null
+          location?: string | null
+          sqft?: number | null
+        }
+        Update: {
+          area?: string | null
+          asset_id?: string | null
+          dimension?: string | null
+          direction?: string | null
+          illumination?: string | null
+          location?: string | null
+          sqft?: number | null
+        }
+        Relationships: []
+      }
+      v_assets_vacant_today: {
+        Row: {
+          area: string | null
+          asset_id: string | null
+          availability_status: string | null
+          available_from: string | null
+          dimension: string | null
+          direction: string | null
+          illumination: string | null
+          live_campaign_id: string | null
+          live_campaign_name: string | null
+          live_client_name: string | null
+          live_end_date: string | null
+          live_start_date: string | null
+          location: string | null
+          next_campaign_id: string | null
+          next_campaign_name: string | null
+          next_client_name: string | null
+          next_end_date: string | null
+          next_start_date: string | null
+          sqft: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["live_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["next_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["live_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["next_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["live_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_forecast"
+            referencedColumns: ["campaign_id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["next_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_forecast"
+            referencedColumns: ["campaign_id"]
+          },
+        ]
+      }
+      v_invoice_dues: {
+        Row: {
+          campaign_id: string | null
+          client_name: string | null
+          due_bucket: string | null
+          due_date: string | null
+          invoice_date: string | null
+          invoice_id: string | null
+          invoice_status: Database["public"]["Enums"]["invoice_status"] | null
+          outstanding: number | null
+          paid_amount: number | null
+          total_amount: number | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          client_name?: string | null
+          due_bucket?: never
+          due_date?: string | null
+          invoice_date?: string | null
+          invoice_id?: string | null
+          invoice_status?: Database["public"]["Enums"]["invoice_status"] | null
+          outstanding?: never
+          paid_amount?: never
+          total_amount?: number | null
+        }
+        Update: {
+          campaign_id?: string | null
+          client_name?: string | null
+          due_bucket?: never
+          due_date?: string | null
+          invoice_date?: string | null
+          invoice_id?: string | null
+          invoice_status?: Database["public"]["Enums"]["invoice_status"] | null
+          outstanding?: never
+          paid_amount?: never
+          total_amount?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_forecast"
+            referencedColumns: ["campaign_id"]
+          },
+        ]
+      }
     }
     Functions: {
       add_creative_version: {
@@ -8545,6 +9383,62 @@ export type Database = {
         }[]
       }
       extract_state_code: { Args: { client_id: string }; Returns: string }
+      fn_assets_ending_within: {
+        Args: { days_ahead: number }
+        Returns: {
+          area: string
+          asset_id: string
+          booking_end_date: string
+          bucket: string
+          campaign_id: string
+          campaign_name: string
+          client_name: string
+          dimension: string
+          direction: string
+          illumination: string
+          location: string
+          sqft: number
+        }[]
+      }
+      fn_assets_for_campaign: {
+        Args: { p_campaign_id: string }
+        Returns: {
+          area: string
+          asset_id: string
+          booking_end_date: string
+          booking_start_date: string
+          dimension: string
+          direction: string
+          illumination: string
+          location: string
+          sqft: number
+        }[]
+      }
+      fn_assets_for_invoice: {
+        Args: { p_invoice_id: string }
+        Returns: {
+          area: string
+          asset_id: string
+          booking_end_date: string
+          booking_start_date: string
+          dimension: string
+          direction: string
+          illumination: string
+          location: string
+          sqft: number
+        }[]
+      }
+      fn_campaigns_ending_within: {
+        Args: { days_ahead: number }
+        Returns: {
+          campaign_id: string
+          campaign_name: string
+          client_name: string
+          end_date: string
+          start_date: string
+          total_assets: number
+        }[]
+      }
       generate_asset_qr_code: {
         Args: { asset_id_param: string }
         Returns: string

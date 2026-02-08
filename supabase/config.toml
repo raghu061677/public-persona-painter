@@ -261,3 +261,6 @@ verify_jwt = true
 [functions.generate-vacant-media-ppt]
 verify_jwt = true
 
+# Daily Alerts Automation
+[functions.send-daily-alerts]
+verify_jwt = false

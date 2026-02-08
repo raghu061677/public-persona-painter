@@ -574,7 +574,7 @@ All colors MUST be HSL.
  * We override OUTSIDE @layer so it wins over DaisyUI's rule.
  */
 :root {
-  --page-overflow: visible !important;
+  --page-overflow: auto !important;
 }
 
 html {
@@ -582,6 +582,17 @@ html {
   min-height: -webkit-fill-available !important;
   overflow-x: hidden !important;
   overflow-y: auto !important;
+}
+
+body {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  min-height: 100% !important;
+}
+
+#root {
+  min-height: 100% !important;
+  overflow: visible !important;
 }
 
 @layer base {

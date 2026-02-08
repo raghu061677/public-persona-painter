@@ -10,7 +10,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col bg-background overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-background">
       {/* Announcement Banner */}
       <AnnouncementBanner />
 

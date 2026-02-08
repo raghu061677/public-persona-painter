@@ -30,7 +30,7 @@ const Landing = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-background">
       {/* Announcement Banner */}
       <AnnouncementBanner />
 
@@ -90,11 +90,11 @@ const Landing = () => {
             </div>
 
             {/* Mobile Navigation */}
-            <div className="md:hidden flex items-center gap-2">
+            <div className="md:hidden flex items-center gap-2 flex-shrink-0">
               <DarkModeToggle />
               <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetTrigger asChild>
-                  <button className="p-2 hover:bg-muted rounded-lg transition-colors">
+                  <button className="p-2 hover:bg-muted rounded-lg transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center">
                     <Menu className="h-6 w-6" />
                   </button>
                 </SheetTrigger>

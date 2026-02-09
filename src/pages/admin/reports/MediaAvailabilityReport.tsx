@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,28 +6,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { 
-  Download, 
-  Calendar, 
-  MapPin, 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
-  AlertTriangle,
+import {
+  Download,
+  Calendar,
+  MapPin,
+  CheckCircle2,
+  XCircle,
+  Clock,
   Search,
   RefreshCw,
   ArrowUp,
@@ -37,7 +29,8 @@ import {
   Presentation,
   FileText,
   Columns,
-  RotateCcw
+  RotateCcw,
+  Zap,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -65,24 +58,48 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { 
-  generateAvailabilityExcel, 
-  generateAvailabilityPDF, 
-  generateAvailabilityPPT,
-  ExportTab 
-} from "@/lib/reports/generateAvailabilityExports";
-import { generateAvailabilityPPTWithImages } from "@/lib/reports/generateAvailabilityPPTWithImages";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
-import type { ExportSortOrder } from "@/lib/reports/vacantMediaExportUtils";
+import { generateAvailabilityReportExcel } from "@/lib/reports/generateAvailabilityReportExcel";
 
-// Column definitions for the availability tables - Client View order
-// Area | Location | Direction | Dimensions | Sq.Ft | Illumination | Card Rate | Available From
+// ─── Types ───────────────────────────────────────────────────
+interface AvailabilityRow {
+  asset_id: string;
+  media_asset_code: string | null;
+  area: string;
+  location: string;
+  direction: string | null;
+  dimension: string | null;
+  sqft: number;
+  illumination: string | null;
+  card_rate: number;
+  city: string;
+  media_type: string;
+  primary_photo_url: string | null;
+  qr_code_url: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  availability_status: 'VACANT_NOW' | 'AVAILABLE_SOON' | 'BOOKED_THROUGH_RANGE';
+  available_from: string; // date string
+  booked_till: string | null;
+  current_campaign_id: string | null;
+  current_campaign_name: string | null;
+  current_client_name: string | null;
+  booking_start: string | null;
+  booking_end: string | null;
+}
+
+// ─── Column definitions ──────────────────────────────────────
 const ALL_COLUMNS = [
-  'area', 'location', 'direction', 'dimensions', 'sqft', 
-  'illumination', 'card_rate', 'available_from', 'asset_id', 'type', 'city', 'status', 'booking'
+  'area', 'location', 'direction', 'dimensions', 'sqft',
+  'illumination', 'status', 'available_from', 'card_rate',
+  'asset_id', 'type', 'city', 'booked_till', 'campaign',
 ] as const;
-// Default Client View columns (user requested order)
-const DEFAULT_VISIBLE = ['area', 'location', 'direction', 'dimensions', 'sqft', 'illumination', 'card_rate', 'available_from'];
+
+const DEFAULT_VISIBLE = [
+  'area', 'location', 'direction', 'dimensions', 'sqft',
+  'illumination', 'status', 'available_from',
+];
+
 const COLUMN_LABELS: Record<string, string> = {
   asset_id: 'Asset ID',
   type: 'Type',
@@ -95,8 +112,9 @@ const COLUMN_LABELS: Record<string, string> = {
   illumination: 'Illumination',
   status: 'Status',
   card_rate: 'Card Rate',
-  booking: 'Booking Info',
   available_from: 'Available From',
+  booked_till: 'Booked Till',
+  campaign: 'Campaign',
 };
 
 type SortColumn = 'asset_id' | 'location' | 'area' | 'available_from' | null;
@@ -107,99 +125,33 @@ interface SortConfig {
   direction: SortDirection;
 }
 
-interface BookingInfo {
-  campaign_id: string;
-  campaign_name: string;
-  client_name: string;
-  start_date: string;
-  end_date: string;
-  status: string;
-}
-
-interface AvailableAsset {
-  id: string;
-  media_asset_code: string | null;
-  city: string;
-  area: string;
-  location: string;
-  media_type: string;
-  dimensions: string | null;
-  card_rate: number;
-  total_sqft: number | null;
-  status: string;
-  direction?: string | null;
-  illumination_type?: string | null;
-  availability_status: 'available' | 'available_soon';
-  next_available_from: string | null;
-}
-
-interface BookedAsset {
-  id: string;
-  media_asset_code: string | null;
-  city: string;
-  area: string;
-  location: string;
-  media_type: string;
-  dimensions: string | null;
-  card_rate: number;
-  total_sqft: number | null;
-  status: string;
-  direction?: string | null;
-  illumination_type?: string | null;
-  availability_status: 'booked' | 'conflict';
-  current_booking: BookingInfo | null;
-  all_bookings: BookingInfo[];
-  available_from: string | null;
-}
-
-interface AvailabilitySummary {
-  total_assets: number;
-  available_count: number;
-  booked_count: number;
-  available_soon_count: number;
-  conflict_count: number;
-  total_sqft_available: number;
-  potential_revenue: number;
-}
-
-type DialogType = 'available' | 'booked' | 'soon' | 'conflict' | null;
-
 export default function MediaAvailabilityReport() {
   const { company } = useCompany();
   const { toast } = useToast();
-  
+
   const [loading, setLoading] = useState(false);
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [endDate, setEndDate] = useState(format(addMonths(new Date(), 1), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(addDays(new Date(), 15), 'yyyy-MM-dd'));
   const [selectedCity, setSelectedCity] = useState<string>("all");
   const [selectedMediaType, setSelectedMediaType] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState<string>("available");
-  
-  const [availableAssets, setAvailableAssets] = useState<AvailableAsset[]>([]);
-  const [bookedAssets, setBookedAssets] = useState<BookedAsset[]>([]);
-  const [availableSoonAssets, setAvailableSoonAssets] = useState<BookedAsset[]>([]);
-  const [summary, setSummary] = useState<AvailabilitySummary | null>(null);
-  
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  const [allRows, setAllRows] = useState<AvailabilityRow[]>([]);
   const [cities, setCities] = useState<string[]>([]);
   const [mediaTypes, setMediaTypes] = useState<string[]>([]);
-  
-  // Sort state for each tab
-  const [availableSortConfig, setAvailableSortConfig] = useState<SortConfig>({ column: null, direction: null });
-  const [bookedSortConfig, setBookedSortConfig] = useState<SortConfig>({ column: null, direction: null });
-  const [soonSortConfig, setSoonSortConfig] = useState<SortConfig>({ column: null, direction: null });
-  // Export sorting (independent from UI table sorting) - default to available-from for client-ready exports
-  const [exportSortOrder, setExportSortOrder] = useState<ExportSortOrder>('available-from');
+
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ column: 'available_from', direction: 'asc' });
   const [exporting, setExporting] = useState(false);
-  const [showDialog, setShowDialog] = useState<DialogType>(null);
-  
+  const [autoTrigger, setAutoTrigger] = useState(false);
+
   // Column visibility
   const {
     visibleKeys,
     setVisibleKeys,
     reset: resetColumns,
-  } = useColumnPrefs('availability-report', [...ALL_COLUMNS], DEFAULT_VISIBLE);
-  
+  } = useColumnPrefs('availability-report-v5', [...ALL_COLUMNS], DEFAULT_VISIBLE);
+
   const isColumnVisible = (col: string) => visibleKeys.includes(col);
   const toggleColumn = (col: string) => {
     if (visibleKeys.includes(col)) {
@@ -208,529 +160,240 @@ export default function MediaAvailabilityReport() {
       setVisibleKeys([...visibleKeys, col]);
     }
   };
-  
-  // Get conflict assets from booked assets
-  const conflictAssets = useMemo(() => {
-    return bookedAssets.filter(a => a.availability_status === 'conflict');
-  }, [bookedAssets]);
 
-  // Get non-conflict booked assets
-  const nonConflictBookedAssets = useMemo(() => {
-    return bookedAssets.filter(a => a.availability_status !== 'conflict');
-  }, [bookedAssets]);
-
-  const getExportTabFromActiveTab = (): ExportTab => {
-    switch (activeTab) {
-      case 'available': return 'available';
-      case 'booked': return 'booked';
-      case 'soon': return 'soon';
-      default: return 'all';
-    }
-  };
-
-  const handleExport = async (type: 'excel' | 'pdf' | 'ppt' | 'ppt-images', exportScope: 'current' | 'all' = 'current') => {
-    if (!summary) {
-      toast({ title: "No Data", description: "Please check availability first", variant: "destructive" });
-      return;
-    }
-    setExporting(true);
-    try {
-      const exportTab: ExportTab = exportScope === 'all' ? 'all' : getExportTabFromActiveTab();
-      const exportData = {
-        availableAssets,
-        bookedAssets,
-        availableSoonAssets,
-        conflictAssets,
-        dateRange: `${format(new Date(startDate), 'dd MMM yyyy')} - ${format(new Date(endDate), 'dd MMM yyyy')}`,
-        summary: {
-          total_assets: summary.total_assets,
-          available_count: summary.available_count,
-          booked_count: summary.booked_count,
-          available_soon_count: summary.available_soon_count,
-          conflict_count: summary.conflict_count,
-          potential_revenue: summary.potential_revenue,
-        },
-        exportTab,
-        exportSortOrder,
-        companyId: company?.id,
-      };
-      
-      if (type === 'excel') {
-        await generateAvailabilityExcel(exportData);
-      } else if (type === 'pdf') {
-        await generateAvailabilityPDF(exportData);
-      } else if (type === 'ppt-images') {
-        // Premium image-based PPT export (like Plans module)
-        await generateAvailabilityPPTWithImages(exportData);
-      } else {
-        // Basic table-based PPT export
-        await generateAvailabilityPPT(exportData);
-      }
-      
-      const tabLabel = exportScope === 'all' ? 'All data' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1);
-      const exportTypeLabel = type === 'ppt-images' ? 'PPT (with images)' : type.toUpperCase();
-      toast({ title: "Export Complete", description: `${exportTypeLabel} (${tabLabel}) downloaded successfully` });
-    } catch (error) {
-      console.error('Export error:', error);
-      toast({ title: "Export Failed", description: "Could not generate the report", variant: "destructive" });
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const handleExportConflicts = async (type: 'excel' | 'pdf' | 'ppt') => {
-    if (!summary || conflictAssets.length === 0) {
-      toast({ title: "No Data", description: "No conflicts to export", variant: "destructive" });
-      return;
-    }
-    setExporting(true);
-    try {
-      const exportData = {
-        availableAssets: [],
-        bookedAssets: [],
-        availableSoonAssets: [],
-        conflictAssets,
-        dateRange: `${format(new Date(startDate), 'dd MMM yyyy')} - ${format(new Date(endDate), 'dd MMM yyyy')}`,
-        summary: {
-          total_assets: summary.total_assets,
-          available_count: summary.available_count,
-          booked_count: summary.booked_count,
-          available_soon_count: summary.available_soon_count,
-          conflict_count: summary.conflict_count,
-          potential_revenue: summary.potential_revenue,
-        },
-        exportTab: 'conflict' as ExportTab,
-      };
-      if (type === 'excel') await generateAvailabilityExcel(exportData);
-      else if (type === 'pdf') await generateAvailabilityPDF(exportData);
-      else await generateAvailabilityPPT(exportData);
-      toast({ title: "Export Complete", description: `Conflicts ${type.toUpperCase()} downloaded successfully` });
-    } catch (error) {
-      console.error('Export error:', error);
-      toast({ title: "Export Failed", description: "Could not generate the report", variant: "destructive" });
-    } finally {
-      setExporting(false);
-    }
-  };
-
+  // ─── Load filters (cities & media types) ───────────────────
   useEffect(() => {
-    if (company?.id) {
-      loadFilters();
-    }
+    if (company?.id) loadFilters();
   }, [company]);
 
   const loadFilters = async () => {
     if (!company?.id) return;
-    
     const { data } = await supabase
       .from('media_assets')
       .select('city, media_type')
       .eq('company_id', company.id);
-    
     if (data) {
-      const uniqueCities = [...new Set(data.map(a => a.city).filter(Boolean))];
-      const uniqueTypes = [...new Set(data.map(a => a.media_type).filter(Boolean))];
-      setCities(uniqueCities);
-      setMediaTypes(uniqueTypes);
+      setCities([...new Set(data.map(a => a.city).filter(Boolean))]);
+      setMediaTypes([...new Set(data.map(a => a.media_type).filter(Boolean))]);
     }
   };
 
-  const loadAvailability = async () => {
+  // ─── Load availability via RPC ─────────────────────────────
+  const loadAvailability = useCallback(async () => {
     if (!company?.id) return;
-    
     setLoading(true);
-    
     try {
-      const { data, error } = await supabase.functions.invoke('get-media-availability', {
-        body: {
-          company_id: company.id,
-          start_date: startDate,
-          end_date: endDate,
-          city: selectedCity,
-          media_type: selectedMediaType,
-        }
+      const { data, error } = await supabase.rpc('fn_media_availability_range', {
+        p_company_id: company.id,
+        p_start: startDate,
+        p_end: endDate,
+        p_city: selectedCity === 'all' ? null : selectedCity,
+        p_media_type: selectedMediaType === 'all' ? null : selectedMediaType,
       });
 
       if (error) throw error;
-
-      setAvailableAssets(data.available_assets || []);
-      setBookedAssets(data.booked_assets || []);
-      setAvailableSoonAssets(data.available_soon_assets || []);
-      setSummary(data.summary || null);
-
+      setAllRows((data as AvailabilityRow[]) || []);
       toast({
         title: "Report Updated",
-        description: `Found ${data.summary?.available_count || 0} available assets`,
+        description: `Found ${data?.length || 0} assets in range`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading availability:', error);
       toast({
         title: "Error",
-        description: "Failed to load availability report",
+        description: error.message || "Failed to load availability report",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [company?.id, startDate, endDate, selectedCity, selectedMediaType]);
 
-  const setQuickDateRange = (range: string) => {
-    const today = new Date();
-    switch (range) {
-      case 'next-week':
-        setStartDate(format(today, 'yyyy-MM-dd'));
-        setEndDate(format(addDays(today, 7), 'yyyy-MM-dd'));
-        break;
-      case 'next-15-days':
-        setStartDate(format(today, 'yyyy-MM-dd'));
-        setEndDate(format(addDays(today, 15), 'yyyy-MM-dd'));
-        break;
-      case 'next-month':
-        setStartDate(format(today, 'yyyy-MM-dd'));
-        setEndDate(format(addMonths(today, 1), 'yyyy-MM-dd'));
-        break;
-      case 'next-quarter':
-        setStartDate(format(today, 'yyyy-MM-dd'));
-        setEndDate(format(addMonths(today, 3), 'yyyy-MM-dd'));
-        break;
+  // Auto-trigger when quick button sets dates
+  useEffect(() => {
+    if (autoTrigger && company?.id) {
+      loadAvailability();
+      setAutoTrigger(false);
     }
-  };
+  }, [autoTrigger, loadAvailability]);
 
-  const filterBySearchAvailable = (assets: AvailableAsset[]) => {
-    if (!searchTerm) return assets;
-    const term = searchTerm.toLowerCase();
-    return assets.filter(a => 
-      a.id?.toLowerCase().includes(term) ||
-      a.media_asset_code?.toLowerCase().includes(term) ||
-      a.city?.toLowerCase().includes(term) ||
-      a.area?.toLowerCase().includes(term) ||
-      a.location?.toLowerCase().includes(term) ||
-      a.media_type?.toLowerCase().includes(term)
-    );
-  };
-
-  const filterBySearchBooked = (assets: BookedAsset[]) => {
-    if (!searchTerm) return assets;
-    const term = searchTerm.toLowerCase();
-    return assets.filter(a =>
-      a.id?.toLowerCase().includes(term) ||
-      a.media_asset_code?.toLowerCase().includes(term) ||
-      a.city?.toLowerCase().includes(term) ||
-      a.area?.toLowerCase().includes(term) ||
-      a.location?.toLowerCase().includes(term) ||
-      a.media_type?.toLowerCase().includes(term)
-    );
-  };
-
-  const getAvailableStatusBadge = (asset: AvailableAsset) => {
-    switch (asset.availability_status) {
-      case 'available':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">
-          <CheckCircle2 className="h-3 w-3 mr-1" />Available
-        </Badge>;
-      case 'available_soon':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
-          <Clock className="h-3 w-3 mr-1" />Available Soon
-        </Badge>;
-      default:
-        return null;
+  // ─── Quick date range buttons ──────────────────────────────
+  const setQuickRange = (days: number | 'month') => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    setStartDate(today);
+    if (days === 'month') {
+      setEndDate(format(addMonths(new Date(), 1), 'yyyy-MM-dd'));
+    } else {
+      setEndDate(format(addDays(new Date(), days), 'yyyy-MM-dd'));
     }
+    setAutoTrigger(true);
   };
 
-  const getBookedStatusBadge = (asset: BookedAsset) => {
-    switch (asset.availability_status) {
-      case 'booked':
-        return <Badge className="bg-red-100 text-red-800 border-red-200">
-          <XCircle className="h-3 w-3 mr-1" />Booked
-        </Badge>;
-      case 'conflict':
-        return <Badge className="bg-orange-100 text-orange-800 border-orange-200">
-          <AlertTriangle className="h-3 w-3 mr-1" />Conflict
-        </Badge>;
-      default:
-        return null;
-    }
-  };
+  // ─── Filtering ─────────────────────────────────────────────
+  const filteredRows = useMemo(() => {
+    let rows = allRows;
 
-  // Sorting helpers
-  const handleSort = (
-    column: SortColumn,
-    currentConfig: SortConfig,
-    setConfig: React.Dispatch<React.SetStateAction<SortConfig>>
-  ) => {
-    let newDirection: SortDirection = 'asc';
-    if (currentConfig.column === column) {
-      if (currentConfig.direction === 'asc') newDirection = 'desc';
-      else if (currentConfig.direction === 'desc') newDirection = null;
+    // Status filter
+    if (statusFilter !== 'all') {
+      rows = rows.filter(r => r.availability_status === statusFilter);
     }
-    setConfig({ column: newDirection ? column : null, direction: newDirection });
-  };
 
-  const getSortIcon = (column: SortColumn, config: SortConfig) => {
-    if (config.column !== column) {
-      return <ArrowUpDown className="h-4 w-4 ml-1 text-muted-foreground" />;
+    // Search term
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      rows = rows.filter(r =>
+        r.asset_id?.toLowerCase().includes(term) ||
+        r.media_asset_code?.toLowerCase().includes(term) ||
+        r.area?.toLowerCase().includes(term) ||
+        r.location?.toLowerCase().includes(term) ||
+        r.city?.toLowerCase().includes(term) ||
+        r.media_type?.toLowerCase().includes(term) ||
+        r.current_campaign_name?.toLowerCase().includes(term) ||
+        r.current_client_name?.toLowerCase().includes(term)
+      );
     }
-    if (config.direction === 'asc') {
-      return <ArrowUp className="h-4 w-4 ml-1" />;
-    }
-    if (config.direction === 'desc') {
-      return <ArrowDown className="h-4 w-4 ml-1" />;
-    }
-    return <ArrowUpDown className="h-4 w-4 ml-1 text-muted-foreground" />;
-  };
 
-  const sortAssets = <T extends AvailableAsset | BookedAsset>(assets: T[], config: SortConfig): T[] => {
-    if (!config.column || !config.direction) return assets;
-    
-    return [...assets].sort((a, b) => {
-      let aVal: string | null = '';
-      let bVal: string | null = '';
-      
-      switch (config.column) {
-        case 'asset_id':
-          aVal = a.media_asset_code || a.id;
-          bVal = b.media_asset_code || b.id;
-          break;
-        case 'location':
-          aVal = a.location || '';
-          bVal = b.location || '';
-          break;
-        case 'area':
-          aVal = a.area || '';
-          bVal = b.area || '';
-          break;
-        case 'available_from':
-          aVal = (a as BookedAsset).available_from || '';
-          bVal = (b as BookedAsset).available_from || '';
-          break;
-        default:
-          return 0;
+    return rows;
+  }, [allRows, statusFilter, searchTerm]);
+
+  // ─── Sorting ───────────────────────────────────────────────
+  const sortedRows = useMemo(() => {
+    if (!sortConfig.column || !sortConfig.direction) return filteredRows;
+    return [...filteredRows].sort((a, b) => {
+      let aVal = '';
+      let bVal = '';
+      switch (sortConfig.column) {
+        case 'asset_id': aVal = a.media_asset_code || a.asset_id; bVal = b.media_asset_code || b.asset_id; break;
+        case 'location': aVal = a.location || ''; bVal = b.location || ''; break;
+        case 'area': aVal = a.area || ''; bVal = b.area || ''; break;
+        case 'available_from': aVal = a.available_from || ''; bVal = b.available_from || ''; break;
       }
-      
-      const comparison = (aVal || '').localeCompare(bVal || '');
-      return config.direction === 'asc' ? comparison : -comparison;
+      const cmp = aVal.localeCompare(bVal);
+      return sortConfig.direction === 'asc' ? cmp : -cmp;
     });
-  };
+  }, [filteredRows, sortConfig]);
 
-  const filteredAvailable = filterBySearchAvailable(availableAssets);
-  const filteredBooked = filterBySearchBooked(nonConflictBookedAssets);
-  const filteredAvailableSoon = filterBySearchBooked(availableSoonAssets);
+  // ─── Counts ────────────────────────────────────────────────
+  const counts = useMemo(() => {
+    const vacantNow = allRows.filter(r => r.availability_status === 'VACANT_NOW').length;
+    const availableSoon = allRows.filter(r => r.availability_status === 'AVAILABLE_SOON').length;
+    const totalSqft = allRows.reduce((s, r) => s + (Number(r.sqft) || 0), 0);
+    const potentialRevenue = allRows
+      .filter(r => r.availability_status === 'VACANT_NOW')
+      .reduce((s, r) => s + (Number(r.card_rate) || 0), 0);
+    return { total: allRows.length, vacantNow, availableSoon, totalSqft, potentialRevenue };
+  }, [allRows]);
 
-  // Apply sorting
-  const sortedAvailable = useMemo(() => sortAssets(filteredAvailable, availableSortConfig), [filteredAvailable, availableSortConfig]);
-  const sortedBooked = useMemo(() => sortAssets(filteredBooked, bookedSortConfig), [filteredBooked, bookedSortConfig]);
-  const sortedAvailableSoon = useMemo(() => sortAssets(filteredAvailableSoon, soonSortConfig), [filteredAvailableSoon, soonSortConfig]);
-
-  // Render asset dialog content
-  const renderDialogAssets = (type: DialogType) => {
-    let assets: (AvailableAsset | BookedAsset)[] = [];
-    let title = "";
-    let icon = null;
-    let colorClass = "";
-
-    switch (type) {
-      case 'available':
-        assets = sortedAvailable;
-        title = `Available Assets (${assets.length})`;
-        icon = <CheckCircle2 className="h-5 w-5 text-green-600" />;
-        colorClass = "border-green-200";
-        break;
-      case 'booked':
-        assets = sortedBooked;
-        title = `Booked Assets (${assets.length})`;
-        icon = <XCircle className="h-5 w-5 text-red-600" />;
-        colorClass = "border-red-200";
-        break;
-      case 'soon':
-        assets = sortedAvailableSoon;
-        title = `Available Soon (${assets.length})`;
-        icon = <Clock className="h-5 w-5 text-yellow-600" />;
-        colorClass = "border-yellow-200";
-        break;
-      case 'conflict':
-        assets = conflictAssets;
-        title = `Booking Conflicts (${assets.length})`;
-        icon = <AlertTriangle className="h-5 w-5 text-orange-600" />;
-        colorClass = "border-orange-200";
-        break;
+  // ─── Sort UI helpers ───────────────────────────────────────
+  const handleSort = (column: SortColumn) => {
+    let newDir: SortDirection = 'asc';
+    if (sortConfig.column === column) {
+      if (sortConfig.direction === 'asc') newDir = 'desc';
+      else if (sortConfig.direction === 'desc') newDir = null;
     }
-
-    return (
-      <Dialog open={showDialog === type} onOpenChange={(open) => setShowDialog(open ? type : null)}>
-        {/*
-          NOTE: Use a fixed container height + min-h-0 on the scroll region.
-          This prevents flex overflow issues where the content cannot scroll
-          (commonly seen when cards are taller than the available viewport).
-        */}
-        <DialogContent className="max-w-4xl h-[85vh] flex flex-col overflow-hidden">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center gap-2">
-              {icon}
-              {title}
-            </DialogTitle>
-          </DialogHeader>
-          <ScrollArea className="flex-1 min-h-0 overscroll-contain">
-            <div className="space-y-3 pr-4 pb-4">
-              {assets.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">No assets found</p>
-              ) : (
-                assets.map((asset) => {
-                  const bookedAsset = asset as BookedAsset;
-                  const isConflict = type === 'conflict';
-                  const isBooked = type === 'booked' || type === 'soon';
-                  
-                  return (
-                    <Card key={asset.id} className={colorClass}>
-                      <CardContent className="pt-4 pb-3">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h4 className="font-semibold text-sm">{asset.media_asset_code || asset.id}</h4>
-                            <p className="text-sm text-muted-foreground">{asset.location}</p>
-                            <p className="text-xs text-muted-foreground">{asset.city}, {asset.area}</p>
-                          </div>
-                          <div className="text-right">
-                            <Badge variant="outline" className="mb-1">{asset.media_type}</Badge>
-                            <p className="text-sm font-medium">{formatCurrency(asset.card_rate)}</p>
-                          </div>
-                        </div>
-                        
-                        {/* Extra info row */}
-                        <div className="flex gap-4 text-xs text-muted-foreground mt-2">
-                          {asset.dimensions && <span>Dim: {asset.dimensions}</span>}
-                          {asset.total_sqft && <span>Sq.Ft: {asset.total_sqft}</span>}
-                          {asset.direction && <span>Dir: {asset.direction}</span>}
-                          {asset.illumination_type && <span>Illum: {asset.illumination_type}</span>}
-                        </div>
-                        
-                        {/* Booking info for booked/soon types */}
-                        {isBooked && bookedAsset.current_booking && (
-                          <div className="mt-2 bg-muted/50 rounded p-2 text-sm">
-                            <div className="font-medium">{bookedAsset.current_booking.campaign_name}</div>
-                            <p className="text-xs text-muted-foreground">{bookedAsset.current_booking.client_name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {format(new Date(bookedAsset.current_booking.start_date), 'dd MMM')} - {format(new Date(bookedAsset.current_booking.end_date), 'dd MMM yyyy')}
-                            </p>
-                            {/* Campaign ID for easy identification */}
-                            <p className="text-xs font-mono text-muted-foreground mt-1">
-                              ID: <span className="select-all">{bookedAsset.current_booking.campaign_id}</span>
-                            </p>
-                          </div>
-                        )}
-                        
-                        {/* Conflict details */}
-                        {isConflict && bookedAsset.all_bookings && bookedAsset.all_bookings.length > 0 && (
-                          <div className="mt-2 space-y-2">
-                            <p className="text-xs font-medium text-muted-foreground">Overlapping Campaigns ({bookedAsset.all_bookings.length}):</p>
-                            {bookedAsset.all_bookings.map((booking, idx) => (
-                              <div key={idx} className="bg-muted/50 rounded p-2 text-sm">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-medium">{booking.campaign_name}</span>
-                                  <Badge variant="outline" className="text-xs">{booking.status}</Badge>
-                                </div>
-                                <p className="text-xs text-muted-foreground">{booking.client_name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {format(new Date(booking.start_date), 'dd MMM yyyy')} - {format(new Date(booking.end_date), 'dd MMM yyyy')}
-                                </p>
-                                {/* Campaign ID for easy identification */}
-                                <p className="text-xs font-mono text-muted-foreground mt-1">
-                                  ID: <span className="select-all">{booking.campaign_id}</span>
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })
-              )}
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-    );
+    setSortConfig({ column: newDir ? column : null, direction: newDir });
   };
 
+  const getSortIcon = (column: SortColumn) => {
+    if (sortConfig.column !== column) return <ArrowUpDown className="h-4 w-4 ml-1 text-muted-foreground" />;
+    if (sortConfig.direction === 'asc') return <ArrowUp className="h-4 w-4 ml-1" />;
+    return <ArrowDown className="h-4 w-4 ml-1" />;
+  };
+
+  // ─── Status Badge ──────────────────────────────────────────
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'VACANT_NOW':
+        return (
+          <Badge className="bg-green-100 text-green-800 border-green-200">
+            <CheckCircle2 className="h-3 w-3 mr-1" />Available
+          </Badge>
+        );
+      case 'AVAILABLE_SOON':
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+            <Clock className="h-3 w-3 mr-1" />Available Soon
+          </Badge>
+        );
+      default:
+        return (
+          <Badge className="bg-red-100 text-red-800 border-red-200">
+            <XCircle className="h-3 w-3 mr-1" />Booked
+          </Badge>
+        );
+    }
+  };
+
+  // ─── Export ────────────────────────────────────────────────
+  const handleExportExcel = async () => {
+    if (sortedRows.length === 0) {
+      toast({ title: "No Data", description: "No rows to export", variant: "destructive" });
+      return;
+    }
+    setExporting(true);
+    try {
+      await generateAvailabilityReportExcel(sortedRows, startDate, endDate);
+      toast({ title: "Export Complete", description: "Excel downloaded successfully" });
+    } catch (err) {
+      console.error('Export error:', err);
+      toast({ title: "Export Failed", description: "Could not generate Excel", variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // ─── Render ────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold">Media Availability Report</h1>
             <p className="text-muted-foreground mt-1">
               Check asset availability for specific date ranges
             </p>
           </div>
-          {summary && (
-            <div className="flex items-center gap-3">
-              <div className="hidden md:flex items-center gap-2">
-                <Label className="text-sm text-muted-foreground">Sort by</Label>
-                <Select value={exportSortOrder} onValueChange={(v) => setExportSortOrder(v as ExportSortOrder)}>
-                  <SelectTrigger className="w-[240px]">
-                    <SelectValue placeholder="Available From ↑" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="available-from">Available From (earliest first)</SelectItem>
-                    <SelectItem value="location">Location (A–Z)</SelectItem>
-                    <SelectItem value="area">Area (A–Z)</SelectItem>
-                    <SelectItem value="city-area-location">City → Area → Location (A–Z)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button disabled={exporting}>
-                    <Download className="h-4 w-4 mr-2" />
-                    {exporting ? "Exporting..." : "Export"}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-64">
-                <DropdownMenuLabel>Export Current Tab ({activeTab})</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => handleExport('excel', 'current')}>
+          {allRows.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button disabled={exporting}>
+                  <Download className="h-4 w-4 mr-2" />
+                  {exporting ? "Exporting..." : "Export"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Export Filtered Data ({sortedRows.length} rows)</DropdownMenuLabel>
+                <DropdownMenuItem onClick={handleExportExcel}>
                   <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Excel ({activeTab})
+                  Excel (.xlsx)
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('ppt-images', 'current')}>
-                  <Presentation className="h-4 w-4 mr-2 text-primary" />
-                  <span className="font-medium">PPT with Images ({activeTab})</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('ppt', 'current')}>
-                  <Presentation className="h-4 w-4 mr-2" />
-                  PPT Table Only ({activeTab})
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('pdf', 'current')}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  PDF ({activeTab})
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel>Export All Data</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => handleExport('excel', 'all')}>
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Excel (All)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('ppt-images', 'all')}>
-                  <Presentation className="h-4 w-4 mr-2 text-primary" />
-                  <span className="font-medium">PPT with Images (All)</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('ppt', 'all')}>
-                  <Presentation className="h-4 w-4 mr-2" />
-                  PPT Table Only (All)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('pdf', 'all')}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  PDF (All)
-                </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
+        </div>
+
+        {/* Quick Date Range Buttons */}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="text-sm font-medium text-muted-foreground mr-1">Quick:</span>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setQuickRange(7)}>
+            <Zap className="h-3.5 w-3.5" /> Today → +7 Days
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setQuickRange(15)}>
+            <Zap className="h-3.5 w-3.5" /> Today → +15 Days
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setQuickRange('month')}>
+            <Zap className="h-3.5 w-3.5" /> Today → +1 Month
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setQuickRange(90)}>
+            <Zap className="h-3.5 w-3.5" /> Today → +3 Months
+          </Button>
         </div>
 
         {/* Filters */}
         <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-base">
               <Calendar className="h-5 w-5" />
               Search Criteria
             </CardTitle>
@@ -739,636 +402,284 @@ export default function MediaAvailabilityReport() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
               <div className="space-y-2">
                 <Label>Start Date</Label>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
+                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label>End Date</Label>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
+                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label>City</Label>
                 <Select value={selectedCity} onValueChange={setSelectedCity}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Cities" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="All Cities" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Cities</SelectItem>
-                    {cities.map((city) => (
-                      <SelectItem key={city} value={city}>{city}</SelectItem>
-                    ))}
+                    {cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>Media Type</Label>
                 <Select value={selectedMediaType} onValueChange={setSelectedMediaType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Types" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="All Types" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
-                    {mediaTypes.map((type) => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
-                    ))}
+                    {mediaTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>&nbsp;</Label>
-                <Button 
-                  onClick={loadAvailability} 
-                  disabled={loading}
-                  className="w-full"
-                >
+                <Button onClick={loadAvailability} disabled={loading} className="w-full">
                   {loading ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Checking...
-                    </>
+                    <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Checking...</>
                   ) : (
-                    <>
-                      <Search className="h-4 w-4 mr-2" />
-                      Check Availability
-                    </>
+                    <><Search className="h-4 w-4 mr-2" />Check Availability</>
                   )}
                 </Button>
               </div>
             </div>
-            
-            {/* Quick date range buttons */}
-            <div className="flex gap-2 mt-4">
-              <Button variant="outline" size="sm" onClick={() => setQuickDateRange('next-week')}>
-                Next Week
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setQuickDateRange('next-15-days')}>
-                Next 15 Days
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setQuickDateRange('next-month')}>
-                Next Month
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setQuickDateRange('next-quarter')}>
-                Next Quarter
-              </Button>
-            </div>
           </CardContent>
         </Card>
 
-        {/* Summary Cards - Date-Driven (Client View) */}
-        {summary && (
+        {/* Summary Cards */}
+        {allRows.length > 0 && (
           <div className="grid gap-4 md:grid-cols-4 mb-6">
-            {/* Available Now = Available From equals Start Date */}
-            <Card 
-              className="cursor-pointer hover:border-green-400 transition-colors"
-              onClick={() => setShowDialog('available')}
+            <Card
+              className={`cursor-pointer transition-colors ${statusFilter === 'all' ? 'ring-2 ring-primary' : 'hover:border-primary/50'}`}
+              onClick={() => setStatusFilter('all')}
+            >
+              <CardContent className="pt-6">
+                <div className="text-sm text-muted-foreground">Total in Range</div>
+                <div className="text-3xl font-bold mt-1">{counts.total}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {counts.totalSqft.toFixed(0)} sq.ft total
+                </div>
+              </CardContent>
+            </Card>
+            <Card
+              className={`cursor-pointer transition-colors ${statusFilter === 'VACANT_NOW' ? 'ring-2 ring-green-500' : 'hover:border-green-400'}`}
+              onClick={() => setStatusFilter(statusFilter === 'VACANT_NOW' ? 'all' : 'VACANT_NOW')}
             >
               <CardContent className="pt-6">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  <div className="text-sm text-muted-foreground">Available Now</div>
+                  <span className="text-sm text-muted-foreground">Vacant Now</span>
                 </div>
-                <div className="text-3xl font-bold mt-2 text-green-600">{summary.available_count}</div>
+                <div className="text-3xl font-bold mt-1 text-green-600">{counts.vacantNow}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  {formatCurrency(summary.potential_revenue)} potential • Vacant from {format(new Date(startDate), 'dd MMM')}
+                  {formatCurrency(counts.potentialRevenue)} potential
                 </div>
               </CardContent>
             </Card>
-            {/* Available In Range = Available Soon (Available From between Start–End) */}
-            <Card 
-              className="cursor-pointer hover:border-yellow-400 transition-colors"
-              onClick={() => setShowDialog('soon')}
+            <Card
+              className={`cursor-pointer transition-colors ${statusFilter === 'AVAILABLE_SOON' ? 'ring-2 ring-yellow-500' : 'hover:border-yellow-400'}`}
+              onClick={() => setStatusFilter(statusFilter === 'AVAILABLE_SOON' ? 'all' : 'AVAILABLE_SOON')}
             >
               <CardContent className="pt-6">
                 <div className="flex items-center gap-2">
                   <Clock className="h-5 w-5 text-yellow-600" />
-                  <div className="text-sm text-muted-foreground">Available In Range</div>
+                  <span className="text-sm text-muted-foreground">Available Soon</span>
                 </div>
-                <div className="text-3xl font-bold mt-2 text-yellow-600">{summary.available_soon_count}</div>
+                <div className="text-3xl font-bold mt-1 text-yellow-600">{counts.availableSoon}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Pre-bookable • Free before {format(new Date(endDate), 'dd MMM')}
+                  Pre-bookable within range
                 </div>
               </CardContent>
             </Card>
-            {/* Booked = No free day in range */}
-            <Card 
-              className="cursor-pointer hover:border-red-400 transition-colors"
-              onClick={() => setShowDialog('booked')}
-            >
+            <Card className="hover:border-muted-foreground/30 transition-colors">
               <CardContent className="pt-6">
-                <div className="flex items-center gap-2">
-                  <XCircle className="h-5 w-5 text-red-600" />
-                  <div className="text-sm text-muted-foreground">Booked</div>
+                <div className="text-sm text-muted-foreground">Date Range</div>
+                <div className="text-lg font-semibold mt-1">
+                  {format(new Date(startDate), 'dd MMM')} – {format(new Date(endDate), 'dd MMM yyyy')}
                 </div>
-                <div className="text-3xl font-bold mt-2 text-red-600">{summary.booked_count - summary.conflict_count}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  No availability in selected period
-                </div>
-              </CardContent>
-            </Card>
-            <Card 
-              className={summary.conflict_count > 0 ? "cursor-pointer hover:border-orange-400 transition-colors" : ""}
-              onClick={() => summary.conflict_count > 0 && setShowDialog('conflict')}
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-orange-600" />
-                  <div className="text-sm text-muted-foreground">Conflicts</div>
-                </div>
-                <div className="text-3xl font-bold mt-2 text-orange-600">{summary.conflict_count}</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {summary.conflict_count > 0 ? "Click to view details" : "Multiple bookings overlap"}
+                  {Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000)} days
                 </div>
               </CardContent>
             </Card>
           </div>
         )}
 
-        {/* Search and Column Toggle */}
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <div className="relative max-w-md flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by ID, location, city, type..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          
-          {/* Column Visibility Toggle */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Columns className="h-4 w-4" />
-                Columns
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-56">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium">Toggle Columns</span>
-                <Button variant="ghost" size="sm" onClick={resetColumns} className="h-7 px-2">
-                  <RotateCcw className="h-3 w-3 mr-1" />
-                  Reset
+        {/* Search bar + Column toggle */}
+        {allRows.length > 0 && (
+          <div className="flex items-center gap-3 mb-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search area, location, campaign..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses ({allRows.length})</SelectItem>
+                <SelectItem value="VACANT_NOW">Vacant Now ({counts.vacantNow})</SelectItem>
+                <SelectItem value="AVAILABLE_SOON">Available Soon ({counts.availableSoon})</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Columns className="h-4 w-4" />
+                  Columns
                 </Button>
-              </div>
-              <ScrollArea className="h-[280px]">
-                <div className="space-y-2">
-                  {ALL_COLUMNS.map((col) => (
-                    <div key={col} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`col-${col}`}
-                        checked={isColumnVisible(col)}
-                        onCheckedChange={() => toggleColumn(col)}
-                      />
-                      <label
-                        htmlFor={`col-${col}`}
-                        className="text-sm cursor-pointer"
-                      >
-                        {COLUMN_LABELS[col] || col}
-                      </label>
-                    </div>
-                  ))}
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-56">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium">Toggle Columns</span>
+                  <Button variant="ghost" size="sm" onClick={resetColumns} className="h-7 px-2">
+                    <RotateCcw className="h-3 w-3 mr-1" /> Reset
+                  </Button>
                 </div>
-              </ScrollArea>
-            </PopoverContent>
-          </Popover>
-        </div>
+                <ScrollArea className="h-[280px]">
+                  <div className="space-y-2">
+                    {ALL_COLUMNS.map(col => (
+                      <div key={col} className="flex items-center space-x-2">
+                        <Checkbox id={`col-${col}`} checked={isColumnVisible(col)} onCheckedChange={() => toggleColumn(col)} />
+                        <label htmlFor={`col-${col}`} className="text-sm cursor-pointer">
+                          {COLUMN_LABELS[col] || col}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </PopoverContent>
+            </Popover>
 
-        {/* Results Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="available" className="gap-2">
-              <CheckCircle2 className="h-4 w-4" />
-              Available Now ({filteredAvailable.length})
-            </TabsTrigger>
-            <TabsTrigger value="soon" className="gap-2">
-              <Clock className="h-4 w-4" />
-              Available In Range ({filteredAvailableSoon.length})
-            </TabsTrigger>
-            <TabsTrigger value="booked" className="gap-2">
-              <XCircle className="h-4 w-4" />
-              Booked ({filteredBooked.length})
-            </TabsTrigger>
-          </TabsList>
+            <div className="text-sm text-muted-foreground ml-auto">
+              Showing {sortedRows.length} of {allRows.length} assets
+            </div>
+          </div>
+        )}
 
-          <TabsContent value="available">
-            <Card>
-              <CardContent className="pt-6">
-                {sortedAvailable.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    {summary ? "No available assets for selected period" : "Click 'Check Availability' to load results"}
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto border rounded-md">
-                    <Table className="min-w-[1200px]">
-                      <TableHeader>
-                        <TableRow>
-                          {/* Client View column order: Area | Location | Direction | Dimensions | Sq.Ft | Illumination | Card Rate | Available From */}
-                          {isColumnVisible('area') && (
-                            <TableHead
-                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
-                              onClick={() => handleSort('area', availableSortConfig, setAvailableSortConfig)}
-                            >
-                              <div className="flex items-center">
-                                Area {getSortIcon('area', availableSortConfig)}
+        {/* Data Table */}
+        <Card>
+          <CardContent className="pt-6">
+            {sortedRows.length === 0 && !loading ? (
+              <div className="text-center py-12 text-muted-foreground">
+                {allRows.length > 0
+                  ? "No assets match your filters"
+                  : "Click a quick range button or 'Check Availability' to load results"}
+              </div>
+            ) : loading ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
+                Loading availability data...
+              </div>
+            ) : (
+              <div className="overflow-x-auto border rounded-md">
+                <Table className="min-w-[1000px]">
+                  <TableHeader>
+                    <TableRow>
+                      {isColumnVisible('area') && (
+                        <TableHead className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap" onClick={() => handleSort('area')}>
+                          <div className="flex items-center">Area {getSortIcon('area')}</div>
+                        </TableHead>
+                      )}
+                      {isColumnVisible('location') && (
+                        <TableHead className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap min-w-[200px]" onClick={() => handleSort('location')}>
+                          <div className="flex items-center">Location {getSortIcon('location')}</div>
+                        </TableHead>
+                      )}
+                      {isColumnVisible('direction') && <TableHead className="whitespace-nowrap">Direction</TableHead>}
+                      {isColumnVisible('dimensions') && <TableHead className="whitespace-nowrap">Dimensions</TableHead>}
+                      {isColumnVisible('sqft') && <TableHead className="whitespace-nowrap">Sq.Ft</TableHead>}
+                      {isColumnVisible('illumination') && <TableHead className="whitespace-nowrap">Illumination</TableHead>}
+                      {isColumnVisible('status') && <TableHead className="whitespace-nowrap">Status</TableHead>}
+                      {isColumnVisible('available_from') && (
+                        <TableHead className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap" onClick={() => handleSort('available_from')}>
+                          <div className="flex items-center">Available From {getSortIcon('available_from')}</div>
+                        </TableHead>
+                      )}
+                      {isColumnVisible('card_rate') && <TableHead className="text-right whitespace-nowrap">Card Rate</TableHead>}
+                      {isColumnVisible('asset_id') && (
+                        <TableHead className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap" onClick={() => handleSort('asset_id')}>
+                          <div className="flex items-center">Asset ID {getSortIcon('asset_id')}</div>
+                        </TableHead>
+                      )}
+                      {isColumnVisible('type') && <TableHead className="whitespace-nowrap">Type</TableHead>}
+                      {isColumnVisible('city') && <TableHead className="whitespace-nowrap">City</TableHead>}
+                      {isColumnVisible('booked_till') && <TableHead className="whitespace-nowrap">Booked Till</TableHead>}
+                      {isColumnVisible('campaign') && <TableHead className="whitespace-nowrap min-w-[160px]">Campaign</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sortedRows.map((row) => (
+                      <TableRow key={row.asset_id}>
+                        {isColumnVisible('area') && <TableCell className="whitespace-nowrap">{row.area}</TableCell>}
+                        {isColumnVisible('location') && (
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <span className="min-w-[150px]">{row.location}</span>
+                            </div>
+                          </TableCell>
+                        )}
+                        {isColumnVisible('direction') && <TableCell className="whitespace-nowrap">{row.direction || '-'}</TableCell>}
+                        {isColumnVisible('dimensions') && <TableCell className="whitespace-nowrap">{row.dimension || '-'}</TableCell>}
+                        {isColumnVisible('sqft') && <TableCell className="whitespace-nowrap">{row.sqft || '-'}</TableCell>}
+                        {isColumnVisible('illumination') && <TableCell className="whitespace-nowrap">{row.illumination || '-'}</TableCell>}
+                        {isColumnVisible('status') && <TableCell>{getStatusBadge(row.availability_status)}</TableCell>}
+                        {isColumnVisible('available_from') && (
+                          <TableCell>
+                            {row.availability_status === 'VACANT_NOW' ? (
+                              <Badge className="bg-green-100 text-green-800 border-green-200">
+                                {format(new Date(row.available_from), 'dd-MM-yyyy')}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
+                                {format(new Date(row.available_from), 'dd-MM-yyyy')}
+                              </Badge>
+                            )}
+                          </TableCell>
+                        )}
+                        {isColumnVisible('card_rate') && (
+                          <TableCell className="text-right font-medium whitespace-nowrap">
+                            {formatCurrency(row.card_rate)}
+                          </TableCell>
+                        )}
+                        {isColumnVisible('asset_id') && (
+                          <TableCell className="font-mono text-sm whitespace-nowrap">
+                            {row.media_asset_code || row.asset_id}
+                          </TableCell>
+                        )}
+                        {isColumnVisible('type') && (
+                          <TableCell><Badge variant="outline">{row.media_type}</Badge></TableCell>
+                        )}
+                        {isColumnVisible('city') && <TableCell className="whitespace-nowrap">{row.city}</TableCell>}
+                        {isColumnVisible('booked_till') && (
+                          <TableCell className="whitespace-nowrap">
+                            {row.booked_till ? format(new Date(row.booked_till), 'dd-MM-yyyy') : '-'}
+                          </TableCell>
+                        )}
+                        {isColumnVisible('campaign') && (
+                          <TableCell>
+                            {row.current_campaign_name ? (
+                              <div className="text-xs">
+                                <div className="font-medium truncate max-w-[150px]">{row.current_campaign_name}</div>
+                                <div className="text-muted-foreground truncate max-w-[150px]">{row.current_client_name}</div>
                               </div>
-                            </TableHead>
-                          )}
-                          {isColumnVisible('location') && (
-                            <TableHead
-                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap min-w-[200px]"
-                              onClick={() => handleSort('location', availableSortConfig, setAvailableSortConfig)}
-                            >
-                              <div className="flex items-center">
-                                Location {getSortIcon('location', availableSortConfig)}
-                              </div>
-                            </TableHead>
-                          )}
-                          {isColumnVisible('direction') && <TableHead className="whitespace-nowrap">Direction</TableHead>}
-                          {isColumnVisible('dimensions') && <TableHead className="whitespace-nowrap">Dimensions</TableHead>}
-                          {isColumnVisible('sqft') && <TableHead className="whitespace-nowrap">Sq.Ft</TableHead>}
-                          {isColumnVisible('illumination') && <TableHead className="whitespace-nowrap">Illumination</TableHead>}
-                          {isColumnVisible('card_rate') && <TableHead className="text-right whitespace-nowrap">Card Rate</TableHead>}
-                          {isColumnVisible('available_from') && (
-                            <TableHead
-                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
-                              onClick={() => handleSort('available_from', availableSortConfig, setAvailableSortConfig)}
-                            >
-                              <div className="flex items-center">
-                                Available From {getSortIcon('available_from', availableSortConfig)}
-                              </div>
-                            </TableHead>
-                          )}
-                          {/* Hidden by default in Client View, but available via column toggle */}
-                          {isColumnVisible('asset_id') && (
-                            <TableHead 
-                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
-                              onClick={() => handleSort('asset_id', availableSortConfig, setAvailableSortConfig)}
-                            >
-                              <div className="flex items-center">
-                                Asset ID {getSortIcon('asset_id', availableSortConfig)}
-                              </div>
-                            </TableHead>
-                          )}
-                          {isColumnVisible('type') && <TableHead className="whitespace-nowrap">Type</TableHead>}
-                          {isColumnVisible('city') && <TableHead className="whitespace-nowrap">City</TableHead>}
-                          {isColumnVisible('status') && <TableHead className="whitespace-nowrap">Status</TableHead>}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sortedAvailable.map((asset) => (
-                          <TableRow key={asset.id}>
-                            {/* Client View column order: Area | Location | Direction | Dimensions | Sq.Ft | Illumination | Card Rate | Available From */}
-                            {isColumnVisible('area') && (
-                              <TableCell className="whitespace-nowrap">{asset.area}</TableCell>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
                             )}
-                            {isColumnVisible('location') && (
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                  <span className="min-w-[150px]">{asset.location}</span>
-                                </div>
-                              </TableCell>
-                            )}
-                            {isColumnVisible('direction') && (
-                              <TableCell className="whitespace-nowrap">{asset.direction || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('dimensions') && (
-                              <TableCell className="whitespace-nowrap">{asset.dimensions || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('sqft') && (
-                              <TableCell className="whitespace-nowrap">{asset.total_sqft || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('illumination') && (
-                              <TableCell className="whitespace-nowrap">{asset.illumination_type || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('card_rate') && (
-                              <TableCell className="text-right font-medium whitespace-nowrap">
-                                {formatCurrency(asset.card_rate)}
-                              </TableCell>
-                            )}
-                            {isColumnVisible('available_from') && (
-                              <TableCell>
-                                {/* For available assets, Available From = Start Date */}
-                                <Badge className="bg-green-100 text-green-800 border-green-200">
-                                  {format(new Date(startDate), 'dd-MM-yyyy')}
-                                </Badge>
-                              </TableCell>
-                            )}
-                            {/* Hidden by default, togglable columns */}
-                            {isColumnVisible('asset_id') && (
-                              <TableCell className="font-mono text-sm whitespace-nowrap">
-                                {asset.media_asset_code || asset.id}
-                              </TableCell>
-                            )}
-                            {isColumnVisible('type') && (
-                              <TableCell>
-                                <Badge variant="outline">{asset.media_type}</Badge>
-                              </TableCell>
-                            )}
-                            {isColumnVisible('city') && (
-                              <TableCell className="whitespace-nowrap">{asset.city}</TableCell>
-                            )}
-                            {isColumnVisible('status') && (
-                              <TableCell>{getAvailableStatusBadge(asset)}</TableCell>
-                            )}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="booked">
-            <Card>
-              <CardContent className="pt-6">
-                {sortedBooked.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    {summary ? "No booked assets for selected period" : "Click 'Check Availability' to load results"}
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto border rounded-md">
-                    <Table className="min-w-[1200px]">
-                      <TableHeader>
-                        <TableRow>
-                          {/* Client View column order: Area | Location | Direction | Dimensions | Sq.Ft | Illumination | Card Rate | Available From */}
-                          {isColumnVisible('area') && (
-                            <TableHead
-                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
-                              onClick={() => handleSort('area', bookedSortConfig, setBookedSortConfig)}
-                            >
-                              <div className="flex items-center">
-                                Area {getSortIcon('area', bookedSortConfig)}
-                              </div>
-                            </TableHead>
-                          )}
-                          {isColumnVisible('location') && (
-                            <TableHead
-                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap min-w-[200px]"
-                              onClick={() => handleSort('location', bookedSortConfig, setBookedSortConfig)}
-                            >
-                              <div className="flex items-center">
-                                Location {getSortIcon('location', bookedSortConfig)}
-                              </div>
-                            </TableHead>
-                          )}
-                          {isColumnVisible('direction') && <TableHead className="whitespace-nowrap">Direction</TableHead>}
-                          {isColumnVisible('dimensions') && <TableHead className="whitespace-nowrap">Dimensions</TableHead>}
-                          {isColumnVisible('sqft') && <TableHead className="whitespace-nowrap">Sq.Ft</TableHead>}
-                          {isColumnVisible('illumination') && <TableHead className="whitespace-nowrap">Illumination</TableHead>}
-                          {isColumnVisible('card_rate') && <TableHead className="text-right whitespace-nowrap">Card Rate</TableHead>}
-                          {isColumnVisible('available_from') && (
-                            <TableHead
-                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
-                              onClick={() => handleSort('available_from', bookedSortConfig, setBookedSortConfig)}
-                            >
-                              <div className="flex items-center">
-                                Available From {getSortIcon('available_from', bookedSortConfig)}
-                              </div>
-                            </TableHead>
-                          )}
-                          {/* Hidden by default, togglable columns */}
-                          {isColumnVisible('asset_id') && (
-                            <TableHead
-                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
-                              onClick={() => handleSort('asset_id', bookedSortConfig, setBookedSortConfig)}
-                            >
-                              <div className="flex items-center">
-                                Asset ID {getSortIcon('asset_id', bookedSortConfig)}
-                              </div>
-                            </TableHead>
-                          )}
-                          {isColumnVisible('type') && <TableHead className="whitespace-nowrap">Type</TableHead>}
-                          {isColumnVisible('city') && <TableHead className="whitespace-nowrap">City</TableHead>}
-                          {isColumnVisible('booking') && <TableHead className="whitespace-nowrap min-w-[180px]">Current Booking</TableHead>}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sortedBooked.map((asset) => (
-                          <TableRow key={asset.id}>
-                            {/* Client View column order */}
-                            {isColumnVisible('area') && (
-                              <TableCell className="whitespace-nowrap">{asset.area}</TableCell>
-                            )}
-                            {isColumnVisible('location') && (
-                              <TableCell>
-                                <span className="min-w-[150px] block">{asset.location}</span>
-                              </TableCell>
-                            )}
-                            {isColumnVisible('direction') && (
-                              <TableCell className="whitespace-nowrap">{asset.direction || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('dimensions') && (
-                              <TableCell className="whitespace-nowrap">{asset.dimensions || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('sqft') && (
-                              <TableCell className="whitespace-nowrap">{asset.total_sqft || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('illumination') && (
-                              <TableCell className="whitespace-nowrap">{asset.illumination_type || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('card_rate') && (
-                              <TableCell className="text-right font-medium whitespace-nowrap">
-                                {formatCurrency(asset.card_rate)}
-                              </TableCell>
-                            )}
-                            {isColumnVisible('available_from') && (
-                              <TableCell>
-                                {asset.available_from ? (
-                                  <Badge variant="outline" className="bg-green-50 text-green-700">
-                                    {format(new Date(asset.available_from), 'dd-MM-yyyy')}
-                                  </Badge>
-                                ) : <span className="text-muted-foreground">-</span>}
-                              </TableCell>
-                            )}
-                            {/* Hidden by default, togglable columns */}
-                            {isColumnVisible('asset_id') && (
-                              <TableCell className="font-mono text-sm whitespace-nowrap">
-                                {asset.media_asset_code || asset.id}
-                              </TableCell>
-                            )}
-                            {isColumnVisible('type') && (
-                              <TableCell>
-                                <Badge variant="outline">{asset.media_type}</Badge>
-                              </TableCell>
-                            )}
-                            {isColumnVisible('city') && (
-                              <TableCell className="whitespace-nowrap">{asset.city}</TableCell>
-                            )}
-                            {isColumnVisible('booking') && (
-                              <TableCell>
-                                {asset.current_booking ? (
-                                  <div className="text-sm">
-                                    <div className="font-medium">{asset.current_booking.campaign_name}</div>
-                                    <div className="text-muted-foreground">
-                                      {asset.current_booking.client_name}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {format(new Date(asset.current_booking.start_date), 'dd MMM')} - {format(new Date(asset.current_booking.end_date), 'dd MMM yyyy')}
-                                    </div>
-                                  </div>
-                                ) : '-'}
-                              </TableCell>
-                            )}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="soon">
-            <Card>
-              <CardContent className="pt-6">
-                {sortedAvailableSoon.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    {summary ? "No assets becoming available during selected period" : "Click 'Check Availability' to load results"}
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto border rounded-md">
-                    <Table className="min-w-[1200px]">
-                      <TableHeader>
-                        <TableRow>
-                          {/* Client View column order: Area | Location | Direction | Dimensions | Sq.Ft | Illumination | Card Rate | Available From */}
-                          {isColumnVisible('area') && (
-                            <TableHead
-                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
-                              onClick={() => handleSort('area', soonSortConfig, setSoonSortConfig)}
-                            >
-                              <div className="flex items-center">
-                                Area {getSortIcon('area', soonSortConfig)}
-                              </div>
-                            </TableHead>
-                          )}
-                          {isColumnVisible('location') && (
-                            <TableHead
-                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap min-w-[200px]"
-                              onClick={() => handleSort('location', soonSortConfig, setSoonSortConfig)}
-                            >
-                              <div className="flex items-center">
-                                Location {getSortIcon('location', soonSortConfig)}
-                              </div>
-                            </TableHead>
-                          )}
-                          {isColumnVisible('direction') && <TableHead className="whitespace-nowrap">Direction</TableHead>}
-                          {isColumnVisible('dimensions') && <TableHead className="whitespace-nowrap">Dimensions</TableHead>}
-                          {isColumnVisible('sqft') && <TableHead className="whitespace-nowrap">Sq.Ft</TableHead>}
-                          {isColumnVisible('illumination') && <TableHead className="whitespace-nowrap">Illumination</TableHead>}
-                          {isColumnVisible('card_rate') && <TableHead className="text-right whitespace-nowrap">Card Rate</TableHead>}
-                          {isColumnVisible('available_from') && (
-                            <TableHead
-                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
-                              onClick={() => handleSort('available_from', soonSortConfig, setSoonSortConfig)}
-                            >
-                              <div className="flex items-center">
-                                Available From {getSortIcon('available_from', soonSortConfig)}
-                              </div>
-                            </TableHead>
-                          )}
-                          {/* Hidden by default, togglable columns */}
-                          {isColumnVisible('asset_id') && (
-                            <TableHead
-                              className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap"
-                              onClick={() => handleSort('asset_id', soonSortConfig, setSoonSortConfig)}
-                            >
-                              <div className="flex items-center">
-                                Asset ID {getSortIcon('asset_id', soonSortConfig)}
-                              </div>
-                            </TableHead>
-                          )}
-                          {isColumnVisible('type') && <TableHead className="whitespace-nowrap">Type</TableHead>}
-                          {isColumnVisible('city') && <TableHead className="whitespace-nowrap">City</TableHead>}
-                          {isColumnVisible('booking') && <TableHead className="whitespace-nowrap">Booking Ends</TableHead>}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sortedAvailableSoon.map((asset) => (
-                          <TableRow key={asset.id}>
-                            {/* Client View column order */}
-                            {isColumnVisible('area') && (
-                              <TableCell className="whitespace-nowrap">{asset.area}</TableCell>
-                            )}
-                            {isColumnVisible('location') && (
-                              <TableCell>
-                                <span className="min-w-[150px] block">{asset.location}</span>
-                              </TableCell>
-                            )}
-                            {isColumnVisible('direction') && (
-                              <TableCell className="whitespace-nowrap">{asset.direction || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('dimensions') && (
-                              <TableCell className="whitespace-nowrap">{asset.dimensions || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('sqft') && (
-                              <TableCell className="whitespace-nowrap">{asset.total_sqft || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('illumination') && (
-                              <TableCell className="whitespace-nowrap">{asset.illumination_type || '-'}</TableCell>
-                            )}
-                            {isColumnVisible('card_rate') && (
-                              <TableCell className="text-right font-medium whitespace-nowrap">
-                                {formatCurrency(asset.card_rate)}
-                              </TableCell>
-                            )}
-                            {isColumnVisible('available_from') && (
-                              <TableCell>
-                                {asset.available_from ? (
-                                  <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
-                                    {format(new Date(asset.available_from), 'dd-MM-yyyy')}
-                                  </Badge>
-                                ) : '-'}
-                              </TableCell>
-                            )}
-                            {/* Hidden by default, togglable columns */}
-                            {isColumnVisible('asset_id') && (
-                              <TableCell className="font-mono text-sm whitespace-nowrap">
-                                {asset.media_asset_code || asset.id}
-                              </TableCell>
-                            )}
-                            {isColumnVisible('type') && (
-                              <TableCell>
-                                <Badge variant="outline">{asset.media_type}</Badge>
-                              </TableCell>
-                            )}
-                            {isColumnVisible('city') && (
-                              <TableCell className="whitespace-nowrap">{asset.city}</TableCell>
-                            )}
-                            {isColumnVisible('booking') && (
-                              <TableCell>
-                                {asset.current_booking ? (
-                                  <span>{format(new Date(asset.current_booking.end_date), 'dd MMM yyyy')}</span>
-                                ) : '-'}
-                              </TableCell>
-                            )}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-        
-        {/* Dialogs for each type */}
-        {renderDialogAssets('available')}
-        {renderDialogAssets('booked')}
-        {renderDialogAssets('soon')}
-        {renderDialogAssets('conflict')}
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

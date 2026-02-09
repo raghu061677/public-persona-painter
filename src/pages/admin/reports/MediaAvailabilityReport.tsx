@@ -181,6 +181,10 @@ export default function MediaAvailabilityReport() {
   // ─── Load availability via RPC ─────────────────────────────
   const loadAvailability = useCallback(async () => {
     if (!company?.id) return;
+    if (!startDate || !endDate) {
+      toast({ title: "Missing Dates", description: "Please select both start and end dates", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
       const { data, error } = await supabase.rpc('fn_media_availability_range', {

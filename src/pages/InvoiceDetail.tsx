@@ -19,7 +19,8 @@ import { CreateCreditNoteDialog } from "@/components/finance/CreateCreditNoteDia
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function InvoiceDetail() {
-  const { id } = useParams();
+  const { id, encodedId } = useParams();
+  const invoiceId = encodedId ? decodeURIComponent(encodedId) : id;
   const navigate = useNavigate();
   const [invoice, setInvoice] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -29,7 +30,7 @@ export default function InvoiceDetail() {
   useEffect(() => {
     checkAdminStatus();
     fetchInvoice();
-  }, [id]);
+  }, [invoiceId]);
 
   const checkAdminStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -48,7 +49,7 @@ export default function InvoiceDetail() {
     const { data, error } = await supabase
       .from('invoices')
       .select('*')
-      .eq('id', id)
+      .eq('id', invoiceId)
       .single();
 
     if (error) {
@@ -70,7 +71,7 @@ export default function InvoiceDetail() {
     const { error } = await supabase
       .from('invoices')
       .delete()
-      .eq('id', id);
+      .eq('id', invoiceId);
 
     if (error) {
       toast({

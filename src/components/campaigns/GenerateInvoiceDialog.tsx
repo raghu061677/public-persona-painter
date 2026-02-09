@@ -144,7 +144,7 @@ export function GenerateInvoiceDialog({
       setOpen(false);
       
       // Navigate to invoice detail page
-      navigate(`/admin/invoices/${invoiceId}`);
+      navigate(`/admin/invoices/view/${encodeURIComponent(invoiceId)}`);
     } catch (error: any) {
       console.error('Error generating invoice:', error);
       toast({

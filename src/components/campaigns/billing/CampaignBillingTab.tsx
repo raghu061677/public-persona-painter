@@ -376,7 +376,7 @@ export function CampaignBillingTab({
   };
 
   const handleViewInvoice = (invoiceId: string) => {
-    navigate(`/admin/invoices/${invoiceId}`);
+    navigate(`/admin/invoices/view/${encodeURIComponent(invoiceId)}`);
   };
 
   if (loading) {

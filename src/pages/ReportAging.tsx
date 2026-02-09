@@ -394,7 +394,7 @@ export default function ReportAging() {
                   <TableRow key={inv.invoice_id} className="hover:bg-muted/30">
                     <TableCell>
                       <button
-                        onClick={() => navigate(`/admin/invoices/${inv.invoice_id}`)}
+                        onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(inv.invoice_id)}`)}
                         className="font-medium text-primary hover:underline"
                       >
                         {inv.invoice_id}
@@ -429,7 +429,7 @@ export default function ReportAging() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => navigate(`/admin/invoices/${inv.invoice_id}`)}
+                        onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(inv.invoice_id)}`)}
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>

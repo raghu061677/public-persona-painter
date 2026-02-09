@@ -514,7 +514,7 @@ export default function InvoicesList() {
                       <TableCell className="sticky left-0 z-10 bg-inherit px-4 py-3 font-medium border-r">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => navigate(`/admin/invoices/${invoice.id}`)}
+                            onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(invoice.id)}`)}
                             className="text-primary hover:text-primary/80 hover:underline font-medium transition-colors"
                           >
                             {invoice.id}
@@ -562,7 +562,7 @@ export default function InvoicesList() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => navigate(`/admin/invoices/${invoice.id}`)}
+                            onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(invoice.id)}`)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>

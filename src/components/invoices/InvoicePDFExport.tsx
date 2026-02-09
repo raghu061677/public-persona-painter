@@ -14,9 +14,10 @@ import {
 
 interface InvoicePDFExportProps {
   invoiceId: string;
+  clientName?: string;
 }
 
-export function InvoicePDFExport({ invoiceId }: InvoicePDFExportProps) {
+export function InvoicePDFExport({ invoiceId, clientName }: InvoicePDFExportProps) {
   const { toast } = useToast();
   const [generating, setGenerating] = useState(false);
 
@@ -28,7 +29,9 @@ export function InvoicePDFExport({ invoiceId }: InvoicePDFExportProps) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Invoice_${invoiceId}.pdf`;
+      const safeId = invoiceId.replace(/\//g, '-');
+      const safeName = clientName ? `_${clientName.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '')}` : '';
+      a.download = `${safeId}${safeName}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

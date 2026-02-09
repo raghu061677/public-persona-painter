@@ -83,7 +83,7 @@ const OperationsCreatives = lazy(() => import("./pages/OperationsCreatives"));
 const OperationsPrinting = lazy(() => import("./pages/OperationsPrinting"));
 const OperationsProofUploads = lazy(() => import("./pages/OperationsProofUploads"));
 const ReportClientBookings = lazy(() => import("./pages/ReportClientBookings"));
-const ReportCampaignBookings = lazy(() => import("./pages/ReportCampaignBookings"));
+const ReportCampaignBookings = lazy(() => import("./pages/ReportCampaignBookingsV2"));
 const ReportAssetRevenue = lazy(() => import("./pages/ReportAssetRevenue"));
 const ReportFinancialSummary = lazy(() => import("./pages/ReportFinancialSummary"));
 const ReportProofExecution = lazy(() => import("./pages/ReportProofExecution"));

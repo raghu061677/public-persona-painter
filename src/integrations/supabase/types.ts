@@ -9496,6 +9496,40 @@ export type Database = {
           total_assets: number
         }[]
       }
+      fn_media_availability_range: {
+        Args: {
+          p_city?: string
+          p_company_id: string
+          p_end: string
+          p_media_type?: string
+          p_start: string
+        }
+        Returns: {
+          area: string
+          asset_id: string
+          availability_status: string
+          available_from: string
+          booked_till: string
+          booking_end: string
+          booking_start: string
+          card_rate: number
+          city: string
+          current_campaign_id: string
+          current_campaign_name: string
+          current_client_name: string
+          dimension: string
+          direction: string
+          illumination: string
+          latitude: number
+          location: string
+          longitude: number
+          media_asset_code: string
+          media_type: string
+          primary_photo_url: string
+          qr_code_url: string
+          sqft: number
+        }[]
+      }
       generate_asset_qr_code: {
         Args: { asset_id_param: string }
         Returns: string

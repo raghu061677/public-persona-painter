@@ -104,7 +104,7 @@ export async function generateAvailabilityReportExcel(
   // Data rows
   rows.forEach((row, idx) => {
     const r = worksheet.getRow(currentRow);
-    const statusLabel = row.availability_status === 'VACANT_NOW' ? 'Vacant Now'
+    const statusLabel = row.availability_status === 'VACANT_NOW' ? 'Available'
       : row.availability_status === 'AVAILABLE_SOON' ? 'Available Soon' : 'Booked';
     
     let availFromFormatted = '';
@@ -132,12 +132,20 @@ export async function generateAvailabilityReportExcel(
     r.getCell(12).numFmt = '₹#,##0';
     r.getCell(7).numFmt = '#,##0.00';
 
-    // Status color
-    const statusCell = r.getCell(9);
+    // Row background color based on availability status
     if (row.availability_status === 'VACANT_NOW') {
-      statusCell.font = { bold: true, color: { argb: "FF22C55E" } };
+      // Light green background for Available rows
+      r.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F5E9' } };
+      r.getCell(9).font = { bold: true, color: { argb: "FF16A34A" } };
     } else if (row.availability_status === 'AVAILABLE_SOON') {
-      statusCell.font = { bold: true, color: { argb: "FFEAB308" } };
+      // Light orange background for Available Soon rows
+      r.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF3E0' } };
+      r.getCell(9).font = { bold: true, color: { argb: "FFEA8C00" } };
+    } else {
+      // Alternate gray for other rows
+      if (idx % 2 === 0) {
+        r.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9FAFB' } };
+      }
     }
 
     r.eachCell((cell, colNum) => {
@@ -150,9 +158,6 @@ export async function generateAvailabilityReportExcel(
       };
     });
 
-    if (idx % 2 === 0) {
-      r.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9FAFB' } };
-    }
     currentRow++;
   });
 

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Popover,
@@ -602,7 +603,16 @@ export default function MediaAvailabilityReport() {
                       {isColumnVisible('status') && <TableHead className="whitespace-nowrap">Status</TableHead>}
                       {isColumnVisible('available_from') && (
                         <TableHead className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap" onClick={() => handleSort('available_from')}>
-                          <div className="flex items-center">Available From {getSortIcon('available_from')}</div>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center">Available From {getSortIcon('available_from')}</div>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs text-xs">
+                                Available From = next day after booking end (inclusive booking rule).
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </TableHead>
                       )}
                       {isColumnVisible('card_rate') && <TableHead className="text-right whitespace-nowrap">Card Rate</TableHead>}
@@ -683,6 +693,11 @@ export default function MediaAvailabilityReport() {
                   </TableBody>
                 </Table>
               </div>
+            )}
+            {sortedRows.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-3 px-1">
+                <strong>Note:</strong> If a booking ends on the 16th, the asset becomes available from the 17th. "Available From" = booking end date + 1 day.
+              </p>
             )}
           </CardContent>
         </Card>

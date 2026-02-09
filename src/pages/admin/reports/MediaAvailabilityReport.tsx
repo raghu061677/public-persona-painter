@@ -181,7 +181,9 @@ export default function MediaAvailabilityReport() {
   // ─── Load availability via RPC ─────────────────────────────
   const loadAvailability = useCallback(async () => {
     if (!company?.id) return;
-    if (!startDate || !endDate) {
+    const trimmedStart = (startDate || '').trim();
+    const trimmedEnd = (endDate || '').trim();
+    if (!trimmedStart || !trimmedEnd) {
       toast({ title: "Missing Dates", description: "Please select both start and end dates", variant: "destructive" });
       return;
     }
@@ -189,8 +191,8 @@ export default function MediaAvailabilityReport() {
     try {
       const { data, error } = await supabase.rpc('fn_media_availability_range', {
         p_company_id: company.id,
-        p_start: startDate,
-        p_end: endDate,
+        p_start: trimmedStart,
+        p_end: trimmedEnd,
         p_city: selectedCity === 'all' ? null : selectedCity,
         p_media_type: selectedMediaType === 'all' ? null : selectedMediaType,
       });
@@ -434,7 +436,7 @@ export default function MediaAvailabilityReport() {
               </div>
               <div className="space-y-2">
                 <Label>&nbsp;</Label>
-                <Button onClick={loadAvailability} disabled={loading} className="w-full">
+                <Button onClick={loadAvailability} disabled={loading || !startDate?.trim() || !endDate?.trim()} className="w-full">
                   {loading ? (
                     <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Checking...</>
                   ) : (

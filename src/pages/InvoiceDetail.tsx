@@ -140,7 +140,7 @@ export default function InvoiceDetail() {
             <Badge className={getInvoiceStatusColor(invoice.status)}>
               {invoice.status}
             </Badge>
-            <InvoicePDFExport invoiceId={invoice.id} />
+            <InvoicePDFExport invoiceId={invoice.id} clientName={invoice.client_name} />
             {isAdmin && invoice.status === 'Draft' && (
               <Button variant="destructive" onClick={handleDelete}>
                 <Trash2 className="mr-2 h-4 w-4" />

@@ -199,6 +199,7 @@ const InventoryUtilization = lazy(() => import("./pages/InventoryUtilization"));
 const RevenueForecast = lazy(() => import("./pages/RevenueForecast"));
 const MediaAssetDuplicates = lazy(() => import("./pages/admin/MediaAssetDuplicates"));
 const PaymentConfirmations = lazy(() => import("./pages/PaymentConfirmations"));
+const AlertsSettings = lazy(() => import("./pages/AlertsSettings"));
 
 // Public website pages
 const PublicAbout = lazy(() => import("./pages/public/About"));
@@ -446,6 +447,7 @@ const App = () => (
               <Route path="integrations" element={<CompanyIntegrations />} />
               <Route path="developer" element={<CompanyDeveloper />} />
               <Route path="workflows" element={<CompanyWorkflows />} />
+              <Route path="alerts" element={<AlertsSettings />} />
             </Route>
             
             {/* Company Onboarding */}

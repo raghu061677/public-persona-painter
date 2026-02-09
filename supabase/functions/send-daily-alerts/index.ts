@@ -13,6 +13,12 @@ type DigestSettings = {
   windows_days: number[];
   whatsapp_enabled: boolean;
   whatsapp_recipients: string[];
+  sender_name: string | null;
+  daily_digest_enabled: boolean;
+  per_campaign_enabled: boolean;
+  per_invoice_enabled: boolean;
+  campaign_end_window_days: number;
+  invoice_buckets: string[];
 };
 
 const DEFAULT_ASSET_COLS = [
@@ -300,32 +306,78 @@ Deno.serve(async (req) => {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-  const ALERT_FROM = Deno.env.get("ALERT_FROM_EMAIL") ?? "Go-Ads 360 <alerts@go-ads.in>";
 
   if (!SUPABASE_URL || !SERVICE_KEY || !RESEND_API_KEY) {
     console.error("Missing env vars");
     return new Response(JSON.stringify({ error: "Missing env: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY / RESEND_API_KEY" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
+  // Check for test mode
+  const url = new URL(req.url);
+  const isTestMode = url.searchParams.get("mode") === "test";
+
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
   const resend = new Resend(RESEND_API_KEY);
 
   // Load settings
-  const { data: settingsRow, error: setErr } = await supabase.from("daily_digest_settings").select("enabled, recipients_to, recipients_cc, windows_days, whatsapp_enabled, whatsapp_recipients").limit(1).maybeSingle();
+  const { data: settingsRow, error: setErr } = await supabase.from("daily_digest_settings").select("*").limit(1).maybeSingle();
   if (setErr) {
     console.error("Settings error:", setErr.message);
     return new Response(JSON.stringify({ error: setErr.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
-  const settings: DigestSettings = settingsRow ?? { enabled: true, recipients_to: [], recipients_cc: [], windows_days: [3, 7, 15], whatsapp_enabled: false, whatsapp_recipients: [] };
-  if (!settings.enabled) return new Response(JSON.stringify({ message: "Alerts disabled" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  const settings: DigestSettings = {
+    enabled: settingsRow?.enabled ?? true,
+    recipients_to: settingsRow?.recipients_to ?? [],
+    recipients_cc: settingsRow?.recipients_cc ?? [],
+    windows_days: settingsRow?.windows_days ?? [3, 7, 15],
+    whatsapp_enabled: settingsRow?.whatsapp_enabled ?? false,
+    whatsapp_recipients: settingsRow?.whatsapp_recipients ?? [],
+    sender_name: settingsRow?.sender_name ?? "GO-ADS Alerts",
+    daily_digest_enabled: settingsRow?.daily_digest_enabled ?? true,
+    per_campaign_enabled: settingsRow?.per_campaign_enabled ?? true,
+    per_invoice_enabled: settingsRow?.per_invoice_enabled ?? true,
+    campaign_end_window_days: settingsRow?.campaign_end_window_days ?? 7,
+    invoice_buckets: settingsRow?.invoice_buckets ?? ["DUE_TODAY", "OVERDUE"],
+  };
+
+  if (!settings.enabled && !isTestMode) return new Response(JSON.stringify({ message: "Alerts disabled" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   if (!settings.recipients_to?.length && !settings.whatsapp_recipients?.length) return new Response(JSON.stringify({ message: "No recipients configured" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+  // Build dynamic FROM address
+  const alertFromEmail = Deno.env.get("ALERT_FROM_EMAIL") ?? "alerts@go-ads.in";
+  const senderName = settings.sender_name || "GO-ADS Alerts";
+  const ALERT_FROM = `${senderName} <${alertFromEmail}>`;
 
   const today = new Date().toISOString().slice(0, 10);
   const cc = settings.recipients_cc?.length ? settings.recipients_cc : undefined;
   const results: string[] = [];
 
+  // ===== TEST MODE =====
+  if (isTestMode) {
+    console.log("Running in TEST mode – sending single test email...");
+    const testHtml = wrapEmail("Test Alert Email", `Test sent on ${today}`, 
+      renderKPIBar([
+        { label: "Test Item 1", value: "42", color: BRAND.accent },
+        { label: "Test Item 2", value: "7", color: BRAND.warning },
+        { label: "Test Item 3", value: "3", color: BRAND.danger },
+      ]) +
+      renderSectionCard("Test Section", 1, "✅", BRAND.accent,
+        `<p style="color:${BRAND.textDark};font-size:14px;">This is a test email from GO-ADS 360° Alert System. If you received this, your email alerts are configured correctly.</p>`)
+    );
+
+    try {
+      await resend.emails.send({ from: ALERT_FROM, to: settings.recipients_to, cc, subject: `GO-ADS 360° | Test Alert – ${today}`, html: testHtml });
+      results.push("Test email sent successfully");
+    } catch (e: any) {
+      console.error("Test email error:", e.message);
+      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    return new Response(JSON.stringify({ success: true, mode: "test", results }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
   // ======= (A) DAILY DIGEST =======
+  if (settings.daily_digest_enabled) {
   const digestLogged = await logOnce(supabase, today, "DAILY_DIGEST", "GLOBAL", "ALL");
   if (digestLogged) {
     console.log("Building daily digest...");
@@ -428,9 +480,13 @@ Deno.serve(async (req) => {
   } else {
     results.push("Daily digest already sent today");
   }
+  } else {
+    results.push("Daily digest disabled");
+  }
 
   // ======= (B) PER-CAMPAIGN ENDING ALERTS =======
-  const { data: endingCampaigns, error: cErr } = await supabase.rpc("fn_campaigns_ending_within", { days_ahead: 7 });
+  if (settings.per_campaign_enabled) {
+  const { data: endingCampaigns, error: cErr } = await supabase.rpc("fn_campaigns_ending_within", { days_ahead: settings.campaign_end_window_days || 7 });
   if (cErr) { console.error("fn_campaigns_ending_within:", cErr.message); }
 
   for (const c of (endingCampaigns ?? [])) {
@@ -457,9 +513,14 @@ Deno.serve(async (req) => {
       results.push(`Campaign alert: ${c.campaign_id}`);
     } catch (e: any) { console.error(`Campaign ${c.campaign_id} send error:`, e.message); }
   }
+  } else {
+    results.push("Per-campaign alerts disabled");
+  }
 
   // ======= (C) PER-INVOICE DUE/OVERDUE ALERTS =======
-  const { data: invoiceAlerts, error: iErr } = await supabase.from("v_invoice_dues").select("invoice_id, client_name, campaign_id, invoice_date, due_date, total_amount, paid_amount, outstanding, due_bucket").in("due_bucket", ["DUE_TODAY", "OVERDUE"]).limit(10000);
+  if (settings.per_invoice_enabled) {
+  const invoiceBuckets = settings.invoice_buckets?.length ? settings.invoice_buckets : ["DUE_TODAY", "OVERDUE"];
+  const { data: invoiceAlerts, error: iErr } = await supabase.from("v_invoice_dues").select("invoice_id, client_name, campaign_id, invoice_date, due_date, total_amount, paid_amount, outstanding, due_bucket").in("due_bucket", invoiceBuckets).limit(10000);
   if (iErr) { console.error("v_invoice_dues:", iErr.message); }
 
   for (const inv of (invoiceAlerts ?? [])) {
@@ -492,6 +553,9 @@ Deno.serve(async (req) => {
       await resend.emails.send({ from: ALERT_FROM, to: settings.recipients_to, cc, subject: `GO-ADS 360° | Invoice ${statusLabel} – ${inv.invoice_id} | ₹${inv.outstanding}`, html });
       results.push(`Invoice alert: ${inv.invoice_id}`);
     } catch (e: any) { console.error(`Invoice ${inv.invoice_id} send error:`, e.message); }
+  }
+  } else {
+    results.push("Per-invoice alerts disabled");
   }
 
   console.log("Daily alerts completed:", results);

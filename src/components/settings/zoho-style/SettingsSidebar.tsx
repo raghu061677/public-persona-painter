@@ -84,6 +84,7 @@ const navigationGroups: NavGroup[] = [
       { label: "Email Notifications", path: "/admin/company-settings/email-notifications", icon: Mail },
       { label: "SMS Notifications", path: "/admin/company-settings/sms-notifications", icon: MessageSquare },
       { label: "Digital Signature", path: "/admin/company-settings/digital-signature", icon: FileSignature },
+      { label: "Email & WhatsApp Alerts", path: "/admin/company-settings/alerts", icon: Bell },
     ]
   },
   {

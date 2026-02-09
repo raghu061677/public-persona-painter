@@ -189,6 +189,39 @@ export type Database = {
           },
         ]
       }
+      alert_email_templates: {
+        Row: {
+          body_template: string
+          created_at: string
+          enabled: boolean
+          id: string
+          name: string
+          subject_template: string
+          template_key: string
+          updated_at: string
+        }
+        Insert: {
+          body_template: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name: string
+          subject_template: string
+          template_key: string
+          updated_at?: string
+        }
+        Update: {
+          body_template?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name?: string
+          subject_template?: string
+          template_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       alert_log: {
         Row: {
           alert_date: string
@@ -3451,12 +3484,18 @@ export type Database = {
       }
       daily_digest_settings: {
         Row: {
+          campaign_end_window_days: number
           created_at: string
+          daily_digest_enabled: boolean
           daily_time: string
           enabled: boolean
           id: string
+          invoice_buckets: string[]
+          per_campaign_enabled: boolean
+          per_invoice_enabled: boolean
           recipients_cc: string[]
           recipients_to: string[]
+          sender_name: string | null
           timezone: string
           updated_at: string
           whatsapp_enabled: boolean
@@ -3464,12 +3503,18 @@ export type Database = {
           windows_days: number[]
         }
         Insert: {
+          campaign_end_window_days?: number
           created_at?: string
+          daily_digest_enabled?: boolean
           daily_time?: string
           enabled?: boolean
           id?: string
+          invoice_buckets?: string[]
+          per_campaign_enabled?: boolean
+          per_invoice_enabled?: boolean
           recipients_cc?: string[]
           recipients_to?: string[]
+          sender_name?: string | null
           timezone?: string
           updated_at?: string
           whatsapp_enabled?: boolean
@@ -3477,12 +3522,18 @@ export type Database = {
           windows_days?: number[]
         }
         Update: {
+          campaign_end_window_days?: number
           created_at?: string
+          daily_digest_enabled?: boolean
           daily_time?: string
           enabled?: boolean
           id?: string
+          invoice_buckets?: string[]
+          per_campaign_enabled?: boolean
+          per_invoice_enabled?: boolean
           recipients_cc?: string[]
           recipients_to?: string[]
+          sender_name?: string | null
           timezone?: string
           updated_at?: string
           whatsapp_enabled?: boolean

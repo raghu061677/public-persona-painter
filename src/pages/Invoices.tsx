@@ -245,7 +245,7 @@ export default function Invoices() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => navigate(`/admin/invoices/${invoice.id}`)}
+                            onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(invoice.id)}`)}
                           >
                             <FileText className="h-4 w-4" />
                           </Button>

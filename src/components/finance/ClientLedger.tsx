@@ -230,7 +230,7 @@ export function ClientLedger({ clientId, clientName }: ClientLedgerProps) {
                     <TableRow key={invoice.id}>
                       <TableCell>
                         <button
-                          onClick={() => navigate(`/admin/invoices/${invoice.id}`)}
+                          onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(invoice.id)}`)}
                           className="font-medium text-primary hover:underline"
                         >
                           {invoice.id}
@@ -275,7 +275,7 @@ export function ClientLedger({ clientId, clientName }: ClientLedgerProps) {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => navigate(`/admin/invoices/${invoice.id}`)}
+                          onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(invoice.id)}`)}
                         >
                           <ExternalLink className="h-4 w-4" />
                         </Button>
@@ -314,7 +314,7 @@ export function ClientLedger({ clientId, clientName }: ClientLedgerProps) {
                     <TableCell>{formatDate(payment.payment_date)}</TableCell>
                     <TableCell>
                       <button
-                        onClick={() => navigate(`/admin/invoices/${payment.invoice_id}`)}
+                        onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(payment.invoice_id)}`)}
                         className="text-primary hover:underline"
                       >
                         {payment.invoice_id}

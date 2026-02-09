@@ -377,6 +377,7 @@ const App = () => (
             <Route path="/finance/invoices/:id" element={<ModernAppLayout><InvoiceDetail /></ModernAppLayout>} />
             <Route path="/admin/invoices" element={<ModernAppLayout><InvoicesList /></ModernAppLayout>} />
             <Route path="/admin/invoices/new" element={<ModernAppLayout><InvoiceCreate /></ModernAppLayout>} />
+            <Route path="/admin/invoices/view/:encodedId" element={<ModernAppLayout><InvoiceDetail /></ModernAppLayout>} />
             <Route path="/admin/invoices/:id" element={<ModernAppLayout><InvoiceDetail /></ModernAppLayout>} />
             <Route path="/admin/invoices-import" element={<ModernAppLayout><ImportInvoices /></ModernAppLayout>} />
             <Route path="/admin/payment-reminders" element={<ModernAppLayout><Invoices /></ModernAppLayout>} />

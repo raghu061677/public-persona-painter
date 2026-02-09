@@ -183,7 +183,7 @@ export default function InvoiceCreate() {
         title: "Success",
         description: "Invoice created successfully",
       });
-      navigate(`/admin/invoices/${invoiceId}`);
+      navigate(`/admin/invoices/view/${encodeURIComponent(invoiceId)}`);
     } catch (error: any) {
       console.error('Error creating invoice:', error);
       toast({

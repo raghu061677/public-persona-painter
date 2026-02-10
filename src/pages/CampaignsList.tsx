@@ -55,6 +55,12 @@ export default function CampaignsList() {
     title: "Campaigns",
     excelRules: campaignExcelRules,
     pdfRules: campaignPdfRules,
+    valueOverrides: {
+      sno: (_row: any, index: number) => index + 1,
+      campaign_id: (row: any) => row.id || "",
+      asset_count: (row: any) => row.total_assets || 0,
+      total_amount: (row: any) => row.grand_total || 0,
+    },
   });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");

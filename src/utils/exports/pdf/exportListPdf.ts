@@ -13,6 +13,7 @@ export type PdfBranding = {
   title: string;
   subtitle?: string;
   themeColor?: string;
+  logoUrl?: string;
 };
 
 export type PdfRowStyleRule<T = any> = {
@@ -40,7 +41,23 @@ function hexToRgb(hex?: string): [number, number, number] | null {
   return [r, g, b];
 }
 
-export function exportListPdf<T = any>(opts: ExportListPdfOptions<T>): void {
+async function loadLogoBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function exportListPdf<T = any>(opts: ExportListPdfOptions<T>): Promise<void> {
   const doc = new jsPDF({
     orientation: opts.orientation ?? "l",
     unit: "pt",
@@ -51,24 +68,42 @@ export function exportListPdf<T = any>(opts: ExportListPdfOptions<T>): void {
   const marginLeft = 40;
   let topY = 38;
 
+  // Load and render logo
+  let logoOffset = 0;
+  if (opts.branding.logoUrl) {
+    try {
+      const base64 = opts.branding.logoUrl.startsWith("data:")
+        ? opts.branding.logoUrl
+        : await loadLogoBase64(opts.branding.logoUrl);
+      if (base64) {
+        const logoH = 36;
+        const logoW = 36;
+        doc.addImage(base64, "PNG", marginLeft, topY - 4, logoW, logoH);
+        logoOffset = logoW + 10;
+      }
+    } catch {
+      // Logo load failed, continue without it
+    }
+  }
+
   // Company name
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
   doc.setTextColor(0, 0, 0);
-  doc.text(opts.branding.companyName || "Company", marginLeft, topY + 10);
+  doc.text(opts.branding.companyName || "Company", marginLeft + logoOffset, topY + 10);
 
   // Title
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
   doc.setTextColor(themeRgb[0], themeRgb[1], themeRgb[2]);
-  doc.text(opts.branding.title || "Report", marginLeft, topY + 30);
+  doc.text(opts.branding.title || "Report", marginLeft + logoOffset, topY + 30);
 
   // Subtitle
   if (opts.branding.subtitle) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.setTextColor(75, 85, 99);
-    doc.text(opts.branding.subtitle, marginLeft, topY + 46);
+    doc.text(opts.branding.subtitle, marginLeft + logoOffset, topY + 46);
   }
 
   const head = [opts.fields.map((f) => f.label)];

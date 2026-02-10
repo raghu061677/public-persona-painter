@@ -88,6 +88,7 @@ export function useListViewExport(options: UseListViewExportOptions) {
             companyName: company?.name || "GO-ADS 360°",
             title: options.title,
             subtitle: options.subtitle,
+            logoUrl: company?.logo_url || undefined,
           },
           fields: buildExcelFields(keys),
           rows,
@@ -104,7 +105,7 @@ export function useListViewExport(options: UseListViewExportOptions) {
   );
 
   const handleExportPdf = useCallback(
-    (rows: any[], fieldKeys?: string[]) => {
+    async (rows: any[], fieldKeys?: string[]) => {
       const keys = resolveFieldKeys(fieldKeys);
       if (!rows || rows.length === 0) {
         toast({ title: "No Data", description: "No rows to export." });
@@ -114,12 +115,13 @@ export function useListViewExport(options: UseListViewExportOptions) {
         console.info(`[ListViewExport] PDF export: ${rows.length} rows, ${keys.length} fields`);
       }
       try {
-        exportListPdf({
+        await exportListPdf({
           branding: {
             companyName: company?.name || "GO-ADS 360°",
             title: options.title,
             subtitle: options.subtitle,
-          themeColor: company?.theme_color || undefined,
+            themeColor: company?.theme_color || undefined,
+            logoUrl: company?.logo_url || undefined,
           },
           fields: buildPdfFields(keys),
           rows,

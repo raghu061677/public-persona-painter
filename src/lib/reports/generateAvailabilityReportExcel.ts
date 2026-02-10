@@ -25,6 +25,7 @@ export async function generateAvailabilityReportExcel(
   rows: AvailabilityRow[],
   startDate: string,
   endDate: string,
+  companyName?: string,
 ): Promise<void> {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Media Availability", {
@@ -52,7 +53,7 @@ export async function generateAvailabilityReportExcel(
   // Title
   worksheet.mergeCells(`A${currentRow}:L${currentRow}`);
   const titleCell = worksheet.getRow(currentRow).getCell(1);
-  titleCell.value = "GO-ADS 360° – MEDIA AVAILABILITY REPORT";
+  titleCell.value = `${companyName || 'GO-ADS 360°'} – MEDIA AVAILABILITY REPORT`;
   titleCell.font = { size: 16, bold: true, color: { argb: "FFFFFFFF" } };
   titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E3A8A" } };
   titleCell.alignment = { horizontal: "center", vertical: "middle" };

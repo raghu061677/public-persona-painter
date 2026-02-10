@@ -339,7 +339,7 @@ export default function MediaAvailabilityReport() {
     }
     setExporting(true);
     try {
-      await generateAvailabilityReportExcel(sortedRows, startDate, endDate);
+      await generateAvailabilityReportExcel(sortedRows, startDate, endDate, company?.name || undefined);
       toast({ title: "Export Complete", description: "Excel downloaded successfully" });
     } catch (err) {
       console.error('Export error:', err);

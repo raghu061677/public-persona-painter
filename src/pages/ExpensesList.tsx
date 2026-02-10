@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { ListToolbar } from "@/components/list-views";
@@ -6,7 +6,6 @@ import { useListView } from "@/hooks/useListView";
 import { useListViewExport } from "@/hooks/useListViewExport";
 import { expenseExcelRules, expensePdfRules } from "@/utils/exports/statusColorRules";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,24 +27,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Zap, Receipt, ExternalLink, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Plus, Zap, Receipt, ExternalLink, Pencil, Trash2, SlidersHorizontal } from "lucide-react";
 import { formatINR } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { PowerBillExpenseDialog } from "@/components/expenses/PowerBillExpenseDialog";
 import { ExpenseFormDialog } from "@/components/expenses/ExpenseFormDialog";
-import { PageCustomization, PageCustomizationOption } from "@/components/ui/page-customization";
 import { getAssetDisplayCode } from "@/lib/assets/getAssetDisplayCode";
 import type { ExpenseCategory, CostCenter, ExpenseFormData } from "@/types/expenses";
 import { ExpensesSummaryBar } from "@/components/expenses/ExpensesSummaryBar";
+import { ExpenseAdvancedFilters, ExpenseFilterPills, type ExpenseFilters } from "@/components/expenses/ExpenseAdvancedFilters";
+import { ExpenseQuickChips } from "@/components/expenses/ExpenseQuickChips";
 
 export default function ExpensesList() {
   const { company } = useCompany();
@@ -61,7 +54,6 @@ export default function ExpensesList() {
   });
   const [powerBills, setPowerBills] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [activeTab, setActiveTab] = useState("regular");
   const [editingBill, setEditingBill] = useState<any>(null);
@@ -74,16 +66,10 @@ export default function ExpensesList() {
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
-  
-  // Page customization state
-  const [showSearch, setShowSearch] = useState(true);
-  const [showSummaryCards, setShowSummaryCards] = useState(true);
-  
-  // Filters and sorting state
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [sortField, setSortField] = useState<string>("created_at");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+
+  // Advanced filters
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const advancedFilters = (lv.filters || {}) as ExpenseFilters;
 
   useEffect(() => {
     checkAdminStatus();
@@ -122,8 +108,6 @@ export default function ExpensesList() {
     const tdsAmount = formData.tds_applicable ? (formData.amount_before_tax * formData.tds_percent / 100) : 0;
     const netPayable = totalAmount - tdsAmount;
 
-    // Map category string to valid DB enum value
-    // DB allows only: Printing | Mounting | Transport | Electricity | Other
     const categoryMap: Record<string, 'Printing' | 'Mounting' | 'Transport' | 'Electricity' | 'Other'> = {
       'Printing': 'Printing',
       'Mounting': 'Mounting',
@@ -136,20 +120,17 @@ export default function ExpensesList() {
     };
     const categoryValue = categoryMap[formData.category] || 'Other';
 
-    // Map payment status to valid enum value (DB only supports Pending | Paid)
     const validPaymentStatuses = ['Pending', 'Paid'] as const;
     type PaymentStatusEnum = typeof validPaymentStatuses[number];
     const paymentStatus: PaymentStatusEnum = validPaymentStatuses.includes(formData.payment_status as PaymentStatusEnum)
       ? (formData.payment_status as PaymentStatusEnum)
       : 'Pending';
 
-    // Generate a unique ID and expense number in format EXP-YYYY-MM-XX
     const expenseId = crypto.randomUUID();
     const now = new Date();
     const year = now.getFullYear();
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
     
-    // Get next sequence number for this month
     const monthStart = `${year}-${month}-01`;
     const { count } = await supabase
       .from('expenses')
@@ -225,7 +206,6 @@ export default function ExpensesList() {
   };
 
   const handleExpenseUpdate = async (id: string, formData: Partial<ExpenseFormData>): Promise<boolean> => {
-    // Map category string to valid DB enum value if provided
     const categoryMap: Record<string, 'Printing' | 'Mounting' | 'Transport' | 'Electricity' | 'Other'> = {
       'Printing': 'Printing',
       'Mounting': 'Mounting',
@@ -319,63 +299,97 @@ export default function ExpensesList() {
     setLoading(false);
   };
 
-  const filteredExpenses = expenses
-    .filter(exp => {
-      // Search filter
-      if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        const matchesSearch = (
-          exp.expense_no?.toLowerCase().includes(term) ||
-          exp.id?.toLowerCase().includes(term) ||
-          exp.vendor_name?.toLowerCase().includes(term) ||
-          exp.category?.toLowerCase().includes(term)
+  // Filtered expenses using lv.filters (advanced) + lv.searchQuery
+  const filteredExpenses = useMemo(() => {
+    let result = [...expenses];
+    const f = advancedFilters;
+    const search = lv.searchQuery?.toLowerCase() || "";
+
+    // Search
+    if (search) {
+      result = result.filter((exp) => {
+        return (
+          exp.expense_no?.toLowerCase().includes(search) ||
+          exp.id?.toLowerCase().includes(search) ||
+          exp.vendor_name?.toLowerCase().includes(search) ||
+          exp.category?.toLowerCase().includes(search) ||
+          exp.notes?.toLowerCase().includes(search)
         );
-        if (!matchesSearch) return false;
-      }
-      // Category filter
-      if (categoryFilter !== "all" && exp.category !== categoryFilter) return false;
-      // Status filter
-      if (statusFilter !== "all" && exp.payment_status !== statusFilter) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      let aVal = a[sortField];
-      let bVal = b[sortField];
-      if (sortField === "created_at" || sortField === "expense_date") {
-        aVal = new Date(aVal || 0).getTime();
-        bVal = new Date(bVal || 0).getTime();
-      }
-      if (typeof aVal === "string") aVal = aVal.toLowerCase();
-      if (typeof bVal === "string") bVal = bVal.toLowerCase();
-      if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
-      return 0;
+      });
+    }
+
+    // Payment status
+    if (f.payment_status?.length) {
+      result = result.filter((exp) => f.payment_status!.includes(exp.payment_status));
+    }
+
+    // Category
+    if (f.category?.length) {
+      result = result.filter((exp) => f.category!.includes(exp.category));
+    }
+
+    // Vendor contains
+    if (f.vendor_contains) {
+      const vc = f.vendor_contains.toLowerCase();
+      result = result.filter((exp) => exp.vendor_name?.toLowerCase().includes(vc));
+    }
+
+    // Amount min
+    if (f.amount_min) {
+      result = result.filter((exp) => (Number(exp.total_amount) || Number(exp.amount) || 0) >= f.amount_min!);
+    }
+
+    // GST percent
+    if (f.gst_percent !== undefined && f.gst_percent !== null) {
+      result = result.filter((exp) => Number(exp.gst_percent) === f.gst_percent);
+    }
+
+    // Date between (expense_date)
+    if (f.date_between?.from && f.date_between?.to) {
+      result = result.filter((exp) => {
+        const d = (exp.expense_date || exp.created_at || "").substring(0, 10);
+        return d >= f.date_between!.from && d <= f.date_between!.to;
+      });
+    }
+
+    // Campaign contains
+    if (f.campaign_contains) {
+      const cc = f.campaign_contains.toLowerCase();
+      result = result.filter((exp) => exp.campaign_id?.toLowerCase().includes(cc));
+    }
+
+    // Asset contains
+    if (f.asset_contains) {
+      const ac = f.asset_contains.toLowerCase();
+      result = result.filter((exp) => exp.asset_id?.toLowerCase().includes(ac));
+    }
+
+    // Sort by expense_date desc by default
+    result.sort((a, b) => {
+      const aD = new Date(a.expense_date || a.created_at || 0).getTime();
+      const bD = new Date(b.expense_date || b.created_at || 0).getTime();
+      return bD - aD;
     });
 
+    return result;
+  }, [expenses, lv.searchQuery, advancedFilters]);
+
   const filteredPowerBills = powerBills.filter(bill => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
+    const search = lv.searchQuery?.toLowerCase() || "";
+    if (!search) return true;
     return (
-      bill.asset_id?.toLowerCase().includes(term) ||
-      bill.consumer_name?.toLowerCase().includes(term) ||
-      bill.service_number?.toLowerCase().includes(term)
+      bill.asset_id?.toLowerCase().includes(search) ||
+      bill.consumer_name?.toLowerCase().includes(search) ||
+      bill.service_number?.toLowerCase().includes(search)
     );
   });
 
-  // Calculate totals
-  const totalExpenses = filteredExpenses.reduce((sum, exp) => sum + (exp.total_amount || 0), 0);
-  const totalPowerBills = filteredPowerBills.reduce((sum, bill) => sum + (bill.total_amount || 0), 0);
-
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
-      case 'Paid':
-        return 'default';
-      case 'Pending':
-        return 'secondary';
-      case 'Overdue':
-        return 'destructive';
-      default:
-        return 'outline';
+      case 'Paid': return 'default';
+      case 'Pending': return 'secondary';
+      case 'Overdue': return 'destructive';
+      default: return 'outline';
     }
   };
 
@@ -391,28 +405,17 @@ export default function ExpensesList() {
 
   const handleDeleteConfirm = async () => {
     if (!billToDelete) return;
-
     setDeleting(true);
     try {
       const { error } = await supabase
         .from('asset_power_bills')
         .delete()
         .eq('id', billToDelete.id);
-
       if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Power bill deleted successfully",
-      });
-
+      toast({ title: "Success", description: "Power bill deleted successfully" });
       fetchPowerBills();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete power bill",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to delete power bill", variant: "destructive" });
     } finally {
       setDeleting(false);
       setDeleteDialogOpen(false);
@@ -448,7 +451,7 @@ export default function ExpensesList() {
         {/* Global List View Toolbar */}
         <ListToolbar
           searchQuery={lv.searchQuery}
-          onSearchChange={(q) => { lv.setSearchQuery(q); setSearchTerm(q); }}
+          onSearchChange={lv.setSearchQuery}
           searchPlaceholder="Search expenses..."
           fields={lv.catalog.fields}
           groups={lv.catalog.groups}
@@ -465,134 +468,45 @@ export default function ExpensesList() {
           onExportExcel={(fields) => handleExportExcel(filteredExpenses, fields)}
           onExportPdf={(fields) => handleExportPdf(filteredExpenses, fields)}
           onReset={lv.resetToDefaults}
+          extraActions={
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => setShowAdvancedFilters(true)}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              Advanced Filters
+            </Button>
+          }
         />
 
-        <div className="mb-6 flex flex-wrap gap-4 items-center">
-          <div className="relative flex-1 min-w-[200px] max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by ID, vendor, category..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="Printing">Printing</SelectItem>
-              <SelectItem value="Mounting">Mounting</SelectItem>
-              <SelectItem value="Transport">Transport</SelectItem>
-              <SelectItem value="Electricity">Electricity</SelectItem>
-              <SelectItem value="Other">Other</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[130px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="Pending">Pending</SelectItem>
-              <SelectItem value="Paid">Paid</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Select value={sortField} onValueChange={(value) => setSortField(value)}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="created_at">Date Created</SelectItem>
-              <SelectItem value="expense_date">Expense Date</SelectItem>
-              <SelectItem value="total_amount">Amount</SelectItem>
-              <SelectItem value="vendor_name">Vendor</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Button 
-            variant="outline" 
-            size="icon"
-            onClick={() => setSortDirection(prev => prev === "asc" ? "desc" : "asc")}
-            title={sortDirection === "asc" ? "Ascending" : "Descending"}
-          >
-            {sortDirection === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
-          </Button>
-        </div>
+        {/* Quick Filter Chips */}
+        <ExpenseQuickChips
+          filters={advancedFilters}
+          onFiltersChange={(f) => lv.setFilters(f as Record<string, any>)}
+          presets={lv.presets}
+          activePreset={lv.activePreset}
+          onPresetSelect={lv.applyPreset}
+          onOpenAdvanced={() => setShowAdvancedFilters(true)}
+        />
+
+        {/* Filter Pills */}
+        <ExpenseFilterPills
+          filters={advancedFilters}
+          onClear={(key) => {
+            const next = { ...advancedFilters };
+            delete next[key];
+            lv.setFilters(next as Record<string, any>);
+          }}
+          onClearAll={() => lv.setFilters({})}
+        />
 
         {/* Summary Bar */}
-        {showSummaryCards && (
-          <ExpensesSummaryBar expenses={filteredExpenses} />
-        )}
+        <ExpensesSummaryBar expenses={filteredExpenses} />
 
-        {/* Legacy Summary Cards */}
-        {false && showSummaryCards && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-                  Total Regular Expenses
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl sm:text-2xl font-bold">{formatINR(totalExpenses)}</div>
-                <p className="text-xs text-muted-foreground">{filteredExpenses.length} entries</p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-                  Total Power Bills
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl sm:text-2xl font-bold">{formatINR(totalPowerBills)}</div>
-                <p className="text-xs text-muted-foreground">{filteredPowerBills.length} bills</p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-                  Pending Bills
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl sm:text-2xl font-bold">
-                  {filteredPowerBills.filter(b => b.payment_status === 'Pending').length}
-                </div>
-                <p className="text-xs text-muted-foreground">Requires payment</p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-                  This Month
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl sm:text-2xl font-bold">
-                  {formatINR(
-                    filteredExpenses
-                      .filter(e => new Date(e.created_at).getMonth() === new Date().getMonth())
-                      .reduce((sum, e) => sum + (e.total_amount || 0), 0)
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">Current month total</p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-        
         {/* Tabs for Expenses */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 mt-4">
           <TabsList>
             <TabsTrigger value="regular">
               <Receipt className="mr-2 h-4 w-4" />
@@ -737,18 +651,10 @@ export default function ExpensesList() {
                         {isAdmin && (
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEditBill(bill)}
-                              >
+                              <Button variant="ghost" size="icon" onClick={() => handleEditBill(bill)}>
                                 <Pencil className="h-4 w-4" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDeleteClick(bill)}
-                              >
+                              <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(bill)}>
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
                             </div>
@@ -804,6 +710,15 @@ export default function ExpensesList() {
           costCenters={costCenters}
           onSubmit={handleExpenseSubmit}
           onUpdate={handleExpenseUpdate}
+        />
+
+        {/* Advanced Filters Drawer */}
+        <ExpenseAdvancedFilters
+          open={showAdvancedFilters}
+          onOpenChange={setShowAdvancedFilters}
+          filters={advancedFilters}
+          onApply={(f) => lv.setFilters(f as Record<string, any>)}
+          onReset={() => lv.setFilters({})}
         />
       </div>
     </div>

@@ -9903,6 +9903,7 @@ export type Database = {
           username: string
         }[]
       }
+      lock_plan_for_conversion: { Args: { p_plan_id: string }; Returns: string }
       log_activity:
         | {
             Args: {

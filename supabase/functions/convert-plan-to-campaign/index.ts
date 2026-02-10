@@ -1,5 +1,5 @@
 // supabase/functions/convert-plan-to-campaign/index.ts
-// v10.0 - Fixed conflict detection: per-asset dates, campaign_assets source, timezone-safe
+// v11.0 - Added atomic lock_plan_for_conversion to prevent duplicate campaigns
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -79,7 +79,7 @@ serve(async (req) => {
       return jsonError("Missing required field: plan_id or planId", 400);
     }
 
-    console.log("[v10.0] Converting plan to campaign:", planId);
+    console.log("[v11.0] Converting plan to campaign:", planId);
 
     // 1) Get current user
     const authHeader = req.headers.get("Authorization");
@@ -91,7 +91,7 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
 
     if (userError || !user) {
-      console.error("[v10.0] Auth error:", userError);
+      console.error("[v11.0] Auth error:", userError);
       return jsonError("Unauthorized – could not load current user", 401);
     }
 
@@ -104,7 +104,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (companyError) {
-      console.error("[v10.0] Error loading company:", companyError);
+      console.error("[v11.0] Error loading company:", companyError);
       return jsonError("Could not determine company for current user", 400);
     }
 
@@ -113,9 +113,53 @@ serve(async (req) => {
     }
 
     const companyId: string = companyRow.company_id;
-    console.log("[v10.0] User company ID:", companyId);
+    console.log("[v11.0] User company ID:", companyId);
 
-    // 3) Load Plan (must be Approved)
+    // 3) ATOMIC LOCK: Use lock_plan_for_conversion to prevent race conditions
+    // This function locks the plan row with FOR UPDATE and returns existing campaign_id if already converted
+    const { data: existingCampaignId, error: lockError } = await supabase
+      .rpc("lock_plan_for_conversion", { p_plan_id: planId });
+
+    if (lockError) {
+      console.error("[v11.0] Lock error:", lockError);
+      const msg = lockError.message || '';
+      if (msg.includes('not found')) {
+        return jsonError("Plan not found", 404);
+      }
+      if (msg.includes('must be "Approved"')) {
+        return jsonError(msg, 400);
+      }
+      return jsonError(`Failed to lock plan for conversion: ${msg}`, 500);
+    }
+
+    // If lock returned a campaign_id, plan is already converted — return idempotent success
+    if (existingCampaignId) {
+      console.log("[v11.0] Plan already converted (atomic check):", existingCampaignId);
+      
+      const { data: existingCampaign } = await supabase
+        .from('campaigns')
+        .select('id, status, campaign_name')
+        .eq('id', existingCampaignId)
+        .maybeSingle();
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Plan was already converted to campaign",
+          campaign_id: existingCampaignId,
+          campaign_code: existingCampaignId,
+          plan_id: planId,
+          already_converted: true,
+          status: existingCampaign?.status || 'Draft',
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // 4) Load Plan details (already validated as Approved by the lock function)
     const { data: plan, error: planError } = await supabase
       .from("plans")
       .select(`
@@ -139,52 +183,12 @@ serve(async (req) => {
       .eq("company_id", companyId)
       .maybeSingle();
 
-    if (planError) {
-      console.error("[v10.0] Error loading plan:", planError);
-      return jsonError("Could not load plan", 500);
-    }
-
-    if (!plan) {
+    if (planError || !plan) {
+      console.error("[v11.0] Error loading plan:", planError);
       return jsonError("Plan not found for this company", 404);
     }
 
-    // IDEMPOTENT: Check if already converted - return success with existing campaign
-    if (plan.converted_to_campaign_id) {
-      console.log("[v10.0] Plan already converted to campaign:", plan.converted_to_campaign_id);
-      
-      // Verify the campaign still exists
-      const { data: existingCampaign } = await supabase
-        .from('campaigns')
-        .select('id, status, campaign_name')
-        .eq('id', plan.converted_to_campaign_id)
-        .maybeSingle();
-      
-      if (existingCampaign) {
-        return new Response(
-          JSON.stringify({
-            success: true,
-            message: "Plan was already converted to campaign",
-            campaign_id: plan.converted_to_campaign_id,
-            campaign_code: plan.converted_to_campaign_id,
-            plan_id: plan.id,
-            already_converted: true,
-            status: existingCampaign.status || 'Draft',
-          }),
-          {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-      // If campaign was deleted, allow re-conversion by clearing the field
-      console.log("[v10.0] Previous campaign not found, allowing re-conversion");
-    }
-
-    if (plan.status !== "Approved") {
-      return jsonError(`Plan status is "${plan.status}" - must be "Approved" to convert`, 400);
-    }
-
-    console.log("[v10.0] Plan validated:", plan.id, "Status:", plan.status);
+    console.log("[v11.0] Plan validated:", plan.id, "Status:", plan.status);
 
     // 4) Load Plan Items (including per-asset duration fields)
     const { data: planItems, error: itemsError } = await supabase

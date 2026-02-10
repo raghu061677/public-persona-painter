@@ -1,19 +1,12 @@
 import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreditCard, Calendar, User, DollarSign, Search, ArrowUpDown, ArrowUp, ArrowDown, X } from "lucide-react";
+import { CreditCard, Calendar, User, DollarSign, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -22,8 +15,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DateRangeFilter } from "@/components/common/date-range-filter";
-import { DateRange } from "react-day-picker";
+import { PaymentsSummaryBar } from "@/components/payments/PaymentsSummaryBar";
+import { PaymentQuickChips } from "@/components/payments/PaymentQuickChips";
+import { PaymentAdvancedFilters, PaymentFilterPills } from "@/components/payments/PaymentAdvancedFilters";
+import type { PaymentFilters } from "@/components/payments/PaymentAdvancedFilters";
+import { Search } from "lucide-react";
 
 interface Invoice {
   id: string;
@@ -34,9 +30,9 @@ interface Invoice {
   balance_due: number;
   status: string;
   payments: any;
+  campaign_id?: string;
 }
 
-const PAYMENT_STATUSES = ['Paid', 'Partial', 'Pending', 'Overdue'];
 type SortField = 'id' | 'client_name' | 'invoice_date' | 'due_date' | 'total_amount' | 'balance_due' | 'status';
 type SortDirection = 'asc' | 'desc';
 
@@ -44,14 +40,10 @@ export default function Payments() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  
-  // Filter states
+
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [amountRange, setAmountRange] = useState<{ min: string; max: string }>({ min: "", max: "" });
-  
-  // Sort state
+  const [filters, setFilters] = useState<PaymentFilters>({});
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [sortField, setSortField] = useState<SortField>('invoice_date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
@@ -81,11 +73,11 @@ export default function Payments() {
     }
   };
 
-  // Filter and sort logic
   const filteredInvoices = useMemo(() => {
     let result = [...invoices];
-    
-    // Search filter
+    const f = filters;
+
+    // Search
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       result = result.filter(inv =>
@@ -93,37 +85,44 @@ export default function Payments() {
         inv.client_name?.toLowerCase().includes(term)
       );
     }
-    
-    // Status filter
-    if (statusFilter !== "all") {
-      result = result.filter(inv => inv.status.toLowerCase() === statusFilter.toLowerCase());
+
+    // Status
+    if (f.status?.length) {
+      result = result.filter(inv => f.status!.includes(inv.status));
     }
-    
-    // Date range filter
-    if (dateRange?.from) {
+
+    // Amount thresholds
+    if (f.total_min) {
+      result = result.filter(inv => (inv.total_amount || 0) >= f.total_min!);
+    }
+    if (f.balance_min) {
+      result = result.filter(inv => (inv.balance_due || 0) >= f.balance_min!);
+    }
+
+    // Client contains
+    if (f.client_contains) {
+      const term = f.client_contains.toLowerCase();
+      result = result.filter(inv => inv.client_name?.toLowerCase().includes(term));
+    }
+
+    // Due date range
+    if (f.due_between?.from && f.due_between?.to) {
       result = result.filter(inv => {
-        const invDate = new Date(inv.invoice_date);
-        if (dateRange.to) {
-          return invDate >= dateRange.from! && invDate <= dateRange.to;
-        }
-        return invDate >= dateRange.from!;
+        if (!inv.due_date) return false;
+        const d = inv.due_date.substring(0, 10);
+        return d >= f.due_between!.from && d <= f.due_between!.to;
       });
     }
-    
-    // Amount range filter
-    if (amountRange.min) {
-      const min = parseFloat(amountRange.min);
-      if (!isNaN(min)) {
-        result = result.filter(inv => (inv.total_amount || 0) >= min);
-      }
+
+    // Invoice date range
+    if (f.invoice_between?.from && f.invoice_between?.to) {
+      result = result.filter(inv => {
+        if (!inv.invoice_date) return false;
+        const d = inv.invoice_date.substring(0, 10);
+        return d >= f.invoice_between!.from && d <= f.invoice_between!.to;
+      });
     }
-    if (amountRange.max) {
-      const max = parseFloat(amountRange.max);
-      if (!isNaN(max)) {
-        result = result.filter(inv => (inv.total_amount || 0) <= max);
-      }
-    }
-    
+
     // Sort
     result.sort((a, b) => {
       let aVal: any, bVal: any;
@@ -146,9 +145,9 @@ export default function Payments() {
       if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
-    
+
     return result;
-  }, [invoices, searchTerm, statusFilter, dateRange, amountRange, sortField, sortDirection]);
+  }, [invoices, searchTerm, filters, sortField, sortDirection]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -164,14 +163,26 @@ export default function Payments() {
     return sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
   };
 
-  const clearFilters = () => {
-    setSearchTerm("");
-    setStatusFilter("all");
-    setDateRange(undefined);
-    setAmountRange({ min: "", max: "" });
+  const handleClearFilter = (key: keyof PaymentFilters) => {
+    setFilters(prev => {
+      const next = { ...prev };
+      delete next[key];
+      if (key === "month") delete next.invoice_between;
+      if (key === "duration_days") delete next.due_between;
+      return next;
+    });
   };
 
-  const hasActiveFilters = searchTerm || statusFilter !== "all" || dateRange?.from || amountRange.min || amountRange.max;
+  const handleClearAll = () => {
+    setFilters({});
+  };
+
+  const hasActiveFilters = Object.keys(filters).some(k => {
+    const v = (filters as any)[k];
+    if (Array.isArray(v)) return v.length > 0;
+    if (typeof v === "object" && v !== null) return true;
+    return v !== undefined && v !== null && v !== "";
+  });
 
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
@@ -197,79 +208,55 @@ export default function Payments() {
         </p>
       </div>
 
+      {/* Quick Chips */}
+      <PaymentQuickChips
+        filters={filters}
+        onFiltersChange={setFilters}
+        onOpenAdvanced={() => setDrawerOpen(true)}
+      />
+
+      {/* Filter Pills */}
+      {hasActiveFilters && (
+        <PaymentFilterPills
+          filters={filters}
+          onClear={handleClearFilter}
+          onClearAll={handleClearAll}
+        />
+      )}
+
+      {/* Summary Bar */}
+      <PaymentsSummaryBar invoices={filteredInvoices} />
+
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            Payment Tracking ({filteredInvoices.length} of {invoices.length})
-          </CardTitle>
-          <CardDescription>
-            Monitor all payment activities and invoice status
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Filters Row */}
-          <div className="flex flex-wrap items-end gap-3">
-            {/* Search */}
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search invoice or client..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Payment Tracking ({filteredInvoices.length} of {invoices.length})
+              </CardTitle>
+              <CardDescription>
+                Monitor all payment activities and invoice status
+              </CardDescription>
             </div>
-            
-            {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                {PAYMENT_STATUSES.map((status) => (
-                  <SelectItem key={status} value={status}>{status}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            {/* Date Range Filter */}
-            <DateRangeFilter
-              label=""
-              value={dateRange}
-              onChange={setDateRange}
-              placeholder="Date range"
-            />
-            
-            {/* Amount Range */}
             <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                placeholder="Min ₹"
-                value={amountRange.min}
-                onChange={(e) => setAmountRange(prev => ({ ...prev, min: e.target.value }))}
-                className="w-[100px]"
-              />
-              <span className="text-muted-foreground">-</span>
-              <Input
-                type="number"
-                placeholder="Max ₹"
-                value={amountRange.max}
-                onChange={(e) => setAmountRange(prev => ({ ...prev, max: e.target.value }))}
-                className="w-[100px]"
-              />
-            </div>
-            
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters}>
-                <X className="mr-1 h-3 w-3" />
-                Clear
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search invoice or client..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-[250px]"
+                />
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setDrawerOpen(true)}>
+                <SlidersHorizontal className="h-4 w-4 mr-1" />
+                Filters
               </Button>
-            )}
+            </div>
           </div>
-
-          {/* Table */}
+        </CardHeader>
+        <CardContent>
           {loading ? (
             <div className="space-y-2">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -281,7 +268,7 @@ export default function Payments() {
               <CreditCard className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-lg font-medium">No payment records found</p>
               <p className="text-sm text-muted-foreground mt-2">
-                {hasActiveFilters ? "Try adjusting your filters" : "Payment activities will appear here once invoices are created"}
+                {hasActiveFilters || searchTerm ? "Try adjusting your filters" : "Payment activities will appear here once invoices are created"}
               </p>
             </div>
           ) : (
@@ -366,6 +353,15 @@ export default function Payments() {
           )}
         </CardContent>
       </Card>
+
+      {/* Advanced Filters Drawer */}
+      <PaymentAdvancedFilters
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        filters={filters}
+        onApply={setFilters}
+        onReset={handleClearAll}
+      />
     </div>
   );
 }

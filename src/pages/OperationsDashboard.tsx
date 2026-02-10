@@ -15,12 +15,13 @@ export default function OperationsDashboard() {
     setLoading(true);
     
     // Fetch all operations from campaign_assets with related data including media_asset_code
+    // Filter out deleted campaigns to prevent orphaned/duplicate rows from showing
     const { data: opsData, error: opsError } = await supabase
       .from('campaign_assets')
       .select(`
         *,
         media_assets (id, media_asset_code, location, city, area, qr_code_url, latitude, longitude),
-        campaigns:campaign_id (id, campaign_name, client_name, status)
+        campaigns:campaign_id!inner (id, campaign_name, client_name, status, is_deleted)
       `)
       .order('created_at', { ascending: false });
 
@@ -33,18 +34,33 @@ export default function OperationsDashboard() {
       });
       setOperations([]);
     } else {
-      // Transform data to match OperationsDataTable interface
-      const transformed = (opsData || []).map(op => ({
+      // Filter out deleted campaigns and deduplicate by (campaign_id, asset_id) keeping newest
+      const filtered = (opsData || []).filter(
+        op => !(op.campaigns as any)?.is_deleted
+      );
+      
+      // Deduplicate: keep only the latest row per (campaign_id, asset_id)
+      const seen = new Map<string, any>();
+      for (const op of filtered) {
+        const key = `${op.campaign_id}::${op.asset_id}`;
+        const existing = seen.get(key);
+        if (!existing || (op.created_at || '') > (existing.created_at || '')) {
+          seen.set(key, op);
+        }
+      }
+      
+      const transformed = Array.from(seen.values()).map(op => ({
         ...op,
         campaign: op.campaigns,
       }));
       setOperations(transformed);
     }
 
-    // Fetch campaigns for filter dropdown
+    // Fetch campaigns for filter dropdown (exclude deleted)
     const { data: campaignsData, error: campaignsError } = await supabase
       .from('campaigns')
       .select('id, campaign_name, client_name, status')
+      .or('is_deleted.is.null,is_deleted.eq.false')
       .order('created_at', { ascending: false });
 
     if (campaignsError) {

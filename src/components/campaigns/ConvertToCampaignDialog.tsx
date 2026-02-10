@@ -72,6 +72,25 @@ export function ConvertToCampaignDialog({
         throw new Error("Company context is required");
       }
 
+      // Guard: Check if a campaign already exists for this plan
+      const { data: existingCampaign } = await supabase
+        .from("campaigns")
+        .select("id, campaign_name")
+        .eq("plan_id", plan.id)
+        .or("is_deleted.is.null,is_deleted.eq.false")
+        .limit(1)
+        .maybeSingle();
+
+      if (existingCampaign) {
+        toast({
+          title: "Campaign Already Exists",
+          description: `Campaign "${existingCampaign.campaign_name}" (${existingCampaign.id}) already exists for this plan.`,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       // Generate campaign ID
       const campaignId = await generateCampaignCode(startDate);
 

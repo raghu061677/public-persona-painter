@@ -124,8 +124,16 @@ export function DuplicateCampaignDialog({
       if (createError) throw createError;
 
       // Copy campaign assets with reset status (no photos, no mounter assignments)
+      // Guard: deduplicate by asset_id to prevent duplicate rows
       if (campaignAssets && campaignAssets.length > 0) {
-        const newAssets = campaignAssets.map(asset => {
+        const seenAssetIds = new Set<string>();
+        const uniqueAssets = campaignAssets.filter(asset => {
+          if (seenAssetIds.has(asset.asset_id)) return false;
+          seenAssetIds.add(asset.asset_id);
+          return true;
+        });
+
+        const newAssets = uniqueAssets.map(asset => {
           const { 
             id, 
             created_at, 

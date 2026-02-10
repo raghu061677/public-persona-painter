@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -22,8 +23,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Shield } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
 
@@ -32,6 +39,19 @@ interface AddAssetsDialogProps {
   onClose: () => void;
   existingAssetIds: string[];
   onAddAssets: (assets: any[]) => void;
+  /** Plan start date for hold overlap check */
+  planStartDate?: string;
+  /** Plan end date for hold overlap check */
+  planEndDate?: string;
+}
+
+interface HoldInfo {
+  id: string;
+  asset_id: string;
+  client_name: string | null;
+  hold_type: string;
+  start_date: string;
+  end_date: string;
 }
 
 export function AddAssetsDialog({
@@ -39,6 +59,8 @@ export function AddAssetsDialog({
   onClose,
   existingAssetIds,
   onAddAssets,
+  planStartDate,
+  planEndDate,
 }: AddAssetsDialogProps) {
   const [assets, setAssets] = useState<any[]>([]);
   const [filteredAssets, setFilteredAssets] = useState<any[]>([]);
@@ -47,10 +69,14 @@ export function AddAssetsDialog({
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [mediaTypeFilter, setMediaTypeFilter] = useState<string>("all");
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
+  const [holdsMap, setHoldsMap] = useState<Record<string, HoldInfo>>({});
 
   useEffect(() => {
     if (open) {
       fetchAvailableAssets();
+      if (planStartDate && planEndDate) {
+        fetchOverlappingHolds();
+      }
     }
   }, [open]);
 
@@ -69,7 +95,6 @@ export function AddAssetsDialog({
 
       if (error) throw error;
 
-      // Filter out assets already in the plan
       const availableAssets = data?.filter(
         asset => !existingAssetIds.includes(asset.id)
       ) || [];
@@ -83,6 +108,26 @@ export function AddAssetsDialog({
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchOverlappingHolds = async () => {
+    if (!planStartDate || !planEndDate) return;
+    try {
+      const { data } = await supabase
+        .from("asset_holds")
+        .select("id, asset_id, client_name, hold_type, start_date, end_date")
+        .eq("status", "ACTIVE")
+        .lte("start_date", planEndDate)
+        .gte("end_date", planStartDate);
+
+      if (data) {
+        const map: Record<string, HoldInfo> = {};
+        data.forEach((h: any) => { map[h.asset_id] = h; });
+        setHoldsMap(map);
+      }
+    } catch {
+      // Non-critical; just won't show badges
     }
   };
 
@@ -114,6 +159,8 @@ export function AddAssetsDialog({
   const mediaTypes = Array.from(new Set(assets.map(a => a.media_type).filter(Boolean)));
 
   const toggleAssetSelection = (assetId: string) => {
+    // Prevent selecting blocked assets
+    if (holdsMap[assetId]) return;
     const newSelected = new Set(selectedAssets);
     if (newSelected.has(assetId)) {
       newSelected.delete(assetId);
@@ -185,42 +232,77 @@ export function AddAssetsDialog({
                   <TableHead>Area</TableHead>
                   <TableHead>Media Type</TableHead>
                   <TableHead className="text-right">Card Rate</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       Loading assets...
                     </TableCell>
                   </TableRow>
                 ) : filteredAssets.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       No available assets found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredAssets.map((asset) => (
-                    <TableRow key={asset.id}>
-                      <TableCell>
-                        <input
-                          type="checkbox"
-                          checked={selectedAssets.has(asset.id)}
-                          onChange={() => toggleAssetSelection(asset.id)}
-                          className="h-4 w-4 rounded border-gray-300"
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium font-mono text-sm">{asset.media_asset_code || asset.id}</TableCell>
-                      <TableCell>{asset.location}</TableCell>
-                      <TableCell>{asset.city}</TableCell>
-                      <TableCell>{asset.area}</TableCell>
-                      <TableCell>{asset.media_type}</TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(asset.card_rate)}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  filteredAssets.map((asset) => {
+                    const hold = holdsMap[asset.id];
+                    const isBlocked = !!hold;
+                    return (
+                      <TableRow
+                        key={asset.id}
+                        className={isBlocked ? "opacity-60 bg-purple-50/50" : undefined}
+                      >
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            checked={selectedAssets.has(asset.id)}
+                            onChange={() => toggleAssetSelection(asset.id)}
+                            disabled={isBlocked}
+                            className="h-4 w-4 rounded border-gray-300 disabled:cursor-not-allowed"
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium font-mono text-sm">{asset.media_asset_code || asset.id}</TableCell>
+                        <TableCell>{asset.location}</TableCell>
+                        <TableCell>{asset.city}</TableCell>
+                        <TableCell>{asset.area}</TableCell>
+                        <TableCell>{asset.media_type}</TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(asset.card_rate)}
+                        </TableCell>
+                        <TableCell>
+                          {isBlocked ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Badge variant="outline" className="bg-purple-100 text-purple-700 text-[10px] gap-1">
+                                    <Shield className="h-3 w-3" />
+                                    Held
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent side="left">
+                                  <p className="text-xs font-medium">
+                                    {hold.hold_type.replace("_", " ")} — {hold.client_name || "Internal"}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {hold.start_date} → {hold.end_date}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 text-[10px]">
+                              Available
+                            </Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -229,6 +311,11 @@ export function AddAssetsDialog({
           <div className="flex justify-between items-center pt-4 border-t">
             <p className="text-sm text-muted-foreground">
               {selectedAssets.size} asset(s) selected
+              {Object.keys(holdsMap).length > 0 && (
+                <span className="ml-2 text-purple-600">
+                  · {Object.keys(holdsMap).length} held/blocked
+                </span>
+              )}
             </p>
             <div className="flex gap-3">
               <Button variant="outline" onClick={onClose}>

@@ -750,6 +750,180 @@ export type Database = {
           },
         ]
       }
+      asset_holds: {
+        Row: {
+          asset_id: string
+          client_id: string | null
+          client_name: string | null
+          company_id: string
+          converted_campaign_id: string | null
+          created_at: string
+          created_by: string | null
+          end_date: string
+          hold_type: string
+          id: string
+          notes: string | null
+          priority: number
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          asset_id: string
+          client_id?: string | null
+          client_name?: string | null
+          company_id: string
+          converted_campaign_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          end_date: string
+          hold_type: string
+          id?: string
+          notes?: string | null
+          priority?: number
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          asset_id?: string
+          client_id?: string | null
+          client_name?: string | null
+          company_id?: string
+          converted_campaign_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          end_date?: string
+          hold_type?: string
+          id?: string
+          notes?: string | null
+          priority?: number
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_holds_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_profitability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_holds_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_revenue_summary"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_holds_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_utilization"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_holds_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_forecast"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_holds_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_holds_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_calendar_heatmap"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_holds_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_holds_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_availability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_holds_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_booking_windows"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_holds_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_default"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_holds_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_vacant_today"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "asset_holds_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_holds_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_holds_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_holds_converted_campaign_id_fkey"
+            columns: ["converted_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_holds_converted_campaign_id_fkey"
+            columns: ["converted_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_holds_converted_campaign_id_fkey"
+            columns: ["converted_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_forecast"
+            referencedColumns: ["campaign_id"]
+          },
+        ]
+      }
       asset_maintenance: {
         Row: {
           asset_id: string
@@ -9538,6 +9712,10 @@ export type Database = {
           user_role: Database["public"]["Enums"]["app_role"]
         }
         Returns: Json
+      }
+      dates_overlap: {
+        Args: { a_end: string; a_start: string; b_end: string; b_start: string }
+        Returns: boolean
       }
       delete_user_account: { Args: never; Returns: undefined }
       detect_media_asset_duplicates: {

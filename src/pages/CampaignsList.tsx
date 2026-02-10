@@ -2,6 +2,10 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
+import { ListToolbar } from "@/components/list-views";
+import { useListView } from "@/hooks/useListView";
+import { useListViewExport } from "@/hooks/useListViewExport";
+import { campaignExcelRules, campaignPdfRules } from "@/utils/exports/statusColorRules";
 import { PageContainer } from "@/components/ui/page-container";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +47,15 @@ export default function CampaignsList() {
   const navigate = useNavigate();
   const { company } = useCompany();
   const [campaigns, setCampaigns] = useState<any[]>([]);
+
+  // Global List View System
+  const lv = useListView("campaigns.list");
+  const { handleExportExcel, handleExportPdf } = useListViewExport({
+    pageKey: "campaigns.list",
+    title: "Campaigns",
+    excelRules: campaignExcelRules,
+    pdfRules: campaignPdfRules,
+  });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -424,6 +437,28 @@ export default function CampaignsList() {
             )}
           </div>
         </div>
+
+        {/* Global List View Toolbar */}
+        <ListToolbar
+          searchQuery={lv.searchQuery}
+          onSearchChange={(q) => { lv.setSearchQuery(q); setSearchTerm(q); }}
+          searchPlaceholder="Search campaigns..."
+          fields={lv.catalog.fields}
+          groups={lv.catalog.groups}
+          selectedFields={lv.selectedFields}
+          defaultFieldKeys={lv.catalog.defaultFieldKeys}
+          onFieldsChange={lv.setSelectedFields}
+          presets={lv.presets}
+          activePreset={lv.activePreset}
+          onPresetSelect={lv.applyPreset}
+          onPresetSave={lv.saveCurrentAsView}
+          onPresetUpdate={lv.updateCurrentView}
+          onPresetDelete={lv.deletePreset}
+          onPresetDuplicate={lv.duplicatePreset}
+          onExportExcel={(fields) => handleExportExcel(filteredCampaigns, fields)}
+          onExportPdf={(fields) => handleExportPdf(filteredCampaigns, fields)}
+          onReset={lv.resetToDefaults}
+        />
 
         {/* Status Filter Tabs */}
         <div className="mb-6">

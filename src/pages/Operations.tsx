@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { ListToolbar } from "@/components/list-views";
+import { useListView } from "@/hooks/useListView";
+import { useListViewExport } from "@/hooks/useListViewExport";
 import { useNavigate } from "react-router-dom";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,6 +59,13 @@ interface CampaignAsset {
 export default function Operations() {
   const navigate = useNavigate();
   const { company } = useCompany();
+
+  // Global List View System
+  const lv = useListView("ops.campaign_assets");
+  const { handleExportExcel, handleExportPdf } = useListViewExport({
+    pageKey: "ops.campaign_assets",
+    title: "Operations",
+  });
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignAssets, setCampaignAssets] = useState<CampaignAsset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -266,6 +276,28 @@ export default function Operations() {
           <OperationsNotifications />
         </div>
       </div>
+
+      {/* Global List View Toolbar */}
+      <ListToolbar
+        searchQuery={lv.searchQuery}
+        onSearchChange={lv.setSearchQuery}
+        searchPlaceholder="Search operations..."
+        fields={lv.catalog.fields}
+        groups={lv.catalog.groups}
+        selectedFields={lv.selectedFields}
+        defaultFieldKeys={lv.catalog.defaultFieldKeys}
+        onFieldsChange={lv.setSelectedFields}
+        presets={lv.presets}
+        activePreset={lv.activePreset}
+        onPresetSelect={lv.applyPreset}
+        onPresetSave={lv.saveCurrentAsView}
+        onPresetUpdate={lv.updateCurrentView}
+        onPresetDelete={lv.deletePreset}
+        onPresetDuplicate={lv.duplicatePreset}
+        onExportExcel={(fields) => handleExportExcel(campaignAssets, fields)}
+        onExportPdf={(fields) => handleExportPdf(campaignAssets, fields)}
+        onReset={lv.resetToDefaults}
+      />
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-4">

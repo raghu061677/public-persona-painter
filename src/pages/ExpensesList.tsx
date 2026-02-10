@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
+import { ListToolbar } from "@/components/list-views";
+import { useListView } from "@/hooks/useListView";
+import { useListViewExport } from "@/hooks/useListViewExport";
+import { expenseExcelRules, expensePdfRules } from "@/utils/exports/statusColorRules";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +49,15 @@ import type { ExpenseCategory, CostCenter, ExpenseFormData } from "@/types/expen
 export default function ExpensesList() {
   const { company } = useCompany();
   const [expenses, setExpenses] = useState<any[]>([]);
+
+  // Global List View System
+  const lv = useListView("finance.expenses");
+  const { handleExportExcel, handleExportPdf } = useListViewExport({
+    pageKey: "finance.expenses",
+    title: "Expenses",
+    excelRules: expenseExcelRules,
+    pdfRules: expensePdfRules,
+  });
   const [powerBills, setPowerBills] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -430,6 +443,28 @@ export default function ExpensesList() {
             </Button>
           </div>
         </div>
+
+        {/* Global List View Toolbar */}
+        <ListToolbar
+          searchQuery={lv.searchQuery}
+          onSearchChange={(q) => { lv.setSearchQuery(q); setSearchTerm(q); }}
+          searchPlaceholder="Search expenses..."
+          fields={lv.catalog.fields}
+          groups={lv.catalog.groups}
+          selectedFields={lv.selectedFields}
+          defaultFieldKeys={lv.catalog.defaultFieldKeys}
+          onFieldsChange={lv.setSelectedFields}
+          presets={lv.presets}
+          activePreset={lv.activePreset}
+          onPresetSelect={lv.applyPreset}
+          onPresetSave={lv.saveCurrentAsView}
+          onPresetUpdate={lv.updateCurrentView}
+          onPresetDelete={lv.deletePreset}
+          onPresetDuplicate={lv.duplicatePreset}
+          onExportExcel={(fields) => handleExportExcel(filteredExpenses, fields)}
+          onExportPdf={(fields) => handleExportPdf(filteredExpenses, fields)}
+          onReset={lv.resetToDefaults}
+        />
 
         <div className="mb-6 flex flex-wrap gap-4 items-center">
           <div className="relative flex-1 min-w-[200px] max-w-md">

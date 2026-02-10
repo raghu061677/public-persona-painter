@@ -61,6 +61,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import { generateAvailabilityReportExcel } from "@/lib/reports/generateAvailabilityReportExcel";
+import { CustomExportDialog } from "@/components/reports/CustomExportDialog";
+import { Settings2 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────
 interface AvailabilityRow {
@@ -145,6 +147,7 @@ export default function MediaAvailabilityReport() {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ column: 'available_from', direction: 'asc' });
   const [exporting, setExporting] = useState(false);
   const [autoTrigger, setAutoTrigger] = useState(false);
+  const [customExportOpen, setCustomExportOpen] = useState(false);
 
   // Column visibility
   const {
@@ -373,7 +376,13 @@ export default function MediaAvailabilityReport() {
                 <DropdownMenuLabel>Export Filtered Data ({sortedRows.length} rows)</DropdownMenuLabel>
                 <DropdownMenuItem onClick={handleExportExcel}>
                   <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Excel (.xlsx)
+                  Availability Excel (.xlsx)
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Custom Export</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => setCustomExportOpen(true)}>
+                  <Settings2 className="h-4 w-4 mr-2" />
+                  Custom Fields Excel (.xlsx)
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -702,6 +711,16 @@ export default function MediaAvailabilityReport() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Custom Export Dialog */}
+      <CustomExportDialog
+        open={customExportOpen}
+        onOpenChange={setCustomExportOpen}
+        rows={sortedRows}
+        startDate={startDate}
+        endDate={endDate}
+        companyName={company?.name}
+      />
     </div>
   );
 }

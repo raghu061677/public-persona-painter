@@ -4877,6 +4877,71 @@ export type Database = {
           },
         ]
       }
+      list_view_presets: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          export_format: string
+          export_style: Json
+          field_order: string[]
+          filters: Json
+          id: string
+          is_default: boolean
+          is_shared: boolean
+          page_key: string
+          preset_name: string
+          search_query: string | null
+          selected_fields: string[]
+          sort: Json
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          export_format?: string
+          export_style?: Json
+          field_order?: string[]
+          filters?: Json
+          id?: string
+          is_default?: boolean
+          is_shared?: boolean
+          page_key: string
+          preset_name: string
+          search_query?: string | null
+          selected_fields?: string[]
+          sort?: Json
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          export_format?: string
+          export_style?: Json
+          field_order?: string[]
+          filters?: Json
+          id?: string
+          is_default?: boolean
+          is_shared?: boolean
+          page_key?: string
+          preset_name?: string
+          search_query?: string | null
+          selected_fields?: string[]
+          sort?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_view_presets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketplace_inquiries: {
         Row: {
           asset_id: string | null
@@ -6202,6 +6267,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      page_field_catalog: {
+        Row: {
+          created_at: string
+          data_type: string
+          field_key: string
+          group_name: string
+          id: string
+          is_default: boolean
+          is_exportable: boolean
+          is_filterable: boolean
+          label: string
+          page_key: string
+          sort_order: number
+          updated_at: string
+          width: number | null
+        }
+        Insert: {
+          created_at?: string
+          data_type?: string
+          field_key: string
+          group_name: string
+          id?: string
+          is_default?: boolean
+          is_exportable?: boolean
+          is_filterable?: boolean
+          label: string
+          page_key: string
+          sort_order?: number
+          updated_at?: string
+          width?: number | null
+        }
+        Update: {
+          created_at?: string
+          data_type?: string
+          field_key?: string
+          group_name?: string
+          id?: string
+          is_default?: boolean
+          is_exportable?: boolean
+          is_filterable?: boolean
+          label?: string
+          page_key?: string
+          sort_order?: number
+          updated_at?: string
+          width?: number | null
+        }
+        Relationships: []
       }
       payment_confirmations: {
         Row: {

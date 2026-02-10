@@ -58,6 +58,7 @@ import { EnhancedFilterToggle } from "@/components/common/EnhancedFilterToggle";
 import { useLayoutSettings } from "@/hooks/use-layout-settings";
 import { SortableTableHead, useSortableData, SortConfig } from "@/components/common/SortableTableHead";
 import { Input } from "@/components/ui/input";
+import { PlansSummaryBar } from "@/components/plans/PlansSummaryBar";
 import {
   Command,
   CommandEmpty,
@@ -664,6 +665,9 @@ export default function PlansList() {
           onExportPdf={(fields) => handleExportPdf(filteredPlans, fields)}
           onReset={lv.resetToDefaults}
         />
+
+        {/* Plans Summary Bar */}
+        <PlansSummaryBar plans={filteredPlans} />
 
         <Card>
           <CardContent className="p-2">

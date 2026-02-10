@@ -45,6 +45,7 @@ import { ExpenseFormDialog } from "@/components/expenses/ExpenseFormDialog";
 import { PageCustomization, PageCustomizationOption } from "@/components/ui/page-customization";
 import { getAssetDisplayCode } from "@/lib/assets/getAssetDisplayCode";
 import type { ExpenseCategory, CostCenter, ExpenseFormData } from "@/types/expenses";
+import { ExpensesSummaryBar } from "@/components/expenses/ExpensesSummaryBar";
 
 export default function ExpensesList() {
   const { company } = useCompany();
@@ -524,8 +525,13 @@ export default function ExpensesList() {
           </Button>
         </div>
 
-        {/* Summary Cards */}
+        {/* Summary Bar */}
         {showSummaryCards && (
+          <ExpensesSummaryBar expenses={filteredExpenses} />
+        )}
+
+        {/* Legacy Summary Cards */}
+        {false && showSummaryCards && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <Card>
               <CardHeader className="pb-2">

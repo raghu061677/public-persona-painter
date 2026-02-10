@@ -26,6 +26,9 @@ import PowerBillKPIs from "@/components/power-bills/PowerBillKPIs";
 import SixMonthChart from "@/components/power-bills/SixMonthChart";
 import UnpaidBillsTable from "@/components/power-bills/UnpaidBillsTable";
 import { BookmarkletInstructions } from "@/components/power-bills/BookmarkletInstructions";
+import { PowerBillsSummaryBar } from "@/components/powerBills/PowerBillsSummaryBar";
+import { PowerBillAdvancedFilters, PowerBillFilterPills, type PowerBillFilters } from "@/components/powerBills/PowerBillAdvancedFilters";
+import { PowerBillQuickChips } from "@/components/powerBills/PowerBillQuickChips";
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -101,6 +104,8 @@ export default function PowerBillsDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [areaFilter, setAreaFilter] = useState<string>("all");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("all");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const advancedFilters = (lv.filters || {}) as PowerBillFilters;
   
   // Column visibility state
   const [showColumns, setShowColumns] = useState({
@@ -559,6 +564,27 @@ export default function PowerBillsDashboard() {
         onReset={lv.resetToDefaults}
       />
 
+      {/* Quick Chips */}
+      <PowerBillQuickChips
+        filters={advancedFilters}
+        onFiltersChange={(f) => lv.setFilters(f as Record<string, any>)}
+        onOpenAdvanced={() => setShowAdvancedFilters(true)}
+      />
+
+      {/* Filter Pills */}
+      <PowerBillFilterPills
+        filters={advancedFilters}
+        onClear={(key) => {
+          const next = { ...advancedFilters };
+          delete next[key];
+          lv.setFilters(next as Record<string, any>);
+        }}
+        onClearAll={() => lv.setFilters({})}
+      />
+
+      {/* Summary Bar */}
+      <PowerBillsSummaryBar bills={filteredAssets} />
+
       {/* KPI Cards */}
       <PowerBillKPIs loading={loading} aggregates={aggregates} />
 
@@ -938,6 +964,15 @@ export default function PowerBillsDashboard() {
         onSuccess={fetchAssetsWithBills}
       />
     )}
+
+    {/* Advanced Filters Drawer */}
+    <PowerBillAdvancedFilters
+      open={showAdvancedFilters}
+      onOpenChange={setShowAdvancedFilters}
+      filters={advancedFilters}
+      onApply={(f) => { lv.setFilters(f as Record<string, any>); }}
+      onReset={() => lv.setFilters({})}
+    />
   </div>
 );
 }

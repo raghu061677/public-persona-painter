@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, TrendingUp, AlertCircle, CheckCircle, Clock, Calendar, List, LayoutGrid } from "lucide-react";
+import { OpsSummaryBar } from "@/components/operations/OpsSummaryBar";
 import { toast } from "@/hooks/use-toast";
 import { OperationsNotifications } from "@/components/operations/OperationsNotifications";
 import { OperationsTasksList } from "@/components/operations/OperationsTasksList";
@@ -298,6 +299,9 @@ export default function Operations() {
         onExportPdf={(fields) => handleExportPdf(campaignAssets, fields)}
         onReset={lv.resetToDefaults}
       />
+
+      {/* Summary Bar */}
+      <OpsSummaryBar assets={campaignAssets} />
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-4">

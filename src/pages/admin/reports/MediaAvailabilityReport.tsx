@@ -63,6 +63,9 @@ import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import { generateAvailabilityReportExcel } from "@/lib/reports/generateAvailabilityReportExcel";
 import { CustomExportDialog } from "@/components/reports/CustomExportDialog";
 import { Settings2 } from "lucide-react";
+import { ListToolbar } from "@/components/list-views";
+import { useListViewExport } from "@/hooks/useListViewExport";
+import { vacantMediaExcelRules, vacantMediaPdfRules } from "@/utils/exports/statusColorRules";
 
 // ─── Types ───────────────────────────────────────────────────
 interface AvailabilityRow {
@@ -148,6 +151,21 @@ export default function MediaAvailabilityReport() {
   const [exporting, setExporting] = useState(false);
   const [autoTrigger, setAutoTrigger] = useState(false);
   const [customExportOpen, setCustomExportOpen] = useState(false);
+
+  // Global List View System
+  const { lv, handleExportExcel, handleExportPdf } = useListViewExport({
+    pageKey: "reports.vacant_media",
+    title: "MEDIA AVAILABILITY REPORT",
+    subtitle: `${startDate} to ${endDate}`,
+    excelRules: vacantMediaExcelRules,
+    pdfRules: vacantMediaPdfRules,
+    orientation: "l",
+    valueOverrides: {
+      availability_status: (r) =>
+        r.availability_status === "VACANT_NOW" ? "Available" :
+        r.availability_status === "AVAILABLE_SOON" ? "Available Soon" : "Booked",
+    },
+  });
 
   // Column visibility
   const {
@@ -334,8 +352,8 @@ export default function MediaAvailabilityReport() {
     }
   };
 
-  // ─── Export ────────────────────────────────────────────────
-  const handleExportExcel = async () => {
+  // ─── Export (legacy) ────────────────────────────────────────
+  const handleLegacyExportExcel = async () => {
     if (sortedRows.length === 0) {
       toast({ title: "No Data", description: "No rows to export", variant: "destructive" });
       return;
@@ -364,30 +382,31 @@ export default function MediaAvailabilityReport() {
               Check asset availability for specific date ranges
             </p>
           </div>
-          {allRows.length > 0 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button disabled={exporting}>
-                  <Download className="h-4 w-4 mr-2" />
-                  {exporting ? "Exporting..." : "Export"}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Export Filtered Data ({sortedRows.length} rows)</DropdownMenuLabel>
-                <DropdownMenuItem onClick={handleExportExcel}>
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Availability Excel (.xlsx)
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel>Custom Export</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => setCustomExportOpen(true)}>
-                  <Settings2 className="h-4 w-4 mr-2" />
-                  Custom Fields Excel (.xlsx)
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
         </div>
+
+        {/* Global List View Toolbar */}
+        {!lv.loading && (
+          <ListToolbar
+            searchQuery={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchPlaceholder="Search area, location, campaign..."
+            fields={lv.catalog.fields}
+            groups={lv.catalog.groups}
+            selectedFields={lv.selectedFields}
+            defaultFieldKeys={lv.catalog.defaultFieldKeys}
+            onFieldsChange={lv.setSelectedFields}
+            presets={lv.presets}
+            activePreset={lv.activePreset}
+            onPresetSelect={lv.applyPreset}
+            onPresetSave={lv.saveCurrentAsView}
+            onPresetUpdate={lv.updateCurrentView}
+            onPresetDelete={lv.deletePreset}
+            onPresetDuplicate={lv.duplicatePreset}
+            onExportExcel={(fields) => handleExportExcel(sortedRows, fields)}
+            onExportPdf={(fields) => handleExportPdf(sortedRows, fields)}
+            onReset={lv.resetToDefaults}
+          />
+        )}
 
         {/* Quick Date Range Buttons */}
         <div className="flex flex-wrap items-center gap-2 mb-4">

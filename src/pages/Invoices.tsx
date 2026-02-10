@@ -9,6 +9,9 @@ import { ArrowLeft, FileText, Send, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatINR, getInvoiceStatusColor, getDaysOverdue } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
+import { ListToolbar } from "@/components/list-views";
+import { useListViewExport } from "@/hooks/useListViewExport";
+import { invoiceExcelRules, invoicePdfRules } from "@/utils/exports/statusColorRules";
 
 interface Invoice {
   id: string;
@@ -36,6 +39,15 @@ export default function Invoices() {
   const [reminders, setReminders] = useState<PaymentReminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendingReminders, setSendingReminders] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Global List View System
+  const { lv, handleExportExcel, handleExportPdf } = useListViewExport({
+    pageKey: "finance.invoices",
+    title: "INVOICES",
+    excelRules: invoiceExcelRules,
+    pdfRules: invoicePdfRules,
+  });
 
   useEffect(() => {
     fetchInvoices();
@@ -130,6 +142,16 @@ export default function Invoices() {
     }
   };
 
+  // Search-filtered invoices
+  const filteredInvoices = invoices.filter((inv) => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      inv.id?.toLowerCase().includes(term) ||
+      inv.client_name?.toLowerCase().includes(term)
+    );
+  });
+
   const getOverdueInvoices = () => {
     return invoices.filter(inv => {
       const daysOverdue = getDaysOverdue(inv.due_date);
@@ -182,6 +204,30 @@ export default function Invoices() {
       </div>
 
       <div className="container mx-auto px-4 py-8 space-y-6">
+        {/* Global List View Toolbar */}
+        {!lv.loading && (
+          <ListToolbar
+            searchQuery={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchPlaceholder="Search invoice ID, client..."
+            fields={lv.catalog.fields}
+            groups={lv.catalog.groups}
+            selectedFields={lv.selectedFields}
+            defaultFieldKeys={lv.catalog.defaultFieldKeys}
+            onFieldsChange={lv.setSelectedFields}
+            presets={lv.presets}
+            activePreset={lv.activePreset}
+            onPresetSelect={lv.applyPreset}
+            onPresetSave={lv.saveCurrentAsView}
+            onPresetUpdate={lv.updateCurrentView}
+            onPresetDelete={lv.deletePreset}
+            onPresetDuplicate={lv.duplicatePreset}
+            onExportExcel={(fields) => handleExportExcel(filteredInvoices, fields)}
+            onExportPdf={(fields) => handleExportPdf(filteredInvoices, fields)}
+            onReset={() => { lv.resetToDefaults(); setSearchTerm(""); }}
+          />
+        )}
+
         {/* Overdue Alert */}
         {overdueInvoices.length > 0 && (
           <Card className="border-red-200 bg-red-50 dark:bg-red-950/20">
@@ -203,7 +249,7 @@ export default function Invoices() {
             <CardDescription>Invoices awaiting payment</CardDescription>
           </CardHeader>
           <CardContent>
-            {invoices.length > 0 ? (
+            {filteredInvoices.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -219,7 +265,7 @@ export default function Invoices() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {invoices.map((invoice) => {
+                  {filteredInvoices.map((invoice) => {
                     const daysOverdue = getDaysOverdue(invoice.due_date);
                     return (
                       <TableRow key={invoice.id}>

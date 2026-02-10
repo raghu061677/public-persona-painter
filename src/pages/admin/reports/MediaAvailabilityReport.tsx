@@ -32,6 +32,9 @@ import {
   Columns,
   RotateCcw,
   Zap,
+  MoreHorizontal,
+  Shield,
+  ShieldOff,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -49,8 +52,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { format, addDays, addMonths } from "date-fns";
-import { formatCurrency } from "@/utils/mediaAssets";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,6 +60,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import { format, addDays, addMonths } from "date-fns";
+import { formatCurrency } from "@/utils/mediaAssets";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import { generateAvailabilityReportExcel } from "@/lib/reports/generateAvailabilityReportExcel";
 import { CustomExportDialog } from "@/components/reports/CustomExportDialog";
@@ -66,6 +69,8 @@ import { Settings2 } from "lucide-react";
 import { ListToolbar } from "@/components/list-views";
 import { useListViewExport } from "@/hooks/useListViewExport";
 import { vacantMediaExcelRules, vacantMediaPdfRules } from "@/utils/exports/statusColorRules";
+import { AssetHoldDialog } from "@/components/reports/AssetHoldDialog";
+import { ReleaseHoldDialog } from "@/components/reports/ReleaseHoldDialog";
 
 // ─── Types ───────────────────────────────────────────────────
 interface AvailabilityRow {
@@ -84,14 +89,31 @@ interface AvailabilityRow {
   qr_code_url: string | null;
   latitude: number | null;
   longitude: number | null;
-  availability_status: 'VACANT_NOW' | 'AVAILABLE_SOON' | 'BOOKED_THROUGH_RANGE';
-  available_from: string; // date string
+  availability_status: 'VACANT_NOW' | 'AVAILABLE_SOON' | 'BOOKED_THROUGH_RANGE' | 'HELD';
+  available_from: string;
   booked_till: string | null;
   current_campaign_id: string | null;
   current_campaign_name: string | null;
   current_client_name: string | null;
   booking_start: string | null;
   booking_end: string | null;
+  // Hold fields (computed client-side)
+  hold_status?: string | null;
+  hold_type?: string | null;
+  hold_client_name?: string | null;
+  hold_start_date?: string | null;
+  hold_end_date?: string | null;
+  hold_id?: string | null;
+}
+
+interface ActiveHold {
+  id: string;
+  asset_id: string;
+  client_name: string | null;
+  hold_type: string;
+  status: string;
+  start_date: string;
+  end_date: string;
 }
 
 // ─── Column definitions ──────────────────────────────────────
@@ -152,6 +174,12 @@ export default function MediaAvailabilityReport() {
   const [autoTrigger, setAutoTrigger] = useState(false);
   const [customExportOpen, setCustomExportOpen] = useState(false);
 
+  // Hold dialog state
+  const [holdDialogOpen, setHoldDialogOpen] = useState(false);
+  const [holdTarget, setHoldTarget] = useState<{ assetId: string; label: string; bookingEnd?: string | null }>({ assetId: "", label: "" });
+  const [releaseDialogOpen, setReleaseDialogOpen] = useState(false);
+  const [releaseTarget, setReleaseTarget] = useState<{ holdId: string; label: string; clientName?: string | null }>({ holdId: "", label: "" });
+
   // Global List View System
   const { lv, handleExportExcel, handleExportPdf } = useListViewExport({
     pageKey: "reports.vacant_media",
@@ -161,12 +189,12 @@ export default function MediaAvailabilityReport() {
     pdfRules: vacantMediaPdfRules,
     orientation: "l",
     valueOverrides: {
-      availability_status: (r) =>
+      availability_status: (r: any) =>
         r.availability_status === "VACANT_NOW" ? "Available" :
-        r.availability_status === "AVAILABLE_SOON" ? "Available Soon" : "Booked",
+        r.availability_status === "AVAILABLE_SOON" ? "Available Soon" :
+        r.availability_status === "HELD" ? "Held/Blocked" : "Booked",
     },
   });
-
   // Column visibility
   const {
     visibleKeys,
@@ -200,7 +228,7 @@ export default function MediaAvailabilityReport() {
     }
   };
 
-  // ─── Load availability via RPC ─────────────────────────────
+  // ─── Load availability via RPC + holds ─────────────────────
   const loadAvailability = useCallback(async () => {
     if (!company?.id) return;
     const trimmedStart = (startDate || '').trim();
@@ -211,19 +239,71 @@ export default function MediaAvailabilityReport() {
     }
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('fn_media_availability_range', {
-        p_company_id: company.id,
-        p_start: trimmedStart,
-        p_end: trimmedEnd,
-        p_city: selectedCity === 'all' ? null : selectedCity,
-        p_media_type: selectedMediaType === 'all' ? null : selectedMediaType,
+      // Fetch availability + active holds in parallel
+      const [availResult, holdsResult] = await Promise.all([
+        supabase.rpc('fn_media_availability_range', {
+          p_company_id: company.id,
+          p_start: trimmedStart,
+          p_end: trimmedEnd,
+          p_city: selectedCity === 'all' ? null : selectedCity,
+          p_media_type: selectedMediaType === 'all' ? null : selectedMediaType,
+        }),
+        supabase
+          .from('asset_holds')
+          .select('id, asset_id, client_name, hold_type, status, start_date, end_date')
+          .eq('company_id', company.id)
+          .eq('status', 'ACTIVE')
+          .lte('start_date', trimmedEnd)
+          .gte('end_date', trimmedStart),
+      ]);
+
+      if (availResult.error) throw availResult.error;
+
+      const rows = (availResult.data as AvailabilityRow[]) || [];
+      const holds = (holdsResult.data as ActiveHold[]) || [];
+
+      // Build a map: asset_id -> hold that overlaps report range
+      const holdMap = new Map<string, ActiveHold>();
+      for (const h of holds) {
+        // Keep the one with latest end_date if multiple
+        const existing = holdMap.get(h.asset_id);
+        if (!existing || h.end_date > existing.end_date) {
+          holdMap.set(h.asset_id, h);
+        }
+      }
+
+      // Merge hold info into rows
+      const mergedRows = rows.map((row) => {
+        const hold = holdMap.get(row.asset_id);
+        if (hold) {
+          // If asset was VACANT_NOW or AVAILABLE_SOON but has an active hold, mark as HELD
+          // If booked AND held, booking takes precedence in display but we still note the hold
+          const isCurrentlyBooked = row.availability_status === 'BOOKED_THROUGH_RANGE';
+          const newAvailFrom = isCurrentlyBooked
+            ? row.available_from
+            : (hold.end_date > (row.booked_till || '') 
+                ? format(addDays(new Date(hold.end_date), 1), 'yyyy-MM-dd')
+                : row.available_from);
+          
+          return {
+            ...row,
+            availability_status: isCurrentlyBooked ? row.availability_status : 'HELD' as const,
+            available_from: newAvailFrom,
+            hold_status: 'ACTIVE',
+            hold_type: hold.hold_type,
+            hold_client_name: hold.client_name,
+            hold_start_date: hold.start_date,
+            hold_end_date: hold.end_date,
+            hold_id: hold.id,
+          };
+        }
+        return row;
       });
 
-      if (error) throw error;
-      setAllRows((data as AvailabilityRow[]) || []);
+      setAllRows(mergedRows);
       toast({
         title: "Report Updated",
-        description: `Found ${data?.length || 0} assets in range`,
+        description: `Found ${mergedRows.length} assets in range (${holds.length} with holds)`,
       });
     } catch (error: any) {
       console.error('Error loading availability:', error);
@@ -305,11 +385,12 @@ export default function MediaAvailabilityReport() {
   const counts = useMemo(() => {
     const vacantNow = allRows.filter(r => r.availability_status === 'VACANT_NOW').length;
     const availableSoon = allRows.filter(r => r.availability_status === 'AVAILABLE_SOON').length;
+    const held = allRows.filter(r => r.availability_status === 'HELD').length;
     const totalSqft = allRows.reduce((s, r) => s + (Number(r.sqft) || 0), 0);
     const potentialRevenue = allRows
       .filter(r => r.availability_status === 'VACANT_NOW')
       .reduce((s, r) => s + (Number(r.card_rate) || 0), 0);
-    return { total: allRows.length, vacantNow, availableSoon, totalSqft, potentialRevenue };
+    return { total: allRows.length, vacantNow, availableSoon, held, totalSqft, potentialRevenue };
   }, [allRows]);
 
   // ─── Sort UI helpers ───────────────────────────────────────
@@ -329,8 +410,8 @@ export default function MediaAvailabilityReport() {
   };
 
   // ─── Status Badge ──────────────────────────────────────────
-  const getStatusBadge = (status: string) => {
-    switch (status) {
+  const getStatusBadge = (row: AvailabilityRow) => {
+    switch (row.availability_status) {
       case 'VACANT_NOW':
         return (
           <Badge className="bg-green-100 text-green-800 border-green-200">
@@ -342,6 +423,26 @@ export default function MediaAvailabilityReport() {
           <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
             <Clock className="h-3 w-3 mr-1" />Available Soon
           </Badge>
+        );
+      case 'HELD':
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge className="bg-purple-100 text-purple-800 border-purple-200">
+                  <Shield className="h-3 w-3 mr-1" />Held/Blocked
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs text-xs">
+                <div>
+                  <strong>{row.hold_type}</strong>
+                  {row.hold_client_name && <span> — {row.hold_client_name}</span>}
+                  <br />
+                  {row.hold_start_date} → {row.hold_end_date}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         );
       default:
         return (
@@ -557,6 +658,7 @@ export default function MediaAvailabilityReport() {
                 <SelectItem value="all">All Statuses ({allRows.length})</SelectItem>
                 <SelectItem value="VACANT_NOW">Vacant Now ({counts.vacantNow})</SelectItem>
                 <SelectItem value="AVAILABLE_SOON">Available Soon ({counts.availableSoon})</SelectItem>
+                {counts.held > 0 && <SelectItem value="HELD">Held/Blocked ({counts.held})</SelectItem>}
               </SelectContent>
             </Select>
 
@@ -653,6 +755,7 @@ export default function MediaAvailabilityReport() {
                       {isColumnVisible('city') && <TableHead className="whitespace-nowrap">City</TableHead>}
                       {isColumnVisible('booked_till') && <TableHead className="whitespace-nowrap">Booked Till</TableHead>}
                       {isColumnVisible('campaign') && <TableHead className="whitespace-nowrap min-w-[160px]">Campaign</TableHead>}
+                      <TableHead className="whitespace-nowrap w-[50px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -671,7 +774,7 @@ export default function MediaAvailabilityReport() {
                         {isColumnVisible('dimensions') && <TableCell className="whitespace-nowrap">{row.dimension || '-'}</TableCell>}
                         {isColumnVisible('sqft') && <TableCell className="whitespace-nowrap">{row.sqft || '-'}</TableCell>}
                         {isColumnVisible('illumination') && <TableCell className="whitespace-nowrap">{row.illumination || '-'}</TableCell>}
-                        {isColumnVisible('status') && <TableCell>{getStatusBadge(row.availability_status)}</TableCell>}
+                        {isColumnVisible('status') && <TableCell>{getStatusBadge(row)}</TableCell>}
                         {isColumnVisible('available_from') && (
                           <TableCell>
                             {row.availability_status === 'VACANT_NOW' ? (
@@ -716,6 +819,35 @@ export default function MediaAvailabilityReport() {
                             )}
                           </TableCell>
                         )}
+                        {/* Action column */}
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              {row.availability_status === 'HELD' && row.hold_id ? (
+                                <DropdownMenuItem onClick={() => {
+                                  setReleaseTarget({ holdId: row.hold_id!, label: row.media_asset_code || row.asset_id, clientName: row.hold_client_name });
+                                  setReleaseDialogOpen(true);
+                                }}>
+                                  <ShieldOff className="h-4 w-4 mr-2" />Release Hold
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem onClick={() => {
+                                  setHoldTarget({ assetId: row.asset_id, label: row.media_asset_code || row.asset_id, bookingEnd: row.booked_till });
+                                  setHoldDialogOpen(true);
+                                }}>
+                                  <Shield className="h-4 w-4 mr-2" />Block for Client
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -739,6 +871,27 @@ export default function MediaAvailabilityReport() {
         startDate={startDate}
         endDate={endDate}
         companyName={company?.name}
+      />
+
+      {/* Hold Dialog */}
+      <AssetHoldDialog
+        open={holdDialogOpen}
+        onOpenChange={setHoldDialogOpen}
+        assetId={holdTarget.assetId}
+        assetLabel={holdTarget.label}
+        currentBookingEnd={holdTarget.bookingEnd}
+        fallbackStartDate={startDate}
+        onSuccess={loadAvailability}
+      />
+
+      {/* Release Hold Dialog */}
+      <ReleaseHoldDialog
+        open={releaseDialogOpen}
+        onOpenChange={setReleaseDialogOpen}
+        holdId={releaseTarget.holdId}
+        assetLabel={releaseTarget.label}
+        clientName={releaseTarget.clientName}
+        onSuccess={loadAvailability}
       />
     </div>
   );

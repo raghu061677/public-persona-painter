@@ -24,6 +24,17 @@ export function useListViewExport(options: UseListViewExportOptions) {
   const lv = useListView(options.pageKey);
   const { toast } = useToast();
 
+  /** Resolve ordered field keys: prefer field_order from active preset, fallback to selectedFields */
+  const resolveFieldKeys = useCallback(
+    (fieldKeys?: string[]) => {
+      if (fieldKeys && fieldKeys.length > 0) return fieldKeys;
+      const presetOrder = lv.activePreset?.field_order;
+      if (presetOrder && presetOrder.length > 0) return presetOrder;
+      return lv.selectedFields;
+    },
+    [lv.selectedFields, lv.activePreset]
+  );
+
   const buildExcelFields = useCallback(
     (fieldKeys: string[]) => {
       return fieldKeys
@@ -63,10 +74,13 @@ export function useListViewExport(options: UseListViewExportOptions) {
 
   const handleExportExcel = useCallback(
     async (rows: any[], fieldKeys?: string[]) => {
-      const keys = fieldKeys || lv.selectedFields;
-      if (rows.length === 0) {
-        toast({ title: "No Data", description: "No rows to export", variant: "destructive" });
+      const keys = resolveFieldKeys(fieldKeys);
+      if (!rows || rows.length === 0) {
+        toast({ title: "No Data", description: "No rows to export." });
         return;
+      }
+      if (process.env.NODE_ENV === "development") {
+        console.info(`[ListViewExport] Excel export: ${rows.length} rows, ${keys.length} fields`);
       }
       try {
         await exportListExcel({
@@ -86,15 +100,18 @@ export function useListViewExport(options: UseListViewExportOptions) {
         toast({ title: "Export Failed", variant: "destructive" });
       }
     },
-    [lv.selectedFields, company, options, buildExcelFields, toast]
+    [resolveFieldKeys, company, options, buildExcelFields, toast]
   );
 
   const handleExportPdf = useCallback(
     (rows: any[], fieldKeys?: string[]) => {
-      const keys = fieldKeys || lv.selectedFields;
-      if (rows.length === 0) {
-        toast({ title: "No Data", description: "No rows to export", variant: "destructive" });
+      const keys = resolveFieldKeys(fieldKeys);
+      if (!rows || rows.length === 0) {
+        toast({ title: "No Data", description: "No rows to export." });
         return;
+      }
+      if (process.env.NODE_ENV === "development") {
+        console.info(`[ListViewExport] PDF export: ${rows.length} rows, ${keys.length} fields`);
       }
       try {
         exportListPdf({
@@ -102,7 +119,7 @@ export function useListViewExport(options: UseListViewExportOptions) {
             companyName: company?.name || "GO-ADS 360°",
             title: options.title,
             subtitle: options.subtitle,
-            themeColor: company?.theme_color || undefined,
+          themeColor: company?.theme_color || undefined,
           },
           fields: buildPdfFields(keys),
           rows,
@@ -116,7 +133,7 @@ export function useListViewExport(options: UseListViewExportOptions) {
         toast({ title: "Export Failed", variant: "destructive" });
       }
     },
-    [lv.selectedFields, company, options, buildPdfFields, toast]
+    [resolveFieldKeys, company, options, buildPdfFields, toast]
   );
 
   return {

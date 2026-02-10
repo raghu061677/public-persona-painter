@@ -176,16 +176,18 @@ export default function ReportAssetRevenueV2() {
           end_date,
           booking_start_date,
           booking_end_date,
-          campaigns!campaign_assets_campaign_id_fkey (
+          campaigns!campaign_assets_campaign_id_fkey!inner (
             id,
             campaign_name,
             client_name,
             start_date,
             end_date,
             status,
-            company_id
+            company_id,
+            is_deleted
           )
-        `);
+        `)
+        .or('is_deleted.is.null,is_deleted.eq.false', { referencedTable: 'campaigns' });
 
       if (error) throw error;
 

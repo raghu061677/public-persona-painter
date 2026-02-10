@@ -13,6 +13,7 @@ export type ExportBranding = {
   companyName: string;
   title: string;
   subtitle?: string;
+  logoUrl?: string;
 };
 
 export type RowStyleRule<T = any> = {
@@ -56,6 +57,34 @@ export async function exportListExcel<T = any>(opts: ExportListExcelOptions<T>):
   ws.columns = fields.map((f) => ({
     width: f.width ?? Math.max(12, Math.min(40, (f.label?.length ?? 12) + 6)),
   }));
+
+  // Try to add logo
+  if (opts.branding.logoUrl) {
+    try {
+      let base64 = opts.branding.logoUrl;
+      if (!base64.startsWith("data:")) {
+        const resp = await fetch(opts.branding.logoUrl);
+        if (resp.ok) {
+          const blob = await resp.blob();
+          base64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+      if (base64.startsWith("data:")) {
+        const ext = base64.includes("image/png") ? "png" : "jpeg";
+        const imgId = wb.addImage({ base64, extension: ext });
+        ws.addImage(imgId, {
+          tl: { col: 0, row: 0 },
+          ext: { width: 50, height: 50 },
+        });
+      }
+    } catch {
+      // Logo load failed, continue without it
+    }
+  }
 
   // Row 1: Company branding header (merged)
   ws.mergeCells(1, 1, 1, colCount);

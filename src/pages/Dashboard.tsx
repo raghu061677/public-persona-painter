@@ -34,6 +34,7 @@ import {
   Cell,
 } from "recharts";
 import { PendingApprovalsWidget } from "@/components/dashboard/PendingApprovalsWidget";
+import { BlockedAssetsWidget } from "@/components/dashboard/BlockedAssetsWidget";
 import PowerBillsWidget from "@/components/dashboard/PowerBillsWidget";
 import { ApprovedPlansWidget } from "@/components/dashboard/ApprovedPlansWidget";
 import RoleBasedDashboard, { getRoleDashboardLayout } from "@/components/dashboard/RoleBasedDashboard";
@@ -400,6 +401,11 @@ const Dashboard = () => {
                 <PowerBillsWidget />
               </div>
             )}
+
+            {/* Blocked Assets Widget */}
+            <div className="lg:col-span-4">
+              <BlockedAssetsWidget />
+            </div>
 
             {/* Revenue Overview Chart */}
             <div className="lg:col-span-4">

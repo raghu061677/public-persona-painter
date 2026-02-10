@@ -1695,6 +1695,8 @@ export default function PlanDetail() {
           onClose={() => setShowAddAssetsDialog(false)}
           existingAssetIds={planItems.map(item => item.asset_id)}
           onAddAssets={handleAddAssets}
+          planStartDate={plan?.start_date}
+          planEndDate={plan?.end_date}
         />
 
         <SaveAsTemplateDialog

@@ -1,7 +1,16 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Eye, Edit, Trash2, MapPin } from "lucide-react";
+import { Eye, Edit, Trash2, MapPin, Shield, ShieldOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { QRCodeButton } from "./QRCodeButton";
+import { AssetHoldDialog } from "@/components/reports/AssetHoldDialog";
+import { ReleaseHoldDialog } from "@/components/reports/ReleaseHoldDialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Asset {
   id: string;
@@ -34,13 +43,18 @@ export function ImageCell({ row }: any) {
 export function ActionCell({ 
   row, 
   onDelete,
-  onQRGenerated 
+  onQRGenerated,
+  activeHold,
+  onHoldChange,
 }: any) {
   const navigate = useNavigate();
   const asset = row.original;
   const assetId = asset.id;
   const displayCode = asset.media_asset_code || asset.id;
   const hasLocation = asset.latitude && asset.longitude;
+
+  const [showHoldDialog, setShowHoldDialog] = useState(false);
+  const [showReleaseDialog, setShowReleaseDialog] = useState(false);
 
   const openStreetView = () => {
     if (asset.google_street_view_url) {
@@ -52,60 +66,115 @@ export function ActionCell({
   };
 
   return (
-    <div className="flex items-center justify-end gap-2">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
-        onClick={() => navigate(`/admin/media-assets/${displayCode}`)}
-        title="View Details"
-      >
-        <Eye className="h-4 w-4" />
-      </Button>
-      
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
-        onClick={() => navigate(`/admin/media-assets/edit/${displayCode}`)}
-        title="Edit"
-      >
-        <Edit className="h-4 w-4" />
-      </Button>
-      
-      {hasLocation && (
+    <>
+      <div className="flex items-center justify-end gap-2">
         <Button
           variant="ghost"
           size="icon"
           className="h-8 w-8"
-          onClick={openStreetView}
-          title="Street View"
+          onClick={() => navigate(`/admin/media-assets/${displayCode}`)}
+          title="View Details"
         >
-          <MapPin className="h-4 w-4" />
+          <Eye className="h-4 w-4" />
         </Button>
-      )}
-      
-      <QRCodeButton
+        
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={() => navigate(`/admin/media-assets/edit/${displayCode}`)}
+          title="Edit"
+        >
+          <Edit className="h-4 w-4" />
+        </Button>
+        
+        {hasLocation && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={openStreetView}
+            title="Street View"
+          >
+            <MapPin className="h-4 w-4" />
+          </Button>
+        )}
+
+        {activeHold ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                  onClick={() => setShowReleaseDialog(true)}
+                  title="Release Hold"
+                >
+                  <ShieldOff className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">
+                  {activeHold.hold_type} — {activeHold.client_name || 'Internal'}<br />
+                  {activeHold.start_date} → {activeHold.end_date}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setShowHoldDialog(true)}
+            title="Block/Hold for Client"
+          >
+            <Shield className="h-4 w-4" />
+          </Button>
+        )}
+        
+        <QRCodeButton
+          assetId={assetId}
+          latitude={asset.latitude}
+          longitude={asset.longitude}
+          googleStreetViewUrl={asset.google_street_view_url}
+          locationUrl={asset.location_url}
+          qrCodeUrl={asset.qr_code_url}
+          onQRGenerated={onQRGenerated}
+          size="icon"
+          variant="ghost"
+        />
+        
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+          onClick={() => onDelete(assetId)}
+          title="Delete"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <AssetHoldDialog
+        open={showHoldDialog}
+        onOpenChange={setShowHoldDialog}
         assetId={assetId}
-        latitude={asset.latitude}
-        longitude={asset.longitude}
-        googleStreetViewUrl={asset.google_street_view_url}
-        locationUrl={asset.location_url}
-        qrCodeUrl={asset.qr_code_url}
-        onQRGenerated={onQRGenerated}
-        size="icon"
-        variant="ghost"
+        assetLabel={displayCode}
+        onSuccess={() => onHoldChange?.()}
       />
-      
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-        onClick={() => onDelete(assetId)}
-        title="Delete"
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </div>
+
+      {activeHold && (
+        <ReleaseHoldDialog
+          open={showReleaseDialog}
+          onOpenChange={setShowReleaseDialog}
+          holdId={activeHold.id}
+          assetLabel={displayCode}
+          clientName={activeHold.client_name}
+          onSuccess={() => onHoldChange?.()}
+        />
+      )}
+    </>
   );
 }

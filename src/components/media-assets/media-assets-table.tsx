@@ -263,6 +263,25 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<Asset[]>(assets);
+
+  // Asset holds map for block/release actions
+  const [holdsMap, setHoldsMap] = useState<Record<string, any>>({});
+
+  const fetchActiveHolds = async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const { data } = await supabase
+      .from("asset_holds")
+      .select("id, asset_id, client_name, hold_type, start_date, end_date, status")
+      .eq("status", "ACTIVE")
+      .gte("end_date", today);
+    if (data) {
+      const map: Record<string, any> = {};
+      data.forEach((h: any) => { map[h.asset_id] = h; });
+      setHoldsMap(map);
+    }
+  };
+
+  useEffect(() => { fetchActiveHolds(); }, [assets]);
   
   // Bulk Edit Dialog
   const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
@@ -478,7 +497,15 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
       {
         id: "actions",
         header: () => <div className="text-right">Actions</div>,
-        cell: ({ row }) => <ActionCell row={row} onDelete={openDeleteDialog} onQRGenerated={onRefresh} />,
+        cell: ({ row }) => (
+          <ActionCell
+            row={row}
+            onDelete={openDeleteDialog}
+            onQRGenerated={onRefresh}
+            activeHold={holdsMap[row.original.id] || null}
+            onHoldChange={() => { fetchActiveHolds(); onRefresh(); }}
+          />
+        ),
       },
     ],
     [navigate]

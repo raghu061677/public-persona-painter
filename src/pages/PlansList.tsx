@@ -2,6 +2,10 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
+import { ListToolbar } from "@/components/list-views";
+import { useListView } from "@/hooks/useListView";
+import { useListViewExport } from "@/hooks/useListViewExport";
+import { planExcelRules, planPdfRules } from "@/utils/exports/statusColorRules";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,6 +76,15 @@ export default function PlansList() {
   const navigate = useNavigate();
   const { company } = useCompany();
   const [plans, setPlans] = useState<any[]>([]);
+
+  // Global List View System
+  const lv = useListView("plans.list");
+  const { handleExportExcel, handleExportPdf } = useListViewExport({
+    pageKey: "plans.list",
+    title: "Plans",
+    excelRules: planExcelRules,
+    pdfRules: planPdfRules,
+  });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -630,7 +643,28 @@ export default function PlansList() {
           </div>
         </div>
 
-        {/* Status Filter Tabs */}
+        {/* Global List View Toolbar */}
+        <ListToolbar
+          searchQuery={lv.searchQuery}
+          onSearchChange={(q) => { lv.setSearchQuery(q); setSearchTerm(q); }}
+          searchPlaceholder="Search plans..."
+          fields={lv.catalog.fields}
+          groups={lv.catalog.groups}
+          selectedFields={lv.selectedFields}
+          defaultFieldKeys={lv.catalog.defaultFieldKeys}
+          onFieldsChange={lv.setSelectedFields}
+          presets={lv.presets}
+          activePreset={lv.activePreset}
+          onPresetSelect={lv.applyPreset}
+          onPresetSave={lv.saveCurrentAsView}
+          onPresetUpdate={lv.updateCurrentView}
+          onPresetDelete={lv.deletePreset}
+          onPresetDuplicate={lv.duplicatePreset}
+          onExportExcel={(fields) => handleExportExcel(filteredPlans, fields)}
+          onExportPdf={(fields) => handleExportPdf(filteredPlans, fields)}
+          onReset={lv.resetToDefaults}
+        />
+
         <Card>
           <CardContent className="p-2">
             <div className="flex items-center gap-1 overflow-x-auto pb-1">

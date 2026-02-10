@@ -1,5 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/contexts/CompanyContext";
+import { ListToolbar } from "@/components/list-views";
+import { useListView } from "@/hooks/useListView";
+import { useListViewExport } from "@/hooks/useListViewExport";
+import { powerBillExcelRules, powerBillPdfRules } from "@/utils/exports/statusColorRules";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -71,6 +76,17 @@ const getIlluminationIcon = (type: string | null) => {
 export default function PowerBillsDashboard() {
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
+  const { company } = useCompany();
+
+  // Global List View System
+  const lv = useListView("finance.power_bills");
+  const { handleExportExcel: lvExportExcel, handleExportPdf: lvExportPdf } = useListViewExport({
+    pageKey: "finance.power_bills",
+    title: "Power Bills",
+    excelRules: powerBillExcelRules,
+    pdfRules: powerBillPdfRules,
+  });
+
   const [assets, setAssets] = useState<MediaAssetWithBill[]>([]);
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -520,6 +536,28 @@ export default function PowerBillsDashboard() {
           </Button>
         </div>
       </div>
+
+      {/* Global List View Toolbar */}
+      <ListToolbar
+        searchQuery={lv.searchQuery}
+        onSearchChange={(q) => { lv.setSearchQuery(q); setSearchTerm(q); }}
+        searchPlaceholder="Search power bills..."
+        fields={lv.catalog.fields}
+        groups={lv.catalog.groups}
+        selectedFields={lv.selectedFields}
+        defaultFieldKeys={lv.catalog.defaultFieldKeys}
+        onFieldsChange={lv.setSelectedFields}
+        presets={lv.presets}
+        activePreset={lv.activePreset}
+        onPresetSelect={lv.applyPreset}
+        onPresetSave={lv.saveCurrentAsView}
+        onPresetUpdate={lv.updateCurrentView}
+        onPresetDelete={lv.deletePreset}
+        onPresetDuplicate={lv.duplicatePreset}
+        onExportExcel={(fields) => lvExportExcel(filteredAssets, fields)}
+        onExportPdf={(fields) => lvExportPdf(filteredAssets, fields)}
+        onReset={lv.resetToDefaults}
+      />
 
       {/* KPI Cards */}
       <PowerBillKPIs loading={loading} aggregates={aggregates} />

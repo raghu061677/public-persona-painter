@@ -76,6 +76,7 @@ export default function PlanDetail() {
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showConvertDialog, setShowConvertDialog] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
@@ -813,6 +814,8 @@ export default function PlanDetail() {
   };
 
   const handleConvertToCampaign = async () => {
+    if (isConverting) return; // Prevent double-click
+    setIsConverting(true);
     try {
       console.log("🚀 Starting Plan → Campaign conversion", plan.id);
 
@@ -967,6 +970,8 @@ export default function PlanDetail() {
         variant: "destructive",
       });
       setShowConvertDialog(false);
+    } finally {
+      setIsConverting(false);
     }
   };
 
@@ -1327,9 +1332,13 @@ export default function PlanDetail() {
                   rows={3}
                 />
               </div>
-              <Button onClick={handleConvertToCampaign} className="w-full bg-green-600 hover:bg-green-700">
-                <Rocket className="mr-2 h-4 w-4" />
-                Create Campaign
+              <Button onClick={handleConvertToCampaign} disabled={isConverting} className="w-full bg-green-600 hover:bg-green-700">
+                {isConverting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Rocket className="mr-2 h-4 w-4" />
+                )}
+                {isConverting ? "Converting..." : "Create Campaign"}
               </Button>
             </div>
           </DialogContent>

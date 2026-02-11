@@ -4,6 +4,7 @@ import { format, addMonths } from "date-fns";
 import {
   CheckCircle2,
   XCircle,
+  ArrowUpDown,
   Clock,
   AlertTriangle,
   MapPin,
@@ -563,16 +564,36 @@ export default function VacantMediaReportV2() {
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-12">S.No</TableHead>
-                          <TableHead>Media Type</TableHead>
-                          <TableHead>City</TableHead>
-                          <TableHead>Area</TableHead>
-                          <TableHead>Location</TableHead>
-                          <TableHead>Direction</TableHead>
-                          <TableHead>Dimensions</TableHead>
-                          <TableHead>Sq.Ft</TableHead>
-                          <TableHead>Illumination</TableHead>
-                          <TableHead>Card Rate</TableHead>
-                          <TableHead>Status</TableHead>
+                          {[
+                            { key: "media_type", label: "Media Type" },
+                            { key: "city", label: "City" },
+                            { key: "area", label: "Area" },
+                            { key: "location", label: "Location" },
+                            { key: "direction", label: "Direction" },
+                            { key: "dimensions", label: "Dimensions" },
+                            { key: "total_sqft", label: "Sq.Ft" },
+                            { key: "illumination", label: "Illumination" },
+                            { key: "card_rate", label: "Card Rate" },
+                            { key: "status", label: "Status" },
+                          ].map((col) => (
+                            <TableHead
+                              key={col.key}
+                              className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                              onClick={() => setSortConfig({
+                                field: col.key,
+                                direction: sortConfig.field === col.key && sortConfig.direction === "asc" ? "desc" : "asc",
+                              })}
+                            >
+                              <div className="flex items-center gap-1">
+                                <span>{col.label}</span>
+                                {sortConfig.field === col.key ? (
+                                  <span className="text-xs">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
+                                ) : (
+                                  <ArrowUpDown className="h-3 w-3 opacity-40" />
+                                )}
+                              </div>
+                            </TableHead>
+                          ))}
                         </TableRow>
                       </TableHeader>
                       <TableBody>

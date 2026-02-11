@@ -82,9 +82,9 @@ export function ListToolbar({
   }, [searchQuery]);
 
   return (
-    <div className="flex flex-wrap items-center gap-2 p-3 bg-card border rounded-lg mb-4">
+    <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 p-3 bg-card border rounded-lg mb-4 w-full overflow-hidden">
       {/* Search */}
-      <div className="relative flex-1 min-w-[200px] max-w-[320px]">
+      <div className="relative w-full sm:flex-1 sm:min-w-[200px] sm:max-w-[320px]">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           value={localSearch}

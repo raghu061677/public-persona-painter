@@ -1029,3 +1029,32 @@ input[type="number"] {
   }
 }
 
+/* Mobile admin page layout hardening */
+@layer utilities {
+  /* Prevent horizontal page overflow on mobile */
+  .admin-page-container {
+    @apply w-full overflow-x-hidden;
+  }
+
+  /* Quick filter chips horizontal scroll */
+  .filter-chips-scroll {
+    @apply overflow-x-auto whitespace-nowrap pb-1;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .filter-chips-scroll::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Mobile dialog / sheet full-width overrides */
+@media (max-width: 639px) {
+  /* All Radix dialogs default to near-full-width on mobile */
+  [data-radix-dialog-content] {
+    width: 95vw !important;
+    max-width: none !important;
+    max-height: 85vh !important;
+    overflow-y: auto !important;
+  }
+}
+

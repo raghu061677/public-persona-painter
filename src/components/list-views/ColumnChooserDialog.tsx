@@ -48,7 +48,7 @@ export function ColumnChooserDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg w-[95vw] sm:w-auto max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Custom Fields</DialogTitle>
         </DialogHeader>
@@ -90,7 +90,7 @@ export function ColumnChooserDialog({
           })}
         </ScrollArea>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
+        <DialogFooter className="flex-col sm:flex-row gap-2 sticky bottom-0 bg-background pt-3 pb-1 border-t">
           {onExportExcel && (
             <Button
               variant="outline"

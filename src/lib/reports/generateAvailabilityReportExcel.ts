@@ -103,16 +103,25 @@ export async function generateAvailabilityReportExcel(
   currentRow++;
 
   // Data rows
+  // Helper: format date to DD/MM/YYYY
+  const fmtDateIN = (d: string | null | undefined) => {
+    if (!d) return '';
+    try {
+      const dt = new Date(d);
+      if (isNaN(dt.getTime())) return '';
+      const dd = dt.getDate().toString().padStart(2, '0');
+      const mm = (dt.getMonth() + 1).toString().padStart(2, '0');
+      return `${dd}/${mm}/${dt.getFullYear()}`;
+    } catch { return ''; }
+  };
+
   rows.forEach((row, idx) => {
     const r = worksheet.getRow(currentRow);
     const statusLabel = row.availability_status === 'VACANT_NOW' ? 'Available'
-      : row.availability_status === 'AVAILABLE_SOON' ? 'Available Soon' : 'Booked';
+      : row.availability_status === 'AVAILABLE_SOON' ? `Available from ${fmtDateIN(row.available_from)}` : 'Booked';
     
-    let availFromFormatted = '';
-    try { availFromFormatted = row.available_from ? format(new Date(row.available_from), 'dd-MM-yyyy') : ''; } catch { availFromFormatted = row.available_from || ''; }
-    
-    let bookedTillFormatted = '';
-    try { bookedTillFormatted = row.booked_till ? format(new Date(row.booked_till), 'dd-MM-yyyy') : ''; } catch { bookedTillFormatted = row.booked_till || ''; }
+    const availFromFormatted = fmtDateIN(row.available_from);
+    const bookedTillFormatted = fmtDateIN(row.booked_till);
 
     r.values = [
       idx + 1,

@@ -61,6 +61,18 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { format, addDays, addMonths } from "date-fns";
+
+/** Format date string to Indian DD/MM/YYYY */
+function formatDateIN(dateStr: string | null | undefined): string {
+  if (!dateStr) return '-';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '-';
+    const dd = d.getDate().toString().padStart(2, '0');
+    const mm = (d.getMonth() + 1).toString().padStart(2, '0');
+    return `${dd}/${mm}/${d.getFullYear()}`;
+  } catch { return '-'; }
+}
 import { formatCurrency } from "@/utils/mediaAssets";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import { generateAvailabilityReportExcel } from "@/lib/reports/generateAvailabilityReportExcel";
@@ -191,7 +203,7 @@ export default function MediaAvailabilityReport() {
     valueOverrides: {
       availability_status: (r: any) =>
         r.availability_status === "VACANT_NOW" ? "Available" :
-        r.availability_status === "AVAILABLE_SOON" ? "Available Soon" :
+        r.availability_status === "AVAILABLE_SOON" ? `Available from ${formatDateIN(r.available_from)}` :
         r.availability_status === "HELD" ? "Held/Blocked" : "Booked",
     },
   });
@@ -421,7 +433,7 @@ export default function MediaAvailabilityReport() {
       case 'AVAILABLE_SOON':
         return (
           <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
-            <Clock className="h-3 w-3 mr-1" />Available Soon
+            <Clock className="h-3 w-3 mr-1" />Available from {formatDateIN(row.available_from)}
           </Badge>
         );
       case 'HELD':
@@ -438,7 +450,7 @@ export default function MediaAvailabilityReport() {
                   <strong>{row.hold_type}</strong>
                   {row.hold_client_name && <span> — {row.hold_client_name}</span>}
                   <br />
-                  {row.hold_start_date} → {row.hold_end_date}
+                  {formatDateIN(row.hold_start_date)} → {formatDateIN(row.hold_end_date)}
                 </div>
               </TooltipContent>
             </Tooltip>
@@ -714,8 +726,9 @@ export default function MediaAvailabilityReport() {
             ) : (
               <div className="overflow-x-auto border rounded-md">
                 <Table className="min-w-[1000px]">
-                  <TableHeader>
+                   <TableHeader>
                     <TableRow>
+                      <TableHead className="whitespace-nowrap w-[50px] text-center">S.No</TableHead>
                       {isColumnVisible('area') && (
                         <TableHead className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap" onClick={() => handleSort('area')}>
                           <div className="flex items-center">Area {getSortIcon('area')}</div>
@@ -759,8 +772,9 @@ export default function MediaAvailabilityReport() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sortedRows.map((row) => (
+                    {sortedRows.map((row, rowIndex) => (
                       <TableRow key={row.asset_id}>
+                        <TableCell className="text-center whitespace-nowrap text-muted-foreground">{rowIndex + 1}</TableCell>
                         {isColumnVisible('area') && <TableCell className="whitespace-nowrap">{row.area}</TableCell>}
                         {isColumnVisible('location') && (
                           <TableCell>
@@ -779,11 +793,11 @@ export default function MediaAvailabilityReport() {
                           <TableCell>
                             {row.availability_status === 'VACANT_NOW' ? (
                               <Badge className="bg-green-100 text-green-800 border-green-200">
-                                {format(new Date(row.available_from), 'dd-MM-yyyy')}
+                                {formatDateIN(row.available_from)}
                               </Badge>
                             ) : (
                               <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
-                                {format(new Date(row.available_from), 'dd-MM-yyyy')}
+                                {formatDateIN(row.available_from)}
                               </Badge>
                             )}
                           </TableCell>
@@ -804,7 +818,7 @@ export default function MediaAvailabilityReport() {
                         {isColumnVisible('city') && <TableCell className="whitespace-nowrap">{row.city}</TableCell>}
                         {isColumnVisible('booked_till') && (
                           <TableCell className="whitespace-nowrap">
-                            {row.booked_till ? format(new Date(row.booked_till), 'dd-MM-yyyy') : '-'}
+                            {formatDateIN(row.booked_till)}
                           </TableCell>
                         )}
                         {isColumnVisible('campaign') && (

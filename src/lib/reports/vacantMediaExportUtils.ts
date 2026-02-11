@@ -245,11 +245,12 @@ function mapAvailability(asset: VacantAssetExportData): string {
   if (asset.availability_status === 'available') {
     return 'Available';
   }
+  // For booked/available-soon, show "Booked" (available_from date shown in separate column)
   return 'Booked';
 }
 
 /**
- * Format date from YYYY-MM-DD to dd-MM-yyyy
+ * Format date from YYYY-MM-DD to DD/MM/YYYY (Indian standard)
  */
 function formatAvailableFromDate(dateStr: string | undefined | null): string {
   if (!dateStr) return '';
@@ -261,7 +262,7 @@ function formatAvailableFromDate(dateStr: string | undefined | null): string {
     const day = date.getDate().toString().padStart(2, '0');
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const year = date.getFullYear();
-    return `${day}-${month}-${year}`;
+    return `${day}/${month}/${year}`;
   } catch {
     return '';
   }

@@ -63,6 +63,18 @@ export async function generateVacantMediaPDF(
   doc.text(`Total Sq.Ft: ${totalSqft.toFixed(2)}`, 200, yPos);
 
   // Table data (12 columns)
+  // Helper: format date to DD/MM/YYYY
+  const fmtDateIN = (d: string | undefined | null) => {
+    if (!d) return '-';
+    try {
+      const dt = new Date(d);
+      if (isNaN(dt.getTime())) return '-';
+      const dd = dt.getDate().toString().padStart(2, '0');
+      const mm = (dt.getMonth() + 1).toString().padStart(2, '0');
+      return `${dd}/${mm}/${dt.getFullYear()}`;
+    } catch { return '-'; }
+  };
+
   const tableData = standardizedAssets.map((asset) => [
     asset.sNo.toString(),
     asset.mediaType,
@@ -75,7 +87,7 @@ export async function generateVacantMediaPDF(
     asset.illumination,
     `₹${asset.cardRate.toLocaleString("en-IN")}`,
     asset.availableFrom || '-',
-    asset.availability, // "Available" or "Booked"
+    asset.availability,
   ]);
 
   autoTable(doc, {

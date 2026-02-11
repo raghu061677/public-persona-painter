@@ -398,6 +398,7 @@ export function SelectedAssetsTable({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
+                      type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => setShowPlanHoldDialog(true)}
@@ -415,6 +416,7 @@ export function SelectedAssetsTable({
                 </Tooltip>
               </TooltipProvider>
               <Button
+                type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowPlanReleaseHoldDialog(true)}

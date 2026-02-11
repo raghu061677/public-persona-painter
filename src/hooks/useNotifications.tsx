@@ -35,7 +35,7 @@ export const useNotifications = () => {
   const getSubscription = async () => {
     try {
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      const subscription = await (registration as any).pushManager.getSubscription();
       setState(prev => ({ ...prev, subscription }));
     } catch (error) {
       console.error("Error getting subscription:", error);
@@ -90,7 +90,7 @@ export const useNotifications = () => {
       const response = await supabase.functions.invoke("get-vapid-public-key");
       const { publicKey } = response.data;
 
-      const subscription = await registration.pushManager.subscribe({
+      const subscription = await (registration as any).pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
       });

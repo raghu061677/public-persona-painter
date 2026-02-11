@@ -201,10 +201,14 @@ export default function MediaAvailabilityReport() {
     pdfRules: vacantMediaPdfRules,
     orientation: "l",
     valueOverrides: {
+      sno: (_r: any, idx: number) => idx + 1,
+      asset_id: (r: any) => r.media_asset_code || r.asset_id,
       availability_status: (r: any) =>
         r.availability_status === "VACANT_NOW" ? "Available" :
-        r.availability_status === "AVAILABLE_SOON" ? `Available from ${formatDateIN(r.available_from)}` :
+        r.availability_status === "AVAILABLE_SOON" ? formatDateIN(r.available_from) :
         r.availability_status === "HELD" ? "Held/Blocked" : "Booked",
+      available_from: (r: any) => formatDateIN(r.available_from),
+      booked_till: (r: any) => formatDateIN(r.booked_till),
     },
   });
   // Column visibility

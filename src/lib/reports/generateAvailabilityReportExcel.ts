@@ -118,7 +118,7 @@ export async function generateAvailabilityReportExcel(
   rows.forEach((row, idx) => {
     const r = worksheet.getRow(currentRow);
     const statusLabel = row.availability_status === 'VACANT_NOW' ? 'Available'
-      : row.availability_status === 'AVAILABLE_SOON' ? `Available from ${fmtDateIN(row.available_from)}` : 'Booked';
+      : row.availability_status === 'AVAILABLE_SOON' ? fmtDateIN(row.available_from) : 'Booked';
     
     const availFromFormatted = fmtDateIN(row.available_from);
     const bookedTillFormatted = fmtDateIN(row.booked_till);

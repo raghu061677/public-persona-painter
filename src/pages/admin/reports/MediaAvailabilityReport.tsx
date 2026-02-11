@@ -157,7 +157,7 @@ const COLUMN_LABELS: Record<string, string> = {
   campaign: 'Campaign',
 };
 
-type SortColumn = 'asset_id' | 'location' | 'area' | 'available_from' | null;
+type SortColumn = 'asset_id' | 'location' | 'area' | 'available_from' | 'direction' | 'dimensions' | 'sqft' | 'illumination' | 'status' | 'card_rate' | 'type' | 'city' | 'booked_till' | 'campaign' | null;
 type SortDirection = 'asc' | 'desc' | null;
 
 interface SortConfig {
@@ -384,15 +384,28 @@ export default function MediaAvailabilityReport() {
   const sortedRows = useMemo(() => {
     if (!sortConfig.column || !sortConfig.direction) return filteredRows;
     return [...filteredRows].sort((a, b) => {
-      let aVal = '';
-      let bVal = '';
+      let aVal: string | number = '';
+      let bVal: string | number = '';
       switch (sortConfig.column) {
         case 'asset_id': aVal = a.media_asset_code || a.asset_id; bVal = b.media_asset_code || b.asset_id; break;
         case 'location': aVal = a.location || ''; bVal = b.location || ''; break;
         case 'area': aVal = a.area || ''; bVal = b.area || ''; break;
         case 'available_from': aVal = a.available_from || ''; bVal = b.available_from || ''; break;
+        case 'direction': aVal = a.direction || ''; bVal = b.direction || ''; break;
+        case 'dimensions': aVal = a.dimension || ''; bVal = b.dimension || ''; break;
+        case 'sqft': aVal = a.sqft || 0; bVal = b.sqft || 0; break;
+        case 'illumination': aVal = a.illumination || ''; bVal = b.illumination || ''; break;
+        case 'status': aVal = a.availability_status || ''; bVal = b.availability_status || ''; break;
+        case 'card_rate': aVal = a.card_rate || 0; bVal = b.card_rate || 0; break;
+        case 'type': aVal = a.media_type || ''; bVal = b.media_type || ''; break;
+        case 'city': aVal = a.city || ''; bVal = b.city || ''; break;
+        case 'booked_till': aVal = a.booked_till || ''; bVal = b.booked_till || ''; break;
+        case 'campaign': aVal = a.current_campaign_name || ''; bVal = b.current_campaign_name || ''; break;
       }
-      const cmp = aVal.localeCompare(bVal);
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+      const cmp = String(aVal).localeCompare(String(bVal));
       return sortConfig.direction === 'asc' ? cmp : -cmp;
     });
   }, [filteredRows, sortConfig]);
@@ -743,11 +756,31 @@ export default function MediaAvailabilityReport() {
                           <div className="flex items-center">Location {getSortIcon('location')}</div>
                         </TableHead>
                       )}
-                      {isColumnVisible('direction') && <TableHead className="whitespace-nowrap">Direction</TableHead>}
-                      {isColumnVisible('dimensions') && <TableHead className="whitespace-nowrap">Dimensions</TableHead>}
-                      {isColumnVisible('sqft') && <TableHead className="whitespace-nowrap">Sq.Ft</TableHead>}
-                      {isColumnVisible('illumination') && <TableHead className="whitespace-nowrap">Illumination</TableHead>}
-                      {isColumnVisible('status') && <TableHead className="whitespace-nowrap">Status</TableHead>}
+                      {isColumnVisible('direction') && (
+                        <TableHead className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap" onClick={() => handleSort('direction')}>
+                          <div className="flex items-center">Direction {getSortIcon('direction')}</div>
+                        </TableHead>
+                      )}
+                      {isColumnVisible('dimensions') && (
+                        <TableHead className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap" onClick={() => handleSort('dimensions')}>
+                          <div className="flex items-center">Dimensions {getSortIcon('dimensions')}</div>
+                        </TableHead>
+                      )}
+                      {isColumnVisible('sqft') && (
+                        <TableHead className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap" onClick={() => handleSort('sqft')}>
+                          <div className="flex items-center">Sq.Ft {getSortIcon('sqft')}</div>
+                        </TableHead>
+                      )}
+                      {isColumnVisible('illumination') && (
+                        <TableHead className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap" onClick={() => handleSort('illumination')}>
+                          <div className="flex items-center">Illumination {getSortIcon('illumination')}</div>
+                        </TableHead>
+                      )}
+                      {isColumnVisible('status') && (
+                        <TableHead className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap" onClick={() => handleSort('status')}>
+                          <div className="flex items-center">Status {getSortIcon('status')}</div>
+                        </TableHead>
+                      )}
                       {isColumnVisible('available_from') && (
                         <TableHead className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap" onClick={() => handleSort('available_from')}>
                           <TooltipProvider>
@@ -762,16 +795,36 @@ export default function MediaAvailabilityReport() {
                           </TooltipProvider>
                         </TableHead>
                       )}
-                      {isColumnVisible('card_rate') && <TableHead className="text-right whitespace-nowrap">Card Rate</TableHead>}
+                      {isColumnVisible('card_rate') && (
+                        <TableHead className="cursor-pointer select-none hover:bg-muted/50 text-right whitespace-nowrap" onClick={() => handleSort('card_rate')}>
+                          <div className="flex items-center justify-end">Card Rate {getSortIcon('card_rate')}</div>
+                        </TableHead>
+                      )}
                       {isColumnVisible('asset_id') && (
                         <TableHead className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap" onClick={() => handleSort('asset_id')}>
                           <div className="flex items-center">Asset ID {getSortIcon('asset_id')}</div>
                         </TableHead>
                       )}
-                      {isColumnVisible('type') && <TableHead className="whitespace-nowrap">Type</TableHead>}
-                      {isColumnVisible('city') && <TableHead className="whitespace-nowrap">City</TableHead>}
-                      {isColumnVisible('booked_till') && <TableHead className="whitespace-nowrap">Booked Till</TableHead>}
-                      {isColumnVisible('campaign') && <TableHead className="whitespace-nowrap min-w-[160px]">Campaign</TableHead>}
+                      {isColumnVisible('type') && (
+                        <TableHead className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap" onClick={() => handleSort('type')}>
+                          <div className="flex items-center">Type {getSortIcon('type')}</div>
+                        </TableHead>
+                      )}
+                      {isColumnVisible('city') && (
+                        <TableHead className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap" onClick={() => handleSort('city')}>
+                          <div className="flex items-center">City {getSortIcon('city')}</div>
+                        </TableHead>
+                      )}
+                      {isColumnVisible('booked_till') && (
+                        <TableHead className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap" onClick={() => handleSort('booked_till')}>
+                          <div className="flex items-center">Booked Till {getSortIcon('booked_till')}</div>
+                        </TableHead>
+                      )}
+                      {isColumnVisible('campaign') && (
+                        <TableHead className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap min-w-[160px]" onClick={() => handleSort('campaign')}>
+                          <div className="flex items-center">Campaign {getSortIcon('campaign')}</div>
+                        </TableHead>
+                      )}
                       <TableHead className="whitespace-nowrap w-[50px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>

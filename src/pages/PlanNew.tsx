@@ -782,6 +782,9 @@ export default function PlanNew() {
                 durationDays={formData.duration_days}
                 planStartDate={formData.start_date}
                 planEndDate={formData.end_date}
+                planId={formData.id}
+                planClientId={formData.client_id}
+                planClientName={formData.client_name}
               />
             </CardContent>
           </Card>

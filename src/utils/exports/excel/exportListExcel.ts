@@ -135,7 +135,7 @@ export async function exportListExcel<T = any>(opts: ExportListExcelOptions<T>):
       if (f.type === "currency") {
         cell.numFmt = f.format ?? "₹#,##0";
       } else if (f.type === "number") {
-        cell.numFmt = f.format ?? "#,##0.00";
+        cell.numFmt = f.format ?? (f.key === "sno" ? "0" : "#,##0.00");
       } else if (f.type === "date") {
         cell.numFmt = f.format ?? "dd-mm-yyyy";
       }

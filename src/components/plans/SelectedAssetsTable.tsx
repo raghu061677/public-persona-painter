@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2, Sparkles, Loader2, Settings2, History, ArrowUpDown, ArrowUp, ArrowDown, AlertCircle, CalendarDays, Printer, Hammer, ChevronDown, DollarSign, Calculator } from "lucide-react";
+import { Trash2, Sparkles, Loader2, Settings2, History, ArrowUpDown, ArrowUp, ArrowDown, AlertCircle, CalendarDays, Printer, Hammer, ChevronDown, DollarSign, Calculator, Shield, Unlock } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -79,7 +79,8 @@ import { BulkAssetDatesDialog } from "./BulkAssetDatesDialog";
 import { BulkAssetDaysDialog } from "./BulkAssetDaysDialog";
 import { BulkNegotiatedRateDialog } from "./BulkNegotiatedRateDialog";
 import { BulkBillingModeDialog } from "./BulkBillingModeDialog";
-
+import { PlanHoldDialog } from "./PlanHoldDialog";
+import { PlanReleaseHoldDialog } from "./PlanReleaseHoldDialog";
 type SortDirection = 'asc' | 'desc' | null;
 type SortableColumn = 'asset_id' | 'location' | 'area';
 
@@ -96,6 +97,10 @@ interface SelectedAssetsTableProps {
   durationDays?: number;
   planStartDate?: Date;
   planEndDate?: Date;
+  /** Plan-level hold props (optional — enables Hold/Release buttons) */
+  planId?: string;
+  planClientId?: string;
+  planClientName?: string;
 }
 
 const ALL_COLUMNS = [
@@ -174,6 +179,9 @@ export function SelectedAssetsTable({
   durationDays = 30,
   planStartDate,
   planEndDate,
+  planId,
+  planClientId,
+  planClientName,
 }: SelectedAssetsTableProps) {
   const [loadingRates, setLoadingRates] = useState<Set<string>>(new Set());
   const [showBulkSettingsDialog, setShowBulkSettingsDialog] = useState(false);
@@ -193,7 +201,8 @@ export function SelectedAssetsTable({
   const [showBulkDaysDialog, setShowBulkDaysDialog] = useState(false);
   const [showBulkNegotiatedRateDialog, setShowBulkNegotiatedRateDialog] = useState(false);
   const [showBulkBillingModeDialog, setShowBulkBillingModeDialog] = useState(false);
-  
+  const [showPlanHoldDialog, setShowPlanHoldDialog] = useState(false);
+  const [showPlanReleaseHoldDialog, setShowPlanReleaseHoldDialog] = useState(false);
   const { visibleKeys, setVisibleKeys } = useColumnPrefs(
     'plan-assets',
     ALL_COLUMNS,
@@ -380,8 +389,41 @@ export function SelectedAssetsTable({
           )}
         </div>
 
-        {/* Bulk Update + View Options - Right side */}
+        {/* Hold/Release + Bulk Update + View Options - Right side */}
         <div className="flex items-center gap-2">
+          {/* Hold / Release buttons (only when plan context available) */}
+          {planId && (
+            <>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowPlanHoldDialog(true)}
+                      disabled={!planClientId}
+                    >
+                      <Shield className="h-4 w-4 mr-1" />
+                      Hold / Block
+                    </Button>
+                  </TooltipTrigger>
+                  {!planClientId && (
+                    <TooltipContent>
+                      <p>Select a client first to create holds.</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowPlanReleaseHoldDialog(true)}
+              >
+                <Unlock className="h-4 w-4 mr-1" />
+                Release Hold
+              </Button>
+            </>
+          )}
           {/* Bulk Update Dropdown */}
           <TooltipProvider>
             <Tooltip>
@@ -1242,6 +1284,33 @@ export function SelectedAssetsTable({
         planEndDate={planEndDate}
         onBulkUpdate={handleBulkUpdate}
       />
+
+      {/* Plan Hold Dialog */}
+      {planId && planStartDate && planEndDate && (
+        <PlanHoldDialog
+          open={showPlanHoldDialog}
+          onOpenChange={setShowPlanHoldDialog}
+          planId={planId}
+          planClientId={planClientId || ""}
+          planClientName={planClientName || ""}
+          planStartDate={planStartDate}
+          planEndDate={planEndDate}
+          allAssetIds={assets.map((a) => a.id)}
+          selectedAssetIds={Array.from(selectedAssetIds)}
+        />
+      )}
+
+      {/* Plan Release Hold Dialog */}
+      {planId && (
+        <PlanReleaseHoldDialog
+          open={showPlanReleaseHoldDialog}
+          onOpenChange={setShowPlanReleaseHoldDialog}
+          planId={planId}
+          planClientId={planClientId || ""}
+          allAssetIds={assets.map((a) => a.id)}
+          selectedAssetIds={Array.from(selectedAssetIds)}
+        />
+      )}
     </div>
   );
 }

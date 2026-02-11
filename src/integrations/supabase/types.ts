@@ -764,6 +764,8 @@ export type Database = {
           id: string
           notes: string | null
           priority: number
+          source: string | null
+          source_plan_id: string | null
           start_date: string
           status: string
           updated_at: string
@@ -781,6 +783,8 @@ export type Database = {
           id?: string
           notes?: string | null
           priority?: number
+          source?: string | null
+          source_plan_id?: string | null
           start_date: string
           status?: string
           updated_at?: string
@@ -798,6 +802,8 @@ export type Database = {
           id?: string
           notes?: string | null
           priority?: number
+          source?: string | null
+          source_plan_id?: string | null
           start_date?: string
           status?: string
           updated_at?: string
@@ -921,6 +927,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "media_asset_forecast"
             referencedColumns: ["campaign_id"]
+          },
+          {
+            foreignKeyName: "asset_holds_source_plan_id_fkey"
+            columns: ["source_plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
           },
         ]
       }

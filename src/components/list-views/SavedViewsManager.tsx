@@ -86,7 +86,7 @@ export function SavedViewsManager({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-5 w-5"
+                  className="h-7 w-7 sm:h-5 sm:w-5"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDuplicate(p.id);
@@ -97,7 +97,7 @@ export function SavedViewsManager({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-5 w-5 text-destructive"
+                  className="h-7 w-7 sm:h-5 sm:w-5 text-destructive"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete(p.id);
@@ -123,7 +123,7 @@ export function SavedViewsManager({
       </DropdownMenu>
 
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm w-[95vw] sm:w-auto max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Save View</DialogTitle>
           </DialogHeader>

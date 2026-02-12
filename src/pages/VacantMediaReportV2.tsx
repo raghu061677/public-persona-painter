@@ -488,6 +488,25 @@ export default function VacantMediaReportV2() {
       });
     }
 
+    // Bulk fetch qr_code_url for all visible assets in ONE query
+    const assetIds = currentAssets.map((a) => a.id);
+    const qrMap: Record<string, string | null> = {};
+    if (assetIds.length > 0) {
+      try {
+        const { data: qrRows } = await supabase
+          .from("media_assets")
+          .select("id, qr_code_url")
+          .in("id", assetIds);
+        if (qrRows) {
+          for (const row of qrRows) {
+            qrMap[row.id] = row.qr_code_url ?? null;
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to bulk fetch qr_code_url:", e);
+      }
+    }
+
     // Map currentAssets (VacantAsset[]) to the format expected by generateAvailabilityPPTWithImages
     const availableForExport = currentAssets
       .filter((a) => a.status === "available")
@@ -505,7 +524,7 @@ export default function VacantMediaReportV2() {
         direction: a.direction,
         illumination_type: a.illumination,
         primary_photo_url: null as string | null,
-        qr_code_url: null as string | null,
+        qr_code_url: qrMap[a.id] ?? null,
         latitude: null as number | null,
         longitude: null as number | null,
         availability_status: "available" as const,
@@ -528,7 +547,7 @@ export default function VacantMediaReportV2() {
         direction: a.direction,
         illumination_type: a.illumination,
         primary_photo_url: null as string | null,
-        qr_code_url: null as string | null,
+        qr_code_url: qrMap[a.id] ?? null,
         latitude: null as number | null,
         longitude: null as number | null,
         availability_status: "booked" as const,
@@ -553,7 +572,7 @@ export default function VacantMediaReportV2() {
         direction: a.direction,
         illumination_type: a.illumination,
         primary_photo_url: null as string | null,
-        qr_code_url: null as string | null,
+        qr_code_url: qrMap[a.id] ?? null,
         latitude: null as number | null,
         longitude: null as number | null,
         availability_status: "booked" as const,

@@ -180,52 +180,57 @@ function getPlaceholder(): string {
 
 /**
  * Fetch up to 2 photos for an asset (for Slide B).
- * Priority: media_photos library → campaign proofs → primary_photo_url
+ * Priority: latest campaign proofs → latest uploads (media_photos) → primary_photo_url
  */
 async function fetchAssetPhotos(row: ProposalRow): Promise<string[]> {
   const photos: string[] = [];
 
-  // Try media_photos library
+  // 1) Latest campaign proof photos FIRST
   try {
-    const { data: libPhotos } = await supabase
-      .from("media_photos")
-      .select("photo_url")
+    const { data: campAssets } = await supabase
+      .from("campaign_assets")
+      .select("photos")
       .eq("asset_id", row.asset_id)
-      .order("uploaded_at", { ascending: false })
-      .limit(4);
-    if (libPhotos) {
-      for (const p of libPhotos) {
+      .order("created_at", { ascending: false })
+      .limit(3);
+    if (campAssets) {
+      for (const ca of campAssets) {
         if (photos.length >= 2) break;
-        if (p.photo_url) {
-          const img = await fetchImg(p.photo_url);
-          if (img) photos.push(img);
+        if (ca.photos) {
+          const p = ca.photos as Record<string, string>;
+          const urls = [p.geotag, p.geo, p.traffic1, p.traffic2, p.newspaper].filter(Boolean);
+          for (const url of urls) {
+            if (photos.length >= 2) break;
+            const img = await fetchImg(url!);
+            if (img) photos.push(img);
+          }
         }
       }
     }
   } catch {}
 
-  // Try campaign proof photos if needed
+  // 2) Latest uploads from media_photos library
   if (photos.length < 2) {
     try {
-      const { data: campAssets } = await supabase
-        .from("campaign_assets")
-        .select("photos")
+      const { data: libPhotos } = await supabase
+        .from("media_photos")
+        .select("photo_url")
         .eq("asset_id", row.asset_id)
-        .order("created_at", { ascending: false })
-        .limit(1);
-      if (campAssets?.[0]?.photos) {
-        const p = campAssets[0].photos as Record<string, string>;
-        const urls = [p.geo, p.geotag, p.traffic1, p.traffic2, p.newspaper].filter(Boolean);
-        for (const url of urls) {
+        .order("uploaded_at", { ascending: false })
+        .limit(4);
+      if (libPhotos) {
+        for (const p of libPhotos) {
           if (photos.length >= 2) break;
-          const img = await fetchImg(url!);
-          if (img) photos.push(img);
+          if (p.photo_url) {
+            const img = await fetchImg(p.photo_url);
+            if (img) photos.push(img);
+          }
         }
       }
     } catch {}
   }
 
-  // Fallback: primary_photo_url
+  // 3) Fallback: primary_photo_url
   if (photos.length < 2 && row.primary_photo_url) {
     const img = await fetchImg(row.primary_photo_url);
     if (img && !photos.includes(img)) photos.push(img);
@@ -516,9 +521,20 @@ export async function generateProposalPpt(opts: ProposalPptOptions): Promise<voi
       });
     }
 
+    // QR code on Slide A — bottom-right of details slide, gold frame
+    const qrBase64 = await fetchQR(row.qr_code_url);
+    if (qrBase64) {
+      slideA.addShape("rect" as any, {
+        x: 8.35, y: 5.7, w: 1.15, h: 1.15,
+        fill: { color: CHARCOAL_DEEP },
+        line: { color: GOLD, width: 1 },
+      });
+      slideA.addImage({ data: qrBase64, x: 8.42, y: 5.77, w: 1.0, h: 1.0 });
+    }
+
     addPremiumFooter(slideA, companyName, slideNum, totalSlides);
 
-    // ── SLIDE B: Photos + QR (Dark frame) ─────────────────────
+    // ── SLIDE B: Photos (Dark frame) ──────────────────────────
     const slideB = pptx.addSlide();
     slideB.background = { color: CHARCOAL_DEEP };
 
@@ -538,7 +554,6 @@ export async function generateProposalPpt(opts: ProposalPptOptions): Promise<voi
       const ph = getPlaceholder();
       slideB.addImage({ data: ph, x: 1.5, y: 1.0, w: 7, h: 4.8, sizing: { type: "contain", w: 7, h: 4.8 } });
     } else if (photos.length === 1) {
-      // Gold border frame
       slideB.addShape("rect" as any, {
         x: 0.8, y: 0.9, w: 7.2, h: 5.0,
         fill: { color: CHARCOAL },
@@ -546,8 +561,6 @@ export async function generateProposalPpt(opts: ProposalPptOptions): Promise<voi
       });
       slideB.addImage({ data: photos[0], x: 0.9, y: 1.0, w: 7.0, h: 4.8, sizing: { type: "cover", w: 7.0, h: 4.8 } });
     } else {
-      // Two images with gold border frames
-      // Left image
       slideB.addShape("rect" as any, {
         x: 0.35, y: 0.9, w: 4.6, h: 5.0,
         fill: { color: CHARCOAL },
@@ -555,24 +568,12 @@ export async function generateProposalPpt(opts: ProposalPptOptions): Promise<voi
       });
       slideB.addImage({ data: photos[0], x: 0.45, y: 1.0, w: 4.4, h: 4.8, sizing: { type: "cover", w: 4.4, h: 4.8 } });
 
-      // Right image
       slideB.addShape("rect" as any, {
         x: 5.1, y: 0.9, w: 4.6, h: 5.0,
         fill: { color: CHARCOAL },
         line: { color: GOLD, width: 1.5 },
       });
       slideB.addImage({ data: photos[1], x: 5.2, y: 1.0, w: 4.4, h: 4.8, sizing: { type: "cover", w: 4.4, h: 4.8 } });
-    }
-
-    // QR code — EXACTLY ONE, bottom-right, gold frame
-    const qrBase64 = await fetchQR(row.qr_code_url);
-    if (qrBase64) {
-      slideB.addShape("rect" as any, {
-        x: 8.35, y: 6.0, w: 1.15, h: 1.15,
-        fill: { color: CHARCOAL },
-        line: { color: GOLD, width: 1 },
-      });
-      slideB.addImage({ data: qrBase64, x: 8.42, y: 6.07, w: 1.0, h: 1.0 });
     }
 
     // Location info below photos

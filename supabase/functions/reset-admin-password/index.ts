@@ -1,81 +1,40 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
+// v3.0 - Phase-5: withAuth + getAuthContext + requireRole + audit
+import { corsHeaders } from '../_shared/cors.ts';
+import {
+  getAuthContext, requireRole, isPlatformAdmin, logSecurityAudit,
+  supabaseServiceClient, jsonError, jsonSuccess, withAuth, AuthError,
+} from '../_shared/auth.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+Deno.serve(withAuth(async (req) => {
+  const ctx = await getAuthContext(req);
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  const isAdmin = await isPlatformAdmin(ctx.userId);
+  if (!isAdmin) {
+    throw new AuthError('Only platform admins can reset admin passwords', 403);
   }
 
-  try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
+  const body = await req.json().catch(() => null);
+  if (!body) return jsonError('Invalid JSON body', 400);
 
-    const { email, newPassword } = await req.json();
+  const { email, newPassword } = body;
+  if (!email || typeof email !== 'string') return jsonError('Email is required', 400);
+  if (!newPassword || newPassword.length < 8) return jsonError('Password must be 8+ chars', 400);
 
-    if (!email || !newPassword) {
-      return new Response(
-        JSON.stringify({ error: 'Email and new password are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  const serviceClient = supabaseServiceClient();
+  const { data: { users }, error: listError } = await serviceClient.auth.admin.listUsers();
+  if (listError) throw listError;
 
-    // Get user by email
-    const { data: { users }, error: listError } = await supabaseClient.auth.admin.listUsers();
-    
-    if (listError) {
-      throw new Error(`Failed to list users: ${listError.message}`);
-    }
+  const targetUser = users?.find((u: any) => u.email === email);
+  if (!targetUser) return jsonError('User not found', 404);
 
-    const user = users.find(u => u.email === email);
-    
-    if (!user) {
-      return new Response(
-        JSON.stringify({ error: 'User not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  const { error } = await serviceClient.auth.admin.updateUserById(targetUser.id, { password: newPassword });
+  if (error) throw error;
 
-    // Update password and ensure user is active
-    const { error: updateError } = await supabaseClient.auth.admin.updateUserById(
-      user.id,
-      { 
-        password: newPassword,
-        email_confirm: true,
-        ban_duration: 'none'
-      }
-    );
+  await logSecurityAudit({
+    functionName: 'reset-admin-password', userId: ctx.userId,
+    companyId: ctx.companyId, action: 'reset_admin_password',
+    recordIds: [targetUser.id], status: 'success', req,
+  });
 
-    if (updateError) {
-      throw new Error(`Failed to update password: ${updateError.message}`);
-    }
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Password reset successfully. User is now active and can login.' 
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    console.error('Error resetting password:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-});
+  return jsonSuccess({ message: 'Admin password reset successfully' });
+}));

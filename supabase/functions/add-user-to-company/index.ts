@@ -1,140 +1,107 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from "../_shared/cors.ts";
+// v3.0 - Phase-5: withAuth + getAuthContext + requireRole + audit
+import { corsHeaders } from '../_shared/cors.ts';
+import {
+  getAuthContext, requireRole, isPlatformAdmin, logSecurityAudit,
+  supabaseServiceClient, jsonError, jsonSuccess, withAuth, AuthError,
+} from '../_shared/auth.ts';
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+Deno.serve(withAuth(async (req) => {
+  const ctx = await getAuthContext(req);
+  requireRole(ctx, ['admin']);
+
+  const isAdmin = await isPlatformAdmin(ctx.userId);
+  const body = await req.json().catch(() => null);
+  if (!body) return jsonError('Invalid JSON body', 400);
+
+  const { companyId, userName, userEmail, userPassword, userRole } = body;
+
+  if (!companyId || !userName || !userEmail || !userPassword || !userRole) {
+    return jsonError('Missing required fields', 400);
   }
 
-  try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+  // Check permission: platform admin can add to any company, company admin only to own
+  const hasAccess = isAdmin || companyId === ctx.companyId;
+  if (!hasAccess) {
+    await logSecurityAudit({
+      functionName: 'add-user-to-company', userId: ctx.userId,
+      companyId: ctx.companyId, action: 'add_user_denied',
+      status: 'denied', req, metadata: { targetCompany: companyId },
+    });
+    return jsonError('Forbidden – cannot add users to other companies', 403);
+  }
 
-    // Verify the requester is authenticated
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Authorization required');
-    }
+  const serviceClient = supabaseServiceClient();
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+  // Check if user already exists
+  const { data: existingUser } = await serviceClient
+    .from('company_users')
+    .select('id')
+    .eq('email', userEmail)
+    .eq('company_id', companyId)
+    .maybeSingle();
 
-    if (userError || !user) {
-      throw new Error('Unauthorized');
-    }
+  if (existingUser) {
+    return jsonError('User already exists in this company', 409);
+  }
 
-    // Check if user is platform admin or company admin
-    const { data: companyUsers } = await supabaseClient
-      .from('company_users')
-      .select('company_id, role, companies!inner(type)')
-      .eq('user_id', user.id)
-      .eq('status', 'active');
+  // Create auth user
+  const { data: authUser, error: authError } = await serviceClient.auth.admin.createUser({
+    email: userEmail,
+    password: userPassword,
+    email_confirm: true,
+  });
 
-    const isPlatformAdmin = companyUsers?.some(
-      (cu: any) => cu.companies.type === 'platform_admin'
-    );
+  if (authError) {
+    // User might already exist in auth, try to find them
+    const { data: { users } } = await serviceClient.auth.admin.listUsers();
+    const existing = users?.find((u: any) => u.email === userEmail);
+    if (!existing) throw authError;
 
-    const { companyId, userName, userEmail, userPassword, userRole } = await req.json();
-
-    if (!companyId || !userName || !userEmail || !userPassword || !userRole) {
-      throw new Error('Missing required fields');
-    }
-
-    // Check if user has permission to add users to this company
-    const hasCompanyAccess = isPlatformAdmin || companyUsers?.some(
-      (cu: any) => cu.company_id === companyId && cu.role === 'admin'
-    );
-
-    if (!hasCompanyAccess) {
-      throw new Error('User not allowed to add users to this company');
-    }
-
-    // Create auth user
-    console.log('Creating auth user:', userEmail);
-    const { data: authUser, error: authError } = await supabaseClient.auth.admin.createUser({
+    // Add existing auth user to company
+    const { error: insertError } = await serviceClient.from('company_users').insert({
+      user_id: existing.id,
+      company_id: companyId,
+      name: userName,
       email: userEmail,
-      password: userPassword,
-      email_confirm: true,
-      user_metadata: {
-        name: userName,
-      },
+      role: userRole,
+      status: 'active',
     });
 
-    if (authError) {
-      console.error('Auth error:', authError);
-      throw new Error(`Failed to create user: ${authError.message}`);
-    }
+    if (insertError) throw insertError;
 
-    if (!authUser?.user) {
-      throw new Error('User creation failed - no user returned');
-    }
+    await logSecurityAudit({
+      functionName: 'add-user-to-company', userId: ctx.userId,
+      companyId: ctx.companyId, action: 'add_existing_user_to_company',
+      recordIds: [existing.id], status: 'success', req,
+    });
 
-    console.log('Auth user created:', authUser.user.id);
-
-    // Upsert profile (in case a trigger already created it)
-    const { error: profileError } = await supabaseClient
-      .from('profiles')
-      .upsert({
-        id: authUser.user.id,
-        username: userName,
-      }, {
-        onConflict: 'id'
-      });
-
-    if (profileError) {
-      console.error('Profile error:', profileError);
-      // Don't fail if profile already exists
-      if (profileError.code !== '23505') {
-        throw new Error(`Failed to create profile: ${profileError.message}`);
-      }
-    }
-
-    console.log('Profile created/updated for user:', authUser.user.id);
-
-    // Link user to company
-    const { error: companyUserError } = await supabaseClient
-      .from('company_users')
-      .insert({
-        company_id: companyId,
-        user_id: authUser.user.id,
-        role: userRole,
-        status: 'active',
-        invited_by: user.id,
-      });
-
-    if (companyUserError) {
-      console.error('Company user error:', companyUserError);
-      throw new Error(`Failed to link user to company: ${companyUserError.message}`);
-    }
-
-    console.log('User linked to company successfully');
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        user: {
-          id: authUser.user.id,
-          email: userEmail,
-          name: userName,
-          role: userRole,
-        },
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
-  } catch (error: any) {
-    console.error('Error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      }
-    );
+    return jsonSuccess({ message: 'Existing user added to company', userId: existing.id });
   }
-});
+
+  // New auth user created, add to company
+  const { error: insertError } = await serviceClient.from('company_users').insert({
+    user_id: authUser.user.id,
+    company_id: companyId,
+    name: userName,
+    email: userEmail,
+    role: userRole,
+    status: 'active',
+  });
+
+  if (insertError) throw insertError;
+
+  // Also add to user_roles
+  await serviceClient.from('user_roles').insert({
+    user_id: authUser.user.id,
+    role: userRole,
+  });
+
+  await logSecurityAudit({
+    functionName: 'add-user-to-company', userId: ctx.userId,
+    companyId: ctx.companyId, action: 'add_new_user_to_company',
+    recordIds: [authUser.user.id], status: 'success', req,
+    metadata: { targetCompany: companyId, role: userRole },
+  });
+
+  return jsonSuccess({ message: 'User created and added to company', userId: authUser.user.id });
+}));

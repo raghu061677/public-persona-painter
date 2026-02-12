@@ -214,12 +214,16 @@ export function CampaignHealthAlerts({ campaignId }: CampaignHealthAlertsProps) 
           }
         }
 
-        // 3. Check Budget Overruns - use pro-rated costs for campaign duration
+        // 3. Check Budget Overruns - use negotiated_rate (actual agreed price) for campaign duration
         const breakdown: BudgetBreakdown[] = [];
         const estimatedCosts = assets.reduce((sum, a) => {
-          // Calculate pro-rata rate: (monthly_rate / 30) * campaign_days
-          const monthlyRate = a.card_rate || 0;
-          const proRataRate = (monthlyRate / 30) * campaignDuration;
+          // Use negotiated_rate (actual price) falling back to card_rate only if no negotiation
+          const monthlyRate = a.negotiated_rate || a.card_rate || 0;
+          // Use per-asset booking dates if available, otherwise campaign duration
+          const assetStart = a.booking_start_date ? new Date(a.booking_start_date) : startDate;
+          const assetEnd = a.booking_end_date ? new Date(a.booking_end_date) : endDate;
+          const assetDays = Math.max(1, Math.ceil((assetEnd.getTime() - assetStart.getTime()) / (1000 * 60 * 60 * 24)));
+          const proRataRate = (monthlyRate / 30) * assetDays;
           const printing = a.printing_charges || 0;
           const mounting = a.mounting_charges || 0;
           const totalCost = proRataRate + printing + mounting;

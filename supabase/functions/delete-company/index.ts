@@ -1,103 +1,90 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
+// supabase/functions/delete-company/index.ts
+// v2.0 - Phase-3 Security: Platform admin enforcement + audit logging
+// This function legitimately needs service role for cascade deletes,
+// but MUST enforce platform admin authentication.
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
-};
+import { corsHeaders } from '../_shared/cors.ts';
+import {
+  getAuthContext,
+  isPlatformAdmin,
+  logSecurityAudit,
+  supabaseServiceClient,
+  jsonError,
+  jsonSuccess,
+  withAuth,
+  AuthError,
+} from '../_shared/auth.ts';
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+Deno.serve(withAuth(async (req) => {
+  const ctx = await getAuthContext(req);
+
+  // Only platform admins can delete companies
+  const isAdmin = await isPlatformAdmin(ctx.userId);
+  if (!isAdmin) {
+    await logSecurityAudit({
+      functionName: 'delete-company', userId: ctx.userId,
+      companyId: ctx.companyId, action: 'delete_company',
+      status: 'denied', errorMessage: 'Not a platform admin', req,
+    });
+    throw new AuthError('Only platform admins can delete companies', 403);
   }
 
-  try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    );
+  const body = await req.json().catch(() => null);
+  const companyId = body?.companyId;
 
-    const { companyId } = await req.json();
-
-    if (!companyId) {
-      return new Response(
-        JSON.stringify({ error: 'Company ID is required' }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        }
-      );
-    }
-
-    // Check if it's a platform_admin company
-    const { data: company, error: companyError } = await supabaseClient
-      .from('companies')
-      .select('type')
-      .eq('id', companyId)
-      .single();
-
-    if (companyError) {
-      return new Response(
-        JSON.stringify({ error: `Company not found: ${companyError.message}` }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 404,
-        }
-      );
-    }
-
-    if (company?.type === 'platform_admin') {
-      return new Response(
-        JSON.stringify({ error: 'Cannot delete platform admin company' }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 403,
-        }
-      );
-    }
-
-    // Delete all related data in order
-    await supabaseClient.from('company_users').delete().eq('company_id', companyId);
-    await supabaseClient.from('booking_requests').delete().eq('owner_company_id', companyId);
-    await supabaseClient.from('booking_requests').delete().eq('requester_company_id', companyId);
-    await supabaseClient.from('leads').delete().eq('company_id', companyId);
-    await supabaseClient.from('clients').delete().eq('company_id', companyId);
-    await supabaseClient.from('expenses').delete().eq('company_id', companyId);
-    await supabaseClient.from('invoices').delete().eq('company_id', companyId);
-    await supabaseClient.from('estimations').delete().eq('company_id', companyId);
-    await supabaseClient.from('campaigns').delete().eq('company_id', companyId);
-    await supabaseClient.from('plans').delete().eq('company_id', companyId);
-    await supabaseClient.from('media_assets').delete().eq('company_id', companyId);
-    
-    // Finally delete the company
-    const { error } = await supabaseClient
-      .from('companies')
-      .delete()
-      .eq('id', companyId);
-
-    if (error) {
-      return new Response(
-        JSON.stringify({ error: `Failed to delete company: ${error.message}` }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500,
-        }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({ success: true, message: 'Company and all related data deleted successfully' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-    );
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Delete company error:', errorMessage);
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      }
-    );
+  if (!companyId || typeof companyId !== 'string') {
+    return jsonError('Company ID is required', 400);
   }
-});
+
+  // Validate UUID format
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(companyId)) {
+    return jsonError('Invalid company ID format', 400);
+  }
+
+  const serviceClient = supabaseServiceClient();
+
+  // Check if it's a platform_admin company
+  const { data: company, error: companyError } = await serviceClient
+    .from('companies')
+    .select('type, name')
+    .eq('id', companyId)
+    .single();
+
+  if (companyError) {
+    return jsonError(`Company not found: ${companyError.message}`, 404);
+  }
+
+  if (company?.type === 'platform_admin') {
+    return jsonError('Cannot delete platform admin company', 403);
+  }
+
+  console.log(`[delete-company] Platform admin ${ctx.userId} deleting company ${companyId} (${company.name})`);
+
+  // Delete all related data in order
+  await serviceClient.from('company_users').delete().eq('company_id', companyId);
+  await serviceClient.from('booking_requests').delete().eq('owner_company_id', companyId);
+  await serviceClient.from('booking_requests').delete().eq('requester_company_id', companyId);
+  await serviceClient.from('leads').delete().eq('company_id', companyId);
+  await serviceClient.from('clients').delete().eq('company_id', companyId);
+  await serviceClient.from('expenses').delete().eq('company_id', companyId);
+  await serviceClient.from('invoices').delete().eq('company_id', companyId);
+  await serviceClient.from('estimations').delete().eq('company_id', companyId);
+  await serviceClient.from('campaigns').delete().eq('company_id', companyId);
+  await serviceClient.from('plans').delete().eq('company_id', companyId);
+  await serviceClient.from('media_assets').delete().eq('company_id', companyId);
+
+  const { error } = await serviceClient.from('companies').delete().eq('id', companyId);
+
+  if (error) {
+    return jsonError(`Failed to delete company: ${error.message}`, 500);
+  }
+
+  await logSecurityAudit({
+    functionName: 'delete-company', userId: ctx.userId,
+    companyId: ctx.companyId, action: 'delete_company',
+    recordIds: [companyId], req,
+    metadata: { deleted_company_name: company.name, deleted_company_type: company.type },
+  });
+
+  return jsonSuccess({ success: true, message: 'Company and all related data deleted successfully' });
+}));

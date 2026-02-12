@@ -1,8 +1,8 @@
 /**
- * Phase-5: Shared Edge Function Security Utilities
+ * Phase-6: Shared Edge Function Security Utilities
  * 
  * Provides consistent AuthN, tenant isolation, role authorization,
- * HMAC validation for cron/system endpoints, and audit logging.
+ * HMAC validation for cron/system endpoints, rate limiting, and audit logging.
  * 
  * NEVER trust company_id or role from request body.
  * ALWAYS derive from JWT/database.
@@ -15,13 +15,6 @@ import { corsHeaders } from './cors.ts';
 
 const MAX_TIMESTAMP_SKEW_MS = 5 * 60 * 1000; // 5 minutes
 
-/**
- * Validate HMAC signature for system/cron endpoints.
- * Headers required:
- *   X-GoAds-Timestamp: unix ms
- *   X-GoAds-Signature: hex(hmac_sha256(secret, `${timestamp}.${rawBody}`))
- * Rejects if timestamp skew > 5 min or signature mismatch.
- */
 export async function requireHmac(req: Request, rawBody: string): Promise<void> {
   const secret = Deno.env.get('CRON_HMAC_SECRET');
   if (!secret) {
@@ -45,7 +38,6 @@ export async function requireHmac(req: Request, rawBody: string): Promise<void> 
     throw new AuthError('Request timestamp too old or too far in future (>5 min skew)', 401);
   }
 
-  // Compute expected HMAC
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     'raw',
@@ -65,10 +57,6 @@ export async function requireHmac(req: Request, rawBody: string): Promise<void> 
   }
 }
 
-/**
- * Wrap a system/cron endpoint handler with HMAC validation.
- * Handles CORS preflight and validates HMAC before calling the handler.
- */
 export function withHmac(handler: (req: Request, rawBody: string) => Promise<Response>) {
   return async (req: Request): Promise<Response> => {
     if (req.method === 'OPTIONS') {
@@ -117,11 +105,6 @@ const ALLOWED_ORIGINS: string[] = [
   'http://localhost:3000',
 ];
 
-/**
- * Build CORS headers for a specific request, enforcing origin allowlist.
- * For authenticated routes, only allowed origins get Access-Control-Allow-Origin.
- * For public routes (portal), use the shared corsHeaders (wildcard).
- */
 export function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('Origin') || '';
   if (ALLOWED_ORIGINS.includes(origin)) {
@@ -131,20 +114,14 @@ export function getCorsHeaders(req: Request): Record<string, string> {
       'Vary': 'Origin',
     };
   }
-  // For non-matching origins on authenticated routes, return restrictive headers
   return {
     'Access-Control-Allow-Headers': corsHeaders['Access-Control-Allow-Headers'],
     'Vary': 'Origin',
-    // Intentionally omit Access-Control-Allow-Origin to block cross-origin
   };
 }
 
 // ─── Client Factories ────────────────────────────────────────────────
 
-/**
- * Create a Supabase client scoped to the requesting user's JWT.
- * All queries run under RLS — no service role bypass.
- */
 export function supabaseUserClient(req: Request): SupabaseClient {
   const authHeader = req.headers.get('Authorization');
   if (!authHeader) {
@@ -160,10 +137,6 @@ export function supabaseUserClient(req: Request): SupabaseClient {
   );
 }
 
-/**
- * Create a service-role client. ONLY for true system jobs
- * (webhooks, scheduled tasks) — never for user-triggered endpoints.
- */
 export function supabaseServiceClient(): SupabaseClient {
   return createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -174,10 +147,6 @@ export function supabaseServiceClient(): SupabaseClient {
 
 // ─── Authentication ──────────────────────────────────────────────────
 
-/**
- * Verify the requesting user is authenticated.
- * Returns the authenticated user object.
- */
 export async function requireUser(supabase: SupabaseClient) {
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) {
@@ -188,17 +157,10 @@ export async function requireUser(supabase: SupabaseClient) {
 
 // ─── Authorization Context ──────────────────────────────────────────
 
-/**
- * Get full auth context: userId, companyId, role.
- * Derived from the database — NEVER from request body.
- * Uses a service-role client to read company_users (bypasses RLS)
- * since the user client may not have read access to company_users.
- */
 export async function getAuthContext(req: Request): Promise<AuthContext> {
   const userClient = supabaseUserClient(req);
   const user = await requireUser(userClient);
 
-  // Use service client to reliably read company_users
   const serviceClient = supabaseServiceClient();
   const { data: companyUser, error } = await serviceClient
     .from('company_users')
@@ -220,9 +182,6 @@ export async function getAuthContext(req: Request): Promise<AuthContext> {
   };
 }
 
-/**
- * Check if user is a platform admin (company type = 'platform_admin').
- */
 export async function isPlatformAdmin(userId: string): Promise<boolean> {
   const serviceClient = supabaseServiceClient();
   const { data } = await serviceClient
@@ -236,10 +195,6 @@ export async function isPlatformAdmin(userId: string): Promise<boolean> {
 
 // ─── Role Enforcement ────────────────────────────────────────────────
 
-/**
- * Require the user to have one of the specified roles.
- * Throws 403 if not authorized.
- */
 export function requireRole(ctx: AuthContext, allowedRoles: AppRole[]): void {
   if (!allowedRoles.includes(ctx.role)) {
     throw new AuthError(
@@ -249,21 +204,37 @@ export function requireRole(ctx: AuthContext, allowedRoles: AppRole[]): void {
   }
 }
 
-/**
- * Verify the target record belongs to the user's company.
- * Prevents cross-tenant access.
- */
 export function requireCompanyMatch(ctx: AuthContext, recordCompanyId: string | null): void {
   if (!recordCompanyId || recordCompanyId !== ctx.companyId) {
     throw new AuthError('Forbidden – record does not belong to your company', 403);
   }
 }
 
-// ─── Audit Logging ───────────────────────────────────────────────────
+// ─── In-Memory Rate Limiting ─────────────────────────────────────────
+
+const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
 /**
- * Log a security-relevant action to the security_audit_log table.
+ * Simple in-memory rate limiter. Per-function, per-user or per-IP.
+ * Throws AuthError(429) if limit exceeded.
  */
+export function checkRateLimit(key: string, maxRequests: number, windowMs: number): void {
+  const now = Date.now();
+  const entry = rateLimitStore.get(key);
+
+  if (!entry || now > entry.resetAt) {
+    rateLimitStore.set(key, { count: 1, resetAt: now + windowMs });
+    return;
+  }
+
+  entry.count++;
+  if (entry.count > maxRequests) {
+    throw new AuthError('Rate limit exceeded. Please try again later.', 429);
+  }
+}
+
+// ─── Audit Logging ───────────────────────────────────────────────────
+
 export async function logSecurityAudit(params: {
   functionName: string;
   userId?: string;
@@ -289,9 +260,53 @@ export async function logSecurityAudit(params: {
       metadata: params.metadata || {},
     });
   } catch (e) {
-    // Never let audit logging failures break the main flow
     console.error('[audit] Failed to log:', e);
   }
+}
+
+// ─── Email Recipient Validation ──────────────────────────────────────
+
+/**
+ * Verify that a recipient email belongs to a client/contact within the caller's company.
+ * Prevents sending emails to arbitrary addresses.
+ */
+export async function validateRecipientInCompany(
+  email: string,
+  companyId: string
+): Promise<boolean> {
+  const serviceClient = supabaseServiceClient();
+
+  // Check clients table
+  const { data: clientMatch } = await serviceClient
+    .from('clients')
+    .select('id')
+    .eq('company_id', companyId)
+    .ilike('email', email)
+    .limit(1);
+
+  if (clientMatch && clientMatch.length > 0) return true;
+
+  // Check client_contacts table
+  const { data: contactMatch } = await serviceClient
+    .from('client_contacts')
+    .select('id, clients!inner(company_id)')
+    .ilike('email', email)
+    .limit(1);
+
+  if (contactMatch && contactMatch.length > 0) {
+    const match = contactMatch[0] as any;
+    return match.clients?.company_id === companyId;
+  }
+
+  // Check company_users (internal emails)
+  const { data: companyUserMatch } = await serviceClient
+    .from('company_users')
+    .select('id')
+    .eq('company_id', companyId)
+    .ilike('email', email)
+    .limit(1);
+
+  return (companyUserMatch && companyUserMatch.length > 0) || false;
 }
 
 // ─── Error Handling ──────────────────────────────────────────────────
@@ -303,9 +318,6 @@ export class AuthError extends Error {
   }
 }
 
-/**
- * Standard JSON error response with CORS headers.
- */
 export function jsonError(message: string, status = 400): Response {
   return new Response(
     JSON.stringify({ error: message }),
@@ -313,9 +325,6 @@ export function jsonError(message: string, status = 400): Response {
   );
 }
 
-/**
- * Standard JSON success response with CORS headers.
- */
 export function jsonSuccess(data: unknown, status = 200): Response {
   return new Response(
     JSON.stringify(data),
@@ -323,23 +332,17 @@ export function jsonSuccess(data: unknown, status = 200): Response {
   );
 }
 
-/**
- * Wrap an edge function handler with strict CORS enforcement + error handling.
- * Authenticated routes use origin allowlist; rejects disallowed origins.
- */
 export function withAuth(handler: (req: Request) => Promise<Response>) {
   return async (req: Request): Promise<Response> => {
     const responseHeaders = getCorsHeaders(req);
 
     if (req.method === 'OPTIONS') {
-      // Preflight: only respond with CORS if origin is allowed
       if (!responseHeaders['Access-Control-Allow-Origin']) {
         return new Response(null, { status: 403 });
       }
       return new Response(null, { headers: responseHeaders });
     }
 
-    // For non-preflight: reject disallowed origins
     const origin = req.headers.get('Origin') || '';
     if (origin && !ALLOWED_ORIGINS.includes(origin)) {
       return new Response(
@@ -350,7 +353,6 @@ export function withAuth(handler: (req: Request) => Promise<Response>) {
 
     try {
       const response = await handler(req);
-      // Inject strict CORS headers into response
       for (const [key, value] of Object.entries(responseHeaders)) {
         response.headers.set(key, value);
       }

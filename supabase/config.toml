@@ -160,7 +160,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.send-plan-reminders]
-verify_jwt = true
+verify_jwt = false
 
 [functions.send-push-notification]
 verify_jwt = true

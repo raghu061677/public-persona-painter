@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,13 +12,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { FileSpreadsheet, CheckSquare, Square, RotateCcw } from "lucide-react";
+import { FileSpreadsheet, Presentation, CheckSquare, RotateCcw, Loader2 } from "lucide-react";
 import {
   ALL_EXPORT_FIELDS,
   DEFAULT_CUSTOM_FIELDS,
   FIELD_GROUPS,
   generateCustomAvailabilityExcel,
 } from "@/lib/reports/generateCustomAvailabilityExcel";
+import { generateCustomAvailabilityPpt } from "@/lib/reports/generateCustomAvailabilityPpt";
 import { useToast } from "@/hooks/use-toast";
 
 interface CustomExportDialogProps {
@@ -28,6 +29,7 @@ interface CustomExportDialogProps {
   startDate: string;
   endDate: string;
   companyName?: string;
+  themeColor?: string;
 }
 
 export function CustomExportDialog({
@@ -37,10 +39,11 @@ export function CustomExportDialog({
   startDate,
   endDate,
   companyName,
+  themeColor,
 }: CustomExportDialogProps) {
   const { toast } = useToast();
   const [selectedFields, setSelectedFields] = useState<string[]>([...DEFAULT_CUSTOM_FIELDS]);
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<"excel" | "ppt" | null>(null);
 
   const toggleField = (key: string) => {
     setSelectedFields(prev =>
@@ -72,21 +75,28 @@ export function CustomExportDialog({
   const selectAll = () => setSelectedFields(ALL_EXPORT_FIELDS.map(f => f.key));
   const resetToDefault = () => setSelectedFields([...DEFAULT_CUSTOM_FIELDS]);
 
-  const handleExport = async () => {
+  const handleExport = async (type: "excel" | "ppt") => {
     if (selectedFields.length === 0) {
       toast({ title: "No Fields", description: "Select at least one field to export", variant: "destructive" });
       return;
     }
-    setExporting(true);
+    setExporting(type);
     try {
-      await generateCustomAvailabilityExcel(rows, selectedFields, startDate, endDate, companyName);
-      toast({ title: "Export Complete", description: `Excel exported with ${selectedFields.length} columns` });
+      if (type === "excel") {
+        await generateCustomAvailabilityExcel(rows, selectedFields, startDate, endDate, companyName);
+      } else {
+        await generateCustomAvailabilityPpt(rows, selectedFields, startDate, endDate, companyName, themeColor);
+      }
+      toast({
+        title: "Export Complete",
+        description: `${type === "excel" ? "Excel" : "PPT"} exported with ${selectedFields.length} columns`,
+      });
       onOpenChange(false);
     } catch (err) {
-      console.error('Custom export error:', err);
-      toast({ title: "Export Failed", description: "Could not generate Excel", variant: "destructive" });
+      console.error("Custom export error:", err);
+      toast({ title: "Export Failed", description: `Could not generate ${type.toUpperCase()}`, variant: "destructive" });
     } finally {
-      setExporting(false);
+      setExporting(null);
     }
   };
 
@@ -96,7 +106,7 @@ export function CustomExportDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
-            Custom Excel Export
+            Custom Fields Export
           </DialogTitle>
           <DialogDescription>
             Select the fields you want to include in the export. {rows.length} assets will be exported.
@@ -157,11 +167,32 @@ export function CustomExportDialog({
           </div>
         </ScrollArea>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleExport} disabled={exporting || selectedFields.length === 0} className="gap-2">
-            <FileSpreadsheet className="h-4 w-4" />
-            {exporting ? "Exporting..." : `Export ${selectedFields.length} Columns`}
+          <Button
+            variant="outline"
+            onClick={() => handleExport("ppt")}
+            disabled={!!exporting || selectedFields.length === 0}
+            className="gap-2"
+          >
+            {exporting === "ppt" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Presentation className="h-4 w-4 text-orange-600" />
+            )}
+            {exporting === "ppt" ? "Exporting..." : "Export PPT"}
+          </Button>
+          <Button
+            onClick={() => handleExport("excel")}
+            disabled={!!exporting || selectedFields.length === 0}
+            className="gap-2"
+          >
+            {exporting === "excel" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="h-4 w-4" />
+            )}
+            {exporting === "excel" ? "Exporting..." : "Export Excel"}
           </Button>
         </DialogFooter>
       </DialogContent>

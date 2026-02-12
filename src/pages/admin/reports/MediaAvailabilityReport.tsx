@@ -512,6 +512,16 @@ export default function MediaAvailabilityReport() {
               Check asset availability for specific date ranges
             </p>
           </div>
+          {sortedRows.length > 0 && (
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => setCustomExportOpen(true)}
+            >
+              <Settings2 className="h-4 w-4" />
+              Custom Fields Export
+            </Button>
+          )}
         </div>
 
         {/* Global List View Toolbar */}
@@ -942,6 +952,7 @@ export default function MediaAvailabilityReport() {
         startDate={startDate}
         endDate={endDate}
         companyName={company?.name}
+        themeColor={company?.theme_color}
       />
 
       {/* Hold Dialog */}

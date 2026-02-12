@@ -595,6 +595,13 @@ export type Database = {
             foreignKeyName: "asset_bookings_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_bookings_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
             referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
@@ -905,6 +912,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_holds_converted_campaign_id_fkey"
+            columns: ["converted_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
             referencedColumns: ["id"]
           },
           {
@@ -1584,6 +1598,13 @@ export type Database = {
             foreignKeyName: "campaign_asset_creative_changes_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_asset_creative_changes_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
             referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
@@ -1860,6 +1881,13 @@ export type Database = {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
             referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
@@ -1914,6 +1942,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "campaign_billing_periods_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "campaign_billing_periods_campaign_id_fkey"
             columns: ["campaign_id"]
@@ -1997,6 +2032,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "campaign_creatives_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "campaign_creatives_campaign_id_fkey"
             columns: ["campaign_id"]
@@ -2314,6 +2356,13 @@ export type Database = {
             foreignKeyName: "campaign_items_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_items_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
             referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
@@ -2369,6 +2418,13 @@ export type Database = {
           old_status?: Database["public"]["Enums"]["campaign_status"] | null
         }
         Relationships: [
+          {
+            foreignKeyName: "campaign_status_history_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "campaign_status_history_campaign_id_fkey"
             columns: ["campaign_id"]
@@ -2475,6 +2531,13 @@ export type Database = {
           metadata?: Json | null
         }
         Relationships: [
+          {
+            foreignKeyName: "campaign_timeline_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "campaign_timeline_campaign_id_fkey"
             columns: ["campaign_id"]
@@ -4289,6 +4352,13 @@ export type Database = {
             foreignKeyName: "expenses_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
             referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
@@ -4904,6 +4974,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "invoices_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invoices_campaign_id_fkey"
             columns: ["campaign_id"]
@@ -5676,6 +5753,13 @@ export type Database = {
             foreignKeyName: "media_assets_current_campaign_id_fkey"
             columns: ["current_campaign_id"]
             isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_assets_current_campaign_id_fkey"
+            columns: ["current_campaign_id"]
+            isOneToOne: false
             referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
@@ -6097,6 +6181,13 @@ export type Database = {
             foreignKeyName: "operations_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
             referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
@@ -6291,6 +6382,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_operations_tasks_campaign"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "fk_operations_tasks_campaign"
             columns: ["campaign_id"]
@@ -7667,6 +7765,13 @@ export type Database = {
             foreignKeyName: "fk_converted_campaign"
             columns: ["converted_to_campaign_id"]
             isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_converted_campaign"
+            columns: ["converted_to_campaign_id"]
+            isOneToOne: false
             referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
@@ -8987,6 +9092,39 @@ export type Database = {
           },
         ]
       }
+      campaign_public_share_safe: {
+        Row: {
+          campaign_name: string | null
+          client_name: string | null
+          end_date: string | null
+          id: string | null
+          public_share_enabled: boolean | null
+          public_tracking_token: string | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["campaign_status"] | null
+        }
+        Insert: {
+          campaign_name?: string | null
+          client_name?: string | null
+          end_date?: string | null
+          id?: string | null
+          public_share_enabled?: boolean | null
+          public_tracking_token?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["campaign_status"] | null
+        }
+        Update: {
+          campaign_name?: string | null
+          client_name?: string | null
+          end_date?: string | null
+          id?: string | null
+          public_share_enabled?: boolean | null
+          public_tracking_token?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["campaign_status"] | null
+        }
+        Relationships: []
+      }
       client_outstanding_summary: {
         Row: {
           client_id: string | null
@@ -9119,6 +9257,13 @@ export type Database = {
           total_amount?: never
         }
         Relationships: [
+          {
+            foreignKeyName: "invoices_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invoices_campaign_id_fkey"
             columns: ["campaign_id"]
@@ -9336,9 +9481,16 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["live_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["next_campaign_id"]
             isOneToOne: false
-            referencedRelation: "campaigns"
+            referencedRelation: "campaign_public_share_safe"
             referencedColumns: ["id"]
           },
           {
@@ -9352,7 +9504,7 @@ export type Database = {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["next_campaign_id"]
             isOneToOne: false
-            referencedRelation: "finance_eligible_campaigns"
+            referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
           {
@@ -9365,13 +9517,20 @@ export type Database = {
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["next_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["live_campaign_id"]
             isOneToOne: false
             referencedRelation: "media_asset_forecast"
             referencedColumns: ["campaign_id"]
           },
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
-            columns: ["live_campaign_id"]
+            columns: ["next_campaign_id"]
             isOneToOne: false
             referencedRelation: "media_asset_forecast"
             referencedColumns: ["campaign_id"]
@@ -9394,6 +9553,20 @@ export type Database = {
           next_start_date: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["live_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["next_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["live_campaign_id"]
@@ -9493,9 +9666,16 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["next_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["live_campaign_id"]
             isOneToOne: false
-            referencedRelation: "campaigns"
+            referencedRelation: "campaign_public_share_safe"
             referencedColumns: ["id"]
           },
           {
@@ -9509,7 +9689,7 @@ export type Database = {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["live_campaign_id"]
             isOneToOne: false
-            referencedRelation: "finance_eligible_campaigns"
+            referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
           {
@@ -9522,13 +9702,20 @@ export type Database = {
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["live_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["next_campaign_id"]
             isOneToOne: false
             referencedRelation: "media_asset_forecast"
             referencedColumns: ["campaign_id"]
           },
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
-            columns: ["next_campaign_id"]
+            columns: ["live_campaign_id"]
             isOneToOne: false
             referencedRelation: "media_asset_forecast"
             referencedColumns: ["campaign_id"]
@@ -9573,6 +9760,13 @@ export type Database = {
           total_amount?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "invoices_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invoices_campaign_id_fkey"
             columns: ["campaign_id"]
@@ -9994,10 +10188,8 @@ export type Database = {
         Returns: Json
       }
       get_campaign_limited: {
-        Args: { p_campaign_id: string }
+        Args: { p_id: string }
         Returns: {
-          assigned_to: string
-          billing_cycle: string
           campaign_name: string
           client_id: string
           client_name: string
@@ -10008,7 +10200,7 @@ export type Database = {
           plan_id: string
           start_date: string
           status: string
-          total_assets: number
+          total_amount: number
         }[]
       }
       get_company_active_modules: {
@@ -10027,20 +10219,17 @@ export type Database = {
         Returns: string
       }
       get_invoice_limited: {
-        Args: { p_invoice_id: string }
+        Args: { p_id: string }
         Returns: {
           balance_due: number
-          billing_month: string
           campaign_id: string
           client_id: string
           client_name: string
-          created_at: string
           due_date: string
           id: string
           invoice_date: string
           invoice_no: string
           notes: string
-          paid_amount: number
           status: string
           total_amount: number
         }[]
@@ -10135,58 +10324,103 @@ export type Database = {
           username: string
         }[]
       }
-      list_campaigns_limited: {
-        Args: { p_company_id?: string }
-        Returns: {
-          assigned_to: string
-          campaign_name: string
-          client_id: string
-          client_name: string
-          created_at: string
-          end_date: string
-          id: string
-          is_deleted: boolean
-          notes: string
-          plan_id: string
-          start_date: string
-          status: string
-          total_assets: number
-        }[]
-      }
-      list_invoices_limited: {
-        Args: { p_company_id?: string }
-        Returns: {
-          balance_due: number
-          billing_month: string
-          campaign_id: string
-          client_id: string
-          client_name: string
-          created_at: string
-          due_date: string
-          id: string
-          invoice_date: string
-          invoice_no: string
-          paid_amount: number
-          status: string
-          total_amount: number
-        }[]
-      }
-      list_plans_limited: {
-        Args: { p_company_id?: string }
-        Returns: {
-          client_id: string
-          client_name: string
-          created_at: string
-          created_by: string
-          end_date: string
-          id: string
-          notes: string
-          plan_name: string
-          start_date: string
-          status: string
-          total_locations: number
-        }[]
-      }
+      list_campaigns_limited:
+        | {
+            Args: never
+            Returns: {
+              campaign_name: string
+              client_id: string
+              client_name: string
+              created_at: string
+              end_date: string
+              id: string
+              start_date: string
+              status: string
+              total_amount: number
+            }[]
+          }
+        | {
+            Args: { p_company_id?: string }
+            Returns: {
+              assigned_to: string
+              campaign_name: string
+              client_id: string
+              client_name: string
+              created_at: string
+              end_date: string
+              id: string
+              is_deleted: boolean
+              notes: string
+              plan_id: string
+              start_date: string
+              status: string
+              total_assets: number
+            }[]
+          }
+      list_invoices_limited:
+        | {
+            Args: never
+            Returns: {
+              balance_due: number
+              campaign_id: string
+              client_id: string
+              client_name: string
+              due_date: string
+              id: string
+              invoice_date: string
+              invoice_no: string
+              status: string
+              total_amount: number
+            }[]
+          }
+        | {
+            Args: { p_company_id?: string }
+            Returns: {
+              balance_due: number
+              billing_month: string
+              campaign_id: string
+              client_id: string
+              client_name: string
+              created_at: string
+              due_date: string
+              id: string
+              invoice_date: string
+              invoice_no: string
+              paid_amount: number
+              status: string
+              total_amount: number
+            }[]
+          }
+      list_plans_limited:
+        | {
+            Args: never
+            Returns: {
+              client_id: string
+              created_at: string
+              end_date: string
+              id: string
+              plan_name: string
+              start_date: string
+              status: string
+              total_amount: number
+            }[]
+          }
+        | {
+            Args: { p_company_id?: string }
+            Returns: {
+              client_id: string
+              client_name: string
+              created_at: string
+              created_by: string
+              end_date: string
+              id: string
+              notes: string
+              plan_name: string
+              start_date: string
+              status: string
+              total_locations: number
+            }[]
+          }
       lock_plan_for_conversion: { Args: { p_plan_id: string }; Returns: string }
       log_activity:
         | {

@@ -138,7 +138,7 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.capture-bill-receipt]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-power-bill-reminders]
 verify_jwt = false

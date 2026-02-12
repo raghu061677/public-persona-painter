@@ -1,98 +1,72 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+/**
+ * send-email — Phase-6 Hardened
+ * Auth: JWT + role gate (admin, sales, finance)
+ * Validates recipient belongs to caller's company
+ * Rate limit: 10 emails/min/user
+ * Audit log on every send
+ */
+import {
+  withAuth, getAuthContext, requireRole, checkRateLimit,
+  validateRecipientInCompany, logSecurityAudit, jsonError, jsonSuccess,
+} from '../_shared/auth.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
-};
+const MAX_BODY_SIZE = 16384; // 16KB max for email body
 
-interface EmailRequest {
-  to: string;
-  subject: string;
-  body: string;
-  fromName?: string;
-  fromEmail?: string;
-}
+Deno.serve(withAuth(async (req) => {
+  if (req.method !== 'POST') return jsonError('Method not allowed', 405);
 
-serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const ctx = await getAuthContext(req);
+  requireRole(ctx, ['admin', 'sales', 'finance']);
+  checkRateLimit(`send-email:${ctx.userId}`, 10, 60_000);
 
-  // Only accept POST requests
-  if (req.method !== 'POST') {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Method not allowed' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
+  const raw = await req.text();
+  if (raw.length > MAX_BODY_SIZE) return jsonError('Request body too large', 413);
 
-  try {
-    const { to, subject, body, fromName, fromEmail }: EmailRequest = await req.json();
+  let body: any;
+  try { body = JSON.parse(raw); } catch { return jsonError('Invalid JSON'); }
 
-    // Validate required fields
-    if (!to || !subject || !body) {
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Missing required fields: to, subject, and body are required' 
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  const { to, subject, body: emailBody, fromName, fromEmail } = body;
 
-    // Get Resend API key from environment
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    if (!resendApiKey) {
-      console.error('RESEND_API_KEY not configured');
-      return new Response(
-        JSON.stringify({ success: false, error: 'Email service not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  if (!to || typeof to !== 'string') return jsonError('to (email string) is required');
+  if (!subject || typeof subject !== 'string' || subject.length > 200) return jsonError('subject is required (max 200 chars)');
+  if (!emailBody || typeof emailBody !== 'string') return jsonError('body (html string) is required');
 
-    // Send email via Resend API
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: fromEmail || 'Go-Ads 360° <noreply@go-ads.in>',
-        to: [to],
-        subject: subject,
-        html: body,
-      }),
+  // Validate email format
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return jsonError('Invalid email format');
+
+  // Validate recipient belongs to company
+  const isValid = await validateRecipientInCompany(to, ctx.companyId);
+  if (!isValid) {
+    await logSecurityAudit({
+      functionName: 'send-email', userId: ctx.userId, companyId: ctx.companyId,
+      action: 'email_blocked_invalid_recipient', status: 'denied',
+      metadata: { to: to.slice(0, 50) }, req,
     });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      console.error('Resend API error:', result);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: result.message || 'Failed to send email' 
-        }),
-        { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('Email sent successfully:', result);
-
-    return new Response(
-      JSON.stringify({ success: true, data: result }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error: any) {
-    console.error('Error in send-email function:', error);
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message || 'Internal server error' 
-      }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return jsonError('Recipient email not found in your company contacts', 403);
   }
-});
+
+  const resendApiKey = Deno.env.get('RESEND_API_KEY');
+  if (!resendApiKey) return jsonError('Email service not configured', 500);
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${resendApiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: fromEmail || 'Go-Ads 360° <noreply@go-ads.in>',
+      to: [to],
+      subject,
+      html: emailBody,
+    }),
+  });
+
+  const result = await response.json();
+  if (!response.ok) return jsonError(result.message || 'Failed to send email', response.status);
+
+  await logSecurityAudit({
+    functionName: 'send-email', userId: ctx.userId, companyId: ctx.companyId,
+    action: 'email_sent', recordIds: [result.id || ''],
+    metadata: { to: to.slice(0, 50), subject: subject.slice(0, 50) }, req,
+  });
+
+  return jsonSuccess({ success: true, data: result });
+}));

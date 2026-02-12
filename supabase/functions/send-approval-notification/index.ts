@@ -1,144 +1,94 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+/**
+ * send-approval-notification — Phase-6 Hardened
+ * Auth: JWT + role gate (admin, sales, finance)
+ * Validates plan belongs to caller's company
+ * Rate limit: 5/min/user
+ * Audit log
+ */
+import {
+  withAuth, getAuthContext, requireRole, checkRateLimit,
+  supabaseServiceClient, logSecurityAudit, jsonError, jsonSuccess,
+} from '../_shared/auth.ts';
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const VALID_TYPES = ['approval_request', 'approval_completed', 'approval_rejected'];
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+Deno.serve(withAuth(async (req) => {
+  if (req.method !== 'POST') return jsonError('Method not allowed', 405);
 
-interface ApprovalNotificationRequest {
-  planId: string;
-  approvalLevel: string;
-  requiredRole: string;
-  notificationType: 'approval_request' | 'approval_completed' | 'approval_rejected';
-}
+  const ctx = await getAuthContext(req);
+  requireRole(ctx, ['admin', 'sales', 'finance']);
+  checkRateLimit(`approval-notif:${ctx.userId}`, 5, 60_000);
 
-const handler = async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+  const body = await req.json().catch(() => null);
+  if (!body) return jsonError('Invalid JSON');
+
+  const { planId, approvalLevel, requiredRole, notificationType } = body;
+
+  if (!planId || typeof planId !== 'string') return jsonError('planId is required');
+  if (!notificationType || !VALID_TYPES.includes(notificationType)) return jsonError(`notificationType must be one of: ${VALID_TYPES.join(', ')}`);
+
+  const supabase = supabaseServiceClient();
+
+  // Verify plan belongs to caller's company
+  const { data: plan, error: planError } = await supabase
+    .from('plans')
+    .select('id, plan_name, client_name, grand_total, company_id')
+    .eq('id', planId)
+    .single();
+
+  if (planError || !plan) return jsonError('Plan not found', 404);
+  if (plan.company_id !== ctx.companyId) return jsonError('Plan does not belong to your company', 403);
+
+  // Get approvers from company_users with required role
+  const { data: approvers } = await supabase
+    .from('company_users')
+    .select('user_id, email, name')
+    .eq('company_id', ctx.companyId)
+    .eq('role', requiredRole || 'admin')
+    .eq('status', 'active');
+
+  const emails = (approvers || []).filter(a => a.email).map(a => a.email);
+
+  if (emails.length === 0) {
+    return jsonSuccess({ message: 'No approvers found', emailsSent: 0 });
   }
 
-  try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+  // Build email
+  let subject = '';
+  let htmlContent = '';
 
-    const { planId, approvalLevel, requiredRole, notificationType }: ApprovalNotificationRequest = await req.json();
+  if (notificationType === 'approval_request') {
+    subject = `Approval Required: ${plan.plan_name}`;
+    htmlContent = `<h1>Plan Approval Required</h1><p>Plan: ${plan.plan_name}</p><p>Client: ${plan.client_name}</p><p>Amount: ₹${plan.grand_total?.toLocaleString('en-IN')}</p><p>Level: ${approvalLevel || 'N/A'}</p>`;
+  } else if (notificationType === 'approval_completed') {
+    subject = `Plan Approved: ${plan.plan_name}`;
+    htmlContent = `<h1>Plan Approved</h1><p>Plan: ${plan.plan_name}</p><p>Client: ${plan.client_name}</p><p>Amount: ₹${plan.grand_total?.toLocaleString('en-IN')}</p>`;
+  } else {
+    subject = `Plan Rejected: ${plan.plan_name}`;
+    htmlContent = `<h1>Plan Rejected</h1><p>Plan: ${plan.plan_name}</p><p>Client: ${plan.client_name}</p>`;
+  }
 
-    console.log("Sending approval notification:", { planId, approvalLevel, requiredRole, notificationType });
+  const resendApiKey = Deno.env.get('RESEND_API_KEY');
+  if (!resendApiKey) return jsonError('Email service not configured', 500);
 
-    // Get plan details
-    const { data: plan, error: planError } = await supabase
-      .from("plans")
-      .select("*, clients(*)")
-      .eq("id", planId)
-      .single();
-
-    if (planError) throw planError;
-
-    // Get users with the required role
-    const { data: userRoles, error: rolesError } = await supabase
-      .from("user_roles")
-      .select("user_id, profiles(*)")
-      .eq("role", requiredRole);
-
-    if (rolesError) throw rolesError;
-
-    // Get user emails from auth.users
-    const emails: string[] = [];
-    for (const userRole of userRoles || []) {
-      const { data: userData } = await supabase.auth.admin.getUserById(userRole.user_id);
-      if (userData?.user?.email) {
-        emails.push(userData.user.email);
-      }
-    }
-
-    if (emails.length === 0) {
-      console.log("No approvers found for role:", requiredRole);
-      return new Response(
-        JSON.stringify({ message: "No approvers found" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Determine email content based on notification type
-    let subject = "";
-    let htmlContent = "";
-
-    if (notificationType === 'approval_request') {
-      subject = `Approval Required: ${plan.plan_name}`;
-      htmlContent = `
-        <h1>Plan Approval Required</h1>
-        <p>A new plan requires your approval:</p>
-        <ul>
-          <li><strong>Plan ID:</strong> ${plan.id}</li>
-          <li><strong>Plan Name:</strong> ${plan.plan_name}</li>
-          <li><strong>Client:</strong> ${plan.client_name}</li>
-          <li><strong>Amount:</strong> ₹${plan.grand_total?.toLocaleString('en-IN')}</li>
-          <li><strong>Approval Level:</strong> ${approvalLevel}</li>
-        </ul>
-        <p>Please log in to review and approve this plan.</p>
-      `;
-    } else if (notificationType === 'approval_completed') {
-      subject = `Plan Approved: ${plan.plan_name}`;
-      htmlContent = `
-        <h1>Plan Approved</h1>
-        <p>The following plan has been fully approved:</p>
-        <ul>
-          <li><strong>Plan ID:</strong> ${plan.id}</li>
-          <li><strong>Plan Name:</strong> ${plan.plan_name}</li>
-          <li><strong>Client:</strong> ${plan.client_name}</li>
-          <li><strong>Amount:</strong> ₹${plan.grand_total?.toLocaleString('en-IN')}</li>
-        </ul>
-        <p>You can now proceed to convert this plan to a campaign.</p>
-      `;
-    } else {
-      subject = `Plan Rejected: ${plan.plan_name}`;
-      htmlContent = `
-        <h1>Plan Rejected</h1>
-        <p>The following plan has been rejected:</p>
-        <ul>
-          <li><strong>Plan ID:</strong> ${plan.id}</li>
-          <li><strong>Plan Name:</strong> ${plan.plan_name}</li>
-          <li><strong>Client:</strong> ${plan.client_name}</li>
-          <li><strong>Amount:</strong> ₹${plan.grand_total?.toLocaleString('en-IN')}</li>
-        </ul>
-        <p>Please review the rejection comments and make necessary changes.</p>
-      `;
-    }
-
-    // Send email to all approvers
-    const emailResponse = await resend.emails.send({
-      from: "Go-Ads 360° <notifications@resend.dev>",
+  const emailResponse = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${resendApiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: 'Go-Ads 360° <notifications@resend.dev>',
       to: emails,
       subject,
       html: htmlContent,
-    });
+    }),
+  });
 
-    console.log("Email sent successfully:", emailResponse);
+  const result = await emailResponse.json();
 
-    return new Response(
-      JSON.stringify({ success: true, emailResponse }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
-  } catch (error: any) {
-    console.error("Error sending approval notification:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
-  }
-};
+  await logSecurityAudit({
+    functionName: 'send-approval-notification', userId: ctx.userId, companyId: ctx.companyId,
+    action: `approval_notification_${notificationType}`, recordIds: [planId],
+    metadata: { emailCount: emails.length, notificationType }, req,
+  });
 
-serve(handler);
+  return jsonSuccess({ success: true, emailsSent: emails.length, emailResponse: result });
+}));

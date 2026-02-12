@@ -77,6 +77,7 @@ import { formatCurrency } from "@/utils/mediaAssets";
 import { useColumnPrefs } from "@/hooks/use-column-prefs";
 import { generateAvailabilityReportExcel } from "@/lib/reports/generateAvailabilityReportExcel";
 import { CustomExportDialog } from "@/components/reports/CustomExportDialog";
+import { generateProposalPpt } from "@/lib/reports/generateProposalPpt";
 import { Settings2 } from "lucide-react";
 import { ListToolbar } from "@/components/list-views";
 import { useListViewExport } from "@/hooks/useListViewExport";
@@ -185,6 +186,7 @@ export default function MediaAvailabilityReport() {
   const [exporting, setExporting] = useState(false);
   const [autoTrigger, setAutoTrigger] = useState(false);
   const [customExportOpen, setCustomExportOpen] = useState(false);
+  const [proposalExporting, setProposalExporting] = useState(false);
 
   // Hold dialog state
   const [holdDialogOpen, setHoldDialogOpen] = useState(false);
@@ -500,6 +502,34 @@ export default function MediaAvailabilityReport() {
     }
   };
 
+  // ─── Proposal PPT Export ───────────────────────────────────
+  const handleProposalPpt = async () => {
+    if (sortedRows.length === 0) return;
+    if (sortedRows.length > 200) {
+      const ok = window.confirm(`Large proposal (${sortedRows.length} assets). This may take a while. Continue?`);
+      if (!ok) return;
+    }
+    setProposalExporting(true);
+    try {
+      await generateProposalPpt({
+        rows: sortedRows,
+        startDate,
+        endDate,
+        companyName: company?.name,
+        themeColor: company?.theme_color,
+        cityFilter: selectedCity,
+        mediaTypeFilter: selectedMediaType,
+        showCardRate: true, // TODO: gate by role when RBAC hook is available
+      });
+      toast({ title: "Proposal PPT Ready", description: `${sortedRows.length} asset proposal downloaded` });
+    } catch (err) {
+      console.error('Proposal PPT error:', err);
+      toast({ title: "Export Failed", description: "Could not generate Proposal PPT", variant: "destructive" });
+    } finally {
+      setProposalExporting(false);
+    }
+  };
+
   // ─── Render ────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background">
@@ -513,14 +543,28 @@ export default function MediaAvailabilityReport() {
             </p>
           </div>
           {sortedRows.length > 0 && (
-            <Button
-              variant="outline"
-              className="gap-2"
-              onClick={() => setCustomExportOpen(true)}
-            >
-              <Settings2 className="h-4 w-4" />
-              Custom Fields Export
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                className="gap-2"
+                disabled={proposalExporting}
+                onClick={handleProposalPpt}
+              >
+                {proposalExporting ? (
+                  <><RefreshCw className="h-4 w-4 animate-spin" />Generating...</>
+                ) : (
+                  <><Presentation className="h-4 w-4 text-orange-600" />Download Proposal PPT</>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => setCustomExportOpen(true)}
+              >
+                <Settings2 className="h-4 w-4" />
+                Custom Fields Export
+              </Button>
+            </div>
           )}
         </div>
 

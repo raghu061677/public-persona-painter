@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Trash2, Lock, FileText } from "lucide-react";
+import { ShareInvoiceButton } from "@/components/invoices/ShareInvoiceButton";
 import { toast } from "@/hooks/use-toast";
 import { formatINR, getInvoiceStatusColor } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
@@ -142,6 +143,9 @@ export default function InvoiceDetail() {
               {invoice.status}
             </Badge>
             <InvoicePDFExport invoiceId={invoice.id} clientName={invoice.client_name} />
+            {isAdmin && invoice.status !== 'Draft' && (
+              <ShareInvoiceButton invoiceId={invoice.id} invoiceNo={invoice.invoice_no} />
+            )}
             {isAdmin && invoice.status === 'Draft' && (
               <Button variant="destructive" onClick={handleDelete}>
                 <Trash2 className="mr-2 h-4 w-4" />

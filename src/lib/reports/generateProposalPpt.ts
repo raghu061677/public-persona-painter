@@ -185,23 +185,26 @@ function getPlaceholder(): string {
 async function fetchAssetPhotos(row: ProposalRow): Promise<string[]> {
   const photos: string[] = [];
 
-  // 1) Latest campaign proof photos FIRST
+  // 1) Latest campaign proof photos FIRST (from campaign_assets.photos JSON)
+  // Photos JSON can use keys: photo_1..photo_N, geotag, geo, traffic1, traffic2, newspaper
   try {
     const { data: campAssets } = await supabase
       .from("campaign_assets")
       .select("photos")
       .eq("asset_id", row.asset_id)
+      .not("photos", "is", null)
       .order("created_at", { ascending: false })
       .limit(3);
     if (campAssets) {
       for (const ca of campAssets) {
         if (photos.length >= 2) break;
-        if (ca.photos) {
+        if (ca.photos && typeof ca.photos === "object") {
           const p = ca.photos as Record<string, string>;
-          const urls = [p.geotag, p.geo, p.traffic1, p.traffic2, p.newspaper].filter(Boolean);
+          // Extract ALL non-empty URL values from photos JSON (handles any key naming)
+          const urls = Object.values(p).filter((v): v is string => typeof v === "string" && v.length > 0);
           for (const url of urls) {
             if (photos.length >= 2) break;
-            const img = await fetchImg(url!);
+            const img = await fetchImg(url);
             if (img) photos.push(img);
           }
         }

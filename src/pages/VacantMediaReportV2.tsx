@@ -39,6 +39,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { generateAvailabilityPPTWithImages } from "@/lib/reports/generateAvailabilityPPTWithImages";
 
 interface BookingInfo {
   campaign_id: string;
@@ -474,6 +475,114 @@ export default function VacantMediaReportV2() {
     doc.save(`Vacant_Media_Report_${new Date().toISOString().split("T")[0]}.pdf`);
   };
 
+  const handleExportPPT = async () => {
+    if (currentAssets.length === 0) {
+      toast({ title: "No rows to export", variant: "destructive" });
+      return;
+    }
+
+    if (currentAssets.length > 60) {
+      toast({
+        title: "Large PPT export",
+        description: `Generating ${currentAssets.length * 2}+ slides. This may take a moment.`,
+      });
+    }
+
+    // Map currentAssets (VacantAsset[]) to the format expected by generateAvailabilityPPTWithImages
+    const availableForExport = currentAssets
+      .filter((a) => a.status === "available")
+      .map((a) => ({
+        id: a.id,
+        media_asset_code: a.asset_code,
+        city: a.city,
+        area: a.area,
+        location: a.location,
+        media_type: a.media_type,
+        dimensions: a.dimensions,
+        card_rate: a.card_rate,
+        total_sqft: a.total_sqft,
+        status: a.status,
+        direction: a.direction,
+        illumination_type: a.illumination,
+        primary_photo_url: null as string | null,
+        qr_code_url: null as string | null,
+        latitude: null as number | null,
+        longitude: null as number | null,
+        availability_status: "available" as const,
+        next_available_from: null as string | null,
+      }));
+
+    const soonForExport = currentAssets
+      .filter((a) => a.status === "available_soon")
+      .map((a) => ({
+        id: a.id,
+        media_asset_code: a.asset_code,
+        city: a.city,
+        area: a.area,
+        location: a.location,
+        media_type: a.media_type,
+        dimensions: a.dimensions,
+        card_rate: a.card_rate,
+        total_sqft: a.total_sqft,
+        status: a.status,
+        direction: a.direction,
+        illumination_type: a.illumination,
+        primary_photo_url: null as string | null,
+        qr_code_url: null as string | null,
+        latitude: null as number | null,
+        longitude: null as number | null,
+        availability_status: "booked" as const,
+        current_booking: a.current_booking || null,
+        all_bookings: [] as any[],
+        available_from: a.next_available_from,
+      }));
+
+    const bookedForExport = currentAssets
+      .filter((a) => a.status === "booked")
+      .map((a) => ({
+        id: a.id,
+        media_asset_code: a.asset_code,
+        city: a.city,
+        area: a.area,
+        location: a.location,
+        media_type: a.media_type,
+        dimensions: a.dimensions,
+        card_rate: a.card_rate,
+        total_sqft: a.total_sqft,
+        status: a.status,
+        direction: a.direction,
+        illumination_type: a.illumination,
+        primary_photo_url: null as string | null,
+        qr_code_url: null as string | null,
+        latitude: null as number | null,
+        longitude: null as number | null,
+        availability_status: "booked" as const,
+        current_booking: a.current_booking || null,
+        all_bookings: [] as any[],
+        available_from: a.next_available_from,
+      }));
+
+    const startDate = dateRange?.from ? format(dateRange.from, "dd/MM/yyyy") : format(new Date(), "dd/MM/yyyy");
+    const endDate = dateRange?.to ? format(dateRange.to, "dd/MM/yyyy") : format(addMonths(new Date(), 1), "dd/MM/yyyy");
+
+    await generateAvailabilityPPTWithImages({
+      availableAssets: availableForExport,
+      bookedAssets: bookedForExport,
+      availableSoonAssets: soonForExport,
+      dateRange: `${startDate} - ${endDate}`,
+      summary: {
+        total_assets: allAssets.length,
+        available_count: availableAssets.length,
+        booked_count: bookedAssets.length,
+        available_soon_count: availableSoonAssets.length,
+        potential_revenue: availableAssets.reduce((sum, a) => sum + a.card_rate, 0),
+      },
+      exportTab: activeTab === "soon" ? "soon" : activeTab,
+      companyId: company?.id,
+      exportSortOrder: (sortConfig.field === "area" ? "area" : sortConfig.field === "city" ? "city-area-location" : "location") as any,
+    });
+  };
+
   return (
     <div className="h-full flex flex-col">
       <ReportControls
@@ -510,6 +619,7 @@ export default function VacantMediaReportV2() {
           <ReportExportMenu 
             onExportExcel={handleExportExcel} 
             onExportPDF={handleExportPDF}
+            onExportPPT={handleExportPPT}
             metadata={{
               reportName: "Vacant Media Report",
               generatedAt: new Date(),

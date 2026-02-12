@@ -792,25 +792,7 @@ export async function generateAvailabilityPPTWithImages(data: ExportData): Promi
       console.error('Failed to add image:', e);
     }
 
-    // Add QR code overlay on image (bottom-right corner) - NO hyperlink to avoid PPTX corruption
-    // NOTE: Hyperlinks with complex URLs (containing & characters) can corrupt PPTX files
-    // The QR code itself contains the link - users can scan it with their phone
-    if (qrData) {
-      try {
-        const qrSize = 0.8; // ~80px in inches
-        const qrPadding = 0.15;
-        slide.addImage({
-          data: qrData.base64,
-          x: 0.4 + 5 - qrSize - qrPadding, // Bottom-right of image area
-          y: 1.4 + 4 - qrSize - qrPadding,
-          w: qrSize,
-          h: qrSize,
-          // Removed hyperlink - QR code is scannable and hyperlinks with &amp; can corrupt PPTX
-        });
-      } catch (e) {
-        console.error('Failed to add QR code:', e);
-      }
-    }
+    // QR code will be placed on the details panel instead (see below)
 
     // Details panel (right side)
     slide.addShape(prs.ShapeType.rect, {
@@ -858,6 +840,54 @@ export async function generateAvailabilityPPTWithImages(data: ExportData): Promi
       rowH: 0.32,
       fill: { color: 'FFFFFF' },
     });
+
+    // QR Code overlay on DETAILS slide - bottom-left corner, from media_assets.qr_code_url
+    const qrOverlayX = 0.5;
+    const qrOverlayY = 5.6;
+    const qrOverlaySize = 1.0;
+    if (qrData) {
+      try {
+        slide.addImage({
+          data: qrData.base64,
+          x: qrOverlayX,
+          y: qrOverlayY,
+          w: qrOverlaySize,
+          h: qrOverlaySize,
+        });
+        slide.addText(sanitizePptText('Scan to view asset'), {
+          x: qrOverlayX - 0.1,
+          y: qrOverlayY + qrOverlaySize + 0.02,
+          w: qrOverlaySize + 0.2,
+          h: 0.2,
+          fontSize: 7,
+          color: '6B7280',
+          align: 'center',
+          fontFace: PPT_SAFE_FONTS.primary,
+        });
+      } catch (e) {
+        console.error('Failed to add QR code overlay:', e);
+      }
+    } else {
+      // Placeholder when QR not available
+      slide.addShape(prs.ShapeType.rect, {
+        x: qrOverlayX,
+        y: qrOverlayY,
+        w: qrOverlaySize,
+        h: qrOverlaySize,
+        fill: { color: 'F3F4F6' },
+        line: { color: 'D1D5DB', width: 1 },
+      });
+      slide.addText(sanitizePptText('QR not\navailable'), {
+        x: qrOverlayX,
+        y: qrOverlayY + 0.2,
+        w: qrOverlaySize,
+        h: 0.6,
+        fontSize: 8,
+        color: '9CA3AF',
+        align: 'center',
+        fontFace: PPT_SAFE_FONTS.primary,
+      });
+    }
 
     // Footer bar
     slide.addShape(prs.ShapeType.rect, {

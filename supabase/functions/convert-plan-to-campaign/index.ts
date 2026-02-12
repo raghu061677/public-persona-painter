@@ -1,699 +1,209 @@
-// supabase/functions/convert-plan-to-campaign/index.ts
-// v11.0 - Added atomic lock_plan_for_conversion to prevent duplicate campaigns
-
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
 /**
- * Normalize a date to YYYY-MM-DD string (date-only, no timezone issues)
+ * convert-plan-to-campaign — Phase-5 hardened
+ * v12.0 - Uses getAuthContext for company scoping, service client for cross-table writes
+ * Roles: admin, sales (company-scoped)
  */
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import {
+  withAuth,
+  getAuthContext,
+  requireRole,
+  logSecurityAudit,
+  supabaseServiceClient,
+  jsonError as authJsonError,
+  jsonSuccess,
+} from '../_shared/auth.ts';
+import { corsHeaders } from '../_shared/cors.ts';
+
 function toDateString(d: string | Date | null | undefined): string {
   if (!d) return '';
   const str = typeof d === 'string' ? d : d.toISOString();
-  // Extract just YYYY-MM-DD part
   return str.substring(0, 10);
 }
 
-/**
- * Check if two date ranges overlap (INCLUSIVE dates)
- * Uses string comparison (YYYY-MM-DD) to avoid timezone issues
- * Overlap: existingStart <= newEnd AND existingEnd >= newStart
- */
-function datesOverlap(
-  existingStart: string,
-  existingEnd: string,
-  newStart: string,
-  newEnd: string
-): boolean {
-  // Normalize all to YYYY-MM-DD strings
-  const es = toDateString(existingStart);
-  const ee = toDateString(existingEnd);
-  const ns = toDateString(newStart);
-  const ne = toDateString(newEnd);
-  
-  if (!es || !ee || !ns || !ne) return false;
-  
-  // String comparison works for YYYY-MM-DD format
-  return es <= ne && ee >= ns;
+function datesOverlap(es: string, ee: string, ns: string, ne: string): boolean {
+  const a = toDateString(es), b = toDateString(ee), c = toDateString(ns), d = toDateString(ne);
+  if (!a || !b || !c || !d) return false;
+  return a <= d && b >= c;
 }
 
-/**
- * Get effective selling price - Single source of truth for pricing
- * Priority: sales_price (if > 0) > card_rate
- */
 function getEffectivePrice(salesPrice: number | null | undefined, cardRate: number | null | undefined): number {
-  // Use sales_price if it's a positive number
-  if (salesPrice != null && salesPrice > 0) {
-    return salesPrice;
-  }
-  // Fallback to card_rate
+  if (salesPrice != null && salesPrice > 0) return salesPrice;
   return cardRate || 0;
 }
-
-serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-  try {
-    if (req.method !== "POST") {
-      return jsonError("Only POST is allowed", 405);
-    }
-
-    const body = await req.json().catch(() => null) as { plan_id?: string; planId?: string } | null;
-    const planId = body?.plan_id || body?.planId;
-
-    if (!planId) {
-      return jsonError("Missing required field: plan_id or planId", 400);
-    }
-
-    console.log("[v11.0] Converting plan to campaign:", planId);
-
-    // 1) Get current user
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return jsonError("Missing authorization header", 401);
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-
-    if (userError || !user) {
-      console.error("[v11.0] Auth error:", userError);
-      return jsonError("Unauthorized – could not load current user", 401);
-    }
-
-    // 2) Get user's company
-    const { data: companyRow, error: companyError } = await supabase
-      .from("company_users")
-      .select("company_id")
-      .eq("user_id", user.id)
-      .eq("status", "active")
-      .maybeSingle();
-
-    if (companyError) {
-      console.error("[v11.0] Error loading company:", companyError);
-      return jsonError("Could not determine company for current user", 400);
-    }
-
-    if (!companyRow?.company_id) {
-      return jsonError("No active company found for current user", 400);
-    }
-
-    const companyId: string = companyRow.company_id;
-    console.log("[v11.0] User company ID:", companyId);
-
-    // 3) ATOMIC LOCK: Use lock_plan_for_conversion to prevent race conditions
-    // This function locks the plan row with FOR UPDATE and returns existing campaign_id if already converted
-    const { data: existingCampaignId, error: lockError } = await supabase
-      .rpc("lock_plan_for_conversion", { p_plan_id: planId });
-
-    if (lockError) {
-      console.error("[v11.0] Lock error:", lockError);
-      const msg = lockError.message || '';
-      if (msg.includes('not found')) {
-        return jsonError("Plan not found", 404);
-      }
-      if (msg.includes('must be "Approved"')) {
-        return jsonError(msg, 400);
-      }
-      return jsonError(`Failed to lock plan for conversion: ${msg}`, 500);
-    }
-
-    // If lock returned a campaign_id, plan is already converted — return idempotent success
-    if (existingCampaignId) {
-      console.log("[v11.0] Plan already converted (atomic check):", existingCampaignId);
-      
-      const { data: existingCampaign } = await supabase
-        .from('campaigns')
-        .select('id, status, campaign_name')
-        .eq('id', existingCampaignId)
-        .maybeSingle();
-      
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: "Plan was already converted to campaign",
-          campaign_id: existingCampaignId,
-          campaign_code: existingCampaignId,
-          plan_id: planId,
-          already_converted: true,
-          status: existingCampaign?.status || 'Draft',
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    // 4) Load Plan details (already validated as Approved by the lock function)
-    const { data: plan, error: planError } = await supabase
-      .from("plans")
-      .select(`
-        id,
-        plan_name,
-        status,
-        company_id,
-        client_id,
-        client_name,
-        start_date,
-        end_date,
-        duration_days,
-        total_amount,
-        gst_percent,
-        gst_amount,
-        grand_total,
-        notes,
-        converted_to_campaign_id
-      `)
-      .eq("id", planId)
-      .eq("company_id", companyId)
-      .maybeSingle();
-
-    if (planError || !plan) {
-      console.error("[v11.0] Error loading plan:", planError);
-      return jsonError("Plan not found for this company", 404);
-    }
-
-    console.log("[v11.0] Plan validated:", plan.id, "Status:", plan.status);
-
-    // 4) Load Plan Items (including per-asset duration fields)
-    const { data: planItems, error: itemsError } = await supabase
-      .from("plan_items")
-      .select(`
-        id,
-        plan_id,
-        asset_id,
-        location,
-        city,
-        area,
-        media_type,
-        dimensions,
-        card_rate,
-        sales_price,
-        printing_charges,
-        printing_rate,
-        printing_cost,
-        mounting_charges,
-        installation_rate,
-        installation_cost,
-        total_with_gst,
-        state,
-        district,
-        latitude,
-        longitude,
-        illumination_type,
-        direction,
-        total_sqft,
-        start_date,
-        end_date,
-        booked_days,
-        billing_mode,
-        daily_rate,
-        rent_amount
-      `)
-      .eq("plan_id", planId);
-
-    if (itemsError) {
-      console.error("[v10.0] Error loading plan items:", itemsError);
-      return jsonError("Could not load plan items", 500);
-    }
-
-    if (!planItems || planItems.length === 0) {
-      return jsonError("Plan has no items to convert", 400);
-    }
-
-    console.log(`[v10.0] Loaded ${planItems.length} plan items`);
-    
-    // Log pricing for each item to debug negotiated price issues
-    planItems.forEach((item, idx) => {
-      const effectivePrice = getEffectivePrice(item.sales_price, item.card_rate);
-      console.log(`[v10.0] Item ${idx + 1}: asset=${item.asset_id}, card_rate=${item.card_rate}, sales_price=${item.sales_price}, effective_price=${effectivePrice}`);
-    });
-
-    // 5) Check for booking conflicts using campaign_assets (SINGLE SOURCE OF TRUTH)
-    // Query campaign_assets for each asset with proper date overlap using per-asset dates
-    const assetIds = planItems.map(item => item.asset_id);
-    
-    // Build a map of asset_id -> per-asset dates from plan_items
-    const assetDateMap = new Map(planItems.map(item => [
-      item.asset_id,
-      {
-        start_date: toDateString(item.start_date || plan.start_date),
-        end_date: toDateString(item.end_date || plan.end_date),
-      }
-    ]));
-
-    // Query existing campaign_assets for these asset IDs with their campaigns
-    // Exclude campaigns that are Completed, Cancelled, or Archived
-    const { data: existingBookings, error: bookingError } = await supabase
-      .from("campaign_assets")
-      .select(`
-        id,
-        campaign_id,
-        asset_id,
-        booking_start_date,
-        booking_end_date,
-        start_date,
-        end_date,
-        campaigns!inner(
-          id,
-          campaign_name,
-          client_name,
-          status,
-          plan_id
-        )
-      `)
-      .in("asset_id", assetIds)
-      .not("campaigns.status", "in", '("Completed","Cancelled","Archived")');
-
-    if (bookingError) {
-      console.error("[v10.0] Error checking existing bookings:", bookingError);
-      // Continue anyway - we'll rely on DB constraints as fallback
-    }
-
-    // Filter for actual date overlaps using PER-ASSET dates
-    const conflicts: Array<{
-      asset_id: string;
-      existing_start: string;
-      existing_end: string;
-      new_start: string;
-      new_end: string;
-      campaign_id: string;
-      campaign_name: string;
-      client_name: string;
-      campaign_status: string;
-    }> = [];
-
-    for (const booking of (existingBookings || [])) {
-      const assetDates = assetDateMap.get(booking.asset_id);
-      if (!assetDates) continue;
-
-      // Use booking_start_date/booking_end_date if available, else fall back to start_date/end_date
-      const existingStart = toDateString(booking.booking_start_date || booking.start_date);
-      const existingEnd = toDateString(booking.booking_end_date || booking.end_date);
-      const newStart = assetDates.start_date;
-      const newEnd = assetDates.end_date;
-
-      // Skip if this booking belongs to a campaign created from THIS plan (self-conflict prevention)
-      const campaign = booking.campaigns as any;
-      if (campaign?.plan_id === planId) {
-        console.log(`[v10.0] Skipping self-conflict for asset ${booking.asset_id} (same plan: ${planId})`);
-        continue;
-      }
-
-      // Check for date overlap using timezone-safe string comparison
-      if (datesOverlap(existingStart, existingEnd, newStart, newEnd)) {
-        console.log(`[v10.0] CONFLICT: Asset ${booking.asset_id} - existing ${existingStart} to ${existingEnd}, new ${newStart} to ${newEnd}`);
-        conflicts.push({
-          asset_id: booking.asset_id,
-          existing_start: existingStart,
-          existing_end: existingEnd,
-          new_start: newStart,
-          new_end: newEnd,
-          campaign_id: campaign?.id || booking.campaign_id,
-          campaign_name: campaign?.campaign_name || 'Unknown',
-          client_name: campaign?.client_name || 'Unknown',
-          campaign_status: campaign?.status || 'Unknown',
-        });
-      } else {
-        console.log(`[v10.0] NO conflict: Asset ${booking.asset_id} - existing ${existingStart} to ${existingEnd}, new ${newStart} to ${newEnd}`);
-      }
-    }
-
-    if (conflicts.length > 0) {
-      console.warn("[v10.0] Booking conflicts found:", conflicts.length);
-      
-      // Deduplicate conflicts by asset_id (keep first conflict per asset)
-      const uniqueConflicts = Array.from(
-        conflicts.reduce((map, c) => {
-          if (!map.has(c.asset_id)) {
-            map.set(c.asset_id, c);
-          }
-          return map;
-        }, new Map<string, typeof conflicts[0]>())
-      ).map(([_, c]) => c);
-      
-      // Format conflict details for response
-      const conflictDetails = uniqueConflicts.map(c => ({
-        asset_id: c.asset_id,
-        location: '',  // Will be filled from plan_items below
-        city: '',
-        booked_from: c.existing_start,
-        booked_to: c.existing_end,
-        plan_item_start: c.new_start,
-        plan_item_end: c.new_end,
-        campaign_id: c.campaign_id,
-        campaign_name: c.campaign_name,
-        client_name: c.client_name,
-      }));
-
-      // Enrich with location info from plan_items
-      for (const detail of conflictDetails) {
-        const planItem = planItems.find(i => i.asset_id === detail.asset_id);
-        if (planItem) {
-          detail.location = planItem.location || planItem.area || '';
-          detail.city = planItem.city || '';
-        }
-      }
-      
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: `${uniqueConflicts.length} asset(s) already booked during this period`,
-          conflicts: conflictDetails,
-        }),
-        {
-          status: 409,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    console.log("[v10.0] No booking conflicts found, proceeding with conversion");
-
-    // 6) Generate Campaign ID with retry logic for duplicates
-    // NEW FORMAT: CAM-YYYYMM-#### (e.g., CAM-202601-0001)
-    let campaignId: string = '';
-    let campaign: { id: string } | null = null;
-    const maxRetries = 5;
-    
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      // Generate a new ID each attempt using the v2 function (YYYYMM format)
-      const { data: campaignIdData, error: campaignIdError } = await supabase
-        .rpc("generate_campaign_id_v2", { p_user_id: user.id });
-
-      if (campaignIdError) {
-        console.error(`[v9.0] Error generating campaign ID (attempt ${attempt}):`, campaignIdError);
-        // Fallback ID generation with NEW format
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const period = `${year}${month}`;
-        const random = Math.floor(Math.random() * 9000) + 1000;
-        campaignId = `CAM-${period}-${String(random).padStart(4, '0')}`;
-      } else {
-        campaignId = campaignIdData as string;
-      }
-      
-      console.log(`[v9.0] Generated campaign ID (attempt ${attempt}):`, campaignId);
-
-      // 7) Insert Campaign - Use 'Draft' status, trigger will auto-update based on dates
-      // CRITICAL: Carry GST percent from plan - if plan.gst_percent is 0, campaign must be 0
-      // Only default to 0 if plan.gst_percent is null/undefined (never default to 18)
-      const effectiveGstPercent = (plan.gst_percent !== null && plan.gst_percent !== undefined) 
-        ? plan.gst_percent 
-        : 0;
-      
-      const campaignInsertPayload = {
-        id: campaignId,
-        plan_id: plan.id,
-        company_id: companyId,
-        client_id: plan.client_id,
-        client_name: plan.client_name,
-        campaign_name: plan.plan_name,
-        status: 'Draft', // Will be auto-updated by trg_auto_set_campaign_status trigger
-        start_date: plan.start_date,
-        end_date: plan.end_date,
-        total_assets: planItems.length,
-        total_amount: plan.total_amount,
-        gst_percent: effectiveGstPercent,
-        gst_amount: plan.gst_amount || 0,
-        grand_total: plan.grand_total,
-        notes: plan.notes || "",
-        created_by: user.id,
-        created_from: 'plan',
-      };
-
-      console.log("[v9.0] Campaign insert payload:", JSON.stringify(campaignInsertPayload, null, 2));
-
-      const { data: insertedCampaign, error: campaignError } = await supabase
-        .from("campaigns")
-        .insert(campaignInsertPayload)
-        .select("id")
-        .maybeSingle();
-
-      if (campaignError) {
-        // Check if it's a duplicate key error
-        if (campaignError.code === '23505' && attempt < maxRetries) {
-          console.warn(`[v9.0] Duplicate ID detected, retrying (attempt ${attempt}/${maxRetries}):`, campaignError.message);
-          // Add a small delay before retry
-          await new Promise(resolve => setTimeout(resolve, 100 * attempt));
-          continue;
-        }
-        console.error("[v9.0] Error inserting campaign:", campaignError);
-        return jsonError(`Failed to create campaign: ${campaignError.message}`, 500);
-      }
-
-      if (!insertedCampaign) {
-        return jsonError("Campaign insert did not return a record", 500);
-      }
-
-      campaign = insertedCampaign;
-      console.log("[v9.0] Campaign created successfully:", campaign.id);
-      break;
-    }
-
-    if (!campaign) {
-      return jsonError("Failed to create campaign after multiple attempts", 500);
-    }
-
-    // 8) Insert campaign_items (for financial tracking)
-    // Use getEffectivePrice helper for consistent pricing
-    const campaignItemsPayload = planItems.map((item) => {
-      const effectivePrice = getEffectivePrice(item.sales_price, item.card_rate);
-      // Use printing_cost if available, otherwise fall back to printing_charges
-      const printingCost = item.printing_cost || item.printing_charges || 0;
-      const mountingCost = item.installation_cost || item.mounting_charges || 0;
-      return {
-        campaign_id: campaignId,
-        plan_item_id: item.id,
-        asset_id: item.asset_id,
-        start_date: plan.start_date,
-        end_date: plan.end_date,
-        card_rate: item.card_rate || 0,
-        negotiated_rate: effectivePrice, // Use effective price (sales_price if > 0, else card_rate)
-        printing_charge: printingCost,
-        mounting_charge: mountingCost,
-        final_price: item.total_with_gst || 0,
-        quantity: 1,
-      };
-    });
-
-    const { error: campaignItemsError } = await supabase
-      .from("campaign_items")
-      .insert(campaignItemsPayload);
-
-    if (campaignItemsError) {
-      console.error("[v9.0] Error inserting campaign items:", campaignItemsError);
-      return jsonError(`Campaign created but failed to attach items: ${campaignItemsError.message}`, 500);
-    }
-
-    console.log(`[v9.0] Created ${campaignItemsPayload.length} campaign items`);
-
-    // 9) Insert campaign_assets (for operations tracking with full snapshot)
-    // Use getEffectivePrice helper for consistent pricing
-    const campaignAssetsPayload = planItems.map((item) => {
-      const effectivePrice = getEffectivePrice(item.sales_price, item.card_rate);
-      // Use printing_cost if available, otherwise fall back to printing_charges
-      const printingCost = item.printing_cost || item.printing_charges || 0;
-      const mountingCost = item.installation_cost || item.mounting_charges || 0;
-      
-      // Use per-asset dates if available, otherwise fall back to plan dates
-      const assetStartDate = item.start_date || plan.start_date;
-      const assetEndDate = item.end_date || plan.end_date;
-      
-      // Calculate booked_days (inclusive) - ALWAYS recalculate to ensure accuracy
-      const startMs = new Date(assetStartDate).setHours(0, 0, 0, 0);
-      const endMs = new Date(assetEndDate).setHours(0, 0, 0, 0);
-      const bookedDays = Math.max(1, Math.floor((endMs - startMs) / (1000 * 60 * 60 * 24)) + 1);
-      
-      // Get billing mode from plan item
-      const billingMode = item.billing_mode || 'PRORATA_30';
-      
-      // Calculate rent using CANONICAL formula to match Plans:
-      // PRORATA_30: (monthly_rate / 30) * booked_days (use raw calculation, round final result)
-      // FULL_MONTH: monthly_rate * ceil(booked_days / 30)
-      // DAILY: daily_rate * booked_days
-      let rawRentAmount: number;
-      let displayDailyRate: number;
-      
-      if (billingMode === 'FULL_MONTH') {
-        const fullMonths = Math.ceil(bookedDays / 30);
-        rawRentAmount = effectivePrice * fullMonths;
-        displayDailyRate = Math.round((effectivePrice / 30) * 100) / 100;
-      } else if (billingMode === 'DAILY' && item.daily_rate && item.daily_rate > 0) {
-        rawRentAmount = item.daily_rate * bookedDays;
-        displayDailyRate = item.daily_rate;
-      } else {
-        // PRORATA_30 (default): Use raw calculation to avoid precision errors
-        const rawDailyRate = effectivePrice / 30;
-        rawRentAmount = rawDailyRate * bookedDays;
-        displayDailyRate = Math.round(rawDailyRate * 100) / 100;
-      }
-      
-      // Round final rent amount only at the end
-      const rentAmount = Math.round(rawRentAmount * 100) / 100;
-      
-      // Calculate line total (without GST) = rent + printing + mounting
-      const lineTotal = Math.round((rentAmount + printingCost + mountingCost) * 100) / 100;
-      
-      return {
-        campaign_id: campaignId,
-        asset_id: item.asset_id,
-        // Pricing snapshot - use effective price for negotiated_rate
-        card_rate: item.card_rate || 0,
-        negotiated_rate: effectivePrice,
-        printing_charges: printingCost,
-        mounting_charges: mountingCost,
-        total_price: item.total_with_gst || 0,
-        // Media snapshot
-        media_type: item.media_type || "Unknown",
-        state: item.state || "",
-        district: item.district || "",
-        city: item.city || "",
-        area: item.area || "",
-        location: item.location || "",
-        direction: item.direction || "",
-        dimensions: item.dimensions || "",
-        total_sqft: item.total_sqft || null,
-        illumination_type: item.illumination_type || "",
-        latitude: item.latitude || null,
-        longitude: item.longitude || null,
-        // Per-asset booking dates (copied from plan_items)
-        booking_start_date: assetStartDate,
-        booking_end_date: assetEndDate,
-        start_date: assetStartDate,
-        end_date: assetEndDate,
-        booked_days: bookedDays,
-        billing_mode: item.billing_mode || 'PRORATA_30',
-        daily_rate: displayDailyRate,
-        rent_amount: rentAmount,
-        // Status
-        status: "Pending" as const,
-      };
-    });
-
-    const { error: campaignAssetsError } = await supabase
-      .from("campaign_assets")
-      .insert(campaignAssetsPayload);
-
-    if (campaignAssetsError) {
-      console.error("[v9.0] Error inserting campaign assets:", campaignAssetsError);
-      return jsonError(`Failed to create campaign assets: ${campaignAssetsError.message}`, 500);
-    }
-
-    console.log(`[v9.0] Created ${campaignAssetsPayload.length} campaign assets`);
-
-    // 10) Update media assets to "Booked"
-    const { error: assetUpdateError } = await supabase
-      .from("media_assets")
-      .update({
-        status: "Booked",
-        booked_from: plan.start_date,
-        booked_to: plan.end_date,
-        current_campaign_id: campaignId,
-      })
-      .in("id", assetIds);
-
-    if (assetUpdateError) {
-      console.error("[v9.0] Error updating asset statuses:", assetUpdateError);
-      // Non-fatal - campaign is still created
-    } else {
-      console.log(`[v9.0] Updated ${assetIds.length} assets to Booked status`);
-    }
-
-    // 11) Update Plan to mark as converted
-    const { error: planUpdateError } = await supabase
-      .from("plans")
-      .update({
-        status: "Converted",
-        converted_to_campaign_id: campaignId,
-        converted_at: new Date().toISOString(),
-      })
-      .eq("id", planId);
-
-    if (planUpdateError) {
-      console.error("[v9.0] Error updating plan after conversion:", planUpdateError);
-      // Non-fatal
-    }
-
-    console.log("[v9.0] Plan marked as Converted");
-
-    // 12) Log timeline event
-    try {
-      await supabase.functions.invoke('add-timeline-event', {
-        body: {
-          campaign_id: campaignId,
-          company_id: companyId,
-          event_type: 'draft_created',
-          event_title: 'Campaign Created from Plan',
-          event_description: `Converted from plan ${plan.plan_name}`,
-          created_by: user.id,
-          metadata: { plan_id: planId },
-        },
-      });
-    } catch (timelineError) {
-      console.error('[v9.0] Error logging timeline event:', timelineError);
-      // Non-fatal
-    }
-
-    // 13) Call auto_update_campaign_status to set correct status based on dates
-    try {
-      await supabase.rpc('auto_update_campaign_status');
-    } catch (statusError) {
-      console.error('[v9.0] Error updating campaign status:', statusError);
-      // Non-fatal - trigger should have already set correct status
-    }
-
-    // Get the actual status after insert
-    const { data: createdCampaign } = await supabase
-      .from('campaigns')
-      .select('status')
-      .eq('id', campaignId)
-      .single();
-
-    // 14) Success response
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Plan converted to campaign successfully",
-        campaign_id: campaignId,
-        campaign_code: campaignId,
-        plan_id: plan.id,
-        total_items: planItems.length,
-        status: createdCampaign?.status || 'Draft',
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
-  } catch (err) {
-    console.error("[v9.0] Unexpected error in convert-plan-to-campaign:", err);
-    return jsonError(`Unexpected error: ${err instanceof Error ? err.message : "Unknown error"}`, 500);
-  }
-});
 
 function jsonError(message: string, status = 400): Response {
   return new Response(
     JSON.stringify({ success: false, error: message }),
-    {
-      status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    }
+    { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
 }
+
+serve(withAuth(async (req) => {
+  if (req.method !== "POST") return jsonError("Only POST is allowed", 405);
+
+  const ctx = await getAuthContext(req);
+  requireRole(ctx, ['admin', 'sales']);
+
+  const body = await req.json().catch(() => null) as { plan_id?: string; planId?: string } | null;
+  const planId = body?.plan_id || body?.planId;
+  if (!planId || typeof planId !== 'string') return jsonError("Missing required field: plan_id", 400);
+
+  const companyId = ctx.companyId;
+  console.log(`[v12.0] Converting plan ${planId} for company ${companyId} by ${ctx.userId}`);
+
+  // Service client for cross-table writes (campaign creation needs to write to multiple tables atomically)
+  const supabase = supabaseServiceClient();
+
+  // Atomic lock
+  const { data: existingCampaignId, error: lockError } = await supabase
+    .rpc("lock_plan_for_conversion", { p_plan_id: planId });
+
+  if (lockError) {
+    const msg = lockError.message || '';
+    if (msg.includes('not found')) return jsonError("Plan not found", 404);
+    if (msg.includes('must be "Approved"')) return jsonError(msg, 400);
+    return jsonError(`Failed to lock plan: ${msg}`, 500);
+  }
+
+  if (existingCampaignId) {
+    const { data: ec } = await supabase.from('campaigns').select('id, status, campaign_name').eq('id', existingCampaignId).maybeSingle();
+    return jsonSuccess({ success: true, message: "Plan was already converted", campaign_id: existingCampaignId, plan_id: planId, already_converted: true, status: ec?.status || 'Draft' });
+  }
+
+  // Load plan — MUST belong to user's company
+  const { data: plan, error: planError } = await supabase
+    .from("plans")
+    .select("id, plan_name, status, company_id, client_id, client_name, start_date, end_date, duration_days, total_amount, gst_percent, gst_amount, grand_total, notes, converted_to_campaign_id")
+    .eq("id", planId)
+    .eq("company_id", companyId)
+    .maybeSingle();
+
+  if (planError || !plan) return jsonError("Plan not found for this company", 404);
+
+  // Load plan items
+  const { data: planItems, error: itemsError } = await supabase
+    .from("plan_items")
+    .select("id, plan_id, asset_id, location, city, area, media_type, dimensions, card_rate, sales_price, printing_charges, printing_rate, printing_cost, mounting_charges, installation_rate, installation_cost, total_with_gst, state, district, latitude, longitude, illumination_type, direction, total_sqft, start_date, end_date, booked_days, billing_mode, daily_rate, rent_amount")
+    .eq("plan_id", planId);
+
+  if (itemsError) return jsonError("Could not load plan items", 500);
+  if (!planItems || planItems.length === 0) return jsonError("Plan has no items to convert", 400);
+
+  // Check booking conflicts
+  const assetIds = planItems.map(i => i.asset_id);
+  const assetDateMap = new Map(planItems.map(item => [
+    item.asset_id,
+    { start_date: toDateString(item.start_date || plan.start_date), end_date: toDateString(item.end_date || plan.end_date) }
+  ]));
+
+  const { data: existingBookings } = await supabase
+    .from("campaign_assets")
+    .select("id, campaign_id, asset_id, booking_start_date, booking_end_date, start_date, end_date, campaigns!inner(id, campaign_name, client_name, status, plan_id)")
+    .in("asset_id", assetIds)
+    .not("campaigns.status", "in", '("Completed","Cancelled","Archived")');
+
+  const conflicts: any[] = [];
+  for (const booking of (existingBookings || [])) {
+    const dates = assetDateMap.get(booking.asset_id);
+    if (!dates) continue;
+    const campaign = booking.campaigns as any;
+    if (campaign?.plan_id === planId) continue;
+    const es = toDateString(booking.booking_start_date || booking.start_date);
+    const ee = toDateString(booking.booking_end_date || booking.end_date);
+    if (datesOverlap(es, ee, dates.start_date, dates.end_date)) {
+      conflicts.push({ asset_id: booking.asset_id, campaign_id: campaign?.id, campaign_name: campaign?.campaign_name });
+    }
+  }
+
+  if (conflicts.length > 0) {
+    return new Response(JSON.stringify({ success: false, error: `${conflicts.length} asset(s) already booked`, conflicts }), {
+      status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+
+  // Generate campaign ID
+  let campaignId = '';
+  let campaign: { id: string } | null = null;
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    const { data: cid, error: cidErr } = await supabase.rpc("generate_campaign_id_v2", { p_user_id: ctx.userId });
+    if (cidErr) {
+      const now = new Date();
+      const period = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
+      campaignId = `CAM-${period}-${String(Math.floor(Math.random()*9000)+1000).padStart(4,'0')}`;
+    } else {
+      campaignId = cid as string;
+    }
+
+    const effectiveGstPercent = (plan.gst_percent !== null && plan.gst_percent !== undefined) ? plan.gst_percent : 0;
+    const { data: inserted, error: insertErr } = await supabase.from("campaigns").insert({
+      id: campaignId, plan_id: plan.id, company_id: companyId, client_id: plan.client_id, client_name: plan.client_name,
+      campaign_name: plan.plan_name, status: 'Draft', start_date: plan.start_date, end_date: plan.end_date,
+      total_assets: planItems.length, total_amount: plan.total_amount, gst_percent: effectiveGstPercent,
+      gst_amount: plan.gst_amount || 0, grand_total: plan.grand_total, notes: plan.notes || "", created_by: ctx.userId, created_from: 'plan',
+    }).select("id").maybeSingle();
+
+    if (insertErr) {
+      if (insertErr.code === '23505' && attempt < 5) { await new Promise(r => setTimeout(r, 100 * attempt)); continue; }
+      return jsonError(`Failed to create campaign: ${insertErr.message}`, 500);
+    }
+    if (!inserted) return jsonError("Campaign insert did not return a record", 500);
+    campaign = inserted;
+    break;
+  }
+  if (!campaign) return jsonError("Failed after multiple attempts", 500);
+
+  // Insert campaign_items
+  const ciPayload = planItems.map(item => {
+    const ep = getEffectivePrice(item.sales_price, item.card_rate);
+    return { campaign_id: campaignId, plan_item_id: item.id, asset_id: item.asset_id, start_date: plan.start_date, end_date: plan.end_date, card_rate: item.card_rate||0, negotiated_rate: ep, printing_charge: item.printing_cost||item.printing_charges||0, mounting_charge: item.installation_cost||item.mounting_charges||0, final_price: item.total_with_gst||0, quantity: 1 };
+  });
+  await supabase.from("campaign_items").insert(ciPayload);
+
+  // Insert campaign_assets
+  const caPayload = planItems.map(item => {
+    const ep = getEffectivePrice(item.sales_price, item.card_rate);
+    const pc = item.printing_cost||item.printing_charges||0;
+    const mc = item.installation_cost||item.mounting_charges||0;
+    const sd = item.start_date||plan.start_date;
+    const ed = item.end_date||plan.end_date;
+    const startMs = new Date(sd).setHours(0,0,0,0);
+    const endMs = new Date(ed).setHours(0,0,0,0);
+    const days = Math.max(1, Math.floor((endMs-startMs)/86400000)+1);
+    const bm = item.billing_mode||'PRORATA_30';
+    let rent: number, dr: number;
+    if (bm==='FULL_MONTH') { rent=ep*Math.ceil(days/30); dr=Math.round((ep/30)*100)/100; }
+    else if (bm==='DAILY'&&item.daily_rate&&item.daily_rate>0) { rent=item.daily_rate*days; dr=item.daily_rate; }
+    else { const raw=ep/30; rent=Math.round(raw*days*100)/100; dr=Math.round(raw*100)/100; }
+    return { campaign_id: campaignId, asset_id: item.asset_id, card_rate: item.card_rate||0, negotiated_rate: ep, printing_charges: pc, mounting_charges: mc, total_price: item.total_with_gst||0, media_type: item.media_type||"Unknown", state: item.state||"", district: item.district||"", city: item.city||"", area: item.area||"", location: item.location||"", direction: item.direction||"", dimensions: item.dimensions||"", total_sqft: item.total_sqft||null, illumination_type: item.illumination_type||"", latitude: item.latitude||null, longitude: item.longitude||null, booking_start_date: sd, booking_end_date: ed, start_date: sd, end_date: ed, booked_days: days, billing_mode: bm, daily_rate: dr, rent_amount: rent, status: "Pending" as const };
+  });
+  const { error: caErr } = await supabase.from("campaign_assets").insert(caPayload);
+  if (caErr) return jsonError(`Failed to create campaign assets: ${caErr.message}`, 500);
+
+  // Update media_assets to Booked
+  await supabase.from("media_assets").update({ status: "Booked", booked_from: plan.start_date, booked_to: plan.end_date, current_campaign_id: campaignId }).in("id", assetIds);
+
+  // Update plan to Converted
+  await supabase.from("plans").update({ status: "Converted", converted_to_campaign_id: campaignId, converted_at: new Date().toISOString() }).eq("id", planId);
+
+  // Timeline event
+  try { await supabase.functions.invoke('add-timeline-event', { body: { campaign_id: campaignId, company_id: companyId, event_type: 'draft_created', event_title: 'Campaign Created from Plan', event_description: `Converted from plan ${plan.plan_name}`, created_by: ctx.userId, metadata: { plan_id: planId } } }); } catch (_) {}
+
+  try { await supabase.rpc('auto_update_campaign_status'); } catch (_) {}
+
+  // Audit
+  await logSecurityAudit({
+    functionName: 'convert-plan-to-campaign',
+    userId: ctx.userId,
+    companyId,
+    action: 'convert_plan_to_campaign',
+    recordIds: [planId, campaignId],
+    status: 'success',
+    metadata: { plan_name: plan.plan_name, total_items: planItems.length },
+    req,
+  });
+
+  const { data: created } = await supabase.from('campaigns').select('status').eq('id', campaignId).single();
+
+  return jsonSuccess({ success: true, message: "Plan converted to campaign successfully", campaign_id: campaignId, campaign_code: campaignId, plan_id: plan.id, total_items: planItems.length, status: created?.status || 'Draft' });
+}));

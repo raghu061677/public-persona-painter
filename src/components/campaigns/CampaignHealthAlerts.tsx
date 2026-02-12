@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, Clock, DollarSign, CheckCircle2, Bell, Info } from "lucide-react";
+import { AlertTriangle, Clock, DollarSign, CheckCircle2, Bell, Info, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { formatDate } from "@/utils/plans";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -35,6 +36,7 @@ interface BudgetBreakdown {
 
 export function CampaignHealthAlerts({ campaignId }: CampaignHealthAlertsProps) {
   const { company } = useCompany();
+  const navigate = useNavigate();
   const [alerts, setAlerts] = useState<HealthAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [budgetBreakdowns, setBudgetBreakdowns] = useState<Map<string, BudgetBreakdown[]>>(new Map());
@@ -362,8 +364,12 @@ export function CampaignHealthAlerts({ campaignId }: CampaignHealthAlertsProps) 
                   )}
                 </div>
                 {!campaignId && (
-                  <AlertDescription className="text-xs opacity-60">
+                  <AlertDescription 
+                    className="text-xs opacity-60 cursor-pointer hover:opacity-100 hover:underline inline-flex items-center gap-1"
+                    onClick={() => navigate(`/admin/campaigns/${alert.campaignId}`)}
+                  >
                     Campaign: {alert.campaignName}
+                    <ExternalLink className="h-3 w-3" />
                   </AlertDescription>
                 )}
               </div>

@@ -1,12 +1,14 @@
 /**
- * Client Proposal PPT Generator for Media Availability Report
+ * PREMIUM LUXURY Client Proposal PPT — Media Availability Report
  * 
- * Generates a 2-slide-per-asset client-ready proposal:
- * - Cover slide with branding
- * - Summary slide
- * - Slide A: Asset details (left panel + right info table)
- * - Slide B: Asset photos (up to 2) + QR code
- * - Terms & conditions slide
+ * Design: High-end corporate pitch deck (charcoal + metallic gold)
+ * 
+ * Structure:
+ * - Cover: Dark charcoal gradient, gold accent line, elegant typography
+ * - Summary: Gold-outlined metric boxes, executive look
+ * - Slide A: Asset details with gold divider, large asset code
+ * - Slide B: Dark-framed photos with gold borders, QR code
+ * - Terms: Premium close slide
  * 
  * This is a SEPARATE export from the table-based Custom Fields PPT.
  * DO NOT merge with planExports.ts or generateAvailabilityPPTWithImages.ts.
@@ -83,14 +85,25 @@ function getStatusLabel(row: ProposalRow): string {
   }
 }
 
+// Premium muted status colors (fits luxury palette)
 function getStatusColor(status: string): string {
   switch (status) {
-    case "VACANT_NOW": return "22C55E";
-    case "AVAILABLE_SOON": return "F59E0B";
-    case "HELD": return "8B5CF6";
-    default: return "EF4444";
+    case "VACANT_NOW": return "3D8B5E";     // muted emerald
+    case "AVAILABLE_SOON": return "B8943D";  // muted gold
+    case "HELD": return "6B5B8D";            // muted purple
+    default: return "8B3D3D";                // muted wine
   }
 }
+
+// Premium palette constants
+const CHARCOAL = "1A1A1A";
+const CHARCOAL_DEEP = "111111";
+const GOLD = "C6A75E";
+const GOLD_LIGHT = "D4AF37";
+const SOFT_WHITE = "F8F8F8";
+const WARM_GRAY = "2A2A2A";
+const TEXT_LIGHT = "B0A89A";
+const TEXT_DIM = "7A7268";
 
 // ─── Image utilities ──────────────────────────────────────────
 
@@ -141,17 +154,23 @@ async function fetchImg(url: string): Promise<string | null> {
   }
 }
 
-/** Get placeholder PNG as base64 */
+/** Get premium dark placeholder PNG as base64 */
 let _placeholder: string | null = null;
 function getPlaceholder(): string {
   if (_placeholder) return _placeholder;
   const c = document.createElement("canvas");
   c.width = 1200; c.height = 900;
   const ctx = c.getContext("2d")!;
-  ctx.fillStyle = "#F3F4F6";
+  // Dark premium background
+  ctx.fillStyle = "#1A1A1A";
   ctx.fillRect(0, 0, 1200, 900);
-  ctx.fillStyle = "#9CA3AF";
-  ctx.font = "bold 48px Arial";
+  // Gold border
+  ctx.strokeStyle = "#C6A75E";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(20, 20, 1160, 860);
+  // Gold text
+  ctx.fillStyle = "#C6A75E";
+  ctx.font = "300 42px Arial";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("Photo Not Available", 600, 450);
@@ -229,7 +248,6 @@ export async function generateProposalPpt(opts: ProposalPptOptions): Promise<voi
   const {
     rows, startDate, endDate,
     companyName = "Go-Ads 360°",
-    themeColor,
     companyPrefix,
     cityFilter,
     mediaTypeFilter,
@@ -238,94 +256,144 @@ export async function generateProposalPpt(opts: ProposalPptOptions): Promise<voi
 
   if (rows.length === 0) return;
 
-  const brand = (themeColor || "#1E3A8A").replace("#", "");
   const pptx = new PptxGenJS();
   pptx.author = companyName;
   pptx.company = companyName;
-  pptx.title = "Media Availability Proposal";
+  pptx.title = "Media Availability Proposal — Premium";
   pptx.layout = "LAYOUT_16x9";
 
   const startF = formatDateIN(startDate);
   const endF = formatDateIN(endDate);
   const generatedOn = formatDateIN(format(new Date(), "yyyy-MM-dd"));
+  const totalAssets = rows.length;
+  const totalSlides = 2 + totalAssets * 2 + 1; // cover + summary + pairs + terms
 
-  // ===== COVER SLIDE =====
+  // ═══════════════════════════════════════════════════════════════
+  // COVER SLIDE — Luxury dark charcoal + gold accent
+  // ═══════════════════════════════════════════════════════════════
   const cover = pptx.addSlide();
-  cover.background = { color: brand };
+  cover.background = { color: CHARCOAL_DEEP };
 
-  cover.addText(sanitizePptText("MEDIA AVAILABILITY PROPOSAL"), {
-    x: 0.5, y: 2.0, w: 9, h: 1.0,
-    fontSize: 36, bold: true, color: "FFFFFF", align: "center", fontFace: PPT_SAFE_FONTS.primary,
+  // Subtle diagonal gold accent line (top-left to mid-right)
+  cover.addShape("line" as any, {
+    x: 0, y: 1.5, w: 10, h: 0,
+    line: { color: GOLD, width: 1.5, transparency: 60 },
+  });
+  cover.addShape("line" as any, {
+    x: 0, y: 5.8, w: 10, h: 0,
+    line: { color: GOLD, width: 1.0, transparency: 70 },
+  });
+
+  // Small gold bar accent
+  cover.addShape("rect" as any, { x: 4.2, y: 2.2, w: 1.6, h: 0.04, fill: { color: GOLD } });
+
+  // Title — Large elegant
+  cover.addText(sanitizePptText("MEDIA AVAILABILITY"), {
+    x: 0.5, y: 2.5, w: 9, h: 0.7,
+    fontSize: 38, bold: true, color: SOFT_WHITE, align: "center",
+    fontFace: PPT_SAFE_FONTS.primary, charSpacing: 6,
+  });
+  cover.addText(sanitizePptText("P R O P O S A L"), {
+    x: 0.5, y: 3.2, w: 9, h: 0.5,
+    fontSize: 18, color: GOLD, align: "center",
+    fontFace: PPT_SAFE_FONTS.primary, charSpacing: 8,
   });
 
   // Filter summary
   const filterParts: string[] = [];
-  if (cityFilter && cityFilter !== "all") filterParts.push(`City: ${cityFilter}`);
-  if (mediaTypeFilter && mediaTypeFilter !== "all") filterParts.push(`Type: ${mediaTypeFilter}`);
-  filterParts.push(`Period: ${startF} - ${endF}`);
+  if (cityFilter && cityFilter !== "all") filterParts.push(cityFilter);
+  if (mediaTypeFilter && mediaTypeFilter !== "all") filterParts.push(mediaTypeFilter);
+  filterParts.push(`${startF} — ${endF}`);
 
-  cover.addText(sanitizePptText(filterParts.join("  |  ")), {
-    x: 0.5, y: 3.2, w: 9, h: 0.5,
-    fontSize: 16, color: "CBD5E1", align: "center", fontFace: PPT_SAFE_FONTS.primary,
+  cover.addText(sanitizePptText(filterParts.join("  ·  ")), {
+    x: 0.5, y: 4.1, w: 9, h: 0.35,
+    fontSize: 13, color: TEXT_LIGHT, align: "center", fontFace: PPT_SAFE_FONTS.primary,
   });
 
-  cover.addText(sanitizePptText(`${rows.length} Assets`), {
-    x: 0.5, y: 3.9, w: 9, h: 0.4,
-    fontSize: 14, color: "94A3B8", align: "center", fontFace: PPT_SAFE_FONTS.primary,
+  cover.addText(sanitizePptText(`${rows.length} Assets  ·  Generated ${generatedOn}`), {
+    x: 0.5, y: 4.55, w: 9, h: 0.3,
+    fontSize: 11, color: TEXT_DIM, align: "center", fontFace: PPT_SAFE_FONTS.primary,
   });
 
-  cover.addText(sanitizePptText(`Generated: ${generatedOn}`), {
-    x: 0.5, y: 4.4, w: 9, h: 0.3,
-    fontSize: 11, color: "94A3B8", align: "center", fontFace: PPT_SAFE_FONTS.primary,
+  // Bottom bar
+  cover.addShape("rect" as any, { x: 0, y: 6.95, w: 10, h: 0.55, fill: { color: CHARCOAL } });
+  cover.addShape("rect" as any, { x: 0, y: 6.93, w: 10, h: 0.02, fill: { color: GOLD } });
+  cover.addText(sanitizePptText(`${companyName}  ·  Go-Ads 360°`), {
+    x: 0.5, y: 7.03, w: 9, h: 0.35,
+    fontSize: 10, color: GOLD, align: "center", fontFace: PPT_SAFE_FONTS.primary,
   });
 
-  // Footer
-  cover.addShape("rect" as any, { x: 0, y: 6.8, w: 10, h: 0.7, fill: { color: "000000", transparency: 50 } });
-  cover.addText(sanitizePptText(`${companyName} | Go-Ads 360°`), {
-    x: 0.5, y: 6.9, w: 9, h: 0.4,
-    fontSize: 12, color: "FFFFFF", align: "center", fontFace: PPT_SAFE_FONTS.primary,
-  });
-
-  // ===== SUMMARY SLIDE =====
+  // ═══════════════════════════════════════════════════════════════
+  // SUMMARY SLIDE — Executive look, gold-outlined metric boxes
+  // ═══════════════════════════════════════════════════════════════
   const vacantNow = rows.filter(r => r.availability_status === "VACANT_NOW").length;
   const availSoon = rows.filter(r => r.availability_status === "AVAILABLE_SOON").length;
   const held = rows.filter(r => r.availability_status === "HELD").length;
   const booked = rows.length - vacantNow - availSoon - held;
 
   const summary = pptx.addSlide();
-  summary.background = { color: "FFFFFF" };
-  summary.addShape("rect" as any, { x: 0, y: 0, w: 10, h: 0.7, fill: { color: brand } });
-  summary.addText(sanitizePptText("Availability Summary"), {
-    x: 0.3, y: 0.15, w: 9.4, h: 0.5,
-    fontSize: 22, bold: true, color: "FFFFFF", fontFace: PPT_SAFE_FONTS.primary,
+  summary.background = { color: CHARCOAL_DEEP };
+
+  // Gold accent line at top
+  summary.addShape("rect" as any, { x: 0, y: 0, w: 10, h: 0.04, fill: { color: GOLD } });
+
+  summary.addText(sanitizePptText("EXECUTIVE SUMMARY"), {
+    x: 0.5, y: 0.4, w: 9, h: 0.5,
+    fontSize: 20, bold: true, color: GOLD, fontFace: PPT_SAFE_FONTS.primary, charSpacing: 4,
   });
 
-  const cards = [
-    { label: "Total Assets", count: rows.length, color: brand },
-    { label: "Available Now", count: vacantNow, color: "22C55E" },
-    { label: "Available Soon", count: availSoon, color: "F59E0B" },
-    { label: "Held/Blocked", count: held, color: "8B5CF6" },
-    { label: "Booked", count: booked, color: "EF4444" },
-  ].filter(c => c.count > 0);
+  // Gold-outlined metric cards
+  const metrics = [
+    { label: "Available", count: vacantNow, accent: "3D8B5E" },
+    { label: "Available Soon", count: availSoon, accent: "B8943D" },
+    { label: "Held / Blocked", count: held, accent: "6B5B8D" },
+    { label: "Booked", count: booked, accent: "8B3D3D" },
+  ].filter(m => m.count > 0);
 
-  const cw = Math.min(1.7, 9 / cards.length - 0.1);
-  cards.forEach((card, i) => {
-    const x = 0.5 + i * (cw + 0.15);
-    summary.addShape("roundRect" as any, { x, y: 1.3, w: cw, h: 1.3, fill: { color: card.color }, rectRadius: 0.08 });
-    summary.addText(String(card.count), { x, y: 1.45, w: cw, h: 0.65, fontSize: 34, bold: true, color: "FFFFFF", align: "center", fontFace: PPT_SAFE_FONTS.primary });
-    summary.addText(sanitizePptText(card.label), { x, y: 2.1, w: cw, h: 0.35, fontSize: 9, color: "FFFFFF", align: "center", fontFace: PPT_SAFE_FONTS.primary });
+  const cardW = 2.0;
+  const gap = 0.3;
+  const totalW = metrics.length * cardW + (metrics.length - 1) * gap;
+  const startX = (10 - totalW) / 2;
+
+  metrics.forEach((m, i) => {
+    const x = startX + i * (cardW + gap);
+    // Gold outlined box
+    summary.addShape("roundRect" as any, {
+      x, y: 1.5, w: cardW, h: 2.2,
+      fill: { color: CHARCOAL_DEEP },
+      line: { color: GOLD, width: 1.5 },
+      rectRadius: 0.06,
+    });
+    // Accent dot
+    summary.addShape("rect" as any, { x: x + cardW / 2 - 0.15, y: 1.75, w: 0.3, h: 0.04, fill: { color: m.accent } });
+    // Large number
+    summary.addText(String(m.count), {
+      x, y: 2.0, w: cardW, h: 0.8,
+      fontSize: 42, bold: true, color: SOFT_WHITE, align: "center", fontFace: PPT_SAFE_FONTS.primary,
+    });
+    // Label
+    summary.addText(sanitizePptText(m.label), {
+      x, y: 2.9, w: cardW, h: 0.4,
+      fontSize: 10, color: TEXT_LIGHT, align: "center", fontFace: PPT_SAFE_FONTS.primary,
+    });
   });
 
-  summary.addText(sanitizePptText(`Report Period: ${startF} - ${endF}`), {
-    x: 0.5, y: 3.1, w: 9, h: 0.3, fontSize: 11, color: "64748B", align: "center", fontFace: PPT_SAFE_FONTS.primary,
+  // Total assets centered below
+  summary.addText(sanitizePptText(`${rows.length} Total Assets`), {
+    x: 0.5, y: 4.1, w: 9, h: 0.35,
+    fontSize: 14, color: GOLD, align: "center", fontFace: PPT_SAFE_FONTS.primary, charSpacing: 2,
   });
 
-  // Footer on summary
-  addFooter(summary, companyName, brand, 1, Math.ceil(rows.length * 2) + 2);
+  summary.addText(sanitizePptText(`Report Period: ${startF} — ${endF}`), {
+    x: 0.5, y: 4.6, w: 9, h: 0.3,
+    fontSize: 10, color: TEXT_DIM, align: "center", fontFace: PPT_SAFE_FONTS.primary,
+  });
 
-  // ===== PER-ASSET SLIDES (2 per asset) =====
-  const totalAssets = rows.length;
+  addPremiumFooter(summary, companyName, 2, totalSlides);
 
+  // ═══════════════════════════════════════════════════════════════
+  // PER-ASSET SLIDES (2 per asset)
+  // ═══════════════════════════════════════════════════════════════
   for (let i = 0; i < totalAssets; i++) {
     const row = rows[i];
     const statusColor = getStatusColor(row.availability_status);
@@ -336,189 +404,259 @@ export async function generateProposalPpt(opts: ProposalPptOptions): Promise<voi
       companyPrefix,
     });
 
-    const slideNum = 3 + i * 2; // cover=1, summary=2, then pairs
-    const totalSlides = 2 + totalAssets * 2 + 1; // +1 for terms
+    const slideNum = 3 + i * 2;
 
-    // ── SLIDE A: Details ──────────────────────────────
+    // ── SLIDE A: Asset Details (Luxury) ────────────────────────
     const slideA = pptx.addSlide();
-    slideA.background = { color: "FFFFFF" };
+    slideA.background = { color: SOFT_WHITE };
 
-    // Border
-    slideA.addShape("rect" as any, {
-      x: 0.15, y: 0.15, w: 9.7, h: 7.2,
-      fill: { color: "FFFFFF" },
-      line: { color: brand, width: 4 },
-    });
+    // Top gold accent
+    slideA.addShape("rect" as any, { x: 0, y: 0, w: 10, h: 0.04, fill: { color: GOLD } });
 
-    // Asset code header
+    // Asset code — large, centered, gold accent
     slideA.addText(sanitizePptText(displayCode), {
-      x: 0.3, y: 0.35, w: 7, h: 0.4,
-      fontSize: 14, bold: true, color: "6B7280", fontFace: PPT_SAFE_FONTS.primary,
+      x: 0.5, y: 0.4, w: 9, h: 0.6,
+      fontSize: 28, bold: true, color: CHARCOAL_DEEP, align: "center",
+      fontFace: PPT_SAFE_FONTS.primary, charSpacing: 3,
     });
 
-    // Status badge
-    slideA.addShape("rect" as any, { x: 7.3, y: 0.3, w: 2.3, h: 0.5, fill: { color: statusColor } });
+    // Gold bar below code
+    slideA.addShape("rect" as any, { x: 3.5, y: 1.05, w: 3, h: 0.03, fill: { color: GOLD } });
+
+    // Status badge — minimal, right-aligned
+    slideA.addShape("roundRect" as any, {
+      x: 7.0, y: 0.45, w: 2.5, h: 0.45,
+      fill: { color: statusColor },
+      rectRadius: 0.04,
+    });
     slideA.addText(
-      sanitizePptText(row.availability_status === "VACANT_NOW" ? "AVAILABLE" : row.availability_status === "AVAILABLE_SOON" ? "AVAILABLE SOON" : row.availability_status === "HELD" ? "HELD" : "BOOKED"),
-      { x: 7.3, y: 0.33, w: 2.3, h: 0.45, fontSize: 11, bold: true, color: "FFFFFF", align: "center", fontFace: PPT_SAFE_FONTS.primary }
+      sanitizePptText(
+        row.availability_status === "VACANT_NOW" ? "AVAILABLE" :
+        row.availability_status === "AVAILABLE_SOON" ? "AVAILABLE SOON" :
+        row.availability_status === "HELD" ? "HELD" : "BOOKED"
+      ),
+      { x: 7.0, y: 0.47, w: 2.5, h: 0.42, fontSize: 10, bold: true, color: SOFT_WHITE, align: "center", fontFace: PPT_SAFE_FONTS.primary }
     );
 
-    // Location title
-    slideA.addText(sanitizePptText(`${row.area} - ${row.location}`), {
-      x: 0.3, y: 0.85, w: 9.4, h: 0.5,
-      fontSize: 20, bold: true, color: brand, fontFace: PPT_SAFE_FONTS.primary,
-    });
+    // Left panel — Details (no table grid lines, clean list)
+    const leftX = 0.6;
+    const leftW = 5.5;
+    let yPos = 1.4;
 
-    // Details table (left-aligned, full width)
-    const details: any[][] = [
-      [{ text: sanitizePptText("Asset Code"), options: { bold: true } }, { text: sanitizePptText(displayCode) }],
-      [{ text: sanitizePptText("Area"), options: { bold: true } }, { text: sanitizePptText(row.area) }],
-      [{ text: sanitizePptText("Location"), options: { bold: true } }, { text: sanitizePptText(row.location) }],
-      [{ text: sanitizePptText("Direction"), options: { bold: true } }, { text: sanitizePptText(row.direction || "N/A") }],
-      [{ text: sanitizePptText("Dimensions"), options: { bold: true } }, { text: sanitizePptText(row.dimension || "N/A") }],
-      [{ text: sanitizePptText("Sq.Ft"), options: { bold: true } }, { text: sanitizePptText(row.sqft?.toString() || "N/A") }],
-      [{ text: sanitizePptText("Illumination"), options: { bold: true } }, { text: sanitizePptText(row.illumination || "Non-lit") }],
-      [{ text: sanitizePptText("Media Type"), options: { bold: true } }, { text: sanitizePptText(row.media_type) }],
-      [{ text: sanitizePptText("City"), options: { bold: true } }, { text: sanitizePptText(row.city) }],
+    const detailRows: [string, string][] = [
+      ["Location", `${row.area} — ${row.location}`],
+      ["Direction", row.direction || "—"],
+      ["Media Type", row.media_type],
+      ["Dimensions", row.dimension || "—"],
+      ["Sq.Ft", row.sqft?.toString() || "—"],
+      ["Illumination", row.illumination || "Non-lit"],
+      ["City", row.city],
+      ["Availability", statusLabel],
     ];
 
-    // Availability status
-    details.push([
-      { text: sanitizePptText("Availability"), options: { bold: true } },
-      { text: sanitizePptText(statusLabel) },
-    ]);
-
-    // Coordinates
     if (row.latitude && row.longitude) {
-      details.push([
-        { text: sanitizePptText("Coordinates"), options: { bold: true } },
-        { text: sanitizePptText(`${row.latitude.toFixed(6)}, ${row.longitude.toFixed(6)}`) },
-      ]);
+      detailRows.push(["Coordinates", `${row.latitude.toFixed(6)}, ${row.longitude.toFixed(6)}`]);
     }
 
-    // Card rate (RBAC gated)
-    if (showCardRate) {
-      details.push([
-        { text: sanitizePptText("Card Rate"), options: { bold: true } },
-        { text: sanitizePptText(`Rs. ${row.card_rate?.toLocaleString("en-IN") || "0"}/month`) },
-      ]);
+    if (showCardRate && row.card_rate) {
+      detailRows.push(["Card Rate", `₹ ${row.card_rate?.toLocaleString("en-IN")}/month`]);
     }
 
-    slideA.addTable(details, {
-      x: 0.5, y: 1.5, w: 9, colW: [2.5, 6.5],
-      border: { type: "solid", color: "E5E7EB", pt: 0.5 },
-      fontFace: PPT_SAFE_FONTS.primary,
-      fontSize: 11,
-      valign: "middle",
-      rowH: 0.38,
-      fill: { color: "F9FAFB" },
+    detailRows.forEach(([label, value]) => {
+      // Label
+      slideA.addText(sanitizePptText(label.toUpperCase()), {
+        x: leftX, y: yPos, w: 1.8, h: 0.38,
+        fontSize: 8, bold: true, color: TEXT_DIM,
+        fontFace: PPT_SAFE_FONTS.primary, charSpacing: 1,
+      });
+      // Value
+      slideA.addText(sanitizePptText(value), {
+        x: leftX + 1.9, y: yPos, w: leftW - 1.9, h: 0.38,
+        fontSize: 11, color: CHARCOAL_DEEP, fontFace: PPT_SAFE_FONTS.primary,
+      });
+      // Subtle separator
+      slideA.addShape("line" as any, {
+        x: leftX, y: yPos + 0.38, w: leftW, h: 0,
+        line: { color: "E0DDD8", width: 0.5 },
+      });
+      yPos += 0.42;
     });
 
-    addFooter(slideA, companyName, brand, slideNum, totalSlides);
+    // Right panel — Gold vertical divider
+    slideA.addShape("line" as any, {
+      x: 6.4, y: 1.3, w: 0, h: yPos - 1.3,
+      line: { color: GOLD, width: 1.5 },
+    });
 
-    // ── SLIDE B: Photos + QR ─────────────────────────
+    // Right side — asset number & asset count
+    slideA.addText(sanitizePptText(`Asset ${i + 1} of ${totalAssets}`), {
+      x: 6.7, y: 1.5, w: 3, h: 0.35,
+      fontSize: 10, color: TEXT_DIM, fontFace: PPT_SAFE_FONTS.primary,
+    });
+
+    slideA.addText(sanitizePptText(displayCode), {
+      x: 6.7, y: 2.0, w: 3, h: 0.5,
+      fontSize: 16, bold: true, color: GOLD, fontFace: PPT_SAFE_FONTS.primary,
+    });
+
+    if (showCardRate && row.card_rate) {
+      slideA.addShape("roundRect" as any, {
+        x: 6.7, y: 3.0, w: 2.8, h: 0.8,
+        fill: { color: CHARCOAL_DEEP },
+        line: { color: GOLD, width: 1 },
+        rectRadius: 0.05,
+      });
+      slideA.addText(sanitizePptText("CARD RATE"), {
+        x: 6.7, y: 3.05, w: 2.8, h: 0.3,
+        fontSize: 8, color: GOLD, align: "center", fontFace: PPT_SAFE_FONTS.primary, charSpacing: 2,
+      });
+      slideA.addText(sanitizePptText(`₹ ${row.card_rate?.toLocaleString("en-IN")}`), {
+        x: 6.7, y: 3.35, w: 2.8, h: 0.35,
+        fontSize: 18, bold: true, color: SOFT_WHITE, align: "center", fontFace: PPT_SAFE_FONTS.primary,
+      });
+    }
+
+    addPremiumFooter(slideA, companyName, slideNum, totalSlides);
+
+    // ── SLIDE B: Photos + QR (Dark frame) ─────────────────────
     const slideB = pptx.addSlide();
-    slideB.background = { color: "FFFFFF" };
+    slideB.background = { color: CHARCOAL_DEEP };
 
-    // Border
-    slideB.addShape("rect" as any, {
-      x: 0.15, y: 0.15, w: 9.7, h: 7.2,
-      fill: { color: "FFFFFF" },
-      line: { color: brand, width: 4 },
-    });
+    // Top gold accent
+    slideB.addShape("rect" as any, { x: 0, y: 0, w: 10, h: 0.04, fill: { color: GOLD } });
 
     // Header
-    slideB.addText(sanitizePptText(`${displayCode} - Photos`), {
-      x: 0.3, y: 0.35, w: 9.4, h: 0.4,
-      fontSize: 14, bold: true, color: brand, fontFace: PPT_SAFE_FONTS.primary,
+    slideB.addText(sanitizePptText(displayCode), {
+      x: 0.5, y: 0.2, w: 9, h: 0.4,
+      fontSize: 14, bold: true, color: GOLD, fontFace: PPT_SAFE_FONTS.primary, charSpacing: 2,
     });
 
     // Fetch photos
     const photos = await fetchAssetPhotos(row);
 
     if (photos.length === 0) {
-      // Single large placeholder
       const ph = getPlaceholder();
-      slideB.addImage({ data: ph, x: 1.5, y: 1.2, w: 7, h: 4.5, sizing: { type: "contain", w: 7, h: 4.5 } });
+      slideB.addImage({ data: ph, x: 1.5, y: 1.0, w: 7, h: 4.8, sizing: { type: "contain", w: 7, h: 4.8 } });
     } else if (photos.length === 1) {
-      // Single large image
-      slideB.addImage({ data: photos[0], x: 0.5, y: 1.0, w: 6, h: 4.5, sizing: { type: "cover", w: 6, h: 4.5 } });
-      // Placeholder for second
-      slideB.addShape("rect" as any, { x: 6.7, y: 1.0, w: 3, h: 4.5, fill: { color: "F3F4F6" }, line: { color: "E5E7EB", width: 1 } });
-      slideB.addText(sanitizePptText("Photo not\navailable"), { x: 6.7, y: 2.5, w: 3, h: 1, fontSize: 12, color: "9CA3AF", align: "center", fontFace: PPT_SAFE_FONTS.primary });
+      // Gold border frame
+      slideB.addShape("rect" as any, {
+        x: 0.8, y: 0.9, w: 7.2, h: 5.0,
+        fill: { color: CHARCOAL },
+        line: { color: GOLD, width: 1.5 },
+      });
+      slideB.addImage({ data: photos[0], x: 0.9, y: 1.0, w: 7.0, h: 4.8, sizing: { type: "cover", w: 7.0, h: 4.8 } });
     } else {
-      // Two images side by side
-      slideB.addImage({ data: photos[0], x: 0.4, y: 1.0, w: 4.5, h: 4.5, sizing: { type: "cover", w: 4.5, h: 4.5 } });
-      slideB.addImage({ data: photos[1], x: 5.1, y: 1.0, w: 4.5, h: 4.5, sizing: { type: "cover", w: 4.5, h: 4.5 } });
+      // Two images with gold border frames
+      // Left image
+      slideB.addShape("rect" as any, {
+        x: 0.35, y: 0.9, w: 4.6, h: 5.0,
+        fill: { color: CHARCOAL },
+        line: { color: GOLD, width: 1.5 },
+      });
+      slideB.addImage({ data: photos[0], x: 0.45, y: 1.0, w: 4.4, h: 4.8, sizing: { type: "cover", w: 4.4, h: 4.8 } });
+
+      // Right image
+      slideB.addShape("rect" as any, {
+        x: 5.1, y: 0.9, w: 4.6, h: 5.0,
+        fill: { color: CHARCOAL },
+        line: { color: GOLD, width: 1.5 },
+      });
+      slideB.addImage({ data: photos[1], x: 5.2, y: 1.0, w: 4.4, h: 4.8, sizing: { type: "cover", w: 4.4, h: 4.8 } });
     }
 
-    // QR code - EXACTLY ONE per asset, bottom-right
+    // QR code — EXACTLY ONE, bottom-right, gold frame
     const qrBase64 = await fetchQR(row.qr_code_url);
     if (qrBase64) {
-      slideB.addImage({ data: qrBase64, x: 8.5, y: 5.7, w: 1.0, h: 1.0 });
-      slideB.addText(sanitizePptText("Scan to view"), {
-        x: 8.3, y: 6.72, w: 1.4, h: 0.2,
-        fontSize: 7, color: "6B7280", align: "center", fontFace: PPT_SAFE_FONTS.primary,
+      slideB.addShape("rect" as any, {
+        x: 8.35, y: 6.0, w: 1.15, h: 1.15,
+        fill: { color: CHARCOAL },
+        line: { color: GOLD, width: 1 },
       });
+      slideB.addImage({ data: qrBase64, x: 8.42, y: 6.07, w: 1.0, h: 1.0 });
     }
 
     // Location info below photos
-    slideB.addText(sanitizePptText(`${row.area} | ${row.location} | ${row.city}`), {
-      x: 0.4, y: 5.7, w: 7.5, h: 0.3,
-      fontSize: 10, color: "64748B", fontFace: PPT_SAFE_FONTS.primary,
+    slideB.addText(sanitizePptText(`${row.area}  ·  ${row.location}  ·  ${row.city}`), {
+      x: 0.4, y: 6.1, w: 7.5, h: 0.3,
+      fontSize: 10, color: TEXT_LIGHT, fontFace: PPT_SAFE_FONTS.primary,
     });
 
-    addFooter(slideB, companyName, brand, slideNum + 1, totalSlides);
+    addPremiumFooter(slideB, companyName, slideNum + 1, totalSlides);
   }
 
-  // ===== TERMS SLIDE =====
+  // ═══════════════════════════════════════════════════════════════
+  // TERMS SLIDE — Premium close
+  // ═══════════════════════════════════════════════════════════════
   const terms = pptx.addSlide();
-  terms.background = { color: "FFFFFF" };
-  terms.addShape("rect" as any, { x: 0, y: 0, w: 10, h: 0.7, fill: { color: brand } });
-  terms.addText(sanitizePptText("Terms & Conditions"), {
-    x: 0.3, y: 0.15, w: 9.4, h: 0.5,
-    fontSize: 22, bold: true, color: "FFFFFF", fontFace: PPT_SAFE_FONTS.primary,
+  terms.background = { color: CHARCOAL_DEEP };
+
+  terms.addShape("rect" as any, { x: 0, y: 0, w: 10, h: 0.04, fill: { color: GOLD } });
+
+  terms.addText(sanitizePptText("TERMS & CONDITIONS"), {
+    x: 0.5, y: 0.5, w: 9, h: 0.5,
+    fontSize: 18, bold: true, color: GOLD, fontFace: PPT_SAFE_FONTS.primary, charSpacing: 4,
   });
 
+  // Gold bar
+  terms.addShape("rect" as any, { x: 0.5, y: 1.1, w: 2, h: 0.03, fill: { color: GOLD } });
+
   const termsText = [
-    "1. Subject to availability at the time of confirmation",
-    "2. Card rates are indicative and subject to negotiation",
-    "3. Taxes & statutory charges extra as applicable",
-    "4. Artwork approval is mandatory before printing",
-    "5. Images shown are indicative and may vary",
-    "6. Booking confirmation required within 7 days",
-    "7. Installation dates subject to weather and permissions",
+    "Subject to availability at the time of confirmation",
+    "Card rates are indicative and subject to negotiation",
+    "Taxes & statutory charges extra as applicable",
+    "Artwork approval is mandatory before printing",
+    "Images shown are indicative and may vary",
+    "Booking confirmation required within 7 days",
+    "Installation dates subject to weather and permissions",
   ];
   termsText.forEach((t, idx) => {
-    terms.addText(sanitizePptText(t), {
-      x: 0.5, y: 1.2 + idx * 0.5, w: 9, h: 0.4,
-      fontSize: 14, color: "374151", fontFace: PPT_SAFE_FONTS.primary,
+    terms.addText(sanitizePptText(`${idx + 1}.  ${t}`), {
+      x: 0.7, y: 1.4 + idx * 0.5, w: 8.6, h: 0.4,
+      fontSize: 12, color: TEXT_LIGHT, fontFace: PPT_SAFE_FONTS.primary,
     });
   });
 
-  terms.addShape("rect" as any, { x: 0.5, y: 5.2, w: 9, h: 1.0, fill: { color: "F3F4F6" }, line: { color: "E5E7EB", width: 1 } });
-  terms.addText(sanitizePptText(`${companyName} | OOH Media Management Platform`), {
-    x: 0.6, y: 5.4, w: 8.8, h: 0.5,
-    fontSize: 14, bold: true, color: brand, fontFace: PPT_SAFE_FONTS.primary,
+  // Company branding box
+  terms.addShape("rect" as any, {
+    x: 2.5, y: 5.3, w: 5, h: 0.9,
+    fill: { color: CHARCOAL },
+    line: { color: GOLD, width: 1 },
+  });
+  terms.addText(sanitizePptText(`${companyName}`), {
+    x: 2.5, y: 5.4, w: 5, h: 0.35,
+    fontSize: 14, bold: true, color: GOLD, align: "center", fontFace: PPT_SAFE_FONTS.primary,
+  });
+  terms.addText(sanitizePptText("OOH Media Management Platform"), {
+    x: 2.5, y: 5.78, w: 5, h: 0.3,
+    fontSize: 9, color: TEXT_DIM, align: "center", fontFace: PPT_SAFE_FONTS.primary,
   });
 
-  // ===== Download =====
+  addPremiumFooter(terms, companyName, totalSlides, totalSlides);
+
+  // ═══════════════════════════════════════════════════════════════
+  // DOWNLOAD — Premium filename
+  // ═══════════════════════════════════════════════════════════════
   const cityTag = cityFilter && cityFilter !== "all" ? cityFilter : "All";
-  const startTag = startDate.replace(/-/g, "");
-  const endTag = endDate.replace(/-/g, "");
-  const fileName = `Vacant_Media_${cityTag}_${startTag}-${endTag}.pptx`;
+  const startTag = startDate.replace(/-/g, "").slice(6, 8) + startDate.replace(/-/g, "").slice(4, 6) + startDate.replace(/-/g, "").slice(0, 4);
+  const endTag = endDate.replace(/-/g, "").slice(6, 8) + endDate.replace(/-/g, "").slice(4, 6) + endDate.replace(/-/g, "").slice(0, 4);
+  const fileName = `Vacant_Media_Proposal_Premium_${cityTag}_${startTag}-${endTag}.pptx`;
 
   await pptx.writeFile({ fileName });
 }
 
-function addFooter(slide: any, companyName: string, brand: string, pageNum: number, totalPages: number) {
-  slide.addShape("rect" as any, { x: 0.15, y: 6.85, w: 9.7, h: 0.5, fill: { color: brand } });
-  slide.addText(sanitizePptText(`${companyName} | Go-Ads 360°`), {
-    x: 0.3, y: 6.92, w: 7, h: 0.35,
-    fontSize: 10, color: "FFFFFF", fontFace: PPT_SAFE_FONTS.primary,
+function addPremiumFooter(slide: any, companyName: string, pageNum: number, totalPages: number) {
+  // Gold line
+  slide.addShape("rect" as any, { x: 0, y: 6.93, w: 10, h: 0.02, fill: { color: GOLD } });
+  // Dark footer bar
+  slide.addShape("rect" as any, { x: 0, y: 6.95, w: 10, h: 0.55, fill: { color: CHARCOAL_DEEP } });
+  // Company name
+  slide.addText(sanitizePptText(`${companyName}  ·  Go-Ads 360°`), {
+    x: 0.5, y: 7.02, w: 7, h: 0.35,
+    fontSize: 9, color: GOLD, fontFace: PPT_SAFE_FONTS.primary,
   });
+  // Page number
   slide.addText(sanitizePptText(`${pageNum} / ${totalPages}`), {
-    x: 7.5, y: 6.92, w: 2.2, h: 0.35,
-    fontSize: 10, color: "FFFFFF", align: "right", fontFace: PPT_SAFE_FONTS.primary,
+    x: 7.5, y: 7.02, w: 2.2, h: 0.35,
+    fontSize: 9, color: TEXT_DIM, align: "right", fontFace: PPT_SAFE_FONTS.primary,
   });
 }

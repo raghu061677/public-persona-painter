@@ -4831,6 +4831,53 @@ export type Database = {
           },
         ]
       }
+      invoice_share_tokens: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          invoice_id: string
+          is_revoked: boolean
+          max_uses: number | null
+          token: string
+          use_count: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          invoice_id: string
+          is_revoked?: boolean
+          max_uses?: number | null
+          token?: string
+          use_count?: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          invoice_id?: string
+          is_revoked?: boolean
+          max_uses?: number | null
+          token?: string
+          use_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_share_tokens_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           balance_due: number

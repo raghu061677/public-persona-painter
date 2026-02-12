@@ -1,6 +1,5 @@
 // supabase/functions/generate-share-token/index.ts
-// Phase-4: Secure server-side share token generation for invoices
-// Tokens are generated using crypto-grade randomness on the server.
+// Phase-5: Token hashing — store sha256(token), never raw token in DB
 
 import { corsHeaders } from '../_shared/cors.ts';
 import {
@@ -15,6 +14,12 @@ import {
   withAuth,
 } from '../_shared/auth.ts';
 
+async function sha256Hex(data: string): Promise<string> {
+  const encoded = new TextEncoder().encode(data);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 Deno.serve(withAuth(async (req) => {
   const ctx = await getAuthContext(req);
   requireRole(ctx, ['admin', 'finance']);
@@ -28,11 +33,10 @@ Deno.serve(withAuth(async (req) => {
     return jsonError('invoice_id is required', 400);
   }
 
-  // Validate expires_days (1-365)
   const expDays = Math.min(Math.max(Number(expires_days) || 7, 1), 365);
   const maxUsesVal = Math.min(Math.max(Number(max_uses) || 200, 1), 10000);
 
-  // Verify invoice exists and belongs to user's company
+  // Verify invoice belongs to user's company
   const userClient = supabaseUserClient(req);
   const { data: invoice, error: invoiceError } = await userClient
     .from('invoices')
@@ -46,19 +50,22 @@ Deno.serve(withAuth(async (req) => {
 
   requireCompanyMatch(ctx, invoice.company_id);
 
-  // Generate token server-side with crypto-grade randomness
+  // Generate raw token (returned to user ONCE)
   const tokenBytes = new Uint8Array(32);
   crypto.getRandomValues(tokenBytes);
-  const token = Array.from(tokenBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  const rawToken = Array.from(tokenBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  // Hash token for storage — raw token NEVER stored in DB
+  const tokenHash = await sha256Hex(rawToken);
 
   const expiresAt = new Date(Date.now() + expDays * 24 * 60 * 60 * 1000).toISOString();
 
-  // Insert token using service client (RLS may block if user doesn't own the invoice)
   const serviceClient = supabaseServiceClient();
   const { data: tokenRecord, error: insertError } = await serviceClient
     .from('invoice_share_tokens')
     .insert({
-      token,
+      token: null,           // Raw token NOT stored
+      token_hash: tokenHash, // Only hash stored
       invoice_id,
       company_id: ctx.companyId,
       created_by: ctx.userId,
@@ -67,7 +74,7 @@ Deno.serve(withAuth(async (req) => {
       is_revoked: false,
       use_count: 0,
     })
-    .select('id, token, expires_at, max_uses, created_at')
+    .select('id, expires_at, max_uses, created_at')
     .single();
 
   if (insertError) {
@@ -85,13 +92,13 @@ Deno.serve(withAuth(async (req) => {
     metadata: { expires_days: expDays, max_uses: maxUsesVal },
   });
 
-  // Return token ONCE — it should be copied immediately by the user
+  // Return raw token ONCE — user must copy immediately
   return jsonSuccess({
     success: true,
     token_id: tokenRecord.id,
-    token: tokenRecord.token,
+    token: rawToken,
     expires_at: tokenRecord.expires_at,
     max_uses: tokenRecord.max_uses,
-    portal_url: `/portal/view-invoice/${tokenRecord.token}`,
+    portal_url: `/portal/view-invoice/${rawToken}`,
   });
 }));

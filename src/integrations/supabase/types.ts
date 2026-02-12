@@ -4844,6 +4844,7 @@ export type Database = {
           revoked_at: string | null
           revoked_by: string | null
           token: string
+          token_hash: string | null
           use_count: number
         }
         Insert: {
@@ -4858,6 +4859,7 @@ export type Database = {
           revoked_at?: string | null
           revoked_by?: string | null
           token?: string
+          token_hash?: string | null
           use_count?: number
         }
         Update: {
@@ -4872,6 +4874,7 @@ export type Database = {
           revoked_at?: string | null
           revoked_by?: string | null
           token?: string
+          token_hash?: string | null
           use_count?: number
         }
         Relationships: [

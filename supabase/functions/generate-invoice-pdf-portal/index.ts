@@ -1,9 +1,14 @@
 // supabase/functions/generate-invoice-pdf-portal/index.ts
-// v3.0 - Phase-3.1 Security: Share token validation (no direct invoice_id access)
-// PUBLIC endpoint (verify_jwt = false) — secured via unguessable share tokens.
+// v4.0 - Phase-5: Token hash lookup (sha256) + backward compat with raw token column
 
 import { corsHeaders } from '../_shared/cors.ts';
 import { supabaseServiceClient, jsonError, jsonSuccess, logSecurityAudit } from '../_shared/auth.ts';
+
+async function sha256Hex(data: string): Promise<string> {
+  const encoded = new TextEncoder().encode(data);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 // Simple in-memory rate limiter per IP
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -48,12 +53,31 @@ Deno.serve(async (req) => {
 
     const supabase = supabaseServiceClient();
 
-    // Validate share token: exists, not revoked, not expired
-    const { data: tokenRecord, error: tokenError } = await supabase
+    // Compute hash of incoming token for lookup
+    const tokenHash = await sha256Hex(share_token);
+
+    // Try hash-based lookup first (new tokens), fall back to raw token (legacy)
+    let tokenRecord: any = null;
+    let tokenError: any = null;
+
+    const { data: hashMatch, error: hashErr } = await supabase
       .from('invoice_share_tokens')
       .select('invoice_id, company_id, is_revoked, expires_at, max_uses, use_count')
-      .eq('token', share_token)
+      .eq('token_hash', tokenHash)
       .single();
+
+    if (hashMatch) {
+      tokenRecord = hashMatch;
+    } else {
+      // Backward compat: check raw token column for pre-migration tokens
+      const { data: rawMatch, error: rawErr } = await supabase
+        .from('invoice_share_tokens')
+        .select('invoice_id, company_id, is_revoked, expires_at, max_uses, use_count')
+        .eq('token', share_token)
+        .single();
+      tokenRecord = rawMatch;
+      tokenError = rawErr;
+    }
 
     if (tokenError || !tokenRecord) {
       await logSecurityAudit({

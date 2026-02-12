@@ -1,97 +1,53 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
+// v3.0 - Phase-5: withAuth + getAuthContext + requireRole + audit
+import { corsHeaders } from '../_shared/cors.ts';
+import {
+  getAuthContext, requireRole, isPlatformAdmin, logSecurityAudit,
+  supabaseServiceClient, jsonError, jsonSuccess, withAuth, AuthError,
+} from '../_shared/auth.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
-};
-
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+Deno.serve(withAuth(async (req) => {
+  const ctx = await getAuthContext(req);
+  
+  // Platform admin only
+  const isAdmin = await isPlatformAdmin(ctx.userId);
+  if (!isAdmin) {
+    throw new AuthError('Only platform admins can reset user passwords', 403);
   }
 
-  try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
+  const body = await req.json().catch(() => null);
+  if (!body) return jsonError('Invalid JSON body', 400);
 
-    // Get current user from auth header
-    const authHeader = req.headers.get('Authorization')!;
-    const token = authHeader.replace('Bearer ', '');
-    
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
-    
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Check if user is platform admin
-    const { data: companyUsers, error: roleError } = await supabaseClient
-      .from('company_users')
-      .select('role, companies(type)')
-      .eq('user_id', user.id)
-      .eq('status', 'active');
-
-    const isPlatformAdmin = companyUsers?.some(cu => 
-      cu.role === 'admin' && (cu.companies as any)?.type === 'platform_admin'
-    );
-
-    if (roleError || !isPlatformAdmin) {
-      return new Response(
-        JSON.stringify({ error: 'Forbidden - Platform admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Parse request body
-    const { email } = await req.json();
-
-    if (!email) {
-      return new Response(
-        JSON.stringify({ error: 'email is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('reset-user-password: Sending reset email to:', email);
-
-    // Send password reset email
-    const { error: resetError } = await supabaseClient.auth.resetPasswordForEmail(email, {
-      redirectTo: `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify`,
-    });
-
-    if (resetError) {
-      console.error('Error sending reset email:', resetError);
-      throw resetError;
-    }
-
-    console.log('reset-user-password: Successfully sent reset email to:', email);
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'Password reset email sent successfully'
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    console.error('Error resetting password:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+  const { email, newPassword } = body;
+  if (!email || typeof email !== 'string') return jsonError('Email is required', 400);
+  if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
+    return jsonError('Password must be at least 8 characters', 400);
   }
-});
+
+  const serviceClient = supabaseServiceClient();
+
+  // Find user by email
+  const { data: { users }, error: listError } = await serviceClient.auth.admin.listUsers();
+  if (listError) throw listError;
+
+  const targetUser = users?.find((u: any) => u.email === email);
+  if (!targetUser) {
+    return jsonError('User not found', 404);
+  }
+
+  // Reset password
+  const { error: resetError } = await serviceClient.auth.admin.updateUserById(
+    targetUser.id,
+    { password: newPassword }
+  );
+
+  if (resetError) throw resetError;
+
+  await logSecurityAudit({
+    functionName: 'reset-user-password', userId: ctx.userId,
+    companyId: ctx.companyId, action: 'reset_user_password',
+    recordIds: [targetUser.id], status: 'success', req,
+    metadata: { targetEmail: email },
+  });
+
+  return jsonSuccess({ message: 'Password reset successfully' });
+}));

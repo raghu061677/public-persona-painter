@@ -1,8 +1,8 @@
 /**
- * Phase-3.1: Shared Edge Function Security Utilities
+ * Phase-5: Shared Edge Function Security Utilities
  * 
  * Provides consistent AuthN, tenant isolation, role authorization,
- * and audit logging across all edge functions.
+ * HMAC validation for cron/system endpoints, and audit logging.
  * 
  * NEVER trust company_id or role from request body.
  * ALWAYS derive from JWT/database.
@@ -10,6 +10,92 @@
 
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { corsHeaders } from './cors.ts';
+
+// ─── HMAC Validation for Cron/System Endpoints ─────────────────────
+
+const MAX_TIMESTAMP_SKEW_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Validate HMAC signature for system/cron endpoints.
+ * Headers required:
+ *   X-GoAds-Timestamp: unix ms
+ *   X-GoAds-Signature: hex(hmac_sha256(secret, `${timestamp}.${rawBody}`))
+ * Rejects if timestamp skew > 5 min or signature mismatch.
+ */
+export async function requireHmac(req: Request, rawBody: string): Promise<void> {
+  const secret = Deno.env.get('CRON_HMAC_SECRET');
+  if (!secret) {
+    throw new AuthError('CRON_HMAC_SECRET not configured', 500);
+  }
+
+  const timestamp = req.headers.get('X-GoAds-Timestamp');
+  const signature = req.headers.get('X-GoAds-Signature');
+
+  if (!timestamp || !signature) {
+    throw new AuthError('Missing HMAC headers (X-GoAds-Timestamp, X-GoAds-Signature)', 401);
+  }
+
+  const tsNum = parseInt(timestamp, 10);
+  if (isNaN(tsNum)) {
+    throw new AuthError('Invalid timestamp', 401);
+  }
+
+  const now = Date.now();
+  if (Math.abs(now - tsNum) > MAX_TIMESTAMP_SKEW_MS) {
+    throw new AuthError('Request timestamp too old or too far in future (>5 min skew)', 401);
+  }
+
+  // Compute expected HMAC
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const data = encoder.encode(`${timestamp}.${rawBody}`);
+  const sigBuffer = await crypto.subtle.sign('HMAC', key, data);
+  const expectedHex = Array.from(new Uint8Array(sigBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+
+  if (signature !== expectedHex) {
+    throw new AuthError('Invalid HMAC signature', 401);
+  }
+}
+
+/**
+ * Wrap a system/cron endpoint handler with HMAC validation.
+ * Handles CORS preflight and validates HMAC before calling the handler.
+ */
+export function withHmac(handler: (req: Request, rawBody: string) => Promise<Response>) {
+  return async (req: Request): Promise<Response> => {
+    if (req.method === 'OPTIONS') {
+      return new Response(null, { headers: corsHeaders });
+    }
+
+    try {
+      const rawBody = await req.text();
+      await requireHmac(req, rawBody);
+      return await handler(req, rawBody);
+    } catch (error) {
+      if (error instanceof AuthError) {
+        console.error(`[hmac] Auth error: ${error.message}`);
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: error.statusCode, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      console.error('[hmac] Unhandled error:', error);
+      const msg = error instanceof Error ? error.message : 'Internal server error';
+      return new Response(
+        JSON.stringify({ error: msg }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+  };
+}
 
 // ─── Types ───────────────────────────────────────────────────────────
 

@@ -1,134 +1,64 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
+// v3.0 - Phase-5: withAuth + getAuthContext + requireRole + audit
+import { corsHeaders } from '../_shared/cors.ts';
+import {
+  getAuthContext, requireRole, logSecurityAudit,
+  supabaseServiceClient, jsonError, jsonSuccess, withAuth,
+} from '../_shared/auth.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
-};
+Deno.serve(withAuth(async (req) => {
+  const ctx = await getAuthContext(req);
+  requireRole(ctx, ['admin']);
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  const body = await req.json().catch(() => null);
+  if (!body) return jsonError('Invalid JSON body', 400);
+
+  const { user_id, company_id, name, email, phone, role, status } = body;
+  if (!user_id || typeof user_id !== 'string') return jsonError('user_id is required', 400);
+
+  // Company scoping: can only update users in own company
+  const targetCompany = company_id || ctx.companyId;
+  if (targetCompany !== ctx.companyId) {
+    return jsonError('Cannot update users in other companies', 403);
   }
 
-  try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
+  const serviceClient = supabaseServiceClient();
 
-    // Get current user from auth header
-    const authHeader = req.headers.get('Authorization')!;
-    const token = authHeader.replace('Bearer ', '');
-    
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
-    
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  // Verify target user exists in company
+  const { data: existing } = await serviceClient
+    .from('company_users')
+    .select('id')
+    .eq('user_id', user_id)
+    .eq('company_id', ctx.companyId)
+    .maybeSingle();
 
-    // Parse request body
-    const { user_id, company_id, name, email, phone, role, status } = await req.json();
+  if (!existing) return jsonError('User not found in your company', 404);
 
-    if (!user_id || !company_id) {
-      return new Response(
-        JSON.stringify({ error: 'user_id and company_id are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  const updates: any = {};
+  if (name) updates.name = name;
+  if (email) updates.email = email;
+  if (phone !== undefined) updates.phone = phone;
+  if (role) updates.role = role;
+  if (status) updates.status = status;
 
-    // Check if user has permission to edit this company's users
-    const { data: companyUsers, error: roleError } = await supabaseClient
-      .from('company_users')
-      .select('role, company_id, companies(type)')
-      .eq('user_id', user.id)
-      .eq('status', 'active');
+  const { error } = await serviceClient
+    .from('company_users')
+    .update(updates)
+    .eq('user_id', user_id)
+    .eq('company_id', ctx.companyId);
 
-    const isPlatformAdmin = companyUsers?.some(cu => 
-      cu.role === 'admin' && (cu.companies as any)?.type === 'platform_admin'
-    );
+  if (error) throw error;
 
-    const isCompanyAdmin = companyUsers?.some(cu => 
-      cu.role === 'admin' && cu.company_id === company_id
-    );
-
-    if (roleError || (!isPlatformAdmin && !isCompanyAdmin)) {
-      return new Response(
-        JSON.stringify({ error: 'Forbidden - Admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('update-company-user: Updating user:', user_id);
-
-    // Update email if changed
-    if (email) {
-      const { error: emailError } = await supabaseClient.auth.admin.updateUserById(
-        user_id,
-        { email }
-      );
-
-      if (emailError) {
-        console.error('Error updating email:', emailError);
-        throw emailError;
-      }
-    }
-
-    // Update profile
-    if (name) {
-      const { error: profileError } = await supabaseClient
-        .from('profiles')
-        .update({ username: name })
-        .eq('id', user_id);
-
-      if (profileError) {
-        console.error('Error updating profile:', profileError);
-      }
-    }
-
-    // Update company_users
-    const updates: any = {};
-    if (role) updates.role = role;
-    if (status) updates.status = status;
-
-    if (Object.keys(updates).length > 0) {
-      const { error: companyUserError } = await supabaseClient
-        .from('company_users')
-        .update(updates)
-        .eq('user_id', user_id)
-        .eq('company_id', company_id);
-
-      if (companyUserError) {
-        console.error('Error updating company user:', companyUserError);
-        throw companyUserError;
-      }
-    }
-
-    console.log('update-company-user: Successfully updated user:', user_id);
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'User updated successfully'
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    console.error('Error updating company user:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+  // Update auth email if changed
+  if (email) {
+    await serviceClient.auth.admin.updateUserById(user_id, { email });
   }
-});
+
+  await logSecurityAudit({
+    functionName: 'update-company-user', userId: ctx.userId,
+    companyId: ctx.companyId, action: 'update_company_user',
+    recordIds: [user_id], status: 'success', req,
+    metadata: { updatedFields: Object.keys(updates) },
+  });
+
+  return jsonSuccess({ message: 'Company user updated successfully' });
+}));

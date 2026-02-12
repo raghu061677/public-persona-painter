@@ -1,128 +1,71 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// v3.0 - Phase-5: withAuth + getAuthContext + requireRole + audit
 import { corsHeaders } from '../_shared/cors.ts';
+import {
+  getAuthContext, requireRole, logSecurityAudit,
+  supabaseServiceClient, jsonError, jsonSuccess, withAuth,
+} from '../_shared/auth.ts';
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+Deno.serve(withAuth(async (req) => {
+  const ctx = await getAuthContext(req);
+  requireRole(ctx, ['admin']);
+
+  const body = await req.json().catch(() => null);
+  if (!body) return jsonError('Invalid JSON body', 400);
+
+  const { userId, name, email, phone, role, status, display_name } = body;
+  if (!userId || typeof userId !== 'string') return jsonError('userId is required', 400);
+
+  const serviceClient = supabaseServiceClient();
+
+  // Verify target user belongs to same company (unless platform admin)
+  const { data: targetUser } = await serviceClient
+    .from('company_users')
+    .select('company_id, role')
+    .eq('user_id', userId)
+    .eq('company_id', ctx.companyId)
+    .maybeSingle();
+
+  if (!targetUser) {
+    return jsonError('User not found in your company', 404);
   }
 
-  try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
+  // Build update object
+  const updateData: any = {};
+  if (name) updateData.name = name;
+  if (email) updateData.email = email;
+  if (phone) updateData.phone = phone;
+  if (role) updateData.role = role;
+  if (status) updateData.status = status;
+  if (display_name !== undefined) updateData.display_name = display_name;
 
-    // Get current user from auth header
-    const authHeader = req.headers.get('Authorization')!;
-    const token = authHeader.replace('Bearer ', '');
-    
-    const { data: { user: currentUser }, error: userError } = await supabaseClient.auth.getUser(token);
-    
-    if (userError || !currentUser) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  // Update company_users
+  const { error: updateError } = await serviceClient
+    .from('company_users')
+    .update(updateData)
+    .eq('user_id', userId)
+    .eq('company_id', ctx.companyId);
 
-    // Check if user has admin role using service role client
-    const { data: userRoles, error: roleError } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', currentUser.id);
+  if (updateError) throw updateError;
 
-    const isAdmin = userRoles?.some(r => r.role === 'admin') || currentUser.email === 'admin@go-ads.in';
+  // Update auth user email if changed
+  if (email) {
+    await serviceClient.auth.admin.updateUserById(userId, { email });
+  }
 
-    if (!isAdmin) {
-      return new Response(
-        JSON.stringify({ error: 'Forbidden - Admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Parse request body
-    const { userId, username, role, isActive } = await req.json();
-
-    if (!userId) {
-      return new Response(
-        JSON.stringify({ error: 'User ID is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Update profile if username provided
-    if (username) {
-      const { error: profileError } = await supabaseClient
-        .from('profiles')
-        .update({ username })
-        .eq('id', userId);
-
-      if (profileError) {
-        throw new Error(`Failed to update profile: ${profileError.message}`);
-      }
-    }
-
-    // Update role if provided
-    if (role) {
-      // Delete old roles
-      await supabaseClient.from('user_roles').delete().eq('user_id', userId);
-      
-      // Insert new role
-      const { error: roleInsertError } = await supabaseClient
-        .from('user_roles')
-        .insert({ user_id: userId, role: role });
-
-      if (roleInsertError) {
-        throw new Error(`Failed to update role: ${roleInsertError.message}`);
-      }
-    }
-
-    // Update user status if isActive is provided
-    if (typeof isActive === 'boolean') {
-      if (isActive) {
-        // Activate user - unban if banned and confirm email if not confirmed
-        const { error: updateError } = await supabaseClient.auth.admin.updateUserById(
-          userId,
-          { 
-            ban_duration: 'none',
-            email_confirm: true  // Confirm email to activate the user
-          }
-        );
-        if (updateError) {
-          console.error('Error activating user:', updateError);
-          throw new Error(`Failed to activate user: ${updateError.message}`);
-        }
-      } else {
-        // Deactivate user - ban them
-        const { error: banError } = await supabaseClient.auth.admin.updateUserById(
-          userId,
-          { ban_duration: '876000h' } // 100 years (effectively permanent)
-        );
-        if (banError) {
-          console.error('Error deactivating user:', banError);
-          throw new Error(`Failed to deactivate user: ${banError.message}`);
-        }
-      }
-    }
-
-    return new Response(
-      JSON.stringify({ success: true, message: 'User updated successfully' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    console.error('Error updating user:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  // Update user_roles if role changed
+  if (role) {
+    await serviceClient.from('user_roles').upsert(
+      { user_id: userId, role },
+      { onConflict: 'user_id,role' }
     );
   }
-});
+
+  await logSecurityAudit({
+    functionName: 'update-user', userId: ctx.userId,
+    companyId: ctx.companyId, action: 'update_user',
+    recordIds: [userId], status: 'success', req,
+    metadata: { updatedFields: Object.keys(updateData) },
+  });
+
+  return jsonSuccess({ message: 'User updated successfully' });
+}));

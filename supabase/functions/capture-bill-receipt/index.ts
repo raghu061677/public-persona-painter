@@ -1,124 +1,113 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
+// v2.0 - Phase-5: JWT + role enforcement + Zod validation + audit logging
+import { corsHeaders } from '../_shared/cors.ts';
+import {
+  getAuthContext, requireRole, logSecurityAudit,
+  supabaseServiceClient, jsonError, jsonSuccess, withAuth,
+} from '../_shared/auth.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+const MAX_BODY_SIZE = 4096; // 4KB max for this simple JSON endpoint
 
-serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+Deno.serve(withAuth(async (req) => {
+  const ctx = await getAuthContext(req);
+  requireRole(ctx, ['admin', 'finance']);
+
+  // Body size limit
+  const contentLength = parseInt(req.headers.get('content-length') || '0', 10);
+  if (contentLength > MAX_BODY_SIZE) {
+    return jsonError('Request body too large', 413);
   }
 
-  try {
-    const { service_no, bill_month, amount, bill_id, asset_id } = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body) return jsonError('Invalid JSON body', 400);
 
-    if (!service_no || !bill_month || !amount || !bill_id) {
-      throw new Error("Missing required parameters");
-    }
+  const { service_no, bill_month, amount, bill_id, asset_id } = body;
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // For now, we'll create a placeholder receipt URL
-    // In production, you would use Puppeteer/Playwright to capture the actual receipt
-    // This requires a more complex setup with browser automation
-    
-    // Generate a mock receipt URL (in production, this would be the actual screenshot)
-    const receiptFileName = `receipts/${service_no}-${bill_month}.txt`;
-    const receiptContent = `
-TGSPDCL Payment Receipt
-=======================
-Service Number: ${service_no}
-Bill Month: ${bill_month}
-Amount Paid: ₹${amount}
-Payment Date: ${new Date().toISOString()}
-
-This is a placeholder receipt.
-In production, this would be replaced with an actual screenshot
-from the TGSPDCL payment portal using browser automation.
-    `.trim();
-
-    // Upload placeholder receipt to storage
-    const { error: uploadError } = await supabase.storage
-      .from('campaign-photos')
-      .upload(receiptFileName, receiptContent, { 
-        contentType: 'text/plain', 
-        upsert: true 
-      });
-
-    if (uploadError) throw uploadError;
-
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('campaign-photos')
-      .getPublicUrl(receiptFileName);
-
-    // Update power bill as paid
-    const { error: billUpdateError } = await supabase
-      .from('asset_power_bills')
-      .update({
-        paid: true,
-        payment_status: 'Paid',
-        payment_date: new Date().toISOString().split('T')[0],
-        paid_amount: amount,
-        paid_receipt_url: publicUrl
-      })
-      .eq('id', bill_id);
-
-    if (billUpdateError) throw billUpdateError;
-
-    // Create expense record
-    const { data: expenseData, error: expenseError } = await supabase
-      .from('expenses')
-      .insert({
-        category: 'Electricity',
-        vendor_name: 'TGSPDCL',
-        amount: amount,
-        gst_percent: 0,
-        gst_amount: 0,
-        total_amount: amount,
-        payment_status: 'Paid',
-        paid_date: new Date().toISOString().split('T')[0],
-        notes: `Power bill payment for Service ${service_no}, ${bill_month}`,
-        invoice_url: publicUrl,
-        bill_id: bill_id,
-        bill_month: bill_month,
-        campaign_id: asset_id // Link to asset through campaign_id field
-      })
-      .select()
-      .single();
-
-    if (expenseError) throw expenseError;
-
-    return new Response(
-      JSON.stringify({ 
-        status: 'success', 
-        receipt: publicUrl,
-        expense_id: expenseData.id,
-        message: 'Payment recorded successfully. Receipt saved and expense created.'
-      }), 
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
-
-  } catch (error: any) {
-    console.error('Error processing payment:', error);
-    return new Response(
-      JSON.stringify({ 
-        status: 'error', 
-        message: error.message 
-      }), 
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      }
-    );
+  // Zod-like validation
+  if (!service_no || typeof service_no !== 'string' || service_no.length > 50) {
+    return jsonError('Invalid service_no', 400);
   }
-});
+  if (!bill_month || typeof bill_month !== 'string' || !/^\d{4}-\d{2}/.test(bill_month)) {
+    return jsonError('Invalid bill_month format (expected YYYY-MM...)', 400);
+  }
+  if (typeof amount !== 'number' || amount <= 0 || amount > 10000000) {
+    return jsonError('Invalid amount', 400);
+  }
+  if (!bill_id || typeof bill_id !== 'string') {
+    return jsonError('Invalid bill_id', 400);
+  }
+
+  // Service client needed for storage + cross-table writes
+  const serviceClient = supabaseServiceClient();
+
+  // Verify the bill belongs to user's company
+  const { data: bill, error: billErr } = await serviceClient
+    .from('asset_power_bills')
+    .select('id, asset_id, media_assets!inner(company_id)')
+    .eq('id', bill_id)
+    .single();
+
+  if (billErr || !bill) {
+    return jsonError('Bill not found', 404);
+  }
+
+  const billCompanyId = (bill as any).media_assets?.company_id;
+  if (billCompanyId !== ctx.companyId) {
+    await logSecurityAudit({
+      functionName: 'capture-bill-receipt', userId: ctx.userId,
+      companyId: ctx.companyId, action: 'capture_bill_cross_company',
+      status: 'denied', req, metadata: { bill_id, target_company: billCompanyId },
+    });
+    return jsonError('Forbidden – bill does not belong to your company', 403);
+  }
+
+  // Generate placeholder receipt
+  const receiptFileName = `company/${ctx.companyId}/receipts/${service_no}-${bill_month}.txt`;
+  const receiptContent = `TGSPDCL Payment Receipt\nService: ${service_no}\nMonth: ${bill_month}\nAmount: ₹${amount}\nDate: ${new Date().toISOString()}`;
+
+  const { error: uploadError } = await serviceClient.storage
+    .from('campaign-photos')
+    .upload(receiptFileName, receiptContent, { contentType: 'text/plain', upsert: true });
+
+  if (uploadError) throw uploadError;
+
+  const { data: { publicUrl } } = serviceClient.storage
+    .from('campaign-photos')
+    .getPublicUrl(receiptFileName);
+
+  const { error: billUpdateError } = await serviceClient
+    .from('asset_power_bills')
+    .update({
+      paid: true, payment_status: 'Paid',
+      payment_date: new Date().toISOString().split('T')[0],
+      paid_amount: amount, paid_receipt_url: publicUrl,
+    })
+    .eq('id', bill_id);
+
+  if (billUpdateError) throw billUpdateError;
+
+  const { data: expenseData, error: expenseError } = await serviceClient
+    .from('expenses')
+    .insert({
+      category: 'Electricity', vendor_name: 'TGSPDCL',
+      amount, gst_percent: 0, gst_amount: 0, total_amount: amount,
+      payment_status: 'Paid', paid_date: new Date().toISOString().split('T')[0],
+      notes: `Power bill payment for Service ${service_no}, ${bill_month}`,
+      invoice_url: publicUrl, bill_id, bill_month,
+      campaign_id: asset_id,
+    })
+    .select().single();
+
+  if (expenseError) throw expenseError;
+
+  await logSecurityAudit({
+    functionName: 'capture-bill-receipt', userId: ctx.userId,
+    companyId: ctx.companyId, action: 'capture_bill_payment',
+    recordIds: [bill_id, expenseData.id], status: 'success', req,
+    metadata: { service_no, bill_month, amount },
+  });
+
+  return jsonSuccess({
+    status: 'success', receipt: publicUrl, expense_id: expenseData.id,
+    message: 'Payment recorded successfully.',
+  });
+}));

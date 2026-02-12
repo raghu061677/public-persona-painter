@@ -1,5 +1,5 @@
 /**
- * Phase-3: Shared Edge Function Security Utilities
+ * Phase-3.1: Shared Edge Function Security Utilities
  * 
  * Provides consistent AuthN, tenant isolation, role authorization,
  * and audit logging across all edge functions.
@@ -20,6 +20,37 @@ export interface AuthContext {
   companyId: string;
   role: AppRole;
   email?: string;
+}
+
+// ─── CORS Origin Allowlist ───────────────────────────────────────────
+
+const ALLOWED_ORIGINS: string[] = [
+  'https://go-ads.lovable.app',
+  'https://id-preview--e5e4d66a-feda-48ef-a6c6-1845bb9855ea.lovable.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
+/**
+ * Build CORS headers for a specific request, enforcing origin allowlist.
+ * For authenticated routes, only allowed origins get Access-Control-Allow-Origin.
+ * For public routes (portal), use the shared corsHeaders (wildcard).
+ */
+export function getCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get('Origin') || '';
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    return {
+      ...corsHeaders,
+      'Access-Control-Allow-Origin': origin,
+      'Vary': 'Origin',
+    };
+  }
+  // For non-matching origins on authenticated routes, return restrictive headers
+  return {
+    'Access-Control-Allow-Headers': corsHeaders['Access-Control-Allow-Headers'],
+    'Vary': 'Origin',
+    // Intentionally omit Access-Control-Allow-Origin to block cross-origin
+  };
 }
 
 // ─── Client Factories ────────────────────────────────────────────────
@@ -207,22 +238,50 @@ export function jsonSuccess(data: unknown, status = 200): Response {
 }
 
 /**
- * Wrap an edge function handler with standard CORS + error handling.
+ * Wrap an edge function handler with strict CORS enforcement + error handling.
+ * Authenticated routes use origin allowlist; rejects disallowed origins.
  */
 export function withAuth(handler: (req: Request) => Promise<Response>) {
   return async (req: Request): Promise<Response> => {
+    const responseHeaders = getCorsHeaders(req);
+
     if (req.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders });
+      // Preflight: only respond with CORS if origin is allowed
+      if (!responseHeaders['Access-Control-Allow-Origin']) {
+        return new Response(null, { status: 403 });
+      }
+      return new Response(null, { headers: responseHeaders });
     }
+
+    // For non-preflight: reject disallowed origins
+    const origin = req.headers.get('Origin') || '';
+    if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+      return new Response(
+        JSON.stringify({ error: 'Origin not allowed' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     try {
-      return await handler(req);
+      const response = await handler(req);
+      // Inject strict CORS headers into response
+      for (const [key, value] of Object.entries(responseHeaders)) {
+        response.headers.set(key, value);
+      }
+      return response;
     } catch (error) {
       if (error instanceof AuthError) {
-        return jsonError(error.message, error.statusCode);
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: error.statusCode, headers: { ...responseHeaders, 'Content-Type': 'application/json' } }
+        );
       }
       console.error('[edge-fn] Unhandled error:', error);
       const msg = error instanceof Error ? error.message : 'Internal server error';
-      return jsonError(msg, 500);
+      return new Response(
+        JSON.stringify({ error: msg }),
+        { status: 500, headers: { ...responseHeaders, 'Content-Type': 'application/json' } }
+      );
     }
   };
 }

@@ -6665,8 +6665,11 @@ export type Database = {
           company_id: string | null
           created_at: string | null
           created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           id: string
           invoice_id: string
+          is_deleted: boolean | null
           method: string
           notes: string | null
           payment_date: string
@@ -6680,8 +6683,11 @@ export type Database = {
           company_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           invoice_id: string
+          is_deleted?: boolean | null
           method?: string
           notes?: string | null
           payment_date?: string
@@ -6695,8 +6701,11 @@ export type Database = {
           company_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           invoice_id?: string
+          is_deleted?: boolean | null
           method?: string
           notes?: string | null
           payment_date?: string
@@ -9193,8 +9202,6 @@ export type Database = {
       public_media_assets_safe: {
         Row: {
           area: string | null
-          base_rate: number | null
-          card_rate: number | null
           category: Database["public"]["Enums"]["media_category"] | null
           city: string | null
           company_id: string | null
@@ -9214,11 +9221,9 @@ export type Database = {
           longitude: number | null
           media_asset_code: string | null
           media_type: string | null
-          mounting_rate_default: number | null
           municipal_authority: string | null
           municipal_id: string | null
           primary_photo_url: string | null
-          printing_rate_default: number | null
           qr_code_url: string | null
           state: string | null
           status: Database["public"]["Enums"]["media_asset_status"] | null
@@ -9228,8 +9233,6 @@ export type Database = {
         }
         Insert: {
           area?: string | null
-          base_rate?: number | null
-          card_rate?: number | null
           category?: Database["public"]["Enums"]["media_category"] | null
           city?: string | null
           company_id?: string | null
@@ -9249,11 +9252,9 @@ export type Database = {
           longitude?: number | null
           media_asset_code?: string | null
           media_type?: string | null
-          mounting_rate_default?: number | null
           municipal_authority?: string | null
           municipal_id?: string | null
           primary_photo_url?: string | null
-          printing_rate_default?: number | null
           qr_code_url?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["media_asset_status"] | null
@@ -9263,8 +9264,6 @@ export type Database = {
         }
         Update: {
           area?: string | null
-          base_rate?: number | null
-          card_rate?: number | null
           category?: Database["public"]["Enums"]["media_category"] | null
           city?: string | null
           company_id?: string | null
@@ -9284,11 +9283,9 @@ export type Database = {
           longitude?: number | null
           media_asset_code?: string | null
           media_type?: string | null
-          mounting_rate_default?: number | null
           municipal_authority?: string | null
           municipal_id?: string | null
           primary_photo_url?: string | null
-          printing_rate_default?: number | null
           qr_code_url?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["media_asset_status"] | null
@@ -9339,13 +9336,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
-            columns: ["live_campaign_id"]
-            isOneToOne: false
-            referencedRelation: "campaigns"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["next_campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
@@ -9355,7 +9345,7 @@ export type Database = {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["live_campaign_id"]
             isOneToOne: false
-            referencedRelation: "finance_eligible_campaigns"
+            referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
           {
@@ -9368,13 +9358,20 @@ export type Database = {
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["live_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["next_campaign_id"]
             isOneToOne: false
             referencedRelation: "media_asset_forecast"
             referencedColumns: ["campaign_id"]
           },
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
-            columns: ["next_campaign_id"]
+            columns: ["live_campaign_id"]
             isOneToOne: false
             referencedRelation: "media_asset_forecast"
             referencedColumns: ["campaign_id"]
@@ -9996,6 +9993,24 @@ export type Database = {
         Args: { p_campaign_id: string }
         Returns: Json
       }
+      get_campaign_limited: {
+        Args: { p_campaign_id: string }
+        Returns: {
+          assigned_to: string
+          billing_cycle: string
+          campaign_name: string
+          client_id: string
+          client_name: string
+          created_at: string
+          end_date: string
+          id: string
+          notes: string
+          plan_id: string
+          start_date: string
+          status: string
+          total_assets: number
+        }[]
+      }
       get_company_active_modules: {
         Args: { p_company_id: string }
         Returns: Json
@@ -10010,6 +10025,25 @@ export type Database = {
       get_gst_mode: {
         Args: { p_client_state: string; p_company_state: string }
         Returns: string
+      }
+      get_invoice_limited: {
+        Args: { p_invoice_id: string }
+        Returns: {
+          balance_due: number
+          billing_month: string
+          campaign_id: string
+          client_id: string
+          client_name: string
+          created_at: string
+          due_date: string
+          id: string
+          invoice_date: string
+          invoice_no: string
+          notes: string
+          paid_amount: number
+          status: string
+          total_amount: number
+        }[]
       }
       get_invoice_terms_label: {
         Args: { p_terms_days: number; p_terms_mode: string }
@@ -10099,6 +10133,58 @@ export type Database = {
           email: string
           id: string
           username: string
+        }[]
+      }
+      list_campaigns_limited: {
+        Args: { p_company_id?: string }
+        Returns: {
+          assigned_to: string
+          campaign_name: string
+          client_id: string
+          client_name: string
+          created_at: string
+          end_date: string
+          id: string
+          is_deleted: boolean
+          notes: string
+          plan_id: string
+          start_date: string
+          status: string
+          total_assets: number
+        }[]
+      }
+      list_invoices_limited: {
+        Args: { p_company_id?: string }
+        Returns: {
+          balance_due: number
+          billing_month: string
+          campaign_id: string
+          client_id: string
+          client_name: string
+          created_at: string
+          due_date: string
+          id: string
+          invoice_date: string
+          invoice_no: string
+          paid_amount: number
+          status: string
+          total_amount: number
+        }[]
+      }
+      list_plans_limited: {
+        Args: { p_company_id?: string }
+        Returns: {
+          client_id: string
+          client_name: string
+          created_at: string
+          created_by: string
+          end_date: string
+          id: string
+          notes: string
+          plan_name: string
+          start_date: string
+          status: string
+          total_locations: number
         }[]
       }
       lock_plan_for_conversion: { Args: { p_plan_id: string }; Returns: string }

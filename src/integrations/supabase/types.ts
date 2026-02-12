@@ -8223,6 +8223,48 @@ export type Database = {
         }
         Relationships: []
       }
+      security_audit_log: {
+        Row: {
+          action: string
+          company_id: string | null
+          created_at: string
+          error_message: string | null
+          function_name: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          record_ids: Json | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          company_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          function_name: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          record_ids?: Json | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          company_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          function_name?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          record_ids?: Json | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       subscription_usage: {
         Row: {
           assets_count: number | null

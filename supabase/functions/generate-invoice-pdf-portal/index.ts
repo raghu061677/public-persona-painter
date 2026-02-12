@@ -1,57 +1,58 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
+// supabase/functions/generate-invoice-pdf-portal/index.ts
+// v2.0 - Phase-3 Security: Public portal endpoint but with strict validation
+// This is a PUBLIC endpoint (verify_jwt = false) for client portal access.
+// Security: validates invoice exists and uses sanitized output only.
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from '../_shared/cors.ts';
+import { supabaseServiceClient, jsonError, jsonSuccess, logSecurityAudit } from '../_shared/auth.ts';
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const body = await req.json().catch(() => null);
+    const invoice_id = body?.invoice_id;
 
-    const { invoice_id } = await req.json();
-
-    if (!invoice_id) {
-      throw new Error('Invoice ID is required');
+    if (!invoice_id || typeof invoice_id !== 'string') {
+      return jsonError('Invoice ID is required', 400);
     }
 
+    // Validate invoice_id format (basic injection prevention)
+    if (!/^[A-Za-z0-9\-]+$/.test(invoice_id)) {
+      return jsonError('Invalid invoice ID format', 400);
+    }
+
+    const supabase = supabaseServiceClient();
+
     // Fetch invoice data
-    const { data: invoice, error: invoiceError } = await supabaseClient
+    const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
       .select(`
-        *,
+        id, invoice_date, due_date, status, client_name,
+        sub_total, gst_amount, gst_percent, total_amount, balance_due,
+        items, notes, company_id,
         clients (
-          name,
-          billing_address_line1,
-          billing_city,
-          billing_state,
-          billing_pincode,
-          gst_number
+          name, billing_address_line1, billing_city, billing_state,
+          billing_pincode, gst_number
         )
       `)
       .eq('id', invoice_id)
       .single();
 
     if (invoiceError || !invoice) {
-      throw new Error('Invoice not found');
+      return jsonError('Invoice not found', 404);
     }
 
-    // Fetch company details
-    const { data: company } = await supabaseClient
+    // Fetch company details (sanitized - no internal fields)
+    const { data: company } = await supabase
       .from('companies')
       .select('name, gstin, address_line1, city, state, phone, email, logo_url')
       .eq('id', invoice.company_id)
       .single();
 
-    // Generate PDF content (simplified HTML for now)
+    // Generate sanitized PDF HTML (no internal costs, vendor details, etc.)
     const pdfHtml = `
       <!DOCTYPE html>
       <html>
@@ -78,7 +79,6 @@ serve(async (req) => {
             <div class="invoice-title">TAX INVOICE</div>
             <div>Invoice #${invoice.id}</div>
           </div>
-
           <div style="display: flex; justify-content: space-between;">
             <div class="company-info">
               <div class="info-label">From:</div>
@@ -86,10 +86,7 @@ serve(async (req) => {
               <div>${company?.address_line1 || ''}</div>
               <div>${company?.city || ''}, ${company?.state || ''}</div>
               <div>GSTIN: ${company?.gstin || 'N/A'}</div>
-              <div>Phone: ${company?.phone || ''}</div>
-              <div>Email: ${company?.email || ''}</div>
             </div>
-
             <div class="client-info">
               <div class="info-label">To:</div>
               <div><strong>${invoice.clients?.name || invoice.client_name}</strong></div>
@@ -98,39 +95,29 @@ serve(async (req) => {
               <div>GSTIN: ${invoice.clients?.gst_number || 'N/A'}</div>
             </div>
           </div>
-
           <div style="margin: 30px 0;">
             <div><strong>Invoice Date:</strong> ${new Date(invoice.invoice_date).toLocaleDateString('en-IN')}</div>
             <div><strong>Due Date:</strong> ${new Date(invoice.due_date).toLocaleDateString('en-IN')}</div>
-            <div><strong>Status:</strong> ${invoice.status.toUpperCase()}</div>
+            <div><strong>Status:</strong> ${invoice.status}</div>
           </div>
-
           <table>
-            <thead>
-              <tr>
-                <th>Description</th>
-                <th style="text-align: right;">Amount</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Description</th><th style="text-align: right;">Amount</th></tr></thead>
             <tbody>
               ${(invoice.items || []).map((item: any) => `
                 <tr>
-                  <td>${item.description || item.name}</td>
+                  <td>${item.description || item.name || ''}</td>
                   <td style="text-align: right;">₹${(item.amount || 0).toLocaleString('en-IN')}</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
-
           <div class="totals">
-            <div><strong>Sub Total:</strong> ₹${invoice.sub_total.toLocaleString('en-IN')}</div>
-            <div><strong>GST (${invoice.gst_percent}%):</strong> ₹${invoice.gst_amount.toLocaleString('en-IN')}</div>
-            <div class="total-row"><strong>Grand Total:</strong> ₹${invoice.total_amount.toLocaleString('en-IN')}</div>
-            ${invoice.balance_due > 0 ? `<div style="color: #ef4444; margin-top: 10px;"><strong>Balance Due:</strong> ₹${invoice.balance_due.toLocaleString('en-IN')}</div>` : ''}
+            <div><strong>Sub Total:</strong> ₹${(invoice.sub_total || 0).toLocaleString('en-IN')}</div>
+            <div><strong>GST (${invoice.gst_percent}%):</strong> ₹${(invoice.gst_amount || 0).toLocaleString('en-IN')}</div>
+            <div class="total-row"><strong>Grand Total:</strong> ₹${(invoice.total_amount || 0).toLocaleString('en-IN')}</div>
+            ${(invoice.balance_due || 0) > 0 ? `<div style="color: #ef4444; margin-top: 10px;"><strong>Balance Due:</strong> ₹${invoice.balance_due.toLocaleString('en-IN')}</div>` : ''}
           </div>
-
           ${invoice.notes ? `<div style="margin-top: 30px;"><strong>Notes:</strong><br>${invoice.notes}</div>` : ''}
-
           <div class="footer">
             <div>Thank you for your business!</div>
             <div>Generated via Go-Ads 360° | ${new Date().toLocaleDateString('en-IN')}</div>
@@ -139,32 +126,16 @@ serve(async (req) => {
       </html>
     `;
 
-    // In a production environment, you would use a library like puppeteer or jsPDF
-    // For now, we'll return the HTML and let the client handle PDF generation
-    // or you can use a service like PDFShift, DocRaptor, etc.
+    await logSecurityAudit({
+      functionName: 'generate-invoice-pdf-portal',
+      action: 'portal_pdf_view',
+      recordIds: [invoice_id],
+      metadata: { portal: true },
+    });
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        html: pdfHtml,
-        invoice_id: invoice.id,
-        // In production: pdf_url would be a presigned URL from storage
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
+    return jsonSuccess({ success: true, html: pdfHtml, invoice_id: invoice.id });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An error occurred';
-    console.error('Error generating invoice PDF:', error);
-    
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      }
-    );
+    console.error('Error generating portal invoice PDF:', error);
+    return jsonError(error instanceof Error ? error.message : 'Failed to generate PDF', 500);
   }
 });

@@ -1,86 +1,70 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// supabase/functions/check-duplicate-asset-codes/index.ts
+// v2.0 - Phase-3 Security: User-scoped + admin role enforcement + audit logging
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from '../_shared/cors.ts';
+import {
+  getAuthContext,
+  requireRole,
+  logSecurityAudit,
+  supabaseUserClient,
+  jsonError,
+  jsonSuccess,
+  withAuth,
+} from '../_shared/auth.ts';
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+Deno.serve(withAuth(async (req) => {
+  const ctx = await getAuthContext(req);
+  requireRole(ctx, ['admin']);
+
+  console.log("Checking for duplicate media asset codes...");
+
+  const userClient = supabaseUserClient(req);
+
+  // RLS ensures only own company's assets are returned
+  const { data: allAssets, error: fetchError } = await userClient
+    .from('media_assets')
+    .select('media_asset_code, id')
+    .not('media_asset_code', 'is', null);
+
+  if (fetchError) {
+    return jsonError(fetchError.message, 500);
   }
 
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  // Group by code
+  const codeMap = new Map<string, string[]>();
+  (allAssets || []).forEach(asset => {
+    const code = asset.media_asset_code;
+    if (!codeMap.has(code)) codeMap.set(code, []);
+    codeMap.get(code)!.push(asset.id);
+  });
 
-    console.log("Checking for duplicate media asset codes...");
+  const duplicates = Array.from(codeMap.entries())
+    .filter(([_, ids]) => ids.length > 1)
+    .map(([code, ids]) => ({ code, count: ids.length, asset_ids: ids }));
 
-    // Check for duplicates in media_asset_code
-    const { data: duplicateCodes, error: dupsError } = await supabase
-      .from('media_assets')
-      .select('media_asset_code, id')
-      .not('media_asset_code', 'is', null);
+  // Check for assets without codes
+  const { data: missingCodes, error: missingError } = await userClient
+    .from('media_assets')
+    .select('id, city, media_type')
+    .is('media_asset_code', null);
 
-    if (dupsError) throw dupsError;
-
-    // Group by code and count
-    const codeMap = new Map<string, string[]>();
-    (duplicateCodes || []).forEach(asset => {
-      const code = asset.media_asset_code;
-      if (!codeMap.has(code)) {
-        codeMap.set(code, []);
-      }
-      codeMap.get(code)!.push(asset.id);
-    });
-
-    const duplicates = Array.from(codeMap.entries())
-      .filter(([_, ids]) => ids.length > 1)
-      .map(([code, ids]) => ({ code, count: ids.length, asset_ids: ids }));
-
-    // Check for assets without codes
-    const { data: missingCodes, error: missingError } = await supabase
-      .from('media_assets')
-      .select('id, city, media_type')
-      .is('media_asset_code', null);
-
-    if (missingError) throw missingError;
-
-    const summary = {
-      total_assets_checked: duplicateCodes?.length || 0,
-      duplicates_found: duplicates.length,
-      assets_without_code: missingCodes?.length || 0,
-      duplicates,
-      missing_codes: missingCodes || [],
-    };
-
-    console.log("Duplicate check complete:", summary);
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        summary,
-        timestamp: new Date().toISOString()
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
-
-  } catch (error) {
-    console.error('Duplicate check error:', error);
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : String(error) 
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
+  if (missingError) {
+    return jsonError(missingError.message, 500);
   }
-});
+
+  const summary = {
+    total_assets_checked: allAssets?.length || 0,
+    duplicates_found: duplicates.length,
+    assets_without_code: missingCodes?.length || 0,
+    duplicates,
+    missing_codes: missingCodes || [],
+  };
+
+  await logSecurityAudit({
+    functionName: 'check-duplicate-asset-codes', userId: ctx.userId,
+    companyId: ctx.companyId, action: 'audit_asset_codes',
+    metadata: { duplicates: duplicates.length, missing: (missingCodes || []).length }, req,
+  });
+
+  return jsonSuccess({ success: true, summary, timestamp: new Date().toISOString() });
+}));

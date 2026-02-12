@@ -239,12 +239,7 @@ if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true,
-        }}
-      >
+      <BrowserRouter>
         <AuthProvider>
           <TenantProvider>
             <CompanyProvider>

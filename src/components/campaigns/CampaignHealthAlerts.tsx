@@ -112,7 +112,8 @@ export function CampaignHealthAlerts({ campaignId }: CampaignHealthAlertsProps) 
       let query = supabase
         .from("campaigns")
         .select("*")
-        .eq("company_id", selectedCompanyId);
+        .eq("company_id", selectedCompanyId)
+        .or('is_deleted.is.null,is_deleted.eq.false');
 
       if (campaignId) {
         query = query.eq("id", campaignId);

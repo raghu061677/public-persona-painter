@@ -9726,6 +9726,8 @@ export type Database = {
         }
         Returns: Json
       }
+      current_company_id: { Args: never; Returns: string }
+      current_role: { Args: never; Returns: string }
       dates_overlap: {
         Args: { a_end: string; a_start: string; b_end: string; b_start: string }
         Returns: boolean
@@ -10075,6 +10077,10 @@ export type Database = {
           username: string
         }[]
       }
+      has_company_role: {
+        Args: { _required_roles: Database["public"]["Enums"]["app_role"][] }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -10082,6 +10088,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_company_member: { Args: { _company_id: string }; Returns: boolean }
       is_field_operations_user: { Args: { _user_id: string }; Returns: boolean }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       list_all_users: {

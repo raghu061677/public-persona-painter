@@ -144,7 +144,8 @@ export default function CampaignCreate() {
       // Calculate initial rent using campaign dates
       const campaignStart = formData.start_date ? new Date(formData.start_date) : new Date();
       const campaignEnd = formData.end_date ? new Date(formData.end_date) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-      const rentResult = computeRentAmount(monthlyCardRate, campaignStart, campaignEnd, 'PRORATA_30');
+      const assetBillingMode: BillingMode = durationMode === 'MONTH' ? 'FULL_MONTH' : 'PRORATA_30';
+      const rentResult = computeRentAmount(monthlyCardRate, campaignStart, campaignEnd, assetBillingMode);
       
       setAssetPricing(prev => ({
         ...prev,
@@ -154,7 +155,7 @@ export default function CampaignCreate() {
           mounting_charges: asset.mounting_charge || 0,
           start_date: formData.start_date,
           end_date: formData.end_date,
-          billing_mode: 'PRORATA_30' as BillingMode,
+          billing_mode: assetBillingMode,
           booked_days: rentResult.booked_days,
           daily_rate: rentResult.daily_rate,
           rent_amount: rentResult.rent_amount,
@@ -186,10 +187,11 @@ export default function CampaignCreate() {
     const campaignStart = formData.start_date ? new Date(formData.start_date) : new Date();
     const campaignEnd = formData.end_date ? new Date(formData.end_date) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
+    const assetBillingMode: BillingMode = durationMode === 'MONTH' ? 'FULL_MONTH' : 'PRORATA_30';
     assets.forEach(asset => {
       newSelected.add(asset.id);
       const monthlyCardRate = asset.card_rate || 0;
-      const rentResult = computeRentAmount(monthlyCardRate, campaignStart, campaignEnd, 'PRORATA_30');
+      const rentResult = computeRentAmount(monthlyCardRate, campaignStart, campaignEnd, assetBillingMode);
       
       newPricing[asset.id] = {
         negotiated_price: monthlyCardRate,
@@ -197,7 +199,7 @@ export default function CampaignCreate() {
         mounting_charges: asset.mounting_charge || 0,
         start_date: formData.start_date,
         end_date: formData.end_date,
-        billing_mode: 'PRORATA_30' as BillingMode,
+        billing_mode: assetBillingMode,
         booked_days: rentResult.booked_days,
         daily_rate: rentResult.daily_rate,
         rent_amount: rentResult.rent_amount,
@@ -359,12 +361,12 @@ export default function CampaignCreate() {
   const handleDurationModeChange = (mode: DurationMode) => {
     setDurationMode(mode);
     
+    const newBillingMode: BillingMode = mode === 'MONTH' ? 'FULL_MONTH' : 'PRORATA_30';
+    
     if (mode === 'MONTH') {
-      // When switching to Month-wise, default to 30 days (OOH industry standard)
       const defaultMonthDays = 30;
-      setDurationValue(1); // 1 month
+      setDurationValue(1);
       
-      // Update end date based on 30 days
       if (formData.start_date) {
         const startDate = new Date(formData.start_date);
         const endDate = calculateEndDate(startDate, defaultMonthDays);
@@ -372,12 +374,37 @@ export default function CampaignCreate() {
         setFormData(prev => ({ ...prev, end_date: endDateStr }));
       }
     } else {
-      // When switching to Days mode, use current calculated days
       const currentDays = getDurationDays();
       if (currentDays > 0) {
         setDurationValue(currentDays);
       }
     }
+    
+    // Recalculate all selected assets with new billing mode
+    setAssetPricing(prev => {
+      const updated = { ...prev };
+      selectedAssets.forEach(assetId => {
+        const pricing = updated[assetId];
+        if (pricing) {
+          const rate = pricing.negotiated_price || 0;
+          const startDate = pricing.start_date || formData.start_date;
+          const endDate = pricing.end_date || formData.end_date;
+          if (startDate && endDate && rate) {
+            const rentResult = computeRentAmount(rate, startDate, endDate, newBillingMode);
+            updated[assetId] = {
+              ...pricing,
+              billing_mode: newBillingMode,
+              booked_days: rentResult.booked_days,
+              daily_rate: rentResult.daily_rate,
+              rent_amount: rentResult.rent_amount,
+            };
+          } else {
+            updated[assetId] = { ...pricing, billing_mode: newBillingMode };
+          }
+        }
+      });
+      return updated;
+    });
   };
   
   // Handle start date change (keep duration, update end date)

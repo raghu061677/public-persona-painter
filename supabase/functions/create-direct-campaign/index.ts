@@ -136,6 +136,7 @@ serve(withAuth(async (req) => {
     .from('campaigns')
     .insert({
       id: campaign_code,
+      campaign_code: campaign_code,
       company_id: companyId,
       client_id,
       client_name: client.name,

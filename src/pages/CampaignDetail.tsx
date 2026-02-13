@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useCampaignResolver, getCampaignDisplayCode } from "@/hooks/useCampaignResolver";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,8 +37,10 @@ import { CampaignDetailAssetsTable } from "@/components/campaigns/CampaignDetail
 import { computeCampaignTotals } from "@/utils/computeCampaignTotals";
 
 export default function CampaignDetail() {
-  const { id } = useParams();
+  const { id: routeParam } = useParams();
   const navigate = useNavigate();
+  const { resolvedId, loading: resolving } = useCampaignResolver(routeParam);
+  const id = resolvedId;
   const [campaign, setCampaign] = useState<any>(null);
   const [campaignAssets, setCampaignAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,9 +58,10 @@ export default function CampaignDetail() {
   };
 
   useEffect(() => {
+    if (!id || resolving) return;
     checkAdminStatus();
     refreshData();
-  }, [id]);
+  }, [id, resolving]);
 
   const checkAdminStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -266,7 +270,7 @@ export default function CampaignDetail() {
                   <Badge className={getCampaignStatusColor(campaign.status)}>
                     {campaign.status}
                   </Badge>
-                  <span className="text-sm text-muted-foreground">{campaign.id}</span>
+                  <span className="text-sm text-muted-foreground">{getCampaignDisplayCode(campaign)}</span>
                 </div>
               </div>
               <div className="flex gap-2 flex-wrap">

@@ -188,13 +188,16 @@ export async function generateSalesOrderCode(): Promise<string> {
 
 /**
  * Generate Invoice Code
- * Format: INV-YYYYMM-####
- * Example: INV-202511-0005
+ * Format: INV/YYYY-YY/#### or INV-Z/YYYY-YY/#### (0% GST)
+ * Now delegates to the generate_invoice_id RPC for canonical format.
+ * Falls back to old format if RPC fails.
  */
-export async function generateInvoiceCode(): Promise<string> {
+export async function generateInvoiceCode(gstRate: number = 18): Promise<string> {
+  const { data, error } = await supabase.rpc('generate_invoice_id', { p_gst_rate: gstRate });
+  if (!error && data) return data as string;
+  // Fallback
   const period = getCurrentPeriod();
   const sequence = await getNextSequence('INVOICE', 'default', period);
-  
   return `INV-${period}-${padNumber(sequence)}`;
 }
 

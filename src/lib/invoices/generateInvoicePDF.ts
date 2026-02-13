@@ -93,9 +93,9 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
       // Fetch media_assets for asset_code (display ID like MNS-HYD-BQS-0001)
       const maIds = campAssets.map((ca: any) => ca.asset_id).filter(Boolean);
       const { data: maData } = maIds.length > 0
-        ? await supabase.from('media_assets').select('id, asset_code').in('id', maIds)
+        ? await supabase.from('media_assets').select('id, media_asset_code').in('id', maIds)
         : { data: [] };
-      const maCodeMap = new Map((maData || []).map((m: any) => [m.id, m.asset_code]));
+      const maCodeMap = new Map((maData || []).map((m: any) => [m.id, m.media_asset_code || m.id]));
 
       enrichedItems = campAssets.map((ca: any, idx: number) => ({
         sno: idx + 1,

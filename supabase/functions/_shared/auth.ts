@@ -149,22 +149,26 @@ export function supabaseServiceClient(): SupabaseClient {
 // ─── Authentication ──────────────────────────────────────────────────
 
 export async function requireUser(supabase: SupabaseClient) {
-  // Try getUser first, fall back to getClaims for signing-key compat
+  // Try getUser first
   const { data: { user }, error } = await supabase.auth.getUser();
-  if (!error && user) return user;
+  if (!error && user) {
+    console.log('[auth] getUser succeeded:', user.id);
+    return user;
+  }
 
-  // Fallback: extract token and use getClaims
+  console.error('[auth] getUser failed:', error?.message, error?.status);
+
+  // Fallback: try getSession (doesn't verify with server, uses JWT directly)
   try {
-    const { data: claimsData, error: claimsError } = await (supabase.auth as any).getClaims?.();
-    if (!claimsError && claimsData?.claims?.sub) {
-      return {
-        id: claimsData.claims.sub,
-        email: claimsData.claims.email,
-        role: claimsData.claims.role,
-        aud: claimsData.claims.aud,
-      } as any;
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (!sessionError && sessionData?.session?.user) {
+      console.log('[auth] getSession fallback succeeded:', sessionData.session.user.id);
+      return sessionData.session.user;
     }
-  } catch (_) { /* getClaims not available */ }
+    console.error('[auth] getSession also failed:', sessionError?.message);
+  } catch (e) {
+    console.error('[auth] getSession exception:', e);
+  }
 
   throw new AuthError('Unauthorized – invalid or missing token', 401);
 }

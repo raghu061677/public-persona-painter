@@ -86,19 +86,21 @@ serve(withAuth(async (req) => {
     }
   }
 
-  // Generate campaign code
+  // Generate campaign code using v2 format: CAM-YYYYMM-####
   let campaign_code: string;
-  const { data: codeData, error: codeError } = await supabase.rpc('generate_campaign_id', {
-    p_user_id: ctx.userId,
+  const { data: codeData, error: codeError } = await supabase.rpc('generate_campaign_id_v2', {
+    p_user_id: null,
   });
 
   if (codeData && !codeError) {
     campaign_code = codeData;
   } else {
+    // Fallback: generate CAM-YYYYMM-#### client-side
     const now = new Date();
     const year = now.getFullYear();
-    const monthName = now.toLocaleString('en-US', { month: 'long' });
-    const prefix = `CAM-${year}-${monthName}-`;
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const period = `${year}${month}`;
+    const prefix = `CAM-${period}-`;
     const { data: existing } = await supabase
       .from('campaigns')
       .select('id')
@@ -107,10 +109,10 @@ serve(withAuth(async (req) => {
       .limit(1);
     let nextSeq = 1;
     if (existing?.length) {
-      const match = existing[0].id.match(/CAM-\d{4}-[A-Za-z]+-(\d+)$/);
+      const match = existing[0].id.match(/CAM-\d{6}-(\d+)$/);
       if (match) nextSeq = parseInt(match[1], 10) + 1;
     }
-    campaign_code = `${prefix}${String(nextSeq).padStart(3, '0')}`;
+    campaign_code = `${prefix}${String(nextSeq).padStart(4, '0')}`;
   }
 
   // Calculate totals

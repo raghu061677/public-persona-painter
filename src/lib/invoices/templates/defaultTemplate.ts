@@ -111,7 +111,7 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   doc.text(invoiceNoLabel, leftColX, detailRowY);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
-  doc.text(`: ${data.invoice.invoice_no || data.invoice.id}`, leftColX + labelWidth, detailRowY);
+  doc.text(`: ${data.invoice.id || data.invoice.invoice_no}`, leftColX + labelWidth, detailRowY);
   
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(80, 80, 80);
@@ -337,8 +337,8 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     const directionVal = item.direction || '-';
     const mediaTypeVal = item.media_type || '-';
     const illuminationVal = item.illumination || item.illumination_type || '-';
-    const dimensions = item.dimensions || item.dimension_text || '';
-    const sqft = item.total_sqft || item.sqft || '';
+    const dimensions = item.dimensions || item.dimension_text || item.size || item.dimension || '';
+    const sqft = item.total_sqft || item.sqft || item.meta?.total_sqft || '';
     const hsnSac = item.hsn_sac || HSN_SAC_CODE;
     
     // Calculate period info
@@ -367,9 +367,9 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
 
     // Size column - line-wise display
     const sizeLines: string[] = [];
-    if (dimensions) sizeLines.push(`Dimension: ${dimensions}`);
-    if (sqft !== '' && sqft != null) sizeLines.push(`Size(Sft): ${sqft}`);
-    const sizeDisplay = sizeLines.length ? sizeLines.join('\n') : 'N/A';
+    if (dimensions) sizeLines.push(`Dimensions: ${dimensions}`);
+    if (sqft !== '' && sqft != null) sizeLines.push(`Sqft: ${sqft}`);
+    const sizeDisplay = sizeLines.length ? sizeLines.join('\n') : 'Dimensions: —';
     
     // Unit price and subtotal - include printing/mounting if present
     const baseRate = item.rate || item.unit_price || item.display_rate || item.negotiated_rate || item.rent_amount || 0;
@@ -541,7 +541,7 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     upiId,
     upiName,
     balanceDue,
-    invoiceNo: data.invoice.invoice_no || data.invoice.id,
+    invoiceNo: data.invoice.id || data.invoice.invoice_no,
     invoiceStatus,
     x: qrX,
     y: qrY,

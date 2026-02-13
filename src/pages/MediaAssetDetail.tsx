@@ -79,10 +79,12 @@ export default function MediaAssetDetail() {
         };
       }) || [];
 
-      // Add photos to asset data
+      // Add photos to asset data, enrich primary_photo_url from latest media_photos if missing
+      const enrichedPrimaryPhoto = data.primary_photo_url || (photos.length > 0 ? photos[0].url : null);
       setAsset({
         ...data,
         photos,
+        primary_photo_url: enrichedPrimaryPhoto,
       });
     }
     setLoading(false);

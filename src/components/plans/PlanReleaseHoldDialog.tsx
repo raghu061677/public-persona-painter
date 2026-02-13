@@ -56,14 +56,15 @@ export function PlanReleaseHoldDialog({
     setReleasing(true);
 
     try {
-      // Release holds that were created from this plan, or match client + plan ID in notes
+      // Release holds matching this plan — use notes filter as primary match
+      // (source_plan_id may not be in PostgREST cache yet)
       const { data, error } = await supabase
         .from("asset_holds")
-        .update({ status: "RELEASED" } as any)
+        .update({ status: "RELEASED" })
         .eq("company_id", company.id)
         .eq("status", "ACTIVE")
         .in("asset_id", targetAssetIds)
-        .or(`source_plan_id.eq.${planId},notes.ilike.%${planId}%`)
+        .or(`source.eq.plan,notes.ilike.%${planId}%`)
         .select("id");
 
       if (error) throw error;

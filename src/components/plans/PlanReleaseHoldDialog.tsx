@@ -64,7 +64,7 @@ export function PlanReleaseHoldDialog({
         .eq("company_id", company.id)
         .eq("status", "ACTIVE")
         .in("asset_id", targetAssetIds)
-        .or(`source.eq.plan,notes.ilike.%${planId}%`)
+        .ilike("notes", `%${planId}%`)
         .select("id");
 
       if (error) throw error;

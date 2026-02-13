@@ -520,6 +520,7 @@ export function MonthlyInvoiceGenerator({
       // Create invoice with GST mode fields
       const { error: invoiceError } = await supabase.from('invoices').insert({
         id: invoiceId,
+        invoice_no: invoiceId,
         campaign_id: campaign.id,
         client_id: campaign.client_id,
         client_name: campaign.client_name,

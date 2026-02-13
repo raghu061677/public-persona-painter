@@ -139,10 +139,11 @@ Deno.serve(withAuth(async (req) => {
     .from('invoices')
     .insert({
       id: invoiceId,
+      invoice_no: invoiceId,
       campaign_id,
       client_id: campaign.client_id,
       client_name: campaign.client_name,
-      company_id: ctx.companyId, // From auth context, NOT from campaign
+      company_id: ctx.companyId,
       invoice_date: new Date().toISOString().split('T')[0],
       due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       items,

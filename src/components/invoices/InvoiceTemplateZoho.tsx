@@ -89,9 +89,9 @@
           if (campAssets && campAssets.length > 0) {
             const maIds = campAssets.map((ca: any) => ca.asset_id).filter(Boolean);
             const { data: maData } = maIds.length > 0
-              ? await supabase.from('media_assets').select('id, asset_code').in('id', maIds)
+              ? await supabase.from('media_assets').select('id, media_asset_code').in('id', maIds)
               : { data: [] };
-            const maCodeMap = new Map((maData || []).map((m: any) => [m.id, m.asset_code]));
+            const maCodeMap = new Map((maData || []).map((m: any) => [m.id, m.media_asset_code || m.id]));
 
             items = campAssets.map((ca: any, idx: number) => {
               const existing: any = items[idx] && typeof items[idx] === 'object' ? items[idx] : {};
@@ -134,7 +134,7 @@
         if (assetIds.length > 0 || campaignAssetIds.length > 0) {
           const [maRes, caRes] = await Promise.all([
             assetIds.length
-              ? supabase.from('media_assets').select('id, asset_code, location, area, direction, media_type, illumination_type, dimensions, total_sqft').in('id', assetIds)
+              ? supabase.from('media_assets').select('id, media_asset_code, location, area, direction, media_type, illumination_type, dimensions, total_sqft').in('id', assetIds)
               : Promise.resolve({ data: null } as any),
             campaignAssetIds.length
               ? supabase.from('campaign_assets').select('id, asset_id, location, area, direction, media_type, illumination_type, dimensions, total_sqft, booking_start_date, booking_end_date').in('id', campaignAssetIds)
@@ -151,7 +151,7 @@
             if (!source) return item;
             return {
               ...item,
-              asset_code: item.asset_code ?? ma?.asset_code,
+              asset_code: item.asset_code ?? ma?.media_asset_code ?? ma?.id,
               location: item.location ?? source.location,
               area: item.area ?? source.area,
               direction: item.direction ?? source.direction,

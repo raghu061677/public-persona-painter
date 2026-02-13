@@ -22,7 +22,7 @@ import { CampaignPerformanceMetrics } from "@/components/campaigns/CampaignPerfo
 import { CampaignPDFReport } from "@/components/campaigns/CampaignPDFReport";
 import { CampaignComparisonDialog } from "@/components/campaigns/CampaignComparisonDialog";
 import { CampaignHealthAlerts } from "@/components/campaigns/CampaignHealthAlerts";
-import { GenerateInvoiceDialog } from "@/components/campaigns/GenerateInvoiceDialog";
+
 import { checkAndAutoGeneratePPT } from "@/lib/operations/autoGenerateProofPPT";
 import { CreativeUploadSection } from "@/components/campaigns/CreativeUploadSection";
 import { useCampaignWorkflows } from "@/hooks/useCampaignWorkflows";
@@ -286,14 +286,6 @@ export default function CampaignDetail() {
                     />
                   </>
                 )}
-                <GenerateInvoiceDialog 
-                  campaign={campaign} 
-                  campaignAssets={campaignAssets}
-                  displayCost={roundedDisplayCost}
-                  printingTotal={printingTotal}
-                  mountingTotal={mountingTotal}
-                  discount={manualDiscount}
-                />
                 <CampaignPDFReport campaign={campaign} campaignAssets={campaignAssets} />
                 <CampaignComparisonDialog currentCampaignId={campaign.id} />
                 <ExportProofDialog

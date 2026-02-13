@@ -83,7 +83,7 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
   yPos += 4;
 
   // ========== INVOICE DETAILS TABLE (Reference style) ==========
-  const invoiceNo = data.invoice.invoice_no || data.invoice.id || '-';
+  const invoiceNo = data.invoice.id || data.invoice.invoice_no || '-';
   const invoiceDate = formatDate(data.invoice.invoice_date);
   const dueDate = formatDate(data.invoice.due_date);
   const termsMode = data.invoice.terms_mode === 'NET_30' ? 'Net 30' : 'Due on Receipt';
@@ -252,8 +252,8 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
     const directionVal = item.direction || '-';
     const mediaTypeVal = item.media_type || '-';
     const illuminationVal = item.illumination || item.illumination_type || '-';
-    const dimensions = item.dimensions || item.dimension_text || '';
-    const sqft = item.total_sqft || item.sqft || '';
+    const dimensions = item.dimensions || item.dimension_text || item.size || item.dimension || '';
+    const sqft = item.total_sqft || item.sqft || item.meta?.total_sqft || '';
     const hsnSac = item.hsn_sac || HSN_SAC_CODE;
     
     // Calculate period info
@@ -282,9 +282,9 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
 
     // Size column
     const sizeLines: string[] = [];
-    if (dimensions) sizeLines.push(`Dimension: ${dimensions}`);
-    if (sqft !== '' && sqft != null) sizeLines.push(`Size(Sft): ${sqft}`);
-    const sizeDisplay = sizeLines.length ? sizeLines.join('\n') : 'N/A';
+     if (dimensions) sizeLines.push(`Dimensions: ${dimensions}`);
+     if (sqft !== '' && sqft != null) sizeLines.push(`Sqft: ${sqft}`);
+     const sizeDisplay = sizeLines.length ? sizeLines.join('\n') : 'Dimensions: —';
     
     // Pricing breakdown - FIXED: Full labels
     const baseRate = item.rate || item.unit_price || item.display_rate || item.negotiated_rate || 0;

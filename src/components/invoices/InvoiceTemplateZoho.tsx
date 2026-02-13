@@ -122,7 +122,7 @@
  
        <div className="grid grid-cols-2 gap-4 text-xs">
          <div className="space-y-1">
-           <div className="flex"><span className="w-24">Invoice No</span><span className="font-bold">: {invoice.invoice_no || invoice.id}</span></div>
+           <div className="flex"><span className="w-24">Invoice No</span><span className="font-bold">: {invoice.id}</span></div>
            <div className="flex"><span className="w-24">Invoice Date</span><span className="font-bold">: {formatDate(invoice.invoice_date)}</span></div>
            <div className="flex"><span className="w-24">Terms</span><span className="font-bold">: {termsLabel}</span></div>
            <div className="flex"><span className="w-24">Due Date</span><span className="font-bold">: {formatDate(invoice.due_date)}</span></div>
@@ -178,7 +178,7 @@
                        <div>HSN/SAC: 998361</div>
                      </div>
                    </td>
-                   <td className="p-2 text-center align-top text-[10px]"><div>Dim: {item.dimensions || '-'}</div><div>Sqft: {item.total_sqft || '-'}</div></td>
+                   <td className="p-2 text-center align-top text-[10px]"><div>Dimensions: {item.dimensions || item.size || item.dimension || item.meta?.dimensions || '—'}</div><div>Sqft: {item.total_sqft || item.sqft || item.meta?.total_sqft || '—'}</div></td>
                    <td className="p-2 text-center align-top text-[10px]">{item.start_date && <div>{formatDate(item.start_date)}</div>}{item.end_date && <div>to {formatDate(item.end_date)}</div>}<div className="font-medium">{billableDays} Days</div></td>
                    <td className="p-2 text-right align-top text-[10px]">
                      <div>Display: {formatINR(rentAmount)}</div>

@@ -28,6 +28,7 @@ function validateAndFixStreetViewUrl(
 
 interface PlanAsset {
   asset_id: string;
+  db_asset_id?: string; // The actual DB id (e.g. HYD-BQS-0105) for querying photos
   area: string;
   location: string;
   direction?: string;
@@ -174,6 +175,71 @@ async function fetchImageWithCache(url: string): Promise<string | null> {
   const base64 = await fetchImageAsBase64Smart(url);
   if (base64) imageCache.set(url, base64);
   return base64;
+}
+
+/**
+ * Fetch up to 2 distinct photos for an asset in Plan PPT.
+ * Priority: campaign_assets.photos → media_photos → primary_photo_url
+ */
+async function fetchAssetPhotosPlan(asset: PlanAsset): Promise<(string | null)[]> {
+  const dbId = asset.db_asset_id;
+  const results: string[] = [];
+
+  // 1) Campaign proof photos (latest first)
+  if (dbId) {
+    try {
+      const { data: campAssets } = await supabase
+        .from("campaign_assets")
+        .select("photos")
+        .eq("asset_id", dbId)
+        .not("photos", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(3);
+      if (campAssets) {
+        for (const ca of campAssets) {
+          if (results.length >= 2) break;
+          if (ca.photos && typeof ca.photos === "object") {
+            const p = ca.photos as Record<string, string>;
+            const urls = Object.values(p).filter((v): v is string => typeof v === "string" && v.length > 0);
+            for (const url of urls) {
+              if (results.length >= 2) break;
+              const img = await fetchImageWithCache(url);
+              if (img) results.push(img);
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // 2) Latest media_photos library uploads
+  if (results.length < 2 && dbId) {
+    try {
+      const { data: libPhotos } = await supabase
+        .from("media_photos")
+        .select("photo_url")
+        .eq("asset_id", dbId)
+        .order("uploaded_at", { ascending: false })
+        .limit(4);
+      if (libPhotos) {
+        for (const p of libPhotos) {
+          if (results.length >= 2) break;
+          if (p.photo_url) {
+            const img = await fetchImageWithCache(p.photo_url);
+            if (img) results.push(img);
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // 3) Fallback: primary_photo_url
+  if (results.length < 2 && asset.primary_photo_url) {
+    const img = await fetchImageWithCache(asset.primary_photo_url);
+    if (img && !results.includes(img)) results.push(img);
+  }
+
+  return results;
 }
 
 export async function generatePlanPPT(
@@ -328,22 +394,10 @@ export async function generatePlanPPT(
 
   // ===== ASSET SLIDES =====
   for (const asset of plan.assets) {
-    // Use primary_photo_url for presentation - fetch as base64.
-    // IMPORTANT: PowerPoint does not reliably render SVG/WebP. Ensure we embed PNG/JPEG.
-    const preferredPhotoUrl = asset.primary_photo_url;
-    const photoBase64 = preferredPhotoUrl ? await fetchImageWithCache(preferredPhotoUrl) : null;
-    const finalPhotoBase64 = photoBase64 || (await fetchImageWithCache(await getPlaceholderPngDataUrl()));
-
-    // Parse dimensions
-    let width = '';
-    let height = '';
-    if (asset.dimensions) {
-      const match = asset.dimensions.match(/(\d+\.?\d*)\s*[xX×]\s*(\d+\.?\d*)/);
-      if (match) {
-        width = match[1];
-        height = match[2];
-      }
-    }
+    // Fetch up to 2 distinct photos for this asset
+    const assetPhotos = await fetchAssetPhotosPlan(asset);
+    const photo1Base64 = assetPhotos[0] || (await fetchImageWithCache(await getPlaceholderPngDataUrl()));
+    const photo2Base64 = assetPhotos[1] || photo1Base64; // fallback to photo1 if only one available
 
     // ===== SLIDE 1: TWO-IMAGE PRESENTATION SLIDE =====
     const slide1 = prs.addSlide();
@@ -384,12 +438,8 @@ export async function generatePlanPPT(
       fontFace: PPT_SAFE_FONTS.primary,
     });
 
-    // NOTE: QR codes are already watermarked into the asset photos during upload.
-    // We don't add separate QR elements to avoid duplicates.
-
-    // Image 1 (fixed frame, cover to keep exact positioning)
+    // Image 1
     try {
-      // Frame (helps visually + ensures consistent crop)
       slide1.addShape(prs.ShapeType.rect, {
         x: 0.4,
         y: 1.5,
@@ -399,9 +449,9 @@ export async function generatePlanPPT(
         line: { color: 'E5E7EB', width: 1 },
       });
 
-      if (finalPhotoBase64) {
+      if (photo1Base64) {
         slide1.addImage({
-          data: finalPhotoBase64,
+          data: photo1Base64,
           x: 0.4,
           y: 1.5,
           w: 4.5,
@@ -409,13 +459,11 @@ export async function generatePlanPPT(
           sizing: { type: 'cover', w: 4.5, h: 3.8 },
         });
       }
-
-      // NOTE: QR code is now only added to Slide 2 (Details slide) to avoid duplicates
     } catch (error) {
       console.error('Failed to add image 1:', error);
     }
 
-    // Image 2 (fixed frame, cover to keep exact positioning)
+    // Image 2
     try {
       slide1.addShape(prs.ShapeType.rect, {
         x: 5.1,
@@ -426,9 +474,9 @@ export async function generatePlanPPT(
         line: { color: 'E5E7EB', width: 1 },
       });
 
-      if (finalPhotoBase64) {
+      if (photo2Base64) {
         slide1.addImage({
-          data: finalPhotoBase64,
+          data: photo2Base64,
           x: 5.1,
           y: 1.5,
           w: 4.5,
@@ -436,8 +484,6 @@ export async function generatePlanPPT(
           sizing: { type: 'cover', w: 4.5, h: 3.8 },
         });
       }
-
-      // NOTE: QR code is now only added to Slide 2 (Details slide) to avoid duplicates
     } catch (error) {
       console.error('Failed to add image 2:', error);
     }
@@ -507,9 +553,9 @@ export async function generatePlanPPT(
 
     // Small thumbnail
     try {
-      if (finalPhotoBase64) {
+      if (photo1Base64) {
         slide2.addImage({
-          data: finalPhotoBase64,
+          data: photo1Base64,
           x: 0.4,
           y: 1.6,
           w: 2.5,
@@ -519,6 +565,17 @@ export async function generatePlanPPT(
       }
     } catch (error) {
       console.error('Failed to add thumbnail:', error);
+    }
+
+    // Parse dimensions
+    let width = '';
+    let height = '';
+    if (asset.dimensions) {
+      const match = asset.dimensions.match(/(\d+\.?\d*)\s*[xX×]\s*(\d+\.?\d*)/);
+      if (match) {
+        width = match[1];
+        height = match[2];
+      }
     }
 
     // Details table data - use object format for table cells, sanitize all text

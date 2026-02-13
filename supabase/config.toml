@@ -211,7 +211,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.create-direct-campaign]
-verify_jwt = true
+verify_jwt = false
 
 [functions.forecast-media-availability]
 verify_jwt = true

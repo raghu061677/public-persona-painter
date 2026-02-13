@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -68,19 +68,27 @@ export default function InvoicesList() {
     },
   });
 
-  // Auto-create presets
+  // Auto-create presets (run once)
+  const presetsCreatedRef = useRef(false);
   useEffect(() => {
-    if (!company?.id || lv.catalog.loading) return;
+    if (!company?.id || lv.catalog.loading || presetsCreatedRef.current) return;
     autoCreatePresets();
-  }, [company?.id, lv.catalog.loading, lv.presets]);
+  }, [company?.id, lv.catalog.loading]);
 
   const autoCreatePresets = async () => {
-    if (!company?.id) return;
-    const existing = lv.presets || [];
+    if (!company?.id || presetsCreatedRef.current) return;
+    presetsCreatedRef.current = true;
+
+    // Query DB directly to avoid race conditions with stale lv.presets
+    const { data: dbPresets } = await supabase
+      .from("list_view_presets")
+      .select("preset_name")
+      .eq("company_id", company.id)
+      .eq("page_key", "finance.invoices");
+
+    const existingNames = (dbPresets || []).map((p) => p.preset_name);
     const presetNames = ["Finance Follow-up", "Client Statement", "GST Summary"];
-    const missing = presetNames.filter(
-      (name) => !existing.some((p) => p.preset_name === name)
-    );
+    const missing = presetNames.filter((name) => !existingNames.includes(name));
     if (missing.length === 0) return;
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -127,7 +135,6 @@ export default function InvoicesList() {
         console.warn(`Failed to create preset "${name}":`, e);
       }
     }
-    // No direct reload needed - effect dependency on lv.presets handles it
   };
 
   useEffect(() => {

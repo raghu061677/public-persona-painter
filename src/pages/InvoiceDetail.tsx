@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Trash2, Lock, FileText } from "lucide-react";
+import { ArrowLeft, Trash2, Lock, FileText, Send } from "lucide-react";
 import { ShareInvoiceButton } from "@/components/invoices/ShareInvoiceButton";
 import { toast } from "@/hooks/use-toast";
 import { formatINR, getInvoiceStatusColor } from "@/utils/finance";
@@ -89,6 +89,29 @@ export default function InvoiceDetail() {
     }
   };
 
+  const handleMarkAsSent = async () => {
+    if (!confirm("Mark this invoice as 'Sent' to client? This will lock the invoice from further edits.")) return;
+
+    const { error } = await supabase
+      .from('invoices')
+      .update({ status: 'Sent', updated_at: new Date().toISOString() })
+      .eq('id', invoiceId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update invoice status",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Invoice marked as Sent",
+      });
+      fetchInvoice();
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -145,6 +168,12 @@ export default function InvoiceDetail() {
             <InvoicePDFExport invoiceId={invoice.id} clientName={invoice.client_name} />
             {isAdmin && invoice.status !== 'Draft' && (
               <ShareInvoiceButton invoiceId={invoice.id} invoiceNo={invoice.invoice_no} />
+            )}
+            {isAdmin && invoice.status === 'Draft' && (
+              <Button onClick={handleMarkAsSent} className="bg-primary">
+                <Send className="mr-2 h-4 w-4" />
+                Mark as Sent
+              </Button>
             )}
             {isAdmin && invoice.status === 'Draft' && (
               <Button variant="destructive" onClick={handleDelete}>

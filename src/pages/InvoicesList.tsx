@@ -177,7 +177,8 @@ export default function InvoicesList() {
       result = result.filter(inv =>
         inv.id?.toLowerCase().includes(term) ||
         inv.client_name?.toLowerCase().includes(term) ||
-        inv.campaign_id?.toLowerCase().includes(term)
+        inv.campaign_id?.toLowerCase().includes(term) ||
+        (inv.due_date && String(inv.due_date).toLowerCase().includes(term))
       );
     }
 
@@ -475,7 +476,7 @@ export default function InvoicesList() {
           <div className="relative flex-1 max-w-md">
             <input
               type="text"
-              placeholder="Search invoices..."
+              placeholder="Search by client, campaign, invoice ID, or due date..."
               value={lv.searchQuery}
               onChange={(e) => lv.setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 rounded-lg border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"

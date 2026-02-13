@@ -153,7 +153,7 @@ export default function InvoiceDetail() {
             </Button>
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-2">
-                {invoice.id}
+                {invoice.invoice_no || invoice.id}
                 {isLocked && <Lock className="h-5 w-5 text-muted-foreground" />}
               </h1>
               <p className="text-muted-foreground mt-1">

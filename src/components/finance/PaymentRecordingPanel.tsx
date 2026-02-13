@@ -118,12 +118,20 @@ export function PaymentRecordingPanel({
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
+      // Get company_id from invoice for RLS compliance
+      const { data: invoiceData } = await supabase
+        .from("invoices")
+        .select("company_id")
+        .eq("id", invoiceId)
+        .single();
+
       const { error } = await supabase
         .from("payment_records")
         .insert({
           invoice_id: invoiceId,
           client_id: clientId || null,
           campaign_id: campaignId || null,
+          company_id: invoiceData?.company_id || null,
           amount: amount,
           payment_date: newPayment.payment_date,
           method: newPayment.method,

@@ -77,6 +77,54 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
   // Important: We do NOT recalculate totals here; only hydrate display metadata.
   let enrichedItems = Array.isArray(invoice.items) ? [...invoice.items] : [];
 
+  // Check if items lack asset details (legacy summary-only items)
+  const itemsLackAssetInfo = enrichedItems.length > 0 && enrichedItems.every(
+    (item: any) => !item.asset_id && !item.campaign_asset_id && !item.campaign_assets_id && !item.location
+  );
+
+  // If items are summary-only and we have a campaign, rebuild from campaign_assets
+  if (itemsLackAssetInfo && invoice.campaign_id) {
+    const { data: campAssets } = await supabase
+      .from('campaign_assets')
+      .select('id, asset_id, location, area, direction, media_type, illumination_type, dimensions, total_sqft, booking_start_date, booking_end_date, rent_amount, printing_cost, mounting_cost, card_rate, negotiated_rate, daily_rate, booked_days')
+      .eq('campaign_id', invoice.campaign_id);
+
+    if (campAssets && campAssets.length > 0) {
+      // Fetch media_assets for asset_code (display ID like MNS-HYD-BQS-0001)
+      const maIds = campAssets.map((ca: any) => ca.asset_id).filter(Boolean);
+      const { data: maData } = maIds.length > 0
+        ? await supabase.from('media_assets').select('id, asset_code').in('id', maIds)
+        : { data: [] };
+      const maCodeMap = new Map((maData || []).map((m: any) => [m.id, m.asset_code]));
+
+      enrichedItems = campAssets.map((ca: any, idx: number) => ({
+        sno: idx + 1,
+        campaign_asset_id: ca.id,
+        asset_id: ca.asset_id,
+        asset_code: maCodeMap.get(ca.asset_id) || ca.asset_id || '-',
+        location: ca.location || '-',
+        area: ca.area || '-',
+        direction: ca.direction || '-',
+        media_type: ca.media_type || '-',
+        illumination: ca.illumination_type || '-',
+        illumination_type: ca.illumination_type || '-',
+        dimensions: ca.dimensions || '-',
+        total_sqft: ca.total_sqft || 0,
+        booking_start_date: ca.booking_start_date,
+        booking_end_date: ca.booking_end_date,
+        description: `Display Rent`,
+        rate: ca.rent_amount || ca.negotiated_rate || ca.card_rate || 0,
+        amount: ca.rent_amount || ca.negotiated_rate || ca.card_rate || 0,
+        quantity: 1,
+        printing_cost: ca.printing_cost || 0,
+        mounting_cost: ca.mounting_cost || 0,
+        hsn_sac: '998361',
+        booked_days: ca.booked_days,
+        daily_rate: ca.daily_rate,
+      }));
+    }
+  }
+
   // 1) First hydrate from invoice_items snapshot table (stable, generation-time)
   if (enrichedItems.length > 0 && Array.isArray(invoiceItemsSnapshot) && invoiceItemsSnapshot.length > 0) {
     const byCampaignAssetId = new Map(

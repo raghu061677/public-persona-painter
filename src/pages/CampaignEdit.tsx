@@ -304,9 +304,10 @@ export default function CampaignEdit() {
         const monthlyRate = Number(asset.negotiated_rate) || Number(asset.card_rate) || 0;
         
         // ALWAYS recalculate rent to avoid precision errors from stored rounded values
+        const effectiveBillingMode: BillingMode = (asset.billing_mode as BillingMode) || (campaign.billing_cycle === 'DAILY' ? 'PRORATA_30' : 'FULL_MONTH');
         const rentResult = assetStartDate && assetEndDate 
-          ? computeRentAmount(monthlyRate, assetStartDate, assetEndDate, (asset.billing_mode as BillingMode) || 'PRORATA_30')
-          : { booked_days: 0, daily_rate: 0, rent_amount: 0, billing_mode: 'PRORATA_30' as BillingMode };
+          ? computeRentAmount(monthlyRate, assetStartDate, assetEndDate, effectiveBillingMode)
+          : { booked_days: 0, daily_rate: 0, rent_amount: 0, billing_mode: effectiveBillingMode };
         
         const assetData = mediaAssetDataMap.get(asset.asset_id);
         const totalSqft = Number(asset.total_sqft) || assetData?.sqft || 0;
@@ -335,7 +336,7 @@ export default function CampaignEdit() {
           end_date: assetEndDate,
           // Always use freshly computed values to avoid precision errors
           booked_days: rentResult.booked_days,
-          billing_mode: (asset.billing_mode as BillingMode) || 'PRORATA_30',
+          billing_mode: effectiveBillingMode,
           daily_rate: rentResult.daily_rate,
           rent_amount: rentResult.rent_amount,
           // New sqft-based fields
@@ -383,9 +384,10 @@ export default function CampaignEdit() {
           const printingCharge = Number(item.printing_charge) || 0;
           const mountingCharge = Number(item.mounting_charge) || 0;
           const totalSqft = Number(asset?.total_sqft) || 0;
+          const itemBillingMode: BillingMode = campaign.billing_cycle === 'DAILY' ? 'PRORATA_30' : 'FULL_MONTH';
           const rentResult = campaignStart && campaignEnd 
-            ? computeRentAmount(finalPrice, campaignStart, campaignEnd, 'PRORATA_30')
-            : { booked_days: 0, daily_rate: 0, rent_amount: 0, billing_mode: 'PRORATA_30' as BillingMode };
+            ? computeRentAmount(finalPrice, campaignStart, campaignEnd, itemBillingMode)
+            : { booked_days: 0, daily_rate: 0, rent_amount: 0, billing_mode: itemBillingMode };
           
           return {
             id: item.id,
@@ -404,7 +406,7 @@ export default function CampaignEdit() {
             start_date: campaignStart,
             end_date: campaignEnd,
             booked_days: rentResult.booked_days,
-            billing_mode: 'PRORATA_30' as BillingMode,
+            billing_mode: itemBillingMode,
             daily_rate: rentResult.daily_rate,
             rent_amount: rentResult.rent_amount,
             // New sqft-based fields
@@ -504,9 +506,10 @@ export default function CampaignEdit() {
     const newAssets: CampaignAsset[] = assets.map(asset => {
       const monthlyRate = Number(asset.card_rate) || 0;
       const totalSqft = Number(asset.total_sqft) || 0;
+      const addBillingMode: BillingMode = durationMode === 'MONTH' ? 'FULL_MONTH' : 'PRORATA_30';
       const rentResult = campaignStart && campaignEnd 
-        ? computeRentAmount(monthlyRate, campaignStart, campaignEnd, 'PRORATA_30')
-        : { booked_days: 0, daily_rate: 0, rent_amount: 0, billing_mode: 'PRORATA_30' as BillingMode };
+        ? computeRentAmount(monthlyRate, campaignStart, campaignEnd, addBillingMode)
+        : { booked_days: 0, daily_rate: 0, rent_amount: 0, billing_mode: addBillingMode };
       
       return {
         id: `new-${Date.now()}-${asset.id}`,
@@ -526,7 +529,7 @@ export default function CampaignEdit() {
         start_date: campaignStart || null,
         end_date: campaignEnd || null,
         booked_days: rentResult.booked_days,
-        billing_mode: 'PRORATA_30' as BillingMode,
+        billing_mode: addBillingMode,
         daily_rate: rentResult.daily_rate,
         rent_amount: rentResult.rent_amount,
         // New sqft-based fields
@@ -561,6 +564,29 @@ export default function CampaignEdit() {
   const handleDurationModeChange = (mode: DurationMode) => {
     setDurationMode(mode);
     
+    const newBillingMode: BillingMode = mode === 'MONTH' ? 'FULL_MONTH' : 'PRORATA_30';
+    
+    // Update billing_mode on all existing assets
+    if (campaignAssets.length > 0) {
+      setCampaignAssets(prev => prev.map(asset => {
+        const monthlyRate = asset.negotiated_rate || asset.card_rate || 0;
+        const assetStart = asset.start_date ? (typeof asset.start_date === 'string' ? new Date(asset.start_date) : asset.start_date) : null;
+        const assetEnd = asset.end_date ? (typeof asset.end_date === 'string' ? new Date(asset.end_date) : asset.end_date) : null;
+        
+        if (assetStart && assetEnd) {
+          const rentResult = computeRentAmount(monthlyRate, assetStart, assetEnd, newBillingMode);
+          return {
+            ...asset,
+            billing_mode: newBillingMode,
+            booked_days: rentResult.booked_days,
+            daily_rate: rentResult.daily_rate,
+            rent_amount: rentResult.rent_amount,
+          };
+        }
+        return { ...asset, billing_mode: newBillingMode };
+      }));
+    }
+    
     if (mode === 'MONTH') {
       // When switching to Month-wise, default to 30 days (OOH industry standard)
       const defaultMonthDays = 30;
@@ -568,14 +594,14 @@ export default function CampaignEdit() {
       
       // Update end date based on 30 days
       if (startDate) {
-        const endDate = calculateEndDate(startDate, defaultMonthDays);
+        const newEndDate = calculateEndDate(startDate, defaultMonthDays);
         
         // If there are assets, prompt user to apply dates
         if (campaignAssets.length > 0) {
-          setPendingDatesUpdate({ start: startDate, end: endDate });
+          setPendingDatesUpdate({ start: startDate, end: newEndDate });
           setShowApplyDatesDialog(true);
         } else {
-          setEndDate(endDate);
+          setEndDate(newEndDate);
         }
       }
     } else {

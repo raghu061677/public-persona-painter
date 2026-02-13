@@ -128,11 +128,11 @@ export function ExportPlanPPTDialog({ planId, planName }: ExportPlanPPTDialogPro
           mediaAssetCode: item.asset?.media_asset_code,
           fallbackId: item.asset?.id,
           companyPrefix: codeSettings?.asset_code_prefix,
-          // companyName will be derived from prefix if needed
         });
 
         return {
           asset_id: displayCode, // Human-readable code, NEVER UUID
+          db_asset_id: item.asset?.id, // Actual DB id for querying photos
           area: item.asset?.area || '',
           location: item.asset?.location || '',
           direction: item.asset?.direction || '',

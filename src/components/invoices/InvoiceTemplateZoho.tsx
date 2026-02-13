@@ -59,26 +59,120 @@
      fetchInvoiceData();
    }, [invoiceId]);
  
-   const fetchInvoiceData = async () => {
-     setLoading(true);
-     try {
-       const { data: invoice, error: invoiceError } = await supabase.from('invoices').select('*').eq('id', invoiceId).single();
-       if (invoiceError || !invoice) throw new Error('Invoice not found');
-       const { data: client } = await supabase.from('clients').select('*').eq('id', invoice.client_id).single();
-       const { data: company } = await supabase.from('companies').select('*').eq('id', invoice.company_id).single();
-       let campaign = null;
-       if (invoice.campaign_id) {
-         const { data: campaignData } = await supabase.from('campaigns').select('*').eq('id', invoice.campaign_id).single();
-         campaign = campaignData;
-       }
-       const items = Array.isArray(invoice.items) ? invoice.items : [];
-       setData({ invoice, client, company, campaign, items });
-     } catch (error) {
-       console.error('Error fetching invoice data:', error);
-     } finally {
-       setLoading(false);
-     }
-   };
+    const fetchInvoiceData = async () => {
+      setLoading(true);
+      try {
+        const { data: invoice, error: invoiceError } = await supabase.from('invoices').select('*').eq('id', invoiceId).single();
+        if (invoiceError || !invoice) throw new Error('Invoice not found');
+        const { data: client } = await supabase.from('clients').select('*').eq('id', invoice.client_id).single();
+        const { data: company } = await supabase.from('companies').select('*').eq('id', invoice.company_id).single();
+        let campaign = null;
+        if (invoice.campaign_id) {
+          const { data: campaignData } = await supabase.from('campaigns').select('*').eq('id', invoice.campaign_id).single();
+          campaign = campaignData;
+        }
+        let items = Array.isArray(invoice.items) ? [...invoice.items] : [];
+
+        // --- Enrich items with asset details from DB (display only, no total changes) ---
+        // Check if items lack asset info
+        const itemsLackAssetInfo = items.length > 0 && items.every(
+          (item: any) => !item.asset_id && !item.campaign_asset_id && !item.location
+        );
+
+        // If summary-only items and we have a campaign, rebuild from campaign_assets
+        if (itemsLackAssetInfo && invoice.campaign_id) {
+          const { data: campAssets } = await supabase
+            .from('campaign_assets')
+            .select('id, asset_id, location, area, direction, media_type, illumination_type, dimensions, total_sqft, booking_start_date, booking_end_date, rent_amount, printing_cost, mounting_cost, card_rate, negotiated_rate, daily_rate, booked_days')
+            .eq('campaign_id', invoice.campaign_id);
+
+          if (campAssets && campAssets.length > 0) {
+            const maIds = campAssets.map((ca: any) => ca.asset_id).filter(Boolean);
+            const { data: maData } = maIds.length > 0
+              ? await supabase.from('media_assets').select('id, asset_code').in('id', maIds)
+              : { data: [] };
+            const maCodeMap = new Map((maData || []).map((m: any) => [m.id, m.asset_code]));
+
+            items = campAssets.map((ca: any, idx: number) => {
+              const existing: any = items[idx] && typeof items[idx] === 'object' ? items[idx] : {};
+              return {
+                ...existing,
+                sno: idx + 1,
+                campaign_asset_id: ca.id,
+                asset_id: ca.asset_id,
+                asset_code: maCodeMap.get(ca.asset_id) || ca.asset_id || '-',
+                location: ca.location || '-',
+                area: ca.area || '-',
+                direction: ca.direction || '-',
+                media_type: ca.media_type || '-',
+                illumination_type: ca.illumination_type || '-',
+                dimensions: ca.dimensions || '-',
+                total_sqft: ca.total_sqft || 0,
+                booking_start_date: ca.booking_start_date,
+                booking_end_date: ca.booking_end_date,
+                start_date: ca.booking_start_date,
+                end_date: ca.booking_end_date,
+                description: existing.description || 'Display Rent',
+                rate: existing.rate || ca.rent_amount || ca.negotiated_rate || ca.card_rate || 0,
+                amount: existing.amount || ca.rent_amount || ca.negotiated_rate || ca.card_rate || 0,
+                rent_amount: existing.rent_amount || ca.rent_amount || 0,
+              quantity: 1,
+              printing_charges: ca.printing_cost || 0,
+              mounting_charges: ca.mounting_cost || 0,
+              hsn_sac: '998361',
+              booked_days: ca.booked_days,
+              daily_rate: ca.daily_rate,
+              };
+            });
+          }
+        }
+
+        // Bulk-enrich remaining items that have asset_id but missing display fields
+        const assetIds = Array.from(new Set(items.map((i: any) => i.asset_id).filter(Boolean)));
+        const campaignAssetIds = Array.from(new Set(items.map((i: any) => i.campaign_asset_id).filter(Boolean)));
+
+        if (assetIds.length > 0 || campaignAssetIds.length > 0) {
+          const [maRes, caRes] = await Promise.all([
+            assetIds.length
+              ? supabase.from('media_assets').select('id, asset_code, location, area, direction, media_type, illumination_type, dimensions, total_sqft').in('id', assetIds)
+              : Promise.resolve({ data: null } as any),
+            campaignAssetIds.length
+              ? supabase.from('campaign_assets').select('id, asset_id, location, area, direction, media_type, illumination_type, dimensions, total_sqft, booking_start_date, booking_end_date').in('id', campaignAssetIds)
+              : Promise.resolve({ data: null } as any),
+          ]);
+
+          const maMap = new Map(((maRes as any)?.data || []).map((a: any) => [a.id, a]));
+          const caMap = new Map(((caRes as any)?.data || []).map((c: any) => [c.id, c]));
+
+          items = items.map((item: any) => {
+            const ca: any = item.campaign_asset_id ? caMap.get(item.campaign_asset_id) : undefined;
+            const ma: any = (item.asset_id ? maMap.get(item.asset_id) : undefined) || (ca?.asset_id ? maMap.get(ca.asset_id) : undefined);
+            const source: any = ca || ma;
+            if (!source) return item;
+            return {
+              ...item,
+              asset_code: item.asset_code ?? ma?.asset_code,
+              location: item.location ?? source.location,
+              area: item.area ?? source.area,
+              direction: item.direction ?? source.direction,
+              media_type: item.media_type ?? source.media_type,
+              illumination_type: item.illumination_type ?? source.illumination_type,
+              dimensions: item.dimensions ?? source.dimensions,
+              total_sqft: item.total_sqft ?? source.total_sqft,
+              start_date: item.start_date ?? ca?.booking_start_date,
+              end_date: item.end_date ?? ca?.booking_end_date,
+            };
+          });
+        }
+        // --- End enrichment ---
+
+        setData({ invoice, client, company, campaign, items });
+      } catch (error) {
+        console.error('Error fetching invoice data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
  
    if (loading) return <div className="flex items-center justify-center p-8"><p className="text-muted-foreground">Loading invoice...</p></div>;
    if (!data) return <div className="flex items-center justify-center p-8"><p className="text-muted-foreground">Invoice not found</p></div>;
@@ -122,7 +216,7 @@
  
        <div className="grid grid-cols-2 gap-4 text-xs">
          <div className="space-y-1">
-           <div className="flex"><span className="w-24">Invoice No</span><span className="font-bold">: {invoice.id}</span></div>
+           <div className="flex"><span className="w-24">Invoice No</span><span className="font-bold">: {invoice.invoice_no || invoice.id}</span></div>
            <div className="flex"><span className="w-24">Invoice Date</span><span className="font-bold">: {formatDate(invoice.invoice_date)}</span></div>
            <div className="flex"><span className="w-24">Terms</span><span className="font-bold">: {termsLabel}</span></div>
            <div className="flex"><span className="w-24">Due Date</span><span className="font-bold">: {formatDate(invoice.due_date)}</span></div>
@@ -178,8 +272,8 @@
                        <div>HSN/SAC: 998361</div>
                      </div>
                    </td>
-                   <td className="p-2 text-center align-top text-[10px]"><div>Dimensions: {item.dimensions || item.size || item.dimension || item.meta?.dimensions || '—'}</div><div>Sqft: {item.total_sqft || item.sqft || item.meta?.total_sqft || '—'}</div></td>
-                   <td className="p-2 text-center align-top text-[10px]">{item.start_date && <div>{formatDate(item.start_date)}</div>}{item.end_date && <div>to {formatDate(item.end_date)}</div>}<div className="font-medium">{billableDays} Days</div></td>
+                    <td className="p-2 text-center align-top text-[10px]"><div>Dimensions: {item.dimensions || item.dimension || item.size || item.dimension_text || item.meta?.dimensions || '—'}</div><div>Sqft: {item.total_sqft || item.sqft || item.meta?.total_sqft || '—'}</div></td>
+                    <td className="p-2 text-center align-top text-[10px]">{(item.start_date || item.booking_start_date) && <div>{formatDate(item.start_date || item.booking_start_date)}</div>}{(item.end_date || item.booking_end_date) && <div>to {formatDate(item.end_date || item.booking_end_date)}</div>}{billableDays > 0 ? <div className="font-medium">{billableDays} Days</div> : <div>—</div>}</td>
                    <td className="p-2 text-right align-top text-[10px]">
                      <div>Display: {formatINR(rentAmount)}</div>
                      {printingCharges > 0 && <div>Printing: {formatINR(printingCharges)}</div>}

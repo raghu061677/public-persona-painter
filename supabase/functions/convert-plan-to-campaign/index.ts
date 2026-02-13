@@ -137,7 +137,7 @@ serve(withAuth(async (req) => {
 
     const effectiveGstPercent = (plan.gst_percent !== null && plan.gst_percent !== undefined) ? plan.gst_percent : 0;
     const { data: inserted, error: insertErr } = await supabase.from("campaigns").insert({
-      id: campaignId, plan_id: plan.id, company_id: companyId, client_id: plan.client_id, client_name: plan.client_name,
+      id: campaignId, campaign_code: campaignId, plan_id: plan.id, company_id: companyId, client_id: plan.client_id, client_name: plan.client_name,
       campaign_name: plan.plan_name, status: 'Draft', start_date: plan.start_date, end_date: plan.end_date,
       total_assets: planItems.length, total_amount: plan.total_amount, gst_percent: effectiveGstPercent,
       gst_amount: plan.gst_amount || 0, grand_total: plan.grand_total, notes: plan.notes || "", created_by: ctx.userId, created_from: 'plan',

@@ -2572,6 +2572,7 @@ export type Database = {
         Row: {
           assigned_to: string | null
           billing_cycle: string | null
+          campaign_code: string | null
           campaign_name: string
           client_id: string
           client_name: string
@@ -2609,6 +2610,7 @@ export type Database = {
         Insert: {
           assigned_to?: string | null
           billing_cycle?: string | null
+          campaign_code?: string | null
           campaign_name: string
           client_id: string
           client_name: string
@@ -2646,6 +2648,7 @@ export type Database = {
         Update: {
           assigned_to?: string | null
           billing_cycle?: string | null
+          campaign_code?: string | null
           campaign_name?: string
           client_id?: string
           client_name?: string
@@ -10138,6 +10141,10 @@ export type Database = {
       }
       generate_asset_qr_code: {
         Args: { asset_id_param: string }
+        Returns: string
+      }
+      generate_campaign_code: {
+        Args: { p_company_id: string; p_start_date: string }
         Returns: string
       }
       generate_campaign_id:

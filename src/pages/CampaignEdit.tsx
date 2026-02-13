@@ -89,8 +89,12 @@ interface CampaignAsset {
 }
 
 export default function CampaignEdit() {
-  const { id } = useParams();
+  const { id: routeParam } = useParams();
   const navigate = useNavigate();
+  
+  // Resolve campaign by code or id
+  const [resolvedId, setResolvedId] = useState<string | null>(null);
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
@@ -127,6 +131,22 @@ export default function CampaignEdit() {
   // Bulk update dialogs state
   const [showBulkPrintingDialog, setShowBulkPrintingDialog] = useState(false);
   const [showBulkMountingDialog, setShowBulkMountingDialog] = useState(false);
+
+  // Resolve route param to actual campaign id
+  useEffect(() => {
+    if (!routeParam) return;
+    const resolve = async () => {
+      if (/^CAM-\d{6}-\d{4}$/.test(routeParam)) {
+        const { data } = await supabase.from('campaigns').select('id').eq('campaign_code', routeParam).maybeSingle();
+        setResolvedId(data?.id || routeParam);
+      } else {
+        setResolvedId(routeParam);
+      }
+    };
+    resolve();
+  }, [routeParam]);
+
+  const id = resolvedId;
 
   useEffect(() => {
     fetchClients();

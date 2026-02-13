@@ -186,6 +186,7 @@ export default function CampaignsList() {
         const term = searchTerm.toLowerCase();
         const match = (
           campaign.id?.toLowerCase().includes(term) ||
+          campaign.campaign_code?.toLowerCase().includes(term) ||
           campaign.client_name?.toLowerCase().includes(term) ||
           campaign.campaign_name?.toLowerCase().includes(term)
         );
@@ -495,7 +496,7 @@ export default function CampaignsList() {
                             <Checkbox checked={selectedCampaigns.has(campaign.id)} onCheckedChange={() => toggleCampaignSelection(campaign.id)} />
                           </TableCell>
                           <TableCell className={`font-medium px-4 py-3 text-primary hover:underline cursor-pointer ${getCellClassName()}`} onClick={() => navigate(`/admin/campaigns/${campaign.id}`)}>
-                            {campaign.id}
+                            {campaign.campaign_code || campaign.id}
                           </TableCell>
                           <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{campaign.client_name}</TableCell>
                           <TableCell className={`px-4 py-3 font-medium text-primary hover:underline cursor-pointer ${getCellClassName()}`} onClick={() => navigate(`/admin/campaigns/edit/${campaign.id}`)}>

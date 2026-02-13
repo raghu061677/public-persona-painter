@@ -8,7 +8,7 @@
  * ALWAYS derive from JWT/database.
  */
 
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { corsHeaders } from './cors.ts';
 
 // ─── HMAC Validation for Cron/System Endpoints ─────────────────────
@@ -149,11 +149,24 @@ export function supabaseServiceClient(): SupabaseClient {
 // ─── Authentication ──────────────────────────────────────────────────
 
 export async function requireUser(supabase: SupabaseClient) {
+  // Try getUser first, fall back to getClaims for signing-key compat
   const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) {
-    throw new AuthError('Unauthorized – invalid or missing token', 401);
-  }
-  return user;
+  if (!error && user) return user;
+
+  // Fallback: extract token and use getClaims
+  try {
+    const { data: claimsData, error: claimsError } = await (supabase.auth as any).getClaims?.();
+    if (!claimsError && claimsData?.claims?.sub) {
+      return {
+        id: claimsData.claims.sub,
+        email: claimsData.claims.email,
+        role: claimsData.claims.role,
+        aud: claimsData.claims.aud,
+      } as any;
+    }
+  } catch (_) { /* getClaims not available */ }
+
+  throw new AuthError('Unauthorized – invalid or missing token', 401);
 }
 
 // ─── Authorization Context ──────────────────────────────────────────

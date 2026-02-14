@@ -16,7 +16,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Copy, Loader2, CalendarIcon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { generateCampaignId } from "@/utils/campaigns";
 import { cn } from "@/lib/utils";
 
 interface DuplicateCampaignDialogProps {
@@ -90,14 +89,27 @@ export function DuplicateCampaignDialog({
         .select("*")
         .eq("campaign_id", campaign.id);
 
-      // Generate new campaign ID
-      const newCampaignId = await generateCampaignId(supabase);
+      // Generate a UUID for the new campaign primary key
+      const newCampaignId = crypto.randomUUID();
       const newStartDateStr = format(startDate, "yyyy-MM-dd");
       const newEndDateStr = format(endDate, "yyyy-MM-dd");
+
+      // Generate a human-readable campaign code via atomic counter
+      let campaignCode: string | null = null;
+      try {
+        const { data: codeData } = await supabase.rpc("generate_campaign_code", {
+          p_company_id: sourceCampaign.company_id,
+          p_start_date: newStartDateStr,
+        });
+        if (codeData) campaignCode = codeData;
+      } catch (e) {
+        console.warn("Failed to generate campaign code, will proceed without", e);
+      }
 
       // Create new campaign - copy financial data as-is
       const { error: createError } = await supabase.from("campaigns").insert({
         id: newCampaignId,
+        campaign_code: campaignCode,
         campaign_name: `${sourceCampaign.campaign_name} (Copy)`,
         client_id: sourceCampaign.client_id,
         client_name: sourceCampaign.client_name,
@@ -207,9 +219,11 @@ export function DuplicateCampaignDialog({
         },
       });
 
+      const displayId = campaignCode || newCampaignId;
+
       toast({
         title: "Campaign Duplicated",
-        description: `Created ${newCampaignId} as a copy of ${campaign.id}`,
+        description: `Created ${displayId} as a copy of ${campaign.campaign_name}`,
       });
 
       onOpenChange(false);

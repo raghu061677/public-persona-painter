@@ -10186,10 +10186,19 @@ export type Database = {
         Args: { p_city: string; p_media_type: string }
         Returns: string
       }
-      generate_monthly_invoices: {
-        Args: { p_campaign_id: string; p_created_by: string }
-        Returns: Json
-      }
+      generate_monthly_invoices:
+        | {
+            Args: {
+              p_campaign_id: string
+              p_company_id: string
+              p_created_by: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: { p_campaign_id: string; p_created_by: string }
+            Returns: Json
+          }
       generate_new_media_asset_code: {
         Args: { p_area: string; p_city: string; p_media_type: string }
         Returns: string

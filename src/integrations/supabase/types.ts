@@ -10164,9 +10164,7 @@ export type Database = {
       generate_estimation_id: { Args: never; Returns: string }
       generate_expense_id: { Args: never; Returns: string }
       generate_expense_no: { Args: { p_company_id?: string }; Returns: string }
-      generate_invoice_id:
-        | { Args: never; Returns: string }
-        | { Args: { p_gst_rate?: number }; Returns: string }
+      generate_invoice_id: { Args: { p_gst_rate?: number }; Returns: string }
       generate_invoice_number:
         | {
             Args: { p_company_id: string; p_invoice_date?: string }

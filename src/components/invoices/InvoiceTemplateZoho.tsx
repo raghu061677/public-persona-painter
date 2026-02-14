@@ -265,7 +265,9 @@
            <tbody>
              {items.map((item: any, index: number) => {
                const assetCode = formatAssetDisplayCode({ mediaAssetCode: item.media_asset_code || item.asset_code, fallbackId: item.asset_id, companyName: company?.name });
-               const billableDays = item.billable_days || 0;
+                const startDt = item.start_date || item.booking_start_date;
+                const endDt = item.end_date || item.booking_end_date;
+                const billableDays = item.billable_days || item.booked_days || (startDt && endDt ? Math.max(1, Math.floor((new Date(endDt).getTime() - new Date(startDt).getTime()) / (1000 * 60 * 60 * 24)) + 1) : 0);
                const rentAmount = item.rent_amount || item.rate || 0;
                const printingCharges = item.printing_charges || 0;
                const mountingCharges = item.mounting_charges || 0;

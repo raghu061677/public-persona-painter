@@ -89,25 +89,26 @@
           if (campAssets && campAssets.length > 0) {
             const maIds = campAssets.map((ca: any) => ca.asset_id).filter(Boolean);
             const { data: maData } = maIds.length > 0
-              ? await supabase.from('media_assets').select('id, media_asset_code').in('id', maIds)
+              ? await supabase.from('media_assets').select('id, media_asset_code, location, area, direction, media_type, illumination_type, dimensions, total_sqft').in('id', maIds)
               : { data: [] };
-            const maCodeMap = new Map((maData || []).map((m: any) => [m.id, m.media_asset_code || m.id]));
+            const maMap = new Map((maData || []).map((m: any) => [m.id, m]));
 
             items = campAssets.map((ca: any, idx: number) => {
               const existing: any = items[idx] && typeof items[idx] === 'object' ? items[idx] : {};
+              const ma: any = maMap.get(ca.asset_id) || {};
               return {
                 ...existing,
                 sno: idx + 1,
                 campaign_asset_id: ca.id,
                 asset_id: ca.asset_id,
-                asset_code: maCodeMap.get(ca.asset_id) || ca.asset_id || '-',
-                location: ca.location || '-',
-                area: ca.area || '-',
-                direction: ca.direction || '-',
-                media_type: ca.media_type || '-',
-                illumination_type: ca.illumination_type || '-',
-                dimensions: ca.dimensions || '-',
-                total_sqft: ca.total_sqft || 0,
+                asset_code: ma.media_asset_code || ca.asset_id || '-',
+                location: ca.location || ma.location || '-',
+                area: ca.area || ma.area || '-',
+                direction: ca.direction || ma.direction || '-',
+                media_type: ca.media_type || ma.media_type || '-',
+                illumination_type: ca.illumination_type || ma.illumination_type || '-',
+                dimensions: ca.dimensions || ma.dimensions || '-',
+                total_sqft: ca.total_sqft || ma.total_sqft || 0,
                 booking_start_date: ca.booking_start_date,
                 booking_end_date: ca.booking_end_date,
                 start_date: ca.booking_start_date,
@@ -144,21 +145,30 @@
           const maMap = new Map(((maRes as any)?.data || []).map((a: any) => [a.id, a]));
           const caMap = new Map(((caRes as any)?.data || []).map((c: any) => [c.id, c]));
 
+          // Helper: treat null, undefined, '', 'N/A', '-' as empty
+          const isEmpty = (v: any) => v == null || v === '' || v === 'N/A' || v === '-' || v === 0;
+          const pick = (itemVal: any, ...fallbacks: any[]) => {
+            if (!isEmpty(itemVal)) return itemVal;
+            for (const fb of fallbacks) {
+              if (!isEmpty(fb)) return fb;
+            }
+            return itemVal; // return original if all empty
+          };
+
           items = items.map((item: any) => {
             const ca: any = item.campaign_asset_id ? caMap.get(item.campaign_asset_id) : undefined;
             const ma: any = (item.asset_id ? maMap.get(item.asset_id) : undefined) || (ca?.asset_id ? maMap.get(ca.asset_id) : undefined);
-            const source: any = ca || ma;
-            if (!source) return item;
+            if (!ca && !ma) return item;
             return {
               ...item,
-              asset_code: item.asset_code ?? ma?.media_asset_code ?? ma?.id,
-              location: item.location ?? source.location,
-              area: item.area ?? source.area,
-              direction: item.direction ?? source.direction,
-              media_type: item.media_type ?? source.media_type,
-              illumination_type: item.illumination_type ?? source.illumination_type,
-              dimensions: item.dimensions ?? source.dimensions,
-              total_sqft: item.total_sqft ?? source.total_sqft,
+              asset_code: pick(item.asset_code, ma?.media_asset_code, ma?.id),
+              location: pick(item.location, ca?.location, ma?.location),
+              area: pick(item.area, ca?.area, ma?.area),
+              direction: pick(item.direction, ca?.direction, ma?.direction),
+              media_type: pick(item.media_type, ca?.media_type, ma?.media_type),
+              illumination_type: pick(item.illumination_type, ca?.illumination_type, ma?.illumination_type),
+              dimensions: pick(item.dimensions, ca?.dimensions, ma?.dimensions),
+              total_sqft: pick(item.total_sqft, ca?.total_sqft, ma?.total_sqft),
               start_date: item.start_date ?? ca?.booking_start_date,
               end_date: item.end_date ?? ca?.booking_end_date,
             };

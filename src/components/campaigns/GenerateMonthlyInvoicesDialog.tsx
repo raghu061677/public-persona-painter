@@ -136,7 +136,7 @@ export function GenerateMonthlyInvoicesDialog({
             <ul className="list-disc list-inside text-muted-foreground space-y-1">
               <li>{totalMonths} separate invoices will be created</li>
               <li>Each invoice will cover one month's billing</li>
-              <li>Invoices will be created in "Pending" status</li>
+              <li>Invoices will be created in "Draft" status</li>
               <li>Pro-rata amounts will be calculated automatically</li>
             </ul>
           </div>

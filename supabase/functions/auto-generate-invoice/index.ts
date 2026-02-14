@@ -83,14 +83,22 @@ Deno.serve(withAuth(async (req) => {
   const BILLING_CYCLE_DAYS = 30;
   const items = (campaign.campaign_assets || []).map((asset: any, index: number) => {
     const mediaAsset: any = asset?.asset_id ? mediaAssetMap.get(asset.asset_id) : null;
-    const location = asset.location ?? mediaAsset?.location ?? '-';
-    const area = asset.area ?? mediaAsset?.area ?? '-';
-    const direction = asset.direction ?? mediaAsset?.direction ?? '-';
-    const mediaType = asset.media_type ?? mediaAsset?.media_type ?? '-';
-    const illumination = asset.illumination_type ?? mediaAsset?.illumination_type ?? '-';
-    const dimensions = asset.dimensions ?? mediaAsset?.dimensions ?? null;
-    const sqft = asset.total_sqft ?? mediaAsset?.total_sqft ?? null;
-    const assetCode = mediaAsset?.media_asset_code || mediaAsset?.asset_id_readable || asset.asset_id || '-';
+    // Helper: skip null, undefined, empty strings, and placeholders
+    const pick = (primary: any, ...fallbacks: any[]) => {
+      const isEmpty = (v: any) => v == null || v === '' || v === 'N/A' || v === '-' || v === 0;
+      if (!isEmpty(primary)) return primary;
+      for (const fb of fallbacks) { if (!isEmpty(fb)) return fb; }
+      return primary ?? '-';
+    };
+
+    const location = pick(asset.location, mediaAsset?.location);
+    const area = pick(asset.area, mediaAsset?.area);
+    const direction = pick(asset.direction, mediaAsset?.direction);
+    const mediaType = pick(asset.media_type, mediaAsset?.media_type);
+    const illumination = pick(asset.illumination_type, mediaAsset?.illumination_type);
+    const dimensions = pick(asset.dimensions, mediaAsset?.dimensions) === '-' ? null : pick(asset.dimensions, mediaAsset?.dimensions);
+    const sqft = pick(asset.total_sqft, mediaAsset?.total_sqft) === '-' ? null : pick(asset.total_sqft, mediaAsset?.total_sqft);
+    const assetCode = pick(mediaAsset?.media_asset_code, mediaAsset?.asset_id_readable, asset.asset_id);
 
     const startDate = asset.booking_start_date || campaign.start_date;
     const endDate = asset.booking_end_date || campaign.end_date;
@@ -116,7 +124,9 @@ Deno.serve(withAuth(async (req) => {
       city: asset.city || '-',
       dimensions, total_sqft: sqft,
       start_date: startDate, end_date: endDate,
+      booking_start_date: startDate, booking_end_date: endDate,
       billable_days: billableDays,
+      booked_days: billableDays,
       card_rate: Number(asset.card_rate) || 0,
       negotiated_rate: monthlyRate,
       rent_amount: rentAmount,

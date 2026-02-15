@@ -208,9 +208,7 @@ export function MonthlyBillingScheduleTable({
 
                 {/* Total */}
                 <TableCell className="text-right font-semibold">
-                  {hasInvoice && invoice.status !== 'Draft'
-                    ? formatCurrency(invoice.total_amount)
-                    : formatCurrency(amounts.total)}
+                  {formatCurrency(amounts.total)}
                 </TableCell>
 
                 {/* Status */}

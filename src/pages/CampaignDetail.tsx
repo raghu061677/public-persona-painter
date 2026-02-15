@@ -701,6 +701,8 @@ export default function CampaignDetail() {
                   subtotal: campaign.subtotal,
                   billing_cycle: campaign.billing_cycle,
                   company_id: campaign.company_id,
+                  manual_discount_amount: campaign.manual_discount_amount,
+                  manual_discount_reason: campaign.manual_discount_reason,
                 }}
                 campaignAssets={campaignAssets}
                 displayCost={roundedDisplayCost}

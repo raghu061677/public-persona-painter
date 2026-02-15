@@ -164,14 +164,13 @@ export function MonthlyBillingScheduleTable({
 
                 {/* One-Time Charges */}
                 <TableCell>
-                  {!isLockedInvoice ? (
-                    <div className="flex items-center justify-center gap-4">
+                <div className="flex items-center justify-center gap-4">
                        {totals.printingCost > 0 && (
                         <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                           <Checkbox
                             checked={selection.printing}
                             onCheckedChange={() => toggleCharge(period.monthKey, 'printing')}
-                            disabled={isLockedInvoice || printingBilled}
+                            disabled={printingBilled}
                           />
                           <span className={printingBilled ? 'line-through text-muted-foreground' : ''}>
                             Printing
@@ -186,7 +185,7 @@ export function MonthlyBillingScheduleTable({
                           <Checkbox
                             checked={selection.mounting}
                             onCheckedChange={() => toggleCharge(period.monthKey, 'mounting')}
-                            disabled={isLockedInvoice || mountingBilled}
+                            disabled={mountingBilled}
                           />
                           <span className={mountingBilled ? 'line-through text-muted-foreground' : ''}>
                             Mounting
@@ -200,15 +199,6 @@ export function MonthlyBillingScheduleTable({
                         <span className="text-muted-foreground text-xs">—</span>
                       )}
                     </div>
-                  ) : (
-                    <div className="text-center text-xs text-muted-foreground">
-                      {amounts.printing > 0 || amounts.mounting > 0 ? (
-                        <span className="text-green-600">Included</span>
-                      ) : (
-                        "—"
-                      )}
-                    </div>
-                  )}
                 </TableCell>
 
                 {/* GST */}
@@ -246,21 +236,19 @@ export function MonthlyBillingScheduleTable({
                         View
                       </Button>
                     )}
-                    {!isLockedInvoice && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onGenerateInvoice(period, selection.printing, selection.mounting)}
-                        disabled={isGenerating}
-                      >
-                        {isGenerating ? (
-                          <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Plus className="mr-1 h-4 w-4" />
-                        )}
-                        {isDraftInvoice ? 'Regenerate' : 'Generate'}
-                      </Button>
-                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onGenerateInvoice(period, selection.printing, selection.mounting)}
+                      disabled={isGenerating}
+                    >
+                      {isGenerating ? (
+                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Plus className="mr-1 h-4 w-4" />
+                      )}
+                      {hasInvoice ? 'Regenerate' : 'Generate'}
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>

@@ -282,8 +282,15 @@ export function CampaignBillingTab({
       // Calculate amounts using new calculator
       const amounts = calculatePeriodAmountFromTotals(period, totals, includePrinting, includeMounting);
 
-      // Generate invoice ID
-      const invoiceId = await generateInvoiceId(supabase);
+      // Check if an invoice already exists for this period
+      const existingInvoice = monthlyInvoices.find(inv => {
+        const invStart = new Date(inv.invoice_period_start);
+        const invEnd = new Date(inv.invoice_period_end);
+        return (
+          invStart.getTime() === period.periodStart.getTime() &&
+          invEnd.getTime() === period.periodEnd.getTime()
+        );
+      });
 
       // Build items array
       const items: any[] = [
@@ -330,35 +337,58 @@ export function CampaignBillingTab({
       const dueDate = new Date(period.periodStart);
       dueDate.setDate(dueDate.getDate() + 30);
 
-      // Create invoice
-      const { error } = await supabase.from('invoices').insert({
-        id: invoiceId,
-        campaign_id: campaign.id,
-        client_id: campaign.client_id,
-        client_name: campaign.client_name,
-        company_id: campaign.company_id,
-        invoice_date: format(period.periodStart, 'yyyy-MM-dd'),
-        due_date: format(dueDate, 'yyyy-MM-dd'),
-        invoice_period_start: format(period.periodStart, 'yyyy-MM-dd'),
-        invoice_period_end: format(period.periodEnd, 'yyyy-MM-dd'),
-        is_monthly_split: true,
-        sub_total: amounts.subtotal,
-        gst_percent: totals.gstRate,
-        gst_amount: amounts.gstAmount,
-        total_amount: amounts.total,
-        balance_due: amounts.total,
-        status: 'Draft',
-        items,
-        notes: `Monthly billing for ${campaign.campaign_name} - ${period.label}`,
-        created_by: userData.user.id,
-      });
+      if (existingInvoice) {
+        // UPDATE existing invoice - keep same ID and status
+        const { error } = await supabase.from('invoices').update({
+          sub_total: amounts.subtotal,
+          gst_percent: totals.gstRate,
+          gst_amount: amounts.gstAmount,
+          total_amount: amounts.total,
+          balance_due: amounts.total,
+          items,
+          notes: `Monthly billing for ${campaign.campaign_name} - ${period.label}`,
+          updated_at: new Date().toISOString(),
+        }).eq('id', existingInvoice.id);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: "Invoice Generated",
-        description: `Invoice ${invoiceId} created for ${period.label}`,
-      });
+        toast({
+          title: "Invoice Updated",
+          description: `Invoice ${existingInvoice.id} updated for ${period.label}`,
+        });
+      } else {
+        // Generate new invoice ID and INSERT
+        const invoiceId = await generateInvoiceId(supabase);
+
+        const { error } = await supabase.from('invoices').insert({
+          id: invoiceId,
+          campaign_id: campaign.id,
+          client_id: campaign.client_id,
+          client_name: campaign.client_name,
+          company_id: campaign.company_id,
+          invoice_date: format(period.periodStart, 'yyyy-MM-dd'),
+          due_date: format(dueDate, 'yyyy-MM-dd'),
+          invoice_period_start: format(period.periodStart, 'yyyy-MM-dd'),
+          invoice_period_end: format(period.periodEnd, 'yyyy-MM-dd'),
+          is_monthly_split: true,
+          sub_total: amounts.subtotal,
+          gst_percent: totals.gstRate,
+          gst_amount: amounts.gstAmount,
+          total_amount: amounts.total,
+          balance_due: amounts.total,
+          status: 'Draft',
+          items,
+          notes: `Monthly billing for ${campaign.campaign_name} - ${period.label}`,
+          created_by: userData.user.id,
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: "Invoice Generated",
+          description: `Invoice ${invoiceId} created for ${period.label}`,
+        });
+      }
 
       // Refresh data
       await fetchExistingInvoices();

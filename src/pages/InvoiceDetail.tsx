@@ -153,7 +153,7 @@ export default function InvoiceDetail() {
             </Button>
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-2">
-                {invoice.invoice_no || invoice.id}
+                {invoice.id}
                 {isLocked && <Lock className="h-5 w-5 text-muted-foreground" />}
               </h1>
               <p className="text-muted-foreground mt-1">
@@ -167,7 +167,7 @@ export default function InvoiceDetail() {
             </Badge>
             <InvoicePDFExport invoiceId={invoice.id} clientName={invoice.client_name} />
             {isAdmin && invoice.status !== 'Draft' && (
-              <ShareInvoiceButton invoiceId={invoice.id} invoiceNo={invoice.invoice_no} />
+              <ShareInvoiceButton invoiceId={invoice.id} invoiceNo={invoice.id} />
             )}
             {isAdmin && invoice.status === 'Draft' && (
               <Button onClick={handleMarkAsSent} className="bg-primary">

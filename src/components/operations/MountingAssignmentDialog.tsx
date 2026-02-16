@@ -55,16 +55,28 @@ export function MountingAssignmentDialog({
     setLoading(true);
 
     try {
+      // Status hierarchy - don't regress past these levels
+      const statusHierarchy = ['Pending', 'Assigned', 'Installed', 'Proof Uploaded', 'Verified'];
+      const assignedIndex = statusHierarchy.indexOf('Assigned');
+
       // Update each selected asset
       for (const assetId of Array.from(selectedAssets)) {
+        const asset = assets.find(a => a.id === assetId);
+        const currentIndex = asset ? statusHierarchy.indexOf(asset.status) : -1;
+        const shouldUpdateStatus = currentIndex < assignedIndex || currentIndex === -1;
+
+        const updateData: any = {
+          mounter_name: mounterName,
+          mounter_phone: mounterPhone,
+          assigned_at: new Date().toISOString(),
+        };
+        if (shouldUpdateStatus) {
+          updateData.status = "Assigned" as const;
+        }
+
         const { error } = await supabase
           .from("campaign_assets")
-          .update({
-            mounter_name: mounterName,
-            mounter_phone: mounterPhone,
-            status: "Assigned" as const,
-            assigned_at: new Date().toISOString(),
-          })
+          .update(updateData)
           .eq("id", assetId);
 
         if (error) throw error;

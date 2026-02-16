@@ -104,13 +104,23 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
 
     setAssigning(true);
     try {
+      // Don't regress status if asset has already progressed past Assigned
+      const statusHierarchy = ['Pending', 'Assigned', 'Installed', 'Proof Uploaded', 'Verified'];
+      const currentIndex = statusHierarchy.indexOf(selectedAsset.status);
+      const assignedIndex = statusHierarchy.indexOf('Assigned');
+      const shouldUpdateStatus = currentIndex < assignedIndex || currentIndex === -1;
+
+      const updateData: any = {
+        mounter_name: selectedUser.username,
+        assigned_at: new Date().toISOString(),
+      };
+      if (shouldUpdateStatus) {
+        updateData.status = 'Assigned';
+      }
+
       const { error } = await supabase
         .from('campaign_assets')
-        .update({
-          mounter_name: selectedUser.username,
-          status: 'Assigned',
-          assigned_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', selectedAsset.id);
 
       if (error) throw error;

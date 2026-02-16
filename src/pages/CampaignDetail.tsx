@@ -130,24 +130,40 @@ export default function CampaignDetail() {
       .eq('campaign_id', id)
       .order('created_at');
     
-    // Fetch media asset details to get total_sqft and media_asset_code
+    // Fetch media asset details and photo counts
     if (assets && assets.length > 0) {
       const assetIds = assets.map(a => a.asset_id);
-      const { data: mediaAssets } = await supabase
-        .from('media_assets')
-        .select('id, total_sqft, media_asset_code')
-        .in('id', assetIds);
       
-      const mediaAssetsMap = (mediaAssets || []).reduce((acc, ma) => {
+      // Fetch media assets and photo counts in parallel
+      const [mediaAssetsResult, photoCountsResult] = await Promise.all([
+        supabase
+          .from('media_assets')
+          .select('id, total_sqft, media_asset_code')
+          .in('id', assetIds),
+        supabase
+          .from('media_photos')
+          .select('asset_id')
+          .eq('campaign_id', id)
+          .in('asset_id', assetIds),
+      ]);
+      
+      const mediaAssetsMap = (mediaAssetsResult.data || []).reduce((acc, ma) => {
         acc[ma.id] = ma;
         return acc;
       }, {} as Record<string, any>);
+      
+      // Count photos per asset
+      const photoCountMap: Record<string, number> = {};
+      (photoCountsResult.data || []).forEach(p => {
+        photoCountMap[p.asset_id] = (photoCountMap[p.asset_id] || 0) + 1;
+      });
       
       // Merge media asset data with campaign assets
       const enrichedAssets = assets.map(a => ({
         ...a,
         total_sqft: mediaAssetsMap[a.asset_id]?.total_sqft || 0,
-        media_asset_code: mediaAssetsMap[a.asset_id]?.media_asset_code || null
+        media_asset_code: mediaAssetsMap[a.asset_id]?.media_asset_code || null,
+        photo_count: photoCountMap[a.asset_id] || 0,
       }));
       
       setCampaignAssets(enrichedAssets);

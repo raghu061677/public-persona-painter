@@ -50,16 +50,17 @@
    media_type?: string;
    status: string;
    mounter_name?: string;
-   total_sqft?: number;
-   negotiated_rate?: number;
-   card_rate?: number;
-   rent_amount?: number;
-   printing_charges?: number;
-   mounting_charges?: number;
-   booked_days?: number;
-   start_date?: string;
-   end_date?: string;
- }
+    total_sqft?: number;
+    negotiated_rate?: number;
+    card_rate?: number;
+    rent_amount?: number;
+    printing_charges?: number;
+    mounting_charges?: number;
+    booked_days?: number;
+    start_date?: string;
+    end_date?: string;
+    photo_count?: number;
+  }
  
  type SortField =
    | "media_asset_code"
@@ -541,13 +542,10 @@
                </TableRow>
              ) : (
                 filteredAndSortedAssets.map((asset) => {
-                  const hasProof = asset.status === 'PhotoUploaded' || asset.status === 'Verified' || asset.status === 'Completed';
-                  const isInstalled = asset.status === 'Installed' || asset.status === 'Mounted';
-                  const rowBorderClass = hasProof
+                  const hasPhotos = (asset.photo_count || 0) > 0;
+                  const rowBorderClass = hasPhotos
                     ? 'border-l-4 border-l-green-500'
-                    : isInstalled
-                      ? 'border-l-4 border-l-amber-500'
-                      : 'border-l-4 border-l-red-400';
+                    : 'border-l-4 border-l-red-400';
                   return (
                   <TableRow key={asset.id} className={rowBorderClass}>
                    {isColumnVisible("asset_id") && (

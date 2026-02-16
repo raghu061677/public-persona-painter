@@ -164,6 +164,10 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Status hierarchy - don't regress past these levels
+    const statusHierarchy = ['Pending', 'Assigned', 'Installed', 'Proof Uploaded', 'Verified'];
+    const assignedIndex = statusHierarchy.indexOf('Assigned');
+
     // Assign each asset to best mounter
     const operations = [];
     const campaignAssetUpdates = [];
@@ -226,14 +230,19 @@ Deno.serve(async (req) => {
         mounter_id: bestMounter.id,
         assigned_by,
         assigned_at: new Date().toISOString(),
-        deadline: null, // Can be set based on campaign dates
+        deadline: null,
         status: 'Assigned',
       });
+
+      // Don't regress status if asset has already progressed past Assigned
+      const currentStatus = campaignAsset.installation_status || 'Pending';
+      const currentIndex = statusHierarchy.indexOf(currentStatus);
+      const shouldUpdateStatus = currentIndex < assignedIndex || currentIndex === -1;
 
       // Update campaign asset
       campaignAssetUpdates.push({
         id: campaignAsset.id,
-        installation_status: 'Assigned',
+        installation_status: shouldUpdateStatus ? 'Assigned' : currentStatus,
         assigned_mounter_id: bestMounter.id,
       });
 

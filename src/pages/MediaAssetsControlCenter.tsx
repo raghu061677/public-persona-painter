@@ -145,11 +145,49 @@ export default function MediaAssetsControlCenter() {
       });
     }
 
+    // Dynamic availability: fetch active bookings & holds overlapping today
+    const today = new Date().toISOString().split('T')[0];
+    const allAssetIds = (assetsData || []).map(a => a.id);
+
+    const [{ data: activeBookings }, { data: activeHolds }] = await Promise.all([
+      allAssetIds.length > 0
+        ? supabase
+            .from('campaign_assets')
+            .select('asset_id, campaigns:campaign_id!inner(status, is_deleted)')
+            .in('asset_id', allAssetIds)
+            .lte('booking_start_date', today)
+            .gte('booking_end_date', today)
+        : Promise.resolve({ data: [] }),
+      allAssetIds.length > 0
+        ? supabase
+            .from('asset_holds')
+            .select('asset_id')
+            .in('asset_id', allAssetIds)
+            .eq('status', 'ACTIVE')
+            .lte('start_date', today)
+            .gte('end_date', today)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const dynamicBookedIds = new Set<string>();
+    (activeBookings as any[] || []).forEach((b: any) => {
+      const c = b.campaigns as any;
+      if (!c || c.is_deleted) return;
+      if (['Draft', 'Upcoming', 'Running'].includes(c.status)) {
+        dynamicBookedIds.add(b.asset_id);
+      }
+    });
+    (activeHolds as any[] || []).forEach((h: any) => {
+      dynamicBookedIds.add(h.asset_id);
+    });
+
     const enrichedAssets = (assetsData || []).map(asset => {
       const latestPhoto = latestPhotoMap.get(asset.id);
+      const dynamicStatus = dynamicBookedIds.has(asset.id) ? 'Booked' : 'Available';
       
       return {
         ...asset,
+        status: dynamicStatus,
         primary_photo_url: latestPhoto || asset.primary_photo_url || null,
       };
     });

@@ -1,34 +1,32 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+// v2.0 - Phase-6 Security: withAuth + getAuthContext + rate limiting
+import {
+  getAuthContext, checkRateLimit, jsonError, withAuth,
+} from '../_shared/auth.ts';
+import { corsHeaders } from '../_shared/cors.ts';
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+Deno.serve(withAuth(async (req) => {
+  const ctx = await getAuthContext(req);
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+  // Rate limit: 30/min per user
+  checkRateLimit(`business-assistant:${ctx.userId}`, 30, 60000);
+
+  const body = await req.json().catch(() => null);
+  if (!body?.messages || !Array.isArray(body.messages)) {
+    return jsonError('messages array is required', 400);
   }
 
-  try {
-    const { messages } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
+  const { messages } = body;
+  const lastMessage = messages[messages.length - 1]?.content || '';
+  if (lastMessage.length > 2000) {
+    return jsonError('Message too long (max 2000 characters)', 400);
+  }
 
-    // Get user's company context
-    const authHeader = req.headers.get("Authorization");
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader! } } }
-    );
+  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  if (!LOVABLE_API_KEY) {
+    return jsonError('AI service not configured', 500);
+  }
 
-    // System prompt with business context
-    const systemPrompt = `You are a helpful AI assistant for Go-Ads 360°, an OOH (Out-of-Home) media management platform.
+  const systemPrompt = `You are a helpful AI assistant for Go-Ads 360°, an OOH (Out-of-Home) media management platform.
 
 You can help with:
 - Finding vacant media assets by location, type, or specifications
@@ -45,64 +43,27 @@ When users ask questions:
 
 Keep responses clear and brief unless detailed analysis is requested.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages,
-        ],
-        stream: true,
-      }),
-    });
+  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-2.5-flash',
+      messages: [{ role: 'system', content: systemPrompt }, ...messages],
+      stream: true,
+    }),
+  });
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limits exceeded. Please try again later." }),
-          {
-            status: 429,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please add credits to continue." }),
-          {
-            status: 402,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-      
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      return new Response(
-        JSON.stringify({ error: "AI gateway error" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    return new Response(response.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-    });
-  } catch (error) {
-    console.error("Assistant error:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+  if (!response.ok) {
+    if (response.status === 429) return jsonError('Rate limit exceeded. Please try again later.', 429);
+    if (response.status === 402) return jsonError('AI credits exhausted.', 402);
+    console.error('AI gateway error:', response.status);
+    return jsonError('AI gateway error', 500);
   }
-});
+
+  return new Response(response.body, {
+    headers: { ...corsHeaders, 'Content-Type': 'text/event-stream' },
+  });
+}));

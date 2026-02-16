@@ -1,189 +1,108 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+// v2.0 - Phase-6 Security: withAuth + getAuthContext + tenant isolation
+import {
+  getAuthContext, requireRole, requireCompanyMatch, logSecurityAudit,
+  supabaseServiceClient, jsonError, jsonSuccess, withAuth,
+} from '../_shared/auth.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+Deno.serve(withAuth(async (req) => {
+  const ctx = await getAuthContext(req);
+  requireRole(ctx, ['admin', 'sales', 'finance']);
 
-interface RequestBody {
-  campaignId: string;
-}
+  const body = await req.json().catch(() => null);
+  if (!body?.campaignId || typeof body.campaignId !== 'string') {
+    return jsonError('campaignId is required', 400);
+  }
+  const { campaignId } = body;
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+  const serviceClient = supabaseServiceClient();
+
+  const { data: campaign, error: campaignError } = await serviceClient
+    .from('campaigns')
+    .select(`
+      *,
+      clients!inner(name, gstin),
+      campaign_assets(
+        id, asset_id, location, city, area, media_type,
+        card_rate, printing_charges, mounting_charges,
+        status, assigned_at, completed_at
+      )
+    `)
+    .eq('id', campaignId)
+    .single();
+
+  if (campaignError || !campaign) {
+    return jsonError('Campaign not found', 404);
   }
 
-  try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+  // Verify campaign belongs to user's company
+  requireCompanyMatch(ctx, campaign.company_id);
 
-    // Verify user authentication and company access
-    const authHeader = req.headers.get('Authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  const csvRows: string[] = [];
 
-    const { campaignId } = await req.json() as RequestBody;
+  csvRows.push([
+    'Campaign ID', 'Campaign Name', 'Client', 'Start Date', 'End Date',
+    'Status', 'Total Amount', 'GST Amount', 'Grand Total',
+  ].join(','));
 
-    console.log('Generating Excel report for campaign:', campaignId);
+  csvRows.push([
+    campaign.id,
+    `"${campaign.campaign_name}"`,
+    `"${campaign.clients.name}"`,
+    new Date(campaign.start_date).toLocaleDateString('en-IN'),
+    new Date(campaign.end_date).toLocaleDateString('en-IN'),
+    campaign.status,
+    campaign.total_amount?.toFixed(2) || '0.00',
+    campaign.gst_amount?.toFixed(2) || '0.00',
+    campaign.grand_total?.toFixed(2) || '0.00',
+  ].join(','));
 
-    // Fetch campaign with all related data
-    const { data: campaign, error: campaignError } = await supabase
-      .from('campaigns')
-      .select(`
-        *,
-        clients!inner(name, gstin),
-        campaign_assets(
-          id,
-          asset_id,
-          location,
-          city,
-          area,
-          media_type,
-          card_rate,
-          printing_charges,
-          mounting_charges,
-          status,
-          assigned_at,
-          completed_at
-        )
-      `)
-      .eq('id', campaignId)
-      .single();
+  csvRows.push('');
 
-    if (campaignError || !campaign) {
-      throw new Error('Campaign not found');
-    }
+  csvRows.push([
+    'Asset ID', 'Location', 'City', 'Area', 'Media Type',
+    'Card Rate', 'Printing', 'Mounting', 'Status',
+    'Assigned Date', 'Completed Date',
+  ].join(','));
 
-    // Verify user has access to this campaign's company
-    const { data: companyUser } = await supabase
-      .from('company_users')
-      .select('company_id')
-      .eq('user_id', user.id)
-      .eq('company_id', campaign.company_id)
-      .eq('status', 'active')
-      .single();
-    
-    if (!companyUser) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized - No access to this campaign' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Generate CSV (simpler than Excel for edge function)
-    const csvRows = [];
-    
-    // Header
+  for (const asset of campaign.campaign_assets || []) {
     csvRows.push([
-      'Campaign ID',
-      'Campaign Name',
-      'Client',
-      'Start Date',
-      'End Date',
-      'Status',
-      'Total Amount',
-      'GST Amount',
-      'Grand Total',
+      asset.asset_id,
+      `"${asset.location}"`,
+      asset.city, asset.area, asset.media_type,
+      asset.card_rate?.toFixed(2) || '0.00',
+      (asset.printing_charges || 0).toFixed(2),
+      (asset.mounting_charges || 0).toFixed(2),
+      asset.status,
+      asset.assigned_at ? new Date(asset.assigned_at).toLocaleDateString('en-IN') : '',
+      asset.completed_at ? new Date(asset.completed_at).toLocaleDateString('en-IN') : '',
     ].join(','));
-
-    // Campaign summary
-    csvRows.push([
-      campaign.id,
-      `"${campaign.campaign_name}"`,
-      `"${campaign.clients.name}"`,
-      new Date(campaign.start_date).toLocaleDateString('en-IN'),
-      new Date(campaign.end_date).toLocaleDateString('en-IN'),
-      campaign.status,
-      campaign.total_amount.toFixed(2),
-      campaign.gst_amount.toFixed(2),
-      campaign.grand_total.toFixed(2),
-    ].join(','));
-
-    // Empty row
-    csvRows.push('');
-
-    // Assets header
-    csvRows.push([
-      'Asset ID',
-      'Location',
-      'City',
-      'Area',
-      'Media Type',
-      'Card Rate',
-      'Printing',
-      'Mounting',
-      'Status',
-      'Assigned Date',
-      'Completed Date',
-    ].join(','));
-
-    // Assets data
-    for (const asset of campaign.campaign_assets || []) {
-      csvRows.push([
-        asset.asset_id,
-        `"${asset.location}"`,
-        asset.city,
-        asset.area,
-        asset.media_type,
-        asset.card_rate.toFixed(2),
-        (asset.printing_charges || 0).toFixed(2),
-        (asset.mounting_charges || 0).toFixed(2),
-        asset.status,
-        asset.assigned_at ? new Date(asset.assigned_at).toLocaleDateString('en-IN') : '',
-        asset.completed_at ? new Date(asset.completed_at).toLocaleDateString('en-IN') : '',
-      ].join(','));
-    }
-
-    const csvContent = csvRows.join('\n');
-    const csvBuffer = new TextEncoder().encode(csvContent);
-
-    // Upload to storage
-    const fileName = `campaign-report-${campaign.id}-${Date.now()}.csv`;
-    const { error: uploadError } = await supabase.storage
-      .from('client-documents')
-      .upload(fileName, csvBuffer, {
-        contentType: 'text/csv',
-        upsert: false,
-      });
-
-    if (uploadError) {
-      throw uploadError;
-    }
-
-    // Get signed URL
-    const { data: urlData } = await supabase.storage
-      .from('client-documents')
-      .createSignedUrl(fileName, 3600);
-
-    console.log('Excel report generated successfully:', fileName);
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        url: urlData?.signedUrl,
-        fileName,
-        assetCount: campaign.campaign_assets?.length || 0,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    console.error('Error generating campaign Excel:', error);
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to generate Excel',
-      }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
   }
-});
+
+  const csvContent = csvRows.join('\n');
+  const csvBuffer = new TextEncoder().encode(csvContent);
+
+  const fileName = `campaign-report-${campaign.id}-${Date.now()}.csv`;
+  const { error: uploadError } = await serviceClient.storage
+    .from('client-documents')
+    .upload(fileName, csvBuffer, { contentType: 'text/csv', upsert: false });
+
+  if (uploadError) throw uploadError;
+
+  const { data: urlData } = await serviceClient.storage
+    .from('client-documents')
+    .createSignedUrl(fileName, 3600);
+
+  await logSecurityAudit({
+    functionName: 'generate-campaign-excel', userId: ctx.userId,
+    companyId: ctx.companyId, action: 'generate_campaign_excel',
+    recordIds: [campaignId], status: 'success', req,
+    metadata: { assetCount: campaign.campaign_assets?.length || 0 },
+  });
+
+  return jsonSuccess({
+    success: true,
+    url: urlData?.signedUrl,
+    fileName,
+    assetCount: campaign.campaign_assets?.length || 0,
+  });
+}));

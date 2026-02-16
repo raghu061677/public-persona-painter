@@ -196,10 +196,10 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
       
       <div className="grid gap-4">
         {assets.map((asset) => {
-          const hasPhotos = asset.status === 'PhotoUploaded' || asset.status === 'Verified';
+          const hasPhotos = (asset.photo_count || 0) > 0;
           const cardBorderClass = hasPhotos
             ? 'border-l-4 border-l-green-500'
-            : 'border-l-4 border-l-red-500';
+            : 'border-l-4 border-l-red-400';
           return (
           <Card key={asset.id} className={cardBorderClass}>
             <CardContent className="pt-6">

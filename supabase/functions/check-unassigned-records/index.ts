@@ -1,104 +1,58 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7'
-import { corsHeaders } from '../_shared/cors.ts'
+// v2.0 - Phase-6 Security: withAuth + getAuthContext + admin-only
+import { corsHeaders } from '../_shared/cors.ts';
+import {
+  getAuthContext,
+  requireRole,
+  logSecurityAudit,
+  supabaseServiceClient,
+  jsonError,
+  jsonSuccess,
+  withAuth,
+} from '../_shared/auth.ts';
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+Deno.serve(withAuth(async (req) => {
+  const ctx = await getAuthContext(req);
+  requireRole(ctx, ['admin']);
+
+  const serviceClient = supabaseServiceClient();
+
+  // Count records without company_id in each table, scoped to platform admin view
+  const counts: Record<string, number> = {
+    assets: 0,
+    clients: 0,
+    leads: 0,
+    campaigns: 0,
+    plans: 0,
+  };
+
+  const tables = [
+    { key: 'assets', table: 'media_assets' },
+    { key: 'clients', table: 'clients' },
+    { key: 'leads', table: 'leads' },
+    { key: 'campaigns', table: 'campaigns' },
+    { key: 'plans', table: 'plans' },
+  ];
+
+  for (const { key, table } of tables) {
+    const { count, error } = await serviceClient
+      .from(table)
+      .select('id', { count: 'exact', head: true })
+      .is('company_id', null);
+
+    if (!error && count !== null) {
+      counts[key] = count;
+    }
   }
 
-  try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    )
+  await logSecurityAudit({
+    functionName: 'check-unassigned-records',
+    userId: ctx.userId,
+    companyId: ctx.companyId,
+    action: 'check_unassigned_records',
+    status: 'success',
+    req,
+    metadata: { counts },
+  });
 
-    // Count records without company_id in each table
-    const counts = {
-      assets: 0,
-      clients: 0,
-      leads: 0,
-      campaigns: 0,
-      plans: 0,
-    }
-
-    // Check media_assets
-    const { count: assetsCount, error: assetsError } = await supabaseClient
-      .from('media_assets')
-      .select('id', { count: 'exact', head: true })
-      .is('company_id', null)
-
-    if (!assetsError) {
-      counts.assets = assetsCount || 0
-    }
-
-    // Check clients
-    const { count: clientsCount, error: clientsError } = await supabaseClient
-      .from('clients')
-      .select('id', { count: 'exact', head: true })
-      .is('company_id', null)
-
-    if (!clientsError) {
-      counts.clients = clientsCount || 0
-    }
-
-    // Check leads (if exists)
-    const { count: leadsCount, error: leadsError } = await supabaseClient
-      .from('leads')
-      .select('id', { count: 'exact', head: true })
-      .is('company_id', null)
-
-    if (!leadsError) {
-      counts.leads = leadsCount || 0
-    }
-
-    // Check campaigns
-    const { count: campaignsCount, error: campaignsError } = await supabaseClient
-      .from('campaigns')
-      .select('id', { count: 'exact', head: true })
-      .is('company_id', null)
-
-    if (!campaignsError) {
-      counts.campaigns = campaignsCount || 0
-    }
-
-    // Check plans
-    const { count: plansCount, error: plansError } = await supabaseClient
-      .from('plans')
-      .select('id', { count: 'exact', head: true })
-      .is('company_id', null)
-
-    if (!plansError) {
-      counts.plans = plansCount || 0
-    }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        counts,
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    )
-  } catch (error) {
-    console.error('Check error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: errorMessage,
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      }
-    )
-  }
-})
+  return jsonSuccess({ success: true, counts });
+}));

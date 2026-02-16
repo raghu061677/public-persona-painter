@@ -195,8 +195,13 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
       </div>
       
       <div className="grid gap-4">
-        {assets.map((asset) => (
-          <Card key={asset.id}>
+        {assets.map((asset) => {
+          const hasPhotos = asset.status === 'PhotoUploaded' || asset.status === 'Verified';
+          const cardBorderClass = hasPhotos
+            ? 'border-l-4 border-l-green-500'
+            : 'border-l-4 border-l-red-500';
+          return (
+          <Card key={asset.id} className={cardBorderClass}>
             <CardContent className="pt-6">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 space-y-3">
@@ -272,7 +277,8 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
               </div>
             </CardContent>
           </Card>
-        ))}
+        );
+        })}
       </div>
 
       <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>

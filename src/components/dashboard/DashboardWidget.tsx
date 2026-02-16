@@ -195,25 +195,64 @@ export function DashboardWidget({ widget, globalFilters }: WidgetProps) {
   };
 
   const fetchVacantMedia = async (companyId: string) => {
-    let query = supabase
-      .from('media_assets' as any)
-      .select('*')
-      .eq('company_id', companyId)
-      .eq('status', 'Available');
+    const today = new Date().toISOString().split('T')[0];
 
-    // Apply filters
+    // 1. Fetch all assets for this company
+    let assetQuery = supabase
+      .from('media_assets' as any)
+      .select('id, city, media_type')
+      .eq('company_id', companyId);
+
     if (activeFilters.city && activeFilters.city !== 'all') {
-      query = query.eq('city', activeFilters.city);
+      assetQuery = assetQuery.eq('city', activeFilters.city);
     }
     if (activeFilters.assetType && activeFilters.assetType !== 'all') {
-      query = query.eq('media_type', activeFilters.assetType);
+      assetQuery = assetQuery.eq('media_type', activeFilters.assetType);
     }
 
-    const { data } = await query as any;
+    const { data: allAssets } = await assetQuery as any;
+    if (!allAssets || allAssets.length === 0) return { value: 0, data: [] };
+
+    const assetIds = allAssets.map((a: any) => a.id);
+
+    // 2. Fetch active campaign bookings overlapping today
+    const { data: bookings } = await supabase
+      .from('campaign_assets' as any)
+      .select('asset_id, campaign_id, booking_start_date, booking_end_date, campaigns:campaign_id!inner(status, is_deleted)')
+      .in('asset_id', assetIds) as any;
+
+    const bookedAssetIds = new Set<string>();
+    for (const b of (bookings || [])) {
+      const campaign = b.campaigns as any;
+      if (!campaign || campaign.is_deleted) continue;
+      const activeStatuses = ['Draft', 'Upcoming', 'Running'];
+      if (!activeStatuses.includes(campaign.status)) continue;
+      const bStart = b.booking_start_date;
+      const bEnd = b.booking_end_date;
+      if (bStart && bEnd && bStart <= today && bEnd >= today) {
+        bookedAssetIds.add(b.asset_id);
+      }
+    }
+
+    // 3. Fetch active holds overlapping today
+    const { data: holds } = await supabase
+      .from('asset_holds' as any)
+      .select('asset_id')
+      .in('asset_id', assetIds)
+      .eq('status', 'ACTIVE')
+      .lte('start_date', today)
+      .gte('end_date', today) as any;
+
+    for (const h of (holds || [])) {
+      bookedAssetIds.add(h.asset_id);
+    }
+
+    // 4. Truly available = all minus booked/held
+    const vacantCount = allAssets.filter((a: any) => !bookedAssetIds.has(a.id)).length;
 
     return {
-      value: data?.length || 0,
-      data: data || []
+      value: vacantCount,
+      data: allAssets.filter((a: any) => !bookedAssetIds.has(a.id))
     };
   };
 

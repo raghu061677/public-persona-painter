@@ -540,8 +540,16 @@
                  </TableCell>
                </TableRow>
              ) : (
-               filteredAndSortedAssets.map((asset) => (
-                 <TableRow key={asset.id}>
+                filteredAndSortedAssets.map((asset) => {
+                  const hasProof = asset.status === 'PhotoUploaded' || asset.status === 'Verified' || asset.status === 'Completed';
+                  const isInstalled = asset.status === 'Installed' || asset.status === 'Mounted';
+                  const rowBorderClass = hasProof
+                    ? 'border-l-4 border-l-green-500'
+                    : isInstalled
+                      ? 'border-l-4 border-l-amber-500'
+                      : 'border-l-4 border-l-red-400';
+                  return (
+                  <TableRow key={asset.id} className={rowBorderClass}>
                    {isColumnVisible("asset_id") && (
                      <TableCell className="font-medium font-mono text-sm">
                        {formatAssetDisplayCode({
@@ -609,8 +617,9 @@
                        </Button>
                      </TableCell>
                    )}
-                 </TableRow>
-               ))
+                  </TableRow>
+                  );
+                })
              )}
            </TableBody>
          </Table>

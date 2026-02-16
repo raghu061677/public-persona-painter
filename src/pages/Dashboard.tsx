@@ -178,24 +178,55 @@ const Dashboard = () => {
         }
       });
 
-      // Fetch asset status distribution
+      // Fetch asset status distribution (dynamic: check bookings + holds)
+      const today = new Date().toISOString().split('T')[0];
       const { data: assetsByStatus } = await supabase
         .from("media_assets")
-        .select("status")
+        .select("id, status")
         .eq("company_id", selectedCompanyId);
 
-      const statusCounts: Record<string, number> = {};
-      let bookedCount = 0;
-      let availableCount = 0;
-      
-      assetsByStatus?.forEach((asset) => {
-        statusCounts[asset.status] = (statusCounts[asset.status] || 0) + 1;
-        if (asset.status === 'Booked') {
-          bookedCount++;
-        } else if (asset.status === 'Available') {
-          availableCount++;
+      // Get active campaign bookings overlapping today
+      const allAssetIds = (assetsByStatus || []).map((a: any) => a.id);
+      const { data: activeBookings } = allAssetIds.length > 0
+        ? await supabase
+            .from("campaign_assets" as any)
+            .select("asset_id, campaigns:campaign_id!inner(status, is_deleted)")
+            .in("asset_id", allAssetIds)
+            .lte("booking_start_date", today)
+            .gte("booking_end_date", today)
+        : { data: [] };
+
+      const dynamicBookedIds = new Set<string>();
+      (activeBookings as any[] || []).forEach((b: any) => {
+        const c = b.campaigns as any;
+        if (!c || c.is_deleted) return;
+        if (['Draft', 'Upcoming', 'Running'].includes(c.status)) {
+          dynamicBookedIds.add(b.asset_id);
         }
       });
+
+      // Get active holds overlapping today
+      const { data: activeHolds } = allAssetIds.length > 0
+        ? await supabase
+            .from("asset_holds" as any)
+            .select("asset_id")
+            .in("asset_id", allAssetIds)
+            .eq("status", "ACTIVE")
+            .lte("start_date", today)
+            .gte("end_date", today)
+        : { data: [] };
+
+      (activeHolds as any[] || []).forEach((h: any) => {
+        dynamicBookedIds.add(h.asset_id);
+      });
+
+      let bookedCount = dynamicBookedIds.size;
+      let availableCount = (assetsByStatus?.length || 0) - bookedCount;
+
+      const statusCounts: Record<string, number> = {
+        'Available': availableCount,
+        'Booked': bookedCount,
+      };
 
       setAssetStatusData(
         Object.entries(statusCounts).map(([name, value]) => ({ name, value }))

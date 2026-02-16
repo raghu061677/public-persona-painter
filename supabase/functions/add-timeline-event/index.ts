@@ -1,79 +1,77 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+// v2.0 - Phase-6 Security: withAuth + getAuthContext + tenant isolation
+import { corsHeaders } from '../_shared/cors.ts';
+import {
+  getAuthContext,
+  requireRole,
+  logSecurityAudit,
+  supabaseServiceClient,
+  jsonError,
+  jsonSuccess,
+  withAuth,
+} from '../_shared/auth.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+Deno.serve(withAuth(async (req) => {
+  const ctx = await getAuthContext(req);
+  // Allow admin, sales, ops roles to add timeline events
+  requireRole(ctx, ['admin', 'sales', 'ops']);
 
-interface RequestBody {
-  campaign_id: string;
-  company_id: string;
-  event_type: string;
-  event_title: string;
-  event_description?: string;
-  created_by?: string;
-  metadata?: Record<string, any>;
-}
+  const body = await req.json().catch(() => null);
+  if (!body) return jsonError('Invalid JSON body', 400);
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+  const { campaign_id, event_type, event_title, event_description, metadata = {} } = body;
+
+  if (!campaign_id || typeof campaign_id !== 'string') {
+    return jsonError('campaign_id is required', 400);
+  }
+  if (!event_type || typeof event_type !== 'string') {
+    return jsonError('event_type is required', 400);
   }
 
-  try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+  const serviceClient = supabaseServiceClient();
 
-    const body = await req.json() as RequestBody;
-    const {
+  // Verify campaign belongs to user's company (tenant isolation)
+  const { data: campaign, error: campaignError } = await serviceClient
+    .from('campaigns')
+    .select('id, company_id')
+    .eq('id', campaign_id)
+    .single();
+
+  if (campaignError || !campaign) {
+    return jsonError('Campaign not found', 404);
+  }
+
+  if (campaign.company_id !== ctx.companyId) {
+    return jsonError('Campaign does not belong to your company', 403);
+  }
+
+  console.log('Adding timeline event:', { campaign_id, event_type, event_title, userId: ctx.userId });
+
+  const { data, error } = await serviceClient
+    .from('campaign_timeline')
+    .insert({
       campaign_id,
-      company_id,
+      company_id: ctx.companyId, // Always use verified company_id from JWT
       event_type,
-      event_title,
-      event_description,
-      created_by,
-      metadata = {}
-    } = body;
+      event_title: event_title || event_type,
+      event_description: event_description || null,
+      created_by: ctx.userId, // Always use verified user ID
+      metadata,
+    })
+    .select()
+    .single();
 
-    if (!campaign_id || !company_id || !event_type) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required parameters' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  if (error) throw error;
 
-    console.log('Adding timeline event:', { campaign_id, event_type, event_title });
+  await logSecurityAudit({
+    functionName: 'add-timeline-event',
+    userId: ctx.userId,
+    companyId: ctx.companyId,
+    action: 'add_timeline_event',
+    recordIds: [campaign_id],
+    status: 'success',
+    req,
+    metadata: { event_type },
+  });
 
-    const { data, error } = await supabase
-      .from('campaign_timeline')
-      .insert({
-        campaign_id,
-        company_id,
-        event_type,
-        event_title,
-        event_description,
-        created_by,
-        metadata,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return new Response(
-      JSON.stringify({ success: true, data }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    console.error('Error adding timeline event:', error);
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to add timeline event',
-      }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-});
+  return jsonSuccess({ success: true, data });
+}));

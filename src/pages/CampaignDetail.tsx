@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCampaignResolver, getCampaignDisplayCode } from "@/hooks/useCampaignResolver";
+import { useBreadcrumb } from "@/contexts/BreadcrumbContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,9 +49,24 @@ export default function CampaignDetail() {
   const [assetCodePrefix, setAssetCodePrefix] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { company } = useCompany();
+  const { setBreadcrumbs } = useBreadcrumb();
 
   // Enable automated workflows
   useCampaignWorkflows(id);
+
+  // Set custom breadcrumbs with campaign code instead of UUID
+  useEffect(() => {
+    if (campaign) {
+      const displayCode = getCampaignDisplayCode(campaign);
+      setBreadcrumbs([
+        { title: 'Home', href: '/dashboard' },
+        { title: 'Admin', href: '/admin' },
+        { title: 'Campaigns', href: '/admin/campaigns' },
+        { title: displayCode },
+      ]);
+    }
+    return () => setBreadcrumbs(null);
+  }, [campaign]);
 
   const refreshData = () => {
     fetchCampaign();

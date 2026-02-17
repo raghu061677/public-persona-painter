@@ -312,7 +312,7 @@ const App = () => (
             <Route path="/admin/clients/new" element={<ProtectedRoute requiredModule="clients" requiredAction="create"><ModernAppLayout><ClientNew /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/clients/edit/:id" element={<ProtectedRoute requiredModule="clients" requiredAction="update"><ModernAppLayout><ClientEdit /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/clients/:id" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><ModernAppLayout><ClientDetail /></ModernAppLayout></ProtectedRoute>} />
-            <Route path="/admin/clients/:id/analytics" element={<ModernAppLayout><ClientAnalytics /></ModernAppLayout>} />
+            <Route path="/admin/clients/:id/analytics" element={<ProtectedRoute requireAuth><ModernAppLayout><ClientAnalytics /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/leads" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><ModernAppLayout><LeadsList /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/leads/new" element={<ProtectedRoute requiredModule="clients" requiredAction="create"><ModernAppLayout><LeadNew /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/leads/:id" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><ModernAppLayout><LeadDetail /></ModernAppLayout></ProtectedRoute>} />
@@ -339,83 +339,83 @@ const App = () => (
             <Route path="/admin/campaigns/edit/:id" element={<ProtectedRoute requiredModule="campaigns" requiredAction="update"><ModernAppLayout><CampaignEdit /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/campaigns/:id" element={<ProtectedRoute requiredModule="campaigns" requiredAction="view"><ModernAppLayout><CampaignDetail /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/campaigns/:id/budget" element={<ProtectedRoute requiredModule="campaigns" requiredAction="view"><ModernAppLayout><CampaignBudget /></ModernAppLayout></ProtectedRoute>} />
-            <Route path="/admin/operations" element={<ModernAppLayout><OperationsDashboard /></ModernAppLayout>} />
-            <Route path="/admin/operations/:id" element={<ModernAppLayout><OperationDetail /></ModernAppLayout>} />
-            <Route path="/admin/operations/:campaignId/assets/:assetId" element={<ModernAppLayout><CampaignAssetProofs /></ModernAppLayout>} />
-            <Route path="/admin/operations/:campaignId/assets" element={<ModernAppLayout><CampaignAssetsRedirect /></ModernAppLayout>} />
-            <Route path="/admin/operations/creatives" element={<ModernAppLayout><OperationsCreatives /></ModernAppLayout>} />
-            <Route path="/admin/operations/printing" element={<ModernAppLayout><OperationsPrinting /></ModernAppLayout>} />
-            <Route path="/admin/operations/proof-uploads" element={<ModernAppLayout><OperationsProofUploads /></ModernAppLayout>} />
-            <Route path="/admin/workflow-test" element={<ModernAppLayout><WorkflowTest /></ModernAppLayout>} />
-            <Route path="/admin/operations-analytics" element={<ModernAppLayout><OperationsAnalytics /></ModernAppLayout>} />
-            <Route path="/admin/operations-calendar" element={<ModernAppLayout><OperationsCalendar /></ModernAppLayout>} />
-            <Route path="/finance" element={<ModernAppLayout><FinanceDashboard /></ModernAppLayout>} />
-            <Route path="/finance/estimations" element={<ModernAppLayout><EstimationsList /></ModernAppLayout>} />
-            <Route path="/admin/sales-orders" element={<ModernAppLayout><SalesOrders /></ModernAppLayout>} />
-            <Route path="/admin/purchase-orders" element={<ModernAppLayout><PurchaseOrders /></ModernAppLayout>} />
-            <Route path="/admin/payments" element={<ModernAppLayout><Payments /></ModernAppLayout>} />
-            <Route path="/admin/reports/clients" element={<ModernAppLayout><ReportClientBookings /></ModernAppLayout>} />
-            <Route path="/admin/reports/campaigns" element={<ModernAppLayout><ReportCampaignBookings /></ModernAppLayout>} />
-            <Route path="/admin/reports/revenue" element={<ModernAppLayout><ReportAssetRevenue /></ModernAppLayout>} />
-            <Route path="/admin/reports/financial" element={<ModernAppLayout><ReportFinancialSummary /></ModernAppLayout>} />
-            <Route path="/admin/reports/proof-execution" element={<ModernAppLayout><ReportProofExecution /></ModernAppLayout>} />
-            <Route path="/admin/reports/aging" element={<ModernAppLayout><ReportAging /></ModernAppLayout>} />
-            <Route path="/admin/reports/outstanding" element={<ModernAppLayout><ReportOutstanding /></ModernAppLayout>} />
-            <Route path="/admin/platform-reports/company-usage" element={<ModernAppLayout><PlatformReportCompanyUsage /></ModernAppLayout>} />
-            <Route path="/admin/platform-reports/billing" element={<ModernAppLayout><PlatformReportBilling /></ModernAppLayout>} />
-            <Route path="/admin/platform-reports/media-inventory" element={<ModernAppLayout><PlatformReportMediaInventory /></ModernAppLayout>} />
-            <Route path="/admin/platform-roles" element={<ModernAppLayout><PlatformRoles /></ModernAppLayout>} />
-            <Route path="/finance/proformas" element={<ModernAppLayout><ProformasList /></ModernAppLayout>} />
-            <Route path="/finance/proformas/:id" element={<ModernAppLayout><ProformaDetail /></ModernAppLayout>} />
+            <Route path="/admin/operations" element={<ProtectedRoute requireAuth><ModernAppLayout><OperationsDashboard /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/operations/:id" element={<ProtectedRoute requireAuth><ModernAppLayout><OperationDetail /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/operations/:campaignId/assets/:assetId" element={<ProtectedRoute requireAuth><ModernAppLayout><CampaignAssetProofs /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/operations/:campaignId/assets" element={<ProtectedRoute requireAuth><ModernAppLayout><CampaignAssetsRedirect /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/operations/creatives" element={<ProtectedRoute requireAuth><ModernAppLayout><OperationsCreatives /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/operations/printing" element={<ProtectedRoute requireAuth><ModernAppLayout><OperationsPrinting /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/operations/proof-uploads" element={<ProtectedRoute requireAuth><ModernAppLayout><OperationsProofUploads /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/workflow-test" element={<ProtectedRoute requireAuth><ModernAppLayout><WorkflowTest /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/operations-analytics" element={<ProtectedRoute requireAuth><ModernAppLayout><OperationsAnalytics /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/operations-calendar" element={<ProtectedRoute requireAuth><ModernAppLayout><OperationsCalendar /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/finance" element={<ProtectedRoute requireAuth><ModernAppLayout><FinanceDashboard /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/finance/estimations" element={<ProtectedRoute requireAuth><ModernAppLayout><EstimationsList /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/sales-orders" element={<ProtectedRoute requireAuth><ModernAppLayout><SalesOrders /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/purchase-orders" element={<ProtectedRoute requireAuth><ModernAppLayout><PurchaseOrders /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/payments" element={<ProtectedRoute requireAuth><ModernAppLayout><Payments /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/reports/clients" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportClientBookings /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/reports/campaigns" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportCampaignBookings /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/reports/revenue" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportAssetRevenue /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/reports/financial" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportFinancialSummary /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/reports/proof-execution" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportProofExecution /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/reports/aging" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportAging /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/reports/outstanding" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportOutstanding /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/platform-reports/company-usage" element={<ProtectedRoute requireAuth><ModernAppLayout><PlatformReportCompanyUsage /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/platform-reports/billing" element={<ProtectedRoute requireAuth><ModernAppLayout><PlatformReportBilling /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/platform-reports/media-inventory" element={<ProtectedRoute requireAuth><ModernAppLayout><PlatformReportMediaInventory /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/platform-roles" element={<ProtectedRoute requireAuth><ModernAppLayout><PlatformRoles /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/finance/proformas" element={<ProtectedRoute requireAuth><ModernAppLayout><ProformasList /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/finance/proformas/:id" element={<ProtectedRoute requireAuth><ModernAppLayout><ProformaDetail /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/finance/invoices" element={<Navigate to="/admin/invoices" replace />} />
             <Route path="/finance/invoices/new" element={<Navigate to="/admin/invoices/new" replace />} />
-            <Route path="/finance/invoices/:id" element={<ModernAppLayout><InvoiceDetail /></ModernAppLayout>} />
-            <Route path="/admin/invoices" element={<ModernAppLayout><InvoicesList /></ModernAppLayout>} />
-            <Route path="/admin/invoices/new" element={<ModernAppLayout><InvoiceCreate /></ModernAppLayout>} />
-            <Route path="/admin/invoices/view/:encodedId" element={<ModernAppLayout><InvoiceDetail /></ModernAppLayout>} />
-            <Route path="/admin/invoices/:id" element={<ModernAppLayout><InvoiceDetail /></ModernAppLayout>} />
-            <Route path="/admin/invoices-import" element={<ModernAppLayout><ImportInvoices /></ModernAppLayout>} />
-            <Route path="/admin/payment-reminders" element={<ModernAppLayout><Invoices /></ModernAppLayout>} />
-            <Route path="/admin/payment-confirmations" element={<ModernAppLayout><PaymentConfirmations /></ModernAppLayout>} />
-            <Route path="/admin/expenses" element={<ModernAppLayout><ExpensesList /></ModernAppLayout>} />
-            <Route path="/finance/expenses" element={<ModernAppLayout><ExpensesList /></ModernAppLayout>} />
-            <Route path="/reports" element={<ModernAppLayout><ReportsDashboard /></ModernAppLayout>} />
-            <Route path="/reports/vacant-media" element={<ModernAppLayout><MediaAvailabilityReport /></ModernAppLayout>} />
-            <Route path="/admin/reports/vacant-media" element={<ModernAppLayout><MediaAvailabilityReport /></ModernAppLayout>} />
-            <Route path="/admin/reports/availability" element={<ModernAppLayout><MediaAvailabilityReport /></ModernAppLayout>} />
+            <Route path="/finance/invoices/:id" element={<ProtectedRoute requireAuth><ModernAppLayout><InvoiceDetail /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/invoices" element={<ProtectedRoute requireAuth><ModernAppLayout><InvoicesList /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/invoices/new" element={<ProtectedRoute requireAuth><ModernAppLayout><InvoiceCreate /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/invoices/view/:encodedId" element={<ProtectedRoute requireAuth><ModernAppLayout><InvoiceDetail /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/invoices/:id" element={<ProtectedRoute requireAuth><ModernAppLayout><InvoiceDetail /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/invoices-import" element={<ProtectedRoute requireAuth><ModernAppLayout><ImportInvoices /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/payment-reminders" element={<ProtectedRoute requireAuth><ModernAppLayout><Invoices /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/payment-confirmations" element={<ProtectedRoute requireAuth><ModernAppLayout><PaymentConfirmations /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/expenses" element={<ProtectedRoute requireAuth><ModernAppLayout><ExpensesList /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/finance/expenses" element={<ProtectedRoute requireAuth><ModernAppLayout><ExpensesList /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportsDashboard /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/reports/vacant-media" element={<ProtectedRoute requireAuth><ModernAppLayout><MediaAvailabilityReport /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/reports/vacant-media" element={<ProtectedRoute requireAuth><ModernAppLayout><MediaAvailabilityReport /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/reports/availability" element={<ProtectedRoute requireAuth><ModernAppLayout><MediaAvailabilityReport /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/reports/profitability" element={<ProtectedRoute requireAuth><ModernAppLayout><AssetProfitabilityReport /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/approvals" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalsQueue /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/approval-history" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalHistory /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/approvals/rules" element={<RoleGuard requireCompanyRole="company_admin"><ModernAppLayout><ApprovalRulesSettings /></ModernAppLayout></RoleGuard>} />
-            <Route path="/admin/ai-assistant" element={<ModernAppLayout><AIAssistant /></ModernAppLayout>} />
-            <Route path="/admin/assistant" element={<ModernAppLayout><AIAssistant /></ModernAppLayout>} />
-            <Route path="/admin/tenant-analytics" element={<ModernAppLayout><TenantAnalytics /></ModernAppLayout>} />
-            <Route path="/admin/analytics-dashboard" element={<ModernAppLayout><AnalyticsDashboard /></ModernAppLayout>} />
+            <Route path="/admin/ai-assistant" element={<ProtectedRoute requireAuth><ModernAppLayout><AIAssistant /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/assistant" element={<ProtectedRoute requireAuth><ModernAppLayout><AIAssistant /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/tenant-analytics" element={<ProtectedRoute requireAuth><ModernAppLayout><TenantAnalytics /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/analytics-dashboard" element={<ProtectedRoute requireAuth><ModernAppLayout><AnalyticsDashboard /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/analytics/inventory" element={<ProtectedRoute requireAuth><ModernAppLayout><InventoryUtilization /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/analytics/revenue-forecast" element={<ProtectedRoute requireAuth><ModernAppLayout><RevenueForecast /></ModernAppLayout></ProtectedRoute>} />
-            <Route path="/admin/proformas" element={<ModernAppLayout><ProformasList /></ModernAppLayout>} />
-            <Route path="/admin/proformas/:id" element={<ModernAppLayout><ProformaDetail /></ModernAppLayout>} />
-            <Route path="/admin/estimations" element={<ModernAppLayout><EstimationsList /></ModernAppLayout>} />
+            <Route path="/admin/proformas" element={<ProtectedRoute requireAuth><ModernAppLayout><ProformasList /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/proformas/:id" element={<ProtectedRoute requireAuth><ModernAppLayout><ProformaDetail /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/estimations" element={<ProtectedRoute requireAuth><ModernAppLayout><EstimationsList /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/gallery" element={<ProtectedRoute><ModernAppLayout><PhotoGallery /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/photo-library" element={<ProtectedRoute><ModernAppLayout><PhotoGallery /></ModernAppLayout></ProtectedRoute>} />
-            <Route path="/admin/import" element={<ModernAppLayout><ImportData /></ModernAppLayout>} />
-            <Route path="/admin/export" element={<ModernAppLayout><ExportData /></ModernAppLayout>} />
-            <Route path="/admin/data-export-import" element={<ModernAppLayout><DataExportImport /></ModernAppLayout>} />
-            <Route path="/admin/code-management" element={<ModernAppLayout><CodeManagement /></ModernAppLayout>} />
-            <Route path="/admin/power-bills" element={<ModernAppLayout><PowerBillsDashboard /></ModernAppLayout>} />
-            <Route path="/admin/power-bills-analytics" element={<ModernAppLayout><PowerBillsAnalytics /></ModernAppLayout>} />
-            <Route path="/admin/power-bills-bulk-payment" element={<ModernAppLayout><PowerBillsBulkPayment /></ModernAppLayout>} />
-            <Route path="/admin/power-bills/bulk-upload" element={<ModernAppLayout><PowerBillsBulkUpload /></ModernAppLayout>} />
-            <Route path="/admin/power-bills/reconciliation" element={<ModernAppLayout><PowerBillsReconciliation /></ModernAppLayout>} />
-            <Route path="/admin/power-bills/scheduler" element={<ModernAppLayout><PowerBillsScheduler /></ModernAppLayout>} />
-            <Route path="/admin/power-bills-sharing" element={<ModernAppLayout><PowerBillsSharing /></ModernAppLayout>} />
-            <Route path="/admin/audit-logs" element={<ModernAppLayout><AuditLogs /></ModernAppLayout>} />
-            <Route path="/admin/vendors" element={<ModernAppLayout><VendorsManagement /></ModernAppLayout>} />
+            <Route path="/admin/import" element={<ProtectedRoute requireAuth><ModernAppLayout><ImportData /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/export" element={<ProtectedRoute requireAuth><ModernAppLayout><ExportData /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/data-export-import" element={<ProtectedRoute requireAuth><ModernAppLayout><DataExportImport /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/code-management" element={<ProtectedRoute requireAuth><ModernAppLayout><CodeManagement /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/power-bills" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsDashboard /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/power-bills-analytics" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsAnalytics /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/power-bills-bulk-payment" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsBulkPayment /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/power-bills/bulk-upload" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsBulkUpload /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/power-bills/reconciliation" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsReconciliation /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/power-bills/scheduler" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsScheduler /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/power-bills-sharing" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsSharing /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/audit-logs" element={<ProtectedRoute requireAuth><ModernAppLayout><AuditLogs /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/vendors" element={<ProtectedRoute requireAuth><ModernAppLayout><VendorsManagement /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute requiredModule="users" requiredAction="view"><ModernAppLayout><UserManagement /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/admin/users/companies/:companyId" element={<PlatformAdminGuard><ModernAppLayout><CompanyUsersManagement /></ModernAppLayout></PlatformAdminGuard>} />
-            <Route path="/admin/operations-settings" element={<ModernAppLayout><OperationsSettings /></ModernAppLayout>} />
-            <Route path="/admin/organization-settings" element={<ModernAppLayout><OrganizationSettings /></ModernAppLayout>} />
-            <Route path="/settings" element={<ModernAppLayout><Settings /></ModernAppLayout>} />
+            <Route path="/admin/operations-settings" element={<ProtectedRoute requireAuth><ModernAppLayout><OperationsSettings /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/organization-settings" element={<ProtectedRoute requireAuth><ModernAppLayout><OrganizationSettings /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute requireAuth><ModernAppLayout><Settings /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/settings/profile" element={<ProtectedRoute requireAuth><ModernAppLayout><ProfileSettings /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/settings/theme" element={<ProtectedRoute requireAuth><ModernAppLayout><ThemeSettings /></ModernAppLayout></ProtectedRoute>} />
             <Route path="/settings/notifications" element={<ProtectedRoute requireAuth><ModernAppLayout><NotificationSettings /></ModernAppLayout></ProtectedRoute>} />
@@ -447,20 +447,20 @@ const App = () => (
             </Route>
             
             {/* Company Onboarding */}
-            <Route path="/onboarding" element={<CompanyOnboarding />} />
+            <Route path="/onboarding" element={<ProtectedRoute requireAuth><CompanyOnboarding /></ProtectedRoute>} />
             
             {/* Platform Admin Setup */}
-            <Route path="/admin/platform-admin-setup" element={<PlatformAdminSetup />} />
+            <Route path="/admin/platform-admin-setup" element={<ProtectedRoute requireAuth><PlatformAdminSetup /></ProtectedRoute>} />
             
-            <Route path="/admin/approval-settings" element={<ModernAppLayout><ApprovalSettings /></ModernAppLayout>} />
-            <Route path="/admin/approval-delegation" element={<ModernAppLayout><ApprovalDelegation /></ModernAppLayout>} />
-            <Route path="/admin/approval-analytics" element={<ModernAppLayout><ApprovalAnalytics /></ModernAppLayout>} />
-            <Route path="/admin/analytics" element={<ModernAppLayout><AnalyticsDashboard /></ModernAppLayout>} />
-            <Route path="/admin/custom-dashboard" element={<ModernAppLayout><CustomDashboard /></ModernAppLayout>} />
+            <Route path="/admin/approval-settings" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalSettings /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/approval-delegation" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalDelegation /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/approval-analytics" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalAnalytics /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/analytics" element={<ProtectedRoute requireAuth><ModernAppLayout><AnalyticsDashboard /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/custom-dashboard" element={<ProtectedRoute requireAuth><ModernAppLayout><CustomDashboard /></ModernAppLayout></ProtectedRoute>} />
             
             {/* Operations Photo Upload */}
-            <Route path="/admin/ui-showcase" element={<ModernAppLayout><ComponentShowcase /></ModernAppLayout>} />
-            <Route path="/admin/dashboard-builder" element={<ModernAppLayout><DashboardBuilder /></ModernAppLayout>} />
+            <Route path="/admin/ui-showcase" element={<ProtectedRoute requireAuth><ModernAppLayout><ComponentShowcase /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/admin/dashboard-builder" element={<ProtectedRoute requireAuth><ModernAppLayout><DashboardBuilder /></ModernAppLayout></ProtectedRoute>} />
             
             {/* Client Portal Routes */}
             <Route path="/portal/auth" element={<MagicLinkAuth />} />

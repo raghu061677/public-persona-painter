@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,11 +24,20 @@ const Auth = () => {
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
+
+  // Read the ?next= param for post-login redirect
+  const nextPath = searchParams.get('next');
 
   useEffect(() => {
     // Helper to fetch user roles and redirect
     const redirectUserToDashboard = async (userId: string) => {
+      // If there's a next param, go there instead of role dashboard
+      if (nextPath) {
+        navigate(decodeURIComponent(nextPath));
+        return;
+      }
       try {
         const { data: rolesData } = await supabase
           .from('user_roles')
@@ -62,7 +71,7 @@ const Auth = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, nextPath]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

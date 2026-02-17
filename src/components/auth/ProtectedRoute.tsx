@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,6 +27,7 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user, roles, loading: authLoading, isAdmin } = useAuth();
   const { canAccess, loading: permLoading } = usePermissions();
+  const location = useLocation();
 
   // Show loading state while checking authentication
   if (authLoading || permLoading) {
@@ -37,9 +38,11 @@ export function ProtectedRoute({
     );
   }
 
-  // Check authentication
+  // Check authentication — redirect with ?next= so user returns after login
   if (requireAuth && !user) {
-    return <Navigate to={redirectTo} replace />;
+    const currentPath = location.pathname + location.search + location.hash;
+    const redirectUrl = `${redirectTo}?next=${encodeURIComponent(currentPath)}`;
+    return <Navigate to={redirectUrl} replace />;
   }
 
   // Check role requirement

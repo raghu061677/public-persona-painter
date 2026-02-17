@@ -1,6 +1,8 @@
 import { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useRBAC, PlatformRole, CompanyRole, ModuleName } from '@/hooks/useRBAC';
+import { useAuth } from '@/contexts/AuthContext';
+import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -31,6 +33,22 @@ export function RoleGuard({
   redirectTo,
 }: RoleGuardProps) {
   const rbac = useRBAC();
+  const { user, loading: authLoading } = useAuth();
+  const location = useLocation();
+
+  // Must be authenticated first
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    const currentPath = location.pathname + location.search + location.hash;
+    return <Navigate to={`/auth?next=${encodeURIComponent(currentPath)}`} replace />;
+  }
 
   // Check platform role
   if (requirePlatformRole && !rbac.hasPlatformRole(requirePlatformRole)) {

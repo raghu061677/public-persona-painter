@@ -325,7 +325,10 @@ const PowerBillsBulkUpload = () => {
 
       const { error } = await supabase
         .from('asset_power_bills')
-        .insert(billsToInsert);
+        .upsert(billsToInsert, {
+          onConflict: 'asset_id,bill_month',
+          ignoreDuplicates: false,
+        });
 
       if (error) throw error;
 

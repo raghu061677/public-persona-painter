@@ -328,6 +328,13 @@ export function BulkBillImportDialog({ onImportComplete }: { onImportComplete?: 
             billMonth = bill.bill_date.substring(0, 7); // YYYY-MM
           }
 
+          // Skip if we still don't have a valid bill_month (required for unique constraint)
+          if (!billMonth) {
+            console.warn(`Skipping bill for ${bill.asset_id}: no bill_month`);
+            errorCount++;
+            continue;
+          }
+
           const billData = {
             asset_id: bill.asset_id,
             bill_month: billMonth,
@@ -341,7 +348,6 @@ export function BulkBillImportDialog({ onImportComplete }: { onImportComplete?: 
             energy_charges: bill.energy_charges ? parseFloat(bill.energy_charges) : null,
             fixed_charges: bill.fixed_charges ? parseFloat(bill.fixed_charges) : null,
             bill_amount: bill.current_month_bill ? parseFloat(bill.current_month_bill) : (bill.total_amount ? parseFloat(bill.total_amount) : 0),
-            // Identification helpers for UI/reconciliation
             location: bill.location || null,
             direction: bill.direction || null,
             unique_service_number: bill.unique_service_number || null,
@@ -351,6 +357,7 @@ export function BulkBillImportDialog({ onImportComplete }: { onImportComplete?: 
             .from('asset_power_bills')
             .upsert(billData, {
               onConflict: 'asset_id,bill_month',
+              ignoreDuplicates: false,
             });
 
           if (error) throw error;

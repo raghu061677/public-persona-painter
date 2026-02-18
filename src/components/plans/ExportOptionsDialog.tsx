@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -97,6 +98,7 @@ export function ExportOptionsDialog({
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Export Options Settings</DialogTitle>
+          <DialogDescription>Customize export format and included fields.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">

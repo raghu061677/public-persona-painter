@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -77,6 +78,7 @@ export function BulkPrintingMountingDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Bulk Update Printing & Mounting</DialogTitle>
+          <DialogDescription>Update printing and mounting charges for selected assets.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">

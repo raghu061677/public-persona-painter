@@ -351,7 +351,8 @@ export default function PowerBillsDashboard() {
 
     for (const assetId of selectedAssets) {
       const asset = assets.find(a => a.id === assetId);
-      if (!asset || !asset.service_number) {
+      const usn = asset?.unique_service_number || asset?.service_number;
+      if (!asset || !usn) {
         failCount++;
         continue;
       }
@@ -359,7 +360,7 @@ export default function PowerBillsDashboard() {
       try {
         const { data, error } = await supabase.functions.invoke('fetch-tgspdcl-bill', {
           body: { 
-            serviceNumber: asset.service_number,
+            uniqueServiceNumber: usn,
             assetId: asset.id
           }
         });

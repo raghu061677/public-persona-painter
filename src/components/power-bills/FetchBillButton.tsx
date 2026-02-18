@@ -31,9 +31,18 @@ export function FetchBillButton({
 
     setFetching(true);
     try {
+      const usn = uniqueServiceNumber || serviceNumber;
+      if (!usn) {
+        toast({
+          title: "Service Number Required",
+          description: "No unique service number available for this asset",
+          variant: "destructive",
+        });
+        return;
+      }
       const { data, error } = await supabase.functions.invoke('fetch-tgspdcl-bill', {
         body: { 
-          uniqueServiceNumber: uniqueServiceNumber || serviceNumber,
+          uniqueServiceNumber: usn,
           assetId: assetId
         }
       });

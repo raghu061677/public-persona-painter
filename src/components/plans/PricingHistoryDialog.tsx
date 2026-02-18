@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -153,7 +154,7 @@ export function PricingHistoryDialog({
             <History className="h-5 w-5" />
             Pricing History: {assetId}
           </DialogTitle>
-          <p className="text-sm text-muted-foreground">{assetLocation}</p>
+          <DialogDescription>{assetLocation}</DialogDescription>
         </DialogHeader>
 
         {loading ? (

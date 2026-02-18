@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -134,6 +135,7 @@ export function PrintingInstallationDialog({
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl">Printing & Installation Cost Engine</DialogTitle>
+          <DialogDescription>Configure printing and installation costs per sqft.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">

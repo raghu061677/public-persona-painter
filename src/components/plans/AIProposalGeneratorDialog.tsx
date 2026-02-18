@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, Loader2, Copy, Check } from "lucide-react";
@@ -64,6 +64,7 @@ export function AIProposalGeneratorDialog({ open, onClose, planId }: AIProposalG
             <Sparkles className="h-5 w-5 text-primary" />
             AI Proposal Generator
           </DialogTitle>
+          <DialogDescription>Generate AI-powered proposals for your media plan.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           {!proposal && (

@@ -65,10 +65,21 @@ export function BulkBillImportDialog({ onImportComplete }: { onImportComplete?: 
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Helper to parse date formats (returns YYYY-MM-DD)
-  const parseDate = (dateStr: string) => {
+  // Helper to parse date formats (returns YYYY-MM-DD or null)
+  const parseDate = (dateStr: string): string | null => {
     try {
       const cleaned = dateStr.trim();
+      if (!cleaned) return null;
+
+      // Handle Excel serial date numbers passed as strings (e.g. "46054")
+      const asNum = Number(cleaned);
+      if (!isNaN(asNum) && asNum > 30000 && asNum < 70000) {
+        const utcMs = Math.round((asNum - 25569) * 86400 * 1000);
+        const d = new Date(utcMs);
+        if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+        return null;
+      }
+
       const monthMap: any = {
         jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
         jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'
@@ -92,9 +103,13 @@ export function BulkBillImportDialog({ onImportComplete }: { onImportComplete?: 
 
         return `${year}-${month}-${day}`;
       }
-      return cleaned;
+
+      // Try ISO format already
+      if (/^\d{4}-\d{2}-\d{2}/.test(cleaned)) return cleaned.slice(0, 10);
+
+      return null;
     } catch {
-      return dateStr;
+      return null;
     }
   };
 

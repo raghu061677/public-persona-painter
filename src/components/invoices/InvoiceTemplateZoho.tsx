@@ -96,6 +96,10 @@
             items = campAssets.map((ca: any, idx: number) => {
               const existing: any = items[idx] && typeof items[idx] === 'object' ? items[idx] : {};
               const ma: any = maMap.get(ca.asset_id) || {};
+              const rentAmt = existing.rent_amount || ca.rent_amount || ca.negotiated_rate || ca.card_rate || 0;
+              const printAmt = ca.printing_cost || 0;
+              const mountAmt = ca.mounting_cost || 0;
+              const lineTotal = rentAmt + printAmt + mountAmt;
               return {
                 ...existing,
                 sno: idx + 1,
@@ -114,15 +118,16 @@
                 start_date: ca.booking_start_date,
                 end_date: ca.booking_end_date,
                 description: existing.description || 'Display Rent',
-                rate: existing.rate || ca.rent_amount || ca.negotiated_rate || ca.card_rate || 0,
-                amount: existing.amount || ca.rent_amount || ca.negotiated_rate || ca.card_rate || 0,
-                rent_amount: existing.rent_amount || ca.rent_amount || 0,
-              quantity: 1,
-              printing_charges: ca.printing_cost || 0,
-              mounting_charges: ca.mounting_cost || 0,
-              hsn_sac: '998361',
-              booked_days: ca.booked_days,
-              daily_rate: ca.daily_rate,
+                rate: rentAmt,
+                rent_amount: rentAmt,
+                amount: lineTotal,
+                total: lineTotal,
+                quantity: 1,
+                printing_charges: printAmt,
+                mounting_charges: mountAmt,
+                hsn_sac: '998361',
+                booked_days: ca.booked_days,
+                daily_rate: ca.daily_rate,
               };
             });
           }
@@ -268,10 +273,10 @@
                 const startDt = item.start_date || item.booking_start_date;
                 const endDt = item.end_date || item.booking_end_date;
                 const billableDays = item.billable_days || item.booked_days || (startDt && endDt ? Math.max(1, Math.floor((new Date(endDt).getTime() - new Date(startDt).getTime()) / (1000 * 60 * 60 * 24)) + 1) : 0);
-               const rentAmount = item.rent_amount || item.rate || 0;
-               const printingCharges = item.printing_charges || 0;
-               const mountingCharges = item.mounting_charges || 0;
-               const lineTotal = item.total || item.amount || 0;
+                const rentAmount = item.rent_amount || item.rate || 0;
+                const printingCharges = item.printing_charges || item.printing_cost || 0;
+                const mountingCharges = item.mounting_charges || item.mounting_cost || 0;
+                const lineTotal = item.total || item.amount || (rentAmount + printingCharges + mountingCharges);
                return (
                  <tr key={index} className="border-t border-border">
                    <td className="p-2 align-top">{index + 1}</td>

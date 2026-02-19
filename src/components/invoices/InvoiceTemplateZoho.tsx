@@ -83,7 +83,7 @@
         if (itemsLackAssetInfo && invoice.campaign_id) {
           const { data: campAssets } = await supabase
             .from('campaign_assets')
-            .select('id, asset_id, location, area, direction, media_type, illumination_type, dimensions, total_sqft, booking_start_date, booking_end_date, rent_amount, printing_cost, mounting_cost, card_rate, negotiated_rate, daily_rate, booked_days')
+            .select('id, asset_id, location, area, direction, media_type, illumination_type, dimensions, total_sqft, booking_start_date, booking_end_date, rent_amount, printing_cost, mounting_cost, printing_charges, mounting_charges, card_rate, negotiated_rate, daily_rate, booked_days')
             .eq('campaign_id', invoice.campaign_id);
 
           if (campAssets && campAssets.length > 0) {
@@ -97,8 +97,8 @@
               const existing: any = items[idx] && typeof items[idx] === 'object' ? items[idx] : {};
               const ma: any = maMap.get(ca.asset_id) || {};
               const rentAmt = existing.rent_amount || ca.rent_amount || ca.negotiated_rate || ca.card_rate || 0;
-              const printAmt = ca.printing_cost || 0;
-              const mountAmt = ca.mounting_cost || 0;
+              const printAmt = ca.printing_charges || ca.printing_cost || 0;
+              const mountAmt = ca.mounting_charges || ca.mounting_cost || 0;
               const lineTotal = rentAmt + printAmt + mountAmt;
               return {
                 ...existing,

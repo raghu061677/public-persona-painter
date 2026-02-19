@@ -97,31 +97,41 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
         : { data: [] };
       const maCodeMap = new Map((maData || []).map((m: any) => [m.id, m.media_asset_code || m.id]));
 
-      enrichedItems = campAssets.map((ca: any, idx: number) => ({
-        sno: idx + 1,
-        campaign_asset_id: ca.id,
-        asset_id: ca.asset_id,
-        asset_code: maCodeMap.get(ca.asset_id) || ca.asset_id || '-',
-        location: ca.location || '-',
-        area: ca.area || '-',
-        direction: ca.direction || '-',
-        media_type: ca.media_type || '-',
-        illumination: ca.illumination_type || '-',
-        illumination_type: ca.illumination_type || '-',
-        dimensions: ca.dimensions || '-',
-        total_sqft: ca.total_sqft || 0,
-        booking_start_date: ca.booking_start_date,
-        booking_end_date: ca.booking_end_date,
-        description: `Display Rent`,
-        rate: ca.rent_amount || ca.negotiated_rate || ca.card_rate || 0,
-        amount: ca.rent_amount || ca.negotiated_rate || ca.card_rate || 0,
-        quantity: 1,
-        printing_cost: ca.printing_cost || 0,
-        mounting_cost: ca.mounting_cost || 0,
-        hsn_sac: '998361',
-        booked_days: ca.booked_days,
-        daily_rate: ca.daily_rate,
-      }));
+      enrichedItems = campAssets.map((ca: any, idx: number) => {
+        const rentAmt = ca.rent_amount || ca.negotiated_rate || ca.card_rate || 0;
+        const printAmt = ca.printing_cost || 0;
+        const mountAmt = ca.mounting_cost || 0;
+        const lineTotal = rentAmt + printAmt + mountAmt;
+        return {
+          sno: idx + 1,
+          campaign_asset_id: ca.id,
+          asset_id: ca.asset_id,
+          asset_code: maCodeMap.get(ca.asset_id) || ca.asset_id || '-',
+          location: ca.location || '-',
+          area: ca.area || '-',
+          direction: ca.direction || '-',
+          media_type: ca.media_type || '-',
+          illumination: ca.illumination_type || '-',
+          illumination_type: ca.illumination_type || '-',
+          dimensions: ca.dimensions || '-',
+          total_sqft: ca.total_sqft || 0,
+          booking_start_date: ca.booking_start_date,
+          booking_end_date: ca.booking_end_date,
+          description: `Display Rent`,
+          rate: rentAmt,
+          amount: lineTotal,
+          total: lineTotal,
+          rent_amount: rentAmt,
+          quantity: 1,
+          printing_charges: printAmt,
+          mounting_charges: mountAmt,
+          printing_cost: printAmt,
+          mounting_cost: mountAmt,
+          hsn_sac: '998361',
+          booked_days: ca.booked_days,
+          daily_rate: ca.daily_rate,
+        };
+      });
     }
   }
 

@@ -69,6 +69,7 @@ export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
   const [signedUrls, setSignedUrls] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [assetCodeMap, setAssetCodeMap] = useState<Map<string, string>>(new Map());
+  const [assetQrMap, setAssetQrMap] = useState<Map<string, string>>(new Map());
 
   // Get campaign ID from assets
   const campaignId = assets[0]?.campaign_id;
@@ -88,16 +89,21 @@ export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
 
     const { data: mediaAssets } = await supabase
       .from('media_assets')
-      .select('id, media_asset_code')
+      .select('id, media_asset_code, qr_code_url')
       .in('id', assetIds);
 
     const codeMap = new Map<string, string>();
+    const qrMap = new Map<string, string>();
     (mediaAssets || []).forEach(ma => {
       if (ma.media_asset_code) {
         codeMap.set(ma.id, ma.media_asset_code);
       }
+      if (ma.qr_code_url) {
+        qrMap.set(ma.id, ma.qr_code_url);
+      }
     });
     setAssetCodeMap(codeMap);
+    setAssetQrMap(qrMap);
   };
 
   const fetchMediaPhotos = async () => {
@@ -243,44 +249,59 @@ export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {assetPhotos.map((photo, index) => {
-                  const photoTag = photo.metadata?.photo_tag || `Photo ${index + 1}`;
-                  const displayUrl = signedUrls.get(photo.id) || photo.photo_url;
-                  
-                  return (
-                    <div key={photo.id} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">{photoTag}</p>
-                        <Badge variant="outline" className="text-xs">
-                          {photo.approval_status}
-                        </Badge>
+              <div className="flex flex-col lg:flex-row gap-6">
+                {/* Single Large QR Code */}
+                {assetQrMap.get(asset.asset_id) && (
+                  <div className="flex flex-col items-center justify-center gap-2 p-4 border rounded-xl bg-muted/30 min-w-[160px]">
+                    <img
+                      src={assetQrMap.get(asset.asset_id)}
+                      alt="Asset QR Code"
+                      className="w-36 h-36 object-contain bg-white p-2 rounded-lg border"
+                    />
+                    <p className="text-xs text-muted-foreground font-medium text-center">Scan to Verify Location</p>
+                  </div>
+                )}
+
+                {/* Photo Grid */}
+                <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {assetPhotos.map((photo, index) => {
+                    const photoTag = photo.metadata?.photo_tag || `Photo ${index + 1}`;
+                    const displayUrl = signedUrls.get(photo.id) || photo.photo_url;
+                    
+                    return (
+                      <div key={photo.id} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium">{photoTag}</p>
+                          <Badge variant="outline" className="text-xs">
+                            {photo.approval_status}
+                          </Badge>
+                        </div>
+                        <div className="relative aspect-square rounded-lg overflow-hidden border hover:border-primary transition-colors group">
+                          <img
+                            src={displayUrl}
+                            alt={photoTag}
+                            className="w-full h-full object-cover cursor-pointer"
+                            onClick={() => setSelectedPhoto(displayUrl)}
+                          />
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownload(asset, displayUrl, photoTag);
+                            }}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(photo.uploaded_at), "MMM dd, HH:mm")}
+                        </p>
                       </div>
-                      <div className="relative aspect-square rounded-lg overflow-hidden border hover:border-primary transition-colors group">
-                        <img
-                          src={displayUrl}
-                          alt={photoTag}
-                          className="w-full h-full object-cover cursor-pointer"
-                          onClick={() => setSelectedPhoto(displayUrl)}
-                        />
-                        <Button
-                          variant="secondary"
-                          size="icon"
-                          className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDownload(asset, displayUrl, photoTag);
-                          }}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(photo.uploaded_at), "MMM dd, HH:mm")}
-                      </p>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -85,10 +85,11 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       const isLocalDev = hostname === 'localhost' || hostname.startsWith('127.0.0.1');
       const isLovablePreview = hostname.includes('lovable.app') || hostname.includes('lovableproject.com');
       
-      // Also check if hostname starts with 'app' which is typically a preview/development subdomain
+      // Check if hostname is 'app.go-ads.in' (production app subdomain) or a preview/dev subdomain
+      const isProductionApp = hostname === 'app.go-ads.in';
       const isAppSubdomain = hostname.startsWith('app.') && (isLovablePreview || hostname.includes('.dev') || hostname.includes('.staging'));
       
-      if (isLocalDev || isLovablePreview || isAppSubdomain) {
+      if (isLocalDev || isLovablePreview || isProductionApp || isAppSubdomain) {
         const storedTenantId = localStorage.getItem('selected_tenant_id');
         const storedTenantSlug = localStorage.getItem('selected_tenant_slug');
         const storedTenantName = localStorage.getItem('selected_tenant_name');

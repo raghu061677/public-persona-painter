@@ -102,6 +102,7 @@ const ALLOWED_ORIGINS: string[] = [
   'https://go-ads.lovable.app',
   'https://id-preview--e5e4d66a-feda-48ef-a6c6-1845bb9855ea.lovable.app',
   'https://e5e4d66a-feda-48ef-a6c6-1845bb9855ea.lovableproject.com',
+  'https://app.go-ads.in',
   'http://localhost:5173',
   'http://localhost:3000',
 ];

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { formatINR } from "@/utils/finance";
+import { formatINR, generateInvoiceId } from "@/utils/finance";
 import { useCompany } from "@/contexts/CompanyContext";
 
 interface Campaign {
@@ -18,6 +18,7 @@ interface Campaign {
   client_name: string;
   grand_total: number;
   gst_amount: number;
+  gst_percent: number;
   subtotal: number;
   start_date: string;
   end_date: string;
@@ -51,7 +52,7 @@ export default function InvoiceCreate() {
       // Fetch campaigns that are completed or running and don't have invoices yet
       const { data: campaignsData, error } = await supabase
         .from('campaigns')
-        .select('id, campaign_name, client_id, client_name, grand_total, gst_amount, subtotal, start_date, end_date, status')
+        .select('id, campaign_name, client_id, client_name, grand_total, gst_amount, gst_percent, subtotal, start_date, end_date, status')
         .eq('company_id', companyId)
         .in('status', ['Running', 'Completed', 'Planned'])
         .eq('is_deleted', false)
@@ -86,13 +87,7 @@ export default function InvoiceCreate() {
 
   const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId);
 
-  const generateInvoiceId = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const random = String(Math.floor(Math.random() * 9999)).padStart(4, '0');
-    return `INV-${year}${month}-${random}`;
-  };
+  // Invoice ID is now generated via the shared RPC-based function from @/utils/finance
 
   const handleCreateInvoice = async () => {
     if (!selectedCampaign) {
@@ -151,9 +146,10 @@ export default function InvoiceCreate() {
         };
       });
 
-      const invoiceId = generateInvoiceId();
-      const subTotal = selectedCampaign.subtotal || selectedCampaign.grand_total / 1.18;
-      const gstAmount = selectedCampaign.gst_amount || subTotal * 0.18;
+      const gstRate = selectedCampaign.gst_percent || 0;
+      const invoiceId = await generateInvoiceId(supabase, gstRate);
+      const subTotal = selectedCampaign.subtotal || selectedCampaign.grand_total / (1 + gstRate / 100);
+      const gstAmount = selectedCampaign.gst_amount || subTotal * (gstRate / 100);
       const totalAmount = selectedCampaign.grand_total;
 
       const { error } = await supabase

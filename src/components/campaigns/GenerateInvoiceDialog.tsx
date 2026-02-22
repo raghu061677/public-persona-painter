@@ -72,8 +72,9 @@ export function GenerateInvoiceDialog({
         .select('terms')
         .single();
 
-      // Generate invoice ID
-      const invoiceId = await generateInvoiceId(supabase);
+      // Generate invoice ID - pass effective GST rate for correct prefix (INV vs INV-Z)
+      const gstRateForId = isGstApplicable ? (campaign.gst_percent || 18) : 0;
+      const invoiceId = await generateInvoiceId(supabase, gstRateForId);
 
       // Prepare invoice items - use campaign_assets pricing (locked from Plan)
       const items = campaignAssets.map((asset, index) => {

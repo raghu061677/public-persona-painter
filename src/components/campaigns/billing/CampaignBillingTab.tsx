@@ -174,8 +174,8 @@ export function CampaignBillingTab({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Not authenticated");
 
-      // Generate invoice ID
-      const invoiceId = await generateInvoiceId(supabase);
+      // Generate invoice ID using campaign GST rate for correct prefix (INV vs INV-Z)
+      const invoiceId = await generateInvoiceId(supabase, totals.gstRate || 0);
 
       // Build items array
       const items: any[] = [];
@@ -357,8 +357,8 @@ export function CampaignBillingTab({
           description: `Invoice ${existingInvoice.id} updated for ${period.label}`,
         });
       } else {
-        // Generate new invoice ID and INSERT
-        const invoiceId = await generateInvoiceId(supabase);
+        // Generate new invoice ID and INSERT - pass GST rate for correct prefix
+        const invoiceId = await generateInvoiceId(supabase, totals.gstRate || 0);
 
         const { error } = await supabase.from('invoices').insert({
           id: invoiceId,

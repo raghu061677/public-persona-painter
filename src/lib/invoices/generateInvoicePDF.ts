@@ -102,19 +102,21 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
         const printAmt = ca.printing_charges || ca.printing_cost || 0;
         const mountAmt = ca.mounting_charges || ca.mounting_cost || 0;
         const lineTotal = rentAmt + printAmt + mountAmt;
+        // Use null instead of '-' so downstream hydration from media_assets can fill gaps
+        const validOrNull = (v: any) => (v && v !== '-' && v !== 'N/A') ? v : null;
         return {
           sno: idx + 1,
           campaign_asset_id: ca.id,
           asset_id: ca.asset_id,
           asset_code: maCodeMap.get(ca.asset_id) || ca.asset_id || '-',
-          location: ca.location || '-',
-          area: ca.area || '-',
-          direction: ca.direction || '-',
-          media_type: ca.media_type || '-',
-          illumination: ca.illumination_type || '-',
-          illumination_type: ca.illumination_type || '-',
-          dimensions: ca.dimensions || '-',
-          total_sqft: ca.total_sqft || 0,
+          location: validOrNull(ca.location),
+          area: validOrNull(ca.area),
+          direction: validOrNull(ca.direction),
+          media_type: validOrNull(ca.media_type),
+          illumination: validOrNull(ca.illumination_type),
+          illumination_type: validOrNull(ca.illumination_type),
+          dimensions: validOrNull(ca.dimensions),
+          total_sqft: ca.total_sqft || null,
           booking_start_date: ca.booking_start_date,
           booking_end_date: ca.booking_end_date,
           description: `Display Rent`,
@@ -217,6 +219,9 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
     const mediaAssetMap = new Map(mediaAssets.map((a: any) => [a.id, a]));
     const campaignAssetMap = new Map(campaignAssets.map((c: any) => [c.id, c]));
 
+    // Helper: pick the first truthy, non-placeholder value
+    const pick = (...vals: any[]) => vals.find(v => v != null && v !== '' && v !== '-' && v !== 'N/A') ?? null;
+
     enrichedItems = enrichedItems.map((item: any) => {
       const caId = item.campaign_asset_id || item.campaign_assets_id;
       const campaignAsset: any = caId ? campaignAssetMap.get(caId) : undefined;
@@ -229,16 +234,14 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
       return {
         ...item,
         asset_id: item.asset_id || campaignAsset?.asset_id,
-        // Prefer existing snapshot values on item; otherwise use joined values
-        location: item.location ?? source.location,
-        area: item.area ?? source.area,
-        direction: item.direction ?? source.direction,
-        media_type: item.media_type ?? source.media_type,
-        illumination: item.illumination ?? source.illumination_type,
-        illumination_type: item.illumination_type ?? source.illumination_type,
-        dimensions: item.dimensions ?? item.dimension_text ?? source.dimensions,
-        total_sqft: item.total_sqft ?? source.total_sqft,
-        // Booking dates (only if missing)
+        location: pick(item.location, source.location) || '-',
+        area: pick(item.area, source.area) || '-',
+        direction: pick(item.direction, source.direction) || '-',
+        media_type: pick(item.media_type, source.media_type) || '-',
+        illumination: pick(item.illumination, source.illumination_type) || '-',
+        illumination_type: pick(item.illumination_type, source.illumination_type) || '-',
+        dimensions: pick(item.dimensions, item.dimension_text, source.dimensions) || '-',
+        total_sqft: pick(item.total_sqft, source.total_sqft) || 0,
         booking_start_date: item.booking_start_date ?? campaignAsset?.booking_start_date,
         booking_end_date: item.booking_end_date ?? campaignAsset?.booking_end_date,
       };

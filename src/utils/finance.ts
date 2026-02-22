@@ -40,8 +40,12 @@ export async function generateEstimationId(supabase: any): Promise<string> {
  * @returns Invoice ID with appropriate prefix (INV or INV-Z)
  */
 export async function generateInvoiceId(supabase: any, gstRate?: number): Promise<string> {
+  // IMPORTANT: Default to 0 (not 18) so callers that forget to pass gstRate
+  // don't accidentally generate a taxable prefix for zero-GST invoices.
+  // Callers MUST pass the actual GST rate from the campaign/client.
+  const effectiveRate = gstRate ?? 0;
   const { data, error } = await supabase.rpc('generate_invoice_id', { 
-    p_gst_rate: gstRate ?? 18 
+    p_gst_rate: effectiveRate 
   });
   if (error) {
     console.error('Error generating invoice ID:', error);

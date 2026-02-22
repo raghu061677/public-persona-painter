@@ -313,7 +313,7 @@ export function ExtendCampaignDialog({
 
     // Generate invoice for new campaign if selected
     if (generateInvoice && campaignData.client_id) {
-      const invoiceId = await generateInvoiceId(supabase);
+      const invoiceId = await generateInvoiceId(supabase, gstPercent);
       
       await supabase.from("invoices").insert({
         id: invoiceId,
@@ -468,8 +468,8 @@ export function ExtendCampaignDialog({
 
     // Generate invoice for renewal period if selected
     if (generateInvoice && campaignData && campaignData.client_id) {
-      const invoiceId = await generateInvoiceId(supabase);
       const gstPercent = campaignData.gst_percent || 18;
+      const invoiceId = await generateInvoiceId(supabase, gstPercent);
       const subTotal = Math.round(renewalAmount / (1 + gstPercent / 100));
       const gstAmount = Math.round(renewalAmount - subTotal);
 

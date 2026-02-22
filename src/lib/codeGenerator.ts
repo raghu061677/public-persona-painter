@@ -192,7 +192,7 @@ export async function generateSalesOrderCode(): Promise<string> {
  * Now delegates to the generate_invoice_id RPC for canonical format.
  * Falls back to old format if RPC fails.
  */
-export async function generateInvoiceCode(gstRate: number = 18): Promise<string> {
+export async function generateInvoiceCode(gstRate: number = 0): Promise<string> {
   const { data, error } = await supabase.rpc('generate_invoice_id', { p_gst_rate: gstRate });
   if (!error && data) return data as string;
   // Fallback

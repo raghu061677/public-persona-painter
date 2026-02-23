@@ -95,7 +95,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
       const { data: maData } = maIds.length > 0
         ? await supabase.from('media_assets').select('id, media_asset_code').in('id', maIds)
         : { data: [] };
-      const maCodeMap = new Map((maData || []).map((m: any) => [m.id, m.media_asset_code || m.id]));
+      const maCodeMap = new Map((maData || []).map((m: any) => [m.id, m.media_asset_code || null]));
 
       enrichedItems = campAssets.map((ca: any, idx: number) => {
         const rentAmt = ca.rent_amount || ca.negotiated_rate || ca.card_rate || 0;
@@ -108,7 +108,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
           sno: idx + 1,
           campaign_asset_id: ca.id,
           asset_id: ca.asset_id,
-          asset_code: maCodeMap.get(ca.asset_id) || ca.asset_id || '-',
+          asset_code: maCodeMap.get(ca.asset_id) || null,
           location: validOrNull(ca.location),
           area: validOrNull(ca.area),
           direction: validOrNull(ca.direction),

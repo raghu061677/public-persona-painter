@@ -26,8 +26,12 @@ export function getAssetDisplayCode(
   }
 
   // Priority 1b: asset_code (alternative field name used in some contexts)
+  // But reject if it looks like a UUID
   if (assetRecord?.asset_code) {
-    return assetRecord.asset_code;
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(assetRecord.asset_code);
+    if (!isUUID) {
+      return assetRecord.asset_code;
+    }
   }
 
   // Priority 2: asset_id_readable (legacy readable format)

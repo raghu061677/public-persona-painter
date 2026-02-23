@@ -76,6 +76,13 @@ export function GenerateInvoiceDialog({
       const gstRateForId = isGstApplicable ? (campaign.gst_percent || 18) : 0;
       const invoiceId = await generateInvoiceId(supabase, gstRateForId);
 
+      // Fetch media_asset_code for all assets to avoid storing UUIDs as asset_code
+      const assetIds = campaignAssets.map(a => a.asset_id).filter(Boolean);
+      const { data: maData } = assetIds.length > 0
+        ? await supabase.from('media_assets').select('id, media_asset_code').in('id', assetIds)
+        : { data: [] };
+      const maCodeMap = new Map((maData || []).map((m: any) => [m.id, m.media_asset_code || null]));
+
       // Prepare invoice items - use campaign_assets pricing (locked from Plan)
       const items = campaignAssets.map((asset, index) => {
         // Use negotiated_rate (final price) from campaign_assets, not card_rate
@@ -84,10 +91,13 @@ export function GenerateInvoiceDialog({
         const assetMountingCost = asset.mounting_charges || 0;
         const assetSubtotal = assetDisplayCost + assetPrintingCost + assetMountingCost;
         
+        const resolvedCode = maCodeMap.get(asset.asset_id) || null;
         return {
           sno: index + 1,
           description: `${asset.media_type} - ${asset.location}, ${asset.area}, ${asset.city}`,
           asset_id: asset.asset_id,
+          asset_code: resolvedCode,
+          media_asset_code: resolvedCode,
           campaign_asset_id: asset.id,
           dimensions: asset.dimensions || 'N/A',
           location: asset.location || '',

@@ -177,36 +177,48 @@ export function CampaignBillingTab({
       // Generate invoice ID using campaign GST rate for correct prefix (INV vs INV-Z)
       const invoiceId = await generateInvoiceId(supabase, totals.gstRate || 0);
 
-      // Build items array
-      const items: any[] = [];
-      
-      items.push({
-        sno: 1,
-        description: `Display Rent - ${format(totals.campaignPeriodStart, "dd MMM yyyy")} to ${format(totals.campaignPeriodEnd, "dd MMM yyyy")} (${totals.durationDays} days)`,
-        quantity: 1,
-        rate: totals.displayCost,
-        amount: totals.displayCost,
+      // Fetch media_asset_code for all campaign assets
+      const assetIds = campaignAssets.map(a => a.asset_id).filter(Boolean);
+      const { data: maData } = assetIds.length > 0
+        ? await supabase.from('media_assets').select('id, media_asset_code').in('id', assetIds)
+        : { data: [] };
+      const maCodeMap = new Map((maData || []).map((m: any) => [m.id, m.media_asset_code || null]));
+
+      // Build per-asset detailed items
+      const items: any[] = campaignAssets.map((ca: any, idx: number) => {
+        const rentAmt = ca.negotiated_rate || ca.card_rate || 0;
+        const printAmt = ca.printing_charges || ca.printing_cost || 0;
+        const mountAmt = ca.mounting_charges || ca.mounting_cost || 0;
+        const lineTotal = rentAmt + printAmt + mountAmt;
+        const resolvedCode = maCodeMap.get(ca.asset_id) || null;
+        return {
+          sno: idx + 1,
+          asset_id: ca.asset_id,
+          asset_code: resolvedCode,
+          media_asset_code: resolvedCode,
+          campaign_asset_id: ca.id,
+          description: `${ca.media_type || 'Display'} - ${ca.location || ''}, ${ca.area || ''}, ${ca.city || ''}`,
+          location: ca.location || null,
+          area: ca.area || null,
+          direction: ca.direction || null,
+          media_type: ca.media_type || null,
+          illumination_type: ca.illumination_type || null,
+          dimensions: ca.dimensions || null,
+          total_sqft: ca.total_sqft || 0,
+          booking_start_date: ca.booking_start_date || ca.start_date,
+          booking_end_date: ca.booking_end_date || ca.end_date,
+          booked_days: ca.booked_days,
+          daily_rate: ca.daily_rate,
+          quantity: 1,
+          rate: rentAmt,
+          rent_amount: rentAmt,
+          printing_charges: printAmt,
+          mounting_charges: mountAmt,
+          amount: lineTotal,
+          total: lineTotal,
+          hsn_sac: '998361',
+        };
       });
-
-      if (totals.printingCost > 0) {
-        items.push({
-          sno: items.length + 1,
-          description: `Printing Charges (${campaignAssets.length} assets)`,
-          quantity: 1,
-          rate: totals.printingCost,
-          amount: totals.printingCost,
-        });
-      }
-
-      if (totals.mountingCost > 0) {
-        items.push({
-          sno: items.length + 1,
-          description: `Mounting Charges (${campaignAssets.length} assets)`,
-          quantity: 1,
-          rate: totals.mountingCost,
-          amount: totals.mountingCost,
-        });
-      }
 
       if (totals.manualDiscountAmount > 0) {
         items.push({
@@ -292,36 +304,48 @@ export function CampaignBillingTab({
         );
       });
 
-      // Build items array
-      const items: any[] = [
-        {
-          sno: 1,
-          description: `Display Rent - ${period.label} (${format(period.periodStart, "dd MMM")} to ${format(period.periodEnd, "dd MMM yyyy")})`,
-          quantity: 1,
-          rate: amounts.baseRent,
-          amount: amounts.baseRent,
-        },
-      ];
+      // Fetch media_asset_code for all campaign assets
+      const assetIds = campaignAssets.map(a => a.asset_id).filter(Boolean);
+      const { data: maData } = assetIds.length > 0
+        ? await supabase.from('media_assets').select('id, media_asset_code').in('id', assetIds)
+        : { data: [] };
+      const maCodeMap = new Map((maData || []).map((m: any) => [m.id, m.media_asset_code || null]));
 
-      if (includePrinting && totals.printingCost > 0) {
-        items.push({
-          sno: items.length + 1,
-          description: `Printing Charges (${campaignAssets.length} assets)`,
+      // Build per-asset detailed items for this period
+      const items: any[] = campaignAssets.map((ca: any, idx: number) => {
+        const rentAmt = ca.negotiated_rate || ca.card_rate || 0;
+        const printAmt = (includePrinting ? (ca.printing_charges || ca.printing_cost || 0) : 0);
+        const mountAmt = (includeMounting ? (ca.mounting_charges || ca.mounting_cost || 0) : 0);
+        const lineTotal = rentAmt + printAmt + mountAmt;
+        const resolvedCode = maCodeMap.get(ca.asset_id) || null;
+        return {
+          sno: idx + 1,
+          asset_id: ca.asset_id,
+          asset_code: resolvedCode,
+          media_asset_code: resolvedCode,
+          campaign_asset_id: ca.id,
+          description: `${ca.media_type || 'Display'} - ${ca.location || ''}, ${ca.area || ''}, ${ca.city || ''}`,
+          location: ca.location || null,
+          area: ca.area || null,
+          direction: ca.direction || null,
+          media_type: ca.media_type || null,
+          illumination_type: ca.illumination_type || null,
+          dimensions: ca.dimensions || null,
+          total_sqft: ca.total_sqft || 0,
+          booking_start_date: format(period.periodStart, 'yyyy-MM-dd'),
+          booking_end_date: format(period.periodEnd, 'yyyy-MM-dd'),
+          booked_days: ca.booked_days,
+          daily_rate: ca.daily_rate,
           quantity: 1,
-          rate: totals.printingCost,
-          amount: totals.printingCost,
-        });
-      }
-
-      if (includeMounting && totals.mountingCost > 0) {
-        items.push({
-          sno: items.length + 1,
-          description: `Mounting Charges (${campaignAssets.length} assets)`,
-          quantity: 1,
-          rate: totals.mountingCost,
-          amount: totals.mountingCost,
-        });
-      }
+          rate: rentAmt,
+          rent_amount: rentAmt,
+          printing_charges: printAmt,
+          mounting_charges: mountAmt,
+          amount: lineTotal,
+          total: lineTotal,
+          hsn_sac: '998361',
+        };
+      });
 
       if (amounts.discount > 0) {
         items.push({

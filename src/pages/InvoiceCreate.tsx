@@ -112,10 +112,11 @@ export default function InvoiceCreate() {
 
       // Build line items from campaign items with all required data for PDF
       const items = (campaignItems || []).map((item, index) => {
-        const displayAssetCode = item.media_assets?.media_asset_code || item.asset_id;
+        const displayAssetCode = item.media_assets?.media_asset_code || null;
         return {
           sno: index + 1,
-          asset_id: displayAssetCode,
+          asset_id: item.asset_id,
+          asset_code: displayAssetCode,
           media_asset_code: displayAssetCode,
           location: item.media_assets?.location || `Asset ${displayAssetCode}`,
           description: item.media_assets 

@@ -105,7 +105,7 @@
                 sno: idx + 1,
                 campaign_asset_id: ca.id,
                 asset_id: ca.asset_id,
-                asset_code: ma.media_asset_code || ca.asset_id || '-',
+                asset_code: ma.media_asset_code || null,
                 location: ca.location || ma.location || '-',
                 area: ca.area || ma.area || '-',
                 direction: ca.direction || ma.direction || '-',

@@ -166,7 +166,7 @@
             if (!ca && !ma) return item;
             return {
               ...item,
-              asset_code: pick(item.asset_code, ma?.media_asset_code, ma?.id),
+              asset_code: ma?.media_asset_code || (item.asset_code && !/^[0-9a-f]{8}-/.test(item.asset_code) ? item.asset_code : null),
               location: pick(item.location, ca?.location, ma?.location),
               area: pick(item.area, ca?.area, ma?.area),
               direction: pick(item.direction, ca?.direction, ma?.direction),

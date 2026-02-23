@@ -200,7 +200,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
       assetIds.length
         ? supabase
             .from('media_assets')
-            .select('id, location, area, direction, media_type, illumination_type, dimensions, total_sqft')
+            .select('id, media_asset_code, location, area, direction, media_type, illumination_type, dimensions, total_sqft')
             .in('id', assetIds)
         : Promise.resolve({ data: null } as any),
       campaignAssetIds.length
@@ -234,6 +234,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
       return {
         ...item,
         asset_id: item.asset_id || campaignAsset?.asset_id,
+        asset_code: mediaAsset?.media_asset_code || (item.asset_code && !/^[0-9a-f]{8}-/.test(item.asset_code) ? item.asset_code : null),
         location: pick(item.location, source.location) || '-',
         area: pick(item.area, source.area) || '-',
         direction: pick(item.direction, source.direction) || '-',

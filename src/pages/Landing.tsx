@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { AnnouncementBanner } from "@/components/landing/AnnouncementBanner";
 import { HeroCosmicMode } from "@/components/landing/cosmic/HeroCosmicMode";
@@ -23,6 +23,29 @@ import { MobileStickyCTA } from "@/components/landing/cosmic/MobileStickyCTA";
 const Landing = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    // Home page must always use normal document scroll
+    document.documentElement.style.overflowY = "auto";
+    document.documentElement.style.overflowX = "hidden";
+    document.documentElement.style.height = "auto";
+
+    document.body.style.overflowY = "auto";
+    document.body.style.overflowX = "hidden";
+    document.body.style.height = "auto";
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+
+    const root = document.getElementById("root");
+    if (root) {
+      root.style.overflow = "visible";
+      root.style.height = "auto";
+      root.style.minHeight = "100%";
+    }
+  }, []);
 
   const handleNavigation = (path: string) => {
     setMobileMenuOpen(false);
@@ -153,7 +176,7 @@ const Landing = () => {
         </div>
       </nav>
 
-      <main className="space-y-0">
+      <main className="space-y-0 pb-20 md:pb-0">
         {/* Hero Section */}
         <HeroCosmicMode />
 
@@ -201,3 +224,4 @@ const Landing = () => {
 };
 
 export default Landing;
+

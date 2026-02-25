@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
@@ -8,6 +9,29 @@ import { useNavigate } from "react-router-dom";
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Public pages must use natural document scrolling
+    document.documentElement.style.overflowY = "auto";
+    document.documentElement.style.overflowX = "hidden";
+    document.documentElement.style.height = "auto";
+
+    document.body.style.overflowY = "auto";
+    document.body.style.overflowX = "hidden";
+    document.body.style.height = "auto";
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+
+    const root = document.getElementById("root");
+    if (root) {
+      root.style.overflow = "visible";
+      root.style.height = "auto";
+      root.style.minHeight = "100%";
+    }
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-background overflow-y-auto overflow-x-hidden">
@@ -80,7 +104,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
       </nav>
 
       {/* Main Content */}
-      <main className="flex-1">
+      <main className="flex-1 pb-20 md:pb-0">
         {children}
       </main>
 
@@ -89,3 +113,4 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+

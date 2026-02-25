@@ -42,7 +42,7 @@ export const SecurityCompliance = () => {
             Enterprise-Grade Security & Compliance
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Your data is protected with bank-level security standards
+            Your data is protected with industry-standard security practices
           </p>
         </div>
 
@@ -77,11 +77,7 @@ export const SecurityCompliance = () => {
               </div>
             ))}
           </div>
-          <div className="flex justify-center">
-            <Button variant="outline" size="lg">
-              View Security Whitepaper →
-            </Button>
-          </div>
+          {/* Security whitepaper removed */}
         </div>
       </div>
     </section>

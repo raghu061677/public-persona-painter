@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { MapPin, Maximize2, Download, Share2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 interface MediaAsset {
@@ -15,6 +16,7 @@ interface MediaAsset {
 export const CosmicProofGallery = () => {
   const [assets, setAssets] = useState<MediaAsset[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchPublicAssets = async () => {
@@ -27,9 +29,28 @@ export const CosmicProofGallery = () => {
 
         if (assetsError) throw assetsError;
 
+        const assetIds = (mediaAssets || []).map(a => a.id);
+
+        // Fetch first photo per asset from media_photos as fallback
+        let photoMap: Record<string, string> = {};
+        if (assetIds.length > 0) {
+          const { data: photos } = await supabase
+            .from('media_photos')
+            .select('asset_id, photo_url')
+            .in('asset_id', assetIds);
+
+          if (photos) {
+            for (const p of photos) {
+              if (!photoMap[p.asset_id]) {
+                photoMap[p.asset_id] = p.photo_url;
+              }
+            }
+          }
+        }
+
         const assetsWithPhotos = (mediaAssets || []).map((asset) => ({
           id: asset.id,
-          image: asset.primary_photo_url || '/placeholder.svg',
+          image: asset.primary_photo_url || photoMap[asset.id] || '',
           city: asset.city,
           area: asset.area,
           dimensions: asset.dimensions,
@@ -74,7 +95,6 @@ export const CosmicProofGallery = () => {
         {/* Gallery Grid */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {loading ? (
-            // Loading skeleton
             Array.from({ length: 9 }).map((_, index) => (
               <div key={index} className="relative">
                 <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-[20px] overflow-hidden h-[400px] animate-pulse">
@@ -101,14 +121,11 @@ export const CosmicProofGallery = () => {
               whileHover={{ y: -8 }}
               className="group relative"
             >
-              {/* Glow Ring */}
               <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-[20px] blur-lg opacity-0 group-hover:opacity-40 transition-opacity duration-500" />
               
-              {/* Card */}
               <div className="relative bg-white/5 backdrop-blur-md border border-white/10 rounded-[20px] overflow-hidden">
-                {/* Image Container */}
                 <div className="relative h-64 overflow-hidden">
-          {asset.image && asset.image !== '/placeholder.svg' ? (
+                  {asset.image ? (
                     <img
                       src={asset.image}
                       alt={asset.id}
@@ -121,7 +138,6 @@ export const CosmicProofGallery = () => {
                     </div>
                   )}
                   
-                  {/* Overlay on Hover */}
                   <div className="absolute inset-0 bg-gradient-to-t from-[#001B4A] via-transparent to-transparent opacity-0 group-hover:opacity-90 transition-opacity duration-300">
                     <div className="absolute inset-0 flex items-center justify-center gap-3">
                       <button className="p-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-white hover:bg-white/20 transition-all duration-300 hover:scale-110">
@@ -136,13 +152,11 @@ export const CosmicProofGallery = () => {
                     </div>
                   </div>
 
-                  {/* Asset ID Badge */}
                   <div className="absolute top-3 left-3 px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-full text-xs font-bold text-[#2563FF]">
                     {asset.id}
                   </div>
                 </div>
 
-                {/* Content */}
                 <div className="p-5">
                   <div className="flex items-center gap-2 text-white/70 text-sm mb-2">
                     <MapPin className="h-4 w-4" />
@@ -153,7 +167,10 @@ export const CosmicProofGallery = () => {
                       <p className="text-white font-semibold">{asset.dimensions}</p>
                       <p className="text-white/60 text-xs">{asset.illumination_type}</p>
                     </div>
-                    <button className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-xl text-white text-sm font-semibold hover:shadow-glow transition-all duration-300">
+                    <button
+                      onClick={() => navigate('/marketplace')}
+                      className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-xl text-white text-sm font-semibold hover:shadow-glow transition-all duration-300"
+                    >
                       Add to Plan
                     </button>
                   </div>
@@ -171,7 +188,10 @@ export const CosmicProofGallery = () => {
           viewport={{ once: true }}
           className="text-center mt-12"
         >
-          <button className="px-8 py-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white font-semibold hover:bg-white/20 transition-all duration-300 hover:scale-105">
+          <button
+            onClick={() => navigate('/marketplace')}
+            className="px-8 py-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white font-semibold hover:bg-white/20 transition-all duration-300 hover:scale-105"
+          >
             View All 110+ Assets
           </button>
         </motion.div>

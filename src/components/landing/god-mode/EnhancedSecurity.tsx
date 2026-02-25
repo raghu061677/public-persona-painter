@@ -60,12 +60,12 @@ export const EnhancedSecurity = () => {
             Enterprise-Grade Security
           </Badge>
           <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Bank-Level Security
+            Enterprise-Grade Security
             <br />
             For Your Business Data
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Your data is protected with enterprise-grade security standards trusted by Fortune 500 companies
+            Your data is protected with industry-standard security practices and robust access controls
           </p>
         </motion.div>
 
@@ -127,12 +127,7 @@ export const EnhancedSecurity = () => {
                   </motion.div>
                 ))}
               </div>
-              <div className="flex justify-center">
-                <Button variant="outline" size="lg" className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Download Security Whitepaper
-                </Button>
-              </div>
+              {/* Security whitepaper removed - not yet available */}
             </div>
           </Card>
         </motion.div>

@@ -108,11 +108,18 @@ export const CosmicProofGallery = () => {
               <div className="relative bg-white/5 backdrop-blur-md border border-white/10 rounded-[20px] overflow-hidden">
                 {/* Image Container */}
                 <div className="relative h-64 overflow-hidden">
-                  <img
-                    src={asset.image}
-                    alt={asset.id}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
+          {asset.image && asset.image !== '/placeholder.svg' ? (
+                    <img
+                      src={asset.image}
+                      alt={asset.id}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-900/40 to-cyan-900/30 text-white/60">
+                      <MapPin className="h-10 w-10 mb-2" />
+                      <span className="text-xs font-medium">{asset.city} • {asset.area}</span>
+                    </div>
+                  )}
                   
                   {/* Overlay on Hover */}
                   <div className="absolute inset-0 bg-gradient-to-t from-[#001B4A] via-transparent to-transparent opacity-0 group-hover:opacity-90 transition-opacity duration-300">
@@ -165,7 +172,7 @@ export const CosmicProofGallery = () => {
           className="text-center mt-12"
         >
           <button className="px-8 py-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white font-semibold hover:bg-white/20 transition-all duration-300 hover:scale-105">
-            View All 50,000+ Assets
+            View All 110+ Assets
           </button>
         </motion.div>
       </div>

@@ -234,19 +234,7 @@ export function MonthlyBillingScheduleTable({
                         View
                       </Button>
                     )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onGenerateInvoice(period, selection.printing, selection.mounting)}
-                      disabled={isGenerating}
-                    >
-                      {isGenerating ? (
-                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Plus className="mr-1 h-4 w-4" />
-                      )}
-                      {hasInvoice ? 'Regenerate' : 'Generate'}
-                    </Button>
+                    {/* Generate button removed — use Billing & Invoices module */}
                   </div>
                 </TableCell>
               </TableRow>

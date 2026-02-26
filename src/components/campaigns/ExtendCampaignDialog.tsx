@@ -852,28 +852,7 @@ export function ExtendCampaignDialog({
               <Label className="text-base font-semibold">Workflow Options</Label>
               
               <div className="space-y-3">
-                <div className="flex items-start gap-3 p-3 rounded-lg border">
-                  <Checkbox
-                    id="generateInvoice"
-                    checked={generateInvoice}
-                    onCheckedChange={(checked) => setGenerateInvoice(checked as boolean)}
-                  />
-                  <div className="flex-1">
-                    <Label htmlFor="generateInvoice" className="cursor-pointer flex items-center gap-2 font-medium">
-                      <FileText className="h-4 w-4 text-blue-500" />
-                      Generate Invoice
-                    </Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Create a draft invoice for the {extensionType === "copy_new" ? "new campaign" : "extension period"}
-                    </p>
-                    {generateInvoice && renewalAmount > 0 && (
-                      <p className="text-sm font-medium text-green-600 mt-1 flex items-center gap-1">
-                        <IndianRupee className="h-3 w-3" />
-                        Estimated: ₹{renewalAmount.toLocaleString('en-IN')}
-                      </p>
-                    )}
-                  </div>
-                </div>
+                {/* Generate Invoice checkbox removed — use Billing & Invoices module */}
 
                 {extensionType !== "copy_new" && (
                   <div className="flex items-start gap-3 p-3 rounded-lg border">

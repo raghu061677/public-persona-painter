@@ -1,406 +1,229 @@
 import { useEffect, useState, useMemo } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShoppingCart, Calendar, DollarSign, Search, ArrowUpDown, ArrowUp, ArrowDown, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Input } from "@/components/ui/input";
+import { useCompany } from "@/contexts/CompanyContext";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { DateRangeFilter } from "@/components/common/date-range-filter";
-import { DateRange } from "react-day-picker";
+import { Search, Download, RotateCcw, ShoppingCart, IndianRupee, Clock, CheckCircle2, Calendar, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import ExcelJS from "exceljs";
 
-interface Expense {
-  id: string;
-  expense_no?: string;
-  vendor_name: string;
-  category: string;
-  amount: number;
-  gst_amount: number;
-  total_amount: number;
-  payment_status: string;
-  created_at: string;
-  notes: string | null;
-}
-
-const PO_STATUSES = ['Paid', 'Pending', 'Overdue'];
-type SortField = 'id' | 'vendor_name' | 'category' | 'created_at' | 'amount' | 'total_amount' | 'payment_status';
-type SortDirection = 'asc' | 'desc';
+const PO_STATUSES = ["Paid", "Pending", "Overdue"];
+const PAGE_SIZES = [10, 20, 50, 100];
+type SortField = "id" | "vendor_name" | "category" | "created_at" | "total_amount" | "payment_status";
+type SortDir = "asc" | "desc";
 
 export default function PurchaseOrders() {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const { company } = useCompany();
+  const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-  
-  // Filter states
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [vendorFilter, setVendorFilter] = useState<string>("all");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [amountRange, setAmountRange] = useState<{ min: string; max: string }>({ min: "", max: "" });
-  
-  // Sort state
-  const [sortField, setSortField] = useState<SortField>('created_at');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [vendorFilter, setVendorFilter] = useState("all");
+  const [sortField, setSortField] = useState<SortField>("created_at");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   useEffect(() => {
-    loadExpenses();
-  }, []);
+    if (company?.id) loadExpenses();
+  }, [company]);
 
   const loadExpenses = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("expenses")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setExpenses(data || []);
-    } catch (error: any) {
-      console.error("Error loading expenses:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to load purchase orders",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("expenses")
+      .select("*")
+      .eq("company_id", company!.id)
+      .order("created_at", { ascending: false });
+    if (error) toast({ title: "Error", description: "Failed to load purchase orders", variant: "destructive" });
+    else setExpenses(data || []);
+    setLoading(false);
   };
 
-  // Get unique vendors for filter
-  const uniqueVendors = useMemo(() => {
-    const vendors = new Set(expenses.map(e => e.vendor_name).filter(Boolean));
-    return Array.from(vendors).sort();
-  }, [expenses]);
+  const uniqueVendors = useMemo(() => [...new Set(expenses.map(e => e.vendor_name).filter(Boolean))].sort(), [expenses]);
 
-  // Filter and sort logic
-  const filteredExpenses = useMemo(() => {
+  const filtered = useMemo(() => {
     let result = [...expenses];
-    
-    // Search filter
     if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      result = result.filter(exp =>
-        exp.id?.toLowerCase().includes(term) ||
-        exp.expense_no?.toLowerCase().includes(term) ||
-        exp.vendor_name?.toLowerCase().includes(term) ||
-        exp.category?.toLowerCase().includes(term)
-      );
+      const t = searchTerm.toLowerCase();
+      result = result.filter(e => e.id?.toLowerCase().includes(t) || e.expense_no?.toLowerCase().includes(t) || e.vendor_name?.toLowerCase().includes(t) || e.category?.toLowerCase().includes(t));
     }
-    
-    // Status filter
-    if (statusFilter !== "all") {
-      result = result.filter(exp => exp.payment_status.toLowerCase() === statusFilter.toLowerCase());
-    }
-    
-    // Vendor filter
-    if (vendorFilter !== "all") {
-      result = result.filter(exp => exp.vendor_name === vendorFilter);
-    }
-    
-    // Date range filter
-    if (dateRange?.from) {
-      result = result.filter(exp => {
-        const expDate = new Date(exp.created_at);
-        if (dateRange.to) {
-          return expDate >= dateRange.from! && expDate <= dateRange.to;
-        }
-        return expDate >= dateRange.from!;
-      });
-    }
-    
-    // Amount range filter
-    if (amountRange.min) {
-      const min = parseFloat(amountRange.min);
-      if (!isNaN(min)) {
-        result = result.filter(exp => (exp.total_amount || 0) >= min);
-      }
-    }
-    if (amountRange.max) {
-      const max = parseFloat(amountRange.max);
-      if (!isNaN(max)) {
-        result = result.filter(exp => (exp.total_amount || 0) <= max);
-      }
-    }
-    
-    // Sort
+    if (statusFilter !== "all") result = result.filter(e => e.payment_status?.toLowerCase() === statusFilter.toLowerCase());
+    if (vendorFilter !== "all") result = result.filter(e => e.vendor_name === vendorFilter);
     result.sort((a, b) => {
-      let aVal: any, bVal: any;
-      switch (sortField) {
-        case 'created_at':
-          aVal = a[sortField] ? new Date(a[sortField]).getTime() : 0;
-          bVal = b[sortField] ? new Date(b[sortField]).getTime() : 0;
-          break;
-        case 'amount':
-        case 'total_amount':
-          aVal = a[sortField] || 0;
-          bVal = b[sortField] || 0;
-          break;
-        default:
-          aVal = (a[sortField] || '').toString().toLowerCase();
-          bVal = (b[sortField] || '').toString().toLowerCase();
-      }
-      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
+      let aV: any, bV: any;
+      if (sortField === "created_at") { aV = new Date(a[sortField] || 0).getTime(); bV = new Date(b[sortField] || 0).getTime(); }
+      else if (sortField === "total_amount") { aV = a[sortField] || 0; bV = b[sortField] || 0; }
+      else { aV = (a[sortField] || "").toString().toLowerCase(); bV = (b[sortField] || "").toString().toLowerCase(); }
+      return sortDir === "asc" ? (aV < bV ? -1 : 1) : (aV > bV ? -1 : 1);
     });
-    
     return result;
-  }, [expenses, searchTerm, statusFilter, vendorFilter, dateRange, amountRange, sortField, sortDirection]);
+  }, [expenses, searchTerm, statusFilter, vendorFilter, sortField, sortDir]);
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
+  const kpis = useMemo(() => ({
+    total: filtered.length,
+    totalValue: filtered.reduce((s, e) => s + (e.total_amount || 0), 0),
+    pending: filtered.filter(e => e.payment_status?.toLowerCase() === "pending").length,
+    paid: filtered.filter(e => e.payment_status?.toLowerCase() === "paid").length,
+  }), [filtered]);
+
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const paginated = useMemo(() => filtered.slice((page - 1) * pageSize, page * pageSize), [filtered, page, pageSize]);
+  useEffect(() => setPage(1), [searchTerm, statusFilter, vendorFilter]);
+
+  const fmt = (n: number) => `₹${(n || 0).toLocaleString("en-IN")}`;
+
+  const handleSort = (f: SortField) => {
+    if (sortField === f) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortField(f); setSortDir("asc"); }
   };
-
-  const getSortIcon = (field: SortField) => {
-    if (sortField !== field) return <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />;
-    return sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
-  };
-
-  const clearFilters = () => {
-    setSearchTerm("");
-    setStatusFilter("all");
-    setVendorFilter("all");
-    setDateRange(undefined);
-    setAmountRange({ min: "", max: "" });
-  };
-
-  const hasActiveFilters = searchTerm || statusFilter !== "all" || vendorFilter !== "all" || dateRange?.from || amountRange.min || amountRange.max;
+  const sortIcon = (f: SortField) => sortField !== f ? <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" /> : sortDir === "asc" ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
 
   const getStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "paid":
-        return <Badge variant="default">Paid</Badge>;
-      case "pending":
-        return <Badge variant="secondary">Pending</Badge>;
-      case "overdue":
-        return <Badge variant="destructive">Overdue</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
+    const s = status?.toLowerCase();
+    if (s === "paid") return <Badge variant="default">Paid</Badge>;
+    if (s === "overdue") return <Badge variant="destructive">Overdue</Badge>;
+    return <Badge variant="secondary">{status || "Pending"}</Badge>;
   };
 
-  const getDisplayId = (expense: Expense) => {
-    if (expense.expense_no) return expense.expense_no;
-    const d = new Date(expense.created_at);
-    return `PO-${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${expense.id.slice(0,4).toUpperCase()}`;
+  const getDisplayId = (e: any) => e.expense_no || `PO-${new Date(e.created_at).getFullYear()}-${e.id.slice(0, 6).toUpperCase()}`;
+
+  const exportExcel = async () => {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Purchase Orders");
+    ws.columns = [
+      { header: "PO ID", key: "display_id", width: 20 },
+      { header: "Vendor", key: "vendor_name", width: 25 },
+      { header: "Category", key: "category", width: 18 },
+      { header: "Date", key: "created_at", width: 14 },
+      { header: "Amount (₹)", key: "amount", width: 14 },
+      { header: "GST (₹)", key: "gst_amount", width: 14 },
+      { header: "Total (₹)", key: "total_amount", width: 16 },
+      { header: "Status", key: "payment_status", width: 12 },
+    ];
+    ws.getRow(1).font = { bold: true };
+    filtered.forEach(e => ws.addRow({ ...e, display_id: getDisplayId(e), created_at: new Date(e.created_at).toLocaleDateString("en-IN") }));
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "Purchase_Orders.xlsx"; a.click();
+    URL.revokeObjectURL(url);
   };
+
+  const resetFilters = () => { setSearchTerm(""); setStatusFilter("all"); setVendorFilter("all"); };
 
   return (
-    <div className="h-full flex flex-col space-y-6 p-8">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Purchase Orders</h1>
-        <p className="text-muted-foreground">
-          Manage vendor purchase orders and expenses
-        </p>
+        <h1 className="text-2xl font-bold flex items-center gap-2"><ShoppingCart className="h-6 w-6" /> Purchase Orders</h1>
+        <p className="text-sm text-muted-foreground mt-1">Track vendor orders and expenses</p>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card><CardContent className="pt-4">
+          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1"><ShoppingCart className="h-3.5 w-3.5" /> Total POs</div>
+          <p className="text-2xl font-bold">{kpis.total}</p>
+        </CardContent></Card>
+        <Card><CardContent className="pt-4">
+          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1"><IndianRupee className="h-3.5 w-3.5" /> Total Value</div>
+          <p className="text-2xl font-bold">{fmt(kpis.totalValue)}</p>
+        </CardContent></Card>
+        <Card><CardContent className="pt-4">
+          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1"><Clock className="h-3.5 w-3.5" /> Pending</div>
+          <p className="text-2xl font-bold text-amber-600">{kpis.pending}</p>
+        </CardContent></Card>
+        <Card><CardContent className="pt-4">
+          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1"><CheckCircle2 className="h-3.5 w-3.5" /> Paid</div>
+          <p className="text-2xl font-bold text-primary">{kpis.paid}</p>
+        </CardContent></Card>
+      </div>
+
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="relative flex-1 min-w-[200px] max-w-[320px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search ID, vendor, category..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 h-9" />
+        </div>
+        <Select value={vendorFilter} onValueChange={setVendorFilter}>
+          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Vendor" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Vendors</SelectItem>
+            {uniqueVendors.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            {PO_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Button variant="ghost" size="sm" onClick={resetFilters}><RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset</Button>
+        <Button variant="outline" size="sm" onClick={exportExcel}><Download className="h-3.5 w-3.5 mr-1" /> Export</Button>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            Purchase Orders ({filteredExpenses.length} of {expenses.length})
-          </CardTitle>
-          <CardDescription>
-            Track all vendor orders and expenses
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Filters Row */}
-          <div className="flex flex-wrap items-end gap-3">
-            {/* Search */}
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search ID, vendor, category..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            
-            {/* Vendor Filter */}
-            <Select value={vendorFilter} onValueChange={setVendorFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Vendor" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Vendors</SelectItem>
-                {uniqueVendors.map((vendor) => (
-                  <SelectItem key={vendor} value={vendor}>{vendor}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                {PO_STATUSES.map((status) => (
-                  <SelectItem key={status} value={status}>{status}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            {/* Date Range Filter */}
-            <DateRangeFilter
-              label=""
-              value={dateRange}
-              onChange={setDateRange}
-              placeholder="Date range"
-            />
-            
-            {/* Amount Range */}
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                placeholder="Min ₹"
-                value={amountRange.min}
-                onChange={(e) => setAmountRange(prev => ({ ...prev, min: e.target.value }))}
-                className="w-[100px]"
-              />
-              <span className="text-muted-foreground">-</span>
-              <Input
-                type="number"
-                placeholder="Max ₹"
-                value={amountRange.max}
-                onChange={(e) => setAmountRange(prev => ({ ...prev, max: e.target.value }))}
-                className="w-[100px]"
-              />
-            </div>
-            
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters}>
-                <X className="mr-1 h-3 w-3" />
-                Clear
-              </Button>
-            )}
-          </div>
-
-          {/* Table */}
-          {loading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-b border-border/40">
+                <TableHead><Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort("id")}>PO ID {sortIcon("id")}</Button></TableHead>
+                <TableHead><Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort("vendor_name")}>Vendor {sortIcon("vendor_name")}</Button></TableHead>
+                <TableHead><Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort("category")}>Category {sortIcon("category")}</Button></TableHead>
+                <TableHead><Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort("created_at")}>Date {sortIcon("created_at")}</Button></TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="text-right">GST</TableHead>
+                <TableHead className="text-right"><Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort("total_amount")}>Total {sortIcon("total_amount")}</Button></TableHead>
+                <TableHead><Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort("payment_status")}>Status {sortIcon("payment_status")}</Button></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow><TableCell colSpan={8} className="text-center py-12"><div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-8 bg-muted animate-pulse rounded mx-auto w-3/4" />)}</div></TableCell></TableRow>
+              ) : paginated.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-16">
+                    <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-lg font-medium">No purchase orders found</p>
+                    <p className="text-sm text-muted-foreground mt-1">{searchTerm || statusFilter !== "all" || vendorFilter !== "all" ? "Try adjusting your filters" : "Vendor orders will appear here once expenses are recorded"}</p>
+                  </TableCell>
+                </TableRow>
+              ) : paginated.map(e => (
+                <TableRow key={e.id} className="hover:bg-muted/30">
+                  <TableCell className="font-mono text-sm font-medium">{getDisplayId(e)}</TableCell>
+                  <TableCell>{e.vendor_name}</TableCell>
+                  <TableCell><Badge variant="outline">{e.category}</Badge></TableCell>
+                  <TableCell className="text-sm">{new Date(e.created_at).toLocaleDateString("en-IN")}</TableCell>
+                  <TableCell className="text-right font-mono">{fmt(e.amount)}</TableCell>
+                  <TableCell className="text-right font-mono">{fmt(e.gst_amount)}</TableCell>
+                  <TableCell className="text-right font-mono font-semibold">{fmt(e.total_amount)}</TableCell>
+                  <TableCell>{getStatusBadge(e.payment_status)}</TableCell>
+                </TableRow>
               ))}
+            </TableBody>
+          </Table>
+        </div>
+        {filtered.length > 0 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)} of {filtered.length}</span>
+              <Select value={String(pageSize)} onValueChange={v => { setPageSize(Number(v)); setPage(1); }}>
+                <SelectTrigger className="w-[70px] h-8"><SelectValue /></SelectTrigger>
+                <SelectContent>{PAGE_SIZES.map(s => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}</SelectContent>
+              </Select>
             </div>
-          ) : filteredExpenses.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <ShoppingCart className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-lg font-medium">No purchase orders found</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                {hasActiveFilters ? "Try adjusting your filters" : "Vendor orders will appear here once created"}
-              </p>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled={page <= 1} onClick={() => setPage(p => p - 1)}><ChevronLeft className="h-4 w-4" /></Button>
+              <span className="text-sm px-2">{page} / {totalPages || 1}</span>
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}><ChevronRight className="h-4 w-4" /></Button>
             </div>
-          ) : (
-            <div className="w-full overflow-x-auto">
-              <div className="inline-block min-w-full align-middle">
-                <div className="overflow-hidden border border-border/50 rounded-lg">
-                  <Table className="min-w-max w-full table-auto whitespace-nowrap">
-                    <TableHeader className="bg-muted sticky top-0 z-20">
-                      <TableRow>
-                        <TableHead className="sticky left-0 z-30 bg-muted px-4 py-3 text-left font-semibold border-r">
-                          <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('id')}>
-                            Order ID {getSortIcon('id')}
-                          </Button>
-                        </TableHead>
-                        <TableHead className="px-4 py-3 text-left font-semibold">
-                          <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('vendor_name')}>
-                            Vendor {getSortIcon('vendor_name')}
-                          </Button>
-                        </TableHead>
-                        <TableHead className="px-4 py-3 text-left font-semibold">
-                          <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('category')}>
-                            Category {getSortIcon('category')}
-                          </Button>
-                        </TableHead>
-                        <TableHead className="px-4 py-3 text-left font-semibold">
-                          <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('created_at')}>
-                            Date {getSortIcon('created_at')}
-                          </Button>
-                        </TableHead>
-                        <TableHead className="px-4 py-3 text-right font-semibold">
-                          <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('amount')}>
-                            Amount {getSortIcon('amount')}
-                          </Button>
-                        </TableHead>
-                        <TableHead className="px-4 py-3 text-right font-semibold">GST</TableHead>
-                        <TableHead className="px-4 py-3 text-right font-semibold">
-                          <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('total_amount')}>
-                            Total {getSortIcon('total_amount')}
-                          </Button>
-                        </TableHead>
-                        <TableHead className="px-4 py-3 text-left font-semibold">
-                          <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('payment_status')}>
-                            Status {getSortIcon('payment_status')}
-                          </Button>
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredExpenses.map((expense, index) => (
-                        <TableRow 
-                          key={expense.id}
-                          className={`transition-all duration-150 hover:bg-muted/80 ${
-                            index % 2 === 0 ? 'bg-background' : 'bg-muted/30'
-                          }`}
-                        >
-                          <TableCell className="sticky left-0 z-10 bg-inherit px-4 py-3 font-medium border-r font-mono text-sm">
-                            {getDisplayId(expense)}
-                          </TableCell>
-                          <TableCell className="px-4 py-3">{expense.vendor_name}</TableCell>
-                          <TableCell className="px-4 py-3">
-                            <Badge variant="outline">{expense.category}</Badge>
-                          </TableCell>
-                          <TableCell className="px-4 py-3">
-                            <div className="flex items-center gap-1 text-sm">
-                              <Calendar className="h-3 w-3 text-muted-foreground" />
-                              {new Date(expense.created_at).toLocaleDateString()}
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-right">₹{expense.amount.toLocaleString()}</TableCell>
-                          <TableCell className="px-4 py-3 text-right">₹{expense.gst_amount.toLocaleString()}</TableCell>
-                          <TableCell className="px-4 py-3 text-right font-medium">
-                            <div className="flex items-center gap-1 justify-end">
-                              <DollarSign className="h-3 w-3 text-muted-foreground" />
-                              ₹{expense.total_amount.toLocaleString()}
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-4 py-3">{getStatusBadge(expense.payment_status)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            </div>
-          )}
-        </CardContent>
+          </div>
+        )}
       </Card>
     </div>
   );

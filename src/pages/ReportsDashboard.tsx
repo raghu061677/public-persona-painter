@@ -10,6 +10,7 @@ import {
   Users,
   DollarSign,
   FileText,
+  BookOpen,
 } from "lucide-react";
 import { formatINR, getFYRange } from "@/utils/finance";
 import { RevenueChart } from "@/components/charts/RevenueChart";
@@ -138,6 +139,15 @@ export default function ReportsDashboard() {
       bgColor: "bg-emerald-50 dark:bg-emerald-950",
       route: "/reports/finance",
       stat: "Aging & GST",
+    },
+    {
+      title: "Vendor Ledger",
+      description: "Mounter & printer statements with month-wise payables and balance",
+      icon: BookOpen,
+      color: "text-orange-600",
+      bgColor: "bg-orange-50 dark:bg-orange-950",
+      route: "/admin/reports/vendor-ledger",
+      stat: "Vendor Statements",
     },
   ];
 

@@ -78,7 +78,7 @@ export const ROUTES = {
   MOBILE_UPLOAD: "/mobile/upload/:campaignId/:assetId",
   
   // Reports
-  REPORTS: "/admin/reports",
+  REPORTS: "/admin/reports/financial",
   VACANT_MEDIA_REPORT: "/admin/reports/vacant-media",
   AGING_REPORT: "/admin/reports/aging",
   OUTSTANDING_REPORT: "/admin/reports/outstanding",

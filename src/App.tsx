@@ -102,6 +102,9 @@ const AssetProfitabilityReport = lazy(() => import("./pages/AssetProfitabilityRe
 const ReportCampaignProfitability = lazy(() => import("./pages/ReportCampaignProfitability"));
 const ReportOOHRevenue = lazy(() => import("./pages/ReportOOHRevenue"));
 const ReportOOHKPIs = lazy(() => import("./pages/ReportOOHKPIs"));
+const ReportCashFlowForecast = lazy(() => import("./pages/ReportCashFlowForecast"));
+const ReportConcessionRisk = lazy(() => import("./pages/ReportConcessionRisk"));
+const ReportExecutiveDashboard = lazy(() => import("./pages/ReportExecutiveDashboard"));
 const MediaAvailabilityReport = lazy(() => import("./pages/admin/reports/MediaAvailabilityReport"));
 const PhotoGallery = lazy(() => import("./pages/PhotoGallery"));
 // ImportData and ExportData removed — redirect to data-export-import
@@ -382,6 +385,9 @@ const App = () => (
               <Route path="reports/campaign-profitability" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportCampaignProfitability /></ModernAppLayout></ProtectedRoute>} />
               <Route path="reports/ooh-revenue" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportOOHRevenue /></ModernAppLayout></ProtectedRoute>} />
               <Route path="reports/ooh-kpis" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportOOHKPIs /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="reports/cashflow-forecast" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportCashFlowForecast /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="reports/concession-risk" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportConcessionRisk /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="reports/executive" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportExecutiveDashboard /></ModernAppLayout></ProtectedRoute>} />
               <Route path="approvals" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalsQueue /></ModernAppLayout></ProtectedRoute>} />
               <Route path="approval-history" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalHistory /></ModernAppLayout></ProtectedRoute>} />
               <Route path="approvals/rules" element={<RoleGuard requireCompanyRole="company_admin"><ModernAppLayout><ApprovalRulesSettings /></ModernAppLayout></RoleGuard>} />

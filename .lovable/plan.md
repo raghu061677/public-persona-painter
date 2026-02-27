@@ -1,57 +1,70 @@
 
 
-# Client-wise Booking Report -- Implementation Plan
+# Add Custom Fields Export + Summary to Booked Media Report
 
-## Overview
-Replace the existing basic `ReportClientBookings.tsx` with a full-featured report that groups bookings by client, supports date range filtering, provides two-level drilldown (Client -> Campaigns -> Assets), and includes Excel export. The route will be updated from `/admin/reports/clients` to `/admin/reports/client-bookings`.
+## What's Missing vs. Vacant Media Report
 
-## What You Will Get
-- A summary table grouped by client showing: Total Campaigns, Total Assets Booked, First and Last Booking Dates
-- Click a client row to expand and see their campaigns
-- Click a campaign row to expand and see the booked assets
-- Date range picker, status filter, search bar
-- KPI cards (Total Clients, Total Campaigns, Total Assets, Cities Covered)
-- Excel export for both the summary view and a full drilldown export
-- The old `/admin/reports/clients` route will redirect to the new one
+The `/admin/reports/vacant-media` (MediaAvailabilityReport) has two features that `/admin/reports/booked-media` currently lacks:
 
----
+1. **"Custom Fields Export" button** -- Opens a dialog (`CustomExportDialog`) where users can pick specific fields grouped by category (Core, Location, Specifications, etc.), then export to Excel or PPT with only those fields. The Booked Media page only has a basic "Export Excel" in the `ReportExportMenu` dropdown that exports visible columns.
 
-## Technical Steps
+2. **Summary row in the Excel export** -- The Vacant Media custom export includes a summary section (Total, Available, Booked counts) above the data rows. The Booked Media export has no such summary.
 
-### 1. Rewrite `src/pages/ReportClientBookings.tsx`
-Complete rewrite following the established pattern from `ReportMonthlyCampaigns.tsx`:
+## Implementation Plan
 
-**Data model (3-level hierarchy):**
-```
-ClientSummaryRow
-  -> client_name, total_campaigns, total_assets, first_booking, last_booking
-  -> campaigns: CampaignRow[]
-       -> campaign_name, start_date, end_date, duration, asset_count, status
-       -> assets: AssetRow[]
-            -> asset_code, media_type, city, area, location, dimensions, illumination, direction
-```
+### Step 1: Create Booked Media Custom Export Fields Definition
+**New file: `src/lib/reports/generateCustomBookedMediaExcel.ts`**
 
-**Query logic:**
-- Fetch `campaigns` scoped by `company_id` with date overlap filter (`start_date <= rangeEnd AND end_date >= rangeStart`)
-- Batch-fetch `campaign_assets` for matched campaign IDs (chunks of 100)
-- Batch-fetch `media_assets` for asset codes (chunks of 100)
-- Group by `client_name` / `client_id` on the client side
+Define `ALL_BOOKED_EXPORT_FIELDS` grouped by category:
+- **Core**: S.No, Asset Code
+- **Location**: City, Area, Location, Address, Facing (Direction)
+- **Specifications**: Media Type, Dimensions, Sq.Ft, Illumination
+- **Campaign**: Campaign Name, Client Name, Campaign Status, Installation Status
+- **Dates**: Start Date, End Date, Duration (Days)
+- **Geo Coordinates**: Latitude, Longitude
 
-**Filters:** DateRangeFilter component, Status select, Search input, Reset button
+Each field has a `getValue` function that reads from `BookedMediaRow` and formats appropriately (dates as DD/MM/YYYY, etc.).
 
-**UI:** Two-level collapsible rows using the existing `Collapsible` component -- first expand shows campaigns, second expand shows assets per campaign
+Also define `DEFAULT_CUSTOM_FIELDS`, `FIELD_GROUPS`, and a `generateCustomBookedMediaExcel()` function that:
+- Creates a branded header row
+- Adds a summary section (Total Bookings, Unique Assets, Campaigns, Clients)
+- Writes data rows with campaign-status-based row coloring (green for Completed, red for Cancelled, blue for Running)
+- Downloads the file
 
-**Export:** Two options via `ReportExportMenu`:
-- "Export Excel" -- client summary rows only
-- "Export PDF" placeholder (async noop for now)
+### Step 2: Create Booked Media Custom PPT Export
+**New file: `src/lib/reports/generateCustomBookedMediaPpt.ts`**
 
-### 2. Update Route in `src/App.tsx`
-- Add new route: `reports/client-bookings` pointing to `ReportClientBookings`
-- Change the old `reports/clients` route to `<Navigate to="/admin/reports/client-bookings" replace />`
+Similar to `generateCustomAvailabilityPpt.ts`:
+- Cover slide with branding
+- Summary slide with KPI cards (Total Bookings, Unique Assets, Campaigns, Clients)
+- Paginated table slides with selected fields
+- Campaign-status-based row coloring
 
-### 3. Update Sidebar Navigation
-- In `src/components/layout/ResponsiveSidebar.tsx`: change the "Client Bookings" menu item href from `/admin/reports/clients` to `/admin/reports/client-bookings`
-- In `src/layouts/SidebarLayout.tsx`: same update if the reports section is listed there
+### Step 3: Create Custom Export Dialog for Booked Media
+**New file: `src/components/reports/BookedMediaCustomExportDialog.tsx`**
 
-### 4. No Database or Schema Changes
-All data comes from existing `campaigns`, `campaign_assets`, and `media_assets` tables via client-side joins and grouping. Company scoping uses `useCompany()` context.
+A dialog component (similar to `CustomExportDialog`) that:
+- Shows all booked media fields grouped by category with checkboxes
+- Select All / Reset to Default actions
+- "Export Excel" and "Export PPT" buttons
+- Calls the new `generateCustomBookedMediaExcel` and `generateCustomBookedMediaPpt` functions
+
+### Step 4: Update ReportBookedMedia Page
+**Edit: `src/pages/ReportBookedMedia.tsx`**
+
+- Import `BookedMediaCustomExportDialog` and `Settings2` icon
+- Add state: `customExportOpen`
+- Add "Custom Fields Export" button next to the existing `ReportExportMenu` in the header area
+- Wire up the dialog with `filteredData`, date range, and company info
+- Ensure the existing column-toggle Excel export in `ReportExportMenu` continues to work as-is
+
+### Summary of Changes
+| File | Action |
+|------|--------|
+| `src/lib/reports/generateCustomBookedMediaExcel.ts` | Create -- field definitions + Excel generator |
+| `src/lib/reports/generateCustomBookedMediaPpt.ts` | Create -- PPT generator |
+| `src/components/reports/BookedMediaCustomExportDialog.tsx` | Create -- dialog UI |
+| `src/pages/ReportBookedMedia.tsx` | Edit -- add button + dialog integration |
+
+No database or billing changes. All additions are UI + export logic only.
+

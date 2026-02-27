@@ -33,10 +33,14 @@ interface BookedMediaRow {
   city: string;
   area: string;
   location: string;
+  address: string;
   direction: string;
   dimensions: string;
   total_sqft: number;
   illumination: string;
+  latitude: number | null;
+  longitude: number | null;
+  asset_status: string;
   campaign_name: string;
   client_name: string;
   start_date: string;
@@ -67,9 +71,14 @@ const COLUMNS = [
   { key: "city", label: "City", default: true },
   { key: "area", label: "Area", default: true },
   { key: "location", label: "Location", default: true },
+  { key: "address", label: "Address", default: false },
   { key: "direction", label: "Facing", default: true },
-  { key: "dimensions", label: "Size", default: true },
-  { key: "illumination", label: "Illumination", default: false },
+  { key: "dimensions", label: "Dimensions", default: true },
+  { key: "total_sqft", label: "Sq.Ft", default: false },
+  { key: "illumination", label: "Illumination", default: true },
+  { key: "latitude", label: "Latitude", default: false },
+  { key: "longitude", label: "Longitude", default: false },
+  { key: "asset_status", label: "Asset Status", default: false },
   { key: "campaign_name", label: "Campaign", default: true },
   { key: "client_name", label: "Client", default: true },
   { key: "start_date", label: "Start Date", default: true },
@@ -78,6 +87,9 @@ const COLUMNS = [
   { key: "campaign_status", label: "Campaign Status", default: true },
   { key: "installation_status", label: "Installation", default: false },
 ];
+
+const STORAGE_KEY = "report.bookedMedia.visibleColumns";
+const DEFAULT_VISIBLE = COLUMNS.filter((c) => c.default).map((c) => c.key);
 
 function formatDateDDMMYYYY(dateStr: string): string {
   if (!dateStr) return "-";
@@ -121,9 +133,21 @@ export default function ReportBookedMedia() {
     reportKey: "booked-media-report",
   });
 
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(
-    COLUMNS.filter((c) => c.default).map((c) => c.key)
-  );
+  const [visibleColumns, setVisibleColumnsRaw] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return DEFAULT_VISIBLE;
+  });
+
+  const setVisibleColumns = useCallback((cols: string[]) => {
+    setVisibleColumnsRaw(cols);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cols)); } catch {}
+  }, []);
 
   // Load data
   const loadData = useCallback(async () => {
@@ -137,6 +161,7 @@ export default function ReportBookedMedia() {
           asset_id, city, area, location, direction, dimensions, total_sqft,
           media_type, card_rate, status, start_date, end_date,
           booking_start_date, booking_end_date, illumination_type,
+          latitude, longitude,
           campaign_id,
           campaigns!inner(id, campaign_name, client_name, start_date, end_date, status, company_id)
         `)
@@ -147,6 +172,7 @@ export default function ReportBookedMedia() {
       // Get asset codes
       const assetIds = [...new Set((caData || []).map((r: any) => r.asset_id))];
       let assetCodeMap = new Map<string, string>();
+      let assetExtraMap = new Map<string, { address: string; status: string }>();
 
       if (assetIds.length > 0) {
         // Batch in chunks of 100
@@ -154,9 +180,12 @@ export default function ReportBookedMedia() {
           const chunk = assetIds.slice(i, i + 100);
           const { data: maData } = await supabase
             .from("media_assets")
-            .select("id, media_asset_code")
+            .select("id, media_asset_code, address, status")
             .in("id", chunk);
-          maData?.forEach((ma: any) => assetCodeMap.set(ma.id, ma.media_asset_code || ma.id));
+          maData?.forEach((ma: any) => {
+            assetCodeMap.set(ma.id, ma.media_asset_code || ma.id);
+            assetExtraMap.set(ma.id, { address: ma.address || "-", status: ma.status || "-" });
+          });
         }
       }
 
@@ -172,10 +201,14 @@ export default function ReportBookedMedia() {
           city: r.city || "-",
           area: r.area || "-",
           location: r.location || "-",
+          address: assetExtraMap.get(r.asset_id)?.address || "-",
           direction: r.direction || "-",
           dimensions: r.dimensions || "-",
           total_sqft: r.total_sqft || 0,
           illumination: r.illumination_type || "-",
+          latitude: r.latitude || null,
+          longitude: r.longitude || null,
+          asset_status: assetExtraMap.get(r.asset_id)?.status || "-",
           campaign_name: campaign.campaign_name || "-",
           client_name: campaign.client_name || "-",
           start_date: startDate,

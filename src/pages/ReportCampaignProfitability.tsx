@@ -47,6 +47,7 @@ export default function ReportCampaignProfitability() {
 
   const totalRevenue = data.reduce((s, c) => s + c.revenue, 0);
   const totalCost = data.reduce((s, c) => s + c.directCost, 0);
+  const totalAllocated = data.reduce((s, c) => s + (c.allocatedExpenses || 0), 0);
   const totalProfit = data.reduce((s, c) => s + c.netProfit, 0);
   const avgMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
@@ -126,6 +127,8 @@ export default function ReportCampaignProfitability() {
                   { key: "revenue", label: "Revenue (₹)", type: "currency", width: 16 },
                   { key: "printingCost", label: "Printing (₹)", type: "currency", width: 14 },
                   { key: "mountingCost", label: "Mounting (₹)", type: "currency", width: 14 },
+                  { key: "allocatedExpenses", label: "Alloc. Expenses (₹)", type: "currency", width: 16 },
+                  { key: "directCost", label: "Total Cost (₹)", type: "currency", width: 16 },
                   { key: "netProfit", label: "Net Profit (₹)", type: "currency", width: 16 },
                   { key: "margin", label: "Margin %", type: "number", width: 12, value: r => Number(r.margin.toFixed(1)) },
                   { key: "status", label: "Status", width: 12 },
@@ -151,6 +154,8 @@ export default function ReportCampaignProfitability() {
                       <TableHead className="text-right">Revenue</TableHead>
                       <TableHead className="text-right">Printing</TableHead>
                       <TableHead className="text-right">Mounting</TableHead>
+                      <TableHead className="text-right">Alloc. Exp.</TableHead>
+                      <TableHead className="text-right">Total Cost</TableHead>
                       <TableHead className="text-right">Net Profit</TableHead>
                       <TableHead className="text-right">Margin</TableHead>
                       <TableHead>Status</TableHead>
@@ -168,6 +173,8 @@ export default function ReportCampaignProfitability() {
                         <TableCell className="text-right">{fmt(c.revenue)}</TableCell>
                         <TableCell className="text-right text-red-600">{fmt(c.printingCost)}</TableCell>
                         <TableCell className="text-right text-red-600">{fmt(c.mountingCost)}</TableCell>
+                        <TableCell className="text-right text-orange-600">{fmt(c.allocatedExpenses || 0)}</TableCell>
+                        <TableCell className="text-right text-red-600 font-medium">{fmt(c.directCost)}</TableCell>
                         <TableCell className={cn("text-right font-medium", c.netProfit >= 0 ? "text-emerald-600" : "text-red-600")}>{fmt(c.netProfit)}</TableCell>
                         <TableCell className="text-right">
                           <Badge variant={c.margin >= 20 ? "default" : c.margin >= 0 ? "secondary" : "destructive"} className="text-[10px]">{c.margin.toFixed(1)}%</Badge>
@@ -180,7 +187,7 @@ export default function ReportCampaignProfitability() {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {data.length === 0 && <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">No campaign data</TableCell></TableRow>}
+                    {data.length === 0 && <TableRow><TableCell colSpan={14} className="text-center text-muted-foreground py-8">No campaign data</TableCell></TableRow>}
                   </TableBody>
                 </Table>
               </div>

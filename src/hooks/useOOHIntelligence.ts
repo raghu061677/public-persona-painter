@@ -17,6 +17,7 @@ export interface CampaignProfitRow {
   revenue: number;
   printingCost: number;
   mountingCost: number;
+  allocatedExpenses: number;
   directCost: number;
   netProfit: number;
   margin: number;
@@ -95,6 +96,7 @@ export function useOOHIntelligence() {
   const [campaignAssets, setCampaignAssets] = useState<any[]>([]);
   const [mediaAssets, setMediaAssets] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [campaignExpenses, setCampaignExpenses] = useState<any[]>([]);
 
   const dateRange = useMemo((): DateRange => {
     const now = new Date();
@@ -110,16 +112,18 @@ export function useOOHIntelligence() {
     if (!company?.id) return;
     setLoading(true);
     try {
-      const [cmpRes, caRes, maRes, invRes] = await Promise.all([
+      const [cmpRes, caRes, maRes, invRes, expRes] = await Promise.all([
         supabase.from("campaigns").select("id, name, client_id, status, start_date, end_date, clients(name)").eq("company_id", company.id),
         supabase.from("campaign_assets").select("id, campaign_id, asset_id, city, area, location, media_type, card_rate, negotiated_rate, printing_cost, mounting_cost, total_price, rent_amount, total_sqft, booking_start_date, booking_end_date, direction, dimensions"),
         supabase.from("media_assets").select("id, city, area, media_type, total_sqft, status, company_id").eq("company_id", company.id),
         supabase.from("invoices").select("id, campaign_id, total_amount, status").eq("company_id", company.id),
+        supabase.from("expenses").select("id, campaign_id, total_amount, category, allocation_type").eq("company_id", company.id).eq("allocation_type", "Campaign"),
       ]);
       setCampaigns(cmpRes.data || []);
       setCampaignAssets(caRes.data || []);
       setMediaAssets(maRes.data || []);
       setInvoices(invRes.data || []);
+      setCampaignExpenses(expRes.data || []);
     } catch (e) {
       console.error("OOH Intelligence load error:", e);
     } finally {
@@ -166,6 +170,15 @@ export function useOOHIntelligence() {
     return map;
   }, [invoices]);
 
+  // Expense totals by campaign
+  const expenseByCampaign = useMemo(() => {
+    const map: Record<string, number> = {};
+    campaignExpenses.forEach(e => {
+      if (e.campaign_id) map[e.campaign_id] = (map[e.campaign_id] || 0) + (Number(e.total_amount) || 0);
+    });
+    return map;
+  }, [campaignExpenses]);
+
   // A) Campaign Profitability
   const campaignProfitability = useMemo((): CampaignProfitRow[] => {
     return filteredCampaigns
@@ -180,7 +193,8 @@ export function useOOHIntelligence() {
         const revenue = invoiceRevenue > 0 ? invoiceRevenue : assetRevenue;
         const printingCost = filteredA.reduce((s, a) => s + (Number(a.printing_cost) || 0), 0);
         const mountingCost = filteredA.reduce((s, a) => s + (Number(a.mounting_cost) || 0), 0);
-        const directCost = printingCost + mountingCost;
+        const allocatedExpenses = expenseByCampaign[c.id] || 0;
+        const directCost = printingCost + mountingCost + allocatedExpenses;
         const netProfit = revenue - directCost;
         const margin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
 
@@ -191,13 +205,13 @@ export function useOOHIntelligence() {
           startDate: c.start_date,
           endDate: c.end_date,
           assetCount: filteredA.length,
-          revenue, printingCost, mountingCost, directCost, netProfit, margin,
+          revenue, printingCost, mountingCost, allocatedExpenses, directCost, netProfit, margin,
           status: c.status || "—",
         };
       })
       .filter(c => c.revenue > 0 || c.assetCount > 0)
       .sort((a, b) => b.revenue - a.revenue);
-  }, [filteredCampaigns, campaignAssets, invoiceByCampaign, cityFilter]);
+  }, [filteredCampaigns, campaignAssets, invoiceByCampaign, expenseByCampaign, cityFilter]);
 
   // B) City Revenue
   const cityRevenue = useMemo((): CityRevenueRow[] => {

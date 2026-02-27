@@ -343,7 +343,7 @@ export function ResponsiveSidebar() {
                     <MenuItem icon={Map} label="Media Availability" href="/admin/reports/vacant-media" />
                     <MenuItem icon={Calendar} label="Booked Media" href="/admin/reports/booked-media" />
                     <MenuItem icon={CalendarDays} label="Monthly Campaigns" href="/admin/reports/monthly-campaigns" />
-                    <MenuItem icon={Users} label="Client Bookings" href="/admin/reports/clients" />
+                    <MenuItem icon={Users} label="Client Bookings" href="/admin/reports/client-bookings" />
                     <MenuItem icon={Briefcase} label="Campaign Bookings" href="/admin/reports/campaigns" />
                     <MenuItem icon={TrendingUp} label="Asset Revenue" href="/admin/reports/revenue" />
                     <MenuItem icon={DollarSign} label="Financial Summary" href="/admin/reports/financial" />

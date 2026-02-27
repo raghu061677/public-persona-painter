@@ -111,6 +111,7 @@ const ReportOpsPayables = lazy(() => import("./pages/ReportOpsPayables"));
 const ReportOpsBillables = lazy(() => import("./pages/ReportOpsBillables"));
 const ReportOpsMargin = lazy(() => import("./pages/ReportOpsMargin"));
 const ReportVendorLedger = lazy(() => import("./pages/ReportVendorLedger"));
+const ReportPrinterLedger = lazy(() => import("./pages/ReportPrinterLedger"));
 const MediaAvailabilityReport = lazy(() => import("./pages/admin/reports/MediaAvailabilityReport"));
 const PhotoGallery = lazy(() => import("./pages/PhotoGallery"));
 // ImportData and ExportData removed — redirect to data-export-import
@@ -405,6 +406,7 @@ const App = () => (
               <Route path="reports/ops-billables" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportOpsBillables /></ModernAppLayout></ProtectedRoute>} />
               <Route path="reports/ops-margin" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportOpsMargin /></ModernAppLayout></ProtectedRoute>} />
               <Route path="reports/vendor-ledger" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportVendorLedger /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="reports/printer-ledger" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportPrinterLedger /></ModernAppLayout></ProtectedRoute>} />
               <Route path="approvals" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalsQueue /></ModernAppLayout></ProtectedRoute>} />
               <Route path="approval-history" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalHistory /></ModernAppLayout></ProtectedRoute>} />
               <Route path="approvals/rules" element={<RoleGuard requireCompanyRole="company_admin"><ModernAppLayout><ApprovalRulesSettings /></ModernAppLayout></RoleGuard>} />

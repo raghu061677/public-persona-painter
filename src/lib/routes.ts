@@ -88,6 +88,7 @@ export const ROUTES = {
   OPS_BILLABLES_REPORT: "/admin/reports/ops-billables",
   OPS_MARGIN_REPORT: "/admin/reports/ops-margin",
   VENDOR_LEDGER_REPORT: "/admin/reports/vendor-ledger",
+  PRINTER_LEDGER_REPORT: "/admin/reports/printer-ledger",
   
   // Users & Access
   USER_MANAGEMENT: "/admin/users",

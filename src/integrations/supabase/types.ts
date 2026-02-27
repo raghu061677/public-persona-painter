@@ -6660,6 +6660,47 @@ export type Database = {
         }
         Relationships: []
       }
+      payable_batches: {
+        Row: {
+          company_id: string
+          generated_at: string
+          generated_by: string | null
+          id: string
+          month_key: string
+          notes: string | null
+          total_amount: number
+          total_entries: number
+        }
+        Insert: {
+          company_id: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          month_key: string
+          notes?: string | null
+          total_amount?: number
+          total_entries?: number
+        }
+        Update: {
+          company_id?: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          month_key?: string
+          notes?: string | null
+          total_amount?: number
+          total_entries?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payable_batches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_confirmations: {
         Row: {
           approved_amount: number | null
@@ -10797,6 +10838,7 @@ export type Database = {
         | "Transport"
         | "Electricity"
         | "Other"
+        | "Unmounting"
       gst_type: "None" | "IGST" | "CGST_SGST"
       invoice_status:
         | "Draft"
@@ -11041,6 +11083,7 @@ export const Constants = {
         "Transport",
         "Electricity",
         "Other",
+        "Unmounting",
       ],
       gst_type: ["None", "IGST", "CGST_SGST"],
       invoice_status: [

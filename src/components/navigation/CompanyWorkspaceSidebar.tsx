@@ -16,7 +16,8 @@ import {
   CalendarCheck,
   CreditCard,
   TrendingUp,
-  Wallet
+  Wallet,
+  Zap
 } from "lucide-react";
 import { SidebarSection } from "@/components/sidebar/SidebarSection";
 import { SidebarItem } from "@/components/sidebar/SidebarItem";
@@ -91,6 +92,7 @@ export function CompanyWorkspaceSidebar({ collapsed, activeModules }: CompanyWor
       {/* Payables */}
       {hasModule('finance') && (
         <SidebarSection label="Payables" collapsed={collapsed}>
+          <SidebarItem icon={Zap} label="Generate Payables" href="/admin/finance/generate-payables" collapsed={collapsed} />
           <SidebarItem icon={BookOpen} label="Vendor Ledger" href="/admin/reports/vendor-ledger" collapsed={collapsed} />
           <SidebarItem icon={Printer} label="Printer Ledger" href="/admin/reports/printer-ledger" collapsed={collapsed} />
           <SidebarItem icon={ShoppingCart} label="Ops Payables" href="/admin/reports/ops-payables" collapsed={collapsed} />

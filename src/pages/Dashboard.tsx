@@ -343,7 +343,12 @@ const Dashboard = () => {
       <RoleBasedDashboard role={userRole}>
         <div className="space-y-6 animate-fade-in">
           {/* Metric Cards */}
-          {shouldShowWidget('revenue') && (
+          {shouldShowWidget('revenue') && (() => {
+            const now = new Date();
+            const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+            const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+            return (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4" data-tour="dashboard">
               <div onClick={() => navigate('/media-assets')} className="cursor-pointer hover:opacity-80 transition-opacity">
                 <StatCard
@@ -354,7 +359,7 @@ const Dashboard = () => {
                   borderColor="border-l-blue-500"
                 />
               </div>
-              <div onClick={() => navigate('/media-assets?status=Available')} className="cursor-pointer hover:opacity-80 transition-opacity">
+              <div onClick={() => navigate('/admin/reports/vacant-media')} className="cursor-pointer hover:opacity-80 transition-opacity">
                 <StatCard
                   title="Available Assets"
                   value={metrics.availableAssets}
@@ -363,7 +368,7 @@ const Dashboard = () => {
                   borderColor="border-l-emerald-500"
                 />
               </div>
-              <div onClick={() => navigate('/media-assets?status=Booked')} className="cursor-pointer hover:opacity-80 transition-opacity">
+              <div onClick={() => navigate(`/admin/reports/booked-media?from=${monthStart}&to=${monthEnd}`)} className="cursor-pointer hover:opacity-80 transition-opacity">
                 <StatCard
                   title="Booked Assets"
                   value={metrics.bookedAssets}
@@ -372,7 +377,7 @@ const Dashboard = () => {
                   borderColor="border-l-amber-500"
                 />
               </div>
-              <div onClick={() => navigate('/campaigns?status=Running')} className="cursor-pointer hover:opacity-80 transition-opacity">
+              <div onClick={() => navigate(`/admin/reports/monthly-campaigns?month=${curMonth}&status=Running`)} className="cursor-pointer hover:opacity-80 transition-opacity">
                 <StatCard
                   title="Active Campaigns"
                   value={metrics.activeCampaigns}
@@ -409,7 +414,8 @@ const Dashboard = () => {
                 />
               </div>
             </div>
-          )}
+            );
+          })()}
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
             {/* Approved Plans Widget */}

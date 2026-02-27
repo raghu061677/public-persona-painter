@@ -91,7 +91,7 @@ export default function ReportFinancialSummary() {
           sub="Received − Expenses" />
       </div>
 
-      {/* OOH Intelligence Links */}
+      {/* Intelligence Links */}
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => navigate("/admin/reports/campaign-profitability")}>
           <BarChart3 className="h-3.5 w-3.5 mr-1.5" /> Campaign Profitability
@@ -101,6 +101,15 @@ export default function ReportFinancialSummary() {
         </Button>
         <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => navigate("/admin/reports/ooh-kpis")}>
           <Tv2 className="h-3.5 w-3.5 mr-1.5" /> OOH KPIs
+        </Button>
+        <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => navigate("/admin/reports/cashflow-forecast")}>
+          <Wallet className="h-3.5 w-3.5 mr-1.5" /> Cash Flow Forecast
+        </Button>
+        <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => navigate("/admin/reports/concession-risk")}>
+          <AlertTriangle className="h-3.5 w-3.5 mr-1.5" /> Risk Monitor
+        </Button>
+        <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => navigate("/admin/reports/executive")}>
+          <TrendingUp className="h-3.5 w-3.5 mr-1.5" /> Executive View
         </Button>
       </div>
 

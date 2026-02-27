@@ -134,6 +134,7 @@ export function ExportPlanPPTDialog({ planId, planName }: ExportPlanPPTDialogPro
           asset_id: displayCode, // Human-readable code, NEVER UUID
           db_asset_id: item.asset?.id, // Actual DB id for querying photos
           area: item.asset?.area || '',
+          city: item.asset?.city || '',
           location: item.asset?.location || '',
           direction: item.asset?.direction || '',
           dimensions: item.asset?.dimensions || '',

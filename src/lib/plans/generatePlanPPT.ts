@@ -30,6 +30,7 @@ interface PlanAsset {
   asset_id: string;
   db_asset_id?: string; // The actual DB id (e.g. HYD-BQS-0105) for querying photos
   area: string;
+  city?: string;
   location: string;
   direction?: string;
   dimensions?: string;
@@ -580,7 +581,7 @@ export async function generatePlanPPT(
 
     // Details table data - use object format for table cells, sanitize all text
     const detailsTableData = [
-      [{ text: sanitizePptText('City'), options: { bold: true } }, { text: sanitizePptText('Hyderabad') }],
+      [{ text: sanitizePptText('City'), options: { bold: true } }, { text: sanitizePptText(asset.city || 'N/A') }],
       [{ text: sanitizePptText('Area'), options: { bold: true } }, { text: sanitizePptText(asset.area) }],
       [{ text: sanitizePptText('Location'), options: { bold: true } }, { text: sanitizePptText(asset.location) }],
       [{ text: sanitizePptText('Direction'), options: { bold: true } }, { text: sanitizePptText(asset.direction || 'N/A') }],

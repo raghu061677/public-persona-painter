@@ -44,6 +44,7 @@ import { ManagerDashboard } from "@/components/dashboard/ManagerDashboard";
 import { InstallationDashboard } from "@/components/dashboard/InstallationDashboard";
 import { MonitoringDashboard } from "@/components/dashboard/MonitoringDashboard";
 import { PageCustomization, PageCustomizationOption } from "@/components/ui/page-customization";
+import { MonthCloseWidget } from "@/components/dashboard/MonthCloseWidget";
 
 const COLORS = [
   'hsl(var(--chart-1))',
@@ -442,6 +443,11 @@ const Dashboard = () => {
             {/* Blocked Assets Widget */}
             <div className="lg:col-span-4">
               <BlockedAssetsWidget />
+            </div>
+
+            {/* Month Close Widget */}
+            <div className="lg:col-span-4">
+              <MonthCloseWidget />
             </div>
 
             {/* Revenue Overview Chart */}

@@ -384,7 +384,7 @@ export function MonthCloseWidget() {
         </div>
 
         {/* Vendor Snapshot */}
-        {!isLoading && data && (
+        {!isLoading && data?.vendorSnapshot && (
           <>
             <Separator />
             <div>

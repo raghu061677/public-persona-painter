@@ -10742,7 +10742,13 @@ export type Database = {
         | "Electricity"
         | "Other"
       gst_type: "None" | "IGST" | "CGST_SGST"
-      invoice_status: "Draft" | "Sent" | "Paid" | "Overdue" | "Cancelled"
+      invoice_status:
+        | "Draft"
+        | "Sent"
+        | "Partial"
+        | "Paid"
+        | "Overdue"
+        | "Cancelled"
       media_asset_status:
         | "Available"
         | "Booked"
@@ -10981,7 +10987,14 @@ export const Constants = {
         "Other",
       ],
       gst_type: ["None", "IGST", "CGST_SGST"],
-      invoice_status: ["Draft", "Sent", "Paid", "Overdue", "Cancelled"],
+      invoice_status: [
+        "Draft",
+        "Sent",
+        "Partial",
+        "Paid",
+        "Overdue",
+        "Cancelled",
+      ],
       media_asset_status: [
         "Available",
         "Booked",

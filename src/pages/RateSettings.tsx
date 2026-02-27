@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, DollarSign, Truck, Printer, ArrowDownToLine, History, ShieldCheck } from "lucide-react";
 import { format } from "date-fns";
 import { getMinMarginThreshold, setMinMarginThreshold } from "@/hooks/useCampaignProfitability";
+import { getProfitLockSettings, setProfitLockSettings } from "@/utils/profitability";
 
 interface RateSetting {
   id: string;
@@ -61,17 +62,20 @@ const emptyForm = {
 
 function MinMarginCard({ companyId }: { companyId?: string }) {
   const [margin, setMargin] = useState(15);
+  const [enabled, setEnabled] = useState(true);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    setMargin(getMinMarginThreshold(companyId));
+    const settings = getProfitLockSettings(companyId);
+    setMargin(settings.minMargin);
+    setEnabled(settings.enabled);
   }, [companyId]);
 
   const handleSave = () => {
     if (companyId) {
-      setMinMarginThreshold(companyId, margin);
+      setProfitLockSettings(companyId, { minMargin: margin, enabled });
       setSaved(true);
-      toast.success(`Minimum margin threshold set to ${margin}%`);
+      toast.success(`Profitability lock ${enabled ? 'enabled' : 'disabled'} — threshold: ${margin}%`);
       setTimeout(() => setSaved(false), 2000);
     }
   };
@@ -82,30 +86,45 @@ function MinMarginCard({ companyId }: { companyId?: string }) {
         <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
           <ShieldCheck className="h-4 w-4 text-primary" />
         </div>
-        <div>
+        <div className="flex-1">
           <h3 className="font-semibold text-foreground">Profitability Lock</h3>
           <p className="text-xs text-muted-foreground">Minimum campaign margin % required before invoice generation</p>
         </div>
       </div>
-      <div className="flex items-end gap-3">
-        <div className="flex-1 max-w-[200px]">
-          <Label htmlFor="min-margin">Minimum Margin (%)</Label>
-          <Input
-            id="min-margin"
-            type="number"
-            min={0}
-            max={100}
-            value={margin}
-            onChange={e => setMargin(Number(e.target.value))}
-            className="mt-1"
-          />
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <Switch checked={enabled} onCheckedChange={setEnabled} id="profit-lock-toggle" />
+          <Label htmlFor="profit-lock-toggle" className="text-sm">
+            {enabled ? "Enabled — margin check enforced" : "Disabled — no margin check"}
+          </Label>
         </div>
-        <Button onClick={handleSave} size="sm" variant={saved ? "outline" : "default"}>
-          {saved ? "✓ Saved" : "Save"}
-        </Button>
+        {enabled && (
+          <div className="flex items-end gap-3">
+            <div className="flex-1 max-w-[200px]">
+              <Label htmlFor="min-margin">Minimum Margin (%)</Label>
+              <Input
+                id="min-margin"
+                type="number"
+                min={0}
+                max={100}
+                value={margin}
+                onChange={e => setMargin(Number(e.target.value))}
+                className="mt-1"
+              />
+            </div>
+            <Button onClick={handleSave} size="sm" variant={saved ? "outline" : "default"}>
+              {saved ? "✓ Saved" : "Save"}
+            </Button>
+          </div>
+        )}
+        {!enabled && (
+          <Button onClick={handleSave} size="sm" variant={saved ? "outline" : "default"} className="w-fit">
+            {saved ? "✓ Saved" : "Save"}
+          </Button>
+        )}
       </div>
       <p className="text-xs text-muted-foreground mt-2">
-        If campaign margin falls below this threshold, non-admin users will be blocked from generating invoices.
+        If enabled and campaign margin falls below threshold, non-admin users will be blocked from generating invoices.
         Admins can override with a logged reason.
       </p>
     </SettingsCard>

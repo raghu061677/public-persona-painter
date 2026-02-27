@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { AlertTriangle, ShieldAlert, Lock } from "lucide-react";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { CampaignProfitability, getMinMarginThreshold } from "@/hooks/useCampaignProfitability";
-import { supabase } from "@/integrations/supabase/client";
+import { logProfitabilityOverride } from "@/utils/profitability";
 import { toast } from "sonner";
 
 interface Props {
@@ -42,36 +42,40 @@ export function ProfitabilityGateDialog({
   const [submitting, setSubmitting] = useState(false);
   const minMargin = getMinMarginThreshold(companyId);
 
+  const isCalcFailed = !!(p as any).calcFailed;
+  const marginDisplay = p.revenue > 0 && !isCalcFailed
+    ? `${p.marginPercent.toFixed(1)}%`
+    : "—";
+
   const handleOverride = async () => {
-    if (!overrideReason.trim()) {
-      toast.error("Please provide an override reason");
+    if (overrideReason.trim().length < 10) {
+      toast.error("Override reason must be at least 10 characters");
       return;
     }
     setSubmitting(true);
     try {
-      // Log the override in activity_logs
-      const { data: { user } } = await supabase.auth.getUser();
-      await supabase.from("activity_logs").insert({
-        action: "profitability_override",
-        resource_type: "campaign",
-        resource_id: campaignId,
-        resource_name: campaignName,
-        user_id: user?.id,
-        details: {
-          margin_percent: p.marginPercent,
-          min_threshold: minMargin,
-          revenue: p.revenue,
-          direct_costs: p.directCosts,
-          net_profit: p.netProfit,
-          override_reason: overrideReason,
-        },
+      const logged = await logProfitabilityOverride({
+        campaignId,
+        campaignName,
+        invoiceContext: "campaign_generate_invoice",
+        snapshot: p,
+        minMargin,
+        overrideReason: overrideReason.trim(),
       });
 
-      toast.success("Profitability override approved");
+      if (!logged) {
+        toast.warning("Warning: could not write audit log — proceeding anyway");
+      } else {
+        toast.success("Profitability override approved and logged");
+      }
+
       onOpenChange(false);
       onApproved();
     } catch {
-      toast.error("Failed to log override");
+      // Do NOT block invoice generation for admin even if logging fails
+      toast.warning("Warning: audit log failed — proceeding with invoice generation");
+      onOpenChange(false);
+      onApproved();
     } finally {
       setSubmitting(false);
     }
@@ -83,34 +87,45 @@ export function ProfitabilityGateDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive">
             <ShieldAlert className="h-5 w-5" />
-            Profitability Warning
+            {isAdmin ? "Override Profitability Lock?" : "Profitability Lock"}
           </DialogTitle>
           <DialogDescription>
-            Campaign margin is below the minimum threshold
+            {isCalcFailed
+              ? "Profit summary is unavailable due to missing data"
+              : `Campaign margin is below the minimum threshold (${minMargin}%)`}
           </DialogDescription>
         </DialogHeader>
 
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Low Margin Alert</AlertTitle>
+          <AlertTitle>{isCalcFailed ? "Calculation Unavailable" : "Low Margin Alert"}</AlertTitle>
           <AlertDescription className="space-y-1 text-sm">
-            <p>Campaign margin is <strong>{p.marginPercent.toFixed(1)}%</strong> — below the <strong>{minMargin}%</strong> threshold.</p>
+            {isCalcFailed ? (
+              <p>Profitability data could not be computed. Admin override required to proceed.</p>
+            ) : (
+              <p>Margin ({marginDisplay}) is below minimum ({minMargin}%).
+                {!isAdmin && " Contact your admin to proceed."}</p>
+            )}
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-xs">
               <span>Revenue:</span>
-              <span className="font-medium">{formatCurrency(p.revenue)}</span>
+              <span className="font-medium">{p.revenue > 0 ? formatCurrency(p.revenue) : "—"}</span>
               <span>Direct Costs:</span>
               <span className="font-medium">{formatCurrency(p.directCosts)}</span>
               <span>Net Profit:</span>
               <span className={`font-bold ${p.netProfit >= 0 ? "text-emerald-700" : "text-destructive"}`}>
-                {formatCurrency(p.netProfit)}
+                {p.revenue > 0 ? formatCurrency(p.netProfit) : "—"}
               </span>
+              <span>Margin:</span>
+              <span className="font-bold">{marginDisplay}</span>
+              <span>Min Threshold:</span>
+              <span className="font-medium">{minMargin}%</span>
             </div>
           </AlertDescription>
         </Alert>
 
         {isAdmin ? (
           <div className="space-y-3">
-            <Label htmlFor="override-reason">Override Reason (required)</Label>
+            <Label htmlFor="override-reason">Override Reason (min 10 characters)</Label>
             <Textarea
               id="override-reason"
               placeholder="Explain why this invoice should be generated despite low margin..."
@@ -118,14 +133,17 @@ export function ProfitabilityGateDialog({
               onChange={e => setOverrideReason(e.target.value)}
               rows={3}
             />
+            {overrideReason.length > 0 && overrideReason.length < 10 && (
+              <p className="text-xs text-destructive">{10 - overrideReason.length} more characters required</p>
+            )}
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button
                 variant="destructive"
                 onClick={handleOverride}
-                disabled={submitting || !overrideReason.trim()}
+                disabled={submitting || overrideReason.trim().length < 10}
               >
-                {submitting ? "Logging..." : "Override & Proceed"}
+                {submitting ? "Logging..." : "Proceed Anyway"}
               </Button>
             </div>
           </div>

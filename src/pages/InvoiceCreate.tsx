@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatINR, generateInvoiceId } from "@/utils/finance";
 import { useCompany } from "@/contexts/CompanyContext";
+import { ProfitabilityGateDialog } from "@/components/campaigns/ProfitabilityGateDialog";
+import { useCampaignProfitability, isProfitLockEnabled, getMinMarginThreshold } from "@/hooks/useCampaignProfitability";
 
 interface Campaign {
   id: string;
@@ -23,6 +25,7 @@ interface Campaign {
   start_date: string;
   end_date: string;
   status: string;
+  company_id?: string;
 }
 
 export default function InvoiceCreate() {
@@ -39,20 +42,39 @@ export default function InvoiceCreate() {
     date.setDate(date.getDate() + 30);
     return date.toISOString().split('T')[0];
   });
+  const [showProfitGate, setShowProfitGate] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId);
+
+  // Profitability check for selected campaign
+  const { data: profitability } = useCampaignProfitability(
+    selectedCampaignId || undefined,
+    companyId,
+    selectedCampaign?.grand_total || 0
+  );
 
   useEffect(() => {
-    if (companyId) {
-      fetchEligibleCampaigns();
-    }
+    if (companyId) fetchEligibleCampaigns();
   }, [companyId]);
+
+  // Check admin status
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+        setIsAdmin(data?.some(r => r.role === "admin") || false);
+      }
+    })();
+  }, []);
 
   const fetchEligibleCampaigns = async () => {
     setLoading(true);
     try {
-      // Fetch campaigns that are completed or running and don't have invoices yet
       const { data: campaignsData, error } = await supabase
         .from('campaigns')
-        .select('id, campaign_name, client_id, client_name, grand_total, gst_amount, gst_percent, subtotal, start_date, end_date, status')
+        .select('id, campaign_name, client_id, client_name, grand_total, gst_amount, gst_percent, subtotal, start_date, end_date, status, company_id')
         .eq('company_id', companyId)
         .in('status', ['Running', 'Completed', 'Planned'])
         .eq('is_deleted', false)
@@ -60,7 +82,6 @@ export default function InvoiceCreate() {
 
       if (error) throw error;
 
-      // Filter out campaigns that already have invoices
       const { data: existingInvoices } = await supabase
         .from('invoices')
         .select('campaign_id')
@@ -68,7 +89,6 @@ export default function InvoiceCreate() {
         .not('campaign_id', 'is', null);
 
       const invoicedCampaignIds = new Set(existingInvoices?.map(inv => inv.campaign_id) || []);
-      
       const eligibleCampaigns = (campaignsData || []).filter(
         campaign => !invoicedCampaignIds.has(campaign.id)
       );
@@ -76,41 +96,42 @@ export default function InvoiceCreate() {
       setCampaigns(eligibleCampaigns);
     } catch (error) {
       console.error('Error fetching campaigns:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch campaigns",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to fetch campaigns", variant: "destructive" });
     }
     setLoading(false);
   };
 
-  const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId);
-
-  // Invoice ID is now generated via the shared RPC-based function from @/utils/finance
-
-  const handleCreateInvoice = async () => {
+  const handleCreateWithProfitCheck = () => {
     if (!selectedCampaign) {
-      toast({
-        title: "Error",
-        description: "Please select a campaign",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Please select a campaign", variant: "destructive" });
       return;
     }
+
+    // Check profitability gate
+    if (isProfitLockEnabled(companyId) && profitability) {
+      const minMargin = getMinMarginThreshold(companyId);
+      if (profitability.marginPercent < minMargin || profitability.calcFailed) {
+        setShowProfitGate(true);
+        return;
+      }
+    }
+
+    handleCreateInvoice();
+  };
+
+  const handleCreateInvoice = async () => {
+    if (!selectedCampaign) return;
 
     setCreating(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Fetch campaign items to create invoice line items with full asset details
       const { data: campaignItems } = await supabase
         .from('campaign_items')
         .select('*, media_assets(id, media_asset_code, location, area, city, media_type, dimensions, direction, illumination_type, total_sqft)')
         .eq('campaign_id', selectedCampaignId);
 
-      // Build line items from campaign items with all required data for PDF
       const items = (campaignItems || []).map((item, index) => {
         const displayAssetCode = item.media_assets?.media_asset_code || null;
         return {
@@ -122,7 +143,6 @@ export default function InvoiceCreate() {
           description: item.media_assets 
             ? `${item.media_assets.media_type} - ${item.media_assets.location}, ${item.media_assets.area}, ${item.media_assets.city}`
             : `Media Display - ${displayAssetCode}`,
-          // Detailed asset info for PDF
           area: item.media_assets?.area || '',
           zone: item.media_assets?.area || '',
           media_type: item.media_assets?.media_type || 'Bus Shelter',
@@ -130,13 +150,11 @@ export default function InvoiceCreate() {
           illumination_type: item.media_assets?.illumination_type || 'NonLit',
           dimensions: item.media_assets?.dimensions || 'N/A',
           total_sqft: item.media_assets?.total_sqft || '',
-          // Booking dates
           start_date: item.start_date,
           end_date: item.end_date,
           booking_period: item.start_date && item.end_date 
             ? `${new Date(item.start_date).toLocaleDateString('en-IN')} - ${new Date(item.end_date).toLocaleDateString('en-IN')}`
             : '',
-          // Pricing
           quantity: item.quantity || 1,
           rate: item.negotiated_rate || item.card_rate,
           unit_price: item.negotiated_rate || item.card_rate,
@@ -176,18 +194,11 @@ export default function InvoiceCreate() {
 
       if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: "Invoice created successfully",
-      });
+      toast({ title: "Success", description: "Invoice created successfully" });
       navigate(`/admin/invoices/view/${encodeURIComponent(invoiceId)}`);
     } catch (error: any) {
       console.error('Error creating invoice:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create invoice",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to create invoice", variant: "destructive" });
     }
     setCreating(false);
   };
@@ -199,6 +210,9 @@ export default function InvoiceCreate() {
       </div>
     );
   }
+
+  const showMarginWarning = selectedCampaign && profitability && isProfitLockEnabled(companyId) &&
+    (profitability.marginPercent < getMinMarginThreshold(companyId) || profitability.calcFailed);
 
   return (
     <div className="min-h-screen bg-background">
@@ -325,10 +339,22 @@ export default function InvoiceCreate() {
                 </div>
               )}
 
+              {/* Margin warning badge */}
+              {showMarginWarning && (
+                <div className="flex items-center gap-2 text-xs text-destructive p-2 bg-destructive/5 rounded-md">
+                  <ShieldAlert className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span>
+                    {profitability?.calcFailed
+                      ? "Profit summary unavailable — admin override required"
+                      : `Margin (${profitability?.marginPercent.toFixed(1)}%) below threshold (${getMinMarginThreshold(companyId)}%)`}
+                  </span>
+                </div>
+              )}
+
               <Button 
                 className="w-full mt-4" 
                 size="lg"
-                onClick={handleCreateInvoice}
+                onClick={handleCreateWithProfitCheck}
                 disabled={!selectedCampaign || creating}
               >
                 {creating ? (
@@ -347,6 +373,20 @@ export default function InvoiceCreate() {
           </Card>
         </div>
       </div>
+
+      {/* Profitability Gate Dialog */}
+      {profitability && selectedCampaign && (
+        <ProfitabilityGateDialog
+          open={showProfitGate}
+          onOpenChange={setShowProfitGate}
+          profitability={profitability}
+          campaignId={selectedCampaign.id}
+          campaignName={selectedCampaign.campaign_name}
+          isAdmin={isAdmin}
+          companyId={companyId}
+          onApproved={handleCreateInvoice}
+        />
+      )}
     </div>
   );
 }

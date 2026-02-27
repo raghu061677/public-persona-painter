@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, AlertTriangle, Check, FileText, Calendar, Lock, ExternalLink, ShieldAlert } from "lucide-react";
-import { useCampaignProfitability, getMinMarginThreshold } from "@/hooks/useCampaignProfitability";
+import { useCampaignProfitability, getMinMarginThreshold, isProfitLockEnabled } from "@/hooks/useCampaignProfitability";
 import { ProfitabilityGateDialog } from "@/components/campaigns/ProfitabilityGateDialog";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
@@ -429,10 +429,10 @@ export function MonthlyInvoiceGenerator({
   const handleInvoiceWithProfitCheck = () => {
     if (!selectedMonth || filteredPreviews.length === 0) return;
     
-    // Check profitability threshold
-    if (profitability) {
+    // Check profitability threshold (only if lock enabled)
+    if (isProfitLockEnabled(campaign.company_id) && profitability) {
       const minMargin = getMinMarginThreshold(campaign.company_id);
-      if (profitability.marginPercent < minMargin) {
+      if (profitability.marginPercent < minMargin || profitability.calcFailed) {
         setShowProfitGate(true);
         return;
       }

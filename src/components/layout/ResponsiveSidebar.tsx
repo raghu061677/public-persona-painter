@@ -275,7 +275,7 @@ export function ResponsiveSidebar() {
                 </MenuGroup>
 
                 <MenuItem icon={DollarSign} label="Billing & Subscriptions" href="/admin/platform-reports/billing" />
-                <MenuItem icon={FileCheck} label="Onboarding & QA" href="/admin/onboarding" />
+                {/* Onboarding test page removed from nav */}
                 
                 <MenuGroup icon={BarChart3} label="Platform Reports">
                   <MenuItem icon={BarChart3} label="Multi-Tenant Reports" href="/admin/analytics-dashboard" />

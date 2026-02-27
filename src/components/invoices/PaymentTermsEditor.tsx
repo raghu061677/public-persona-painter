@@ -52,6 +52,12 @@ export function PaymentTermsEditor({
   const [calculatedDueDate, setCalculatedDueDate] = useState(dueDate);
   const [saving, setSaving] = useState(false);
 
+  // Sync local state when props change (e.g., after refetch)
+  useEffect(() => {
+    setTermsMode(currentTermsMode || 'DUE_ON_RECEIPT');
+    setCustomDays(currentTermsDays || 0);
+  }, [currentTermsMode, currentTermsDays]);
+
   useEffect(() => {
     calculateDueDate();
   }, [termsMode, customDays, invoiceDate]);
@@ -133,9 +139,10 @@ export function PaymentTermsEditor({
       });
     } catch (error: any) {
       console.error('Error updating payment terms:', error);
+      const detail = [error.message, error.details, error.hint].filter(Boolean).join(" — ");
       toast({
         title: 'Error',
-        description: 'Failed to update payment terms',
+        description: detail || 'Failed to update payment terms',
         variant: 'destructive',
       });
     } finally {

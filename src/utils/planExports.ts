@@ -62,17 +62,59 @@ async function fetchAssetDetails(assetIds: string[]): Promise<Map<string, AssetD
 }
 
 /**
- * Get all image URLs from asset - now fetches from media_photos table
+ * Get up to 4 image URLs for an asset.
+ * Priority: campaign_assets.photos → media_photos → primary_photo_url (from assetDetail)
  */
-async function getAssetImageUrls(assetId: string): Promise<string[]> {
-  const { data: photos } = await supabase
-    .from('media_photos')
-    .select('photo_url')
-    .eq('asset_id', assetId)
-    .order('uploaded_at', { ascending: false });
-  
-  const urls = photos?.map(p => p.photo_url).filter(url => url) || [];
-  console.log(`Asset ${assetId} has ${urls.length} images:`, urls);
+async function getAssetImageUrls(assetId: string, primaryPhotoUrl?: string | null): Promise<string[]> {
+  const urls: string[] = [];
+  const seen = new Set<string>();
+
+  const addUrl = (u: string) => {
+    if (u && !seen.has(u)) { seen.add(u); urls.push(u); }
+  };
+
+  // 1) Campaign proof photos (latest first)
+  try {
+    const { data: campAssets } = await supabase
+      .from('campaign_assets')
+      .select('photos')
+      .eq('asset_id', assetId)
+      .not('photos', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(3);
+    if (campAssets) {
+      for (const ca of campAssets) {
+        if (urls.length >= 4) break;
+        if (ca.photos && typeof ca.photos === 'object') {
+          const p = ca.photos as Record<string, string>;
+          for (const v of Object.values(p)) {
+            if (typeof v === 'string' && v.trim()) addUrl(v);
+            if (urls.length >= 4) break;
+          }
+        }
+      }
+    }
+  } catch { /* ignore */ }
+
+  // 2) Media photos library
+  if (urls.length < 4) {
+    try {
+      const { data: photos } = await supabase
+        .from('media_photos')
+        .select('photo_url')
+        .eq('asset_id', assetId)
+        .order('uploaded_at', { ascending: false })
+        .limit(4);
+      photos?.forEach(p => { if (p.photo_url && urls.length < 4) addUrl(p.photo_url); });
+    } catch { /* ignore */ }
+  }
+
+  // 3) Primary photo fallback
+  if (urls.length < 4 && primaryPhotoUrl) {
+    addUrl(primaryPhotoUrl);
+  }
+
+  console.log(`Asset ${assetId} has ${urls.length} images`);
   return urls;
 }
 
@@ -470,8 +512,8 @@ export async function exportPlanToPPT(
       const assetDetail = assetDetailsMap.get(item.asset_id);
       if (!assetDetail) continue;
 
-      // Get all images for this asset from media_photos table
-      const allImages = await getAssetImageUrls(item.asset_id);
+      // Get all images for this asset (campaign proofs → media_photos → primary_photo)
+      const allImages = await getAssetImageUrls(item.asset_id, assetDetail.primary_photo_url);
       console.log(`Processing asset ${item.asset_id}, found ${allImages.length} images`);
 
       // SLIDE 1: Professional full-size images with border
@@ -694,40 +736,47 @@ export async function exportPlanToPPT(
          bold: true
        });
 
-      // High-quality image on the right with border
+      // High-quality image on the right with border (always show something)
       const detailImgX = 5.25;
       const detailImgY = 1.05;
       const detailImgW = 4.4;
       const detailImgH = 5.25;
       
-      if (imagesToShow.length > 0) {
+      {
+        let detailImgData: string | null = null;
+        if (imagesToShow.length > 0) {
+          try {
+            detailImgData = await imageToBase64(imagesToShow[0]);
+          } catch (err) {
+            console.warn("Failed to fetch detail image:", err);
+          }
+        }
+        if (!detailImgData) {
+          detailImgData = await getPlaceholderPptDataUrl();
+        }
         try {
-          const imgBase64 = await imageToBase64(imagesToShow[0]);
-          if (imgBase64) {
-            detailSlide.addImage({
-              data: imgBase64,
-              x: detailImgX,
-              y: detailImgY,
-              w: detailImgW,
-              h: detailImgH,
-              sizing: { type: "cover", w: detailImgW, h: detailImgH }
-            });
+          detailSlide.addImage({
+            data: detailImgData,
+            x: detailImgX,
+            y: detailImgY,
+            w: detailImgW,
+            h: detailImgH,
+            sizing: { type: "cover", w: detailImgW, h: detailImgH }
+          });
 
-            // Add clickable QR code watermark on detail image (bottom-right corner)
-            // CRITICAL: sanitize hyperlink to avoid invalid XML in slide rels
-            const safeStreetViewUrl3 = sanitizePptHyperlink(qrData?.streetViewUrl);
-            if (qrData?.qrBase64 && safeStreetViewUrl3) {
-              const qrSize = 0.7;
-              const qrPadding = 0.12;
-              detailSlide.addImage({
-                data: qrData.qrBase64,
-                x: detailImgX + detailImgW - qrSize - qrPadding,
-                y: detailImgY + detailImgH - qrSize - qrPadding,
-                w: qrSize,
-                h: qrSize,
-                hyperlink: { url: safeStreetViewUrl3 },
-              });
-            }
+          // Add clickable QR code watermark on detail image (bottom-right corner)
+          const safeStreetViewUrl3 = sanitizePptHyperlink(qrData?.streetViewUrl);
+          if (qrData?.qrBase64 && safeStreetViewUrl3) {
+            const qrSize = 0.7;
+            const qrPadding = 0.12;
+            detailSlide.addImage({
+              data: qrData.qrBase64,
+              x: detailImgX + detailImgW - qrSize - qrPadding,
+              y: detailImgY + detailImgH - qrSize - qrPadding,
+              w: qrSize,
+              h: qrSize,
+              hyperlink: { url: safeStreetViewUrl3 },
+            });
           }
         } catch (err) {
           console.warn("Failed to add detail image:", err);

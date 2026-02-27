@@ -109,6 +109,9 @@ export function ExpenseFormDialog({
   const [plans, setPlans] = useState<any[]>([]);
   const [assets, setAssets] = useState<any[]>([]);
   const [relatedDataLoading, setRelatedDataLoading] = useState(false);
+  const [plansLoadFailed, setPlansLoadFailed] = useState(false);
+  const [campaignsLoadFailed, setCampaignsLoadFailed] = useState(false);
+  const [assetsLoadFailed, setAssetsLoadFailed] = useState(false);
   const isEditing = !!expense;
 
   const form = useForm<FormValues>({
@@ -222,50 +225,59 @@ export function ExpenseFormDialog({
 
   const loadRelatedData = async () => {
     setRelatedDataLoading(true);
+    setPlansLoadFailed(false);
+    setCampaignsLoadFailed(false);
+    setAssetsLoadFailed(false);
+
+    // Load campaigns
     try {
-      const [campaignRes, planRes, assetRes] = await Promise.all([
-        supabase
-          .from("campaigns")
-          .select("id, campaign_name, client_name")
-          .eq("company_id", company!.id)
-          .order("created_at", { ascending: false })
-          .limit(200),
-        supabase
-          .from("plans")
-          .select("id, name, client_name")
-          .eq("company_id", company!.id)
-          .order("created_at", { ascending: false })
-          .limit(200),
-        supabase
-          .from("media_assets")
-          .select("id, media_asset_code, location, city")
-          .eq("company_id", company!.id)
-          .order("created_at", { ascending: false })
-          .limit(200),
-      ]);
-
-      if (campaignRes.error) {
-        console.error("Failed to load campaigns:", campaignRes.error);
-        toast({ title: "Warning", description: "Could not load campaigns list", variant: "destructive" });
-      }
-      setCampaigns(campaignRes.data || []);
-
-      if (planRes.error) {
-        console.error("Failed to load plans:", planRes.error);
-        toast({ title: "Warning", description: "Could not load plans list", variant: "destructive" });
-      }
-      setPlans(planRes.data || []);
-
-      if (assetRes.error) {
-        console.error("Failed to load assets:", assetRes.error);
-        toast({ title: "Warning", description: "Could not load assets list", variant: "destructive" });
-      }
-      setAssets(assetRes.data || []);
+      const { data, error } = await supabase
+        .from("campaigns")
+        .select("id, campaign_name, client_name")
+        .eq("company_id", company!.id)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      setCampaigns(data || []);
     } catch (err) {
-      console.error("Error loading allocation data:", err);
-    } finally {
-      setRelatedDataLoading(false);
+      console.warn("Failed to load campaigns:", err);
+      setCampaigns([]);
+      setCampaignsLoadFailed(true);
     }
+
+    // Load plans (non-blocking — don't crash form)
+    try {
+      const { data, error } = await supabase
+        .from("plans")
+        .select("id, name, client_name")
+        .eq("company_id", company!.id)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      setPlans(data || []);
+    } catch (err) {
+      console.warn("Plans list unavailable:", err);
+      setPlans([]);
+      setPlansLoadFailed(true);
+    }
+
+    // Load assets
+    try {
+      const { data, error } = await supabase
+        .from("media_assets")
+        .select("id, media_asset_code, location, city")
+        .eq("company_id", company!.id)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      setAssets(data || []);
+    } catch (err) {
+      console.warn("Failed to load assets:", err);
+      setAssets([]);
+      setAssetsLoadFailed(true);
+    }
+
+    setRelatedDataLoading(false);
   };
 
   const getCampaignLabel = (c: any) => {
@@ -338,12 +350,23 @@ export function ExpenseFormDialog({
         tags: values.tags || [],
       };
 
+      let success = false;
       if (isEditing && expense) {
-        await onUpdate(expense.id, formData);
+        success = await onUpdate(expense.id, formData);
       } else {
-        await onSubmit(formData);
+        const result = await onSubmit(formData);
+        success = result !== null;
       }
-      onOpenChange(false);
+      if (success) {
+        onOpenChange(false);
+      }
+    } catch (err: any) {
+      console.error("Submit error:", err);
+      toast({
+        title: "Error",
+        description: err?.message || "Failed to save expense",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -355,12 +378,26 @@ export function ExpenseFormDialog({
   const tdsAmount = watchTdsApplicable ? totalAmount * (watchTdsPercent / 100) : 0;
   const netPayable = totalAmount - tdsAmount;
 
-  const EmptyState = ({ label }: { label: string }) => (
+  const EmptyState = ({ label, failed }: { label: string; failed?: boolean }) => (
     <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground bg-muted/30 rounded-md border border-dashed">
       <AlertCircle className="h-4 w-4 shrink-0" />
-      <span>No {label} found for this company. {relatedDataLoading ? "Loading..." : "Check permissions or create one first."}</span>
+      <span>{failed ? `${label} list unavailable (permissions or config).` : `No ${label} found for this company.`} {relatedDataLoading ? "Loading..." : ""}</span>
     </div>
   );
+
+  // Effective cost centers: DB list or fallback defaults
+  const DEFAULT_COST_CENTERS: CostCenter[] = [
+    { id: "general", company_id: company?.id || "", name: "General", code: "GEN", type: "Department", is_active: true, created_at: "", updated_at: "", parent_id: null },
+    { id: "operations", company_id: company?.id || "", name: "Operations", code: "OPS", type: "Department", is_active: true, created_at: "", updated_at: "", parent_id: null },
+    { id: "printing", company_id: company?.id || "", name: "Printing", code: "PRT", type: "Department", is_active: true, created_at: "", updated_at: "", parent_id: null },
+    { id: "mounting", company_id: company?.id || "", name: "Mounting", code: "MNT", type: "Department", is_active: true, created_at: "", updated_at: "", parent_id: null },
+    { id: "electricity", company_id: company?.id || "", name: "Electricity", code: "ELC", type: "Department", is_active: true, created_at: "", updated_at: "", parent_id: null },
+    { id: "transport", company_id: company?.id || "", name: "Transport", code: "TRN", type: "Department", is_active: true, created_at: "", updated_at: "", parent_id: null },
+    { id: "maintenance", company_id: company?.id || "", name: "Maintenance", code: "MNT", type: "Department", is_active: true, created_at: "", updated_at: "", parent_id: null },
+    { id: "office", company_id: company?.id || "", name: "Office", code: "OFF", type: "Department", is_active: true, created_at: "", updated_at: "", parent_id: null },
+  ];
+  const effectiveCostCenters = costCenters.length > 0 ? costCenters : DEFAULT_COST_CENTERS;
+  const usingDefaultCostCenters = costCenters.length === 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -618,7 +655,7 @@ export function ExpenseFormDialog({
 
                   {/* Campaign Select */}
                   {watchAllocationType === "Campaign" && (
-                    campaigns.length === 0 ? <EmptyState label="campaigns" /> : (
+                    campaigns.length === 0 ? <EmptyState label="campaigns" failed={campaignsLoadFailed} /> : (
                       <FormField
                         control={form.control}
                         name="campaign_id"
@@ -651,7 +688,7 @@ export function ExpenseFormDialog({
 
                   {/* Plan Select */}
                   {watchAllocationType === "Plan" && (
-                    plans.length === 0 ? <EmptyState label="plans" /> : (
+                    plans.length === 0 ? <EmptyState label="Plans" failed={plansLoadFailed} /> : (
                       <FormField
                         control={form.control}
                         name="plan_id"
@@ -684,7 +721,7 @@ export function ExpenseFormDialog({
 
                   {/* Asset Select */}
                   {watchAllocationType === "Asset" && (
-                    assets.length === 0 ? <EmptyState label="assets" /> : (
+                    assets.length === 0 ? <EmptyState label="assets" failed={assetsLoadFailed} /> : (
                       <FormField
                         control={form.control}
                         name="asset_id"
@@ -722,6 +759,9 @@ export function ExpenseFormDialog({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Cost Center</FormLabel>
+                        {usingDefaultCostCenters && (
+                          <p className="text-xs text-muted-foreground">Using default cost centers</p>
+                        )}
                         <Select 
                           value={field.value || ""} 
                           onValueChange={field.onChange}
@@ -732,7 +772,7 @@ export function ExpenseFormDialog({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {costCenters.map((cc) => (
+                            {effectiveCostCenters.map((cc) => (
                               <SelectItem key={cc.id} value={cc.id}>
                                 {cc.name} {cc.code && `(${cc.code})`}
                               </SelectItem>

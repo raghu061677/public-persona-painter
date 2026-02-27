@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Button } from "@/components/ui/button";
@@ -35,11 +35,13 @@ type SortDirection = 'asc' | 'desc';
 
 export default function InvoicesList() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { company } = useCompany();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const urlFiltersAppliedRef = useRef(false);
 
   // Sort state
   const [sortField, setSortField] = useState<SortField>('invoice_date');
@@ -136,6 +138,25 @@ export default function InvoicesList() {
       }
     }
   };
+
+  // Apply URL query params as filters on mount
+  useEffect(() => {
+    if (urlFiltersAppliedRef.current) return;
+    const statusParam = searchParams.get('status');
+    if (statusParam) {
+      urlFiltersAppliedRef.current = true;
+      // Map common aliases
+      const statusMap: Record<string, string[]> = {
+        pending: ['Draft', 'Sent', 'Partial'],
+        overdue: ['Overdue'],
+        outstanding: ['Draft', 'Sent', 'Partial', 'Overdue'],
+      };
+      const mapped = statusMap[statusParam.toLowerCase()] || [statusParam];
+      lv.setFilters({ ...advancedFilters, status: mapped } as Record<string, any>);
+      // Clean URL params after applying
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     checkAdminStatus();

@@ -84,6 +84,9 @@ export const ROUTES = {
   AGING_BY_CLIENT_REPORT: "/admin/reports/aging-by-client",
   OUTSTANDING_REPORT: "/admin/reports/outstanding",
   ASSET_PROFITABILITY_REPORT: "/admin/reports/profitability",
+  OPS_PAYABLES_REPORT: "/admin/reports/ops-payables",
+  OPS_BILLABLES_REPORT: "/admin/reports/ops-billables",
+  OPS_MARGIN_REPORT: "/admin/reports/ops-margin",
   
   // Users & Access
   USER_MANAGEMENT: "/admin/users",

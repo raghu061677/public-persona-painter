@@ -5,7 +5,7 @@ import {
   FileText, Receipt, Zap, UserCog, Palette, FileSpreadsheet,
   Bell, LogOut, User, Menu, Shield, DollarSign, Smartphone,
   Image, Settings, FileCheck, CreditCard, Globe, Mail, MessageSquare,
-  Lock, Database, Upload, Download, HardDrive, Sparkles, ShoppingBag, BarChart3, Calendar
+  Lock, Database, Upload, Download, HardDrive, Sparkles, ShoppingBag, BarChart3, Calendar, CalendarDays
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -337,6 +337,12 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                         icon={Calendar}
                         label="Booked Media"
                         href="/admin/reports/booked-media"
+                        collapsed={collapsed}
+                      />
+                      <SidebarItem
+                        icon={CalendarDays}
+                        label="Monthly Campaigns"
+                        href="/admin/reports/monthly-campaigns"
                         collapsed={collapsed}
                       />
                       <SidebarItem

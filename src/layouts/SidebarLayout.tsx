@@ -348,7 +348,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                       <SidebarItem
                         icon={Users}
                         label="Client-wise Bookings"
-                        href="/admin/reports/clients"
+                        href="/admin/reports/client-bookings"
                         collapsed={collapsed}
                       />
                       <SidebarItem

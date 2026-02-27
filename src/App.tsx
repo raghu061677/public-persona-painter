@@ -359,7 +359,8 @@ const App = () => (
               <Route path="sales-orders" element={<ProtectedRoute requireAuth><ModernAppLayout><SalesOrders /></ModernAppLayout></ProtectedRoute>} />
               <Route path="purchase-orders" element={<ProtectedRoute requireAuth><ModernAppLayout><PurchaseOrders /></ModernAppLayout></ProtectedRoute>} />
               <Route path="payments" element={<ProtectedRoute requireAuth><ModernAppLayout><Payments /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="reports/clients" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportClientBookings /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="reports/client-bookings" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportClientBookings /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="reports/clients" element={<Navigate to="/admin/reports/client-bookings" replace />} />
               <Route path="reports/campaigns" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportCampaignBookings /></ModernAppLayout></ProtectedRoute>} />
               <Route path="reports/revenue" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportAssetRevenue /></ModernAppLayout></ProtectedRoute>} />
               <Route path="reports/financial" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportFinancialSummary /></ModernAppLayout></ProtectedRoute>} />

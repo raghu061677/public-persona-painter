@@ -1,45 +1,57 @@
 
 
-## Fix: Asset Code UUID Display and Per-Asset Invoice Items
+# Client-wise Booking Report -- Implementation Plan
 
-### Problem
-1. **Asset codes show as UUIDs** (e.g., `MNS-98808d58-459e-4ec6-bf25-71ad754deb33`) instead of readable codes (e.g., `MNS-HYD-PUB-0001`) in invoice previews and PDFs.
-2. **Root cause**: All three invoice generation paths fail to fetch and store `media_asset_code` from the `media_assets` table when creating invoice items. They store only the UUID `asset_id`.
-3. **Hydration fallback issue**: Both `InvoiceTemplateZoho.tsx` and `generateInvoicePDF.ts` have UUID fallbacks in their `maCodeMap` construction (line `m.media_asset_code || m.id`), so when `media_asset_code` is missing from stored items, the UUID leaks through.
+## Overview
+Replace the existing basic `ReportClientBookings.tsx` with a full-featured report that groups bookings by client, supports date range filtering, provides two-level drilldown (Client -> Campaigns -> Assets), and includes Excel export. The route will be updated from `/admin/reports/clients` to `/admin/reports/client-bookings`.
 
-### Affected Files and Changes
+## What You Will Get
+- A summary table grouped by client showing: Total Campaigns, Total Assets Booked, First and Last Booking Dates
+- Click a client row to expand and see their campaigns
+- Click a campaign row to expand and see the booked assets
+- Date range picker, status filter, search bar
+- KPI cards (Total Clients, Total Campaigns, Total Assets, Cities Covered)
+- Excel export for both the summary view and a full drilldown export
+- The old `/admin/reports/clients` route will redirect to the new one
 
-#### 1. `src/components/campaigns/GenerateInvoiceDialog.tsx`
-- **Before**: Items are built from `campaignAssets` without fetching `media_asset_code`.
-- **Fix**: Before building items, fetch `media_asset_code` from `media_assets` for all `asset_id`s. Store it as `asset_code` and `media_asset_code` in each item.
+---
 
-#### 2. `src/components/campaigns/billing/CampaignBillingTab.tsx`
-- **Both single and monthly invoice generators** create summary-only items (no per-asset detail).
-- **Fix**: Replace summary items with per-asset detailed items that include `asset_code`, `location`, `area`, `dimensions`, etc. -- matching the standard from the memory entries. Fetch `media_asset_code` from `media_assets` for proper codes.
+## Technical Steps
 
-#### 3. `src/lib/invoices/generateInvoicePDF.ts` (line 98)
-- **Before**: `maCodeMap` fallback is `m.media_asset_code || m.id` -- UUID leaks when code is null.
-- **Fix**: Change to `m.media_asset_code || null` so UUID never becomes the "code". The `formatAssetDisplayCode` utility already handles UUID fallbacks properly via `getAssetDisplayCode`.
+### 1. Rewrite `src/pages/ReportClientBookings.tsx`
+Complete rewrite following the established pattern from `ReportMonthlyCampaigns.tsx`:
 
-#### 4. `src/components/invoices/InvoiceTemplateZoho.tsx` (line 108)
-- **Before**: Same UUID fallback: `ma.media_asset_code || ca.asset_id || '-'`
-- **Fix**: Use `ma.media_asset_code || null` and let the `formatAssetDisplayCode` function handle fallback display properly (it shows `ASSET-XXXXXX` for UUIDs instead of raw UUIDs).
+**Data model (3-level hierarchy):**
+```
+ClientSummaryRow
+  -> client_name, total_campaigns, total_assets, first_booking, last_booking
+  -> campaigns: CampaignRow[]
+       -> campaign_name, start_date, end_date, duration, asset_count, status
+       -> assets: AssetRow[]
+            -> asset_code, media_type, city, area, location, dimensions, illumination, direction
+```
 
-#### 5. `src/pages/InvoiceCreate.tsx`
-- Already fetches `media_asset_code` via join -- verify it stores as `asset_code` properly.
+**Query logic:**
+- Fetch `campaigns` scoped by `company_id` with date overlap filter (`start_date <= rangeEnd AND end_date >= rangeStart`)
+- Batch-fetch `campaign_assets` for matched campaign IDs (chunks of 100)
+- Batch-fetch `media_assets` for asset codes (chunks of 100)
+- Group by `client_name` / `client_id` on the client side
 
-### Summary of Changes
+**Filters:** DateRangeFilter component, Status select, Search input, Reset button
 
-| File | What Changes |
-|------|-------------|
-| `GenerateInvoiceDialog.tsx` | Fetch `media_asset_code` from `media_assets`, store as `asset_code` in invoice items |
-| `CampaignBillingTab.tsx` | Replace summary items with per-asset detailed items including `asset_code`, `location`, `dimensions`, etc. |
-| `generateInvoicePDF.ts` | Fix `maCodeMap` UUID fallback to `null` instead of `m.id` |
-| `InvoiceTemplateZoho.tsx` | Fix asset_code fallback to avoid raw UUIDs |
+**UI:** Two-level collapsible rows using the existing `Collapsible` component -- first expand shows campaigns, second expand shows assets per campaign
 
-### Technical Detail
+**Export:** Two options via `ReportExportMenu`:
+- "Export Excel" -- client summary rows only
+- "Export PDF" placeholder (async noop for now)
 
-The `formatAssetDisplayCode` function already handles UUIDs properly by showing `ASSET-XXXXXX` (last 6 chars). The issue is that upstream code was storing the full UUID as `asset_code`, bypassing this logic. By ensuring `media_asset_code` is always fetched and stored at invoice creation time, and fixing fallbacks to never treat UUIDs as display codes, the problem is permanently resolved.
+### 2. Update Route in `src/App.tsx`
+- Add new route: `reports/client-bookings` pointing to `ReportClientBookings`
+- Change the old `reports/clients` route to `<Navigate to="/admin/reports/client-bookings" replace />`
 
-After these fixes, the user can regenerate invoice `INV/2025-26/0014` (which is currently Cancelled) and it will display the correct asset code `MNS-HYD-PUB-0001`.
+### 3. Update Sidebar Navigation
+- In `src/components/layout/ResponsiveSidebar.tsx`: change the "Client Bookings" menu item href from `/admin/reports/clients` to `/admin/reports/client-bookings`
+- In `src/layouts/SidebarLayout.tsx`: same update if the reports section is listed there
 
+### 4. No Database or Schema Changes
+All data comes from existing `campaigns`, `campaign_assets`, and `media_assets` tables via client-side joins and grouping. Company scoping uses `useCompany()` context.

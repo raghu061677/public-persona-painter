@@ -13,26 +13,20 @@ export interface BookedExportField {
 export const ALL_BOOKED_EXPORT_FIELDS: BookedExportField[] = [
   // Core
   { key: "sno", label: "S.No", group: "Core", getValue: (_r, i) => i + 1, width: 6 },
-  { key: "asset_code", label: "Asset Code", group: "Core", getValue: (r) => r.asset_code || "", width: 20 },
 
   // Location
+  { key: "location", label: "Location", group: "Location", getValue: (r) => r.location || "", width: 30 },
+  { key: "direction", label: "Direction (facing)", group: "Location", getValue: (r) => r.direction || "", width: 16 },
   { key: "city", label: "City", group: "Location", getValue: (r) => r.city || "", width: 14 },
   { key: "area", label: "Area", group: "Location", getValue: (r) => r.area || "", width: 15 },
-  { key: "location", label: "Location", group: "Location", getValue: (r) => r.location || "", width: 30 },
   { key: "address", label: "Address", group: "Location", getValue: (r) => r.address || "", width: 30 },
-  { key: "direction", label: "Facing", group: "Location", getValue: (r) => r.direction || "", width: 12 },
+  { key: "asset_code", label: "Asset Code", group: "Core", getValue: (r) => r.asset_code || "", width: 20 },
 
   // Specifications
-  { key: "media_type", label: "Media Type", group: "Specifications", getValue: (r) => r.media_type || "", width: 16 },
   { key: "dimensions", label: "Dimensions", group: "Specifications", getValue: (r) => r.dimensions || "", width: 14 },
   { key: "total_sqft", label: "Sq.Ft", group: "Specifications", getValue: (r) => r.total_sqft || 0, width: 10, numFmt: "#,##0.00" },
   { key: "illumination", label: "Illumination", group: "Specifications", getValue: (r) => r.illumination || "", width: 14 },
-
-  // Campaign
-  { key: "campaign_name", label: "Campaign Name", group: "Campaign", getValue: (r) => r.campaign_name || "", width: 24 },
-  { key: "client_name", label: "Client Name", group: "Campaign", getValue: (r) => r.client_name || "", width: 24 },
-  { key: "campaign_status", label: "Campaign Status", group: "Campaign", getValue: (r) => r.campaign_status || "", width: 16 },
-  { key: "installation_status", label: "Installation Status", group: "Campaign", getValue: (r) => r.installation_status || "", width: 16 },
+  { key: "media_type", label: "Media Type", group: "Specifications", getValue: (r) => r.media_type || "", width: 16 },
 
   // Dates
   { key: "start_date", label: "Start Date", group: "Dates", getValue: (r) => {
@@ -43,16 +37,27 @@ export const ALL_BOOKED_EXPORT_FIELDS: BookedExportField[] = [
   }, width: 14 },
   { key: "duration_days", label: "Duration (Days)", group: "Dates", getValue: (r) => r.duration_days || 0, width: 14, numFmt: "#,##0" },
 
+  // Campaign
+  { key: "campaign_name", label: "Campaign Name", group: "Campaign", getValue: (r) => r.campaign_name || "", width: 24 },
+  { key: "client_name", label: "Client Name", group: "Campaign", getValue: (r) => r.client_name || "", width: 24 },
+  { key: "campaign_status", label: "Campaign Status", group: "Campaign", getValue: (r) => r.campaign_status || "", width: 16 },
+  { key: "installation_status", label: "Installation Status", group: "Campaign", getValue: (r) => r.installation_status || "", width: 16 },
+
   // Geo Coordinates
   { key: "latitude", label: "Latitude", group: "Geo Coordinates", getValue: (r) => r.latitude ?? "", width: 14, numFmt: "0.000000" },
   { key: "longitude", label: "Longitude", group: "Geo Coordinates", getValue: (r) => r.longitude ?? "", width: 14, numFmt: "0.000000" },
 ];
 
+/**
+ * Default export fields — exact order per spec:
+ * S.No, Location, Direction (facing), Dimensions, Sq.Ft, Illumination,
+ * Start Date, End Date, Duration (Days), Campaign Name, Client Name, Campaign Status
+ */
 export const DEFAULT_BOOKED_CUSTOM_FIELDS = [
-  "sno", "asset_code", "city", "area", "location", "direction",
-  "media_type", "dimensions", "illumination",
-  "campaign_name", "client_name", "campaign_status",
+  "sno", "location", "direction",
+  "dimensions", "total_sqft", "illumination",
   "start_date", "end_date", "duration_days",
+  "campaign_name", "client_name", "campaign_status",
 ];
 
 export const BOOKED_FIELD_GROUPS = [...new Set(ALL_BOOKED_EXPORT_FIELDS.map((f) => f.group))];
@@ -68,6 +73,23 @@ function getStatusRowColor(status: string): string | null {
   }
 }
 
+/**
+ * Sort rows by Location (A-Z) then Direction (A-Z)
+ */
+function sortBookedRows(rows: any[]): any[] {
+  return [...rows].sort((a, b) => {
+    const locA = (a.location || "").toLowerCase();
+    const locB = (b.location || "").toLowerCase();
+    if (locA < locB) return -1;
+    if (locA > locB) return 1;
+    const dirA = (a.direction || "").toLowerCase();
+    const dirB = (b.direction || "").toLowerCase();
+    if (dirA < dirB) return -1;
+    if (dirA > dirB) return 1;
+    return 0;
+  });
+}
+
 export async function generateCustomBookedMediaExcel(
   rows: any[],
   selectedFieldKeys: string[],
@@ -80,6 +102,9 @@ export async function generateCustomBookedMediaExcel(
     .filter(Boolean) as BookedExportField[];
 
   if (fields.length === 0) return;
+
+  // Sort rows by Location → Direction before export
+  const sortedRows = sortBookedRows(rows);
 
   const colCount = fields.length;
   const workbook = new ExcelJS.Workbook();
@@ -107,7 +132,7 @@ export async function generateCustomBookedMediaExcel(
   const infoCell = worksheet.getRow(currentRow).getCell(1);
   const start = format(new Date(startDate), "dd MMM yyyy");
   const end = format(new Date(endDate), "dd MMM yyyy");
-  infoCell.value = `Period: ${start} – ${end} | Generated: ${format(new Date(), "dd MMM yyyy HH:mm")} | Total: ${rows.length} bookings | Columns: ${fields.length}`;
+  infoCell.value = `Period: ${start} – ${end} | Generated: ${format(new Date(), "dd MMM yyyy HH:mm")} | Total: ${sortedRows.length} bookings | Columns: ${fields.length}`;
   infoCell.font = { size: 11, italic: true };
   infoCell.alignment = { horizontal: "center" };
   worksheet.getRow(currentRow).height = 20;
@@ -115,11 +140,11 @@ export async function generateCustomBookedMediaExcel(
 
   // Summary
   currentRow++;
-  const uniqueAssets = new Set(rows.map((r) => r.asset_id || r.asset_code)).size;
-  const uniqueCampaigns = new Set(rows.map((r) => r.campaign_name)).size;
-  const uniqueClients = new Set(rows.map((r) => r.client_name)).size;
+  const uniqueAssets = new Set(sortedRows.map((r) => r.asset_id || r.asset_code)).size;
+  const uniqueCampaigns = new Set(sortedRows.map((r) => r.campaign_name)).size;
+  const uniqueClients = new Set(sortedRows.map((r) => r.client_name)).size;
   worksheet.getRow(currentRow).values = [
-    "Total Bookings:", rows.length, "",
+    "Total Bookings:", sortedRows.length, "",
     "Unique Assets:", uniqueAssets, "",
     "Campaigns:", uniqueCampaigns, "",
     "Clients:", uniqueClients,
@@ -141,8 +166,8 @@ export async function generateCustomBookedMediaExcel(
   worksheet.views = [{ state: "frozen", ySplit: currentRow }];
   currentRow++;
 
-  // Data
-  rows.forEach((row, idx) => {
+  // Data — S.No regenerated sequentially after sorting
+  sortedRows.forEach((row, idx) => {
     const r = worksheet.getRow(currentRow);
     r.values = fields.map((f) => f.getValue(row, idx));
 

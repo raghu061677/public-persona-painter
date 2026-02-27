@@ -1,14 +1,15 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DollarSign, TrendingUp, TrendingDown, Target, MapPin, BarChart3, Building2, Lightbulb } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Target, MapPin, BarChart3, Building2, Lightbulb, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 // Lazy load heavy tab content
 const ReportAssetRevenueV2 = lazy(() => import("./ReportAssetRevenueV2"));
@@ -28,10 +29,12 @@ interface RevenueOverview {
 
 export default function RevenueControlCenter() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const activeTab = searchParams.get("tab") || "overview";
   const { company } = useCompany();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [totalExpenses, setTotalExpenses] = useState(0);
   const [data, setData] = useState<RevenueOverview>({
     totalRevenue: 0,
     collected: 0,
@@ -72,6 +75,12 @@ export default function RevenueControlCenter() {
       const { data: campaignAssets } = await supabase
         .from("campaign_assets")
         .select("city, total_price, negotiated_rate, card_rate, campaign_id");
+
+      // Fetch total expenses for expense impact
+      const { data: expensesData } = await supabase
+        .from("expenses")
+        .select("total_amount");
+      setTotalExpenses((expensesData || []).reduce((s, e) => s + (e.total_amount || 0), 0));
 
       const totalRevenue = invoices?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0;
       const collected = payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
@@ -163,6 +172,7 @@ export default function RevenueControlCenter() {
     ? ((data.collected / data.totalRevenue) * 100).toFixed(1)
     : "0";
 
+  const expenseImpact = data.totalRevenue > 0 ? (totalExpenses / data.totalRevenue) * 100 : 0;
   return (
     <div className="h-full flex flex-col space-y-6 p-8">
       <div>
@@ -220,6 +230,21 @@ export default function RevenueControlCenter() {
               {data.revenueGrowth > 0 ? "+" : ""}
               {data.revenueGrowth.toFixed(1)}%
             </div>
+          </CardContent>
+        </Card>
+        <Card
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => navigate("/admin/reports/expense-allocation")}
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Expense Impact</CardTitle>
+            <AlertTriangle className={cn("h-4 w-4", expenseImpact > 50 ? "text-red-500" : expenseImpact > 30 ? "text-orange-500" : "text-emerald-500")} />
+          </CardHeader>
+          <CardContent>
+            <div className={cn("text-2xl font-bold", expenseImpact > 50 ? "text-red-600" : expenseImpact > 30 ? "text-orange-600" : "text-emerald-600")}>
+              {expenseImpact.toFixed(1)}%
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-0.5">of revenue</p>
           </CardContent>
         </Card>
         <Card>

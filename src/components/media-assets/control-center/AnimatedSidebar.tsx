@@ -28,7 +28,7 @@ const menuItems = [
   { icon: Camera, label: "Campaigns", path: "/campaigns" },
   { icon: DollarSign, label: "Finance", path: "/admin/invoices" },
   { icon: BarChart3, label: "Reports", path: "/reports/vacant-media" },
-  { icon: Settings, label: "Settings", path: "/settings" },
+  { icon: Settings, label: "Settings", path: "/admin/company-settings" },
 ];
 
 export function AnimatedSidebar() {

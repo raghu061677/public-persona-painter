@@ -43,7 +43,7 @@ const MediaAssetsMap = lazy(() => import("./pages/MediaAssetsMap"));
 const MediaAssetsImport = lazy(() => import("./pages/MediaAssetsImport"));
 const MediaAssetsValidation = lazy(() => import("./pages/MediaAssetsValidation"));
 const MediaAssetsHealthReport = lazy(() => import("./pages/MediaAssetsHealthReport"));
-const TenantAnalytics = lazy(() => import("./pages/TenantAnalytics"));
+// TenantAnalytics removed — redirect to analytics-dashboard
 const ClientsImport = lazy(() => import("./pages/ClientsImport"));
 const ClientsList = lazy(() => import("./pages/ClientsList"));
 const ClientNew = lazy(() => import("./pages/ClientNew"));
@@ -99,8 +99,9 @@ const VacantMediaReport = lazy(() => import("./pages/VacantMediaReport"));
 const AssetProfitabilityReport = lazy(() => import("./pages/AssetProfitabilityReport"));
 const MediaAvailabilityReport = lazy(() => import("./pages/admin/reports/MediaAvailabilityReport"));
 const PhotoGallery = lazy(() => import("./pages/PhotoGallery"));
-const ImportData = lazy(() => import("./pages/ImportData"));
-const ExportData = lazy(() => import("./pages/ExportData"));
+// ImportData and ExportData removed — redirect to data-export-import
+// const ImportData = lazy(() => import("./pages/ImportData"));
+// const ExportData = lazy(() => import("./pages/ExportData"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
 const CompanyUsersManagement = lazy(() => import("./pages/CompanyUsersManagement"));
 const CodeManagement = lazy(() => import("./pages/CodeManagement"));
@@ -137,8 +138,9 @@ const ProformaDetail = lazy(() => import("./pages/ProformaDetail"));
 const ImportInvoices = lazy(() => import("./pages/ImportInvoices"));
 const Install = lazy(() => import("./pages/Install"));
 const NotFound = lazy(() => import("./pages/NotFound"));
-const ComponentShowcase = lazy(() => import("./pages/ComponentShowcase"));
-const DashboardBuilder = lazy(() => import("./pages/DashboardBuilder"));
+// ComponentShowcase, DashboardBuilder removed — dev/test pages
+// const ComponentShowcase = lazy(() => import("./pages/ComponentShowcase"));
+// const DashboardBuilder = lazy(() => import("./pages/DashboardBuilder"));
 const DataExportImport = lazy(() => import("./pages/DataExportImport"));
 const CompanyOnboarding = lazy(() => import("./pages/CompanyOnboarding"));
 const CompaniesManagement = lazy(() => import("./pages/CompaniesManagement"));
@@ -167,22 +169,25 @@ const PlatformAdminDashboard = lazy(() => import("./pages/PlatformAdminDashboard
 const PlatformAdminSetup = lazy(() => import("./pages/PlatformAdminSetup"));
 const PlatformReports = lazy(() => import("./pages/PlatformReports"));
 const DashboardRouter = lazy(() => import("./components/dashboard/DashboardRouter").then(m => ({ default: m.DashboardRouter })));
-const CompanyTesting = lazy(() => import("./pages/CompanyTesting"));
+// CompanyTesting, OnboardingTest removed — test pages
+// const CompanyTesting = lazy(() => import("./pages/CompanyTesting"));
 const CompanyManagement = lazy(() => import("./pages/CompanyManagement"));
-const OnboardingTest = lazy(() => import("./pages/OnboardingTest"));
+// const OnboardingTest = lazy(() => import("./pages/OnboardingTest"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
 const MarketplaceAssetDetail = lazy(() => import("./pages/MarketplaceAssetDetail"));
 const CompanyUsersSettings = lazy(() => import("./pages/CompanyUsersSettings"));
 const CompanyCodeSettings = lazy(() => import("./pages/CompanyCodeSettings"));
 const AIAssistant = lazy(() => import("./pages/AIAssistant"));
 const AnalyticsDashboard = lazy(() => import("./pages/AnalyticsDashboard"));
-const CustomDashboard = lazy(() => import("./pages/CustomDashboard"));
+// CustomDashboard removed — placeholder
+// const CustomDashboard = lazy(() => import("./pages/CustomDashboard"));
 const BookingRequests = lazy(() => import("./pages/BookingRequests"));
 const ClientPortalDashboard = lazy(() => import("./pages/ClientPortalDashboard"));
 const ClientPortalProofs = lazy(() => import("./pages/ClientPortalProofs"));
 const ClientPortalPayments = lazy(() => import("./pages/ClientPortalPayments"));
 const ClientPortalDownloads = lazy(() => import("./pages/ClientPortalDownloads"));
-const WorkflowTest = lazy(() => import("./pages/WorkflowTest"));
+// WorkflowTest removed — test page
+// const WorkflowTest = lazy(() => import("./pages/WorkflowTest"));
 const ClientCampaignView = lazy(() => import("./pages/ClientCampaignView"));
 const ClientInvoices = lazy(() => import("./pages/ClientInvoices"));
 const AccessDenied = lazy(() => import("./pages/AccessDenied"));
@@ -305,8 +310,9 @@ const App = () => (
               <Route path="migrate-data" element={<PlatformAdminGuard><ModernAppLayout><MigrateToMatrix /></ModernAppLayout></PlatformAdminGuard>} />
               <Route path="fix-streetview-links" element={<ProtectedRoute requireAuth><ModernAppLayout><FixStreetViewLinks /></ModernAppLayout></ProtectedRoute>} />
               
-              <Route path="company-testing" element={<ProtectedRoute requireAuth><ModernAppLayout><CompanyTesting /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="onboarding" element={<ProtectedRoute requireAuth><ModernAppLayout><OnboardingTest /></ModernAppLayout></ProtectedRoute>} />
+              {/* Dead test routes — redirect to dashboard */}
+              <Route path="company-testing" element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="onboarding" element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="booking-requests" element={<ProtectedRoute requireAuth><ModernAppLayout><BookingRequests /></ModernAppLayout></ProtectedRoute>} />
               <Route path="clients" element={<ProtectedRoute requiredModule="clients" requiredAction="view"><ModernAppLayout><ClientsList /></ModernAppLayout></ProtectedRoute>} />
               <Route path="clients/new" element={<ProtectedRoute requiredModule="clients" requiredAction="create"><ModernAppLayout><ClientNew /></ModernAppLayout></ProtectedRoute>} />
@@ -345,7 +351,7 @@ const App = () => (
               <Route path="operations/creatives" element={<ProtectedRoute requireAuth><ModernAppLayout><OperationsCreatives /></ModernAppLayout></ProtectedRoute>} />
               <Route path="operations/printing" element={<ProtectedRoute requireAuth><ModernAppLayout><OperationsPrinting /></ModernAppLayout></ProtectedRoute>} />
               <Route path="operations/proof-uploads" element={<ProtectedRoute requireAuth><ModernAppLayout><OperationsProofUploads /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="workflow-test" element={<ProtectedRoute requireAuth><ModernAppLayout><WorkflowTest /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="workflow-test" element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="operations-analytics" element={<ProtectedRoute requireAuth><ModernAppLayout><OperationsAnalytics /></ModernAppLayout></ProtectedRoute>} />
               <Route path="operations-calendar" element={<ProtectedRoute requireAuth><ModernAppLayout><OperationsCalendar /></ModernAppLayout></ProtectedRoute>} />
               <Route path="sales-orders" element={<ProtectedRoute requireAuth><ModernAppLayout><SalesOrders /></ModernAppLayout></ProtectedRoute>} />
@@ -369,18 +375,18 @@ const App = () => (
               <Route path="approval-history" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalHistory /></ModernAppLayout></ProtectedRoute>} />
               <Route path="approvals/rules" element={<RoleGuard requireCompanyRole="company_admin"><ModernAppLayout><ApprovalRulesSettings /></ModernAppLayout></RoleGuard>} />
               <Route path="ai-assistant" element={<ProtectedRoute requireAuth><ModernAppLayout><AIAssistant /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="assistant" element={<ProtectedRoute requireAuth><ModernAppLayout><AIAssistant /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="tenant-analytics" element={<ProtectedRoute requireAuth><ModernAppLayout><TenantAnalytics /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="assistant" element={<Navigate to="/admin/ai-assistant" replace />} />
+              <Route path="tenant-analytics" element={<Navigate to="/admin/analytics-dashboard" replace />} />
               <Route path="analytics-dashboard" element={<ProtectedRoute requireAuth><ModernAppLayout><AnalyticsDashboard /></ModernAppLayout></ProtectedRoute>} />
               <Route path="analytics/inventory" element={<ProtectedRoute requireAuth><ModernAppLayout><InventoryUtilization /></ModernAppLayout></ProtectedRoute>} />
               <Route path="analytics/revenue-forecast" element={<ProtectedRoute requireAuth><ModernAppLayout><RevenueForecast /></ModernAppLayout></ProtectedRoute>} />
               <Route path="proformas" element={<ProtectedRoute requireAuth><ModernAppLayout><ProformasList /></ModernAppLayout></ProtectedRoute>} />
               <Route path="proformas/:id" element={<ProtectedRoute requireAuth><ModernAppLayout><ProformaDetail /></ModernAppLayout></ProtectedRoute>} />
               <Route path="estimations" element={<ProtectedRoute requireAuth><ModernAppLayout><EstimationsList /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="gallery" element={<ProtectedRoute requireAuth><ModernAppLayout><PhotoGallery /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="gallery" element={<Navigate to="/admin/photo-library" replace />} />
               <Route path="photo-library" element={<ProtectedRoute requireAuth><ModernAppLayout><PhotoGallery /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="import" element={<ProtectedRoute requireAuth><ModernAppLayout><ImportData /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="export" element={<ProtectedRoute requireAuth><ModernAppLayout><ExportData /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="import" element={<Navigate to="/admin/data-export-import" replace />} />
+              <Route path="export" element={<Navigate to="/admin/data-export-import" replace />} />
               <Route path="data-export-import" element={<ProtectedRoute requireAuth><ModernAppLayout><DataExportImport /></ModernAppLayout></ProtectedRoute>} />
               <Route path="power-bills" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsDashboard /></ModernAppLayout></ProtectedRoute>} />
               <Route path="power-bills-analytics" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsAnalytics /></ModernAppLayout></ProtectedRoute>} />
@@ -394,23 +400,24 @@ const App = () => (
               <Route path="users" element={<ProtectedRoute requiredModule="users" requiredAction="view"><ModernAppLayout><UserManagement /></ModernAppLayout></ProtectedRoute>} />
               <Route path="users/companies/:companyId" element={<PlatformAdminGuard><ModernAppLayout><CompanyUsersManagement /></ModernAppLayout></PlatformAdminGuard>} />
               <Route path="operations-settings" element={<ProtectedRoute requireAuth><ModernAppLayout><OperationsSettings /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="organization-settings" element={<ProtectedRoute requireAuth><ModernAppLayout><OrganizationSettings /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="organization-settings" element={<Navigate to="/admin/company-settings" replace />} />
               <Route path="invoices" element={<ProtectedRoute requireAuth><ModernAppLayout><InvoicesList /></ModernAppLayout></ProtectedRoute>} />
               <Route path="invoices/new" element={<ProtectedRoute requireAuth><ModernAppLayout><InvoiceCreate /></ModernAppLayout></ProtectedRoute>} />
               <Route path="invoices/view/:encodedId" element={<ProtectedRoute requireAuth><ModernAppLayout><InvoiceDetail /></ModernAppLayout></ProtectedRoute>} />
               <Route path="invoices/:id" element={<ProtectedRoute requireAuth><ModernAppLayout><InvoiceDetail /></ModernAppLayout></ProtectedRoute>} />
               <Route path="invoices-import" element={<ProtectedRoute requireAuth><ModernAppLayout><ImportInvoices /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="payment-reminders" element={<ProtectedRoute requireAuth><ModernAppLayout><Invoices /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="payment-reminders" element={<Navigate to="/admin/invoices" replace />} />
               <Route path="payment-confirmations" element={<ProtectedRoute requireAuth><ModernAppLayout><PaymentConfirmations /></ModernAppLayout></ProtectedRoute>} />
               <Route path="expenses" element={<ProtectedRoute requireAuth><ModernAppLayout><ExpensesList /></ModernAppLayout></ProtectedRoute>} />
               <Route path="platform-admin-setup" element={<ProtectedRoute requireAuth><PlatformAdminSetup /></ProtectedRoute>} />
-              <Route path="approval-settings" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalSettings /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="approval-settings" element={<Navigate to="/admin/approvals/rules" replace />} />
               <Route path="approval-delegation" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalDelegation /></ModernAppLayout></ProtectedRoute>} />
               <Route path="approval-analytics" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalAnalytics /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="analytics" element={<ProtectedRoute requireAuth><ModernAppLayout><AnalyticsDashboard /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="custom-dashboard" element={<ProtectedRoute requireAuth><ModernAppLayout><CustomDashboard /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="ui-showcase" element={<ProtectedRoute requireAuth><ModernAppLayout><ComponentShowcase /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="dashboard-builder" element={<ProtectedRoute requireAuth><ModernAppLayout><DashboardBuilder /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="analytics" element={<Navigate to="/admin/analytics-dashboard" replace />} />
+              {/* Dead test/placeholder routes — redirect */}
+              <Route path="custom-dashboard" element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="ui-showcase" element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="dashboard-builder" element={<Navigate to="/admin/dashboard" replace />} />
               
               {/* Company Settings with SettingsLayout */}
               <Route path="company-settings" element={<ProtectedRoute requireAuth><SettingsLayout /></ProtectedRoute>}>

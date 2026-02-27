@@ -30,11 +30,12 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
+import { toast } from "@/hooks/use-toast";
 import type { 
   Expense, 
   ExpenseCategory, 
@@ -69,6 +70,16 @@ const formSchema = z.object({
   plan_id: z.string().nullable().optional(),
   asset_id: z.string().nullable().optional(),
   tags: z.array(z.string()).optional(),
+}).superRefine((data, ctx) => {
+  if (data.allocation_type === "Campaign" && !data.campaign_id) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Campaign is required", path: ["campaign_id"] });
+  }
+  if (data.allocation_type === "Plan" && !data.plan_id) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Plan is required", path: ["plan_id"] });
+  }
+  if (data.allocation_type === "Asset" && !data.asset_id) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Asset is required", path: ["asset_id"] });
+  }
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -97,6 +108,7 @@ export function ExpenseFormDialog({
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
   const [assets, setAssets] = useState<any[]>([]);
+  const [relatedDataLoading, setRelatedDataLoading] = useState(false);
   const isEditing = !!expense;
 
   const form = useForm<FormValues>({
@@ -129,6 +141,24 @@ export function ExpenseFormDialog({
   const watchTdsPercent = form.watch("tds_percent");
   const watchAllocationType = form.watch("allocation_type");
 
+  // Clear conflicting allocation fields when type changes
+  useEffect(() => {
+    if (watchAllocationType === "General") {
+      form.setValue("campaign_id", null);
+      form.setValue("plan_id", null);
+      form.setValue("asset_id", null);
+    } else if (watchAllocationType === "Campaign") {
+      form.setValue("plan_id", null);
+      form.setValue("asset_id", null);
+    } else if (watchAllocationType === "Plan") {
+      form.setValue("campaign_id", null);
+      form.setValue("asset_id", null);
+    } else if (watchAllocationType === "Asset") {
+      form.setValue("campaign_id", null);
+      form.setValue("plan_id", null);
+    }
+  }, [watchAllocationType, form]);
+
   // Auto-calculate GST
   useEffect(() => {
     if (watchGstType === "None") {
@@ -149,10 +179,10 @@ export function ExpenseFormDialog({
 
   // Load related data
   useEffect(() => {
-    if (company?.id) {
+    if (company?.id && open) {
       loadRelatedData();
     }
-  }, [company?.id]);
+  }, [company?.id, open]);
 
   // Reset form when expense changes
   useEffect(() => {
@@ -191,32 +221,89 @@ export function ExpenseFormDialog({
   }, [expense, form]);
 
   const loadRelatedData = async () => {
-    // Load campaigns
-    const { data: campaignData } = await supabase
-      .from("campaigns")
-      .select("id, campaign_name, client_name")
-      .eq("company_id", company!.id)
-      .order("created_at", { ascending: false })
-      .limit(100);
-    setCampaigns(campaignData || []);
+    setRelatedDataLoading(true);
+    try {
+      const [campaignRes, planRes, assetRes] = await Promise.all([
+        supabase
+          .from("campaigns")
+          .select("id, campaign_name, client_name")
+          .eq("company_id", company!.id)
+          .order("created_at", { ascending: false })
+          .limit(200),
+        supabase
+          .from("plans")
+          .select("id, name, client_name")
+          .eq("company_id", company!.id)
+          .order("created_at", { ascending: false })
+          .limit(200),
+        supabase
+          .from("media_assets")
+          .select("id, media_asset_code, location, city")
+          .eq("company_id", company!.id)
+          .order("created_at", { ascending: false })
+          .limit(200),
+      ]);
 
-    // Load plans
-    const { data: planData } = await supabase
-      .from("plans")
-      .select("id, name, client_name")
-      .eq("company_id", company!.id)
-      .order("created_at", { ascending: false })
-      .limit(100);
-    setPlans(planData || []);
+      if (campaignRes.error) {
+        console.error("Failed to load campaigns:", campaignRes.error);
+        toast({ title: "Warning", description: "Could not load campaigns list", variant: "destructive" });
+      }
+      setCampaigns(campaignRes.data || []);
 
-    // Load assets
-    const { data: assetData } = await supabase
-      .from("media_assets")
-      .select("id, media_asset_code, location, city")
-      .eq("company_id", company!.id)
-      .order("created_at", { ascending: false })
-      .limit(100);
-    setAssets(assetData || []);
+      if (planRes.error) {
+        console.error("Failed to load plans:", planRes.error);
+        toast({ title: "Warning", description: "Could not load plans list", variant: "destructive" });
+      }
+      setPlans(planRes.data || []);
+
+      if (assetRes.error) {
+        console.error("Failed to load assets:", assetRes.error);
+        toast({ title: "Warning", description: "Could not load assets list", variant: "destructive" });
+      }
+      setAssets(assetRes.data || []);
+    } catch (err) {
+      console.error("Error loading allocation data:", err);
+    } finally {
+      setRelatedDataLoading(false);
+    }
+  };
+
+  const getCampaignLabel = (c: any) => {
+    const name = c.campaign_name || c.name || c.id;
+    const client = c.client_name || "—";
+    return `${name} — ${client}`;
+  };
+
+  const getPlanLabel = (p: any) => {
+    const name = p.name || p.plan_name || p.id;
+    const client = p.client_name || "—";
+    return `${name} — ${client}`;
+  };
+
+  const getAssetLabel = (a: any) => {
+    const code = a.media_asset_code || a.asset_code || a.id;
+    return `${code} — ${a.location || ""}${a.city ? ` (${a.city})` : ""}`;
+  };
+
+  const getAllocationPreviewText = () => {
+    const type = watchAllocationType;
+    if (type === "General") return "This expense will be allocated as a General expense.";
+    if (type === "Campaign") {
+      const id = form.watch("campaign_id");
+      const found = campaigns.find(c => c.id === id);
+      return found ? `Allocated to Campaign: ${getCampaignLabel(found)}` : "Select a campaign below.";
+    }
+    if (type === "Plan") {
+      const id = form.watch("plan_id");
+      const found = plans.find(p => p.id === id);
+      return found ? `Allocated to Plan: ${getPlanLabel(found)}` : "Select a plan below.";
+    }
+    if (type === "Asset") {
+      const id = form.watch("asset_id");
+      const found = assets.find(a => a.id === id);
+      return found ? `Allocated to Asset: ${getAssetLabel(found)}` : "Select an asset below.";
+    }
+    return "";
   };
 
   const handleSubmit = async (values: FormValues) => {
@@ -268,95 +355,386 @@ export function ExpenseFormDialog({
   const tdsAmount = watchTdsApplicable ? totalAmount * (watchTdsPercent / 100) : 0;
   const netPayable = totalAmount - tdsAmount;
 
+  const EmptyState = ({ label }: { label: string }) => (
+    <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground bg-muted/30 rounded-md border border-dashed">
+      <AlertCircle className="h-4 w-4 shrink-0" />
+      <span>No {label} found for this company. {relatedDataLoading ? "Loading..." : "Check permissions or create one first."}</span>
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "Edit Expense" : "Add New Expense"}
           </DialogTitle>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="basic">Basic</TabsTrigger>
-                <TabsTrigger value="allocation">Allocation</TabsTrigger>
-                <TabsTrigger value="tax">Tax & TDS</TabsTrigger>
-                <TabsTrigger value="payment">Payment</TabsTrigger>
-              </TabsList>
+        <div className="flex-1 overflow-y-auto pr-1">
+          <Form {...form}>
+            <form id="expense-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+              <Tabs defaultValue="basic" className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="basic">Basic</TabsTrigger>
+                  <TabsTrigger value="allocation">Allocation</TabsTrigger>
+                  <TabsTrigger value="tax">Tax & TDS</TabsTrigger>
+                  <TabsTrigger value="payment">Payment</TabsTrigger>
+                </TabsList>
 
-              <TabsContent value="basic" className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Expense Date */}
+                <TabsContent value="basic" className="space-y-4 mt-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Expense Date */}
+                    <FormField
+                      control={form.control}
+                      name="expense_date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Expense Date *</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? format(field.value, "dd MMM yyyy") : "Select date"}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Category */}
+                    <FormField
+                      control={form.control}
+                      name="category"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Category *</FormLabel>
+                          <Select
+                            value={field.value}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              const cat = categories.find(c => c.name === value);
+                              if (cat) {
+                                form.setValue("category_id", cat.id);
+                              }
+                            }}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {categories.map((cat) => (
+                                <SelectItem key={cat.id} value={cat.name}>
+                                  <div className="flex items-center gap-2">
+                                    <div 
+                                      className="w-2 h-2 rounded-full" 
+                                      style={{ backgroundColor: cat.color }} 
+                                    />
+                                    {cat.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Vendor */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="vendor_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Vendor Name *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter vendor name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="vendor_gstin"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Vendor GSTIN</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., 36AABCU9603R1ZM" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Invoice Details */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="invoice_no"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Invoice Number</FormLabel>
+                          <FormControl>
+                            <Input placeholder="INV-001" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="invoice_date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Invoice Date</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? format(field.value, "dd MMM yyyy") : "Select date"}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value || undefined}
+                                onSelect={field.onChange}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Amount */}
                   <FormField
                     control={form.control}
-                    name="expense_date"
+                    name="amount_before_tax"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Expense Date *</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                {field.value ? format(field.value, "dd MMM yyyy") : "Select date"}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
+                        <FormLabel>Amount (Before Tax) *</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            step="0.01"
+                            placeholder="0.00" 
+                            {...field}
+                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  {/* Category */}
+                  {/* Notes */}
                   <FormField
                     control={form.control}
-                    name="category"
+                    name="notes"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Category *</FormLabel>
-                        <Select
-                          value={field.value}
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            const cat = categories.find(c => c.name === value);
-                            if (cat) {
-                              form.setValue("category_id", cat.id);
-                            }
-                          }}
-                        >
+                        <FormLabel>Notes</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Additional details..." 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TabsContent>
+
+                <TabsContent value="allocation" className="space-y-4 mt-4">
+                  {/* Allocation Type */}
+                  <FormField
+                    control={form.control}
+                    name="allocation_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Allocation Type</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select category" />
+                              <SelectValue />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {categories.map((cat) => (
-                              <SelectItem key={cat.id} value={cat.name}>
-                                <div className="flex items-center gap-2">
-                                  <div 
-                                    className="w-2 h-2 rounded-full" 
-                                    style={{ backgroundColor: cat.color }} 
-                                  />
-                                  {cat.name}
-                                </div>
+                            <SelectItem value="General">General</SelectItem>
+                            <SelectItem value="Campaign">Campaign</SelectItem>
+                            <SelectItem value="Plan">Plan</SelectItem>
+                            <SelectItem value="Asset">Asset</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Allocation Preview */}
+                  <div className="text-sm px-3 py-2 rounded-md bg-muted/50 border text-muted-foreground">
+                    {getAllocationPreviewText()}
+                  </div>
+
+                  {/* Campaign Select */}
+                  {watchAllocationType === "Campaign" && (
+                    campaigns.length === 0 ? <EmptyState label="campaigns" /> : (
+                      <FormField
+                        control={form.control}
+                        name="campaign_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Campaign *</FormLabel>
+                            <Select 
+                              value={field.value || ""} 
+                              onValueChange={field.onChange}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select campaign" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {campaigns.map((c) => (
+                                  <SelectItem key={c.id} value={c.id}>
+                                    {getCampaignLabel(c)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )
+                  )}
+
+                  {/* Plan Select */}
+                  {watchAllocationType === "Plan" && (
+                    plans.length === 0 ? <EmptyState label="plans" /> : (
+                      <FormField
+                        control={form.control}
+                        name="plan_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Plan *</FormLabel>
+                            <Select 
+                              value={field.value || ""} 
+                              onValueChange={field.onChange}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select plan" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {plans.map((p) => (
+                                  <SelectItem key={p.id} value={p.id}>
+                                    {getPlanLabel(p)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )
+                  )}
+
+                  {/* Asset Select */}
+                  {watchAllocationType === "Asset" && (
+                    assets.length === 0 ? <EmptyState label="assets" /> : (
+                      <FormField
+                        control={form.control}
+                        name="asset_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Asset *</FormLabel>
+                            <Select 
+                              value={field.value || ""} 
+                              onValueChange={field.onChange}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select asset" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {assets.map((a) => (
+                                  <SelectItem key={a.id} value={a.id}>
+                                    {getAssetLabel(a)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )
+                  )}
+
+                  {/* Cost Center */}
+                  <FormField
+                    control={form.control}
+                    name="cost_center_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cost Center</FormLabel>
+                        <Select 
+                          value={field.value || ""} 
+                          onValueChange={field.onChange}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select cost center" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {costCenters.map((cc) => (
+                              <SelectItem key={cc.id} value={cc.id}>
+                                {cc.name} {cc.code && `(${cc.code})`}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -365,61 +743,224 @@ export function ExpenseFormDialog({
                       </FormItem>
                     )}
                   />
-                </div>
+                </TabsContent>
 
-                {/* Vendor */}
-                <div className="grid grid-cols-2 gap-4">
+                <TabsContent value="tax" className="space-y-4 mt-4">
+                  {/* GST Type */}
                   <FormField
                     control={form.control}
-                    name="vendor_name"
+                    name="gst_type_enum"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Vendor Name *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter vendor name" {...field} />
-                        </FormControl>
+                        <FormLabel>GST Type</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="None">No GST</SelectItem>
+                            <SelectItem value="CGST_SGST">CGST + SGST (Intra-state)</SelectItem>
+                            <SelectItem value="IGST">IGST (Inter-state)</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="vendor_gstin"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Vendor GSTIN</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., 36AABCU9603R1ZM" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                  {/* GST Breakdown */}
+                  {watchGstType !== "None" && (
+                    <div className="grid grid-cols-3 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="cgst"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>CGST (9%)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                step="0.01"
+                                {...field}
+                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                disabled={watchGstType === "IGST"}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="sgst"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>SGST (9%)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                step="0.01"
+                                {...field}
+                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                disabled={watchGstType === "IGST"}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="igst"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>IGST (18%)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                step="0.01"
+                                {...field}
+                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                disabled={watchGstType === "CGST_SGST"}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
 
-                {/* Invoice Details */}
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="invoice_no"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Invoice Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="INV-001" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                  {/* TDS */}
+                  <div className="space-y-4 pt-4 border-t">
+                    <FormField
+                      control={form.control}
+                      name="tds_applicable"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                          <div>
+                            <FormLabel>TDS Applicable</FormLabel>
+                            <p className="text-sm text-muted-foreground">
+                              Enable if TDS needs to be deducted
+                            </p>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {watchTdsApplicable && (
+                      <FormField
+                        control={form.control}
+                        name="tds_percent"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>TDS Percentage</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                step="0.01"
+                                max={100}
+                                placeholder="e.g., 2"
+                                {...field}
+                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     )}
-                  />
+                  </div>
+
+                  {/* Summary */}
+                  <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Amount Before Tax:</span>
+                      <span>₹{watchAmount.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Total Tax:</span>
+                      <span>₹{totalTax.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between font-medium">
+                      <span>Total Amount:</span>
+                      <span>₹{totalAmount.toLocaleString('en-IN')}</span>
+                    </div>
+                    {watchTdsApplicable && (
+                      <div className="flex justify-between text-sm text-red-600">
+                        <span>TDS ({watchTdsPercent}%):</span>
+                        <span>-₹{tdsAmount.toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-bold text-lg border-t pt-2">
+                      <span>Net Payable:</span>
+                      <span>₹{netPayable.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="payment" className="space-y-4 mt-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="payment_mode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Payment Mode</FormLabel>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Cash">Cash</SelectItem>
+                              <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                              <SelectItem value="UPI">UPI</SelectItem>
+                              <SelectItem value="Cheque">Cheque</SelectItem>
+                              <SelectItem value="Card">Card</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="payment_status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Payment Status</FormLabel>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Unpaid">Unpaid</SelectItem>
+                              <SelectItem value="Partially Paid">Partially Paid</SelectItem>
+                              <SelectItem value="Paid">Paid</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                   <FormField
                     control={form.control}
-                    name="invoice_date"
+                    name="paid_date"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Invoice Date</FormLabel>
+                        <FormLabel>Payment Date</FormLabel>
                         <Popover>
                           <PopoverTrigger asChild>
                             <FormControl>
@@ -448,459 +989,31 @@ export function ExpenseFormDialog({
                       </FormItem>
                     )}
                   />
-                </div>
+                </TabsContent>
+              </Tabs>
+            </form>
+          </Form>
+        </div>
 
-                {/* Amount */}
-                <FormField
-                  control={form.control}
-                  name="amount_before_tax"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Amount (Before Tax) *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          step="0.01"
-                          placeholder="0.00" 
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Notes */}
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notes</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Additional details..." 
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </TabsContent>
-
-              <TabsContent value="allocation" className="space-y-4 mt-4">
-                {/* Allocation Type */}
-                <FormField
-                  control={form.control}
-                  name="allocation_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Allocation Type</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="General">General</SelectItem>
-                          <SelectItem value="Campaign">Campaign</SelectItem>
-                          <SelectItem value="Plan">Plan</SelectItem>
-                          <SelectItem value="Asset">Asset</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Campaign Select */}
-                {watchAllocationType === "Campaign" && (
-                  <FormField
-                    control={form.control}
-                    name="campaign_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Campaign</FormLabel>
-                        <Select 
-                          value={field.value || ""} 
-                          onValueChange={field.onChange}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select campaign" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {campaigns.map((c) => (
-                              <SelectItem key={c.id} value={c.id}>
-                                {c.campaign_name} - {c.client_name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-                {/* Plan Select */}
-                {watchAllocationType === "Plan" && (
-                  <FormField
-                    control={form.control}
-                    name="plan_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Plan</FormLabel>
-                        <Select 
-                          value={field.value || ""} 
-                          onValueChange={field.onChange}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select plan" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {plans.map((p) => (
-                              <SelectItem key={p.id} value={p.id}>
-                                {p.name} - {p.client_name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-                {/* Asset Select */}
-                {watchAllocationType === "Asset" && (
-                  <FormField
-                    control={form.control}
-                    name="asset_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Asset</FormLabel>
-                        <Select 
-                          value={field.value || ""} 
-                          onValueChange={field.onChange}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select asset" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {assets.map((a) => (
-                              <SelectItem key={a.id} value={a.id}>
-                                {a.media_asset_code || a.id} - {a.location}, {a.city}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-                {/* Cost Center */}
-                <FormField
-                  control={form.control}
-                  name="cost_center_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cost Center</FormLabel>
-                      <Select 
-                        value={field.value || ""} 
-                        onValueChange={field.onChange}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select cost center" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {costCenters.map((cc) => (
-                            <SelectItem key={cc.id} value={cc.id}>
-                              {cc.name} {cc.code && `(${cc.code})`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </TabsContent>
-
-              <TabsContent value="tax" className="space-y-4 mt-4">
-                {/* GST Type */}
-                <FormField
-                  control={form.control}
-                  name="gst_type_enum"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>GST Type</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="None">No GST</SelectItem>
-                          <SelectItem value="CGST_SGST">CGST + SGST (Intra-state)</SelectItem>
-                          <SelectItem value="IGST">IGST (Inter-state)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* GST Breakdown */}
-                {watchGstType !== "None" && (
-                  <div className="grid grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="cgst"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>CGST (9%)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              step="0.01"
-                              {...field}
-                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                              disabled={watchGstType === "IGST"}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="sgst"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>SGST (9%)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              step="0.01"
-                              {...field}
-                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                              disabled={watchGstType === "IGST"}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="igst"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>IGST (18%)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              step="0.01"
-                              {...field}
-                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                              disabled={watchGstType === "CGST_SGST"}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                )}
-
-                {/* TDS */}
-                <div className="space-y-4 pt-4 border-t">
-                  <FormField
-                    control={form.control}
-                    name="tds_applicable"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                        <div>
-                          <FormLabel>TDS Applicable</FormLabel>
-                          <p className="text-sm text-muted-foreground">
-                            Enable if TDS needs to be deducted
-                          </p>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  {watchTdsApplicable && (
-                    <FormField
-                      control={form.control}
-                      name="tds_percent"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>TDS Percentage</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              step="0.01"
-                              max={100}
-                              placeholder="e.g., 2"
-                              {...field}
-                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-                </div>
-
-                {/* Summary */}
-                <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Amount Before Tax:</span>
-                    <span>₹{watchAmount.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Total Tax:</span>
-                    <span>₹{totalTax.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex justify-between font-medium">
-                    <span>Total Amount:</span>
-                    <span>₹{totalAmount.toLocaleString('en-IN')}</span>
-                  </div>
-                  {watchTdsApplicable && (
-                    <div className="flex justify-between text-sm text-red-600">
-                      <span>TDS ({watchTdsPercent}%):</span>
-                      <span>-₹{tdsAmount.toLocaleString('en-IN')}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between font-bold text-lg border-t pt-2">
-                    <span>Net Payable:</span>
-                    <span>₹{netPayable.toLocaleString('en-IN')}</span>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="payment" className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="payment_mode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Payment Mode</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Cash">Cash</SelectItem>
-                            <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                            <SelectItem value="UPI">UPI</SelectItem>
-                            <SelectItem value="Cheque">Cheque</SelectItem>
-                            <SelectItem value="Card">Card</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="payment_status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Payment Status</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Unpaid">Unpaid</SelectItem>
-                            <SelectItem value="Partially Paid">Partially Paid</SelectItem>
-                            <SelectItem value="Paid">Paid</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="paid_date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Payment Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? format(field.value, "dd MMM yyyy") : "Select date"}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value || undefined}
-                            onSelect={field.onChange}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </TabsContent>
-            </Tabs>
-
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? "Saving..." : isEditing ? "Update Expense" : "Create Expense"}
-              </Button>
-            </div>
-          </form>
-        </Form>
+        {/* Sticky footer */}
+        <div className="flex justify-end gap-3 pt-4 border-t mt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+          <Button 
+            type="submit" 
+            form="expense-form" 
+            disabled={loading}
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            {loading ? "Saving..." : isEditing ? "Update Expense" : "Create Expense"}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

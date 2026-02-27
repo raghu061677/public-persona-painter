@@ -441,7 +441,7 @@ export default function ExpensesList() {
           </div>
           <div className="flex gap-2">
             <PowerBillExpenseDialog onBillAdded={fetchPowerBills} />
-            <Button variant="gradient" size="lg" onClick={() => setIsExpenseDialogOpen(true)}>
+            <Button variant="default" size="lg" onClick={() => setIsExpenseDialogOpen(true)} className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md">
               <Plus className="mr-2 h-5 w-5" />
               Add Expense
             </Button>

@@ -538,26 +538,34 @@ const Dashboard = () => {
 
           {shouldShowWidget('invoices') && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <MetricCard
-                title="Profit / Loss"
-                value={`₹${financials.profitLoss.toLocaleString()}`}
-                icon={<Banknote />}
-              />
-              <MetricCard
-                title="GST Collected"
-                value={`₹${financials.gstCollected.toLocaleString()}`}
-                icon={<Receipt />}
-              />
-              <MetricCard
-                title="Pending Invoices"
-                value={financials.pendingInvoices}
-                icon={<Copy />}
-              />
-              <MetricCard
-                title="Paid Invoices"
-                value={financials.paidInvoices}
-                icon={<IndianRupee />}
-              />
+              <div onClick={() => navigate('/admin/reports/financial')} className="cursor-pointer hover:opacity-80 transition-opacity">
+                <MetricCard
+                  title="Profit / Loss"
+                  value={`₹${financials.profitLoss.toLocaleString()}`}
+                  icon={<Banknote />}
+                />
+              </div>
+              <div onClick={() => navigate('/admin/reports/financial')} className="cursor-pointer hover:opacity-80 transition-opacity">
+                <MetricCard
+                  title="GST Collected"
+                  value={`₹${financials.gstCollected.toLocaleString()}`}
+                  icon={<Receipt />}
+                />
+              </div>
+              <div onClick={() => navigate('/admin/invoices?status=pending')} className="cursor-pointer hover:opacity-80 transition-opacity">
+                <MetricCard
+                  title="Pending Invoices"
+                  value={financials.pendingInvoices}
+                  icon={<Copy />}
+                />
+              </div>
+              <div onClick={() => navigate('/admin/invoices?status=Paid')} className="cursor-pointer hover:opacity-80 transition-opacity">
+                <MetricCard
+                  title="Paid Invoices"
+                  value={financials.paidInvoices}
+                  icon={<IndianRupee />}
+                />
+              </div>
             </div>
           )}
 

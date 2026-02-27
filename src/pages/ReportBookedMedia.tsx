@@ -6,6 +6,7 @@ import {
   Users,
   Briefcase,
   Clock,
+  Settings2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -25,6 +26,7 @@ import { useReportFilters } from "@/hooks/useReportFilters";
 import { usePagination } from "@/hooks/usePagination";
 import { Button } from "@/components/ui/button";
 import { exportListExcel } from "@/utils/exports/excel/exportListExcel";
+import { BookedMediaCustomExportDialog } from "@/components/reports/BookedMediaCustomExportDialog";
 
 interface BookedMediaRow {
   asset_id: string;
@@ -112,6 +114,7 @@ export default function ReportBookedMedia() {
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(false);
+  const [customExportOpen, setCustomExportOpen] = useState(false);
   const [data, setData] = useState<BookedMediaRow[]>([]);
 
   const {
@@ -438,18 +441,29 @@ export default function ReportBookedMedia() {
             All booked/active campaign assets with campaign + client + duration details
           </p>
         </div>
-        <ReportExportMenu
-          onExportExcel={handleExportExcel}
-          onExportPDF={async () => {}}
-          metadata={{
-            reportName: "Booked Media Report",
-            generatedAt: new Date(),
-            dateRange: dateRange?.from && dateRange?.to ? { from: dateRange.from, to: dateRange.to } : undefined,
-            filtersApplied: [],
-            companyName: company?.name,
-          }}
-          disabled={filteredData.length === 0}
-        />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCustomExportOpen(true)}
+            className="gap-2"
+          >
+            <Settings2 className="h-4 w-4" />
+            Custom Fields Export
+          </Button>
+          <ReportExportMenu
+            onExportExcel={handleExportExcel}
+            onExportPDF={async () => {}}
+            metadata={{
+              reportName: "Booked Media Report",
+              generatedAt: new Date(),
+              dateRange: dateRange?.from && dateRange?.to ? { from: dateRange.from, to: dateRange.to } : undefined,
+              filtersApplied: [],
+              companyName: company?.name,
+            }}
+            disabled={filteredData.length === 0}
+          />
+        </div>
       </div>
 
       <ReportControls
@@ -544,6 +558,16 @@ export default function ReportBookedMedia() {
           </div>
         </>
       )}
+
+      <BookedMediaCustomExportDialog
+        open={customExportOpen}
+        onOpenChange={setCustomExportOpen}
+        rows={filteredData}
+        startDate={dateRange?.from?.toISOString().split("T")[0] || new Date().toISOString().split("T")[0]}
+        endDate={dateRange?.to?.toISOString().split("T")[0] || new Date().toISOString().split("T")[0]}
+        companyName={company?.name}
+        themeColor={company?.theme_color || undefined}
+      />
     </div>
   );
 }

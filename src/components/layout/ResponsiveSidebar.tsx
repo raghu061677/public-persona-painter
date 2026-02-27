@@ -326,16 +326,25 @@ export function ResponsiveSidebar() {
                 )}
 
                 {rbac.canViewModule('finance') && (
-                  <MenuGroup icon={DollarSign} label="Finance">
-                    <MenuItem icon={FileSpreadsheet} label="Quotations" href="/admin/estimations" />
-                    <MenuItem icon={FileText} label="Sales Orders" href="/admin/sales-orders" />
-                    <MenuItem icon={FileCheck} label="Purchase Orders" href="/admin/purchase-orders" />
-                    <MenuItem icon={FileCheck} label="Proforma Invoice" href="/admin/proformas" />
-                    <MenuItem icon={Receipt} label="Invoices" href="/admin/invoices" />
-                    <MenuItem icon={CreditCard} label="Payments" href="/admin/payments" />
-                    <MenuItem icon={DollarSign} label="Expenses" href="/admin/expenses" />
-                    <MenuItem icon={Zap} label="Power Bills" href="/admin/power-bills" />
-                  </MenuGroup>
+                  <>
+                    <MenuGroup icon={DollarSign} label="Finance">
+                      <MenuItem icon={FileSpreadsheet} label="Quotations" href="/admin/estimations" />
+                      <MenuItem icon={FileText} label="Sales Orders" href="/admin/sales-orders" />
+                      <MenuItem icon={FileCheck} label="Purchase Orders" href="/admin/purchase-orders" />
+                      <MenuItem icon={FileCheck} label="Proforma Invoice" href="/admin/proformas" />
+                      <MenuItem icon={Receipt} label="Invoices" href="/admin/invoices" />
+                      <MenuItem icon={CreditCard} label="Payments" href="/admin/payments" />
+                      <MenuItem icon={DollarSign} label="Expenses" href="/admin/expenses" />
+                      <MenuItem icon={Zap} label="Power Bills" href="/admin/power-bills" />
+                      <MenuItem icon={CalendarDays} label="Month Close" href="/admin/finance/month-close" />
+                    </MenuGroup>
+                    <MenuGroup icon={Wallet} label="Payables">
+                      <MenuItem icon={Zap} label="Generate Payables" href="/admin/finance/generate-payables" />
+                      <MenuItem icon={FileText} label="Vendor Ledger" href="/admin/reports/vendor-ledger" />
+                      <MenuItem icon={FileText} label="Printer Ledger" href="/admin/reports/printer-ledger" />
+                      <MenuItem icon={Wallet} label="Ops Payables" href="/admin/reports/ops-payables" />
+                    </MenuGroup>
+                  </>
                 )}
 
                 {rbac.canViewModule('reports') && (

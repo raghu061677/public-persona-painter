@@ -56,6 +56,7 @@ export const ROUTES = {
   INVOICES_DETAIL: (id: string) => `/admin/invoices/${id}`,
   EXPENSES: "/admin/expenses",
   FINANCE_DASHBOARD: "/admin/finance",
+  MONTH_CLOSE: "/admin/finance/month-close",
   
   // Power Bills
   POWER_BILLS_DASHBOARD: "/admin/power-bills",

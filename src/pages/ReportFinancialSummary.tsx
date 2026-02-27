@@ -91,6 +91,19 @@ export default function ReportFinancialSummary() {
           sub="Received − Expenses" />
       </div>
 
+      {/* OOH Intelligence Links */}
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => navigate("/admin/reports/campaign-profitability")}>
+          <BarChart3 className="h-3.5 w-3.5 mr-1.5" /> Campaign Profitability
+        </Button>
+        <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => navigate("/admin/reports/ooh-revenue")}>
+          <Building2 className="h-3.5 w-3.5 mr-1.5" /> OOH Revenue Insights
+        </Button>
+        <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => navigate("/admin/reports/ooh-kpis")}>
+          <Tv2 className="h-3.5 w-3.5 mr-1.5" /> OOH KPIs
+        </Button>
+      </div>
+
       {/* ── Tab Navigation ── */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="h-9">

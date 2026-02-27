@@ -1,629 +1,494 @@
 import PptxGenJS from "pptxgenjs";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { fetchImageAsBase64 } from "@/lib/qrWatermark";
-import { buildStreetViewUrl } from "@/lib/streetview";
-import { 
-  sanitizePptHyperlink, 
-  sanitizePptText, 
-  PPT_SAFE_FONTS 
+import {
+  sanitizePptText,
+  PPT_SAFE_FONTS,
 } from "@/lib/ppt/sanitizers";
 
 // ========== CONSTANTS ==========
-const SLIDE_WIDTH = 10; // inches
-const SLIDE_HEIGHT = 7.5; // inches
-const MARGIN = 0.4; // inches from edge
-const CONTENT_WIDTH = SLIDE_WIDTH - (MARGIN * 2); // 9.2 inches
+const SLIDE_WIDTH = 10;
+const SLIDE_HEIGHT = 7.5;
+const MARGIN = 0.4;
+const CONTENT_WIDTH = SLIDE_WIDTH - MARGIN * 2;
 
-// Colors
 const PRIMARY_COLOR = "1E40AF";
 const SECONDARY_COLOR = "10B981";
 const MUTED_COLOR = "64748B";
 const BORDER_COLOR = "E2E8F0";
-const BG_LIGHT = "F8FAFC";
 
-// Photo type configuration
-const PHOTO_TYPE_CONFIG = [
-  { keys: ["geo", "geotag", "Geo-Tagged", "Geo-Tagged Photo"], label: "Geo-tagged Photo", color: "10B981" },
-  { keys: ["newspaper", "Newspaper", "Newspaper Photo"], label: "Newspaper Ad", color: "3B82F6" },
-  { keys: ["traffic1", "traffic_left", "Traffic", "Traffic Photo 1"], label: "Traffic View 1", color: "F59E0B" },
-  { keys: ["traffic2", "traffic_right", "Traffic Photo 2"], label: "Traffic View 2", color: "EF4444" },
-  { keys: ["Other", "Other Photo"], label: "Other Photo", color: "6B7280" },
-];
+// The 4 mandatory proof photo slots — order matters
+const PROOF_SLOTS = [
+  { key: "geotag", aliases: ["geo", "geotag", "geo-tagged", "geo-tagged photo", "photo_1"], label: "Geo-tagged Photo", color: "10B981" },
+  { key: "newspaper", aliases: ["newspaper", "newspaper photo", "photo_2"], label: "Newspaper Ad", color: "3B82F6" },
+  { key: "traffic1", aliases: ["traffic1", "traffic_left", "traffic", "traffic photo 1", "photo_3"], label: "Traffic View 1", color: "F59E0B" },
+  { key: "traffic2", aliases: ["traffic2", "traffic_right", "traffic photo 2", "photo_4"], label: "Traffic View 2", color: "EF4444" },
+] as const;
 
-interface CampaignData {
+interface CampaignAssetRow {
   id: string;
-  campaign_name: string;
-  client_name: string;
-  start_date: string;
-  end_date: string;
-  plan_id?: string;
-}
-
-interface AssetData {
-  id: string;
-  asset_code: string;
+  asset_id: string;
   area: string;
   city: string;
   location: string;
   direction?: string;
   media_type?: string;
-  qr_code_url?: string;
-  latitude?: number;
-  longitude?: number;
   dimensions?: string;
   total_sqft?: number | string;
   illumination_type?: string;
-}
-
-interface PhotoData {
-  photo_url: string;
-  category: string;
   latitude?: number;
   longitude?: number;
-  uploaded_at: string;
-  asset_id: string;
-  campaign_asset_id: string;
+  mounter_name?: string;
+  completed_at?: string;
+  status?: string;
+  photos?: Record<string, string> | null;
 }
 
-interface GroupedPhotos {
-  [campaignAssetId: string]: {
-    asset: AssetData;
-    photos: PhotoData[];
-  };
-}
-
-// Truncate long text
-function truncateText(text: string, maxLength: number): string {
-  const sanitized = sanitizePptText(text);
-  if (sanitized.length <= maxLength) return sanitized;
-  return sanitized.substring(0, maxLength - 3) + "...";
-}
-
-// Get photo config by category
-function getPhotoConfig(category: string): { label: string; color: string } {
-  for (const config of PHOTO_TYPE_CONFIG) {
-    if (config.keys.some(key => category.toLowerCase().includes(key.toLowerCase()))) {
-      return { label: config.label, color: config.color };
-    }
+// ─── Placeholder generator ───────────────────────────────────
+let _placeholderDataUrl: string | null = null;
+function getPlaceholderDataUrl(): string {
+  if (_placeholderDataUrl) return _placeholderDataUrl;
+  const canvas = document.createElement("canvas");
+  canvas.width = 800;
+  canvas.height = 600;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    _placeholderDataUrl =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7W2u0AAAAASUVORK5CYII=";
+    return _placeholderDataUrl;
   }
-  return { label: category || "Photo", color: "6B7280" };
+  ctx.fillStyle = "#F3F4F6";
+  ctx.fillRect(0, 0, 800, 600);
+  ctx.fillStyle = "#9CA3AF";
+  ctx.font = "bold 40px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("Missing", 400, 280);
+  ctx.font = "24px Arial";
+  ctx.fillText("Photo not uploaded", 400, 330);
+  _placeholderDataUrl = canvas.toDataURL("image/png");
+  return _placeholderDataUrl;
 }
 
-// QR cache
-const qrCache = new Map<string, { base64: string; streetViewUrl: string }>();
-
-async function getCachedQR(asset: AssetData): Promise<{ base64: string; streetViewUrl: string } | null> {
-  if (!asset.qr_code_url) return null;
-  
-  if (qrCache.has(asset.id)) {
-    return qrCache.get(asset.id)!;
-  }
-
-  try {
-    const streetViewUrl = asset.latitude && asset.longitude 
-      ? buildStreetViewUrl(asset.latitude, asset.longitude)
-      : null;
-    
-    if (!streetViewUrl) return null;
-
-    const base64 = await fetchImageAsBase64(asset.qr_code_url);
-    const result = { base64, streetViewUrl };
-    qrCache.set(asset.id, result);
-    return result;
-  } catch (error) {
-    console.warn(`Failed to fetch QR for asset ${asset.id}:`, error);
-    return null;
-  }
+// ─── Resolve the 4 proof photo URLs for one asset ────────────
+interface ResolvedSlot {
+  label: string;
+  color: string;
+  url: string | null; // null = missing
+  source: "campaign_assets" | "media_photos" | null;
 }
 
-export async function generateProofOfDisplayPPT(campaignId: string): Promise<void> {
-  try {
-    // Get current user and their company
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Authentication required");
+function resolveProofSlots(
+  caPhotosJson: Record<string, string> | null | undefined,
+  mediaPhotos: Array<{ photo_url: string; category: string }>
+): ResolvedSlot[] {
+  const result: ResolvedSlot[] = [];
 
-    // Fetch campaign data with company verification
-    const { data: campaign, error: campaignError } = await supabase
-      .from("campaigns")
-      .select("*, company_id")
-      .eq("id", campaignId)
-      .single();
+  for (const slot of PROOF_SLOTS) {
+    let url: string | null = null;
+    let source: ResolvedSlot["source"] = null;
 
-    if (campaignError) throw campaignError;
-    if (!campaign) throw new Error("Campaign not found");
-
-    // Verify user has access to this campaign's company
-    const { data: userCompany } = await supabase
-      .from("company_users")
-      .select("company_id")
-      .eq("user_id", user.id)
-      .eq("company_id", campaign.company_id)
-      .single();
-
-    if (!userCompany) {
-      throw new Error("You don't have access to this campaign");
-    }
-
-    // Fetch company details
-    const { data: company } = await supabase
-      .from("companies")
-      .select("name, logo_url")
-      .eq("id", campaign.company_id)
-      .single();
-
-    // Fetch campaign_assets with snapshot data
-    const { data: campaignAssets, error: campaignAssetsError } = await supabase
-      .from("campaign_assets")
-      .select(`
-        id,
-        asset_id,
-        area,
-        city,
-        location,
-        direction,
-        media_type,
-        latitude,
-        longitude,
-        dimensions,
-        total_sqft,
-        illumination_type,
-        mounter_name,
-        completed_at,
-        status,
-        media_assets(qr_code_url, area, city, location, direction, media_type, dimensions, total_sqft, illumination_type)
-      `)
-      .eq("campaign_id", campaignId)
-      .order("city", { ascending: true })
-      .order("area", { ascending: true });
-
-    if (campaignAssetsError) throw campaignAssetsError;
-
-    // Create mapping from campaign_assets.id to asset data
-    const campaignAssetMap = new Map<string, AssetData & { mounter_name?: string; completed_at?: string; status?: string }>();
-    campaignAssets?.forEach(ca => {
-      const master = (ca.media_assets as any) || {};
-      campaignAssetMap.set(ca.id, {
-        id: ca.id,
-        asset_code: ca.asset_id,
-        area: ca.area || master.area || "Unknown",
-        city: ca.city || master.city || "Unknown",
-        location: ca.location || master.location || "Unknown",
-        direction: ca.direction || master.direction || undefined,
-        media_type: ca.media_type || master.media_type || undefined,
-        latitude: ca.latitude ?? undefined,
-        longitude: ca.longitude ?? undefined,
-        qr_code_url: master.qr_code_url ?? undefined,
-        dimensions: (ca as any).dimensions || master.dimensions || undefined,
-        total_sqft: (ca as any).total_sqft || master.total_sqft || undefined,
-        illumination_type: (ca as any).illumination_type || master.illumination_type || undefined,
-        mounter_name: (ca as any).mounter_name,
-        completed_at: (ca as any).completed_at,
-        status: (ca as any).status,
-      });
-    });
-
-    // Fetch all photos for this campaign
-    const { data: photos, error: photosError } = await supabase
-      .from("media_photos")
-      .select("*")
-      .eq("campaign_id", campaignId)
-      .eq("company_id", campaign.company_id)
-      .order("asset_id", { ascending: true })
-      .order("uploaded_at", { ascending: true });
-
-    if (photosError) throw photosError;
-    if (!photos || photos.length === 0) {
-      throw new Error("No photos available for this campaign");
-    }
-
-    // Group photos by campaign_assets.id
-    const grouped: GroupedPhotos = {};
-    
-    photos.forEach((photo: any) => {
-      const campaignAssetId = photo.asset_id;
-      const assetData = campaignAssetMap.get(campaignAssetId);
-      
-      if (!grouped[campaignAssetId]) {
-        grouped[campaignAssetId] = {
-          asset: assetData || {
-            id: campaignAssetId,
-            asset_code: campaignAssetId,
-            area: "Unknown",
-            city: "Unknown",
-            location: "Unknown",
-          },
-          photos: [],
-        };
+    // 1) Try campaign_assets.photos JSON first
+    if (caPhotosJson && typeof caPhotosJson === "object") {
+      for (const alias of slot.aliases) {
+        const val = caPhotosJson[alias] || caPhotosJson[alias.replace(/ /g, "_")];
+        if (typeof val === "string" && val.trim()) {
+          url = val.trim();
+          source = "campaign_assets";
+          break;
+        }
       }
-      grouped[campaignAssetId].photos.push({
-        ...photo,
-        campaign_asset_id: campaignAssetId,
-      });
-    });
-
-    // Generate PPT
-    const pptx = new PptxGenJS();
-    
-    // Configure presentation
-    pptx.author = company?.name || "Go-Ads 360°";
-    pptx.company = company?.name || "Go-Ads 360°";
-    pptx.title = `Proof of Display - ${campaign.campaign_name}`;
-    pptx.subject = "Campaign Proof of Installation";
-    pptx.layout = "LAYOUT_16x9";
-
-    const footerY = SLIDE_HEIGHT - 0.6;
-
-    // ==================== SLIDE 1: COVER ====================
-    const coverSlide = pptx.addSlide();
-    coverSlide.background = { color: PRIMARY_COLOR };
-
-    // Campaign name (centered, large)
-    coverSlide.addText(sanitizePptText(campaign.campaign_name), {
-      x: MARGIN,
-      y: 2.0,
-      w: CONTENT_WIDTH,
-      h: 1.2,
-      fontSize: 44,
-      bold: true,
-      color: "FFFFFF",
-      align: "center",
-      fontFace: PPT_SAFE_FONTS.primary,
-    });
-
-    // Subtitle
-    coverSlide.addText("Proof of Performance Report", {
-      x: MARGIN,
-      y: 3.2,
-      w: CONTENT_WIDTH,
-      h: 0.6,
-      fontSize: 24,
-      color: "E0E7FF",
-      align: "center",
-      fontFace: PPT_SAFE_FONTS.primary,
-    });
-
-    // Horizontal divider
-    coverSlide.addShape(pptx.ShapeType.rect, {
-      x: 3.5,
-      y: 4.0,
-      w: 3,
-      h: 0.02,
-      fill: { color: SECONDARY_COLOR },
-    });
-
-    // Total Assets badge
-    const assetsWithPhotos = Object.keys(grouped).length;
-    coverSlide.addText(`Total Assets: ${assetsWithPhotos}`, {
-      x: MARGIN,
-      y: 4.3,
-      w: CONTENT_WIDTH,
-      h: 0.5,
-      fontSize: 18,
-      bold: true,
-      color: "FFFFFF",
-      align: "center",
-      fontFace: PPT_SAFE_FONTS.primary,
-    });
-
-    // Footer with company branding
-    coverSlide.addText(sanitizePptText(company?.name || "Go-Ads 360°"), {
-      x: MARGIN,
-      y: footerY,
-      w: CONTENT_WIDTH,
-      h: 0.4,
-      fontSize: 12,
-      color: "B0C4DE",
-      align: "center",
-      fontFace: PPT_SAFE_FONTS.primary,
-    });
-
-    // ==================== SLIDE 2: SUMMARY ====================
-    const summarySlide = pptx.addSlide();
-    summarySlide.background = { color: "FFFFFF" };
-
-    // Summary title
-    summarySlide.addText("Campaign Summary", {
-      x: MARGIN,
-      y: 0.4,
-      w: CONTENT_WIDTH,
-      h: 0.7,
-      fontSize: 28,
-      bold: true,
-      color: PRIMARY_COLOR,
-      fontFace: PPT_SAFE_FONTS.primary,
-    });
-
-    // Calculate stats
-    const totalAssets = Object.keys(grouped).length;
-    const totalPhotos = photos.length;
-    const verifiedAssets = Object.values(grouped).filter(g => {
-      const assetData = g.asset as any;
-      return assetData?.status === "Verified" || assetData?.status === "Completed";
-    }).length;
-
-    // Summary table
-    const summaryTableData: any[][] = [
-      [
-        { text: "Metric", options: { bold: true, fill: { color: PRIMARY_COLOR }, color: "FFFFFF" } }, 
-        { text: "Value", options: { bold: true, fill: { color: PRIMARY_COLOR }, color: "FFFFFF" } }
-      ],
-      ["Total Assets", totalAssets.toString()],
-      ["Assets with Photos", totalAssets.toString()],
-      ["Total Photos Uploaded", totalPhotos.toString()],
-      ["Verified Assets", verifiedAssets.toString()],
-    ];
-
-    summarySlide.addTable(summaryTableData, {
-      x: 1.5,
-      y: 1.4,
-      w: 7,
-      colW: [4.5, 2.5],
-      border: { type: "solid", color: BORDER_COLOR, pt: 0.5 },
-      fontFace: PPT_SAFE_FONTS.primary,
-      fontSize: 14,
-      align: "left",
-      valign: "middle",
-      rowH: 0.5,
-    });
-
-    // Campaign period info
-    const startDate = format(new Date(campaign.start_date), "dd MMM yyyy");
-    const endDate = format(new Date(campaign.end_date), "dd MMM yyyy");
-    
-    summarySlide.addText(`Campaign Period: ${startDate} - ${endDate}`, {
-      x: MARGIN,
-      y: 5.0,
-      w: CONTENT_WIDTH,
-      h: 0.4,
-      fontSize: 14,
-      color: MUTED_COLOR,
-      align: "center",
-      fontFace: PPT_SAFE_FONTS.primary,
-    });
-
-    summarySlide.addText(`Client: ${sanitizePptText(campaign.client_name)}`, {
-      x: MARGIN,
-      y: 5.5,
-      w: CONTENT_WIDTH,
-      h: 0.4,
-      fontSize: 14,
-      color: MUTED_COLOR,
-      align: "center",
-      fontFace: PPT_SAFE_FONTS.primary,
-    });
-
-    // Footer
-    summarySlide.addText("Powered by Go-Ads 360° — OOH Media Platform", {
-      x: MARGIN,
-      y: footerY,
-      w: CONTENT_WIDTH,
-      h: 0.3,
-      fontSize: 10,
-      color: MUTED_COLOR,
-      align: "center",
-      fontFace: PPT_SAFE_FONTS.primary,
-    });
-
-    // ==================== ASSET SLIDES ====================
-    for (const [campaignAssetId, data] of Object.entries(grouped)) {
-      await addAssetSlides(pptx, data.asset, data.photos, company?.name || "Go-Ads 360°");
     }
 
-    // Generate and download
-    const fileName = `${campaign.campaign_name.replace(/[^a-z0-9]/gi, "_")}-Proof-Report.pptx`;
-    await pptx.writeFile({ fileName });
+    // 2) Fallback to media_photos by category
+    if (!url && mediaPhotos.length > 0) {
+      for (const alias of slot.aliases) {
+        const match = mediaPhotos.find(
+          (p) => p.category && p.category.toLowerCase() === alias.toLowerCase()
+        );
+        if (match?.photo_url) {
+          url = match.photo_url;
+          source = "media_photos";
+          break;
+        }
+      }
+    }
 
-  } catch (error) {
-    console.error("Error generating PPT:", error);
-    throw error;
+    result.push({ label: slot.label, color: slot.color, url, source });
   }
+
+  return result;
 }
 
-async function addAssetSlides(
-  pptx: PptxGenJS,
-  asset: AssetData,
-  photos: PhotoData[],
-  companyName: string
-): Promise<void> {
-  const footerY = SLIDE_HEIGHT - 0.6;
+// ─── Main export ─────────────────────────────────────────────
+export async function generateProofOfDisplayPPT(campaignId: string): Promise<void> {
+  // Auth check
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Authentication required");
 
-  // Process photos in pairs (2 per slide)
-  for (let i = 0; i < photos.length; i += 2) {
-    const slide = pptx.addSlide();
-    slide.background = { color: "FFFFFF" };
+  // Fetch campaign
+  const { data: campaign, error: campaignError } = await supabase
+    .from("campaigns")
+    .select("*, company_id, campaign_code")
+    .eq("id", campaignId)
+    .single();
+  if (campaignError) throw campaignError;
+  if (!campaign) throw new Error("Campaign not found");
 
-    // ========== HEADER SECTION ==========
-    const cityArea = `${asset.city}, ${asset.area}`;
-    const locationText = truncateText(asset.location, 50);
-    const headerTitle = `Asset: ${asset.asset_code} – ${cityArea}, ${locationText}`;
-    
-    slide.addText(truncateText(headerTitle, 85), {
-      x: MARGIN,
-      y: 0.25,
-      w: CONTENT_WIDTH - 0.2,
-      h: 0.45,
-      fontSize: 18,
-      bold: true,
-      color: PRIMARY_COLOR,
-      fontFace: PPT_SAFE_FONTS.primary,
-    });
+  // Verify access
+  const { data: userCompany } = await supabase
+    .from("company_users")
+    .select("company_id")
+    .eq("user_id", user.id)
+    .eq("company_id", campaign.company_id)
+    .single();
+  if (!userCompany) throw new Error("You don't have access to this campaign");
 
-    // Details line
-    const detailParts: string[] = [];
-    if (asset.location) {
-      detailParts.push(`Location: ${truncateText(asset.location, 35)}`);
-    }
-    if (asset.direction) {
-      detailParts.push(`Direction: ${sanitizePptText(asset.direction)}`);
-    }
-    if (asset.dimensions) {
-      detailParts.push(`Dimension: ${sanitizePptText(asset.dimensions)}`);
-    }
-    if (asset.illumination_type) {
-      detailParts.push(sanitizePptText(asset.illumination_type));
-    }
+  // Company info
+  const { data: company } = await supabase
+    .from("companies")
+    .select("name, logo_url")
+    .eq("id", campaign.company_id)
+    .single();
 
-    const detailsText = truncateText(detailParts.join(" | "), 120);
-    slide.addText(detailsText, {
-      x: MARGIN,
-      y: 0.75,
-      w: CONTENT_WIDTH,
-      h: 0.3,
-      fontSize: 11,
-      color: MUTED_COLOR,
-      fontFace: PPT_SAFE_FONTS.primary,
-    });
+  const companyName = company?.name || "Go-Ads 360°";
+  const campaignCode = campaign.campaign_code || campaign.id;
 
-    // ========== PHOTO SECTION ==========
-    const photoAreaY = 1.15;
-    const photoAreaHeight = 4.6;
-    const photoWidth = 4.3;
-    const photoHeight = photoAreaHeight;
-    const photoGap = 0.3;
-    const photoStartX = MARGIN + 0.1;
+  // Fetch campaign_assets (includes photos JSON)
+  const { data: campaignAssets, error: caError } = await supabase
+    .from("campaign_assets")
+    .select(
+      `id, asset_id, area, city, location, direction, media_type, dimensions,
+       total_sqft, illumination_type, latitude, longitude, mounter_name,
+       completed_at, status, photos`
+    )
+    .eq("campaign_id", campaignId)
+    .order("city", { ascending: true })
+    .order("area", { ascending: true });
+  if (caError) throw caError;
 
-    // Photo 1 (left)
-    const photo1 = photos[i];
-    if (photo1) {
-      await addPhotoWithFrame(slide, pptx, photo1, photoStartX, photoAreaY, photoWidth, photoHeight);
-    }
-
-    // Photo 2 (right) if exists
-    if (i + 1 < photos.length) {
-      const photo2 = photos[i + 1];
-      const photo2X = photoStartX + photoWidth + photoGap;
-      await addPhotoWithFrame(slide, pptx, photo2, photo2X, photoAreaY, photoWidth, photoHeight);
-    }
-
-    // ========== FOOTER SECTION ==========
-    const assetData = asset as any;
-    const mounterName = assetData.mounter_name || "N/A";
-    const completedDate = assetData.completed_at 
-      ? format(new Date(assetData.completed_at), "dd MMM yyyy")
-      : "Pending";
-    
-    slide.addText(sanitizePptText(`Installed by: ${mounterName} | Completed: ${completedDate}`), {
-      x: MARGIN,
-      y: 5.9,
-      w: 4.5,
-      h: 0.25,
-      fontSize: 9,
-      italic: true,
-      color: MUTED_COLOR,
-      fontFace: PPT_SAFE_FONTS.primary,
-    });
-
-    // Company branding
-    slide.addText(sanitizePptText(companyName), {
-      x: 5.5,
-      y: 5.9,
-      w: 4,
-      h: 0.25,
-      fontSize: 9,
-      bold: true,
-      color: PRIMARY_COLOR,
-      align: "right",
-      fontFace: PPT_SAFE_FONTS.primary,
-    });
-
-    // Powered by footer
-    slide.addText("Powered by Go-Ads 360° — OOH Media Platform", {
-      x: MARGIN,
-      y: footerY,
-      w: CONTENT_WIDTH,
-      h: 0.3,
-      fontSize: 10,
-      color: MUTED_COLOR,
-      align: "center",
-      fontFace: PPT_SAFE_FONTS.primary,
-    });
+  if (!campaignAssets || campaignAssets.length === 0) {
+    throw new Error("No assets found for this campaign");
   }
-}
 
-async function addPhotoWithFrame(
-  slide: any,
-  pptx: PptxGenJS,
-  photo: PhotoData,
-  x: number,
-  y: number,
-  w: number,
-  h: number
-): Promise<void> {
-  const borderWidth = 0.03;
-  const labelHeight = 0.35;
-  const imageHeight = h - labelHeight - 0.1;
+  // Fetch media_photos for this campaign (supplementary source)
+  const { data: mediaPhotos } = await supabase
+    .from("media_photos")
+    .select("photo_url, category, asset_id")
+    .eq("campaign_id", campaignId)
+    .eq("company_id", campaign.company_id);
 
-  const photoConfig = getPhotoConfig(photo.category);
-
-  // Outer border/frame
-  slide.addShape(pptx.ShapeType.rect, {
-    x: x - borderWidth,
-    y: y - borderWidth,
-    w: w + (borderWidth * 2),
-    h: h + (borderWidth * 2),
-    line: { color: BORDER_COLOR, width: 1.5 },
-    fill: { color: "FFFFFF" },
+  // Group media_photos by campaign_asset_id
+  const mediaPhotosByAsset = new Map<string, Array<{ photo_url: string; category: string }>>();
+  (mediaPhotos || []).forEach((p: any) => {
+    const list = mediaPhotosByAsset.get(p.asset_id) || [];
+    list.push({ photo_url: p.photo_url, category: p.category || "" });
+    mediaPhotosByAsset.set(p.asset_id, list);
   });
 
-  // Photo image - use path for URL-based images
-  slide.addImage({
-    path: photo.photo_url,
-    x: x,
-    y: y,
-    w: w,
-    h: imageHeight,
-    sizing: { type: "contain", w, h: imageHeight },
-  });
+  // ─── Build PPT ─────────────────────────────────────────────
+  const pptx = new PptxGenJS();
+  pptx.author = companyName;
+  pptx.company = companyName;
+  pptx.title = `Proof of Display - ${campaign.campaign_name}`;
+  pptx.subject = "Campaign Proof of Installation";
+  pptx.layout = "LAYOUT_16x9";
 
-  // Category label badge at bottom
-  const labelY = y + imageHeight + 0.05;
-  slide.addShape(pptx.ShapeType.rect, {
-    x: x,
-    y: labelY,
-    w: w,
-    h: labelHeight,
-    fill: { color: photoConfig.color },
-  });
+  const footerY = SLIDE_HEIGHT - 0.55;
 
-  slide.addText(sanitizePptText(photoConfig.label), {
-    x: x,
-    y: labelY,
-    w: w,
-    h: labelHeight,
-    fontSize: 11,
+  // ══════ COVER SLIDE ══════
+  const coverSlide = pptx.addSlide();
+  coverSlide.background = { color: PRIMARY_COLOR };
+
+  coverSlide.addText(sanitizePptText(campaign.campaign_name), {
+    x: MARGIN,
+    y: 2.0,
+    w: CONTENT_WIDTH,
+    h: 1.2,
+    fontSize: 44,
     bold: true,
     color: "FFFFFF",
     align: "center",
-    valign: "middle",
     fontFace: PPT_SAFE_FONTS.primary,
   });
 
-  // GPS coordinates if available
-  if (photo.latitude && photo.longitude) {
-    slide.addText(sanitizePptText(`GPS: ${photo.latitude.toFixed(6)}, ${photo.longitude.toFixed(6)}`), {
-      x: x,
-      y: y + 0.1,
-      w: w,
+  coverSlide.addText("Proof of Performance Report", {
+    x: MARGIN,
+    y: 3.2,
+    w: CONTENT_WIDTH,
+    h: 0.6,
+    fontSize: 24,
+    color: "E0E7FF",
+    align: "center",
+    fontFace: PPT_SAFE_FONTS.primary,
+  });
+
+  coverSlide.addShape(pptx.ShapeType.rect, {
+    x: 3.5,
+    y: 4.0,
+    w: 3,
+    h: 0.02,
+    fill: { color: SECONDARY_COLOR },
+  });
+
+  coverSlide.addText(sanitizePptText(`Campaign: ${campaignCode}  |  Assets: ${campaignAssets.length}`), {
+    x: MARGIN,
+    y: 4.3,
+    w: CONTENT_WIDTH,
+    h: 0.5,
+    fontSize: 18,
+    bold: true,
+    color: "FFFFFF",
+    align: "center",
+    fontFace: PPT_SAFE_FONTS.primary,
+  });
+
+  coverSlide.addText(sanitizePptText(companyName), {
+    x: MARGIN,
+    y: footerY,
+    w: CONTENT_WIDTH,
+    h: 0.4,
+    fontSize: 12,
+    color: "B0C4DE",
+    align: "center",
+    fontFace: PPT_SAFE_FONTS.primary,
+  });
+
+  // ══════ SUMMARY SLIDE ══════
+  const summarySlide = pptx.addSlide();
+  summarySlide.background = { color: "FFFFFF" };
+
+  summarySlide.addText("Campaign Summary", {
+    x: MARGIN,
+    y: 0.4,
+    w: CONTENT_WIDTH,
+    h: 0.7,
+    fontSize: 28,
+    bold: true,
+    color: PRIMARY_COLOR,
+    fontFace: PPT_SAFE_FONTS.primary,
+  });
+
+  // Count stats
+  let totalSlotsFilled = 0;
+  let totalSlotsMissing = 0;
+  const verifiedCount = campaignAssets.filter(
+    (ca) => ca.status === "Verified" || ca.status === "Completed"
+  ).length;
+
+  // Pre-resolve all slots for stats
+  const assetSlots = campaignAssets.map((ca) => {
+    const photos = ca.photos as Record<string, string> | null;
+    const mp = mediaPhotosByAsset.get(ca.id) || [];
+    const slots = resolveProofSlots(photos, mp);
+    const filled = slots.filter((s) => s.url !== null).length;
+    totalSlotsFilled += filled;
+    totalSlotsMissing += 4 - filled;
+    return { ca, slots };
+  });
+
+  const startDate = format(new Date(campaign.start_date), "dd MMM yyyy");
+  const endDate = format(new Date(campaign.end_date), "dd MMM yyyy");
+
+  const summaryTableData: any[][] = [
+    [
+      { text: "Metric", options: { bold: true, fill: { color: PRIMARY_COLOR }, color: "FFFFFF" } },
+      { text: "Value", options: { bold: true, fill: { color: PRIMARY_COLOR }, color: "FFFFFF" } },
+    ],
+    ["Campaign ID", campaignCode],
+    ["Client", campaign.client_name || "N/A"],
+    ["Period", `${startDate} – ${endDate}`],
+    ["Total Assets", campaignAssets.length.toString()],
+    ["Photos Uploaded", totalSlotsFilled.toString()],
+    ["Photos Missing", totalSlotsMissing.toString()],
+    ["Verified Assets", verifiedCount.toString()],
+  ];
+
+  summarySlide.addTable(summaryTableData, {
+    x: 1.5,
+    y: 1.4,
+    w: 7,
+    colW: [4.5, 2.5],
+    border: { type: "solid", color: BORDER_COLOR, pt: 0.5 },
+    fontFace: PPT_SAFE_FONTS.primary,
+    fontSize: 14,
+    align: "left",
+    valign: "middle",
+    rowH: 0.45,
+  });
+
+  summarySlide.addText("Powered by Go-Ads 360° — OOH Media Platform", {
+    x: MARGIN,
+    y: footerY,
+    w: CONTENT_WIDTH,
+    h: 0.3,
+    fontSize: 10,
+    color: MUTED_COLOR,
+    align: "center",
+    fontFace: PPT_SAFE_FONTS.primary,
+  });
+
+  // ══════ ASSET SLIDES (1 slide per asset, 4-photo grid) ══════
+  const placeholderData = getPlaceholderDataUrl();
+  const dateStamp = format(new Date(), "dd MMM yyyy");
+
+  for (const { ca, slots } of assetSlots) {
+    const slide = pptx.addSlide();
+    slide.background = { color: "FFFFFF" };
+
+    // ── Header ──
+    const cityArea = `${ca.city || "N/A"}, ${ca.area || "N/A"}`;
+    const headerText = `${ca.asset_id} — ${cityArea}`;
+    slide.addText(sanitizePptText(headerText), {
+      x: MARGIN,
+      y: 0.2,
+      w: CONTENT_WIDTH,
+      h: 0.4,
+      fontSize: 16,
+      bold: true,
+      color: PRIMARY_COLOR,
+      fontFace: PPT_SAFE_FONTS.primary,
+    });
+
+    // Detail line
+    const detailParts: string[] = [];
+    if (ca.location) detailParts.push(ca.location);
+    if (ca.direction) detailParts.push(`Dir: ${ca.direction}`);
+    if (ca.dimensions) detailParts.push(ca.dimensions);
+    if (ca.illumination_type) detailParts.push(ca.illumination_type);
+    slide.addText(sanitizePptText(detailParts.join(" | ").substring(0, 120)), {
+      x: MARGIN,
+      y: 0.6,
+      w: CONTENT_WIDTH,
       h: 0.25,
-      fontSize: 8,
+      fontSize: 10,
+      color: MUTED_COLOR,
+      fontFace: PPT_SAFE_FONTS.primary,
+    });
+
+    // ── 2x2 Photo Grid ──
+    const gridTop = 1.0;
+    const gridGap = 0.2;
+    const cellW = (CONTENT_WIDTH - gridGap) / 2;
+    const cellH = 2.6;
+    const labelH = 0.3;
+
+    const positions = [
+      { x: MARGIN, y: gridTop },                          // top-left: geotag
+      { x: MARGIN + cellW + gridGap, y: gridTop },        // top-right: newspaper
+      { x: MARGIN, y: gridTop + cellH + labelH + gridGap }, // bottom-left: traffic1
+      { x: MARGIN + cellW + gridGap, y: gridTop + cellH + labelH + gridGap }, // bottom-right: traffic2
+    ];
+
+    for (let i = 0; i < 4; i++) {
+      const slot = slots[i];
+      const pos = positions[i];
+      const imgH = cellH - labelH - 0.05;
+
+      // Border frame
+      slide.addShape(pptx.ShapeType.rect, {
+        x: pos.x,
+        y: pos.y,
+        w: cellW,
+        h: cellH,
+        line: { color: BORDER_COLOR, width: 1 },
+        fill: { color: "FFFFFF" },
+      });
+
+      // Image or placeholder
+      if (slot.url) {
+        try {
+          slide.addImage({
+            path: slot.url,
+            x: pos.x,
+            y: pos.y,
+            w: cellW,
+            h: imgH,
+            sizing: { type: "contain", w: cellW, h: imgH },
+          });
+        } catch (err) {
+          console.warn(`Failed to add image for ${slot.label}:`, err);
+          slide.addImage({
+            data: placeholderData,
+            x: pos.x,
+            y: pos.y,
+            w: cellW,
+            h: imgH,
+            sizing: { type: "contain", w: cellW, h: imgH },
+          });
+        }
+      } else {
+        // Missing placeholder
+        slide.addImage({
+          data: placeholderData,
+          x: pos.x,
+          y: pos.y,
+          w: cellW,
+          h: imgH,
+          sizing: { type: "contain", w: cellW, h: imgH },
+        });
+      }
+
+      // Category label badge
+      const badgeY = pos.y + imgH + 0.05;
+      const badgeColor = slot.url ? slot.color : "9CA3AF";
+      slide.addShape(pptx.ShapeType.rect, {
+        x: pos.x,
+        y: badgeY,
+        w: cellW,
+        h: labelH,
+        fill: { color: badgeColor },
+      });
+      slide.addText(sanitizePptText(slot.url ? slot.label : `${slot.label} — MISSING`), {
+        x: pos.x,
+        y: badgeY,
+        w: cellW,
+        h: labelH,
+        fontSize: 10,
+        bold: true,
+        color: "FFFFFF",
+        align: "center",
+        valign: "middle",
+        fontFace: PPT_SAFE_FONTS.primary,
+      });
+    }
+
+    // ── Footer: Campaign ID + Asset Code + Date ──
+    const footerLine = `${campaignCode}  |  ${ca.asset_id}  |  ${dateStamp}`;
+    slide.addShape(pptx.ShapeType.rect, {
+      x: 0,
+      y: footerY - 0.05,
+      w: SLIDE_WIDTH,
+      h: 0.45,
+      fill: { color: PRIMARY_COLOR },
+    });
+    slide.addText(sanitizePptText(footerLine), {
+      x: MARGIN,
+      y: footerY,
+      w: CONTENT_WIDTH / 2,
+      h: 0.3,
+      fontSize: 10,
       color: "FFFFFF",
-      fill: { color: "00000080" },
-      align: "center",
+      align: "left",
+      fontFace: PPT_SAFE_FONTS.primary,
+    });
+    slide.addText(sanitizePptText(companyName), {
+      x: SLIDE_WIDTH / 2,
+      y: footerY,
+      w: CONTENT_WIDTH / 2,
+      h: 0.3,
+      fontSize: 10,
+      bold: true,
+      color: "FFFFFF",
+      align: "right",
       fontFace: PPT_SAFE_FONTS.primary,
     });
   }
 
-  // Upload date badge
-  slide.addText(format(new Date(photo.uploaded_at), "dd MMM yyyy"), {
-    x: x + w - 1.2,
-    y: y + imageHeight - 0.35,
-    w: 1.1,
-    h: 0.25,
-    fontSize: 8,
-    color: "FFFFFF",
-    fill: { color: "00000080" },
-    align: "center",
-    fontFace: PPT_SAFE_FONTS.primary,
-  });
+  // ─── Save file ─────────────────────────────────────────────
+  const safeName = campaign.campaign_name.replace(/[^a-z0-9]/gi, "_");
+  const fileName = `${safeName}-Proof-Report.pptx`;
+  await pptx.writeFile({ fileName });
 }

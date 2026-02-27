@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/utils/mediaAssets";
+import { useNavigate } from "react-router-dom";
 
 interface SummaryCardsProps {
   totalAssets: number;
@@ -29,6 +30,11 @@ export function SummaryCards({
   newThisMonth,
   totalValue,
 }: SummaryCardsProps) {
+  const navigate = useNavigate();
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+
   const cards = [
     {
       title: "Total Assets",
@@ -36,6 +42,7 @@ export function SummaryCards({
       icon: Layers,
       color: "text-blue-600",
       bgColor: "bg-blue-50 dark:bg-blue-950/20",
+      link: "/media-assets",
     },
     {
       title: "Available",
@@ -43,6 +50,7 @@ export function SummaryCards({
       icon: ShieldCheck,
       color: "text-green-600",
       bgColor: "bg-green-50 dark:bg-green-950/20",
+      link: "/admin/reports/vacant-media",
     },
     {
       title: "Booked",
@@ -50,6 +58,7 @@ export function SummaryCards({
       icon: Calendar,
       color: "text-purple-600",
       bgColor: "bg-purple-50 dark:bg-purple-950/20",
+      link: `/admin/reports/booked-media?from=${monthStart}&to=${monthEnd}`,
     },
     {
       title: "Cities",
@@ -79,7 +88,11 @@ export function SummaryCards({
       {cards.map((card) => {
         const Icon = card.icon;
         return (
-          <Card key={card.title} className="overflow-hidden">
+          <Card
+            key={card.title}
+            className={cn("overflow-hidden", card.link && "cursor-pointer hover:shadow-md transition-shadow")}
+            onClick={() => card.link && navigate(card.link)}
+          >
             <CardContent className="p-2.5">
               <div className="flex items-start justify-between mb-1.5">
                 <div className={cn("p-1.5 rounded-lg", card.bgColor)}>

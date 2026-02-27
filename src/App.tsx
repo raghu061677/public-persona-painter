@@ -79,13 +79,13 @@ const Invoices = lazy(() => import("./pages/Invoices"));
 const ExpensesList = lazy(() => import("./pages/ExpensesList"));
 const SalesOrders = lazy(() => import("./pages/SalesOrders"));
 const PurchaseOrders = lazy(() => import("./pages/PurchaseOrders"));
-const Payments = lazy(() => import("./pages/Payments"));
+const Payments = lazy(() => import("./pages/PaymentsControlCenter"));
 const OperationsCreatives = lazy(() => import("./pages/OperationsCreatives"));
 const OperationsPrinting = lazy(() => import("./pages/OperationsPrinting"));
 const OperationsProofUploads = lazy(() => import("./pages/OperationsProofUploads"));
 const ReportClientBookings = lazy(() => import("./pages/ReportClientBookings"));
 const ReportCampaignBookings = lazy(() => import("./pages/ReportCampaignBookingsV2"));
-const ReportAssetRevenue = lazy(() => import("./pages/ReportAssetRevenue"));
+const ReportAssetRevenue = lazy(() => import("./pages/RevenueControlCenter"));
 const ReportFinancialSummary = lazy(() => import("./pages/ReportFinancialSummary"));
 const ReportProofExecution = lazy(() => import("./pages/ReportProofExecution"));
 const ReportAging = lazy(() => import("./pages/ReportAging"));
@@ -396,7 +396,7 @@ const App = () => (
               <Route path="tenant-analytics" element={<Navigate to="/admin/analytics-dashboard" replace />} />
               <Route path="analytics-dashboard" element={<ProtectedRoute requireAuth><ModernAppLayout><AnalyticsDashboard /></ModernAppLayout></ProtectedRoute>} />
               <Route path="analytics/inventory" element={<ProtectedRoute requireAuth><ModernAppLayout><InventoryUtilization /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="analytics/revenue-forecast" element={<ProtectedRoute requireAuth><ModernAppLayout><RevenueForecast /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="analytics/revenue-forecast" element={<Navigate to="/admin/reports/revenue?tab=forecast" replace />} />
               <Route path="proformas" element={<ProtectedRoute requireAuth><ModernAppLayout><ProformasList /></ModernAppLayout></ProtectedRoute>} />
               <Route path="proformas/:id" element={<ProtectedRoute requireAuth><ModernAppLayout><ProformaDetail /></ModernAppLayout></ProtectedRoute>} />
               <Route path="estimations" element={<ProtectedRoute requireAuth><ModernAppLayout><EstimationsList /></ModernAppLayout></ProtectedRoute>} />
@@ -424,7 +424,7 @@ const App = () => (
               <Route path="invoices/:id" element={<ProtectedRoute requireAuth><ModernAppLayout><InvoiceDetail /></ModernAppLayout></ProtectedRoute>} />
               <Route path="invoices-import" element={<ProtectedRoute requireAuth><ModernAppLayout><ImportInvoices /></ModernAppLayout></ProtectedRoute>} />
               <Route path="payment-reminders" element={<Navigate to="/admin/invoices" replace />} />
-              <Route path="payment-confirmations" element={<ProtectedRoute requireAuth><ModernAppLayout><PaymentConfirmations /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="payment-confirmations" element={<Navigate to="/admin/payments?tab=confirmations" replace />} />
               <Route path="expenses" element={<ProtectedRoute requireAuth><ModernAppLayout><ExpensesList /></ModernAppLayout></ProtectedRoute>} />
               <Route path="platform-admin-setup" element={<ProtectedRoute requireAuth><PlatformAdminSetup /></ProtectedRoute>} />
               <Route path="approval-settings" element={<Navigate to="/admin/approvals/rules" replace />} />

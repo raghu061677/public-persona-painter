@@ -175,6 +175,7 @@ const CompanySales = lazy(() => import("./pages/CompanySales"));
 const CompanyIntegrations = lazy(() => import("./pages/CompanyIntegrations"));
 const CompanyDeveloper = lazy(() => import("./pages/CompanyDeveloper"));
 const CompanyWorkflows = lazy(() => import("./pages/CompanyWorkflows"));
+const RateSettings = lazy(() => import("./pages/RateSettings"));
 const PlatformAdminDashboard = lazy(() => import("./pages/PlatformAdminDashboard"));
 const PlatformAdminSetup = lazy(() => import("./pages/PlatformAdminSetup"));
 const PlatformReports = lazy(() => import("./pages/PlatformReports"));
@@ -467,6 +468,7 @@ const App = () => (
                 <Route path="integrations" element={<CompanyIntegrations />} />
                 <Route path="developer" element={<CompanyDeveloper />} />
                 <Route path="workflows" element={<CompanyWorkflows />} />
+                <Route path="rate-settings" element={<RateSettings />} />
                 <Route path="alerts" element={<AlertsSettings />} />
               </Route>
             </Route>

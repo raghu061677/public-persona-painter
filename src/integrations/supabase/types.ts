@@ -8031,6 +8031,62 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_settings: {
+        Row: {
+          category: string
+          city: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          id: string
+          is_active: boolean
+          media_type: string | null
+          notes: string | null
+          rate_value: number
+          threshold_days: number | null
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          city?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          id?: string
+          is_active?: boolean
+          media_type?: string | null
+          notes?: string | null
+          rate_value?: number
+          threshold_days?: number | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          city?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          id?: string
+          is_active?: boolean
+          media_type?: string | null
+          notes?: string | null
+          rate_value?: number
+          threshold_days?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rate_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       receipt_sequences: {
         Row: {
           company_id: string

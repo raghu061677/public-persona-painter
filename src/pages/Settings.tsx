@@ -9,7 +9,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Shield, Key, Palette, Upload, Image, Hash, Zap, RefreshCw, Settings as SettingsIcon, HelpCircle, ImageDown } from "lucide-react";
+import { User, Shield, Key, Palette, Upload, Image, Hash, Zap, RefreshCw, Settings as SettingsIcon, HelpCircle, ImageDown, Database } from "lucide-react";
+import { CampaignIdMigrationDialog } from "@/components/admin/CampaignIdMigrationDialog";
 import { migrateClientIds } from "@/utils/migrateClientIds";
 import { ThemeCustomization } from "@/components/settings/ThemeCustomization";
 import { ColorLegend } from "@/components/settings/ColorLegend";
@@ -32,6 +33,7 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [migrating, setMigrating] = useState(false);
+  const [showCampaignIdMigration, setShowCampaignIdMigration] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [roles, setRoles] = useState<string[]>([]);
@@ -527,8 +529,34 @@ export default function Settings() {
                   </Button>
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Database className="h-5 w-5" />
+                    <CardTitle>Campaign ID Migration</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Convert old-format campaign codes to canonical CAM-YYYYMM-#### format
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Scan for campaigns using legacy ID formats (e.g. CAM-2026-February-002) and migrate them to the canonical format (CAM-202602-0007).
+                  </p>
+                  <Button variant="outline" onClick={() => setShowCampaignIdMigration(true)}>
+                    <Database className="mr-2 h-4 w-4" />
+                    Open Campaign ID Migration
+                  </Button>
+                </CardContent>
+              </Card>
             </>
           )}
+
+          <CampaignIdMigrationDialog
+            open={showCampaignIdMigration}
+            onOpenChange={setShowCampaignIdMigration}
+          />
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-6 mt-6">

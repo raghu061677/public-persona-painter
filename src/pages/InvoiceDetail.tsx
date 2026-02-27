@@ -85,7 +85,7 @@ export default function InvoiceDetail() {
         title: "Success",
         description: "Invoice deleted successfully",
       });
-      navigate('/finance/invoices');
+      navigate('/admin/invoices');
     }
   };
 
@@ -148,7 +148,7 @@ export default function InvoiceDetail() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/finance/invoices')}>
+            <Button variant="ghost" size="icon" onClick={() => navigate('/admin/invoices')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>

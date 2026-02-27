@@ -30,15 +30,17 @@ const DEFAULT_THRESHOLD = 90; // days
  * Find best matching rate: city+media_type > city > media_type > default (null/null)
  * Among matches, pick the one with latest effective_from <= today.
  */
+export type RateSource = "Default (Hardcoded)" | "Default" | "City Override" | "Media Override" | "City+Media Override";
+
 export function resolveRate(
   rates: RateSettingRow[],
   category: string,
   city?: string | null,
   mediaType?: string | null,
-): { rate: number; thresholdDays: number } {
+): { rate: number; thresholdDays: number; source: RateSource } {
   const active = rates.filter(r => r.category === category && r.is_active);
   if (active.length === 0) {
-    return { rate: DEFAULTS[category] ?? 0, thresholdDays: DEFAULT_THRESHOLD };
+    return { rate: DEFAULTS[category] ?? 0, thresholdDays: DEFAULT_THRESHOLD, source: "Default (Hardcoded)" };
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -60,9 +62,15 @@ export function resolveRate(
 
   const best = scored[0];
   if (!best) {
-    return { rate: DEFAULTS[category] ?? 0, thresholdDays: DEFAULT_THRESHOLD };
+    return { rate: DEFAULTS[category] ?? 0, thresholdDays: DEFAULT_THRESHOLD, source: "Default (Hardcoded)" };
   }
-  return { rate: best.rate_value, thresholdDays: best.threshold_days ?? DEFAULT_THRESHOLD };
+
+  let source: RateSource = "Default";
+  if (best.city && best.media_type) source = "City+Media Override";
+  else if (best.city) source = "City Override";
+  else if (best.media_type) source = "Media Override";
+
+  return { rate: best.rate_value, thresholdDays: best.threshold_days ?? DEFAULT_THRESHOLD, source };
 }
 
 /**
@@ -125,6 +133,8 @@ export interface OpsMarginLine extends OpsBillableLine {
   printingMargin: number;
   unmountingMargin: number;
   totalMargin: number;
+  mountingRateSource: RateSource;
+  printingRateSource: RateSource;
 }
 
 /**
@@ -146,14 +156,17 @@ export function computeOpsLines(
     const printReq = isPrintingRequired(ca);
     const backlit = isBacklit(ca.illumination_type);
 
-    // Resolve rates
-    const mountRate = resolveRate(rates, "vendor_mounting", ca.city, ca.media_type).rate;
+    // Resolve rates with source tracking
+    const mountResolved = resolveRate(rates, "vendor_mounting", ca.city, ca.media_type);
     const unmountRate = resolveRate(rates, "vendor_unmounting", ca.city, ca.media_type).rate;
     const printCategory = backlit ? "vendor_print_backlit" : "vendor_print_nonlit";
-    const printRate = resolveRate(rates, printCategory, ca.city, ca.media_type).rate;
+    const printResolved = resolveRate(rates, printCategory, ca.city, ca.media_type);
 
     const clientMount = resolveRate(rates, "client_mounting_short", ca.city, ca.media_type);
     const clientUnmount = resolveRate(rates, "client_unmounting", ca.city, ca.media_type).rate;
+
+    const mountRate = mountResolved.rate;
+    const printRate = printResolved.rate;
 
     // Payables
     const mountingPayable = mountRate;
@@ -194,6 +207,8 @@ export function computeOpsLines(
       printingMargin: printingBillable - printingPayable,
       unmountingMargin: unmountingBillable - unmountingPayable,
       totalMargin: (mountingBillable - mountingPayable) + (printingBillable - printingPayable) + (unmountingBillable - unmountingPayable),
+      mountingRateSource: mountResolved.source,
+      printingRateSource: printResolved.source,
     };
   });
 }

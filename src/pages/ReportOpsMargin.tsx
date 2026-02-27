@@ -114,6 +114,8 @@ export default function ReportOpsMargin() {
         { header: "Printing Payable", key: "pp", width: 16 },
         { header: "Printing Margin", key: "pm", width: 16 },
         { header: "Total Margin", key: "totalMargin", width: 16 },
+        { header: "Mount Rate Source", key: "mountSource", width: 20 },
+        { header: "Print Rate Source", key: "printSource", width: 20 },
       ];
       ws.getRow(1).font = { bold: true };
       filtered.forEach(l => ws.addRow({
@@ -121,6 +123,8 @@ export default function ReportOpsMargin() {
         mb: l.mountingBillable, mp: l.mountingPayable, mm: l.mountingMargin,
         pb: l.printingBillable, pp: l.printingRequired ? l.printingPayable : 0, pm: l.printingMargin,
         totalMargin: l.totalMargin,
+        mountSource: l.mountingRateSource,
+        printSource: l.printingRateSource,
       }));
     } else {
       ws.columns = [
@@ -211,11 +215,12 @@ export default function ReportOpsMargin() {
                   <th className="text-right py-3 px-4 font-medium">Print ↑</th>
                   <th className="text-right py-3 px-4 font-medium">Print ↓</th>
                   <th className="text-right py-3 px-4 font-medium">Margin</th>
+                  <th className="text-left py-3 px-4 font-medium">Rate Source</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={9} className="text-center py-12 text-muted-foreground">No data</td></tr>
+                  <tr><td colSpan={10} className="text-center py-12 text-muted-foreground">No data</td></tr>
                 ) : filtered.map((l, i) => (
                   <tr key={i} className="border-b border-border/20 hover:bg-muted/30">
                     <td className="py-2.5 px-4 font-medium">{l.campaignName}</td>
@@ -227,6 +232,11 @@ export default function ReportOpsMargin() {
                     <td className="py-2.5 px-4 text-right font-mono">{l.printingRequired ? fmt(l.printingBillable) : "—"}</td>
                     <td className="py-2.5 px-4 text-right font-mono text-muted-foreground">{l.printingRequired ? fmt(l.printingPayable) : "—"}</td>
                     <td className={`py-2.5 px-4 text-right font-mono font-bold ${l.totalMargin >= 0 ? "text-primary" : "text-destructive"}`}>{fmt(l.totalMargin)}</td>
+                    <td className="py-2.5 px-4">
+                      <Badge variant={l.mountingRateSource.includes("Override") ? "default" : "secondary"} className="text-xs">
+                        {l.mountingRateSource}
+                      </Badge>
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -201,7 +201,7 @@ export default function ExpensesList() {
     });
     
     fetchExpenses();
-    setIsExpenseDialogOpen(false);
+    // Don't close dialog here — the dialog handles its own close on success
     return data?.id || null;
   };
 

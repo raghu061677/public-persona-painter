@@ -146,31 +146,40 @@ export default function ReportMonthlyCampaigns() {
         if (caData) allCA.push(...caData);
       }
 
-      // Fetch asset codes
+      // Fetch asset codes + fallback fields
       const assetIds = [...new Set(allCA.map((r: any) => r.asset_id))];
       const codeMap = new Map<string, string>();
+      const assetDetailMap = new Map<string, { direction: string; dimensions: string; illumination_type: string }>();
       for (let i = 0; i < assetIds.length; i += 100) {
         const chunk = assetIds.slice(i, i + 100);
         const { data: maData } = await supabase
           .from("media_assets")
-          .select("id, media_asset_code")
+          .select("id, media_asset_code, direction, dimensions, illumination_type")
           .in("id", chunk);
-        maData?.forEach((m: any) => codeMap.set(m.id, m.media_asset_code || m.id));
+        maData?.forEach((m: any) => {
+          codeMap.set(m.id, m.media_asset_code || `ASSET-${m.id.replace(/-/g, '').slice(-6).toUpperCase()}`);
+          assetDetailMap.set(m.id, {
+            direction: m.direction || "-",
+            dimensions: m.dimensions || "-",
+            illumination_type: m.illumination_type || "-",
+          });
+        });
       }
 
       // Group assets by campaign
       const assetsByCamp = new Map<string, CampaignAssetRow[]>();
       allCA.forEach((r: any) => {
         const arr = assetsByCamp.get(r.campaign_id) || [];
+        const maDetail = assetDetailMap.get(r.asset_id);
         arr.push({
-          asset_code: codeMap.get(r.asset_id) || r.asset_id,
+          asset_code: codeMap.get(r.asset_id) || `ASSET-${r.asset_id.replace(/-/g, '').slice(-6).toUpperCase()}`,
           media_type: r.media_type || "-",
           city: r.city || "-",
           area: r.area || "-",
           location: r.location || "-",
-          dimensions: r.dimensions || "-",
-          illumination: r.illumination_type || "-",
-          direction: r.direction || "-",
+          dimensions: r.dimensions || maDetail?.dimensions || "-",
+          illumination: r.illumination_type || maDetail?.illumination_type || "-",
+          direction: r.direction || maDetail?.direction || "-",
         });
         assetsByCamp.set(r.campaign_id, arr);
       });

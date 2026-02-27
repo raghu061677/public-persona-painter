@@ -59,6 +59,7 @@ const DATE_TYPES = [
 const SORT_OPTIONS = [
   { value: "city", label: "City" },
   { value: "asset_code", label: "Asset Code" },
+  { value: "location", label: "Location" },
   { value: "campaign_name", label: "Campaign Name" },
   { value: "client_name", label: "Client Name" },
   { value: "start_date", label: "Start Date" },
@@ -172,19 +173,25 @@ export default function ReportBookedMedia() {
       // Get asset codes
       const assetIds = [...new Set((caData || []).map((r: any) => r.asset_id))];
       let assetCodeMap = new Map<string, string>();
-      let assetExtraMap = new Map<string, { address: string; status: string }>();
+      let assetExtraMap = new Map<string, { address: string; status: string; direction: string; dimensions: string; illumination_type: string; total_sqft: number }>();
 
       if (assetIds.length > 0) {
-        // Batch in chunks of 100
         for (let i = 0; i < assetIds.length; i += 100) {
           const chunk = assetIds.slice(i, i + 100);
           const { data: maData } = await supabase
             .from("media_assets")
-            .select("id, media_asset_code, address, status")
+            .select("id, media_asset_code, address, status, direction, dimensions, illumination_type, total_sqft")
             .in("id", chunk);
           maData?.forEach((ma: any) => {
-            assetCodeMap.set(ma.id, ma.media_asset_code || ma.id);
-            assetExtraMap.set(ma.id, { address: ma.address || "-", status: ma.status || "-" });
+            assetCodeMap.set(ma.id, ma.media_asset_code || `ASSET-${ma.id.replace(/-/g, '').slice(-6).toUpperCase()}`);
+            assetExtraMap.set(ma.id, {
+              address: ma.address || "-",
+              status: ma.status || "-",
+              direction: ma.direction || "-",
+              dimensions: ma.dimensions || "-",
+              illumination_type: ma.illumination_type || "-",
+              total_sqft: ma.total_sqft || 0,
+            });
           });
         }
       }
@@ -193,22 +200,23 @@ export default function ReportBookedMedia() {
         const campaign = r.campaigns;
         const startDate = r.booking_start_date || r.start_date || campaign.start_date;
         const endDate = r.booking_end_date || r.end_date || campaign.end_date;
+        const maExtra = assetExtraMap.get(r.asset_id);
 
         return {
           asset_id: r.asset_id,
-          asset_code: assetCodeMap.get(r.asset_id) || r.asset_id,
+          asset_code: assetCodeMap.get(r.asset_id) || `ASSET-${r.asset_id.replace(/-/g, '').slice(-6).toUpperCase()}`,
           media_type: r.media_type || "-",
           city: r.city || "-",
           area: r.area || "-",
           location: r.location || "-",
-          address: assetExtraMap.get(r.asset_id)?.address || "-",
-          direction: r.direction || "-",
-          dimensions: r.dimensions || "-",
-          total_sqft: r.total_sqft || 0,
-          illumination: r.illumination_type || "-",
+          address: maExtra?.address || "-",
+          direction: r.direction || maExtra?.direction || "-",
+          dimensions: r.dimensions || maExtra?.dimensions || "-",
+          total_sqft: r.total_sqft || maExtra?.total_sqft || 0,
+          illumination: r.illumination_type || maExtra?.illumination_type || "-",
           latitude: r.latitude || null,
           longitude: r.longitude || null,
-          asset_status: assetExtraMap.get(r.asset_id)?.status || "-",
+          asset_status: maExtra?.status || "-",
           campaign_name: campaign.campaign_name || "-",
           client_name: campaign.client_name || "-",
           start_date: startDate,

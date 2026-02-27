@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Building2, Map, Layers, Briefcase, Users, TrendingUp,
   FileText, Receipt, Zap, UserCog, Palette, FileSpreadsheet,
   Shield, DollarSign, Smartphone, Image, Settings, FileCheck, 
-  CreditCard, Globe, ShoppingBag, BarChart3, Sparkles, Menu, CheckCircle2, History, ListChecks, UserPlus, Clock, Wallet, Calendar
+  CreditCard, Globe, ShoppingBag, BarChart3, Sparkles, Menu, CheckCircle2, History, ListChecks, UserPlus, Clock, Wallet, Calendar, CalendarDays
 } from "lucide-react";
 import {
   Sidebar,
@@ -342,6 +342,7 @@ export function ResponsiveSidebar() {
                   <MenuGroup icon={BarChart3} label="Reports">
                     <MenuItem icon={Map} label="Media Availability" href="/admin/reports/vacant-media" />
                     <MenuItem icon={Calendar} label="Booked Media" href="/admin/reports/booked-media" />
+                    <MenuItem icon={CalendarDays} label="Monthly Campaigns" href="/admin/reports/monthly-campaigns" />
                     <MenuItem icon={Users} label="Client Bookings" href="/admin/reports/clients" />
                     <MenuItem icon={Briefcase} label="Campaign Bookings" href="/admin/reports/campaigns" />
                     <MenuItem icon={TrendingUp} label="Asset Revenue" href="/admin/reports/revenue" />

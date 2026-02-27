@@ -14,12 +14,14 @@ import { format } from "date-fns";
 import {
   DollarSign, TrendingUp, TrendingDown, Percent, Receipt,
   CalendarIcon, ArrowUpRight, AlertTriangle, BarChart3,
-  Tv2, Building2, RefreshCw, Wallet,
+  Tv2, Building2, RefreshCw, Wallet, Users, FileDown,
+  Clock, CreditCard, FileText,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell,
 } from "recharts";
+import { exportListExcel } from "@/utils/exports/excel/exportListExcel";
 
 const fmt = (v: number) => `₹${v.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 
@@ -93,6 +95,7 @@ export default function ReportFinancialSummary() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="h-9">
           <TabsTrigger value="overview" className="text-xs px-4">Overview</TabsTrigger>
+          <TabsTrigger value="clients" className="text-xs px-4">Clients</TabsTrigger>
           <TabsTrigger value="aging" className="text-xs px-4">Aging</TabsTrigger>
           <TabsTrigger value="summary" className="text-xs px-4">Monthly Table</TabsTrigger>
           <TabsTrigger value="profitability" className="text-xs px-4">Profitability</TabsTrigger>
@@ -277,6 +280,151 @@ export default function ReportFinancialSummary() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* ── TAB: Clients ── */}
+        <TabsContent value="clients" className="space-y-5 mt-4">
+          {/* Quick Actions Strip */}
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => navigate(`/admin/invoices?status=Unpaid&from=${fromStr}&to=${toStr}`)}>
+              <FileText className="h-3.5 w-3.5 mr-1.5" /> Unpaid Invoices
+            </Button>
+            <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => { setActiveTab("aging"); }}>
+              <Clock className="h-3.5 w-3.5 mr-1.5" /> Overdue 90+ Days
+            </Button>
+            <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => navigate(`/admin/invoices?status=Paid&from=${fromStr}&to=${toStr}`)}>
+              <CreditCard className="h-3.5 w-3.5 mr-1.5" /> Payments Received
+            </Button>
+            <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => navigate(`/admin/expenses?from=${fromStr}&to=${toStr}`)}>
+              <TrendingDown className="h-3.5 w-3.5 mr-1.5" /> Expenses
+            </Button>
+          </div>
+
+          {/* Client Receivables — Top 10 Outstanding */}
+          <Card>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-orange-500" /> Client Receivables — Top 10 Outstanding
+              </CardTitle>
+              <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => {
+                exportListExcel({
+                  branding: { companyName: "GO-ADS 360°", title: "Client Outstanding Top 10" },
+                  fields: [
+                    { key: "clientName", label: "Client Name", width: 30 },
+                    { key: "outstanding", label: "Outstanding (₹)", type: "currency", width: 18 },
+                    { key: "unpaidCount", label: "Unpaid Invoices", type: "number", width: 16 },
+                    { key: "oldestDue", label: "Oldest Due", width: 16 },
+                    { key: "agingBucket", label: "Aging Bucket", width: 14 },
+                  ],
+                  rows: dash.clientOutstandingTop10,
+                  fileName: `Client_Outstanding_Top10_${fromStr}.xlsx`,
+                });
+              }}>
+                <FileDown className="h-3 w-3 mr-1" /> Export
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-auto max-h-[400px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Client Name</TableHead>
+                      <TableHead className="text-right">Outstanding (₹)</TableHead>
+                      <TableHead className="text-right">Unpaid Invoices</TableHead>
+                      <TableHead>Oldest Due</TableHead>
+                      <TableHead>Aging</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dash.clientOutstandingTop10.map((c, i) => (
+                      <TableRow key={c.clientId}>
+                        <TableCell className="font-medium">{c.clientName}</TableCell>
+                        <TableCell className="text-right font-semibold text-orange-600">{fmt(c.outstanding)}</TableCell>
+                        <TableCell className="text-right">{c.unpaidCount}</TableCell>
+                        <TableCell className="text-sm">{c.oldestDue || '—'}</TableCell>
+                        <TableCell>
+                          <Badge variant={c.agingBucket === '90+' ? 'destructive' : c.agingBucket === '61–90' ? 'destructive' : c.agingBucket === '31–60' ? 'secondary' : 'default'} className="text-[10px]">
+                            {c.agingBucket} days
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="link" size="sm" className="text-xs h-auto p-0"
+                            onClick={() => navigate(`/admin/invoices?client=${encodeURIComponent(c.clientName)}&status=Unpaid&from=${fromStr}&to=${toStr}`)}>
+                            View Invoices <ArrowUpRight className="h-3 w-3 ml-0.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {dash.clientOutstandingTop10.length === 0 && (
+                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No outstanding receivables</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Top Clients — By Invoiced */}
+          <Card>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Users className="h-4 w-4 text-blue-500" /> Top Clients — By Invoiced
+              </CardTitle>
+              <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => {
+                exportListExcel({
+                  branding: { companyName: "GO-ADS 360°", title: "Top Clients by Invoiced" },
+                  fields: [
+                    { key: "clientName", label: "Client Name", width: 30 },
+                    { key: "totalInvoiced", label: "Total Invoiced (₹)", type: "currency", width: 18 },
+                    { key: "totalReceived", label: "Total Received (₹)", type: "currency", width: 18 },
+                    { key: "outstanding", label: "Outstanding (₹)", type: "currency", width: 18 },
+                    { key: "invoiceCount", label: "Invoices", type: "number", width: 12 },
+                  ],
+                  rows: dash.clientInvoicedTop10,
+                  fileName: `Top_Clients_Invoiced_${fromStr}.xlsx`,
+                });
+              }}>
+                <FileDown className="h-3 w-3 mr-1" /> Export
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-auto max-h-[400px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Client Name</TableHead>
+                      <TableHead className="text-right">Total Invoiced</TableHead>
+                      <TableHead className="text-right">Total Received</TableHead>
+                      <TableHead className="text-right">Outstanding</TableHead>
+                      <TableHead className="text-right">Invoices</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dash.clientInvoicedTop10.map(c => (
+                      <TableRow key={c.clientId}>
+                        <TableCell className="font-medium">{c.clientName}</TableCell>
+                        <TableCell className="text-right">{fmt(c.totalInvoiced)}</TableCell>
+                        <TableCell className="text-right text-emerald-600">{fmt(c.totalReceived)}</TableCell>
+                        <TableCell className="text-right text-orange-600">{fmt(c.outstanding)}</TableCell>
+                        <TableCell className="text-right">{c.invoiceCount}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="link" size="sm" className="text-xs h-auto p-0"
+                            onClick={() => navigate(`/admin/invoices?client=${encodeURIComponent(c.clientName)}&from=${fromStr}&to=${toStr}`)}>
+                            View Invoices <ArrowUpRight className="h-3 w-3 ml-0.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {dash.clientInvoicedTop10.length === 0 && (
+                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No invoiced clients in this period</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* ── TAB: Aging ── */}

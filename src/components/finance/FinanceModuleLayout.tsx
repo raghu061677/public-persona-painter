@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,7 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  AlertCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import ExcelJS from "exceljs";
@@ -66,6 +67,7 @@ export interface FinanceModuleLayoutProps<T extends Record<string, any>> {
   /* Data */
   data: T[];
   loading: boolean;
+  error?: string | null;
   /** Unique key extractor */
   rowKey: (row: T) => string;
   onRowClick?: (row: T) => void;
@@ -95,6 +97,36 @@ export interface FinanceModuleLayoutProps<T extends Record<string, any>> {
 
 const PAGE_SIZES = [10, 20, 50, 100];
 
+/** Debounce hook */
+function useDebouncedValue(value: string, delay = 300) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debounced;
+}
+
+/** Skeleton row component */
+function SkeletonRows({ columns, count = 5 }: { columns: number; count?: number }) {
+  return (
+    <>
+      {Array.from({ length: count }).map((_, i) => (
+        <TableRow key={i} className={i % 2 === 0 ? "bg-muted/20" : ""}>
+          {Array.from({ length: columns }).map((_, j) => (
+            <TableCell key={j}>
+              <div
+                className="h-4 bg-muted animate-pulse rounded"
+                style={{ width: `${60 + Math.random() * 30}%` }}
+              />
+            </TableCell>
+          ))}
+        </TableRow>
+      ))}
+    </>
+  );
+}
+
 export function FinanceModuleLayout<T extends Record<string, any>>({
   title,
   subtitle,
@@ -103,6 +135,7 @@ export function FinanceModuleLayout<T extends Record<string, any>>({
   onCreateClick,
   data,
   loading,
+  error,
   rowKey,
   onRowClick,
   kpis,
@@ -118,6 +151,7 @@ export function FinanceModuleLayout<T extends Record<string, any>>({
   emptyDescription = "Try adjusting your filters or create a new record",
 }: FinanceModuleLayoutProps<T>) {
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebouncedValue(searchTerm);
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -125,15 +159,15 @@ export function FinanceModuleLayout<T extends Record<string, any>>({
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   // Reset page on filter change
-  useEffect(() => setPage(1), [searchTerm, statusFilter]);
+  useEffect(() => setPage(1), [debouncedSearch, statusFilter]);
 
   /* ── Filtering ── */
   const filtered = useMemo(() => {
     let result = [...data];
 
-    // Search
-    if (searchTerm) {
-      const t = searchTerm.toLowerCase();
+    // Search (debounced)
+    if (debouncedSearch) {
+      const t = debouncedSearch.toLowerCase();
       result = result.filter((row) =>
         searchFields.some((field) => {
           const val = row[field as string];
@@ -165,7 +199,7 @@ export function FinanceModuleLayout<T extends Record<string, any>>({
     }
 
     return result;
-  }, [data, searchTerm, statusFilter, sortField, sortDir, searchFields, statusAccessor]);
+  }, [data, debouncedSearch, statusFilter, sortField, sortDir, searchFields, statusAccessor]);
 
   /* ── Pagination ── */
   const totalPages = Math.ceil(filtered.length / pageSize);
@@ -245,7 +279,7 @@ export function FinanceModuleLayout<T extends Record<string, any>>({
           </h1>
           <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={exportExcel}>
             <Download className="h-4 w-4 mr-1" />
             Export Excel
@@ -261,43 +295,72 @@ export function FinanceModuleLayout<T extends Record<string, any>>({
 
       {/* ── KPI Widgets ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        {kpis.map((kpi) => {
-          const KpiIcon = kpi.icon;
-          return (
-            <Card
-              key={kpi.label}
-              className={kpi.onClick ? "cursor-pointer hover:border-primary/50 transition-colors" : ""}
-              onClick={kpi.onClick}
-            >
-              <CardContent className="pt-4 pb-3">
-                <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-                  <KpiIcon className="h-3.5 w-3.5" />
-                  {kpi.label}
-                </div>
-                <p className={`text-2xl font-bold ${kpi.valueClassName || ""}`}>
-                  {kpi.value}
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
+        {loading
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i}>
+                <CardContent className="pt-4 pb-3 space-y-2">
+                  <div className="h-3 w-20 bg-muted animate-pulse rounded" />
+                  <div className="h-7 w-16 bg-muted animate-pulse rounded" />
+                </CardContent>
+              </Card>
+            ))
+          : kpis.map((kpi) => {
+              const KpiIcon = kpi.icon;
+              return (
+                <Card
+                  key={kpi.label}
+                  className={
+                    kpi.onClick
+                      ? "cursor-pointer hover:border-primary/50 hover:shadow-sm transition-all"
+                      : "transition-shadow"
+                  }
+                  onClick={kpi.onClick}
+                >
+                  <CardContent className="pt-4 pb-3">
+                    <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+                      <KpiIcon className="h-3.5 w-3.5" />
+                      {kpi.label}
+                    </div>
+                    <p className={`text-2xl font-bold ${kpi.valueClassName || ""}`}>
+                      {kpi.value}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
       </div>
+
+      {/* ── Error State ── */}
+      {error && (
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardContent className="py-4 flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
+            <div>
+              <p className="font-medium text-destructive">Something went wrong</p>
+              <p className="text-sm text-muted-foreground">{error}</p>
+            </div>
+            <Button variant="outline" size="sm" className="ml-auto" onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Filter Bar ── */}
       <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center p-3 bg-card border rounded-lg">
-        <div className="relative flex-1 min-w-[200px] max-w-[320px]">
+        <div className="relative flex-1 min-w-[200px] max-w-full sm:max-w-[320px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={searchPlaceholder}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-9"
+            className="pl-9 h-9 text-[16px] sm:text-sm"
           />
         </div>
 
         {statuses.length > 0 && (
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px] h-9">
+            <SelectTrigger className="w-full sm:w-[150px] h-9">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -313,35 +376,35 @@ export function FinanceModuleLayout<T extends Record<string, any>>({
 
         {extraFilters}
 
-        <Button variant="ghost" size="sm" onClick={resetFilters}>
+        <Button variant="ghost" size="sm" onClick={resetFilters} className="h-9">
           <RotateCcw className="h-3.5 w-3.5 mr-1" />
           Reset
         </Button>
       </div>
 
       {/* ── Data Table ── */}
-      <Card>
+      <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
-              <TableRow className="border-b border-border/40">
+            <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
+              <TableRow className="border-b-2 border-border/60 hover:bg-transparent">
                 {columns.map((col) => (
                   <TableHead
                     key={col.key}
-                    className={col.align === "right" ? "text-right" : ""}
+                    className={`font-semibold text-xs uppercase tracking-wider whitespace-nowrap ${col.align === "right" ? "text-right" : ""}`}
                   >
                     {col.sortable ? (
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="-ml-3 h-8"
+                        className="-ml-3 h-8 hover:bg-background/60"
                         onClick={() => handleSort(col.key)}
                       >
                         {col.header}
                         {sortIcon(col.key)}
                       </Button>
                     ) : (
-                      <span className="font-medium">{col.header}</span>
+                      <span>{col.header}</span>
                     )}
                   </TableHead>
                 ))}
@@ -349,22 +412,11 @@ export function FinanceModuleLayout<T extends Record<string, any>>({
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className="text-center py-12">
-                    <div className="space-y-2">
-                      {[1, 2, 3].map((i) => (
-                        <div
-                          key={i}
-                          className="h-8 bg-muted animate-pulse rounded mx-auto w-3/4"
-                        />
-                      ))}
-                    </div>
-                  </TableCell>
-                </TableRow>
+                <SkeletonRows columns={columns.length} count={pageSize > 10 ? 8 : 5} />
               ) : paginated.length === 0 ? (
-                <TableRow>
+                <TableRow className="hover:bg-transparent">
                   <TableCell colSpan={columns.length} className="text-center py-16">
-                    <DisplayEmptyIcon className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <DisplayEmptyIcon className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-40" />
                     <p className="text-lg font-medium">{emptyTitle}</p>
                     <p className="text-sm text-muted-foreground mt-1">
                       {searchTerm || statusFilter !== "all"
@@ -383,20 +435,20 @@ export function FinanceModuleLayout<T extends Record<string, any>>({
                   </TableCell>
                 </TableRow>
               ) : (
-                paginated.map((row) => (
+                paginated.map((row, idx) => (
                   <TableRow
                     key={rowKey(row)}
-                    className={
-                      onRowClick
-                        ? "hover:bg-muted/30 cursor-pointer"
-                        : "hover:bg-muted/30"
-                    }
+                    className={`
+                      ${idx % 2 === 0 ? "bg-transparent" : "bg-muted/30"}
+                      ${onRowClick ? "cursor-pointer" : ""}
+                      hover:bg-primary/5 transition-colors
+                    `}
                     onClick={() => onRowClick?.(row)}
                   >
                     {columns.map((col) => (
                       <TableCell
                         key={col.key}
-                        className={col.align === "right" ? "text-right" : ""}
+                        className={`whitespace-nowrap ${col.align === "right" ? "text-right tabular-nums" : ""}`}
                       >
                         {col.cell(row)}
                       </TableCell>
@@ -410,7 +462,7 @@ export function FinanceModuleLayout<T extends Record<string, any>>({
 
         {/* ── Pagination ── */}
         {filtered.length > 0 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t">
+          <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 border-t gap-3">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>
                 Showing {(page - 1) * pageSize + 1}–

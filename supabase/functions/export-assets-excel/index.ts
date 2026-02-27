@@ -29,25 +29,49 @@ Deno.serve(withAuth(async (req) => {
   const { data: assets, error: assetsError } = await query.order('city', { ascending: true });
   if (assetsError) throw assetsError;
 
+  // Deduplicate by asset id
+  const seen = new Set<string>();
+  const deduped = (assets || []).filter((a: any) => {
+    const key = a.media_asset_code || a.id;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  // Sort: City → Media Type → Location
+  deduped.sort((a: any, b: any) => {
+    const cmp1 = (a.city || '').localeCompare(b.city || '');
+    if (cmp1 !== 0) return cmp1;
+    const cmp2 = (a.media_type || '').localeCompare(b.media_type || '');
+    if (cmp2 !== 0) return cmp2;
+    return (a.location || '').localeCompare(b.location || '');
+  });
+
+  // Standardised column order
   const csvRows: string[] = [];
   csvRows.push([
-    'Asset ID', 'City', 'Area', 'Location', 'Media Type', 'Dimension',
-    'Total Sq Ft', 'Facing', 'Status', 'Card Rate', 'Base Rate',
-    'Printing Charge', 'Mounting Charge', 'Latitude', 'Longitude',
-    'Municipal ID', 'Municipal Authority', 'Is Public', 'Zone', 'Sub Zone',
+    'Asset Code', 'Media Type', 'City', 'Location', 'Area', 'Facing',
+    'Size', 'Sq Ft', 'Lit Type', 'Rate', 'Status',
+    'Available From', 'Available To', 'Latitude', 'Longitude',
   ].join(','));
 
-  for (const asset of assets || []) {
+  for (const asset of deduped) {
     csvRows.push([
-      asset.id, asset.city || '', asset.area || '',
+      asset.media_asset_code || asset.id,
+      asset.media_type || '',
+      asset.city || '',
       `"${(asset.location || '').replace(/"/g, '""')}"`,
-      asset.media_type || '', asset.dimension || '',
-      asset.total_sqft || '', asset.facing || '', asset.status || '',
-      (asset.card_rate || 0).toFixed(2), (asset.base_rate || 0).toFixed(2),
-      (asset.printing_charge || 0).toFixed(2), (asset.mounting_charge || 0).toFixed(2),
-      asset.latitude || '', asset.longitude || '',
-      asset.municipal_id || '', asset.municipal_authority || '',
-      asset.is_public ? 'Yes' : 'No', asset.zone || '', asset.sub_zone || '',
+      asset.area || '',
+      asset.facing || asset.direction || '',
+      asset.dimension || asset.dimensions || '',
+      asset.total_sqft || '',
+      asset.illumination_type || asset.illumination || '',
+      (asset.card_rate || 0).toFixed(2),
+      asset.status || '',
+      asset.next_available_from || '',
+      '',
+      asset.latitude || '',
+      asset.longitude || '',
     ].join(','));
   }
 

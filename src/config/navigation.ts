@@ -175,7 +175,7 @@ import {
        items: [
          { label: "Client Bookings", href: "/admin/reports/clients", icon: Users },
          { label: "Campaign Bookings", href: "/admin/reports/campaigns", icon: Briefcase },
-         { label: "Asset Revenue", href: "/admin/reports/revenue", icon: TrendingUp },
+         { label: "Revenue Center", href: "/admin/reports/revenue", icon: TrendingUp },
          { label: "Financial Summary", href: "/admin/reports/financial", icon: DollarSign },
        ],
      },

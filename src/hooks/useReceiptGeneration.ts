@@ -104,18 +104,32 @@ export function useReceiptGeneration() {
         console.warn("Client not found, using defaults");
       }
 
-      // Fetch company settings
+      // Fetch company data (from companies table via receipt.company_id)
+      let companyData: any = null;
+      if (receipt.company_id) {
+        const { data: compData } = await supabase
+          .from("companies")
+          .select("name, gstin, logo_url")
+          .eq("id", receipt.company_id)
+          .maybeSingle();
+        companyData = compData;
+      }
+
+      // Fallback to organization_settings if company not found
       const { data: orgSettings } = await supabase
         .from("organization_settings")
         .select("organization_name, gstin, logo_url")
         .limit(1)
         .maybeSingle();
 
+      // Determine logo URL: prefer company logo, then org settings
+      const logoUrl = companyData?.logo_url || orgSettings?.logo_url;
+
       // Fetch logo if available
       let logoBase64: string | undefined;
-      if (orgSettings?.logo_url) {
+      if (logoUrl && !logoUrl.startsWith('data:image/gif')) {
         try {
-          const response = await fetch(orgSettings.logo_url);
+          const response = await fetch(logoUrl);
           const blob = await response.blob();
           logoBase64 = await new Promise<string>((resolve) => {
             const reader = new FileReader();
@@ -126,6 +140,10 @@ export function useReceiptGeneration() {
           console.warn("Could not load logo:", e);
         }
       }
+
+      // Determine company name: prefer companies table, then org settings
+      const companyName = companyData?.name || orgSettings?.organization_name || "Matrix Network Solutions";
+      const companyGstin = companyData?.gstin || orgSettings?.gstin || "36AATFM4107H2Z3";
 
       // Build receipt data
       const receiptData: ReceiptData = {
@@ -155,8 +173,8 @@ export function useReceiptGeneration() {
           billing_pincode: client?.billing_pincode || undefined,
         },
         company: {
-          name: orgSettings?.organization_name || "Matrix Network Solutions",
-          gstin: orgSettings?.gstin || "36AATFM4107H2Z3",
+          name: companyName,
+          gstin: companyGstin,
         },
         orgSettings,
         logoBase64,

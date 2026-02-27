@@ -12,12 +12,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Loader2, CheckCircle2, AlertTriangle, IndianRupee, Zap,
   CalendarCheck, Printer, Hammer, ArrowDownToLine, ShieldCheck,
-  Search, ArrowUpDown, ArrowUp, ArrowDown,
+  Search, ArrowUpDown, ArrowUp, ArrowDown, FileSpreadsheet,
 } from "lucide-react";
 import { format, subMonths, endOfMonth } from "date-fns";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { computeOpsLines, RateSettingRow } from "@/lib/ops-rate-utils";
+import ExcelJS from "exceljs";
 
 function generateMonthOptions() {
   const months: { label: string; value: string }[] = [];
@@ -210,6 +211,82 @@ export default function GeneratePayables() {
       : <ArrowDown className="h-3 w-3 ml-1" />;
   }
 
+  async function handleExportExcel() {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Vendor Payables");
+    const monthLabel = format(new Date(`${selectedMonth}-01`), "MMMM yyyy");
+    const companyName = company?.name || "Go-Ads 360°";
+
+    // Branded header
+    const titleRow = ws.addRow([`${companyName} — Vendor Payables — ${monthLabel}`]);
+    titleRow.font = { bold: true, size: 14 };
+    ws.mergeCells(1, 1, 1, 8);
+
+    // Summary row
+    const summaryRow = ws.addRow([
+      `Total: ₹${filteredTotal.toLocaleString("en-IN")}`,
+      `Entries: ${filteredEntries.length}`,
+      `Mounting: ₹${mountTotal.toLocaleString("en-IN")}`,
+      `Printing: ₹${printTotal.toLocaleString("en-IN")}`,
+      `Unmounting: ₹${unmountTotal.toLocaleString("en-IN")}`,
+    ]);
+    summaryRow.font = { bold: true, size: 10, color: { argb: "FF555555" } };
+    ws.addRow([]);
+
+    // Column headers
+    const headers = ["S.No", "Category", "Campaign", "Client", "Asset ID", "Location", "City", "Vendor", "Amount (₹)"];
+    const headerRow = ws.addRow(headers);
+    headerRow.eachCell(cell => {
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E40AF" } };
+      cell.alignment = { horizontal: "center" };
+    });
+
+    // Data rows
+    filteredEntries.forEach((e, idx) => {
+      const row = ws.addRow([
+        idx + 1,
+        e.category,
+        e.campaignName,
+        e.clientName,
+        e.assetId,
+        e.location,
+        e.city,
+        e.vendorName,
+        e.amount,
+      ]);
+      // Category-based coloring
+      const bgColor = e.category === "Mounting" ? "FFE8F5E9" : e.category === "Printing" ? "FFEEE8F5" : "FFFFF3E0";
+      row.eachCell(cell => {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bgColor } };
+      });
+    });
+
+    // Amount column as number format
+    ws.getColumn(9).numFmt = '#,##0';
+    ws.getColumn(1).width = 6;
+    ws.getColumn(2).width = 12;
+    ws.getColumn(3).width = 25;
+    ws.getColumn(4).width = 20;
+    ws.getColumn(5).width = 18;
+    ws.getColumn(6).width = 25;
+    ws.getColumn(7).width = 14;
+    ws.getColumn(8).width = 18;
+    ws.getColumn(9).width = 14;
+
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Vendor_Payables_${selectedMonth}_${categoryFilter}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Excel exported successfully");
+  }
+
   async function handleGenerate(filterCategory?: CategoryFilter) {
     if (!companyId) return;
     const entriesToGenerate = filterCategory && filterCategory !== "All"
@@ -379,7 +456,17 @@ export default function GeneratePayables() {
                 {categoryFilter !== "All" && ` — filtered by ${categoryFilter}`}
                 {filteredEntries.length > 0 && ` — ₹${filteredTotal.toLocaleString("en-IN")}`}
               </CardDescription>
-            </div>
+           </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              disabled={filteredEntries.length === 0}
+              onClick={() => handleExportExcel()}
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Export Excel
+            </Button>
           </div>
 
           {/* Toolbar: Tabs + Search */}

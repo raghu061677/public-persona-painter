@@ -296,13 +296,15 @@ const App = () => (
             <Route path="/clients" element={<Navigate to="/admin/clients" replace />} />
             <Route path="/plans" element={<Navigate to="/admin/plans" replace />} />
             <Route path="/campaigns" element={<Navigate to="/admin/campaigns" replace />} />
+            {/* Bare /admin/reports → financial summary */}
+            <Route path="/admin/reports" element={<Navigate to="/admin/reports/financial" replace />} />
             
             {/* ===== GLOBAL ADMIN AUTH GATE — all /admin/* routes require authentication ===== */}
             <Route path="/admin" element={<AdminAuthGate />}>
               {/* Redirect /admin to /admin/dashboard */}
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="settings" element={<Navigate to="/admin/company-settings" replace />} />
-              <Route path="reports" element={<Navigate to="/admin/reports/financial" replace />} />
+              {/* /admin/reports redirect handled as top-level route above */}
               
               {/* Dashboard */}
               <Route path="dashboard" element={<ProtectedRoute requireAuth><ModernAppLayout><DashboardRouter /></ModernAppLayout></ProtectedRoute>} />

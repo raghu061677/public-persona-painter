@@ -8,8 +8,13 @@ import {
   Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/utils/mediaAssets";
 import { useNavigate } from "react-router-dom";
+import {
+  currentMonthRange,
+  buildBookedMediaLink,
+  buildVacantMediaLink,
+  buildOOHKpisLink,
+} from "@/utils/deepLinks";
 
 interface SummaryCardsProps {
   totalAssets: number;
@@ -28,12 +33,9 @@ export function SummaryCards({
   uniqueCities,
   litAssets,
   newThisMonth,
-  totalValue,
 }: SummaryCardsProps) {
   const navigate = useNavigate();
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+  const { from, to } = currentMonthRange();
 
   const cards = [
     {
@@ -42,7 +44,7 @@ export function SummaryCards({
       icon: Layers,
       color: "text-blue-600",
       bgColor: "bg-blue-50 dark:bg-blue-950/20",
-      link: "/media-assets",
+      link: "/admin/media-assets",
     },
     {
       title: "Available",
@@ -50,7 +52,7 @@ export function SummaryCards({
       icon: ShieldCheck,
       color: "text-green-600",
       bgColor: "bg-green-50 dark:bg-green-950/20",
-      link: "/admin/reports/vacant-media",
+      link: buildVacantMediaLink({ from, to }),
     },
     {
       title: "Booked",
@@ -58,7 +60,7 @@ export function SummaryCards({
       icon: Calendar,
       color: "text-purple-600",
       bgColor: "bg-purple-50 dark:bg-purple-950/20",
-      link: `/admin/reports/booked-media?from=${monthStart}&to=${monthEnd}`,
+      link: buildBookedMediaLink({ from, to }),
     },
     {
       title: "Cities",
@@ -66,6 +68,7 @@ export function SummaryCards({
       icon: MapPin,
       color: "text-orange-600",
       bgColor: "bg-orange-50 dark:bg-orange-950/20",
+      link: buildOOHKpisLink({ from, to }),
     },
     {
       title: "Lit Assets",

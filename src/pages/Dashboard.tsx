@@ -350,7 +350,7 @@ const Dashboard = () => {
             const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
             return (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4" data-tour="dashboard">
-              <div onClick={() => navigate('/media-assets')} className="cursor-pointer hover:opacity-80 transition-opacity">
+              <div onClick={() => navigate('/admin/media-assets')} className="cursor-pointer hover:opacity-80 transition-opacity">
                 <StatCard
                   title="Total Assets"
                   value={metrics.totalAssets}
@@ -377,7 +377,7 @@ const Dashboard = () => {
                   borderColor="border-l-amber-500"
                 />
               </div>
-              <div onClick={() => navigate(`/admin/reports/monthly-campaigns?month=${curMonth}&status=Running`)} className="cursor-pointer hover:opacity-80 transition-opacity">
+              <div onClick={() => navigate(`/admin/reports/campaigns?month=${curMonth}&status=Running`)} className="cursor-pointer hover:opacity-80 transition-opacity">
                 <StatCard
                   title="Active Campaigns"
                   value={metrics.activeCampaigns}
@@ -386,7 +386,7 @@ const Dashboard = () => {
                   borderColor="border-l-green-500"
                 />
               </div>
-              <div onClick={() => navigate('/leads')} className="cursor-pointer hover:opacity-80 transition-opacity">
+              <div onClick={() => navigate('/admin/leads')} className="cursor-pointer hover:opacity-80 transition-opacity">
                 <StatCard
                   title="New Leads"
                   value={metrics.leadsThisMonth}
@@ -395,7 +395,7 @@ const Dashboard = () => {
                   borderColor="border-l-purple-500"
                 />
               </div>
-              <div onClick={() => navigate('/admin/invoices')} className="cursor-pointer hover:opacity-80 transition-opacity">
+              <div onClick={() => navigate(`/admin/reports/revenue?tab=overview&month=${curMonth}`)} className="cursor-pointer hover:opacity-80 transition-opacity">
                 <StatCard
                   title="Revenue"
                   value={`₹${(metrics.revenueThisMonth / 100000).toFixed(1)}L`}

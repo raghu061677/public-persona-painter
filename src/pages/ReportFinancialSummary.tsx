@@ -15,7 +15,7 @@ import {
   DollarSign, TrendingUp, TrendingDown, Percent, Receipt,
   CalendarIcon, ArrowUpRight, AlertTriangle, BarChart3,
   Tv2, Building2, RefreshCw, Wallet, Users, FileDown,
-  Clock, CreditCard, FileText,
+  Clock, CreditCard, FileText, Radar, ExternalLink, Activity,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -96,6 +96,7 @@ export default function ReportFinancialSummary() {
         <TabsList className="h-9">
           <TabsTrigger value="overview" className="text-xs px-4">Overview</TabsTrigger>
           <TabsTrigger value="clients" className="text-xs px-4">Clients</TabsTrigger>
+          <TabsTrigger value="behaviour" className="text-xs px-4">Behaviour</TabsTrigger>
           <TabsTrigger value="aging" className="text-xs px-4">Aging</TabsTrigger>
           <TabsTrigger value="summary" className="text-xs px-4">Monthly Table</TabsTrigger>
           <TabsTrigger value="profitability" className="text-xs px-4">Profitability</TabsTrigger>
@@ -419,6 +420,160 @@ export default function ReportFinancialSummary() {
                     ))}
                     {dash.clientInvoicedTop10.length === 0 && (
                       <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No invoiced clients in this period</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── TAB: Behaviour ── */}
+        <TabsContent value="behaviour" className="space-y-5 mt-4">
+          {/* Collection Radar */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card className={cn("cursor-pointer border-l-4 border-l-amber-500")}
+              onClick={() => navigate(`/admin/invoices?status=Unpaid&from=${fromStr}&to=${toStr}`)}>
+              <CardHeader className="pb-1 pt-4 px-5">
+                <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" /> Due in Next 7 Days
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-5 pb-4">
+                <div className="text-2xl font-bold text-amber-600">{fmt(dash.collectionRadar.dueSoonAmount)}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{dash.collectionRadar.dueSoonCount} invoice{dash.collectionRadar.dueSoonCount !== 1 ? 's' : ''}</div>
+              </CardContent>
+            </Card>
+            <Card className={cn("cursor-pointer border-l-4 border-l-red-500")}
+              onClick={() => navigate(`/admin/invoices?status=Overdue`)}>
+              <CardHeader className="pb-1 pt-4 px-5">
+                <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5" /> Overdue
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-5 pb-4">
+                <div className="text-2xl font-bold text-red-600">{fmt(dash.collectionRadar.overdueAmount)}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{dash.collectionRadar.overdueCount} invoice{dash.collectionRadar.overdueCount !== 1 ? 's' : ''}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Collection Radar List */}
+          <Card>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Radar className="h-4 w-4 text-muted-foreground" /> Collection Radar — Due & Overdue Invoices
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-auto max-h-[400px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Invoice</TableHead>
+                      <TableHead>Client</TableHead>
+                      <TableHead>Due Date</TableHead>
+                      <TableHead className="text-right">Outstanding</TableHead>
+                      <TableHead className="text-right">Days Overdue</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dash.collectionRadar.items.map(item => (
+                      <TableRow key={item.invoiceId} className={cn(item.isDueSoon ? "bg-amber-50/50 dark:bg-amber-950/10" : "")}>
+                        <TableCell className="font-medium text-xs">{item.invoiceNo}</TableCell>
+                        <TableCell>{item.clientName}</TableCell>
+                        <TableCell className="text-sm">{item.dueDate || '—'}</TableCell>
+                        <TableCell className="text-right font-semibold text-orange-600">{fmt(item.outstanding)}</TableCell>
+                        <TableCell className="text-right">
+                          {item.isDueSoon ? (
+                            <Badge variant="secondary" className="text-[10px]">Due Soon</Badge>
+                          ) : (
+                            <Badge variant="destructive" className="text-[10px]">{item.daysOverdue}d</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="link" size="sm" className="text-xs h-auto p-0"
+                            onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(item.invoiceNo)}`)}>
+                            Open <ExternalLink className="h-3 w-3 ml-0.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {dash.collectionRadar.items.length === 0 && (
+                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No due or overdue invoices 🎉</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Client Payment Behaviour */}
+          <Card>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Activity className="h-4 w-4 text-muted-foreground" /> Client Payment Behaviour (Top 15)
+              </CardTitle>
+              <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => {
+                exportListExcel({
+                  branding: { companyName: "GO-ADS 360°", title: "Client Payment Behaviour" },
+                  fields: [
+                    { key: "clientName", label: "Client Name", width: 28 },
+                    { key: "avgDelay", label: "Avg Delay (days)", type: "number", width: 16, value: (r) => Math.round(r.avgDelay) },
+                    { key: "onTimePercent", label: "On-time %", type: "number", width: 12, value: (r) => Math.round(r.onTimePercent) },
+                    { key: "latePercent", label: "Late %", type: "number", width: 12, value: (r) => Math.round(r.latePercent) },
+                    { key: "avgDaysToPay", label: "Avg Days to Pay", type: "number", width: 16, value: (r) => Math.round(r.avgDaysToPay) },
+                    { key: "unpaidAmount", label: "Unpaid (₹)", type: "currency", width: 16 },
+                  ],
+                  rows: dash.clientPaymentBehaviour,
+                  fileName: `Client_Payment_Behaviour_${fromStr}.xlsx`,
+                });
+              }}>
+                <FileDown className="h-3 w-3 mr-1" /> Export
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-auto max-h-[500px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Client Name</TableHead>
+                      <TableHead className="text-right">Avg Delay</TableHead>
+                      <TableHead className="text-right">On-time %</TableHead>
+                      <TableHead className="text-right">Late %</TableHead>
+                      <TableHead className="text-right">Avg Days to Pay</TableHead>
+                      <TableHead className="text-right">Unpaid (₹)</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dash.clientPaymentBehaviour.map(c => (
+                      <TableRow key={c.clientId}>
+                        <TableCell className="font-medium">{c.clientName}</TableCell>
+                        <TableCell className="text-right">
+                          <span className={cn("font-semibold", c.avgDelay > 30 ? "text-red-600" : c.avgDelay > 7 ? "text-orange-600" : "text-emerald-600")}>
+                            {Math.round(c.avgDelay)}d
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant={c.onTimePercent >= 80 ? "default" : c.onTimePercent >= 50 ? "secondary" : "destructive"} className="text-[10px]">
+                            {Math.round(c.onTimePercent)}%
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right text-sm">{Math.round(c.latePercent)}%</TableCell>
+                        <TableCell className="text-right text-sm">{Math.round(c.avgDaysToPay)}d</TableCell>
+                        <TableCell className="text-right font-semibold text-orange-600">{fmt(c.unpaidAmount)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="link" size="sm" className="text-xs h-auto p-0"
+                            onClick={() => navigate(`/admin/invoices?client=${encodeURIComponent(c.clientName)}&status=Unpaid&from=${fromStr}&to=${toStr}`)}>
+                            View Unpaid <ArrowUpRight className="h-3 w-3 ml-0.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {dash.clientPaymentBehaviour.length === 0 && (
+                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No payment behaviour data</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>

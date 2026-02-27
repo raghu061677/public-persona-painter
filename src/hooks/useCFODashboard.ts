@@ -95,6 +95,34 @@ export interface ClientInvoiced {
   invoiceCount: number;
 }
 
+export interface ClientPaymentBehaviour {
+  clientId: string;
+  clientName: string;
+  avgDelay: number;
+  onTimePercent: number;
+  latePercent: number;
+  avgDaysToPay: number;
+  unpaidAmount: number;
+}
+
+export interface CollectionRadarItem {
+  invoiceId: string;
+  invoiceNo: string;
+  clientName: string;
+  dueDate: string | null;
+  outstanding: number;
+  daysOverdue: number;
+  isDueSoon: boolean;
+}
+
+export interface CollectionRadarSummary {
+  dueSoonCount: number;
+  dueSoonAmount: number;
+  overdueCount: number;
+  overdueAmount: number;
+  items: CollectionRadarItem[];
+}
+
 export interface RevenueExpenseTrend {
   month: string;
   revenue: number;
@@ -427,11 +455,137 @@ export function useCFODashboard() {
       .slice(0, 10);
   }, [filteredInvoices, payments]);
 
+  // Client Payment Behaviour (Top 15)
+  const clientPaymentBehaviour = useMemo((): ClientPaymentBehaviour[] => {
+    const now = new Date();
+    // Build payment map: invoice_id -> list of payment dates & amounts
+    const paymentsByInvoice: Record<string, { amount: number; date: Date }[]> = {};
+    payments.forEach(p => {
+      if (!paymentsByInvoice[p.invoice_id]) paymentsByInvoice[p.invoice_id] = [];
+      paymentsByInvoice[p.invoice_id].push({
+        amount: Number(p.amount) || 0,
+        date: p.payment_date ? new Date(p.payment_date) : now,
+      });
+    });
+
+    // Per-client aggregation
+    const clientMap: Record<string, {
+      clientName: string;
+      delays: number[];
+      daysToPay: number[];
+      onTime: number;
+      late: number;
+      unpaid: number;
+    }> = {};
+
+    filteredInvoices.filter(i => i.status !== 'Draft' && i.status !== 'Cancelled').forEach(inv => {
+      const cid = inv.client_id || 'unknown';
+      const cname = (inv as any).clients?.name || '—';
+      if (!clientMap[cid]) clientMap[cid] = { clientName: cname, delays: [], daysToPay: [], onTime: 0, late: 0, unpaid: 0 };
+
+      const total = Number(inv.total_amount) || 0;
+      const invDate = inv.invoice_date ? new Date(inv.invoice_date) : null;
+      const dueDate = inv.due_date ? new Date(inv.due_date) : invDate;
+      const invPayments = paymentsByInvoice[inv.id] || [];
+      const totalPaid = invPayments.reduce((s, p) => s + p.amount, 0);
+
+      if (totalPaid >= total * 0.99 && invPayments.length > 0 && invDate) {
+        // Fully paid invoice
+        const lastPayDate = new Date(Math.max(...invPayments.map(p => p.date.getTime())));
+        const daysToPay = Math.max(0, differenceInDays(lastPayDate, invDate));
+        clientMap[cid].daysToPay.push(daysToPay);
+
+        if (dueDate) {
+          const delay = Math.max(0, differenceInDays(lastPayDate, dueDate));
+          clientMap[cid].delays.push(delay);
+          if (lastPayDate <= dueDate) {
+            clientMap[cid].onTime++;
+          } else {
+            clientMap[cid].late++;
+          }
+        }
+      } else {
+        // Unpaid
+        clientMap[cid].unpaid += Math.max(0, total - totalPaid);
+      }
+    });
+
+    return Object.entries(clientMap)
+      .map(([clientId, d]) => {
+        const totalPaid = d.onTime + d.late;
+        return {
+          clientId,
+          clientName: d.clientName,
+          avgDelay: d.delays.length > 0 ? d.delays.reduce((a, b) => a + b, 0) / d.delays.length : 0,
+          onTimePercent: totalPaid > 0 ? (d.onTime / totalPaid) * 100 : 0,
+          latePercent: totalPaid > 0 ? (d.late / totalPaid) * 100 : 0,
+          avgDaysToPay: d.daysToPay.length > 0 ? d.daysToPay.reduce((a, b) => a + b, 0) / d.daysToPay.length : 0,
+          unpaidAmount: d.unpaid,
+        };
+      })
+      .filter(c => (c.avgDelay > 0 || c.unpaidAmount > 0 || c.onTimePercent > 0))
+      .sort((a, b) => b.avgDelay - a.avgDelay)
+      .slice(0, 15);
+  }, [filteredInvoices, payments]);
+
+  // Collection Radar
+  const collectionRadar = useMemo((): CollectionRadarSummary => {
+    const now = new Date();
+    const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const paymentMap: Record<string, number> = {};
+    payments.forEach(p => {
+      paymentMap[p.invoice_id] = (paymentMap[p.invoice_id] || 0) + (Number(p.amount) || 0);
+    });
+
+    let dueSoonCount = 0, dueSoonAmount = 0, overdueCount = 0, overdueAmount = 0;
+    const items: CollectionRadarItem[] = [];
+
+    invoices
+      .filter(i => i.status !== 'Draft' && i.status !== 'Cancelled' && i.status !== 'Paid')
+      .forEach(inv => {
+        const total = Number(inv.total_amount) || 0;
+        const paid = paymentMap[inv.id] || 0;
+        const bal = total - paid;
+        if (bal <= 0.01) return;
+
+        const dueDate = inv.due_date ? new Date(inv.due_date) : (inv.invoice_date ? new Date(inv.invoice_date) : null);
+        if (!dueDate) return;
+
+        const daysOverdue = differenceInDays(now, dueDate);
+        const isDueSoon = dueDate >= now && dueDate <= in7Days;
+        const isOverdue = dueDate < now;
+
+        if (isDueSoon) { dueSoonCount++; dueSoonAmount += bal; }
+        if (isOverdue) { overdueCount++; overdueAmount += bal; }
+
+        if (isDueSoon || isOverdue) {
+          items.push({
+            invoiceId: inv.id,
+            invoiceNo: inv.invoice_no || inv.id,
+            clientName: (inv as any).clients?.name || '—',
+            dueDate: format(dueDate, 'dd MMM yyyy'),
+            outstanding: bal,
+            daysOverdue: Math.max(0, daysOverdue),
+            isDueSoon,
+          });
+        }
+      });
+
+    items.sort((a, b) => b.daysOverdue - a.daysOverdue);
+
+    return {
+      dueSoonCount, dueSoonAmount, overdueCount, overdueAmount,
+      items: items.slice(0, 20),
+    };
+  }, [invoices, payments]);
+
   return {
     loading, timeRange, setTimeRange, customRange, setCustomRange, dateRange,
     kpi, monthlyRows, quarterlyRows, yearlyRows, agingBuckets,
     campaignProfitability, cityRevenue, mediaTypeRevenue, trendData,
     clientOutstandingTop10, clientInvoicedTop10,
+    clientPaymentBehaviour, collectionRadar,
     refresh: loadData,
   };
 }

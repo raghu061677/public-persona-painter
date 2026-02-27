@@ -90,6 +90,7 @@ const ReportFinancialSummary = lazy(() => import("./pages/ReportFinancialSummary
 const ReportProofExecution = lazy(() => import("./pages/ReportProofExecution"));
 const ReportAging = lazy(() => import("./pages/ReportAging"));
 const ReportOutstanding = lazy(() => import("./pages/ReportOutstanding"));
+const ReportBookedMedia = lazy(() => import("./pages/ReportBookedMedia"));
 const PlatformReportCompanyUsage = lazy(() => import("./pages/PlatformReportCompanyUsage"));
 const PlatformReportBilling = lazy(() => import("./pages/PlatformReportBilling"));
 const PlatformReportMediaInventory = lazy(() => import("./pages/PlatformReportMediaInventory"));
@@ -364,6 +365,7 @@ const App = () => (
               <Route path="reports/proof-execution" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportProofExecution /></ModernAppLayout></ProtectedRoute>} />
               <Route path="reports/aging" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportAging /></ModernAppLayout></ProtectedRoute>} />
               <Route path="reports/outstanding" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportOutstanding /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="reports/booked-media" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportBookedMedia /></ModernAppLayout></ProtectedRoute>} />
               <Route path="platform-reports/company-usage" element={<ProtectedRoute requireAuth><ModernAppLayout><PlatformReportCompanyUsage /></ModernAppLayout></ProtectedRoute>} />
               <Route path="platform-reports/billing" element={<ProtectedRoute requireAuth><ModernAppLayout><PlatformReportBilling /></ModernAppLayout></ProtectedRoute>} />
               <Route path="platform-reports/media-inventory" element={<ProtectedRoute requireAuth><ModernAppLayout><PlatformReportMediaInventory /></ModernAppLayout></ProtectedRoute>} />

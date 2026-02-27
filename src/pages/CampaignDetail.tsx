@@ -36,6 +36,8 @@ import { DeleteCampaignDialog } from "@/components/campaigns/DeleteCampaignDialo
 import { CampaignBillingTab } from "@/components/campaigns/billing";
 import { CampaignDetailAssetsTable } from "@/components/campaigns/CampaignDetailAssetsTable";
 import { computeCampaignTotals } from "@/utils/computeCampaignTotals";
+import { useCampaignProfitability } from "@/hooks/useCampaignProfitability";
+import { CampaignProfitSummary } from "@/components/campaigns/CampaignProfitSummary";
 
 export default function CampaignDetail() {
   const { id: routeParam } = useParams();
@@ -50,6 +52,7 @@ export default function CampaignDetail() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { company } = useCompany();
   const { setBreadcrumbs } = useBreadcrumb();
+  const { data: profitability, isLoading: profitLoading } = useCampaignProfitability(id, company?.id, 0);
 
   // Enable automated workflows
   useCampaignWorkflows(id);
@@ -646,6 +649,16 @@ export default function CampaignDetail() {
           </Card>
         </div>
 
+        {/* Profitability Summary */}
+        <div className="mb-6">
+          {profitability && (
+            <CampaignProfitSummary
+              profitability={{ ...profitability, bookingRevenue: totals.grandTotal, revenue: profitability.invoiceRevenue > 0 ? profitability.revenue : totals.grandTotal }}
+              companyId={company?.id}
+              isLoading={profitLoading}
+            />
+          )}
+        </div>
         {/* Health Alerts */}
         <div className="mb-6">
           <CampaignHealthAlerts campaignId={campaign.id} />

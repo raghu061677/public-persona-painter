@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -13,8 +13,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, DollarSign, Truck, Printer, ArrowDownToLine, History } from "lucide-react";
+import { Plus, Pencil, Trash2, DollarSign, Truck, Printer, ArrowDownToLine, History, ShieldCheck } from "lucide-react";
 import { format } from "date-fns";
+import { getMinMarginThreshold, setMinMarginThreshold } from "@/hooks/useCampaignProfitability";
 
 interface RateSetting {
   id: string;
@@ -57,6 +58,59 @@ const emptyForm = {
   is_active: true,
   notes: "",
 };
+
+function MinMarginCard({ companyId }: { companyId?: string }) {
+  const [margin, setMargin] = useState(15);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setMargin(getMinMarginThreshold(companyId));
+  }, [companyId]);
+
+  const handleSave = () => {
+    if (companyId) {
+      setMinMarginThreshold(companyId, margin);
+      setSaved(true);
+      toast.success(`Minimum margin threshold set to ${margin}%`);
+      setTimeout(() => setSaved(false), 2000);
+    }
+  };
+
+  return (
+    <SettingsCard>
+      <div className="flex items-center gap-3 mb-3">
+        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+          <ShieldCheck className="h-4 w-4 text-primary" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-foreground">Profitability Lock</h3>
+          <p className="text-xs text-muted-foreground">Minimum campaign margin % required before invoice generation</p>
+        </div>
+      </div>
+      <div className="flex items-end gap-3">
+        <div className="flex-1 max-w-[200px]">
+          <Label htmlFor="min-margin">Minimum Margin (%)</Label>
+          <Input
+            id="min-margin"
+            type="number"
+            min={0}
+            max={100}
+            value={margin}
+            onChange={e => setMargin(Number(e.target.value))}
+            className="mt-1"
+          />
+        </div>
+        <Button onClick={handleSave} size="sm" variant={saved ? "outline" : "default"}>
+          {saved ? "✓ Saved" : "Save"}
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground mt-2">
+        If campaign margin falls below this threshold, non-admin users will be blocked from generating invoices.
+        Admins can override with a logged reason.
+      </p>
+    </SettingsCard>
+  );
+}
 
 export default function RateSettings() {
   const { company } = useCompany();
@@ -288,6 +342,9 @@ export default function RateSettings() {
           <Plus className="h-4 w-4 mr-2" /> Add Rate
         </Button>
       </div>
+
+      {/* Minimum Margin Setting */}
+      <MinMarginCard companyId={companyId} />
 
       {isLoading ? (
         <div className="space-y-4">

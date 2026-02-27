@@ -27,7 +27,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, AlertTriangle, Check, FileText, Calendar, Lock, ExternalLink } from "lucide-react";
+import { Loader2, AlertTriangle, Check, FileText, Calendar, Lock, ExternalLink, ShieldAlert } from "lucide-react";
+import { useCampaignProfitability, getMinMarginThreshold } from "@/hooks/useCampaignProfitability";
+import { ProfitabilityGateDialog } from "@/components/campaigns/ProfitabilityGateDialog";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
@@ -229,7 +231,22 @@ export function MonthlyInvoiceGenerator({
   const [gstMode, setGstMode] = useState<GSTMode>('CGST_SGST');
   const [clientState, setClientState] = useState<string>('');
   const [companyState, setCompanyState] = useState<string>('');
-  
+  const [showProfitGate, setShowProfitGate] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Profitability check
+  const { data: profitability } = useCampaignProfitability(campaign.id, campaign.company_id, 0);
+
+  // Check admin status
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+        setIsAdmin(data?.some(r => r.role === "admin") || false);
+      }
+    })();
+  }, []);
   // Fetch client and company states for GST mode determination
   const fetchGSTInfo = useCallback(async () => {
     try {
@@ -408,6 +425,21 @@ export function MonthlyInvoiceGenerator({
   const alreadyInvoicedCount = billingPreviews.filter(p => p.alreadyInvoiced).length;
   const billableCount = billingPreviews.filter(p => !p.alreadyInvoiced).length;
   
+  // Profitability-gated invoice generation
+  const handleInvoiceWithProfitCheck = () => {
+    if (!selectedMonth || filteredPreviews.length === 0) return;
+    
+    // Check profitability threshold
+    if (profitability) {
+      const minMargin = getMinMarginThreshold(campaign.company_id);
+      if (profitability.marginPercent < minMargin) {
+        setShowProfitGate(true);
+        return;
+      }
+    }
+    handleGenerateInvoice();
+  };
+
   const handleGenerateInvoice = async () => {
     if (!selectedMonth || filteredPreviews.length === 0) return;
     
@@ -960,7 +992,7 @@ export function MonthlyInvoiceGenerator({
             Cancel
           </Button>
           <Button
-            onClick={handleGenerateInvoice}
+            onClick={handleInvoiceWithProfitCheck}
             disabled={generating || !selectedMonth || !!existingInvoice || filteredPreviews.filter(p => !p.alreadyInvoiced || includeAlreadyInvoiced).length === 0}
           >
             {generating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -968,7 +1000,29 @@ export function MonthlyInvoiceGenerator({
             Generate Invoice
           </Button>
         </div>
+
+        {/* Profitability margin warning */}
+        {profitability && profitability.marginPercent < getMinMarginThreshold(campaign.company_id) && (
+          <div className="flex items-center gap-2 text-xs text-destructive mt-2">
+            <ShieldAlert className="h-3.5 w-3.5" />
+            Campaign margin ({profitability.marginPercent.toFixed(1)}%) is below threshold. Admin override required.
+          </div>
+        )}
       </DialogContent>
+
+      {/* Profitability Gate Dialog */}
+      {profitability && (
+        <ProfitabilityGateDialog
+          open={showProfitGate}
+          onOpenChange={setShowProfitGate}
+          profitability={profitability}
+          campaignId={campaign.id}
+          campaignName={campaign.campaign_name}
+          isAdmin={isAdmin}
+          companyId={campaign.company_id}
+          onApproved={handleGenerateInvoice}
+        />
+      )}
     </Dialog>
   );
 }

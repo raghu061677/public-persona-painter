@@ -151,6 +151,7 @@ const PlanComparison = lazy(() => import("./pages/PlanComparison"));
 const ProformasList = lazy(() => import("./pages/ProformasList"));
 const ProformaDetail = lazy(() => import("./pages/ProformaDetail"));
 const ImportInvoices = lazy(() => import("./pages/ImportInvoices"));
+const MonthClose = lazy(() => import("./pages/MonthClose"));
 const Install = lazy(() => import("./pages/Install"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 // ComponentShowcase, DashboardBuilder removed — dev/test pages
@@ -419,6 +420,7 @@ const App = () => (
               <Route path="proformas" element={<ProtectedRoute requireAuth><ModernAppLayout><ProformasList /></ModernAppLayout></ProtectedRoute>} />
               <Route path="proformas/:id" element={<ProtectedRoute requireAuth><ModernAppLayout><ProformaDetail /></ModernAppLayout></ProtectedRoute>} />
               <Route path="estimations" element={<ProtectedRoute requireAuth><ModernAppLayout><EstimationsList /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="finance/month-close" element={<ProtectedRoute requireAuth><ModernAppLayout><MonthClose /></ModernAppLayout></ProtectedRoute>} />
               <Route path="gallery" element={<Navigate to="/admin/photo-library" replace />} />
               <Route path="photo-library" element={<ProtectedRoute requireAuth><ModernAppLayout><PhotoGallery /></ModernAppLayout></ProtectedRoute>} />
               <Route path="import" element={<Navigate to="/admin/data-export-import" replace />} />

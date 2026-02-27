@@ -24,7 +24,7 @@ import { ReportControls, ReportKPICards, ReportEmptyState, ReportExportMenu } fr
 import { useReportFilters } from "@/hooks/useReportFilters";
 import { usePagination } from "@/hooks/usePagination";
 import { Button } from "@/components/ui/button";
-import ExcelJS from "exceljs";
+import { exportListExcel } from "@/utils/exports/excel/exportListExcel";
 
 interface BookedMediaRow {
   asset_id: string;
@@ -383,41 +383,40 @@ export default function ReportBookedMedia() {
 
   // Excel export
   const handleExportExcel = async () => {
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet("Booked Media");
-
     const cols = COLUMNS.filter((c) => visibleColumns.includes(c.key));
-    sheet.addRow(cols.map((c) => c.label));
-    sheet.getRow(1).font = { bold: true };
-    sheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E0E0" } };
-
-    filteredData.forEach((row) => {
-      const values = cols.map((col) => {
-        switch (col.key) {
-          case "start_date": return formatDateDDMMYYYY(row.start_date);
-          case "end_date": return formatDateDDMMYYYY(row.end_date);
-          case "total_sqft": return row.total_sqft;
-          case "duration_days": return row.duration_days;
-          default: return row[col.key as keyof BookedMediaRow] || "-";
-        }
+    try {
+      await exportListExcel({
+        branding: {
+          companyName: company?.name || "GO-ADS 360°",
+          title: "Booked Media Report",
+          subtitle: dateRange?.from && dateRange?.to
+            ? `${formatDateDDMMYYYY(dateRange.from.toISOString())} – ${formatDateDDMMYYYY(dateRange.to.toISOString())}`
+            : undefined,
+          logoUrl: company?.logo_url || undefined,
+        },
+        fields: cols.map((c) => ({
+          key: c.key,
+          label: c.label,
+          width: c.key === "location" || c.key === "address" ? 30 : 18,
+          type: (c.key === "total_sqft" || c.key === "duration_days" ? "number" : c.key === "start_date" || c.key === "end_date" ? "date" : "text") as any,
+          value: c.key === "start_date"
+            ? (row: BookedMediaRow) => formatDateDDMMYYYY(row.start_date)
+            : c.key === "end_date"
+            ? (row: BookedMediaRow) => formatDateDDMMYYYY(row.end_date)
+            : undefined,
+        })),
+        rows: filteredData,
+        rowStyleRules: [
+          { when: (r: BookedMediaRow) => r.campaign_status === "Completed", fill: { argb: "FFD1FAE5" } },
+          { when: (r: BookedMediaRow) => r.campaign_status === "Cancelled", fill: { argb: "FFFEE2E2" } },
+        ],
+        fileName: `Booked_Media_Report_${new Date().toISOString().split("T")[0]}.xlsx`,
       });
-      sheet.addRow(values);
-    });
-
-    sheet.columns.forEach((col) => { col.width = 18; });
-
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Booked_Media_Report_${new Date().toISOString().split("T")[0]}.xlsx`;
-    a.click();
-    URL.revokeObjectURL(url);
-
-    toast({ title: "Export Complete", description: `Exported ${filteredData.length} rows.` });
+      toast({ title: "Export Complete", description: `Exported ${filteredData.length} rows.` });
+    } catch (err) {
+      console.error("Excel export error:", err);
+      toast({ title: "Export Failed", variant: "destructive" });
+    }
   };
 
   const getCellValue = (row: BookedMediaRow, key: string) => {

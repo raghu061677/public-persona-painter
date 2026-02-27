@@ -292,7 +292,7 @@ export async function renderReceiptDefaultTemplate(data: ReceiptData): Promise<B
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
-  doc.text('For Matrix Network Solutions', signX, signY);
+  doc.text(`For ${companyName}`, signX, signY);
 
   doc.setDrawColor(150, 150, 150);
   doc.setLineWidth(0.3);

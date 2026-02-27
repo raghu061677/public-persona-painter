@@ -302,6 +302,7 @@ const App = () => (
               {/* Redirect /admin to /admin/dashboard */}
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="settings" element={<Navigate to="/admin/company-settings" replace />} />
+              <Route path="reports" element={<Navigate to="/admin/reports/financial" replace />} />
               
               {/* Dashboard */}
               <Route path="dashboard" element={<ProtectedRoute requireAuth><ModernAppLayout><DashboardRouter /></ModernAppLayout></ProtectedRoute>} />

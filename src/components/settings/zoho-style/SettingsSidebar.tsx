@@ -94,6 +94,7 @@ const navigationGroups: NavGroup[] = [
       { label: "Online Payments", path: "/admin/company-settings/payments", icon: CreditCard },
       { label: "Sales", path: "/admin/company-settings/sales", icon: ShoppingCart },
       { label: "Operations", path: "/admin/operations-settings", icon: Package },
+      { label: "Rate Settings", path: "/admin/company-settings/rate-settings", icon: Calculator },
     ]
   },
   {

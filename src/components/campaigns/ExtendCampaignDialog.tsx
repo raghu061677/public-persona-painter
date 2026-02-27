@@ -166,7 +166,7 @@ export function ExtendCampaignDialog({
     const newSubtotal = Math.round((campaignData.subtotal || 0) * durationRatio);
     const newPrintingTotal = campaignData.printing_total || 0; // One-time cost, may or may not repeat
     const newMountingTotal = campaignData.mounting_total || 0; // One-time cost
-    const gstPercent = campaignData.gst_percent || 18;
+    const gstPercent = campaignData.gst_percent ?? 0;
     const newTotalAmount = Math.round(newSubtotal + newPrintingTotal + newMountingTotal);
     const newGstAmount = Math.round(newTotalAmount * gstPercent / 100);
     const newGrandTotal = newTotalAmount + newGstAmount;
@@ -468,7 +468,7 @@ export function ExtendCampaignDialog({
 
     // Generate invoice for renewal period if selected
     if (generateInvoice && campaignData && campaignData.client_id) {
-      const gstPercent = campaignData.gst_percent || 18;
+      const gstPercent = campaignData.gst_percent ?? 0;
       const invoiceId = await generateInvoiceId(supabase, gstPercent);
       const subTotal = Math.round(renewalAmount / (1 + gstPercent / 100));
       const gstAmount = Math.round(renewalAmount - subTotal);

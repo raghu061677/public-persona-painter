@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -38,6 +38,11 @@ export function InvoiceTypeSelector({
   const [invoiceType, setInvoiceType] = useState(currentType || 'TAX_INVOICE');
   const [saving, setSaving] = useState(false);
 
+  // Sync local state when prop changes (e.g., after refetch)
+  useEffect(() => {
+    setInvoiceType(currentType || 'TAX_INVOICE');
+  }, [currentType]);
+
   const handleTypeChange = async (value: string) => {
     if (readOnly) return;
     
@@ -65,9 +70,10 @@ export function InvoiceTypeSelector({
       });
     } catch (error: any) {
       console.error('Error updating invoice type:', error);
+      const detail = [error.message, error.details, error.hint].filter(Boolean).join(" — ");
       toast({
         title: 'Error',
-        description: 'Failed to update invoice type',
+        description: detail || 'Failed to update invoice type',
         variant: 'destructive',
       });
     } finally {

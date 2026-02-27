@@ -114,33 +114,65 @@ export function PaymentRecordingPanel({
       return;
     }
 
+    if (!newPayment.payment_date) {
+      toast.error("Please select a payment date");
+      return;
+    }
+
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Get authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        toast.error("Authentication required. Please log in and try again.");
+        return;
+      }
       
       // Get company_id from invoice for RLS compliance
-      const { data: invoiceData } = await supabase
+      const { data: invoiceData, error: invoiceFetchError } = await supabase
         .from("invoices")
-        .select("company_id")
+        .select("company_id, client_id, campaign_id")
         .eq("id", invoiceId)
-        .single();
+        .maybeSingle();
+
+      if (invoiceFetchError) {
+        toast.error(`Failed to fetch invoice: ${invoiceFetchError.message}`);
+        return;
+      }
+
+      if (!invoiceData) {
+        toast.error(`Invoice "${invoiceId}" not found. Cannot record payment.`);
+        return;
+      }
+
+      if (!invoiceData.company_id) {
+        toast.error("Invoice is missing company information. Cannot record payment due to access restrictions.");
+        return;
+      }
+
+      const payload = {
+        invoice_id: invoiceId,
+        client_id: clientId || invoiceData.client_id || null,
+        campaign_id: campaignId || invoiceData.campaign_id || null,
+        company_id: invoiceData.company_id,
+        amount: amount,
+        payment_date: newPayment.payment_date,
+        method: newPayment.method,
+        reference_no: newPayment.reference_no || null,
+        notes: newPayment.notes || null,
+        created_by: user.id,
+      };
 
       const { error } = await supabase
         .from("payment_records")
-        .insert({
-          invoice_id: invoiceId,
-          client_id: clientId || null,
-          campaign_id: campaignId || null,
-          company_id: invoiceData?.company_id || null,
-          amount: amount,
-          payment_date: newPayment.payment_date,
-          method: newPayment.method,
-          reference_no: newPayment.reference_no || null,
-          notes: newPayment.notes || null,
-          created_by: user?.id,
-        });
+        .insert(payload);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Payment insert error:", error);
+        const detail = [error.message, error.details, error.hint].filter(Boolean).join(" — ");
+        toast.error(`Failed to add payment: ${detail}`);
+        return;
+      }
 
       toast.success("Payment recorded successfully");
 
@@ -156,7 +188,8 @@ export function PaymentRecordingPanel({
       fetchPayments();
       onPaymentAdded?.();
     } catch (error: any) {
-      toast.error(error.message || "Failed to add payment");
+      console.error("Payment error:", error);
+      toast.error(error?.message || "An unexpected error occurred while adding payment");
     } finally {
       setSaving(false);
     }

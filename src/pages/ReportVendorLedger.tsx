@@ -4,12 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useOpsReportData } from "@/hooks/useOpsReportData";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Download, RotateCcw, IndianRupee, Truck, ArrowDownToLine, Printer, BookOpen, User, CalendarDays } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Download, RotateCcw, IndianRupee, Truck, ArrowDownToLine, Printer, BookOpen, User, CalendarDays, AlertTriangle } from "lucide-react";
 import ExcelJS from "exceljs";
 
 const downloadExcel = (buf: ArrayBuffer, name: string) => {
@@ -90,7 +90,7 @@ export default function ReportVendorLedger() {
     },
   });
 
-  // Fetch vendor payments from expenses table (category = Mounting or Printing, with vendor_id)
+  // Fetch vendor payments from expenses table
   const { data: vendorPayments = [] } = useQuery({
     queryKey: ["vendor-payments", companyId],
     enabled: !!companyId,
@@ -158,49 +158,42 @@ export default function ReportVendorLedger() {
     return result;
   }, [lines, assetMounterMap]);
 
+  // Count unassigned payables (mounting/unmounting only — printers handled separately)
+  const unassignedCount = useMemo(() => {
+    return payableLines.filter(l => (l.type === "Mounting" || l.type === "Unmounting") && !l.mounterId).length;
+  }, [payableLines]);
+
   // Filter payable lines
   const filteredLines = useMemo(() => {
     let result = payableLines;
-    if (selectedVendor !== "all") {
-      result = result.filter(l => l.mounterId === selectedVendor || l.mounterName === selectedVendor);
+    if (selectedVendor === "__unassigned__") {
+      result = result.filter(l => !l.mounterId && l.type !== "Printing");
+    } else if (selectedVendor !== "all") {
+      result = result.filter(l => l.mounterId === selectedVendor);
     }
     if (vendorType === "mounter") {
       result = result.filter(l => l.type === "Mounting" || l.type === "Unmounting");
     } else if (vendorType === "printer") {
       result = result.filter(l => l.type === "Printing");
     }
-    if (cityFilter !== "all") {
-      result = result.filter(l => l.city === cityFilter);
-    }
-    if (campaignFilter !== "all") {
-      result = result.filter(l => l.campaignName === campaignFilter);
-    }
+    if (cityFilter !== "all") result = result.filter(l => l.city === cityFilter);
+    if (campaignFilter !== "all") result = result.filter(l => l.campaignName === campaignFilter);
     return result;
   }, [payableLines, selectedVendor, vendorType, cityFilter, campaignFilter]);
 
   // Unique values for filters
   const cities = useMemo(() => [...new Set(payableLines.map(l => l.city))].filter(Boolean).sort(), [payableLines]);
   const campaigns = useMemo(() => [...new Set(payableLines.map(l => l.campaignName))].filter(Boolean).sort(), [payableLines]);
-  const uniqueVendors = useMemo(() => {
-    const map = new Map<string, string>();
-    payableLines.forEach(l => {
-      if (l.mounterId) map.set(l.mounterId, l.mounterName);
-      else if (l.mounterName !== "Unassigned") map.set(l.mounterName, l.mounterName);
-    });
-    return [...map.entries()].sort((a, b) => a[1].localeCompare(b[1]));
-  }, [payableLines]);
 
   // Build month-wise statement
   const monthStatement = useMemo((): MonthStatement[] => {
-    // Get all months from payable lines
     const monthSet = new Set<string>();
     filteredLines.forEach(l => { if (l.month) monthSet.add(l.month); });
     const months = [...monthSet].sort();
 
-    // Paid amounts by month (from vendor payments matching selected vendor)
     const paidByMonth = new Map<string, number>();
     vendorPayments.forEach(vp => {
-      const matchVendor = selectedVendor === "all" || vp.vendor_id === selectedVendor;
+      const matchVendor = selectedVendor === "all" || selectedVendor === "__unassigned__" || vp.vendor_id === selectedVendor;
       if (!matchVendor) return;
       const month = vp.bill_month || (vp.expense_date ? vp.expense_date.slice(0, 7) : null);
       if (month) paidByMonth.set(month, (paidByMonth.get(month) ?? 0) + (vp.amount ?? 0));
@@ -233,9 +226,9 @@ export default function ReportVendorLedger() {
   const exportExcel = async () => {
     const wb = new ExcelJS.Workbook();
     const vendorLabel = selectedVendor === "all" ? "All-Vendors" :
+      selectedVendor === "__unassigned__" ? "Unassigned" :
       (mounters.find(m => m.id === selectedVendor)?.name ?? selectedVendor);
 
-    // Sheet 1: Summary
     const wsSummary = wb.addWorksheet("Summary");
     wsSummary.columns = [
       { header: "Metric", key: "metric", width: 25 },
@@ -247,7 +240,6 @@ export default function ReportVendorLedger() {
     wsSummary.addRow({ metric: "Total Paid", amount: totals.totalPaid });
     wsSummary.addRow({ metric: "Balance", amount: totals.balance });
 
-    // Sheet 2: Month-wise Statement
     const wsStatement = wb.addWorksheet("Month Statement");
     wsStatement.columns = [
       { header: "Month", key: "month", width: 12 },
@@ -262,10 +254,7 @@ export default function ReportVendorLedger() {
     wsStatement.getRow(1).font = { bold: true };
     monthStatement.forEach(m => wsStatement.addRow(m));
 
-    // Sheet 3: Mounting Lines
-    const mountingLines = filteredLines.filter(l => l.type === "Mounting");
-    const wsMounting = wb.addWorksheet("Mounting Lines");
-    wsMounting.columns = [
+    const lineCols = [
       { header: "Month", key: "month", width: 12 },
       { header: "Campaign", key: "campaignName", width: 25 },
       { header: "Client", key: "clientName", width: 22 },
@@ -275,24 +264,16 @@ export default function ReportVendorLedger() {
       { header: "Mounter", key: "mounterName", width: 18 },
       { header: "Amount (₹)", key: "amount", width: 14 },
     ];
-    wsMounting.getRow(1).font = { bold: true };
-    mountingLines.forEach(l => wsMounting.addRow(l));
 
-    // Sheet 4: Unmounting Lines
-    const unmountingLines = filteredLines.filter(l => l.type === "Unmounting");
-    const wsUnmounting = wb.addWorksheet("Unmounting Lines");
-    wsUnmounting.columns = wsMounting.columns.map(c => ({ ...c }));
-    wsUnmounting.getRow(1).font = { bold: true };
-    unmountingLines.forEach(l => wsUnmounting.addRow(l));
-
-    // Sheet 5: Printing Lines
-    const printingLines = filteredLines.filter(l => l.type === "Printing");
-    if (printingLines.length > 0) {
-      const wsPrinting = wb.addWorksheet("Printing Lines");
-      wsPrinting.columns = wsMounting.columns.map(c => ({ ...c }));
-      wsPrinting.getRow(1).font = { bold: true };
-      printingLines.forEach(l => wsPrinting.addRow(l));
-    }
+    (["Mounting", "Unmounting", "Printing"] as const).forEach(type => {
+      const typeLines = filteredLines.filter(l => l.type === type);
+      if (typeLines.length > 0) {
+        const ws = wb.addWorksheet(`${type} Lines`);
+        ws.columns = lineCols.map(c => ({ ...c }));
+        ws.getRow(1).font = { bold: true };
+        typeLines.forEach(l => ws.addRow(l));
+      }
+    });
 
     const buf = await wb.xlsx.writeBuffer();
     downloadExcel(buf as ArrayBuffer, `Vendor_Statement_${vendorLabel}.xlsx`);
@@ -316,6 +297,20 @@ export default function ReportVendorLedger() {
         <p className="text-sm text-muted-foreground mt-1">Month-wise vendor statements with payables, payments & balance tracking.</p>
       </div>
 
+      {/* Unassigned warning */}
+      {unassignedCount > 0 && (
+        <Alert variant="destructive" className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>{unassignedCount} payable line(s)</strong> are not assigned to a vendor.
+            Assign mounters in Campaign Operations to link payables to specific vendors.
+            <Button variant="outline" size="sm" className="ml-3" onClick={() => setSelectedVendor("__unassigned__")}>
+              View Unassigned
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card><CardContent className="pt-4">
@@ -332,7 +327,8 @@ export default function ReportVendorLedger() {
         </CardContent></Card>
         <Card><CardContent className="pt-4">
           <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1"><User className="h-3.5 w-3.5" /> Vendors</div>
-          <p className="text-xl font-bold">{uniqueVendors.length}</p>
+          <p className="text-xl font-bold">{mounters.length}</p>
+          {unassignedCount > 0 && <Badge variant="outline" className="text-amber-600 border-amber-400 text-[10px] mt-1">{unassignedCount} unassigned</Badge>}
         </CardContent></Card>
       </div>
 
@@ -342,6 +338,11 @@ export default function ReportVendorLedger() {
           <SelectTrigger className="w-[200px]"><SelectValue placeholder="Select Vendor" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Vendors</SelectItem>
+            <SelectItem value="__unassigned__">
+              <span className="flex items-center gap-1.5">
+                <AlertTriangle className="h-3 w-3 text-amber-500" /> Unassigned
+              </span>
+            </SelectItem>
             {mounters.map(m => (
               <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
             ))}
@@ -476,7 +477,11 @@ export default function ReportVendorLedger() {
                             <td className="py-2.5 px-4 font-mono text-xs">{l.assetId}</td>
                             <td className="py-2.5 px-4 max-w-[200px] truncate">{l.location}</td>
                             <td className="py-2.5 px-4">{l.city}</td>
-                            <td className="py-2.5 px-4">{l.mounterName}</td>
+                            <td className="py-2.5 px-4">
+                              {l.mounterId ? l.mounterName : (
+                                <Badge variant="outline" className="text-amber-600 border-amber-400 text-[10px]">Unassigned</Badge>
+                              )}
+                            </td>
                             <td className="py-2.5 px-4 text-right font-mono font-semibold">{fmt(l.amount)}</td>
                           </tr>
                         ))}
@@ -502,6 +507,7 @@ export default function ReportVendorLedger() {
 
       <p className="text-xs text-muted-foreground">
         Payables computed from campaign assets using Rate Settings engine. Paid amounts tracked from Mounting/Printing expense entries.
+        Vendor linked via campaign_assets.assigned_mounter_id.
       </p>
     </div>
   );

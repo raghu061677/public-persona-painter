@@ -142,12 +142,21 @@ export default function ReportsDashboard() {
     },
     {
       title: "Vendor Ledger",
-      description: "Mounter & printer statements with month-wise payables and balance",
+      description: "Mounter statements with month-wise payables and balance",
       icon: BookOpen,
       color: "text-orange-600",
       bgColor: "bg-orange-50 dark:bg-orange-950",
       route: "/admin/reports/vendor-ledger",
-      stat: "Vendor Statements",
+      stat: "Mounter Statements",
+    },
+    {
+      title: "Printer Ledger",
+      description: "Printing payables by illumination type, sq.ft rate & month-wise balance",
+      icon: FileText,
+      color: "text-pink-600",
+      bgColor: "bg-pink-50 dark:bg-pink-950",
+      route: "/admin/reports/printer-ledger",
+      stat: "Printer Statements",
     },
   ];
 

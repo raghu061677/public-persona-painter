@@ -73,7 +73,7 @@ export function GenerateInvoiceDialog({
         .single();
 
       // Generate invoice ID - pass effective GST rate for correct prefix (INV vs INV-Z)
-      const gstRateForId = isGstApplicable ? (campaign.gst_percent || 18) : 0;
+      const gstRateForId = isGstApplicable ? (campaign.gst_percent ?? 0) : 0;
       const invoiceId = await generateInvoiceId(supabase, gstRateForId);
 
       // Fetch media_asset_code for all assets to avoid storing UUIDs as asset_code
@@ -126,7 +126,7 @@ export function GenerateInvoiceDialog({
       // Calculate totals using campaign_assets pricing
       const sub_total = displayCost + printingTotal + mountingTotal - discount;
       // Use correct GST based on client setting
-      const effectiveGstPercent = isGstApplicable ? (campaign.gst_percent || 18) : 0;
+      const effectiveGstPercent = isGstApplicable ? (campaign.gst_percent ?? 0) : 0;
       const gst_amount = isGstApplicable ? campaign.gst_amount : 0;
       const total_amount = sub_total + gst_amount;
       const balance_due = total_amount;

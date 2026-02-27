@@ -113,7 +113,7 @@ export function ConvertToCampaignDialog({
           status: "Planned",
           total_amount: plan.sub_total || 0,
           gst_amount: plan.gst_amount || 0,
-          gst_percent: plan.gst_percent || 18,
+          gst_percent: plan.gst_percent ?? 0,
           grand_total: plan.grand_total || 0,
           total_assets: planItems.length,
           notes,

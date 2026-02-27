@@ -111,7 +111,7 @@ export default function CampaignEdit() {
   const [endDate, setEndDate] = useState<Date>();
   const [status, setStatus] = useState<Database['public']['Enums']['campaign_status']>("Draft");
   const [notes, setNotes] = useState("");
-  const [gstPercent, setGstPercent] = useState(18);
+  const [gstPercent, setGstPercent] = useState(0);
   const [isGstApplicable, setIsGstApplicable] = useState(true);
   const [companyPrefix, setCompanyPrefix] = useState<string | null>(null);
   const [manualDiscountAmount, setManualDiscountAmount] = useState(0);

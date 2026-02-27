@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Users,
   Briefcase,
@@ -113,6 +113,7 @@ const DEFAULT_VISIBLE = COLUMNS.filter((c) => c.default).map((c) => c.key);
 export default function ReportClientBookings() {
   const { company } = useCompany();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const [loading, setLoading] = useState(false);
@@ -334,6 +335,14 @@ export default function ReportClientBookings() {
     ];
   }, [filteredData]);
 
+  const navigateToClient = (clientId: string) => {
+    const params: Record<string, string> = {};
+    if (dateRange?.from) params.from = dateRange.from.toISOString().split("T")[0];
+    if (dateRange?.to) params.to = dateRange.to.toISOString().split("T")[0];
+    const qs = new URLSearchParams(params).toString();
+    navigate(`/admin/clients/${clientId}${qs ? `?${qs}` : ""}`);
+  };
+
   const toggleClient = (id: string) => {
     setExpandedClients((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
   };
@@ -492,7 +501,14 @@ export default function ReportClientBookings() {
                           </TableCell>
                           {COLUMNS.filter((c) => visibleColumns.includes(c.key)).map((col) => (
                             <TableCell key={col.key} className={col.key === "total_campaigns" || col.key === "total_assets" ? "text-right" : ""}>
-                              {getCellValue(client, col.key)}
+                              {col.key === "client_name" ? (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); navigateToClient(client.client_id); }}
+                                  className="text-primary hover:underline font-medium"
+                                >
+                                  {client.client_name}
+                                </button>
+                              ) : getCellValue(client, col.key)}
                             </TableCell>
                           ))}
                         </TableRow>

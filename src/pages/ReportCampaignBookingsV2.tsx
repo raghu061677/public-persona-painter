@@ -639,7 +639,19 @@ export default function ReportCampaignBookingsV2() {
                           </div>
                         </TableCell>
                       )}
-                      {visibleColumns.includes("client_name") && <TableCell>{campaign.client_name}</TableCell>}
+                      {visibleColumns.includes("client_name") && (
+                        <TableCell>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/admin/clients/${campaign.client_id}`);
+                            }}
+                            className="text-primary hover:underline"
+                          >
+                            {campaign.client_name}
+                          </button>
+                        </TableCell>
+                      )}
                       {visibleColumns.includes("start_date") && (
                         <TableCell>
                           <div className="flex items-center gap-1 text-sm">

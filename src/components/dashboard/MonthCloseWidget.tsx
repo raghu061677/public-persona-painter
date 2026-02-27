@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -26,6 +27,9 @@ import {
   ExternalLink,
   ShieldCheck,
   FileText,
+  Hammer,
+  Printer,
+  BarChart3,
 } from "lucide-react";
 import { format, subMonths, endOfMonth } from "date-fns";
 import { isMonthClosed } from "@/pages/MonthClose";
@@ -59,7 +63,7 @@ export function MonthCloseWidget() {
   const monthStart = `${selectedMonth}-01`;
   const monthEnd = format(endOfMonth(new Date(monthStart)), "yyyy-MM-dd");
 
-  // Fetch summary data for the selected month
+  // Fetch summary data + vendor snapshot for the selected month
   const { data, isLoading } = useQuery({
     queryKey: ["month-close-widget", companyId, selectedMonth],
     enabled: !!companyId,
@@ -73,7 +77,7 @@ export function MonthCloseWidget() {
           .lte("invoice_date", monthEnd),
         supabase
           .from("expenses")
-          .select("id, amount")
+          .select("id, amount, category, payment_status")
           .eq("company_id", companyId!)
           .gte("expense_date", monthStart)
           .lte("expense_date", monthEnd),
@@ -102,12 +106,39 @@ export function MonthCloseWidget() {
         .filter((i) => i.status !== "Paid")
         .reduce((s, i) => s + Number(i.total_amount || 0), 0);
 
+      // Vendor snapshot from expenses
+      const mountingPayable = expenses
+        .filter((e: any) => e.category === "Mounting")
+        .reduce((s, e) => s + Number(e.amount || 0), 0);
+      const printingPayable = expenses
+        .filter((e: any) => e.category === "Printing")
+        .reduce((s, e) => s + Number(e.amount || 0), 0);
+      const unmountPayable = expenses
+        .filter((e: any) => e.category === "Unmounting")
+        .reduce((s, e) => s + Number(e.amount || 0), 0);
+      const paidToVendors = expenses
+        .filter(
+          (e: any) =>
+            ["Mounting", "Printing", "Unmounting"].includes(e.category) &&
+            e.payment_status === "Paid"
+        )
+        .reduce((s, e) => s + Number(e.amount || 0), 0);
+      const vendorTotal = mountingPayable + printingPayable + unmountPayable;
+      const vendorBalance = vendorTotal - paidToVendors;
+
       return {
         revenue,
         expenses: totalExpenses,
         draftInvoices,
         outstanding,
         payablesGenerated: !!batchRes.data,
+        vendorSnapshot: {
+          mounting: mountingPayable,
+          printing: printingPayable,
+          unmounting: unmountPayable,
+          paid: paidToVendors,
+          balance: vendorBalance,
+        },
       };
     },
   });
@@ -117,6 +148,9 @@ export function MonthCloseWidget() {
   if (data && !data.payablesGenerated) warnings.push("Payables not generated");
   if (data && data.draftInvoices > 0)
     warnings.push(`${data.draftInvoices} draft invoice(s)`);
+
+  const fmt = (v: number | undefined) =>
+    v != null ? `₹${v.toLocaleString("en-IN")}` : "—";
 
   return (
     <Card className="hover-scale transition-all duration-200 border-l-4 border-l-violet-500">
@@ -148,10 +182,7 @@ export function MonthCloseWidget() {
         {/* Status Badge */}
         <div className="mt-2">
           {isClosed ? (
-            <Badge
-              variant="destructive"
-              className="gap-1"
-            >
+            <Badge variant="destructive" className="gap-1">
               <Lock className="h-3 w-3" /> CLOSED
             </Badge>
           ) : (
@@ -181,7 +212,7 @@ export function MonthCloseWidget() {
               <span className="text-muted-foreground">Revenue</span>
             </div>
             <span className="text-right font-semibold">
-              ₹{data.revenue.toLocaleString("en-IN")}
+              {fmt(data.revenue)}
             </span>
 
             <div className="flex items-center gap-1.5">
@@ -189,7 +220,7 @@ export function MonthCloseWidget() {
               <span className="text-muted-foreground">Expenses</span>
             </div>
             <span className="text-right font-semibold">
-              ₹{data.expenses.toLocaleString("en-IN")}
+              {fmt(data.expenses)}
             </span>
 
             <div className="flex items-center gap-1.5">
@@ -213,7 +244,7 @@ export function MonthCloseWidget() {
               <span className="text-muted-foreground">Outstanding</span>
             </div>
             <span className="text-right font-semibold">
-              ₹{data.outstanding.toLocaleString("en-IN")}
+              {fmt(data.outstanding)}
             </span>
           </div>
         ) : (
@@ -237,7 +268,7 @@ export function MonthCloseWidget() {
           </div>
         )}
 
-        {/* Actions */}
+        {/* Period Actions */}
         <div className="flex flex-col gap-2 pt-1">
           {isClosed ? (
             <>
@@ -302,6 +333,97 @@ export function MonthCloseWidget() {
             </>
           )}
         </div>
+
+        {/* Vendor Controls */}
+        <Separator />
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+            Vendor Controls
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs h-8"
+              onClick={() =>
+                navigate(
+                  `/admin/reports/vendor-ledger?month=${selectedMonth}&type=mounter`
+                )
+              }
+            >
+              <Hammer className="h-3 w-3 mr-1" />
+              Mounter
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs h-8"
+              onClick={() =>
+                navigate(
+                  `/admin/reports/printer-ledger?month=${selectedMonth}`
+                )
+              }
+            >
+              <Printer className="h-3 w-3 mr-1" />
+              Printer
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs h-8"
+              onClick={() =>
+                navigate(
+                  `/admin/reports/ops-margin?month=${selectedMonth}`
+                )
+              }
+            >
+              <BarChart3 className="h-3 w-3 mr-1" />
+              Ops Margin
+            </Button>
+          </div>
+        </div>
+
+        {/* Vendor Snapshot */}
+        {!isLoading && data && (
+          <>
+            <Separator />
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                Vendor Snapshot
+              </p>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <Hammer className="h-3 w-3" /> Mounting
+                </span>
+                <span className="text-right font-medium">
+                  {fmt(data.vendorSnapshot.mounting)}
+                </span>
+
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <Printer className="h-3 w-3" /> Printing
+                </span>
+                <span className="text-right font-medium">
+                  {fmt(data.vendorSnapshot.printing)}
+                </span>
+
+                <span className="text-muted-foreground">Unmounting</span>
+                <span className="text-right font-medium">
+                  {fmt(data.vendorSnapshot.unmounting)}
+                </span>
+
+                <span className="text-muted-foreground">Paid to Vendors</span>
+                <span className="text-right font-medium text-emerald-600">
+                  {fmt(data.vendorSnapshot.paid)}
+                </span>
+
+                <span className="font-semibold text-foreground">Balance</span>
+                <span className="text-right font-bold text-foreground">
+                  {fmt(data.vendorSnapshot.balance)}
+                </span>
+              </div>
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );

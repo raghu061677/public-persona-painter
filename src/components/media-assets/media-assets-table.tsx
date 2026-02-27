@@ -344,12 +344,16 @@ export function MediaAssetsTable({ assets, onRefresh }: MediaAssetsTableProps) {
       table.resetRowSelection();
     } else if (actionId === "export") {
       const selectedAssets = table.getSelectedRowModel().rows.map(row => row.original);
-      // Export logic here - you can use existing export utilities
-      const XLSX = await import("xlsx");
-      const ws = XLSX.utils.json_to_sheet(selectedAssets);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Assets");
-      XLSX.writeFile(wb, "media-assets-export.xlsx");
+      const { exportListExcel } = await import("@/utils/exports/excel/exportListExcel");
+      const { ASSET_EXCEL_FIELDS, ASSET_ROW_STYLE_RULES, prepareAssetRows } = await import("@/utils/exports/excel/assetExcelStandard");
+      const cleanRows = prepareAssetRows(selectedAssets);
+      await exportListExcel({
+        branding: { companyName: "GO-ADS 360°", title: "Media Assets" },
+        fields: ASSET_EXCEL_FIELDS,
+        rows: cleanRows,
+        rowStyleRules: ASSET_ROW_STYLE_RULES,
+        fileName: "media-assets-export.xlsx",
+      });
     } else if (actionId === "addToPlan") {
       setIsPlanModalOpen(true);
     }

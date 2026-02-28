@@ -36,7 +36,7 @@ export function BulkMountingDialog({
   onBulkUpdate,
 }: BulkMountingDialogProps) {
   const [mountingValue, setMountingValue] = useState("");
-  const [mountingMode, setMountingMode] = useState<"sqft" | "fixed">("sqft");
+  const [mountingMode, setMountingMode] = useState<"sqft" | "fixed">("fixed");
   const [applyMode, setApplyMode] = useState<"selected" | "all">("selected");
   const [overrideExisting, setOverrideExisting] = useState(false);
 

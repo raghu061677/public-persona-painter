@@ -19,6 +19,8 @@ interface AvailabilityRow {
   current_campaign_id: string | null;
   current_campaign_name: string | null;
   current_client_name: string | null;
+  hold_client_name?: string | null;
+  hold_type?: string | null;
 }
 
 export async function generateAvailabilityReportExcel(
@@ -46,12 +48,14 @@ export async function generateAvailabilityReportExcel(
     { width: 14 },  // Available From
     { width: 14 },  // Booked Till
     { width: 14 },  // Card Rate
+    { width: 24 },  // Campaign Name
+    { width: 28 },  // Client Name
   ];
 
   let currentRow = 1;
 
   // Title
-  worksheet.mergeCells(`A${currentRow}:L${currentRow}`);
+  worksheet.mergeCells(`A${currentRow}:N${currentRow}`);
   const titleCell = worksheet.getRow(currentRow).getCell(1);
   titleCell.value = `${companyName || 'GO-ADS 360°'} – MEDIA AVAILABILITY REPORT`;
   titleCell.font = { size: 16, bold: true, color: { argb: "FFFFFFFF" } };
@@ -61,7 +65,7 @@ export async function generateAvailabilityReportExcel(
   currentRow++;
 
   // Info row
-  worksheet.mergeCells(`A${currentRow}:L${currentRow}`);
+  worksheet.mergeCells(`A${currentRow}:N${currentRow}`);
   const infoCell = worksheet.getRow(currentRow).getCell(1);
   const start = format(new Date(startDate), "dd MMM yyyy");
   const end = format(new Date(endDate), "dd MMM yyyy");
@@ -75,12 +79,16 @@ export async function generateAvailabilityReportExcel(
   currentRow++;
   const vacantNow = rows.filter(r => r.availability_status === 'VACANT_NOW').length;
   const availSoon = rows.filter(r => r.availability_status === 'AVAILABLE_SOON').length;
+  const booked = rows.filter(r => r.availability_status === 'BOOKED_THROUGH_RANGE').length;
+  const held = rows.filter(r => r.availability_status === 'HELD').length;
   worksheet.getRow(currentRow).values = [
-    "Total:", rows.length, "", "Vacant Now:", vacantNow, "", "Available Soon:", availSoon,
+    "Total:", rows.length, "", "Available:", vacantNow, "", "Available Soon:", availSoon, "", "Booked:", booked, "", "Held:", held,
   ];
   worksheet.getRow(currentRow).font = { bold: true };
   worksheet.getRow(currentRow).getCell(5).font = { bold: true, color: { argb: "FF22C55E" } };
   worksheet.getRow(currentRow).getCell(8).font = { bold: true, color: { argb: "FFEAB308" } };
+  worksheet.getRow(currentRow).getCell(11).font = { bold: true, color: { argb: "FFEF4444" } };
+  worksheet.getRow(currentRow).getCell(14).font = { bold: true, color: { argb: "FF9333EA" } };
   worksheet.getRow(currentRow).height = 22;
   currentRow += 2;
 
@@ -88,6 +96,7 @@ export async function generateAvailabilityReportExcel(
   const HEADERS = [
     'S.No', 'Asset ID', 'Area', 'Location', 'Direction', 'Dimension',
     'Sq.Ft', 'Illumination', 'Availability Status', 'Available From', 'Booked Till', 'Card Rate',
+    'Campaign Name', 'Client Name',
   ];
 
   const headerRow = worksheet.getRow(currentRow);
@@ -118,7 +127,8 @@ export async function generateAvailabilityReportExcel(
   rows.forEach((row, idx) => {
     const r = worksheet.getRow(currentRow);
     const statusLabel = row.availability_status === 'VACANT_NOW' ? 'Available'
-      : row.availability_status === 'AVAILABLE_SOON' ? fmtDateIN(row.available_from) : 'Booked';
+      : row.availability_status === 'AVAILABLE_SOON' ? 'Available Soon'
+      : row.availability_status === 'HELD' ? 'Held/Blocked' : 'Booked';
     
     const availFromFormatted = fmtDateIN(row.available_from);
     const bookedTillFormatted = fmtDateIN(row.booked_till);
@@ -136,6 +146,8 @@ export async function generateAvailabilityReportExcel(
       availFromFormatted,
       bookedTillFormatted,
       row.card_rate,
+      row.current_campaign_name || (row.hold_type ? `Hold: ${row.hold_type}` : ''),
+      row.current_client_name || row.hold_client_name || '',
     ];
 
     // Format card rate
@@ -144,18 +156,17 @@ export async function generateAvailabilityReportExcel(
 
     // Row background color based on availability status
     if (row.availability_status === 'VACANT_NOW') {
-      // Light green background for Available rows
       r.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F5E9' } };
       r.getCell(9).font = { bold: true, color: { argb: "FF16A34A" } };
     } else if (row.availability_status === 'AVAILABLE_SOON') {
-      // Light orange background for Available Soon rows
       r.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF3E0' } };
       r.getCell(9).font = { bold: true, color: { argb: "FFEA8C00" } };
+    } else if (row.availability_status === 'HELD') {
+      r.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3E5F5' } };
+      r.getCell(9).font = { bold: true, color: { argb: "FF9333EA" } };
     } else {
-      // Alternate gray for other rows
-      if (idx % 2 === 0) {
-        r.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9FAFB' } };
-      }
+      r.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFEBEE' } };
+      r.getCell(9).font = { bold: true, color: { argb: "FFEF4444" } };
     }
 
     r.eachCell((cell, colNum) => {
@@ -173,7 +184,7 @@ export async function generateAvailabilityReportExcel(
 
   // Footer
   currentRow++;
-  worksheet.mergeCells(`A${currentRow}:L${currentRow}`);
+  worksheet.mergeCells(`A${currentRow}:N${currentRow}`);
   const footerRow = worksheet.getRow(currentRow);
   footerRow.getCell(1).value = "Go-Ads 360° | OOH Media Management Platform";
   footerRow.getCell(1).font = { size: 10, italic: true, color: { argb: "FF6B7280" } };

@@ -207,10 +207,12 @@ export default function MediaAvailabilityReport() {
       asset_id: (r: any) => r.media_asset_code || r.asset_id,
       availability_status: (r: any) =>
         r.availability_status === "VACANT_NOW" ? "Available" :
-        r.availability_status === "AVAILABLE_SOON" ? formatDateIN(r.available_from) :
+        r.availability_status === "AVAILABLE_SOON" ? "Available Soon" :
         r.availability_status === "HELD" ? "Held/Blocked" : "Booked",
       available_from: (r: any) => formatDateIN(r.available_from),
       booked_till: (r: any) => formatDateIN(r.booked_till),
+      campaign_name: (r: any) => r.current_campaign_name || (r.hold_type ? `Hold: ${r.hold_type}` : ''),
+      client_name: (r: any) => r.current_client_name || r.hold_client_name || '',
     },
   });
   // Column visibility

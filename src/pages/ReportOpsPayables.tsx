@@ -1,12 +1,12 @@
 import { useState, useMemo } from "react";
 import { useOpsReportData } from "@/hooks/useOpsReportData";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Truck, Printer, ArrowDownToLine, Search, Download, RotateCcw, IndianRupee } from "lucide-react";
-import { format } from "date-fns";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Truck, Printer, ArrowDownToLine, Search, Download, RotateCcw, IndianRupee, ShieldCheck, Clock, List } from "lucide-react";
 import ExcelJS from "exceljs";
 
 const downloadExcel = (buf: ArrayBuffer, name: string) => {
@@ -18,12 +18,14 @@ const downloadExcel = (buf: ArrayBuffer, name: string) => {
 };
 
 type PayableType = "all" | "mounting" | "printing" | "unmounting";
+type UnmountView = "approved" | "pending" | "all";
 
 export default function ReportOpsPayables() {
   const { lines, isLoading } = useOpsReportData();
   const [search, setSearch] = useState("");
   const [monthFilter, setMonthFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState<PayableType>("all");
+  const [unmountView, setUnmountView] = useState<UnmountView>("approved");
 
   // Get unique months from data
   const months = useMemo(() => {
@@ -52,7 +54,7 @@ export default function ReportOpsPayables() {
     return result;
   }, [lines, search, monthFilter]);
 
-  // Build flat payable rows
+  // Build flat payable rows with unmount filtering
   const payableRows = useMemo(() => {
     const rows: Array<{
       type: string;
@@ -65,6 +67,7 @@ export default function ReportOpsPayables() {
       rate: number;
       qty: string;
       amount: number;
+      unmountStatus?: string;
     }> = [];
 
     filtered.forEach(l => {
@@ -82,20 +85,31 @@ export default function ReportOpsPayables() {
           amount: l.mountingPayable,
         });
       }
-      if ((typeFilter === "all" || typeFilter === "unmounting") && l.unmountingPayable > 0) {
-        rows.push({
-          type: "Unmounting",
-          campaignName: l.campaignName,
-          clientName: l.clientName,
-          assetId: l.assetId,
-          location: l.location,
-          city: l.city,
-          month: l.unmountingMonth,
-          rate: l.unmountingPayable,
-          qty: "1 asset",
-          amount: l.unmountingPayable,
-        });
+
+      // Unmounting rows — filtered by unmountView
+      if ((typeFilter === "all" || typeFilter === "unmounting") && l.unmountStatus !== "NOT_REQUIRED") {
+        const showThisUnmount =
+          unmountView === "all" ||
+          (unmountView === "approved" && l.unmountStatus === "APPROVED") ||
+          (unmountView === "pending" && l.unmountStatus === "PENDING");
+
+        if (showThisUnmount) {
+          rows.push({
+            type: "Unmounting",
+            campaignName: l.campaignName,
+            clientName: l.clientName,
+            assetId: l.assetId,
+            location: l.location,
+            city: l.city,
+            month: l.unmountingMonth,
+            rate: l.unmountingPayable,
+            qty: "1 asset",
+            amount: l.unmountingPayable,
+            unmountStatus: l.unmountStatus,
+          });
+        }
       }
+
       if ((typeFilter === "all" || typeFilter === "printing") && l.printingRequired && l.printingPayable > 0) {
         rows.push({
           type: "Printing",
@@ -113,17 +127,24 @@ export default function ReportOpsPayables() {
     });
 
     return rows;
-  }, [filtered, typeFilter]);
+  }, [filtered, typeFilter, unmountView]);
 
-  // Summary KPIs
+  // Summary KPIs — only count approved unmount in totals
   const totals = useMemo(() => {
-    let mounting = 0, unmounting = 0, printing = 0;
+    let mounting = 0, unmountingApproved = 0, unmountingPending = 0, printing = 0;
     filtered.forEach(l => {
       mounting += l.mountingPayable;
-      unmounting += l.unmountingPayable;
+      if (l.unmountStatus === "APPROVED") unmountingApproved += l.unmountingPayable;
+      else if (l.unmountStatus === "PENDING") unmountingPending += l.unmountingPayable;
       if (l.printingRequired) printing += l.printingPayable;
     });
-    return { mounting, unmounting, printing, total: mounting + unmounting + printing };
+    return {
+      mounting,
+      unmountingApproved,
+      unmountingPending,
+      printing,
+      total: mounting + unmountingApproved + printing,
+    };
   }, [filtered]);
 
   const exportExcel = async () => {
@@ -140,17 +161,22 @@ export default function ReportOpsPayables() {
       { header: "Rate (₹)", key: "rate", width: 12 },
       { header: "Qty", key: "qty", width: 12 },
       { header: "Amount (₹)", key: "amount", width: 14 },
+      { header: "Unmount Status", key: "unmountStatus", width: 16 },
     ];
     ws.getRow(1).font = { bold: true };
-    payableRows.forEach(r => ws.addRow(r));
-    // Totals row
+    payableRows.forEach(r => ws.addRow({ ...r, unmountStatus: r.unmountStatus ?? "" }));
     ws.addRow({});
-    ws.addRow({ type: "TOTAL", amount: payableRows.reduce((s, r) => s + r.amount, 0) });
+    ws.addRow({ type: "TOTAL (Approved)", amount: totals.total });
+    if (totals.unmountingPending > 0) {
+      ws.addRow({ type: "PENDING Unmount", amount: totals.unmountingPending });
+    }
     const buf = await wb.xlsx.writeBuffer();
     downloadExcel(buf as ArrayBuffer, `ops-payables-${monthFilter !== "all" ? monthFilter : "all"}.xlsx`);
   };
 
   const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+
+  const pendingCount = filtered.filter(l => l.unmountStatus === "PENDING").length;
 
   return (
     <div className="space-y-6">
@@ -160,14 +186,18 @@ export default function ReportOpsPayables() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card><CardContent className="pt-4">
           <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1"><Truck className="h-3.5 w-3.5" /> Mounting</div>
           <p className="text-xl font-bold">{fmt(totals.mounting)}</p>
         </CardContent></Card>
         <Card><CardContent className="pt-4">
-          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1"><ArrowDownToLine className="h-3.5 w-3.5" /> Unmounting</div>
-          <p className="text-xl font-bold">{fmt(totals.unmounting)}</p>
+          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1"><ArrowDownToLine className="h-3.5 w-3.5" /> Unmount (Approved)</div>
+          <p className="text-xl font-bold">{fmt(totals.unmountingApproved)}</p>
+        </CardContent></Card>
+        <Card className={totals.unmountingPending > 0 ? "border-amber-500/50" : ""}><CardContent className="pt-4">
+          <div className="flex items-center gap-2 text-amber-600 text-xs mb-1"><Clock className="h-3.5 w-3.5" /> Unmount (Pending)</div>
+          <p className="text-xl font-bold text-amber-600">{fmt(totals.unmountingPending)}</p>
         </CardContent></Card>
         <Card><CardContent className="pt-4">
           <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1"><Printer className="h-3.5 w-3.5" /> Printing</div>
@@ -176,8 +206,21 @@ export default function ReportOpsPayables() {
         <Card><CardContent className="pt-4">
           <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1"><IndianRupee className="h-3.5 w-3.5" /> Total Payable</div>
           <p className="text-2xl font-bold text-destructive">{fmt(totals.total)}</p>
+          <p className="text-[10px] text-muted-foreground">Approved only</p>
         </CardContent></Card>
       </div>
+
+      {/* Unmount View Tabs */}
+      <Tabs value={unmountView} onValueChange={v => setUnmountView(v as UnmountView)}>
+        <TabsList>
+          <TabsTrigger value="approved" className="gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Approved</TabsTrigger>
+          <TabsTrigger value="pending" className="gap-1.5">
+            <Clock className="h-3.5 w-3.5" /> Pending
+            {pendingCount > 0 && <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0">{pendingCount}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="all" className="gap-1.5"><List className="h-3.5 w-3.5" /> All</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
@@ -227,13 +270,14 @@ export default function ReportOpsPayables() {
                   <th className="text-right py-3 px-4 font-medium">Rate</th>
                   <th className="text-left py-3 px-4 font-medium">Qty</th>
                   <th className="text-right py-3 px-4 font-medium">Amount</th>
+                  <th className="text-center py-3 px-4 font-medium">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {payableRows.length === 0 ? (
-                  <tr><td colSpan={9} className="text-center py-12 text-muted-foreground">No payable records found</td></tr>
+                  <tr><td colSpan={10} className="text-center py-12 text-muted-foreground">No payable records found</td></tr>
                 ) : payableRows.map((r, i) => (
-                  <tr key={i} className="border-b border-border/20 hover:bg-muted/30">
+                  <tr key={i} className={`border-b border-border/20 hover:bg-muted/30 ${r.unmountStatus === "PENDING" ? "bg-amber-500/5" : ""}`}>
                     <td className="py-2.5 px-4">
                       <Badge variant={r.type === "Mounting" ? "default" : r.type === "Printing" ? "secondary" : "outline"} className="text-xs">
                         {r.type}
@@ -247,14 +291,24 @@ export default function ReportOpsPayables() {
                     <td className="py-2.5 px-4 text-right font-mono">{fmt(r.rate)}</td>
                     <td className="py-2.5 px-4">{r.qty}</td>
                     <td className="py-2.5 px-4 text-right font-mono font-semibold">{fmt(r.amount)}</td>
+                    <td className="py-2.5 px-4 text-center">
+                      {r.type === "Unmounting" ? (
+                        <Badge variant={r.unmountStatus === "APPROVED" ? "default" : "outline"} className={`text-[10px] ${r.unmountStatus === "PENDING" ? "border-amber-500 text-amber-600" : ""}`}>
+                          {r.unmountStatus === "APPROVED" ? "Approved" : "Pending"}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
               {payableRows.length > 0 && (
                 <tfoot>
                   <tr className="border-t-2 border-border font-bold">
-                    <td colSpan={8} className="py-3 px-4 text-right">Total Payable</td>
-                    <td className="py-3 px-4 text-right font-mono text-destructive">{fmt(payableRows.reduce((s, r) => s + r.amount, 0))}</td>
+                    <td colSpan={8} className="py-3 px-4 text-right">Total Payable (Approved)</td>
+                    <td className="py-3 px-4 text-right font-mono text-destructive">{fmt(totals.total)}</td>
+                    <td />
                   </tr>
                 </tfoot>
               )}
@@ -264,7 +318,7 @@ export default function ReportOpsPayables() {
       )}
 
       <p className="text-xs text-muted-foreground">
-        Rates sourced from Settings → Rate Settings. Printing applies only to assets where printing cost &gt; 0.
+        Rates sourced from Settings → Rate Settings. Unmounting payable requires approval — pending unmounts are excluded from totals.
       </p>
     </div>
   );

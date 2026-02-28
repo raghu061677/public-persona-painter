@@ -1689,6 +1689,11 @@ export type Database = {
           tax_percent: number | null
           total_price: number | null
           total_sqft: number | null
+          unmount_approved: boolean
+          unmount_approved_at: string | null
+          unmount_approved_by: string | null
+          unmount_required: boolean
+          unmounted_at: string | null
         }
         Insert: {
           area: string
@@ -1740,6 +1745,11 @@ export type Database = {
           tax_percent?: number | null
           total_price?: number | null
           total_sqft?: number | null
+          unmount_approved?: boolean
+          unmount_approved_at?: string | null
+          unmount_approved_by?: string | null
+          unmount_required?: boolean
+          unmounted_at?: string | null
         }
         Update: {
           area?: string
@@ -1791,6 +1801,11 @@ export type Database = {
           tax_percent?: number | null
           total_price?: number | null
           total_sqft?: number | null
+          unmount_approved?: boolean
+          unmount_approved_at?: string | null
+          unmount_approved_by?: string | null
+          unmount_required?: boolean
+          unmounted_at?: string | null
         }
         Relationships: [
           {

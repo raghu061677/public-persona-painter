@@ -51,10 +51,11 @@ export function canCompleteCampaign(campaign: any, assets: any[]): { can: boolea
  * Checks if asset can have proof uploaded
  */
 export function canUploadProof(asset: any): { can: boolean; reason?: string } {
-  if (asset.status !== 'Mounted') {
+  // "Installed" is canonical DB value; "Mounted" kept for backward compatibility
+  if (asset.status !== 'Installed' && asset.status !== 'Mounted') {
     return { 
       can: false, 
-      reason: `Asset must be mounted first (current: ${asset.status})` 
+      reason: `Asset must be installed first (current: ${asset.status})` 
     };
   }
 

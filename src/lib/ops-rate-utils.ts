@@ -119,6 +119,10 @@ export interface OpsPayableLine {
   mountingMonth: string;
   unmountingMonth: string;
   illuminationType: string;
+  /** Unmount approval status: NOT_REQUIRED | PENDING | APPROVED */
+  unmountStatus: "NOT_REQUIRED" | "PENDING" | "APPROVED";
+  /** Whether this line's unmount cost should be included in totals */
+  unmountIncludeInTotals: boolean;
 }
 
 export interface OpsBillableLine extends OpsPayableLine {
@@ -156,6 +160,14 @@ export function computeOpsLines(
     const printReq = isPrintingRequired(ca);
     const backlit = isBacklit(ca.illumination_type);
 
+    // Unmount approval gating
+    const unmountRequired: boolean = ca.unmount_required === true;
+    const unmountApproved: boolean = ca.unmount_approved === true;
+    const unmountStatus: "NOT_REQUIRED" | "PENDING" | "APPROVED" =
+      !unmountRequired ? "NOT_REQUIRED" :
+      unmountApproved ? "APPROVED" : "PENDING";
+    const unmountIncludeInTotals = unmountStatus === "APPROVED";
+
     // Resolve rates with source tracking
     const mountResolved = resolveRate(rates, "vendor_mounting", ca.city, ca.media_type);
     const unmountRate = resolveRate(rates, "vendor_unmounting", ca.city, ca.media_type).rate;
@@ -170,14 +182,15 @@ export function computeOpsLines(
 
     // Payables
     const mountingPayable = mountRate;
-    const unmountingPayable = unmountRate;
+    // Unmounting payable only generated if unmount is required; amount only counted if approved
+    const unmountingPayable = unmountRequired ? unmountRate : 0;
     const printingPayable = printReq ? sqft * printRate : 0;
 
     // Billables
     const isShort = durationDays <= clientMount.thresholdDays;
     const mountingBillable = isShort ? clientMount.rate : (ca.mounting_charges ?? ca.mounting_cost ?? 0);
     const printingBillable = printReq ? (ca.printing_charges ?? ca.printing_cost ?? 0) : 0;
-    const unmountingBillable = clientUnmount;
+    const unmountingBillable = unmountRequired ? clientUnmount : 0;
 
     // Months
     const mountingMonth = startDate ? startDate.slice(0, 7) : "";
@@ -199,6 +212,8 @@ export function computeOpsLines(
       mountingMonth,
       unmountingMonth,
       illuminationType: ca.illumination_type ?? "Non-Lit",
+      unmountStatus,
+      unmountIncludeInTotals,
       mountingBillable,
       printingBillable,
       unmountingBillable,

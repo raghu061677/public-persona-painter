@@ -15,7 +15,7 @@ export function useOpsReportData() {
       const [caRes, campRes, ratesRes] = await Promise.all([
         supabase
           .from("campaign_assets")
-          .select("campaign_id, asset_id, location, city, area, media_type, total_sqft, illumination_type, printing_cost, printing_charges, mounting_cost, mounting_charges, booking_start_date, booking_end_date, status")
+          .select("campaign_id, asset_id, location, city, area, media_type, total_sqft, illumination_type, printing_cost, printing_charges, mounting_cost, mounting_charges, booking_start_date, booking_end_date, status, unmount_required, unmount_approved, unmount_approved_at, unmount_approved_by")
           .order("campaign_id"),
         supabase
           .from("campaigns")

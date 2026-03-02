@@ -143,7 +143,7 @@
               ? supabase.from('media_assets').select('id, media_asset_code, location, area, direction, media_type, illumination_type, dimensions, total_sqft').in('id', assetIds)
               : Promise.resolve({ data: null } as any),
             campaignAssetIds.length
-              ? supabase.from('campaign_assets').select('id, asset_id, location, area, direction, media_type, illumination_type, dimensions, total_sqft, booking_start_date, booking_end_date').in('id', campaignAssetIds)
+              ? supabase.from('campaign_assets').select('id, asset_id, location, area, direction, media_type, illumination_type, dimensions, total_sqft, booking_start_date, booking_end_date, rent_amount, printing_charges, mounting_charges, daily_rate, booked_days, negotiated_rate, card_rate').in('id', campaignAssetIds)
               : Promise.resolve({ data: null } as any),
           ]);
 
@@ -161,9 +161,18 @@
           };
 
           items = items.map((item: any) => {
+            // Skip discount/adjustment line items (no asset association)
+            if (!item.campaign_asset_id && !item.asset_id) return item;
             const ca: any = item.campaign_asset_id ? caMap.get(item.campaign_asset_id) : undefined;
             const ma: any = (item.asset_id ? maMap.get(item.asset_id) : undefined) || (ca?.asset_id ? maMap.get(ca.asset_id) : undefined);
             if (!ca && !ma) return item;
+
+            // Override pricing from campaign_assets (source of truth) when available
+            const rentAmount = ca?.rent_amount != null ? ca.rent_amount : item.rent_amount;
+            const printingCharges = ca?.printing_charges != null ? ca.printing_charges : item.printing_charges;
+            const mountingCharges = ca?.mounting_charges != null ? ca.mounting_charges : item.mounting_charges;
+            const lineTotal = (rentAmount || 0) + (printingCharges || 0) + (mountingCharges || 0);
+
             return {
               ...item,
               asset_code: ma?.media_asset_code || (item.asset_code && !/^[0-9a-f]{8}-/.test(item.asset_code) ? item.asset_code : null),
@@ -176,6 +185,15 @@
               total_sqft: pick(item.total_sqft, ca?.total_sqft, ma?.total_sqft),
               start_date: item.start_date ?? ca?.booking_start_date,
               end_date: item.end_date ?? ca?.booking_end_date,
+              // Pricing overrides from campaign_assets
+              rent_amount: rentAmount,
+              rate: rentAmount,
+              printing_charges: printingCharges,
+              mounting_charges: mountingCharges,
+              amount: lineTotal,
+              total: lineTotal,
+              booked_days: ca?.booked_days ?? item.booked_days,
+              daily_rate: ca?.daily_rate ?? item.daily_rate,
             };
           });
         }

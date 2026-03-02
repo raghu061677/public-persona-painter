@@ -207,7 +207,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
         ? supabase
             .from('campaign_assets')
             .select(
-              'id, asset_id, location, area, direction, media_type, illumination_type, dimensions, total_sqft, booking_start_date, booking_end_date'
+              'id, asset_id, location, area, direction, media_type, illumination_type, dimensions, total_sqft, booking_start_date, booking_end_date, rent_amount, printing_charges, mounting_charges, daily_rate, booked_days'
             )
             .in('id', campaignAssetIds)
         : Promise.resolve({ data: null } as any),
@@ -223,6 +223,8 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
     const pick = (...vals: any[]) => vals.find(v => v != null && v !== '' && v !== '-' && v !== 'N/A') ?? null;
 
     enrichedItems = enrichedItems.map((item: any) => {
+      // Skip discount/adjustment line items
+      if (!item.campaign_asset_id && !item.campaign_assets_id && !item.asset_id) return item;
       const caId = item.campaign_asset_id || item.campaign_assets_id;
       const campaignAsset: any = caId ? campaignAssetMap.get(caId) : undefined;
       const assetId: string | undefined = item.asset_id || campaignAsset?.asset_id;
@@ -230,6 +232,12 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
 
       const source: any = campaignAsset || mediaAsset;
       if (!source) return item;
+
+      // Override pricing from campaign_assets (source of truth)
+      const rentAmount = campaignAsset?.rent_amount != null ? campaignAsset.rent_amount : item.rent_amount;
+      const printingCharges = campaignAsset?.printing_charges != null ? campaignAsset.printing_charges : item.printing_charges;
+      const mountingCharges = campaignAsset?.mounting_charges != null ? campaignAsset.mounting_charges : item.mounting_charges;
+      const lineTotal = (rentAmount || 0) + (printingCharges || 0) + (mountingCharges || 0);
 
       return {
         ...item,
@@ -245,6 +253,15 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
         total_sqft: pick(item.total_sqft, source.total_sqft) || 0,
         booking_start_date: item.booking_start_date ?? campaignAsset?.booking_start_date,
         booking_end_date: item.booking_end_date ?? campaignAsset?.booking_end_date,
+        // Pricing overrides
+        rent_amount: rentAmount,
+        rate: rentAmount,
+        printing_charges: printingCharges,
+        mounting_charges: mountingCharges,
+        amount: lineTotal,
+        total: lineTotal,
+        booked_days: campaignAsset?.booked_days ?? item.booked_days,
+        daily_rate: campaignAsset?.daily_rate ?? item.daily_rate,
       };
     });
   }

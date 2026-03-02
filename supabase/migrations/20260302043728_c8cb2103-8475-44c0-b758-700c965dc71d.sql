@@ -1,0 +1,1 @@
+UPDATE storage.buckets SET allowed_mime_types = array_append(allowed_mime_types, 'application/vnd.openxmlformats-officedocument.presentationml.presentation') WHERE id = 'client-documents';

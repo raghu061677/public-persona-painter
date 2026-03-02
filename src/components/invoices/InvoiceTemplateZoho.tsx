@@ -286,38 +286,59 @@
              </tr>
            </thead>
            <tbody>
-             {items.map((item: any, index: number) => {
-               const assetCode = formatAssetDisplayCode({ mediaAssetCode: item.media_asset_code || item.asset_code, fallbackId: item.asset_id, companyName: company?.name });
-                const startDt = item.start_date || item.booking_start_date;
-                const endDt = item.end_date || item.booking_end_date;
-                const billableDays = item.billable_days || item.booked_days || (startDt && endDt ? Math.max(1, Math.floor((new Date(endDt).getTime() - new Date(startDt).getTime()) / (1000 * 60 * 60 * 24)) + 1) : 0);
+            {items.map((item: any, index: number) => {
                 const rentAmount = item.rent_amount || item.rate || 0;
                 const printingCharges = item.printing_charges || item.printing_cost || 0;
                 const mountingCharges = item.mounting_charges || item.mounting_cost || 0;
                 const lineTotal = item.total || item.amount || (rentAmount + printingCharges + mountingCharges);
-               return (
-                 <tr key={index} className="border-t border-border">
-                   <td className="p-2 align-top">{index + 1}</td>
-                   <td className="p-2 align-top">
-                     <div className="font-medium">[{assetCode}]</div>
-                     <div className="text-muted-foreground text-[10px]">
-                       <div>Location: {item.location || '-'}</div>
-                       <div>Direction: {item.direction || '-'} | Area: {item.area || '-'}</div>
-                       <div>Media: {item.media_type || '-'} | Lit: {item.illumination_type || '-'}</div>
-                       <div>HSN/SAC: 998361</div>
-                     </div>
-                   </td>
-                    <td className="p-2 text-center align-top text-[10px]"><div>Dimensions: {item.dimensions || item.dimension || item.size || item.dimension_text || item.meta?.dimensions || '—'}</div><div>Sqft: {item.total_sqft || item.sqft || item.meta?.total_sqft || '—'}</div></td>
-                    <td className="p-2 text-center align-top text-[10px]">{(item.start_date || item.booking_start_date) && <div>{formatDate(item.start_date || item.booking_start_date)}</div>}{(item.end_date || item.booking_end_date) && <div>to {formatDate(item.end_date || item.booking_end_date)}</div>}{billableDays > 0 ? <div className="font-medium">{billableDays} Days</div> : <div>—</div>}</td>
-                   <td className="p-2 text-right align-top text-[10px]">
-                     <div>Display: {formatINR(rentAmount)}</div>
-                     {printingCharges > 0 && <div>Printing: {formatINR(printingCharges)}</div>}
-                     {mountingCharges > 0 && <div>Installation: {formatINR(mountingCharges)}</div>}
-                   </td>
-                   <td className="p-2 text-right align-top font-medium">{formatINR(lineTotal)}</td>
-                 </tr>
-               );
-             })}
+
+                // Detect discount/adjustment lines: negative amount or no real asset association
+                const isDiscountLine = (lineTotal < 0) || (rentAmount < 0) ||
+                  (!item.campaign_asset_id && !item.asset_id) ||
+                  (item.description && /discount|adjustment|round/i.test(item.description));
+
+                if (isDiscountLine) {
+                  return (
+                    <tr key={index} className="border-t border-border bg-muted/30">
+                      <td className="p-2 align-top">{index + 1}</td>
+                      <td className="p-2 align-top" colSpan={3}>
+                        <div className="font-medium">{item.description || 'Discount / Adjustment'}</div>
+                      </td>
+                      <td className="p-2 text-right align-top text-[10px]">
+                        <div>{formatINR(lineTotal)}</div>
+                      </td>
+                      <td className="p-2 text-right align-top font-medium">{formatINR(lineTotal)}</td>
+                    </tr>
+                  );
+                }
+
+                const assetCode = formatAssetDisplayCode({ mediaAssetCode: item.media_asset_code || item.asset_code, fallbackId: item.asset_id, companyName: company?.name });
+                 const startDt = item.start_date || item.booking_start_date;
+                 const endDt = item.end_date || item.booking_end_date;
+                 const billableDays = item.billable_days || item.booked_days || (startDt && endDt ? Math.max(1, Math.floor((new Date(endDt).getTime() - new Date(startDt).getTime()) / (1000 * 60 * 60 * 24)) + 1) : 0);
+                return (
+                  <tr key={index} className="border-t border-border">
+                    <td className="p-2 align-top">{index + 1}</td>
+                    <td className="p-2 align-top">
+                      <div className="font-medium">[{assetCode}]</div>
+                      <div className="text-muted-foreground text-[10px]">
+                        <div>Location: {item.location || '-'}</div>
+                        <div>Direction: {item.direction || '-'} | Area: {item.area || '-'}</div>
+                        <div>Media: {item.media_type || '-'} | Lit: {item.illumination_type || '-'}</div>
+                        <div>HSN/SAC: 998361</div>
+                      </div>
+                    </td>
+                     <td className="p-2 text-center align-top text-[10px]"><div>Dimensions: {item.dimensions || item.dimension || item.size || item.dimension_text || item.meta?.dimensions || '—'}</div><div>Sqft: {item.total_sqft || item.sqft || item.meta?.total_sqft || '—'}</div></td>
+                     <td className="p-2 text-center align-top text-[10px]">{(item.start_date || item.booking_start_date) && <div>{formatDate(item.start_date || item.booking_start_date)}</div>}{(item.end_date || item.booking_end_date) && <div>to {formatDate(item.end_date || item.booking_end_date)}</div>}{billableDays > 0 ? <div className="font-medium">{billableDays} Days</div> : <div>—</div>}</td>
+                    <td className="p-2 text-right align-top text-[10px]">
+                      <div>Display: {formatINR(rentAmount)}</div>
+                      {printingCharges > 0 && <div>Printing: {formatINR(printingCharges)}</div>}
+                      {mountingCharges > 0 && <div>Installation: {formatINR(mountingCharges)}</div>}
+                    </td>
+                    <td className="p-2 text-right align-top font-medium">{formatINR(lineTotal)}</td>
+                  </tr>
+                );
+              })}
            </tbody>
          </table>
        </div>

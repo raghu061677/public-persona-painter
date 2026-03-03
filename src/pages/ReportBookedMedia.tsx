@@ -176,23 +176,22 @@ export default function ReportBookedMedia() {
       // Get asset codes
       const assetIds = [...new Set((caData || []).map((r: any) => r.asset_id))];
       let assetCodeMap = new Map<string, string>();
-      let assetExtraMap = new Map<string, { address: string; status: string; direction: string; dimensions: string; illumination_type: string; total_sqft: number }>();
+      let assetExtraMap = new Map<string, { status: string; direction: string; dimensions: string; illumination_type: string; total_sqft: number }>();
 
       if (assetIds.length > 0) {
         for (let i = 0; i < assetIds.length; i += 100) {
           const chunk = assetIds.slice(i, i + 100);
           const { data: maData } = await supabase
             .from("media_assets")
-            .select("id, media_asset_code, address, status, direction, facing, dimensions, dimension, illumination_type, illumination, total_sqft")
+            .select("id, media_asset_code, status, direction, dimensions, illumination_type, total_sqft")
             .in("id", chunk);
           maData?.forEach((ma: any) => {
             assetCodeMap.set(ma.id, ma.media_asset_code || `ASSET-${ma.id.replace(/-/g, '').slice(-6).toUpperCase()}`);
             assetExtraMap.set(ma.id, {
-              address: ma.address || "-",
               status: ma.status || "-",
-              direction: ma.direction || ma.facing || "-",
-              dimensions: ma.dimensions || ma.dimension || "-",
-              illumination_type: ma.illumination_type || ma.illumination || "-",
+              direction: ma.direction || "-",
+              dimensions: ma.dimensions || "-",
+              illumination_type: ma.illumination_type || "-",
               total_sqft: ma.total_sqft || 0,
             });
           });
@@ -212,7 +211,7 @@ export default function ReportBookedMedia() {
           city: r.city || "-",
           area: r.area || "-",
           location: r.location || "-",
-          address: maExtra?.address || "-",
+          address: r.location || "-",
           direction: r.direction || maExtra?.direction || "-",
           dimensions: r.dimensions || maExtra?.dimensions || "-",
           total_sqft: r.total_sqft || maExtra?.total_sqft || 0,

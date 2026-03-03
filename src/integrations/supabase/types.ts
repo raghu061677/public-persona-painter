@@ -4453,6 +4453,68 @@ export type Database = {
         }
         Relationships: []
       }
+      finance_override_requests: {
+        Row: {
+          admin_decision_at: string | null
+          admin_decision_by: string | null
+          admin_decision_reason: string | null
+          company_id: string
+          created_at: string
+          executed_at: string | null
+          id: string
+          payload: Json | null
+          reason: string
+          requested_by: string
+          requested_by_role: string
+          scope_action: string
+          scope_record_id: string
+          scope_table: string
+          status: string
+        }
+        Insert: {
+          admin_decision_at?: string | null
+          admin_decision_by?: string | null
+          admin_decision_reason?: string | null
+          company_id: string
+          created_at?: string
+          executed_at?: string | null
+          id?: string
+          payload?: Json | null
+          reason: string
+          requested_by: string
+          requested_by_role?: string
+          scope_action: string
+          scope_record_id: string
+          scope_table: string
+          status?: string
+        }
+        Update: {
+          admin_decision_at?: string | null
+          admin_decision_by?: string | null
+          admin_decision_reason?: string | null
+          company_id?: string
+          created_at?: string
+          executed_at?: string | null
+          id?: string
+          payload?: Json | null
+          reason?: string
+          requested_by?: string
+          requested_by_role?: string
+          scope_action?: string
+          scope_record_id?: string
+          scope_table?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_override_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       finance_overrides: {
         Row: {
           approved_by: string
@@ -4461,6 +4523,7 @@ export type Database = {
           expires_at: string
           id: string
           reason: string
+          request_id: string | null
           requested_by: string
           scope_action: string
           scope_record_id: string
@@ -4475,6 +4538,7 @@ export type Database = {
           expires_at: string
           id?: string
           reason: string
+          request_id?: string | null
           requested_by: string
           scope_action: string
           scope_record_id: string
@@ -4489,6 +4553,7 @@ export type Database = {
           expires_at?: string
           id?: string
           reason?: string
+          request_id?: string | null
           requested_by?: string
           scope_action?: string
           scope_record_id?: string
@@ -4502,6 +4567,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_overrides_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "finance_override_requests"
             referencedColumns: ["id"]
           },
         ]

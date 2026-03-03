@@ -265,8 +265,17 @@ verify_jwt = true
 [functions.public-media-assistant]
 verify_jwt = false
 
-# Finance Admin Override
+# Finance Override Governance (3-step workflow)
 [functions.admin-finance-override]
+verify_jwt = false
+
+[functions.finance-request-override]
+verify_jwt = false
+
+[functions.admin-decide-override]
+verify_jwt = false
+
+[functions.admin-execute-override]
 verify_jwt = false
 
 # Daily Alerts Automation

@@ -35,6 +35,8 @@ import {
   MoreHorizontal,
   Shield,
   ShieldOff,
+  Unlock,
+  Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -193,6 +195,10 @@ export default function MediaAvailabilityReport() {
   const [holdTarget, setHoldTarget] = useState<{ assetId: string; label: string; bookingEnd?: string | null }>({ assetId: "", label: "" });
   const [releaseDialogOpen, setReleaseDialogOpen] = useState(false);
   const [releaseTarget, setReleaseTarget] = useState<{ holdId: string; label: string; clientName?: string | null }>({ holdId: "", label: "" });
+
+  // Bulk hold release state
+  const [selectedHoldIds, setSelectedHoldIds] = useState<Set<string>>(new Set());
+  const [bulkReleasing, setBulkReleasing] = useState(false);
 
   // Global List View System
   const { lv, handleExportExcel, handleExportPdf } = useListViewExport({
@@ -425,6 +431,48 @@ export default function MediaAvailabilityReport() {
       .reduce((s, r) => s + (Number(r.card_rate) || 0), 0);
     return { total: allRows.length, vacantNow, availableSoon, held, totalSqft, potentialRevenue };
   }, [allRows]);
+
+  // ─── Held rows for bulk selection ──────────────────────────
+  const heldRows = useMemo(() => sortedRows.filter(r => r.availability_status === 'HELD' && r.hold_id), [sortedRows]);
+
+  const isAllHeldSelected = heldRows.length > 0 && heldRows.every(r => selectedHoldIds.has(r.hold_id!));
+  const isSomeHeldSelected = selectedHoldIds.size > 0;
+
+  const toggleHoldSelection = (holdId: string) => {
+    setSelectedHoldIds(prev => {
+      const next = new Set(prev);
+      if (next.has(holdId)) next.delete(holdId);
+      else next.add(holdId);
+      return next;
+    });
+  };
+
+  const toggleAllHeld = () => {
+    if (isAllHeldSelected) {
+      setSelectedHoldIds(new Set());
+    } else {
+      setSelectedHoldIds(new Set(heldRows.map(r => r.hold_id!)));
+    }
+  };
+
+  const handleBulkReleaseHolds = async (holdIds: string[]) => {
+    if (holdIds.length === 0) return;
+    setBulkReleasing(true);
+    try {
+      const { error } = await supabase
+        .from("asset_holds")
+        .update({ status: "RELEASED" })
+        .in("id", holdIds);
+      if (error) throw error;
+      toast({ title: "Holds released", description: `${holdIds.length} hold(s) released successfully` });
+      setSelectedHoldIds(new Set());
+      loadAvailability();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setBulkReleasing(false);
+    }
+  };
 
   // ─── Sort UI helpers ───────────────────────────────────────
   const handleSort = (column: SortColumn) => {
@@ -782,6 +830,45 @@ export default function MediaAvailabilityReport() {
           </div>
         )}
 
+        {/* Bulk Hold Release Bar */}
+        {heldRows.length > 0 && (
+          <div className="flex items-center gap-3 mb-4 p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-lg">
+            <Shield className="h-4 w-4 text-purple-600" />
+            <span className="text-sm font-medium text-purple-800 dark:text-purple-200">
+              {heldRows.length} held asset{heldRows.length !== 1 ? 's' : ''}
+            </span>
+            {isSomeHeldSelected && (
+              <span className="text-sm text-purple-600 dark:text-purple-300">
+                ({selectedHoldIds.size} selected)
+              </span>
+            )}
+            <div className="ml-auto flex items-center gap-2">
+              {isSomeHeldSelected && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={bulkReleasing}
+                  onClick={() => handleBulkReleaseHolds(Array.from(selectedHoldIds))}
+                  className="gap-1 border-purple-300 text-purple-700 hover:bg-purple-100"
+                >
+                  {bulkReleasing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unlock className="h-4 w-4" />}
+                  Release Selected ({selectedHoldIds.size})
+                </Button>
+              )}
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={bulkReleasing}
+                onClick={() => handleBulkReleaseHolds(heldRows.map(r => r.hold_id!))}
+                className="gap-1"
+              >
+                {bulkReleasing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldOff className="h-4 w-4" />}
+                Release All Held ({heldRows.length})
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Data Table */}
         <Card>
           <CardContent className="pt-6">
@@ -801,6 +888,15 @@ export default function MediaAvailabilityReport() {
                 <Table className="min-w-[1000px]">
                    <TableHeader>
                     <TableRow>
+                      {heldRows.length > 0 && (
+                        <TableHead className="w-[40px]">
+                          <Checkbox
+                            checked={isAllHeldSelected}
+                            onCheckedChange={toggleAllHeld}
+                            aria-label="Select all held assets"
+                          />
+                        </TableHead>
+                      )}
                       <TableHead className="whitespace-nowrap w-[50px] text-center">S.No</TableHead>
                       {isColumnVisible('area') && (
                         <TableHead className="cursor-pointer select-none hover:bg-muted/50 whitespace-nowrap" onClick={() => handleSort('area')}>
@@ -887,6 +983,17 @@ export default function MediaAvailabilityReport() {
                   <TableBody>
                     {sortedRows.map((row, rowIndex) => (
                       <TableRow key={row.asset_id}>
+                        {heldRows.length > 0 && (
+                          <TableCell>
+                            {row.availability_status === 'HELD' && row.hold_id ? (
+                              <Checkbox
+                                checked={selectedHoldIds.has(row.hold_id)}
+                                onCheckedChange={() => toggleHoldSelection(row.hold_id!)}
+                                aria-label={`Select hold for ${row.media_asset_code || row.asset_id}`}
+                              />
+                            ) : null}
+                          </TableCell>
+                        )}
                         <TableCell className="text-center whitespace-nowrap text-muted-foreground">{rowIndex + 1}</TableCell>
                         {isColumnVisible('area') && <TableCell className="whitespace-nowrap">{row.area}</TableCell>}
                         {isColumnVisible('location') && (

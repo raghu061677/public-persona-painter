@@ -10,38 +10,35 @@
  */
 
 /**
- * Validate and clean a hyperlink URL for pptxgenjs.
+ * Sanitize a hyperlink URL for pptxgenjs.
  * 
- * IMPORTANT: Do NOT XML-escape here! pptxgenjs handles XML encoding internally
- * when writing the .pptx ZIP. Manual escaping (& → &amp;) causes double-encoding
- * (&amp;amp;) which corrupts the PPTX and triggers "repair" dialogs in PowerPoint.
+ * pptxgenjs does NOT XML-escape hyperlink Target attributes internally.
+ * Raw '&' in URLs (common in Google Maps/Street View) produces invalid XML
+ * that causes PowerPoint "repair" dialogs or generation failures.
  * 
- * This function only validates the URL and strips dangerous characters.
+ * This function XML-escapes '&' → '&amp;' which is the ONLY character
+ * that commonly appears in URLs and breaks XML. We intentionally do NOT
+ * escape <, >, ", ' because they don't appear in valid URLs.
  * 
  * @param url - The raw URL
- * @returns Cleaned URL or undefined if empty/invalid
+ * @returns XML-safe URL or undefined if empty/invalid
  */
 export function sanitizePptHyperlink(url: string | null | undefined): string | undefined {
   if (!url || typeof url !== 'string' || url.trim() === '') {
     return undefined;
   }
 
-  // Remove control characters that could break XML (but keep the URL as-is for pptxgenjs)
+  // Remove control characters
   let cleaned = url
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
     .replace(/[\uFFFE\uFFFF]/g, '')
     .trim();
 
-  // Basic protocol validation
-  try {
-    const u = new URL(cleaned);
-    if (u.protocol !== 'http:' && u.protocol !== 'https:') {
-      return undefined;
-    }
-  } catch {
-    // If not a valid URL, reject it
-    return undefined;
-  }
+  // XML-escape ampersands for pptxgenjs hyperlink Target attributes.
+  // First undo any existing &amp; to avoid double-encoding, then re-encode all &.
+  cleaned = cleaned
+    .replace(/&amp;/g, '&')   // undo any prior encoding
+    .replace(/&/g, '&amp;');   // encode all ampersands
 
   return cleaned;
 }

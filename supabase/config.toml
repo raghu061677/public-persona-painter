@@ -281,3 +281,6 @@ verify_jwt = false
 # Daily Alerts Automation
 [functions.send-daily-alerts]
 verify_jwt = false
+
+[functions.run-concession-allocation]
+verify_jwt = false

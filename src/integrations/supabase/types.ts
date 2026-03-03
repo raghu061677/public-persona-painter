@@ -4453,6 +4453,59 @@ export type Database = {
         }
         Relationships: []
       }
+      finance_overrides: {
+        Row: {
+          approved_by: string
+          company_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          reason: string
+          requested_by: string
+          scope_action: string
+          scope_record_id: string
+          scope_table: string
+          status: string
+          used_at: string | null
+        }
+        Insert: {
+          approved_by: string
+          company_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          reason: string
+          requested_by: string
+          scope_action: string
+          scope_record_id: string
+          scope_table: string
+          status?: string
+          used_at?: string | null
+        }
+        Update: {
+          approved_by?: string
+          company_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          reason?: string
+          requested_by?: string
+          scope_action?: string
+          scope_record_id?: string
+          scope_table?: string
+          status?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_overrides_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       finance_periods: {
         Row: {
           company_id: string
@@ -10194,6 +10247,15 @@ export type Database = {
         Returns: boolean
       }
       cleanup_security_tables: { Args: never; Returns: undefined }
+      consume_finance_override: {
+        Args: {
+          p_action: string
+          p_company_id: string
+          p_record_id: string
+          p_table: string
+        }
+        Returns: undefined
+      }
       create_billing_period_and_invoice: {
         Args: { p_campaign_id: string; p_month_key: string }
         Returns: Json
@@ -10640,6 +10702,15 @@ export type Database = {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
+        }
+        Returns: boolean
+      }
+      has_valid_finance_override: {
+        Args: {
+          p_action: string
+          p_company_id: string
+          p_record_id: string
+          p_table: string
         }
         Returns: boolean
       }

@@ -265,6 +265,10 @@ verify_jwt = true
 [functions.public-media-assistant]
 verify_jwt = false
 
+# Finance Admin Override
+[functions.admin-finance-override]
+verify_jwt = false
+
 # Daily Alerts Automation
 [functions.send-daily-alerts]
 verify_jwt = false

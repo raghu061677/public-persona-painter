@@ -198,6 +198,7 @@ const CompanyUsersSettings = lazy(() => import("./pages/CompanyUsersSettings"));
 const CompanyCodeSettings = lazy(() => import("./pages/CompanyCodeSettings"));
 const AIAssistant = lazy(() => import("./pages/AIAssistant"));
 const AnalyticsDashboard = lazy(() => import("./pages/AnalyticsDashboard"));
+const ConcessionContracts = lazy(() => import("./pages/ConcessionContracts"));
 // CustomDashboard removed — placeholder
 // const CustomDashboard = lazy(() => import("./pages/CustomDashboard"));
 const BookingRequests = lazy(() => import("./pages/BookingRequests"));
@@ -486,6 +487,7 @@ const App = () => (
                 <Route path="workflows" element={<CompanyWorkflows />} />
                 <Route path="rate-settings" element={<RateSettings />} />
                 <Route path="alerts" element={<AlertsSettings />} />
+                <Route path="concession-contracts" element={<ConcessionContracts />} />
               </Route>
             </Route>
             {/* ===== END GLOBAL ADMIN AUTH GATE ===== */}

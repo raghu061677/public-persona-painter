@@ -95,6 +95,7 @@ const navigationGroups: NavGroup[] = [
       { label: "Sales", path: "/admin/company-settings/sales", icon: ShoppingCart },
       { label: "Operations", path: "/admin/operations-settings", icon: Package },
       { label: "Rate Settings", path: "/admin/company-settings/rate-settings", icon: Calculator },
+      { label: "Concession Contracts", path: "/admin/company-settings/concession-contracts", icon: Boxes },
     ]
   },
   {

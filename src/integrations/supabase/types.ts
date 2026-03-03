@@ -638,6 +638,7 @@ export type Database = {
           description: string
           expense_date: string
           id: string
+          metadata: Json | null
           notes: string | null
           payment_date: string | null
           payment_status: string | null
@@ -654,6 +655,7 @@ export type Database = {
           description: string
           expense_date: string
           id?: string
+          metadata?: Json | null
           notes?: string | null
           payment_date?: string | null
           payment_status?: string | null
@@ -670,6 +672,7 @@ export type Database = {
           description?: string
           expense_date?: string
           id?: string
+          metadata?: Json | null
           notes?: string | null
           payment_date?: string | null
           payment_status?: string | null
@@ -3517,6 +3520,137 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      concession_contracts: {
+        Row: {
+          active: boolean
+          allocation_method: string
+          applies_to: string
+          authority_name: string | null
+          billing_cycle: string
+          company_id: string
+          contract_name: string
+          contract_ref: string | null
+          created_at: string
+          end_date: string | null
+          filter_json: Json | null
+          id: string
+          start_date: string
+          total_fee: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          allocation_method: string
+          applies_to: string
+          authority_name?: string | null
+          billing_cycle: string
+          company_id: string
+          contract_name: string
+          contract_ref?: string | null
+          created_at?: string
+          end_date?: string | null
+          filter_json?: Json | null
+          id?: string
+          start_date: string
+          total_fee: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          allocation_method?: string
+          applies_to?: string
+          authority_name?: string | null
+          billing_cycle?: string
+          company_id?: string
+          contract_name?: string
+          contract_ref?: string | null
+          created_at?: string
+          end_date?: string | null
+          filter_json?: Json | null
+          id?: string
+          start_date?: string
+          total_fee?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concession_contracts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      concession_postings: {
+        Row: {
+          allocated_amount: number
+          allocation_method: string
+          asset_id: string
+          basis_value: number
+          company_id: string
+          contract_id: string
+          created_at: string
+          expense_id: string | null
+          id: string
+          period_end: string
+          period_month: number
+          period_start: string
+          period_year: number
+          posting_date: string
+          status: string
+        }
+        Insert: {
+          allocated_amount: number
+          allocation_method: string
+          asset_id: string
+          basis_value: number
+          company_id: string
+          contract_id: string
+          created_at?: string
+          expense_id?: string | null
+          id?: string
+          period_end: string
+          period_month: number
+          period_start: string
+          period_year: number
+          posting_date: string
+          status?: string
+        }
+        Update: {
+          allocated_amount?: number
+          allocation_method?: string
+          asset_id?: string
+          basis_value?: number
+          company_id?: string
+          contract_id?: string
+          created_at?: string
+          expense_id?: string | null
+          id?: string
+          period_end?: string
+          period_month?: number
+          period_start?: string
+          period_year?: number
+          posting_date?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concession_postings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "concession_postings_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "concession_contracts"
             referencedColumns: ["id"]
           },
         ]

@@ -203,14 +203,14 @@ export default function ReportMonthlyCampaigns() {
         const chunk = assetIds.slice(i, i + 100);
         const { data: maData } = await supabase
           .from("media_assets")
-          .select("id, media_asset_code, direction, facing, dimensions, dimension, illumination_type, illumination, total_sqft")
+          .select("id, media_asset_code, direction, dimensions, illumination_type, total_sqft")
           .in("id", chunk);
         maData?.forEach((m: any) => {
           codeMap.set(m.id, m.media_asset_code || `ASSET-${m.id.replace(/-/g, '').slice(-6).toUpperCase()}`);
           detailMap.set(m.id, {
-            direction: m.direction || m.facing || "-",
-            dimensions: m.dimensions || m.dimension || "-",
-            illumination_type: m.illumination_type || m.illumination || "-",
+            direction: m.direction || "-",
+            dimensions: m.dimensions || "-",
+            illumination_type: m.illumination_type || "-",
           });
         });
       }

@@ -183,16 +183,16 @@ export default function ReportBookedMedia() {
           const chunk = assetIds.slice(i, i + 100);
           const { data: maData } = await supabase
             .from("media_assets")
-            .select("id, media_asset_code, address, status, direction, dimensions, illumination_type, total_sqft")
+            .select("id, media_asset_code, address, status, direction, facing, dimensions, dimension, illumination_type, illumination, total_sqft")
             .in("id", chunk);
           maData?.forEach((ma: any) => {
             assetCodeMap.set(ma.id, ma.media_asset_code || `ASSET-${ma.id.replace(/-/g, '').slice(-6).toUpperCase()}`);
             assetExtraMap.set(ma.id, {
               address: ma.address || "-",
               status: ma.status || "-",
-              direction: ma.direction || "-",
-              dimensions: ma.dimensions || "-",
-              illumination_type: ma.illumination_type || "-",
+              direction: ma.direction || ma.facing || "-",
+              dimensions: ma.dimensions || ma.dimension || "-",
+              illumination_type: ma.illumination_type || ma.illumination || "-",
               total_sqft: ma.total_sqft || 0,
             });
           });
@@ -356,12 +356,12 @@ export default function ReportBookedMedia() {
       : 0;
 
     return [
-      { label: "Total Bookings", value: filteredData.length, icon: <MapPin className="h-5 w-5" /> },
-      { label: "Unique Assets", value: uniqueAssets, icon: <Building2 className="h-5 w-5" /> },
-      { label: "Campaigns", value: uniqueCampaigns, icon: <Briefcase className="h-5 w-5" /> },
-      { label: "Clients", value: uniqueClients, icon: <Users className="h-5 w-5" /> },
-      { label: "Cities", value: uniqueCities, icon: <MapPin className="h-5 w-5" /> },
-      { label: "Avg Duration", value: `${avgDuration} days`, icon: <Clock className="h-5 w-5" /> },
+      { label: "Total Bookings", value: filteredData.length, icon: <MapPin className="h-5 w-5" />, color: 'info' as const },
+      { label: "Unique Assets", value: uniqueAssets, icon: <Building2 className="h-5 w-5" />, color: 'success' as const },
+      { label: "Campaigns", value: uniqueCampaigns, icon: <Briefcase className="h-5 w-5" />, color: 'warning' as const },
+      { label: "Clients", value: uniqueClients, icon: <Users className="h-5 w-5" />, color: 'danger' as const },
+      { label: "Cities", value: uniqueCities, icon: <MapPin className="h-5 w-5" />, color: 'info' as const },
+      { label: "Avg Duration", value: `${avgDuration} days`, icon: <Clock className="h-5 w-5" />, color: 'default' as const },
     ];
   }, [filteredData]);
 
@@ -489,7 +489,7 @@ export default function ReportBookedMedia() {
         onApply={loadData}
       />
 
-      <ReportKPICards kpis={kpis} />
+      <ReportKPICards kpis={kpis} columns={6} />
 
       {loading ? (
         <div className="space-y-3">

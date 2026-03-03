@@ -4453,6 +4453,56 @@ export type Database = {
         }
         Relationships: []
       }
+      finance_periods: {
+        Row: {
+          company_id: string
+          created_at: string
+          end_date: string
+          id: string
+          lock_reason: string | null
+          locked: boolean
+          locked_at: string | null
+          locked_by: string | null
+          period_month: number
+          period_year: number
+          start_date: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          lock_reason?: string | null
+          locked?: boolean
+          locked_at?: string | null
+          locked_by?: string | null
+          period_month: number
+          period_year: number
+          start_date: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          lock_reason?: string | null
+          locked?: boolean
+          locked_at?: string | null
+          locked_by?: string | null
+          period_month?: number
+          period_year?: number
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_periods_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       finance_years: {
         Row: {
           company_id: string
@@ -10595,6 +10645,14 @@ export type Database = {
       }
       is_company_member: { Args: { _company_id: string }; Returns: boolean }
       is_field_operations_user: { Args: { _user_id: string }; Returns: boolean }
+      is_fy_locked: {
+        Args: { p_company_id: string; p_date: string }
+        Returns: boolean
+      }
+      is_month_locked: {
+        Args: { p_company_id: string; p_date: string }
+        Returns: boolean
+      }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       list_all_users: {
         Args: never

@@ -10,27 +10,40 @@
  */
 
 /**
- * Escape XML attribute special characters in a URL.
- * Must be applied to ALL hyperlink URLs before passing to pptxgenjs.
+ * Validate and clean a hyperlink URL for pptxgenjs.
  * 
- * @param url - The raw URL (may contain &, <, >, ", ')
- * @returns XML-safe URL or undefined if empty/invalid
+ * IMPORTANT: Do NOT XML-escape here! pptxgenjs handles XML encoding internally
+ * when writing the .pptx ZIP. Manual escaping (& → &amp;) causes double-encoding
+ * (&amp;amp;) which corrupts the PPTX and triggers "repair" dialogs in PowerPoint.
+ * 
+ * This function only validates the URL and strips dangerous characters.
+ * 
+ * @param url - The raw URL
+ * @returns Cleaned URL or undefined if empty/invalid
  */
 export function sanitizePptHyperlink(url: string | null | undefined): string | undefined {
   if (!url || typeof url !== 'string' || url.trim() === '') {
     return undefined;
   }
 
-  // Escape XML special characters for use in XML attributes
-  // Order matters: & must be escaped first to avoid double-escaping
-  let sanitized = url
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
+  // Remove control characters that could break XML (but keep the URL as-is for pptxgenjs)
+  let cleaned = url
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+    .replace(/[\uFFFE\uFFFF]/g, '')
+    .trim();
 
-  return sanitized;
+  // Basic protocol validation
+  try {
+    const u = new URL(cleaned);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+      return undefined;
+    }
+  } catch {
+    // If not a valid URL, reject it
+    return undefined;
+  }
+
+  return cleaned;
 }
 
 /**

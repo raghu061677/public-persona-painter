@@ -186,6 +186,17 @@ serve(withAuth(async (req) => {
   // Update plan to Converted
   await supabase.from("plans").update({ status: "Converted", converted_to_campaign_id: campaignId, converted_at: new Date().toISOString() }).eq("id", planId);
 
+  // Auto-release holds linked to this plan
+  try {
+    const { data: releasedHolds } = await supabase
+      .from("asset_holds")
+      .update({ status: "RELEASED", converted_campaign_id: campaignId })
+      .eq("status", "ACTIVE")
+      .or(`source_plan_id.eq.${planId},notes.ilike.%${planId}%`)
+      .select("id");
+    const releasedCount = releasedHolds?.length || 0;
+    if (releasedCount > 0) console.log(`[v12.1] Auto-released ${releasedCount} hold(s) for plan ${planId}`);
+  } catch (e) { console.warn("[v12.1] Hold release warning:", e); }
   // Timeline event
   try { await supabase.functions.invoke('add-timeline-event', { body: { campaign_id: campaignId, company_id: companyId, event_type: 'draft_created', event_title: 'Campaign Created from Plan', event_description: `Converted from plan ${plan.plan_name}`, created_by: ctx.userId, metadata: { plan_id: planId } } }); } catch (_) {}
 

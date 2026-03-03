@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
+import { motion } from "framer-motion";
 import {
   Briefcase,
   Users,
@@ -190,7 +191,7 @@ export default function ReportMonthlyCampaigns() {
         const chunk = campIds.slice(i, i + 100);
         const { data: caData } = await supabase
           .from("campaign_assets")
-          .select("campaign_id, asset_id, media_type, city, area, location, dimensions, illumination_type, direction")
+          .select("campaign_id, asset_id, media_type, city, area, location, dimensions, illumination_type, direction, total_sqft")
           .in("campaign_id", chunk);
         if (caData) allCA.push(...caData);
       }
@@ -202,11 +203,15 @@ export default function ReportMonthlyCampaigns() {
         const chunk = assetIds.slice(i, i + 100);
         const { data: maData } = await supabase
           .from("media_assets")
-          .select("id, media_asset_code, direction, dimensions, illumination_type")
+          .select("id, media_asset_code, direction, facing, dimensions, dimension, illumination_type, illumination, total_sqft")
           .in("id", chunk);
         maData?.forEach((m: any) => {
           codeMap.set(m.id, m.media_asset_code || `ASSET-${m.id.replace(/-/g, '').slice(-6).toUpperCase()}`);
-          detailMap.set(m.id, { direction: m.direction || "-", dimensions: m.dimensions || "-", illumination_type: m.illumination_type || "-" });
+          detailMap.set(m.id, {
+            direction: m.direction || m.facing || "-",
+            dimensions: m.dimensions || m.dimension || "-",
+            illumination_type: m.illumination_type || m.illumination || "-",
+          });
         });
       }
 
@@ -327,11 +332,11 @@ export default function ReportMonthlyCampaigns() {
     const avgDuration = filteredData.length > 0
       ? Math.round(filteredData.reduce((s, r) => s + r.duration_days, 0) / filteredData.length) : 0;
     return [
-      { label: "Campaigns", value: filteredData.length, icon: <Briefcase className="h-5 w-5" /> },
-      { label: "Total Booked Assets", value: totalAssets, icon: <Building2 className="h-5 w-5" /> },
-      { label: "Clients", value: uniqueClients, icon: <Users className="h-5 w-5" /> },
-      { label: "Cities", value: allCities.size, icon: <MapPin className="h-5 w-5" /> },
-      { label: "Avg Duration", value: `${avgDuration} days`, icon: <CalendarDays className="h-5 w-5" /> },
+      { label: "Campaigns", value: filteredData.length, icon: <Briefcase className="h-5 w-5" />, color: 'info' as const },
+      { label: "Total Booked Assets", value: totalAssets, icon: <Building2 className="h-5 w-5" />, color: 'success' as const },
+      { label: "Clients", value: uniqueClients, icon: <Users className="h-5 w-5" />, color: 'warning' as const },
+      { label: "Cities", value: allCities.size, icon: <MapPin className="h-5 w-5" />, color: 'danger' as const },
+      { label: "Avg Duration", value: `${avgDuration} days`, icon: <CalendarDays className="h-5 w-5" />, color: 'default' as const },
     ];
   }, [filteredData]);
 
@@ -462,7 +467,7 @@ export default function ReportMonthlyCampaigns() {
         onApply={loadData}
       />
 
-      <ReportKPICards kpis={kpis} />
+      <ReportKPICards kpis={kpis} columns={5} />
 
       {loading ? (
         <div className="space-y-3">

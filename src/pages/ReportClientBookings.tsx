@@ -328,10 +328,10 @@ export default function ReportClientBookings() {
     const totalCampaigns = filteredData.reduce((s, r) => s + r.total_campaigns, 0);
     const uniqueCities = new Set(filteredData.flatMap((r) => r.cities_text.split(", ").filter(Boolean))).size;
     return [
-      { label: "Total Clients", value: filteredData.length, icon: <Users className="h-5 w-5" /> },
-      { label: "Total Campaigns", value: totalCampaigns, icon: <Briefcase className="h-5 w-5" /> },
-      { label: "Total Assets Booked", value: totalAssets, icon: <Building2 className="h-5 w-5" /> },
-      { label: "Cities Covered", value: uniqueCities, icon: <MapPin className="h-5 w-5" /> },
+      { label: "Total Clients", value: filteredData.length, icon: <Users className="h-5 w-5" />, color: 'info' as const },
+      { label: "Total Campaigns", value: totalCampaigns, icon: <Briefcase className="h-5 w-5" />, color: 'success' as const },
+      { label: "Total Assets Booked", value: totalAssets, icon: <Building2 className="h-5 w-5" />, color: 'warning' as const },
+      { label: "Cities Covered", value: uniqueCities, icon: <MapPin className="h-5 w-5" />, color: 'danger' as const },
     ];
   }, [filteredData]);
 

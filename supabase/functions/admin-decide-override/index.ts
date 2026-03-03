@@ -3,6 +3,17 @@
  */
 import { getAuthContext, requireRole, supabaseServiceClient, withAuth, logSecurityAudit } from '../_shared/auth.ts';
 
+/** Reject blank, wildcard, or SQL-ish record IDs */
+function isValidRecordId(id: unknown): boolean {
+  if (typeof id !== 'string') return false;
+  const trimmed = id.trim();
+  if (!trimmed || trimmed.length < 1 || trimmed.length > 255) return false;
+  const DANGEROUS = /[*%_;'"\\]|(\b(select|insert|update|delete|drop|alter|union|null)\b)/i;
+  if (DANGEROUS.test(trimmed)) return false;
+  const VALID_PATTERN = /^[a-zA-Z0-9\-]+$/;
+  return VALID_PATTERN.test(trimmed);
+}
+
 Deno.serve(withAuth(async (req: Request): Promise<Response> => {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
@@ -43,6 +54,11 @@ Deno.serve(withAuth(async (req: Request): Promise<Response> => {
 
   if (overrideReq.status !== 'pending') {
     return new Response(JSON.stringify({ error: `Cannot decide on a request with status "${overrideReq.status}".` }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // Validate the scope_record_id hasn't been tampered with
+  if (!isValidRecordId(overrideReq.scope_record_id)) {
+    return new Response(JSON.stringify({ error: 'Request contains invalid scope_record_id. Cannot approve.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
   // Update request

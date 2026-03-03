@@ -6,6 +6,19 @@ import { getAuthContext, requireRole, supabaseServiceClient, withAuth, logSecuri
 const ALLOWED_TABLES = ['invoices', 'expenses', 'invoice_items', 'invoice_line_items', 'payable_batches', 'campaign_assets'];
 const ALLOWED_ACTIONS = ['INSERT', 'UPDATE', 'DELETE'];
 
+/** Reject blank, wildcard, or SQL-ish record IDs */
+function isValidRecordId(id: unknown): boolean {
+  if (typeof id !== 'string') return false;
+  const trimmed = id.trim();
+  if (!trimmed || trimmed.length < 1 || trimmed.length > 255) return false;
+  // Block wildcards, SQL keywords, semicolons, quotes
+  const DANGEROUS = /[*%_;'"\\]|(\b(select|insert|update|delete|drop|alter|union|null)\b)/i;
+  if (DANGEROUS.test(trimmed)) return false;
+  // Must look like a UUID or a structured ID (e.g. INV-2025-001)
+  const VALID_PATTERN = /^[a-zA-Z0-9\-]+$/;
+  return VALID_PATTERN.test(trimmed);
+}
+
 Deno.serve(withAuth(async (req: Request): Promise<Response> => {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
@@ -19,6 +32,9 @@ Deno.serve(withAuth(async (req: Request): Promise<Response> => {
 
   if (!scope_table || !scope_record_id || !scope_action || !reason?.trim()) {
     return new Response(JSON.stringify({ error: 'scope_table, scope_record_id, scope_action, and reason are all required.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  if (!isValidRecordId(scope_record_id)) {
+    return new Response(JSON.stringify({ error: 'Invalid scope_record_id. Must be a valid UUID or structured ID (alphanumeric + hyphens only, no wildcards or SQL).' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
   if (!ALLOWED_TABLES.includes(scope_table)) {
     return new Response(JSON.stringify({ error: `Invalid scope_table. Allowed: ${ALLOWED_TABLES.join(', ')}` }), { status: 400, headers: { 'Content-Type': 'application/json' } });
@@ -42,6 +58,12 @@ Deno.serve(withAuth(async (req: Request): Promise<Response> => {
 
   if (existing && existing.length > 0) {
     return new Response(JSON.stringify({ error: 'A pending override request already exists for this record and action.', existing_request_id: existing[0].id }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // Verify target record exists and belongs to this company
+  const companyCheck = await verifyRecordCompany(service, scope_table, scope_record_id, ctx.companyId);
+  if (!companyCheck.valid) {
+    return new Response(JSON.stringify({ error: companyCheck.error }), { status: 403, headers: { 'Content-Type': 'application/json' } });
   }
 
   const { data: request, error } = await service
@@ -88,3 +110,54 @@ Deno.serve(withAuth(async (req: Request): Promise<Response> => {
 
   return new Response(JSON.stringify({ success: true, request_id: request.id, message: 'Override request submitted. Awaiting admin approval.' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 }));
+
+/** Verify the target record exists and belongs to the caller's company */
+async function verifyRecordCompany(
+  service: any,
+  table: string,
+  recordId: string,
+  companyId: string
+): Promise<{ valid: boolean; error?: string }> {
+  try {
+    if (table === 'campaign_assets') {
+      // campaign_assets has no company_id; derive via campaigns join
+      const { data } = await service
+        .from('campaign_assets')
+        .select('id, campaigns!inner(company_id)')
+        .eq('id', recordId)
+        .single();
+      if (!data) return { valid: false, error: 'Target record not found.' };
+      if ((data as any).campaigns?.company_id !== companyId) {
+        return { valid: false, error: 'Target record does not belong to your company.' };
+      }
+      return { valid: true };
+    }
+
+    if (['invoice_items', 'invoice_line_items'].includes(table)) {
+      const { data } = await service
+        .from(table)
+        .select('id, invoices!inner(company_id)')
+        .eq('id', recordId)
+        .single();
+      if (!data) return { valid: false, error: 'Target record not found.' };
+      if ((data as any).invoices?.company_id !== companyId) {
+        return { valid: false, error: 'Target record does not belong to your company.' };
+      }
+      return { valid: true };
+    }
+
+    // Direct company_id tables: invoices, expenses, payable_batches
+    const { data } = await service
+      .from(table)
+      .select('id, company_id')
+      .eq('id', recordId)
+      .single();
+    if (!data) return { valid: false, error: 'Target record not found.' };
+    if (data.company_id !== companyId) {
+      return { valid: false, error: 'Target record does not belong to your company.' };
+    }
+    return { valid: true };
+  } catch {
+    return { valid: false, error: 'Failed to verify target record ownership.' };
+  }
+}

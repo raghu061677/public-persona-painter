@@ -62,6 +62,7 @@ interface ClientSummaryRow {
   client_name: string;
   total_campaigns: number;
   total_assets: number;
+  total_days: number;
   first_booking: string;
   last_booking: string;
   cities_text: string;
@@ -93,6 +94,7 @@ const SORT_OPTIONS = [
   { value: "client_name", label: "Client Name" },
   { value: "total_campaigns", label: "Total Campaigns" },
   { value: "total_assets", label: "Total Assets" },
+  { value: "total_days", label: "Total Days" },
   { value: "first_booking", label: "First Booking" },
   { value: "last_booking", label: "Last Booking" },
 ];
@@ -101,6 +103,7 @@ const COLUMNS = [
   { key: "client_name", label: "Client Name", default: true },
   { key: "total_campaigns", label: "Campaigns", default: true },
   { key: "total_assets", label: "Assets Booked", default: true },
+  { key: "total_days", label: "Total Days", default: true },
   { key: "first_booking", label: "First Booking", default: true },
   { key: "last_booking", label: "Last Booking", default: true },
   { key: "cities_text", label: "Cities", default: true },
@@ -236,6 +239,7 @@ export default function ReportClientBookings() {
           existing.campaigns.push(campRow);
           existing.total_campaigns += 1;
           existing.total_assets += assets.length;
+          existing.total_days += campRow.duration_days;
           if (c.start_date < existing.first_booking) existing.first_booking = c.start_date;
           if (c.end_date > existing.last_booking) existing.last_booking = c.end_date;
           const newCities = new Set([...existing.cities_text.split(", ").filter(Boolean), ...assets.map((a) => a.city).filter((x) => x !== "-")]);
@@ -247,6 +251,7 @@ export default function ReportClientBookings() {
             client_name: c.client_name || "-",
             total_campaigns: 1,
             total_assets: assets.length,
+            total_days: campRow.duration_days,
             first_booking: c.start_date,
             last_booking: c.end_date,
             cities_text: cities.join(", ") || "-",

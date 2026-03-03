@@ -206,7 +206,7 @@ export default function ReportProofExecutionV2() {
       const proofList: ProofExecutionData[] = filteredCampaigns.map((campaign) => {
         const campaignAssets = assetData.filter((a) => a.campaign_id === campaign.id);
         const totalAssets = campaignAssets.length;
-        const mounted = campaignAssets.filter((a) => a.status === "Mounted").length;
+        const mounted = campaignAssets.filter((a) => a.status === "Installed" || a.status === "Mounted").length;
         const proofUploaded = campaignAssets.filter((a) => a.status === "PhotoUploaded").length;
         const verified = campaignAssets.filter((a) => a.status === "Verified" || a.status === "Completed").length;
         const pending = campaignAssets.filter((a) => a.status === "Assigned" || a.status === "Pending").length;

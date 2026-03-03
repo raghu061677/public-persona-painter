@@ -12,7 +12,7 @@ export function OpsSummaryBar({ assets }: OpsSummaryBarProps) {
     for (const a of assets) {
       const status = a.status || "Pending";
       if (status === "Pending" || status === "Assigned") pending++;
-      else if (status === "Mounted" || status === "InProgress") installed++;
+      else if (status === "Installed" || status === "Mounted" || status === "InProgress") installed++;
       else if (status === "PhotoUploaded") proofPending++;
       else if (status === "Verified" || status === "Completed") verified++;
       else pending++;

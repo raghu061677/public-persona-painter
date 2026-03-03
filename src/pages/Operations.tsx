@@ -206,7 +206,7 @@ export default function Operations() {
 
     return {
       pending: data.filter((a) => a.status === "Pending" || a.status === "Assigned").length,
-      installed: data.filter((a) => a.status === "Mounted" || a.status === "PhotoUploaded").length,
+      installed: data.filter((a) => a.status === "Installed" || a.status === "Mounted" || a.status === "PhotoUploaded").length,
       verified: data.filter((a) => a.status === "Verified").length,
     };
   };
@@ -230,7 +230,7 @@ export default function Operations() {
   // Calculate overall stats from campaign assets
   const overallStats = {
     pending: campaignAssets.filter(a => a.status === "Pending" || a.status === "Assigned").length,
-    inProgress: campaignAssets.filter(a => a.status === "InProgress" || a.status === "Mounted").length,
+    inProgress: campaignAssets.filter(a => a.status === "InProgress" || a.status === "Installed" || a.status === "Mounted").length,
     photoUploaded: campaignAssets.filter(a => a.status === "PhotoUploaded").length,
     verified: campaignAssets.filter(a => a.status === "Verified" || a.status === "Completed").length,
   };

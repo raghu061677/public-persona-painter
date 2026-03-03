@@ -615,28 +615,7 @@ export async function generatePlanPPT(
       fontFace: PPT_SAFE_FONTS.primary,
     });
 
-    // Street View Link - Auto-fix if needed
-    const streetViewUrl = validateAndFixStreetViewUrl(
-      asset.google_street_view_url,
-      asset.latitude,
-      asset.longitude
-    );
-    
-    // Sanitize hyperlink: XML-escape & for pptxgenjs (it does NOT escape internally)
-    const sanitizedStreetViewUrl = sanitizePptHyperlink(streetViewUrl || undefined);
-    if (sanitizedStreetViewUrl) {
-      slide2.addText(sanitizePptText('View on Google Street View'), {
-        x: 3.2,
-        y: 5.0,
-        w: 6.3,
-        h: 0.35,
-        fontSize: 12,
-        color: '2563EB',
-        underline: { color: '2563EB' },
-        hyperlink: { url: sanitizedStreetViewUrl },
-        fontFace: PPT_SAFE_FONTS.primary,
-      });
-    }
+    // Street View link removed to prevent XML corruption issues with complex URLs
 
     // GPS Coordinates below thumbnail
     if (asset.latitude && asset.longitude) {

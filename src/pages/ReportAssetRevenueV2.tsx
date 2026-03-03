@@ -42,7 +42,10 @@ interface AssetRevenueData {
   city: string;
   area: string;
   media_type: string;
+  direction: string;
   dimensions: string;
+  total_sqft: number;
+  illumination_type: string;
   total_bookings: number;
   total_revenue: number;
   avg_rate: number;
@@ -72,6 +75,9 @@ const SORT_OPTIONS = [
   { value: "total_revenue", label: "Total Revenue" },
   { value: "asset_code", label: "Asset Code" },
   { value: "location", label: "Location" },
+  { value: "area", label: "Area" },
+  { value: "direction", label: "Direction" },
+  { value: "total_sqft", label: "Sq.Ft" },
   { value: "total_bookings", label: "Bookings Count" },
   { value: "occupancy_percent", label: "Occupancy %" },
   { value: "last_booked_date", label: "Last Booked" },
@@ -80,13 +86,19 @@ const SORT_OPTIONS = [
 // Column configuration
 const COLUMNS = [
   { key: "asset_code", label: "Asset Code", default: true },
+  { key: "area", label: "Area", default: true },
   { key: "location", label: "Location", default: true },
-  { key: "city", label: "City", default: true },
+  { key: "direction", label: "Direction", default: true },
+  { key: "dimensions", label: "Dimensions", default: true },
+  { key: "total_sqft", label: "Sq.Ft", default: true },
+  { key: "illumination_type", label: "Illumination", default: true },
+  { key: "city", label: "City", default: false },
   { key: "media_type", label: "Media Type", default: true },
   { key: "total_bookings", label: "Bookings", default: true },
   { key: "total_revenue", label: "Total Revenue", default: true },
   { key: "avg_rate", label: "Avg Rate", default: true },
   { key: "occupancy_percent", label: "Occupancy %", default: false },
+  { key: "total_days_booked", label: "Days Booked", default: false },
   { key: "last_booked_date", label: "Last Booked", default: true },
 ];
 
@@ -213,22 +225,18 @@ export default function ReportAssetRevenueV2() {
         }
       });
 
-      // Fetch media assets for codes
-      const assetIds = [...new Set(filteredAssets.map((a) => a.asset_id))];
-      let mediaAssetMap = new Map<string, { media_asset_code: string }>();
+      // Fetch ALL media assets for the company
+      const { data: allMediaAssets } = await supabase
+        .from("media_assets")
+        .select("id, media_asset_code, location, city, area, media_type, direction, dimensions, total_sqft, illumination_type, status")
+        .eq("company_id", company.id);
 
-      if (assetIds.length > 0) {
-        const { data: mediaAssets } = await supabase
-          .from("media_assets")
-          .select("id, media_asset_code")
-          .in("id", assetIds);
+      const mediaAssetMap = new Map<string, any>();
+      (allMediaAssets || []).forEach((ma) => {
+        mediaAssetMap.set(ma.id, ma);
+      });
 
-        mediaAssets?.forEach((ma) => {
-          mediaAssetMap.set(ma.id, { media_asset_code: ma.media_asset_code || ma.id });
-        });
-      }
-
-      // Aggregate by asset
+      // Aggregate bookings by asset
       const assetMap = new Map<string, AssetRevenueData>();
       const periodDays = dateRange?.from && dateRange?.to
         ? Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) + 1
@@ -241,6 +249,7 @@ export default function ReportAssetRevenueV2() {
         const startDate = new Date(asset.booking_start_date || asset.start_date || asset.campaigns?.start_date);
         const endDate = new Date(asset.booking_end_date || asset.end_date || asset.campaigns?.end_date);
         const bookedDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        const ma = mediaAssetMap.get(assetId);
 
         if (existing) {
           existing.total_bookings += 1;
@@ -254,18 +263,45 @@ export default function ReportAssetRevenueV2() {
         } else {
           assetMap.set(assetId, {
             asset_id: assetId,
-            asset_code: mediaAssetMap.get(assetId)?.media_asset_code || assetId,
-            location: asset.location,
-            city: asset.city,
-            area: asset.area,
-            media_type: asset.media_type,
-            dimensions: asset.dimensions || "",
+            asset_code: ma?.media_asset_code || assetId,
+            location: asset.location || ma?.location || "-",
+            city: asset.city || ma?.city || "-",
+            area: asset.area || ma?.area || "-",
+            media_type: asset.media_type || ma?.media_type || "-",
+            direction: ma?.direction || "-",
+            dimensions: ma?.dimensions || asset.dimensions || "-",
+            total_sqft: ma?.total_sqft || 0,
+            illumination_type: ma?.illumination_type || "-",
             total_bookings: 1,
             total_revenue: revenue,
             avg_rate: revenue,
             occupancy_percent: 0,
             last_booked_date: asset.booking_end_date || asset.end_date,
             total_days_booked: bookedDays,
+          });
+        }
+      });
+
+      // Add ALL media assets that have NO bookings (so every asset appears)
+      (allMediaAssets || []).forEach((ma) => {
+        if (!assetMap.has(ma.id)) {
+          assetMap.set(ma.id, {
+            asset_id: ma.id,
+            asset_code: ma.media_asset_code || ma.id,
+            location: ma.location || "-",
+            city: ma.city || "-",
+            area: ma.area || "-",
+            media_type: ma.media_type || "-",
+            direction: ma.direction || "-",
+            dimensions: ma.dimensions || "-",
+            total_sqft: ma.total_sqft || 0,
+            illumination_type: ma.illumination_type || "-",
+            total_bookings: 0,
+            total_revenue: 0,
+            avg_rate: 0,
+            occupancy_percent: 0,
+            last_booked_date: null,
+            total_days_booked: 0,
           });
         }
       });
@@ -304,7 +340,10 @@ export default function ReportAssetRevenueV2() {
               city: asset.city,
               area: asset.area,
               media_type: asset.media_type,
+              direction: "-",
               dimensions: "",
+              total_sqft: 0,
+              illumination_type: "-",
               total_bookings: 1,
               total_revenue: revenue,
               avg_rate: 0,
@@ -516,13 +555,19 @@ export default function ReportAssetRevenueV2() {
       COLUMNS.filter((c) => visibleColumns.includes(c.key)).forEach((col) => {
         switch (col.key) {
           case "asset_code": row.push(asset.asset_code); break;
+          case "area": row.push(asset.area); break;
           case "location": row.push(asset.location); break;
+          case "direction": row.push(asset.direction); break;
+          case "dimensions": row.push(asset.dimensions); break;
+          case "total_sqft": row.push(asset.total_sqft || 0); break;
+          case "illumination_type": row.push(asset.illumination_type); break;
           case "city": row.push(asset.city); break;
           case "media_type": row.push(asset.media_type); break;
           case "total_bookings": row.push(asset.total_bookings); break;
           case "total_revenue": row.push(asset.total_revenue); break;
           case "avg_rate": row.push(asset.avg_rate); break;
           case "occupancy_percent": row.push(`${asset.occupancy_percent}%`); break;
+          case "total_days_booked": row.push(asset.total_days_booked); break;
           case "last_booked_date":
             row.push(asset.last_booked_date ? new Date(asset.last_booked_date).toLocaleDateString() : "-");
             break;
@@ -557,13 +602,19 @@ export default function ReportAssetRevenueV2() {
         COLUMNS.filter((c) => visibleColumns.includes(c.key)).forEach((col) => {
           switch (col.key) {
             case "asset_code": row.push(asset.asset_code); break;
+            case "area": row.push(asset.area); break;
             case "location": row.push(asset.location); break;
+            case "direction": row.push(asset.direction); break;
+            case "dimensions": row.push(asset.dimensions); break;
+            case "total_sqft": row.push(String(asset.total_sqft || 0)); break;
+            case "illumination_type": row.push(asset.illumination_type); break;
             case "city": row.push(asset.city); break;
             case "media_type": row.push(asset.media_type); break;
             case "total_bookings": row.push(String(asset.total_bookings)); break;
             case "total_revenue": row.push(formatCurrency(asset.total_revenue)); break;
             case "avg_rate": row.push(formatCurrency(asset.avg_rate)); break;
             case "occupancy_percent": row.push(`${asset.occupancy_percent}%`); break;
+            case "total_days_booked": row.push(String(asset.total_days_booked)); break;
             case "last_booked_date":
               row.push(asset.last_booked_date ? new Date(asset.last_booked_date).toLocaleDateString() : "-");
               break;
@@ -659,13 +710,19 @@ export default function ReportAssetRevenueV2() {
                 <TableHeader>
                   <TableRow>
                     {visibleColumns.includes("asset_code") && <TableHead>Asset Code</TableHead>}
+                    {visibleColumns.includes("area") && <TableHead>Area</TableHead>}
                     {visibleColumns.includes("location") && <TableHead>Location</TableHead>}
+                    {visibleColumns.includes("direction") && <TableHead>Direction</TableHead>}
+                    {visibleColumns.includes("dimensions") && <TableHead>Dimensions</TableHead>}
+                    {visibleColumns.includes("total_sqft") && <TableHead>Sq.Ft</TableHead>}
+                    {visibleColumns.includes("illumination_type") && <TableHead>Illumination</TableHead>}
                     {visibleColumns.includes("city") && <TableHead>City</TableHead>}
                     {visibleColumns.includes("media_type") && <TableHead>Media Type</TableHead>}
                     {visibleColumns.includes("total_bookings") && <TableHead>Bookings</TableHead>}
                     {visibleColumns.includes("total_revenue") && <TableHead>Total Revenue</TableHead>}
                     {visibleColumns.includes("avg_rate") && <TableHead>Avg Rate</TableHead>}
                     {visibleColumns.includes("occupancy_percent") && <TableHead>Occupancy</TableHead>}
+                    {visibleColumns.includes("total_days_booked") && <TableHead>Days Booked</TableHead>}
                     {visibleColumns.includes("last_booked_date") && <TableHead>Last Booked</TableHead>}
                   </TableRow>
                 </TableHeader>
@@ -684,17 +741,16 @@ export default function ReportAssetRevenueV2() {
                           </div>
                         </TableCell>
                       )}
+                      {visibleColumns.includes("area") && <TableCell>{asset.area}</TableCell>}
                       {visibleColumns.includes("location") && (
                         <TableCell>
-                          <div className="flex items-start gap-1">
-                            <MapPin className="h-3 w-3 text-muted-foreground mt-0.5" />
-                            <div className="text-sm">
-                              <div>{asset.location}</div>
-                              <div className="text-xs text-muted-foreground">{asset.area}</div>
-                            </div>
-                          </div>
+                          <div className="text-sm">{asset.location}</div>
                         </TableCell>
                       )}
+                      {visibleColumns.includes("direction") && <TableCell>{asset.direction}</TableCell>}
+                      {visibleColumns.includes("dimensions") && <TableCell>{asset.dimensions}</TableCell>}
+                      {visibleColumns.includes("total_sqft") && <TableCell>{asset.total_sqft || "-"}</TableCell>}
+                      {visibleColumns.includes("illumination_type") && <TableCell>{asset.illumination_type}</TableCell>}
                       {visibleColumns.includes("city") && <TableCell>{asset.city}</TableCell>}
                       {visibleColumns.includes("media_type") && <TableCell>{asset.media_type}</TableCell>}
                       {visibleColumns.includes("total_bookings") && <TableCell>{asset.total_bookings}</TableCell>}
@@ -715,6 +771,7 @@ export default function ReportAssetRevenueV2() {
                           </Badge>
                         </TableCell>
                       )}
+                      {visibleColumns.includes("total_days_booked") && <TableCell>{asset.total_days_booked}</TableCell>}
                       {visibleColumns.includes("last_booked_date") && (
                         <TableCell>
                           {asset.last_booked_date
@@ -747,14 +804,34 @@ export default function ReportAssetRevenueV2() {
             </TabsList>
             <TabsContent value="overview" className="mt-4 space-y-4">
               {selectedAsset && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Area</p>
+                    <p className="font-medium">{selectedAsset.area}</p>
+                  </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Location</p>
                     <p className="font-medium">{selectedAsset.location}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">City / Area</p>
-                    <p className="font-medium">{selectedAsset.city} / {selectedAsset.area}</p>
+                    <p className="text-sm text-muted-foreground">City</p>
+                    <p className="font-medium">{selectedAsset.city}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Direction</p>
+                    <p className="font-medium">{selectedAsset.direction}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Dimensions</p>
+                    <p className="font-medium">{selectedAsset.dimensions}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Sq.Ft</p>
+                    <p className="font-medium">{selectedAsset.total_sqft || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Illumination</p>
+                    <p className="font-medium">{selectedAsset.illumination_type}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Media Type</p>
@@ -767,6 +844,10 @@ export default function ReportAssetRevenueV2() {
                   <div>
                     <p className="text-sm text-muted-foreground">Total Bookings</p>
                     <p className="font-medium">{selectedAsset.total_bookings}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Days Booked</p>
+                    <p className="font-medium">{selectedAsset.total_days_booked}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Occupancy</p>

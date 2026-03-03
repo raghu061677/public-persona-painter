@@ -622,9 +622,9 @@ export async function generatePlanPPT(
       asset.longitude
     );
     
-    // CRITICAL: Sanitize hyperlink URL to prevent XML corruption (& -> &amp;)
-    const sanitizedStreetViewUrl = sanitizePptHyperlink(streetViewUrl || undefined);
-    if (sanitizedStreetViewUrl) {
+    // NOTE: Do NOT XML-escape the URL here — pptxgenjs handles XML encoding internally.
+    // Double-encoding (&amp;amp;) corrupts the PPTX and triggers "repair" dialogs.
+    if (streetViewUrl) {
       slide2.addText(sanitizePptText('View on Google Street View'), {
         x: 3.2,
         y: 5.0,
@@ -633,7 +633,7 @@ export async function generatePlanPPT(
         fontSize: 12,
         color: '2563EB',
         underline: { color: '2563EB' },
-        hyperlink: { url: sanitizedStreetViewUrl },
+        hyperlink: { url: streetViewUrl },
         fontFace: PPT_SAFE_FONTS.primary,
       });
     }

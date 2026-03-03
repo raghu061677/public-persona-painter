@@ -4453,6 +4453,53 @@ export type Database = {
         }
         Relationships: []
       }
+      finance_years: {
+        Row: {
+          company_id: string
+          created_at: string
+          end_date: string
+          fy_label: string
+          id: string
+          lock_reason: string | null
+          locked: boolean
+          locked_at: string | null
+          locked_by: string | null
+          start_date: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          end_date: string
+          fy_label: string
+          id?: string
+          lock_reason?: string | null
+          locked?: boolean
+          locked_at?: string | null
+          locked_by?: string | null
+          start_date: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          end_date?: string
+          fy_label?: string
+          id?: string
+          lock_reason?: string | null
+          locked?: boolean
+          locked_at?: string | null
+          locked_by?: string | null
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_years_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_logs: {
         Row: {
           created_at: string | null

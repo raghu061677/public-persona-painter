@@ -3,8 +3,6 @@ import QRCode from 'qrcode';
 export interface WatermarkOptions {
   logoUrl?: string;
   organizationName?: string;
-  /** @deprecated Use campaignId + assetId instead */
-  qrCodeUrl?: string;
   campaignId?: string;
   assetId?: string;
 }
@@ -26,13 +24,16 @@ async function generateProofQRDataUrl(campaignId: string, assetId: string): Prom
 
 /**
  * Add watermark with company logo, timestamp, and QR code to an image.
- * Footer layout: 3-column grid — Left (logo+name+timestamp), Center (PROOF OF INSTALLATION), Right (QR card)
+ * Footer layout: 3-column grid with fixed widths:
+ *   Left (40%) — logo + org name + timestamp
+ *   Center (30%) — "PROOF OF INSTALLATION"
+ *   Right (30%) — single QR code card
  */
 export async function addWatermark(
   imageFile: File,
   options: WatermarkOptions = {}
 ): Promise<File> {
-  const { logoUrl, organizationName, qrCodeUrl, campaignId, assetId } = options;
+  const { logoUrl, organizationName, campaignId, assetId } = options;
 
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
@@ -51,19 +52,28 @@ export async function addWatermark(
       ctx.drawImage(img, 0, 0);
 
       // ── Dimensions ────────────────────────────────────────
-      const padding = Math.min(img.width, img.height) * 0.025;
-      const qrDisplaySize = Math.min(Math.max(img.width * 0.1, 120), 170); // target ~160px
+      const W = img.width;
+      const H = img.height;
+      const padding = Math.min(W, H) * 0.02;
+      const qrDisplaySize = Math.min(Math.max(W * 0.1, 120), 170);
       const qrCardPad = 12;
       const qrCardSize = qrDisplaySize + qrCardPad * 2;
-      const watermarkHeight = Math.max(qrCardSize + padding * 2, img.height * 0.14);
-      const footerHeight = Math.min(img.height * 0.025, 28);
+      const watermarkHeight = Math.max(qrCardSize + padding * 2 + 20, H * 0.14);
+      const footerHeight = Math.min(H * 0.025, 28);
       const totalBarHeight = watermarkHeight + footerHeight;
+      const barY = H - totalBarHeight;
 
-      const barY = img.height - totalBarHeight;
+      // ── Column boundaries (fixed widths) ───────────────────
+      const colLeftStart = 0;
+      const colLeftEnd = W * 0.40;
+      const colCenterStart = colLeftEnd;
+      const colCenterEnd = W * 0.70;
+      const colRightStart = colCenterEnd;
+      const colRightEnd = W;
 
       // ── Background bar ────────────────────────────────────
       ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
-      ctx.fillRect(0, barY, img.width, totalBarHeight);
+      ctx.fillRect(0, barY, W, totalBarHeight);
 
       // ── Font sizes ────────────────────────────────────────
       const orgFontSize = Math.max(watermarkHeight * 0.16, 13);
@@ -81,11 +91,17 @@ export async function addWatermark(
         hour12: true,
       });
 
-      // ════════════════════════════════════════════════════════
-      // COLUMN 1 — LEFT: Logo + Org Name + Timestamp
-      // ════════════════════════════════════════════════════════
-      let textX = padding * 2;
       const colCenterY = barY + watermarkHeight / 2;
+
+      // ════════════════════════════════════════════════════════
+      // COLUMN 1 — LEFT (0% to 40%): Logo + Org Name + Timestamp
+      // ════════════════════════════════════════════════════════
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(colLeftStart, barY, colLeftEnd - colLeftStart, watermarkHeight);
+      ctx.clip();
+
+      let textX = colLeftStart + padding * 2;
 
       if (logoUrl) {
         try {
@@ -99,8 +115,7 @@ export async function addWatermark(
 
           const logoH = watermarkHeight * 0.55;
           const logoW = (logo.width / logo.height) * logoH;
-          // White card behind logo
-          const logoCardX = padding;
+          const logoCardX = colLeftStart + padding;
           const logoCardY = colCenterY - logoH / 2 - 6;
           const logoCardW = logoW + 12;
           const logoCardH = logoH + 12;
@@ -129,46 +144,46 @@ export async function addWatermark(
       ctx.fillStyle = 'rgba(255,255,255,0.85)';
       ctx.fillText(timestamp, textX, colCenterY + orgFontSize * 0.7);
 
+      ctx.restore();
+
       // ════════════════════════════════════════════════════════
-      // COLUMN 2 — CENTER: "PROOF OF INSTALLATION"
+      // COLUMN 2 — CENTER (40% to 70%): "PROOF OF INSTALLATION"
       // ════════════════════════════════════════════════════════
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(colCenterStart, barY, colCenterEnd - colCenterStart, watermarkHeight);
+      ctx.clip();
+
+      const centerX = (colCenterStart + colCenterEnd) / 2;
       ctx.font = `bold ${proofFontSize}px Arial`;
       ctx.fillStyle = 'white';
       ctx.textAlign = 'center';
-      ctx.fillText('PROOF OF INSTALLATION', img.width / 2, colCenterY);
+      ctx.textBaseline = 'middle';
+      ctx.fillText('PROOF OF', centerX, colCenterY - proofFontSize * 0.6);
+      ctx.fillText('INSTALLATION', centerX, colCenterY + proofFontSize * 0.6);
+
+      ctx.restore();
 
       // ════════════════════════════════════════════════════════
-      // COLUMN 3 — RIGHT: Single QR Code in white card
+      // COLUMN 3 — RIGHT (70% to 100%): Single QR Code in white card
       // ════════════════════════════════════════════════════════
-      let qrRendered = false;
-
-      // Determine QR data URL — prefer generating from campaignId+assetId
-      let qrDataUrl: string | null = null;
       if (campaignId && assetId) {
         try {
-          qrDataUrl = await generateProofQRDataUrl(campaignId, assetId);
-        } catch {
-          console.warn('Failed to generate proof QR');
-        }
-      }
-      // Fallback to legacy qrCodeUrl (external image)
-      if (!qrDataUrl && qrCodeUrl) {
-        qrDataUrl = qrCodeUrl;
-      }
+          const qrDataUrl = await generateProofQRDataUrl(campaignId, assetId);
 
-      if (qrDataUrl) {
-        try {
           const qrImg = new Image();
           qrImg.crossOrigin = 'anonymous';
           await new Promise<void>((res, rej) => {
             qrImg.onload = () => res();
             qrImg.onerror = () => rej(new Error('QR load failed'));
-            qrImg.src = qrDataUrl!;
+            qrImg.src = qrDataUrl;
           });
 
-          // White card position
-          const cardX = img.width - qrCardSize - padding;
-          const cardY = colCenterY - qrCardSize / 2 - labelFontSize;
+          // Center the QR card within the right column
+          const rightColWidth = colRightEnd - colRightStart;
+          const totalCardHeight = qrCardSize + labelFontSize + 10;
+          const cardX = colRightStart + (rightColWidth - qrCardSize) / 2;
+          const cardY = colCenterY - totalCardHeight / 2;
 
           // Shadow
           ctx.shadowColor = 'rgba(0,0,0,0.25)';
@@ -179,7 +194,7 @@ export async function addWatermark(
           // White rounded card
           ctx.fillStyle = 'white';
           ctx.beginPath();
-          ctx.roundRect(cardX, cardY, qrCardSize, qrCardSize + labelFontSize + 8, 10);
+          ctx.roundRect(cardX, cardY, qrCardSize, totalCardHeight, 10);
           ctx.fill();
 
           // Reset shadow
@@ -191,13 +206,12 @@ export async function addWatermark(
           // Draw QR inside card
           ctx.drawImage(qrImg, cardX + qrCardPad, cardY + qrCardPad, qrDisplaySize, qrDisplaySize);
 
-          // Label below QR
+          // Label below QR inside card
           ctx.fillStyle = '#333';
           ctx.font = `bold ${labelFontSize}px Arial`;
           ctx.textAlign = 'center';
-          ctx.fillText('SCAN FOR LIVE PROOF', cardX + qrCardSize / 2, cardY + qrCardPad + qrDisplaySize + labelFontSize + 2);
-
-          qrRendered = true;
+          ctx.textBaseline = 'middle';
+          ctx.fillText('SCAN FOR LIVE PROOF', cardX + qrCardSize / 2, cardY + qrCardPad + qrDisplaySize + labelFontSize);
         } catch {
           console.warn('Could not render QR code in watermark');
         }
@@ -213,7 +227,7 @@ export async function addWatermark(
       ctx.textBaseline = 'middle';
       ctx.fillText(
         'Powered by Go-Ads 360 — OOH Media Platform',
-        img.width / 2,
+        W / 2,
         barY + watermarkHeight + footerHeight / 2
       );
 

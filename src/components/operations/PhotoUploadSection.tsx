@@ -208,7 +208,6 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
         {
           logoUrl,
           organizationName: orgName,
-          qrCodeUrl,
           campaignId: campaignId || undefined,
           assetId: assetId || undefined,
         },

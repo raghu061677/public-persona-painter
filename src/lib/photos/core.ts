@@ -231,7 +231,9 @@ export async function uploadPhoto(
     }
 
     // Stage 3: Apply QR watermark if asset_id is provided
-    if (metadata.asset_id) {
+    // Skip if file is already watermarked (e.g. from operations proof upload via imageWatermark.ts)
+    const isAlreadyWatermarked = file.name.includes('_watermarked');
+    if (metadata.asset_id && !isAlreadyWatermarked) {
       if (onProgress) {
         onProgress({ stage: 'watermarking', progress: 30, message: 'Adding QR watermark...' });
       }
@@ -246,8 +248,9 @@ export async function uploadPhoto(
         }
       } catch (error) {
         console.warn('QR watermark failed, continuing without watermark:', error);
-        // Continue without watermark if it fails
       }
+    } else if (isAlreadyWatermarked) {
+      console.log('File already watermarked, skipping QR watermark stage');
     }
 
     // Stage 4: Generate unique filename and upload with company isolation

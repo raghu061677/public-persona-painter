@@ -63,12 +63,10 @@ export async function addWatermark(
       const totalBarHeight = watermarkHeight + footerHeight;
       const barY = H - totalBarHeight;
 
-      // ── Column boundaries (fixed widths) ───────────────────
+      // ── Column boundaries (2-column: left 65%, right 35%) ──
       const colLeftStart = 0;
-      const colLeftEnd = W * 0.40;
-      const colCenterStart = colLeftEnd;
-      const colCenterEnd = W * 0.70;
-      const colRightStart = colCenterEnd;
+      const colLeftEnd = W * 0.65;
+      const colRightStart = colLeftEnd;
       const colRightEnd = W;
 
       // ── Background bar ────────────────────────────────────
@@ -146,26 +144,10 @@ export async function addWatermark(
 
       ctx.restore();
 
-      // ════════════════════════════════════════════════════════
-      // COLUMN 2 — CENTER (40% to 70%): "PROOF OF INSTALLATION"
-      // ════════════════════════════════════════════════════════
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(colCenterStart, barY, colCenterEnd - colCenterStart, watermarkHeight);
-      ctx.clip();
-
-      const centerX = (colCenterStart + colCenterEnd) / 2;
-      ctx.font = `bold ${proofFontSize}px Arial`;
-      ctx.fillStyle = 'white';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('PROOF OF', centerX, colCenterY - proofFontSize * 0.6);
-      ctx.fillText('INSTALLATION', centerX, colCenterY + proofFontSize * 0.6);
-
-      ctx.restore();
+      // CENTER COLUMN REMOVED — "PROOF OF INSTALLATION" no longer rendered
 
       // ════════════════════════════════════════════════════════
-      // COLUMN 3 — RIGHT (70% to 100%): Single QR Code in white card
+      // COLUMN 2 — RIGHT (65% to 100%): Single QR Code in white card
       // ════════════════════════════════════════════════════════
       if (campaignId && assetId) {
         try {

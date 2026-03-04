@@ -5,16 +5,15 @@ export interface WatermarkOptions {
   organizationName?: string;
   campaignId?: string;
   assetId?: string;
+  /** Pre-fetched Google Street View URL or QR code URL for the asset */
+  streetViewUrl?: string;
 }
 
-const PROOF_BASE_URL = 'https://goads.app/proof';
-
 /**
- * Generate a QR code data URL for a proof link
+ * Generate a QR code data URL encoding a Google Street View link
  */
-async function generateProofQRDataUrl(campaignId: string, assetId: string): Promise<string> {
-  const url = `${PROOF_BASE_URL}/${campaignId}/${assetId}`;
-  return QRCode.toDataURL(url, {
+async function generateStreetViewQRDataUrl(streetViewUrl: string): Promise<string> {
+  return QRCode.toDataURL(streetViewUrl, {
     width: 320,
     margin: 1,
     color: { dark: '#000000', light: '#FFFFFF' },
@@ -33,7 +32,7 @@ export async function addWatermark(
   imageFile: File,
   options: WatermarkOptions = {}
 ): Promise<File> {
-  const { logoUrl, organizationName, campaignId, assetId } = options;
+  const { logoUrl, organizationName, campaignId, assetId, streetViewUrl } = options;
 
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
@@ -149,9 +148,9 @@ export async function addWatermark(
       // ════════════════════════════════════════════════════════
       // COLUMN 2 — RIGHT (65% to 100%): Single QR Code in white card
       // ════════════════════════════════════════════════════════
-      if (campaignId && assetId) {
+      if (streetViewUrl) {
         try {
-          const qrDataUrl = await generateProofQRDataUrl(campaignId, assetId);
+          const qrDataUrl = await generateStreetViewQRDataUrl(streetViewUrl);
 
           const qrImg = new Image();
           qrImg.crossOrigin = 'anonymous';
@@ -193,7 +192,7 @@ export async function addWatermark(
           ctx.font = `bold ${labelFontSize}px Arial`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText('SCAN FOR LIVE PROOF', cardX + qrCardSize / 2, cardY + qrCardPad + qrDisplaySize + labelFontSize);
+          ctx.fillText('SCAN FOR STREET VIEW', cardX + qrCardSize / 2, cardY + qrCardPad + qrDisplaySize + labelFontSize);
         } catch {
           console.warn('Could not render QR code in watermark');
         }

@@ -1,18 +1,39 @@
+import QRCode from 'qrcode';
+
 export interface WatermarkOptions {
   logoUrl?: string;
   organizationName?: string;
+  /** @deprecated Use campaignId + assetId instead */
   qrCodeUrl?: string;
+  campaignId?: string;
+  assetId?: string;
+}
+
+const PROOF_BASE_URL = 'https://goads.app/proof';
+
+/**
+ * Generate a QR code data URL for a proof link
+ */
+async function generateProofQRDataUrl(campaignId: string, assetId: string): Promise<string> {
+  const url = `${PROOF_BASE_URL}/${campaignId}/${assetId}`;
+  return QRCode.toDataURL(url, {
+    width: 320,
+    margin: 1,
+    color: { dark: '#000000', light: '#FFFFFF' },
+    errorCorrectionLevel: 'M',
+  });
 }
 
 /**
- * Add watermark with company logo, timestamp, and QR code to an image
+ * Add watermark with company logo, timestamp, and QR code to an image.
+ * Footer layout: 3-column grid — Left (logo+name+timestamp), Center (PROOF OF INSTALLATION), Right (QR card)
  */
 export async function addWatermark(
   imageFile: File,
-  logoUrl?: string,
-  organizationName?: string,
-  qrCodeUrl?: string
+  options: WatermarkOptions = {}
 ): Promise<File> {
+  const { logoUrl, organizationName, qrCodeUrl, campaignId, assetId } = options;
+
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -23,25 +44,34 @@ export async function addWatermark(
 
     const img = new Image();
     img.onload = async () => {
-      // Set canvas size to match image
       canvas.width = img.width;
       canvas.height = img.height;
 
       // Draw original image
       ctx.drawImage(img, 0, 0);
 
-      // Calculate watermark dimensions and position
-      const padding = Math.min(img.width, img.height) * 0.03; // 3% padding
-      const watermarkHeight = Math.min(img.height * 0.12, 120); // 12% of height, max 120px (increased for bigger QR)
-      const footerHeight = Math.min(img.height * 0.03, 30); // Footer for attribution
-      const watermarkY = img.height - watermarkHeight - footerHeight - padding;
+      // ── Dimensions ────────────────────────────────────────
+      const padding = Math.min(img.width, img.height) * 0.025;
+      const qrDisplaySize = Math.min(Math.max(img.width * 0.1, 120), 170); // target ~160px
+      const qrCardPad = 12;
+      const qrCardSize = qrDisplaySize + qrCardPad * 2;
+      const watermarkHeight = Math.max(qrCardSize + padding * 2, img.height * 0.14);
+      const footerHeight = Math.min(img.height * 0.025, 28);
+      const totalBarHeight = watermarkHeight + footerHeight;
 
-      // Draw semi-transparent background for watermark (main bar + footer)
-      const bgHeight = watermarkHeight + footerHeight + padding;
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-      ctx.fillRect(0, img.height - bgHeight, img.width, bgHeight);
+      const barY = img.height - totalBarHeight;
 
-      // Add timestamp
+      // ── Background bar ────────────────────────────────────
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      ctx.fillRect(0, barY, img.width, totalBarHeight);
+
+      // ── Font sizes ────────────────────────────────────────
+      const orgFontSize = Math.max(watermarkHeight * 0.16, 13);
+      const timestampFontSize = Math.max(orgFontSize * 0.85, 11);
+      const proofFontSize = Math.max(orgFontSize * 0.95, 14);
+      const labelFontSize = Math.max(orgFontSize * 0.6, 9);
+
+      // ── Timestamp ─────────────────────────────────────────
       const timestamp = new Date().toLocaleString('en-IN', {
         year: 'numeric',
         month: 'short',
@@ -51,115 +81,153 @@ export async function addWatermark(
         hour12: true,
       });
 
-      // Configure text style - SMALLER fonts
-      const fontSize = Math.max(watermarkHeight * 0.22, 10); // Reduced from 0.4 to 0.22
-      ctx.fillStyle = 'white';
-      ctx.textBaseline = 'middle';
-
+      // ════════════════════════════════════════════════════════
+      // COLUMN 1 — LEFT: Logo + Org Name + Timestamp
+      // ════════════════════════════════════════════════════════
       let textX = padding * 2;
+      const colCenterY = barY + watermarkHeight / 2;
 
-      // If logo URL is provided, try to load and draw it
       if (logoUrl) {
         try {
           const logo = new Image();
           logo.crossOrigin = 'anonymous';
-          
-          await new Promise<void>((resolveLoad, rejectLoad) => {
-            logo.onload = () => resolveLoad();
-            logo.onerror = () => rejectLoad(new Error('Failed to load logo'));
+          await new Promise<void>((res, rej) => {
+            logo.onload = () => res();
+            logo.onerror = () => rej(new Error('Logo load failed'));
             logo.src = logoUrl;
           });
 
-          // Calculate logo dimensions maintaining aspect ratio
-          const logoHeight = watermarkHeight * 0.7;
-          const logoWidth = (logo.width / logo.height) * logoHeight;
+          const logoH = watermarkHeight * 0.55;
+          const logoW = (logo.width / logo.height) * logoH;
+          // White card behind logo
+          const logoCardX = padding;
+          const logoCardY = colCenterY - logoH / 2 - 6;
+          const logoCardW = logoW + 12;
+          const logoCardH = logoH + 12;
+          ctx.fillStyle = 'white';
+          ctx.beginPath();
+          ctx.roundRect(logoCardX, logoCardY, logoCardW, logoCardH, 6);
+          ctx.fill();
 
-          // Draw logo
-          ctx.drawImage(
-            logo,
-            padding * 2,
-            watermarkY + (watermarkHeight - logoHeight) / 2,
-            logoWidth,
-            logoHeight
-          );
-
-          textX = padding * 2 + logoWidth + padding;
-        } catch (error) {
-          console.warn('Could not load logo for watermark:', error);
+          ctx.drawImage(logo, logoCardX + 6, logoCardY + 6, logoW, logoH);
+          textX = logoCardX + logoCardW + padding;
+        } catch {
+          // skip logo
         }
       }
 
-      // Draw organization name if provided - smaller font
+      ctx.fillStyle = 'white';
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'left';
+
       if (organizationName) {
-        ctx.font = `bold ${fontSize}px Arial`;
-        ctx.fillText(organizationName, textX, watermarkY + watermarkHeight / 3);
+        ctx.font = `bold ${orgFontSize}px Arial`;
+        ctx.fillText(organizationName, textX, colCenterY - timestampFontSize * 0.7);
       }
 
-      // Draw timestamp - smaller font
-      const timestampY = organizationName 
-        ? watermarkY + (watermarkHeight * 2) / 3 
-        : watermarkY + watermarkHeight / 2;
-      
-      ctx.font = `${fontSize * 0.9}px Arial`;
-      ctx.fillText(timestamp, textX, timestampY);
+      ctx.font = `${timestampFontSize}px Arial`;
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.fillText(timestamp, textX, colCenterY + orgFontSize * 0.7);
 
-      // Draw QR code on the right side if provided - BIGGER SIZE
-      let qrWidth = 0;
-      if (qrCodeUrl) {
+      // ════════════════════════════════════════════════════════
+      // COLUMN 2 — CENTER: "PROOF OF INSTALLATION"
+      // ════════════════════════════════════════════════════════
+      ctx.font = `bold ${proofFontSize}px Arial`;
+      ctx.fillStyle = 'white';
+      ctx.textAlign = 'center';
+      ctx.fillText('PROOF OF INSTALLATION', img.width / 2, colCenterY);
+
+      // ════════════════════════════════════════════════════════
+      // COLUMN 3 — RIGHT: Single QR Code in white card
+      // ════════════════════════════════════════════════════════
+      let qrRendered = false;
+
+      // Determine QR data URL — prefer generating from campaignId+assetId
+      let qrDataUrl: string | null = null;
+      if (campaignId && assetId) {
+        try {
+          qrDataUrl = await generateProofQRDataUrl(campaignId, assetId);
+        } catch {
+          console.warn('Failed to generate proof QR');
+        }
+      }
+      // Fallback to legacy qrCodeUrl (external image)
+      if (!qrDataUrl && qrCodeUrl) {
+        qrDataUrl = qrCodeUrl;
+      }
+
+      if (qrDataUrl) {
         try {
           const qrImg = new Image();
           qrImg.crossOrigin = 'anonymous';
-          
-          await new Promise<void>((resolveLoad, rejectLoad) => {
-            qrImg.onload = () => resolveLoad();
-            qrImg.onerror = () => rejectLoad(new Error('Failed to load QR code'));
-            qrImg.src = qrCodeUrl;
+          await new Promise<void>((res, rej) => {
+            qrImg.onload = () => res();
+            qrImg.onerror = () => rej(new Error('QR load failed'));
+            qrImg.src = qrDataUrl!;
           });
 
-          // QR code size - increased by ~40% for better scanability
-          const qrSize = watermarkHeight * 0.95;
-          qrWidth = qrSize + padding * 2;
-          
-          // Draw white background for QR code
-          const qrX = img.width - qrSize - padding * 2;
-          const qrY = watermarkY + (watermarkHeight - qrSize) / 2;
-          
+          // White card position
+          const cardX = img.width - qrCardSize - padding;
+          const cardY = colCenterY - qrCardSize / 2 - labelFontSize;
+
+          // Shadow
+          ctx.shadowColor = 'rgba(0,0,0,0.25)';
+          ctx.shadowBlur = 8;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 2;
+
+          // White rounded card
           ctx.fillStyle = 'white';
-          ctx.fillRect(qrX - 6, qrY - 6, qrSize + 12, qrSize + 12);
-          
-          // Draw QR code
-          ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
-        } catch (error) {
-          console.warn('Could not load QR code for watermark:', error);
-          qrWidth = 0;
+          ctx.beginPath();
+          ctx.roundRect(cardX, cardY, qrCardSize, qrCardSize + labelFontSize + 8, 10);
+          ctx.fill();
+
+          // Reset shadow
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+
+          // Draw QR inside card
+          ctx.drawImage(qrImg, cardX + qrCardPad, cardY + qrCardPad, qrDisplaySize, qrDisplaySize);
+
+          // Label below QR
+          ctx.fillStyle = '#333';
+          ctx.font = `bold ${labelFontSize}px Arial`;
+          ctx.textAlign = 'center';
+          ctx.fillText('SCAN FOR LIVE PROOF', cardX + qrCardSize / 2, cardY + qrCardPad + qrDisplaySize + labelFontSize + 2);
+
+          qrRendered = true;
+        } catch {
+          console.warn('Could not render QR code in watermark');
         }
       }
 
-      // Add "PROOF OF INSTALLATION" text - smaller font
-      ctx.font = `bold ${fontSize * 0.85}px Arial`;
-      ctx.fillStyle = 'white';
-      ctx.textAlign = 'right';
-      const proofTextX = qrWidth > 0 ? img.width - qrWidth - padding : img.width - padding * 2;
-      ctx.fillText('PROOF OF INSTALLATION', proofTextX, watermarkY + watermarkHeight / 2);
-
-      // Add "Powered by Go-Ads 360 — OOH Media Platform" footer - bigger font
-      const footerFontSize = Math.max(fontSize * 0.9, 14);
+      // ════════════════════════════════════════════════════════
+      // FOOTER — "Powered by Go-Ads 360 — OOH Media Platform"
+      // ════════════════════════════════════════════════════════
+      const footerFontSize = Math.max(timestampFontSize * 0.9, 12);
       ctx.font = `${footerFontSize}px Arial`;
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
       ctx.textAlign = 'center';
-      const footerY = img.height - footerHeight / 2 - padding / 2;
-      ctx.fillText('Powered by Go-Ads 360 — OOH Media Platform', img.width / 2, footerY);
+      ctx.textBaseline = 'middle';
+      ctx.fillText(
+        'Powered by Go-Ads 360 — OOH Media Platform',
+        img.width / 2,
+        barY + watermarkHeight + footerHeight / 2
+      );
 
       // Convert canvas to blob
       canvas.toBlob(
         (blob) => {
           if (blob) {
-            const watermarkedFile = new File(
-              [blob],
-              imageFile.name.replace(/\.(jpg|jpeg|png)$/i, '_watermarked.$1'),
-              { type: imageFile.type }
+            resolve(
+              new File(
+                [blob],
+                imageFile.name.replace(/\.(jpg|jpeg|png)$/i, '_watermarked.$1'),
+                { type: imageFile.type }
+              )
             );
-            resolve(watermarkedFile);
           } else {
             reject(new Error('Failed to create watermarked image'));
           }
@@ -169,10 +237,7 @@ export async function addWatermark(
       );
     };
 
-    img.onerror = () => {
-      reject(new Error('Failed to load image'));
-    };
-
+    img.onerror = () => reject(new Error('Failed to load image'));
     img.src = URL.createObjectURL(imageFile);
   });
 }
@@ -182,24 +247,20 @@ export async function addWatermark(
  */
 export async function addWatermarkBatch(
   files: File[],
-  logoUrl?: string,
-  organizationName?: string,
-  onProgress?: (index: number, progress: number) => void,
-  qrCodeUrl?: string
+  options: WatermarkOptions = {},
+  onProgress?: (index: number, progress: number) => void
 ): Promise<File[]> {
   const watermarkedFiles: File[] = [];
 
   for (let i = 0; i < files.length; i++) {
     if (onProgress) onProgress(i, 0);
-    
+
     try {
-      const watermarkedFile = await addWatermark(files[i], logoUrl, organizationName, qrCodeUrl);
+      const watermarkedFile = await addWatermark(files[i], options);
       watermarkedFiles.push(watermarkedFile);
-      
       if (onProgress) onProgress(i, 100);
     } catch (error) {
       console.error(`Failed to watermark ${files[i].name}:`, error);
-      // Use original file if watermarking fails
       watermarkedFiles.push(files[i]);
       if (onProgress) onProgress(i, 100);
     }

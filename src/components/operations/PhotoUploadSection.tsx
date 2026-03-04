@@ -205,12 +205,16 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
 
       const watermarkedFiles = await addWatermarkBatch(
         files,
-        logoUrl,
-        orgName,
+        {
+          logoUrl,
+          organizationName: orgName,
+          qrCodeUrl,
+          campaignId: campaignId || undefined,
+          assetId: assetId || undefined,
+        },
         (index, progress) => {
           // Optional: show watermarking progress
-        },
-        qrCodeUrl
+        }
       );
 
       // Step 2: Initialize upload state

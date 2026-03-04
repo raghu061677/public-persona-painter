@@ -191,7 +191,9 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
       fromDate: formatDateToDDMMYYYY(item.start_date || start),
       toDate: formatDateToDDMMYYYY(item.end_date || end),
       duration: getDurationDisplay(itemDays),
-      unitPrice: unitPriceTotal,
+      unitPrice: proRataRent,
+      printingCost: printingCharge,
+      mountingCost: mountingCharge,
       subtotal: unitPriceTotal,
     };
   });

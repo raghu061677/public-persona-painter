@@ -68,7 +68,9 @@ export const generateProformaPDF = async (data: ProformaInvoiceData): Promise<Bl
       fromDate: data.campaign_start_date ? formatDateToDDMMYYYY(data.campaign_start_date) : '-',
       toDate: data.campaign_end_date ? formatDateToDDMMYYYY(data.campaign_end_date) : '-',
       duration: getDurationDisplay(days),
-      unitPrice: unitPriceTotal,
+      unitPrice: proRataRent,
+      printingCost: printingCharge,
+      mountingCost: mountingCharge,
       subtotal: item.line_total || item.total_price || unitPriceTotal,
     };
   });

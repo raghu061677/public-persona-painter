@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-// Use pngs library - pure TypeScript, no WASM, very lightweight
 import * as pngs from 'https://deno.land/x/pngs@0.1.1/mod.ts';
+import QRCode from 'https://esm.sh/qrcode@1.5.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,10 +33,31 @@ const QR_PADDING = 12;
 function isAlreadyWatermarked(metadata: any, url?: string): boolean {
   if (metadata?.qr_watermarked === true) return true;
   if (url?.includes('_qr_wm')) return true;
+  if (url?.includes('_watermarked')) return true;
   return false;
 }
 
-// Helper to fetch with retry
+// Build Street View URL from asset data
+function buildStreetViewUrl(asset: { google_street_view_url?: string | null; latitude?: number | null; longitude?: number | null }): string | null {
+  if (asset.google_street_view_url) return asset.google_street_view_url;
+  if (asset.latitude && asset.longitude) {
+    return `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${asset.latitude},${asset.longitude}&heading=90&pitch=0&fov=80`;
+  }
+  return null;
+}
+
+// Generate QR code as PNG buffer from a URL string
+async function generateQRPng(url: string): Promise<Uint8Array> {
+  const pngBuffer = await QRCode.toBuffer(url, {
+    errorCorrectionLevel: 'M',
+    type: 'png',
+    margin: 1,
+    width: 256,
+    color: { dark: '#000000', light: '#FFFFFF' },
+  });
+  return new Uint8Array(pngBuffer);
+}
+
 async function fetchWithRetry(url: string, retries = 2): Promise<Response> {
   for (let i = 0; i <= retries; i++) {
     try {
@@ -51,22 +72,18 @@ async function fetchWithRetry(url: string, retries = 2): Promise<Response> {
   throw new Error('Fetch failed after retries');
 }
 
-// Simple image compositing using raw pixel manipulation
 async function compositeImages(
   mainData: Uint8Array, 
   qrData: Uint8Array, 
   qrSize: number, 
   padding: number
 ): Promise<Uint8Array> {
-  // Decode PNG images
   const mainImage = pngs.decode(mainData);
   const qrImage = pngs.decode(qrData);
   
-  // Calculate position (bottom-right corner)
   const posX = mainImage.width - qrSize - padding;
   const posY = mainImage.height - qrSize - padding;
   
-  // Simple nearest-neighbor resize of QR code
   const qrPixels = new Uint8Array(qrSize * qrSize * 4);
   const scaleX = qrImage.width / qrSize;
   const scaleY = qrImage.height / qrSize;
@@ -84,7 +101,6 @@ async function compositeImages(
     }
   }
   
-  // Composite QR onto main image
   const resultPixels = new Uint8Array(mainImage.image);
   for (let y = 0; y < qrSize; y++) {
     for (let x = 0; x < qrSize; x++) {
@@ -103,7 +119,6 @@ async function compositeImages(
     }
   }
   
-  // Encode result - pngs.encode takes (data, width, height, options?)
   return pngs.encode(resultPixels, mainImage.width, mainImage.height);
 }
 
@@ -143,7 +158,7 @@ Deno.serve(async (req) => {
 
     const { batch_size = 2, offset = 0, image_type = 'both', force_reprocess = false, dry_run = false } = await req.json() as RequestBody;
 
-    console.log('Starting QR watermark processing', { batch_size, offset, image_type, force_reprocess, dry_run });
+    console.log('Starting QR watermark processing (Street View)', { batch_size, offset, image_type, force_reprocess, dry_run });
 
     if (image_type === 'media_photos' || image_type === 'both') {
       await processMediaPhotos(supabase, result, batch_size, offset, force_reprocess, dry_run);
@@ -179,17 +194,24 @@ async function processMediaPhotos(supabase: any, result: ProcessingResult, batch
     result.total_images_scanned++;
     if (!force_reprocess && isAlreadyWatermarked(photo.metadata, photo.photo_url)) { result.skipped_already_done++; continue; }
     
-    const { data: asset } = await supabase.from('media_assets').select('qr_code_url').eq('id', photo.asset_id).single();
-    if (!asset?.qr_code_url) { result.skipped_missing_qr++; continue; }
+    // Fetch asset with Street View URL and coordinates
+    const { data: asset } = await supabase.from('media_assets')
+      .select('google_street_view_url, latitude, longitude')
+      .eq('id', photo.asset_id).single();
+    
+    const streetViewUrl = asset ? buildStreetViewUrl(asset) : null;
+    if (!streetViewUrl) { result.skipped_missing_qr++; continue; }
     if (!photo.photo_url) { result.skipped_missing_image++; continue; }
     if (dry_run) { result.watermarked_count++; continue; }
 
     try {
-      const watermarkedResult = await applyQRWatermark(supabase, photo.photo_url, asset.qr_code_url, 'media-photos');
+      // Generate QR code PNG from Street View URL
+      const qrPngData = await generateQRPng(streetViewUrl);
+      const watermarkedResult = await applyQRWatermarkFromData(supabase, photo.photo_url, qrPngData, 'media-photos');
       if (watermarkedResult.success) {
         await supabase.from('media_photos').update({
           photo_url: watermarkedResult.newUrl,
-          metadata: { ...(photo.metadata || {}), qr_watermarked: true, qr_watermarked_at: new Date().toISOString() },
+          metadata: { ...(photo.metadata || {}), qr_watermarked: true, qr_watermarked_at: new Date().toISOString(), qr_target: 'street_view' },
         }).eq('id', photo.id);
         result.watermarked_count++;
       } else { result.failed_count++; result.errors.push({ id: photo.id, error: watermarkedResult.error || 'Unknown' }); }
@@ -204,8 +226,26 @@ async function processCampaignAssets(supabase: any, result: ProcessingResult, ba
 
   for (const ca of campaignAssets || []) {
     if (!ca.photos || typeof ca.photos !== 'object') continue;
-    const { data: asset } = await supabase.from('media_assets').select('qr_code_url').eq('id', ca.asset_id).single();
-    if (!asset?.qr_code_url) { result.skipped_missing_qr++; continue; }
+    
+    // Fetch asset with Street View URL and coordinates
+    const { data: asset } = await supabase.from('media_assets')
+      .select('google_street_view_url, latitude, longitude')
+      .eq('id', ca.asset_id).single();
+    
+    const streetViewUrl = asset ? buildStreetViewUrl(asset) : null;
+    if (!streetViewUrl) { result.skipped_missing_qr++; continue; }
+
+    // Generate QR code once per asset
+    let qrPngData: Uint8Array | null = null;
+    if (!dry_run) {
+      try {
+        qrPngData = await generateQRPng(streetViewUrl);
+      } catch (err) {
+        result.failed_count++;
+        result.errors.push({ id: ca.id, error: `QR generation failed: ${String(err)}` });
+        continue;
+      }
+    }
 
     const photos = ca.photos as Record<string, string>;
     let updatedPhotos = { ...photos }, anyUpdated = false;
@@ -217,7 +257,7 @@ async function processCampaignAssets(supabase: any, result: ProcessingResult, ba
       if (dry_run) { result.watermarked_count++; continue; }
 
       try {
-        const watermarkedResult = await applyQRWatermark(supabase, photoUrl, asset.qr_code_url, 'campaign-proofs');
+        const watermarkedResult = await applyQRWatermarkFromData(supabase, photoUrl, qrPngData!, 'campaign-proofs');
         if (watermarkedResult.success && watermarkedResult.newUrl) {
           updatedPhotos[photoType] = watermarkedResult.newUrl; anyUpdated = true; result.watermarked_count++;
         } else { result.failed_count++; }
@@ -227,19 +267,14 @@ async function processCampaignAssets(supabase: any, result: ProcessingResult, ba
   }
 }
 
-async function applyQRWatermark(supabase: any, imageUrl: string, qrCodeUrl: string, bucket: string): Promise<{ success: boolean; newUrl?: string; error?: string }> {
+async function applyQRWatermarkFromData(supabase: any, imageUrl: string, qrPngData: Uint8Array, bucket: string): Promise<{ success: boolean; newUrl?: string; error?: string }> {
   try {
-    const [imageRes, qrRes] = await Promise.all([
-      fetchWithRetry(imageUrl),
-      fetchWithRetry(qrCodeUrl)
-    ]);
-    if (!imageRes.ok || !qrRes.ok) return { success: false, error: 'Failed to fetch images' };
+    const imageRes = await fetchWithRetry(imageUrl);
+    if (!imageRes.ok) return { success: false, error: 'Failed to fetch image' };
 
     const imageData = new Uint8Array(await imageRes.arrayBuffer());
-    const qrData = new Uint8Array(await qrRes.arrayBuffer());
 
-    // Use pure-TS compositing
-    const watermarkedData = await compositeImages(imageData, qrData, QR_SIZE, QR_PADDING);
+    const watermarkedData = await compositeImages(imageData, qrPngData, QR_SIZE, QR_PADDING);
 
     const storagePath = extractStoragePath(imageUrl);
     if (!storagePath) return { success: false, error: 'Could not extract path' };
@@ -247,7 +282,7 @@ async function applyQRWatermark(supabase: any, imageUrl: string, qrCodeUrl: stri
     const pathParts = storagePath.split('/');
     const filename = pathParts.pop() || '';
     const dir = pathParts.join('/');
-    const baseName = filename.replace(/\.[^.]+$/, '').replace('_qr_wm', '');
+    const baseName = filename.replace(/\.[^.]+$/, '').replace('_qr_wm', '').replace('_watermarked', '');
     const newPath = dir ? `${dir}/${baseName}_qr_wm.png` : `${baseName}_qr_wm.png`;
 
     const { error: uploadError } = await supabase.storage.from(bucket).upload(newPath, watermarkedData, { contentType: 'image/png', upsert: true });

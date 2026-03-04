@@ -25,8 +25,9 @@ export default function SalesOrders() {
     setLoading(true);
     const { data, error } = await supabase
       .from("campaigns")
-      .select("id, campaign_name, client_name, client_id, status, start_date, end_date, total_amount, plan_id, created_at")
+      .select("id, campaign_code, campaign_name, client_name, client_id, status, start_date, end_date, total_amount, grand_total, plan_id, created_at")
       .eq("company_id", company!.id)
+      .or('is_deleted.is.null,is_deleted.eq.false')
       .order("created_at", { ascending: false });
     if (error) toast({ title: "Error", description: "Failed to load sales orders", variant: "destructive" });
     else setCampaigns(data || []);
@@ -52,14 +53,16 @@ export default function SalesOrders() {
     { label: "Cancelled", value: campaigns.filter(c => c.status === "Cancelled").length, icon: XCircle, valueClassName: "text-rose-600" },
   ], [campaigns]);
 
+  const getDisplayCode = (r: any) => r.campaign_code || r.id;
+
   const columns: FinanceColumn<any>[] = [
-    { key: "id", header: "Campaign ID", sortable: true, cell: (r) => <span className="font-mono text-sm font-medium">{r.id}</span>, exportValue: (r) => r.id },
+    { key: "id", header: "Campaign ID", sortable: true, cell: (r) => <span className="font-mono text-sm font-medium text-primary cursor-pointer hover:underline">{getDisplayCode(r)}</span>, exportValue: (r) => getDisplayCode(r) },
     { key: "campaign_name", header: "Campaign", sortable: true, cell: (r) => r.campaign_name || '-', exportValue: (r) => r.campaign_name },
     { key: "client_name", header: "Client", sortable: true, cell: (r) => r.client_name, exportValue: (r) => r.client_name },
     { key: "start_date", header: "Start Date", sortable: true, cell: (r) => r.start_date ? formatDate(r.start_date) : '-', exportValue: (r) => r.start_date ? new Date(r.start_date).toLocaleDateString("en-IN") : "" },
     { key: "end_date", header: "End Date", sortable: true, cell: (r) => r.end_date ? formatDate(r.end_date) : '-', exportValue: (r) => r.end_date ? new Date(r.end_date).toLocaleDateString("en-IN") : "" },
     { key: "status", header: "Status", sortable: true, cell: (r) => getStatusBadge(r.status), exportValue: (r) => r.status },
-    { key: "total_amount", header: "Amount", sortable: true, align: "right", cell: (r) => <span className="font-mono font-semibold">{formatINR(r.total_amount)}</span>, exportValue: (r) => r.total_amount || 0 },
+    { key: "total_amount", header: "Amount", sortable: true, align: "right", cell: (r) => <span className="font-mono font-semibold">{formatINR(r.grand_total || r.total_amount)}</span>, exportValue: (r) => r.grand_total || r.total_amount || 0 },
     { key: "plan_id", header: "Source Plan", cell: (r) => r.plan_id ? <span className="font-mono text-xs text-muted-foreground">{r.plan_id}</span> : '-', exportValue: (r) => r.plan_id || '', defaultVisible: false },
     { key: "created_at", header: "Created", sortable: true, cell: (r) => r.created_at ? formatDate(r.created_at) : '-', exportValue: (r) => r.created_at ? new Date(r.created_at).toLocaleDateString("en-IN") : "", defaultVisible: false },
   ];
@@ -72,7 +75,7 @@ export default function SalesOrders() {
       data={campaigns}
       loading={loading}
       rowKey={(r) => r.id}
-      onRowClick={(r) => navigate(`/campaigns/${r.id}`)}
+      onRowClick={(r) => navigate(`/campaigns/${r.campaign_code || r.id}`)}
       kpis={kpis}
       columns={columns}
       searchPlaceholder="Search ID, campaign, client..."

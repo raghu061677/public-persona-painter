@@ -27,7 +27,7 @@ export default function EstimationsList() {
     setLoading(true);
     const { data, error } = await supabase
       .from('plans')
-      .select('id, plan_name, client_name, client_id, status, start_date, end_date, grand_total, sub_total, gst_amount, discount_amount, created_at, updated_at, company_id')
+      .select('id, plan_name, client_name, client_id, status, start_date, end_date, grand_total, total_amount, gst_amount, created_at, updated_at, company_id, converted_to_campaign_id')
       .eq('company_id', company.id)
       .in('status', ['Approved', 'Converted'])
       .order('created_at', { ascending: false });
@@ -53,16 +53,16 @@ export default function EstimationsList() {
   }, [plans]);
 
   const columns: FinanceColumn<any>[] = [
-    { key: "id", header: "Plan ID", sortable: true, cell: (r) => <span className="font-mono text-sm font-medium">{r.id}</span>, exportValue: (r) => r.id },
+    { key: "id", header: "Plan ID", sortable: true, cell: (r) => <span className="font-mono text-sm font-medium text-primary cursor-pointer hover:underline">{r.id}</span>, exportValue: (r) => r.id },
     { key: "plan_name", header: "Plan Name", sortable: true, cell: (r) => r.plan_name || '-', exportValue: (r) => r.plan_name },
     { key: "client_name", header: "Client", sortable: true, cell: (r) => r.client_name, exportValue: (r) => r.client_name },
     { key: "start_date", header: "Start Date", sortable: true, cell: (r) => r.start_date ? formatDate(r.start_date) : '-', exportValue: (r) => r.start_date ? new Date(r.start_date).toLocaleDateString("en-IN") : "" },
     { key: "end_date", header: "End Date", sortable: true, cell: (r) => r.end_date ? formatDate(r.end_date) : '-', exportValue: (r) => r.end_date ? new Date(r.end_date).toLocaleDateString("en-IN") : "", defaultVisible: false },
     { key: "status", header: "Status", sortable: true, cell: (r) => <Badge className={getPlanStatusColor(r.status)}>{r.status}</Badge>, exportValue: (r) => r.status },
-    { key: "sub_total", header: "Subtotal", sortable: true, align: "right", cell: (r) => <span className="font-mono">{formatINR(r.sub_total)}</span>, exportValue: (r) => r.sub_total || 0, defaultVisible: false },
+    { key: "total_amount", header: "Subtotal", sortable: true, align: "right", cell: (r) => <span className="font-mono">{formatINR(r.total_amount)}</span>, exportValue: (r) => r.total_amount || 0, defaultVisible: false },
     { key: "gst_amount", header: "GST", align: "right", cell: (r) => <span className="font-mono">{formatINR(r.gst_amount)}</span>, exportValue: (r) => r.gst_amount || 0, defaultVisible: false },
-    { key: "discount_amount", header: "Discount", align: "right", cell: (r) => <span className="font-mono">{formatINR(r.discount_amount)}</span>, exportValue: (r) => r.discount_amount || 0, defaultVisible: false },
     { key: "grand_total", header: "Total Amount", sortable: true, align: "right", cell: (r) => <span className="font-mono font-semibold">{formatINR(r.grand_total)}</span>, exportValue: (r) => r.grand_total || 0 },
+    { key: "converted_to_campaign_id", header: "Campaign", cell: (r) => r.converted_to_campaign_id ? <span className="font-mono text-xs text-muted-foreground">{r.converted_to_campaign_id}</span> : '-', exportValue: (r) => r.converted_to_campaign_id || '', defaultVisible: false },
     {
       key: "actions", header: "Actions", align: "right",
       cell: (r) => (

@@ -164,8 +164,10 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
     const printingCharge = Number(item.printing_charges || 0);
     const mountingCharge = Number(item.mounting_charges || 0);
     const itemDays = item.duration_days || totalDays;
-    // Use full precision for pro-rata calculation, round only the final total
-    const prorataCost = Math.round(((monthlyRate / 30) * itemDays + printingCharge + mountingCharge) * 100) / 100;
+    // Pro-rata rent calculation
+    const proRataRent = Math.round(((monthlyRate / 30) * itemDays) * 100) / 100;
+    // Unit price = pro-rata rent + printing + mounting (full per-asset cost)
+    const unitPriceTotal = Math.round((proRataRent + printingCharge + mountingCharge) * 100) / 100;
 
     // Build location code from media_asset_code or asset_id with company prefix
     const displayCode = formatAssetDisplayCode({
@@ -189,8 +191,8 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
       fromDate: formatDateToDDMMYYYY(item.start_date || start),
       toDate: formatDateToDDMMYYYY(item.end_date || end),
       duration: getDurationDisplay(itemDays),
-      unitPrice: monthlyRate,
-      subtotal: prorataCost,
+      unitPrice: unitPriceTotal,
+      subtotal: unitPriceTotal,
     };
   });
 

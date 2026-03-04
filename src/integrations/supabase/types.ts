@@ -3527,15 +3527,19 @@ export type Database = {
       concession_contracts: {
         Row: {
           active: boolean
+          advertisement_fee: number | null
           allocation_method: string
+          annual_escalation_percent: number | null
           applies_to: string
           authority_name: string | null
+          base_year_fee: number | null
           billing_cycle: string
           company_id: string
           contract_name: string
           contract_ref: string | null
           created_at: string
           end_date: string | null
+          fee_type: string
           filter_json: Json | null
           id: string
           start_date: string
@@ -3544,15 +3548,19 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          advertisement_fee?: number | null
           allocation_method: string
+          annual_escalation_percent?: number | null
           applies_to: string
           authority_name?: string | null
+          base_year_fee?: number | null
           billing_cycle: string
           company_id: string
           contract_name: string
           contract_ref?: string | null
           created_at?: string
           end_date?: string | null
+          fee_type?: string
           filter_json?: Json | null
           id?: string
           start_date: string
@@ -3561,15 +3569,19 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          advertisement_fee?: number | null
           allocation_method?: string
+          annual_escalation_percent?: number | null
           applies_to?: string
           authority_name?: string | null
+          base_year_fee?: number | null
           billing_cycle?: string
           company_id?: string
           contract_name?: string
           contract_ref?: string | null
           created_at?: string
           end_date?: string | null
+          fee_type?: string
           filter_json?: Json | null
           id?: string
           start_date?: string

@@ -49,6 +49,13 @@ export const generateProformaPDF = async (data: ProformaInvoiceData): Promise<Bl
     // Determine readable location code - prioritize media_code, then display_name, then location
     const readableCode = item.media_code || item.display_name || item.location || item.asset_name || `Site ${index + 1}`;
     
+    // Calculate pro-rata rent + printing + mounting for unit price (matching campaign billing)
+    const monthlyRate = Number(item.negotiated_rate || item.card_rate || 0);
+    const printingCharge = Number(item.printing_charges || item.printing_cost || 0);
+    const mountingCharge = Number(item.mounting_charges || item.mounting_cost || 0);
+    const proRataRent = Math.round(((monthlyRate / 30) * days) * 100) / 100;
+    const unitPriceTotal = Math.round((proRataRent + printingCharge + mountingCharge) * 100) / 100;
+    
     return {
       sno: index + 1,
       locationCode: readableCode,
@@ -61,8 +68,8 @@ export const generateProformaPDF = async (data: ProformaInvoiceData): Promise<Bl
       fromDate: data.campaign_start_date ? formatDateToDDMMYYYY(data.campaign_start_date) : '-',
       toDate: data.campaign_end_date ? formatDateToDDMMYYYY(data.campaign_end_date) : '-',
       duration: getDurationDisplay(days),
-      unitPrice: item.negotiated_rate || item.card_rate || 0,
-      subtotal: item.line_total || item.total_price || 0,
+      unitPrice: unitPriceTotal,
+      subtotal: item.line_total || item.total_price || unitPriceTotal,
     };
   });
 

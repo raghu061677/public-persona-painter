@@ -321,6 +321,12 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                         href="/admin/power-bills"
                         collapsed={collapsed}
                       />
+                      <SidebarItem
+                        icon={Layers}
+                        label="Concession Allocation"
+                        href="/admin/finance/concession-allocation"
+                        collapsed={collapsed}
+                      />
                     </SidebarGroup>
                   )}
 

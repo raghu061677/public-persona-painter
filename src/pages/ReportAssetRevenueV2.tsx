@@ -35,6 +35,13 @@ import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+/** Parse YYYY-MM-DD at local noon to avoid UTC day-shift */
+function parseLocal(d: string | null | undefined): Date {
+  if (!d) return new Date(NaN);
+  const [y, m, day] = d.split("-").map(Number);
+  return new Date(y, m - 1, day, 12, 0, 0);
+}
+
 interface AssetRevenueData {
   asset_id: string;
   asset_code: string;
@@ -212,8 +219,8 @@ export default function ReportAssetRevenueV2() {
       const filteredAssets = companyAssets.filter((a) => {
         if (!dateRange?.from || !dateRange?.to) return true;
 
-        const startDate = new Date(a.booking_start_date || a.start_date || a.campaigns?.start_date);
-        const endDate = new Date(a.booking_end_date || a.end_date || a.campaigns?.end_date);
+        const startDate = parseLocal(a.booking_start_date || a.start_date || a.campaigns?.start_date);
+        const endDate = parseLocal(a.booking_end_date || a.end_date || a.campaigns?.end_date);
 
         switch (dateType) {
           case "booking_start":
@@ -248,8 +255,8 @@ export default function ReportAssetRevenueV2() {
 
         // Calculate pro-rata revenue: (monthly_rate / 30) * booked_days
         const monthlyRate = asset.negotiated_rate || asset.card_rate || 0;
-        const startDate = new Date(asset.booking_start_date || asset.start_date || asset.campaigns?.start_date);
-        const endDate = new Date(asset.booking_end_date || asset.end_date || asset.campaigns?.end_date);
+        const startDate = parseLocal(asset.booking_start_date || asset.start_date || asset.campaigns?.start_date);
+        const endDate = parseLocal(asset.booking_end_date || asset.end_date || asset.campaigns?.end_date);
         const bookedDays = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
         const proRataRevenue = Math.round(((monthlyRate / 30) * bookedDays) * 100) / 100;
         const ma = mediaAssetMap.get(assetId);
@@ -300,8 +307,8 @@ export default function ReportAssetRevenueV2() {
         const ma = mediaAssetMap.get(assetId);
         if (!ma) return; // Not our company's asset
 
-        const sDate = new Date(booking.start_date);
-        const eDate = new Date(booking.end_date);
+        const sDate = parseLocal(booking.start_date);
+        const eDate = parseLocal(booking.end_date);
 
         // Apply date range filter
         if (dateRange?.from && dateRange?.to) {
@@ -368,7 +375,7 @@ export default function ReportAssetRevenueV2() {
       if (comparisonEnabled && dateRange?.from && dateRange?.to) {
         const prevPeriod = getPreviousPeriod(dateRange.from, dateRange.to);
         const prevFiltered = companyAssets.filter((a) => {
-          const startDate = new Date(a.booking_start_date || a.start_date || a.campaigns?.start_date);
+          const startDate = parseLocal(a.booking_start_date || a.start_date || a.campaigns?.start_date);
           return startDate >= prevPeriod.from && startDate <= prevPeriod.to;
         });
 
@@ -377,8 +384,8 @@ export default function ReportAssetRevenueV2() {
           const assetId = asset.asset_id;
           const existing = prevAssetMap.get(assetId);
           const monthlyRate = asset.negotiated_rate || asset.card_rate || 0;
-          const sDate = new Date(asset.booking_start_date || asset.start_date || asset.campaigns?.start_date);
-          const eDate = new Date(asset.booking_end_date || asset.end_date || asset.campaigns?.end_date);
+          const sDate = parseLocal(asset.booking_start_date || asset.start_date || asset.campaigns?.start_date);
+          const eDate = parseLocal(asset.booking_end_date || asset.end_date || asset.campaigns?.end_date);
           const days = Math.max(1, Math.ceil((eDate.getTime() - sDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
           const revenue = Math.round(((monthlyRate / 30) * days) * 100) / 100;
 
@@ -836,7 +843,10 @@ export default function ReportAssetRevenueV2() {
                       {visibleColumns.includes("last_booked_date") && (
                         <TableCell>
                           {asset.last_booked_date
-                            ? new Date(asset.last_booked_date).toLocaleDateString()
+                            ? (() => {
+                                const [y, m, d] = asset.last_booked_date.split("-").map(Number);
+                                return new Date(y, m - 1, d).toLocaleDateString();
+                              })()
                             : "-"}
                         </TableCell>
                       )}
@@ -934,8 +944,8 @@ export default function ReportAssetRevenueV2() {
                     <TableRow key={idx}>
                       <TableCell className="font-medium">{booking.campaign_name}</TableCell>
                       <TableCell>{booking.client_name}</TableCell>
-                      <TableCell>{new Date(booking.start_date).toLocaleDateString()}</TableCell>
-                      <TableCell>{new Date(booking.end_date).toLocaleDateString()}</TableCell>
+                      <TableCell>{booking.start_date ? (() => { const [y,m,d] = booking.start_date.split("-").map(Number); return new Date(y,m-1,d).toLocaleDateString(); })() : "-"}</TableCell>
+                      <TableCell>{booking.end_date ? (() => { const [y,m,d] = booking.end_date.split("-").map(Number); return new Date(y,m-1,d).toLocaleDateString(); })() : "-"}</TableCell>
                       <TableCell>{formatCurrency(booking.value)}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{booking.status}</Badge>

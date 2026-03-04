@@ -23,6 +23,10 @@ interface ContractForm {
   end_date: string;
   billing_cycle: string;
   total_fee: string;
+  fee_type: string;
+  annual_escalation_percent: string;
+  advertisement_fee: string;
+  base_year_fee: string;
   allocation_method: string;
   applies_to: string;
   filter_json: string;
@@ -37,11 +41,27 @@ const emptyForm: ContractForm = {
   end_date: "",
   billing_cycle: "monthly",
   total_fee: "",
+  fee_type: "concession",
+  annual_escalation_percent: "5",
+  advertisement_fee: "0",
+  base_year_fee: "",
   allocation_method: "per_asset",
   applies_to: "all_assets",
   filter_json: "",
   active: true,
 };
+
+/** Calculate escalated fee for a given FY based on base_year_fee and escalation % */
+function getEscalatedFee(baseYearFee: number, escalationPercent: number, contractStartDate: string, forDate?: string): { currentFee: number; yearNumber: number } {
+  const start = new Date(contractStartDate);
+  const now = forDate ? new Date(forDate) : new Date();
+  // Calculate FY years elapsed (April-March FY cycle)
+  const startFY = start.getMonth() >= 3 ? start.getFullYear() : start.getFullYear() - 1;
+  const nowFY = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+  const yearNumber = Math.max(0, nowFY - startFY);
+  const currentFee = baseYearFee * Math.pow(1 + escalationPercent / 100, yearNumber);
+  return { currentFee: Math.round(currentFee), yearNumber: yearNumber + 1 };
+}
 
 export default function ConcessionContracts() {
   const { company } = useCompany();
@@ -112,6 +132,7 @@ export default function ConcessionContracts() {
         return;
       }
     }
+    const baseYearFee = form.base_year_fee ? parseFloat(form.base_year_fee) : parseFloat(form.total_fee);
     saveMutation.mutate({
       authority_name: form.authority_name || null,
       contract_name: form.contract_name,
@@ -120,6 +141,10 @@ export default function ConcessionContracts() {
       end_date: form.end_date || null,
       billing_cycle: form.billing_cycle,
       total_fee: parseFloat(form.total_fee),
+      fee_type: form.fee_type,
+      annual_escalation_percent: parseFloat(form.annual_escalation_percent) || 0,
+      advertisement_fee: parseFloat(form.advertisement_fee) || 0,
+      base_year_fee: baseYearFee,
       allocation_method: form.allocation_method,
       applies_to: form.applies_to,
       filter_json: filterJson,
@@ -137,6 +162,10 @@ export default function ConcessionContracts() {
       end_date: c.end_date || "",
       billing_cycle: c.billing_cycle,
       total_fee: String(c.total_fee),
+      fee_type: c.fee_type || "concession",
+      annual_escalation_percent: String(c.annual_escalation_percent ?? 0),
+      advertisement_fee: String(c.advertisement_fee ?? 0),
+      base_year_fee: String(c.base_year_fee ?? c.total_fee),
       allocation_method: c.allocation_method,
       applies_to: c.applies_to,
       filter_json: c.filter_json ? JSON.stringify(c.filter_json, null, 2) : "",
@@ -240,11 +269,14 @@ export default function ConcessionContracts() {
             <TableHeader>
               <TableRow>
                 <TableHead>Contract</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead>Authority</TableHead>
                 <TableHead>Cycle</TableHead>
-                <TableHead className="text-right">Fee</TableHead>
+                <TableHead className="text-right">Base Fee</TableHead>
+                <TableHead className="text-right">Current Fee</TableHead>
+                <TableHead className="text-right">Ad Fee</TableHead>
+                <TableHead>Escalation</TableHead>
                 <TableHead>Method</TableHead>
-                <TableHead>Scope</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead />
               </TableRow>
@@ -252,27 +284,41 @@ export default function ConcessionContracts() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                   <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                     Loading…
                   </TableCell>
                 </TableRow>
               ) : !contracts?.length ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                   <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                     No contracts yet
                   </TableCell>
                 </TableRow>
               ) : (
-                contracts.map((c: any) => (
+                contracts.map((c: any) => {
+                  const escalation = c.annual_escalation_percent ?? 0;
+                  const baseYearFee = c.base_year_fee ?? c.total_fee;
+                  const { currentFee, yearNumber } = c.start_date && escalation > 0
+                    ? getEscalatedFee(baseYearFee, escalation, c.start_date)
+                    : { currentFee: c.total_fee, yearNumber: 1 };
+                  return (
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.contract_name}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs capitalize">{c.fee_type || "concession"}</Badge>
+                    </TableCell>
                     <TableCell className="text-muted-foreground text-sm">{c.authority_name || "—"}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs capitalize">{c.billing_cycle}</Badge>
                     </TableCell>
-                    <TableCell className="text-right font-mono">{fmt(c.total_fee)}</TableCell>
+                    <TableCell className="text-right font-mono text-muted-foreground text-xs">{fmt(baseYearFee)}</TableCell>
+                    <TableCell className="text-right font-mono">
+                      {fmt(currentFee)}
+                      {yearNumber > 1 && <span className="text-xs text-muted-foreground ml-1">(Yr {yearNumber})</span>}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">{(c.advertisement_fee ?? 0) > 0 ? fmt(c.advertisement_fee) : "—"}</TableCell>
+                    <TableCell className="text-xs">{escalation > 0 ? `${escalation}% / yr` : "—"}</TableCell>
                     <TableCell className="text-xs">{c.allocation_method.replace(/_/g, " ")}</TableCell>
-                    <TableCell className="text-xs">{c.applies_to.replace(/_/g, " ")}</TableCell>
                     <TableCell>
                       <Badge variant={c.active ? "default" : "secondary"} className="text-xs">
                         {c.active ? "Active" : "Inactive"}
@@ -283,8 +329,9 @@ export default function ConcessionContracts() {
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
                     </TableCell>
-                  </TableRow>
-                ))
+                   </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -324,6 +371,16 @@ export default function ConcessionContracts() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
+                <Label className="text-xs">Fee Type *</Label>
+                <Select value={form.fee_type} onValueChange={(v) => setForm({ ...form, fee_type: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="concession">Concession Fee</SelectItem>
+                    <SelectItem value="advertisement">Advertisement Fee</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <Label className="text-xs">Billing Cycle *</Label>
                 <Select value={form.billing_cycle} onValueChange={(v) => setForm({ ...form, billing_cycle: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -334,9 +391,46 @@ export default function ConcessionContracts() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Total Fee (₹) *</Label>
-                <Input type="number" value={form.total_fee} onChange={(e) => setForm({ ...form, total_fee: e.target.value })} />
+                <Label className="text-xs">Base Year Fee (₹) *</Label>
+                <Input
+                  type="number"
+                  value={form.base_year_fee || form.total_fee}
+                  onChange={(e) => setForm({ ...form, base_year_fee: e.target.value, total_fee: e.target.value || form.total_fee })}
+                  placeholder="First year fee amount"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Annual Escalation (%)</Label>
+                <Input
+                  type="number"
+                  value={form.annual_escalation_percent}
+                  onChange={(e) => setForm({ ...form, annual_escalation_percent: e.target.value })}
+                  placeholder="e.g. 5 for 5%"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Current Fee (₹) *</Label>
+                <Input type="number" value={form.total_fee} onChange={(e) => setForm({ ...form, total_fee: e.target.value })} placeholder="Fee for current FY" />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {form.base_year_fee && parseFloat(form.annual_escalation_percent) > 0 && form.start_date
+                    ? `Auto-calculated: ${fmt(getEscalatedFee(parseFloat(form.base_year_fee), parseFloat(form.annual_escalation_percent), form.start_date).currentFee)} (Year ${getEscalatedFee(parseFloat(form.base_year_fee), parseFloat(form.annual_escalation_percent), form.start_date).yearNumber})`
+                    : "Set base fee and escalation % to see projection"
+                  }
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs">Advertisement Fee (₹)</Label>
+                <Input
+                  type="number"
+                  value={form.advertisement_fee}
+                  onChange={(e) => setForm({ ...form, advertisement_fee: e.target.value })}
+                  placeholder="Separate ad fee per cycle"
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">

@@ -245,9 +245,8 @@ export default function ReportAssetRevenueV2() {
 
       // Aggregate bookings by asset
       const assetMap = new Map<string, AssetRevenueData>();
-      const periodDays = dateRange?.from && dateRange?.to
-        ? Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) + 1
-        : 30;
+      // Occupancy is always calculated against a standard 30-day month
+      const occupancyBaseDays = 30;
 
       filteredAssets.forEach((asset) => {
         const assetId = asset.asset_id;
@@ -366,7 +365,7 @@ export default function ReportAssetRevenueV2() {
       const assetList = Array.from(assetMap.values()).map((a) => ({
         ...a,
         avg_rate: a.total_bookings > 0 ? a.total_revenue / a.total_bookings : 0,
-        occupancy_percent: periodDays > 0 ? Math.min(100, Math.round((a.total_days_booked / periodDays) * 100)) : 0,
+        occupancy_percent: occupancyBaseDays > 0 ? Math.min(100, Math.round((a.total_days_booked / occupancyBaseDays) * 100)) : 0,
       }));
 
       setAssetData(assetList);

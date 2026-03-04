@@ -31,6 +31,10 @@ interface ContractForm {
   applies_to: string;
   filter_json: string;
   active: boolean;
+  asset_count: string;
+  gst_inclusive: boolean;
+  gst_percent: string;
+  rcm_applicable: boolean;
 }
 
 const emptyForm: ContractForm = {
@@ -49,7 +53,18 @@ const emptyForm: ContractForm = {
   applies_to: "all_assets",
   filter_json: "",
   active: true,
+  asset_count: "50",
+  gst_inclusive: true,
+  gst_percent: "18",
+  rcm_applicable: true,
 };
+
+/** Extract base value from GST-inclusive amount */
+function extractGST(inclusive: number, gstPercent: number) {
+  const base = Math.round((inclusive / (1 + gstPercent / 100)) * 100) / 100;
+  const gst = Math.round((inclusive - base) * 100) / 100;
+  return { base, gst };
+}
 
 /** Calculate escalated fee for a given FY based on base_year_fee and escalation % */
 function getEscalatedFee(baseYearFee: number, escalationPercent: number, contractStartDate: string, forDate?: string): { currentFee: number; yearNumber: number } {
@@ -149,6 +164,10 @@ export default function ConcessionContracts() {
       applies_to: form.applies_to,
       filter_json: filterJson,
       active: form.active,
+      asset_count: parseInt(form.asset_count) || 0,
+      gst_inclusive: form.gst_inclusive,
+      gst_percent: parseFloat(form.gst_percent) || 18,
+      rcm_applicable: form.rcm_applicable,
     });
   };
 
@@ -170,6 +189,10 @@ export default function ConcessionContracts() {
       applies_to: c.applies_to,
       filter_json: c.filter_json ? JSON.stringify(c.filter_json, null, 2) : "",
       active: c.active,
+      asset_count: String(c.asset_count ?? 0),
+      gst_inclusive: c.gst_inclusive ?? true,
+      gst_percent: String(c.gst_percent ?? 18),
+      rcm_applicable: c.rcm_applicable ?? true,
     });
     setShowForm(true);
   };
@@ -271,30 +294,25 @@ export default function ConcessionContracts() {
                 <TableHead>Contract</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Authority</TableHead>
-                <TableHead>Cycle</TableHead>
-                <TableHead className="text-right">Base Year Fee</TableHead>
-                <TableHead className="text-right">Current Year Fee</TableHead>
+                <TableHead className="text-right">Yr Fee (Incl.)</TableHead>
+                <TableHead className="text-right">Base (Ex-GST)</TableHead>
+                <TableHead className="text-right">GST (RCM)</TableHead>
                 <TableHead className="text-right">Monthly</TableHead>
-                <TableHead className="text-right">Ad Fee/Yr</TableHead>
-                <TableHead className="text-right">Ad Fee/Mo</TableHead>
+                <TableHead className="text-center">Assets</TableHead>
+                <TableHead className="text-right">Per Asset/Mo</TableHead>
                 <TableHead>Escalation</TableHead>
-                <TableHead>Method</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
-                    Loading…
-                  </TableCell>
+                <TableRow>
+                  <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">Loading…</TableCell>
                 </TableRow>
               ) : !contracts?.length ? (
                 <TableRow>
-                   <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
-                    No contracts yet
-                  </TableCell>
+                  <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">No contracts yet</TableCell>
                 </TableRow>
               ) : (
                 contracts.map((c: any) => {
@@ -303,26 +321,36 @@ export default function ConcessionContracts() {
                   const { currentFee, yearNumber } = c.start_date && escalation > 0
                     ? getEscalatedFee(baseYearFee, escalation, c.start_date)
                     : { currentFee: c.total_fee, yearNumber: 1 };
+                  const gstPct = c.gst_percent ?? 18;
+                  const isGstInclusive = c.gst_inclusive ?? true;
+                  const { base: yearlyBase, gst: yearlyGst } = isGstInclusive
+                    ? extractGST(currentFee, gstPct)
+                    : { base: currentFee, gst: Math.round(currentFee * gstPct / 100) };
+                  const monthlyBase = Math.round(yearlyBase / 12);
+                  const assetCount = c.asset_count || 0;
+                  const perAssetMonth = assetCount > 0 ? Math.round(monthlyBase / assetCount) : 0;
                   return (
                   <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.contract_name}</TableCell>
+                    <TableCell>
+                      <div className="font-medium">{c.contract_name}</div>
+                      {yearNumber > 1 && <span className="text-xs text-muted-foreground">Year {yearNumber}</span>}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs capitalize">{c.fee_type || "concession"}</Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">{c.authority_name || "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs capitalize">{c.billing_cycle}</Badge>
+                    <TableCell className="text-right font-mono text-sm">{fmt(currentFee)}</TableCell>
+                    <TableCell className="text-right font-mono text-sm">{fmt(yearlyBase)}</TableCell>
+                    <TableCell className="text-right font-mono text-sm text-orange-600">
+                      {fmt(yearlyGst)}
+                      {(c.rcm_applicable ?? true) && <Badge variant="outline" className="text-[10px] ml-1">RCM</Badge>}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-muted-foreground text-xs">{fmt(baseYearFee)}</TableCell>
-                    <TableCell className="text-right font-mono">
-                       {fmt(currentFee)}
-                       {yearNumber > 1 && <span className="text-xs text-muted-foreground ml-1">(Yr {yearNumber})</span>}
-                     </TableCell>
-                     <TableCell className="text-right font-mono text-primary font-semibold">{fmt(Math.round(currentFee / 12))}</TableCell>
-                     <TableCell className="text-right font-mono">{(c.advertisement_fee ?? 0) > 0 ? fmt(c.advertisement_fee) : "—"}</TableCell>
-                     <TableCell className="text-right font-mono text-primary">{(c.advertisement_fee ?? 0) > 0 ? fmt(Math.round(c.advertisement_fee / 12)) : "—"}</TableCell>
-                    <TableCell className="text-xs">{escalation > 0 ? `${escalation}% / yr` : "—"}</TableCell>
-                    <TableCell className="text-xs">{c.allocation_method.replace(/_/g, " ")}</TableCell>
+                    <TableCell className="text-right font-mono text-primary font-semibold">{fmt(monthlyBase)}</TableCell>
+                    <TableCell className="text-center font-mono">{assetCount || "—"}</TableCell>
+                    <TableCell className="text-right font-mono text-xs font-semibold">
+                      {assetCount > 0 ? fmt(perAssetMonth) : "—"}
+                    </TableCell>
+                    <TableCell className="text-xs">{escalation > 0 ? `${escalation}%/yr` : "—"}</TableCell>
                     <TableCell>
                       <Badge variant={c.active ? "default" : "secondary"} className="text-xs">
                         {c.active ? "Active" : "Inactive"}
@@ -396,20 +424,31 @@ export default function ConcessionContracts() {
                 </Select>
               </div>
             </div>
+            {/* GST & RCM Settings */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="flex items-center gap-2">
+                <Switch checked={form.gst_inclusive} onCheckedChange={(v) => setForm({ ...form, gst_inclusive: v })} />
+                <Label className="text-xs">GST Inclusive</Label>
+              </div>
+              <div>
+                <Label className="text-xs">GST %</Label>
+                <Input type="number" value={form.gst_percent} onChange={(e) => setForm({ ...form, gst_percent: e.target.value })} className="h-8" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={form.rcm_applicable} onCheckedChange={(v) => setForm({ ...form, rcm_applicable: v })} />
+                <Label className="text-xs">RCM (Reverse Charge)</Label>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Base Year Fee (₹/Year) *</Label>
+                <Label className="text-xs">Base Year Fee (₹/Year, GST Incl.) *</Label>
                 <Input
                   type="number"
                   value={form.base_year_fee || form.total_fee}
                   onChange={(e) => setForm({ ...form, base_year_fee: e.target.value, total_fee: e.target.value || form.total_fee })}
-                  placeholder="Yearly fee for first year"
+                  placeholder="Yearly fee including GST"
                 />
-                {(form.base_year_fee || form.total_fee) && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Monthly: {fmt(Math.round(parseFloat(form.base_year_fee || form.total_fee || "0") / 12))}
-                  </p>
-                )}
               </div>
               <div>
                 <Label className="text-xs">Annual Escalation (%)</Label>
@@ -425,15 +464,11 @@ export default function ConcessionContracts() {
               <div>
                 <Label className="text-xs">Current Year Fee (₹/Year) *</Label>
                 <Input type="number" value={form.total_fee} onChange={(e) => setForm({ ...form, total_fee: e.target.value })} placeholder="Fee for current FY" />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {form.total_fee
-                    ? <>Monthly Payment: <strong className="text-primary">{fmt(Math.round(parseFloat(form.total_fee) / 12))}</strong></>
-                    : "Enter yearly fee"
-                  }
-                  {form.base_year_fee && parseFloat(form.annual_escalation_percent) > 0 && form.start_date && (
-                    <> · Auto: {fmt(getEscalatedFee(parseFloat(form.base_year_fee), parseFloat(form.annual_escalation_percent), form.start_date).currentFee)}/yr (Year {getEscalatedFee(parseFloat(form.base_year_fee), parseFloat(form.annual_escalation_percent), form.start_date).yearNumber})</>
-                  )}
-                </p>
+                {form.base_year_fee && parseFloat(form.annual_escalation_percent) > 0 && form.start_date && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Auto: {fmt(getEscalatedFee(parseFloat(form.base_year_fee), parseFloat(form.annual_escalation_percent), form.start_date).currentFee)}/yr (Year {getEscalatedFee(parseFloat(form.base_year_fee), parseFloat(form.annual_escalation_percent), form.start_date).yearNumber})
+                  </p>
+                )}
               </div>
               <div>
                 <Label className="text-xs">Advertisement Fee (₹/Year)</Label>
@@ -441,16 +476,22 @@ export default function ConcessionContracts() {
                   type="number"
                   value={form.advertisement_fee}
                   onChange={(e) => setForm({ ...form, advertisement_fee: e.target.value })}
-                  placeholder="Yearly ad fee"
+                  placeholder="Yearly ad fee (GST incl.)"
                 />
-                {parseFloat(form.advertisement_fee) > 0 && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Monthly: {fmt(Math.round(parseFloat(form.advertisement_fee) / 12))}
-                  </p>
-                )}
               </div>
             </div>
+
+            {/* Asset Count */}
             <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">No. of Assets in Package *</Label>
+                <Input
+                  type="number"
+                  value={form.asset_count}
+                  onChange={(e) => setForm({ ...form, asset_count: e.target.value })}
+                  placeholder="e.g. 50"
+                />
+              </div>
               <div>
                 <Label className="text-xs">Allocation Method</Label>
                 <Select value={form.allocation_method} onValueChange={(v) => setForm({ ...form, allocation_method: v })}>
@@ -462,6 +503,50 @@ export default function ConcessionContracts() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* Live Breakdown Preview */}
+            {form.total_fee && parseInt(form.asset_count) > 0 && (() => {
+              const yearlyFee = parseFloat(form.total_fee) || 0;
+              const gstPct = parseFloat(form.gst_percent) || 18;
+              const assetCt = parseInt(form.asset_count) || 1;
+              const { base: yearBase, gst: yearGst } = form.gst_inclusive ? extractGST(yearlyFee, gstPct) : { base: yearlyFee, gst: Math.round(yearlyFee * gstPct / 100) };
+              const monthBase = Math.round(yearBase / 12);
+              const monthGst = Math.round(yearGst / 12);
+              const perAssetMonth = Math.round(monthBase / assetCt);
+              const adFee = parseFloat(form.advertisement_fee) || 0;
+              const { base: adBase } = adFee > 0 && form.gst_inclusive ? extractGST(adFee, gstPct) : { base: adFee };
+              const adPerAssetMonth = assetCt > 0 ? Math.round((adBase / 12) / assetCt) : 0;
+              return (
+                <Card className="bg-muted/50 border-dashed">
+                  <CardContent className="pt-3 pb-3 px-4 space-y-1">
+                    <p className="text-xs font-semibold text-foreground mb-2">💰 Breakdown Preview</p>
+                    <div className="grid grid-cols-2 text-xs gap-y-1">
+                      <span className="text-muted-foreground">Yearly (Incl. GST):</span>
+                      <span className="text-right font-mono">{fmt(yearlyFee)}</span>
+                      <span className="text-muted-foreground">Base (Ex-GST):</span>
+                      <span className="text-right font-mono">{fmt(yearBase)}</span>
+                      <span className="text-muted-foreground">GST {form.rcm_applicable ? "(RCM - Claimable)" : ""}:</span>
+                      <span className="text-right font-mono text-orange-600">{fmt(yearGst)}</span>
+                      <span className="text-muted-foreground">Monthly Base:</span>
+                      <span className="text-right font-mono font-semibold text-primary">{fmt(monthBase)}</span>
+                      <span className="text-muted-foreground">Monthly GST:</span>
+                      <span className="text-right font-mono">{fmt(monthGst)}</span>
+                      <span className="text-muted-foreground font-semibold">Per Asset/Month ({assetCt} assets):</span>
+                      <span className="text-right font-mono font-bold text-primary">{fmt(perAssetMonth)}</span>
+                      {adFee > 0 && (
+                        <>
+                          <span className="text-muted-foreground">Ad Fee Per Asset/Month:</span>
+                          <span className="text-right font-mono">{fmt(adPerAssetMonth)}</span>
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">Applies To</Label>
                 <Select value={form.applies_to} onValueChange={(v) => setForm({ ...form, applies_to: v })}>

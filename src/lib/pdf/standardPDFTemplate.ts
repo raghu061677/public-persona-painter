@@ -71,9 +71,11 @@ export interface PDFLineItem {
   toDate: string;          // e.g., "26/10/2025"
   duration: string;        // e.g., "1 Month" or "30 Days"
   
-  // Pricing
-  unitPrice: number;       // Monthly rate
-  subtotal: number;        // Final amount for this item
+  // Pricing - separate cost breakdown
+  unitPrice: number;       // Display cost (pro-rata rent only)
+  printingCost?: number;   // Printing charges
+  mountingCost?: number;   // Installation/mounting charges
+  subtotal: number;        // Final amount for this item (display + printing + mounting)
 }
 
 // ============= UTILITY FUNCTIONS =============
@@ -239,6 +241,11 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   // Table must always start below the header area.
   const tableStartY = Math.max(yPos, 90);
 
+  // Check if any items have printing or mounting costs
+  const hasPrintingCosts = data.items.some(item => (item.printingCost || 0) > 0);
+  const hasMountingCosts = data.items.some(item => (item.mountingCost || 0) > 0);
+  const hasExtraCosts = hasPrintingCosts || hasMountingCosts;
+
   const tableBody = data.items.map((item) => {
     // LOCATION & DESCRIPTION cell (multi-line)
     const locationDesc = [
@@ -255,6 +262,19 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
     // BOOKING cell
     const bookingCell = `From: ${item.fromDate}\nTo: ${item.toDate}\nDuration: ${item.duration}`;
 
+    if (hasExtraCosts) {
+      return [
+        item.sno.toString(),
+        locationDesc,
+        sizeCell,
+        bookingCell,
+        formatCurrencyForPDF(item.unitPrice),
+        formatCurrencyForPDF(item.printingCost || 0),
+        formatCurrencyForPDF(item.mountingCost || 0),
+        formatCurrencyForPDF(item.subtotal),
+      ];
+    }
+
     return [
       item.sno.toString(),
       locationDesc,
@@ -267,15 +287,39 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
 
   // Track page count for header rendering
   let currentPageCount = 1;
+
+  const tableHeaders = hasExtraCosts
+    ? [['#', 'LOCATION & DESCRIPTION', 'SIZE', 'BOOKING', 'DISPLAY COST', 'PRINTING', 'INSTALLATION', 'SUBTOTAL']]
+    : [['#', 'LOCATION & DESCRIPTION', 'SIZE', 'BOOKING', 'UNIT PRICE', 'SUBTOTAL']];
+
+  const tableColumnStyles = hasExtraCosts
+    ? {
+        0: { cellWidth: 8, halign: 'center' as const, valign: 'middle' as const },
+        1: { cellWidth: 52 },
+        2: { cellWidth: 28, halign: 'left' as const },
+        3: { cellWidth: 30, halign: 'left' as const },
+        4: { cellWidth: 20, halign: 'right' as const },
+        5: { cellWidth: 18, halign: 'right' as const },
+        6: { cellWidth: 18, halign: 'right' as const },
+        7: { cellWidth: 20, halign: 'right' as const },
+      }
+    : {
+        0: { cellWidth: 10, halign: 'center' as const, valign: 'middle' as const },
+        1: { cellWidth: 65 },
+        2: { cellWidth: 30, halign: 'left' as const },
+        3: { cellWidth: 35, halign: 'left' as const },
+        4: { cellWidth: 25, halign: 'right' as const },
+        5: { cellWidth: 25, halign: 'right' as const },
+      };
   
   autoTable(doc, {
     startY: tableStartY,
-    head: [['#', 'LOCATION & DESCRIPTION', 'SIZE', 'BOOKING', 'UNIT PRICE', 'SUBTOTAL']],
+    head: tableHeaders,
     body: tableBody,
     theme: 'grid',
     styles: {
       font: 'NotoSans',
-      fontSize: 8,
+      fontSize: hasExtraCosts ? 7 : 8,
       textColor: [0, 0, 0],
       cellPadding: 2.5,
       overflow: 'linebreak',
@@ -287,18 +331,11 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
       fillColor: [240, 240, 240],
       textColor: [0, 0, 0],
       fontStyle: 'bold',
-      fontSize: 8,
+      fontSize: hasExtraCosts ? 7 : 8,
       halign: 'center',
       valign: 'middle',
     },
-    columnStyles: {
-      0: { cellWidth: 10, halign: 'center', valign: 'middle' },
-      1: { cellWidth: 65 },
-      2: { cellWidth: 30, halign: 'left' },
-      3: { cellWidth: 35, halign: 'left' },
-      4: { cellWidth: 25, halign: 'right' },
-      5: { cellWidth: 25, halign: 'right' },
-    },
+    columnStyles: tableColumnStyles,
     // CRITICAL: Reserve safe header area on EVERY page (35mm for compact header)
     // Page 1 already has header rendered, but page 2+ needs margin.top to leave room
     margin: { top: 35, left: leftMargin, right: rightMargin, bottom: PAGE_MARGINS.bottom },

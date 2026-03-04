@@ -75,7 +75,7 @@ export default function SalesOrders() {
       data={campaigns}
       loading={loading}
       rowKey={(r) => r.id}
-      onRowClick={(r) => navigate(`/campaigns/${r.campaign_code || r.id}`)}
+      onRowClick={(r) => navigate(`/admin/campaigns/${r.id}`)}
       kpis={kpis}
       columns={columns}
       searchPlaceholder="Search ID, campaign, client..."

@@ -3531,6 +3531,7 @@ export type Database = {
           allocation_method: string
           annual_escalation_percent: number | null
           applies_to: string
+          asset_count: number | null
           authority_name: string | null
           base_year_fee: number | null
           billing_cycle: string
@@ -3541,7 +3542,10 @@ export type Database = {
           end_date: string | null
           fee_type: string
           filter_json: Json | null
+          gst_inclusive: boolean | null
+          gst_percent: number | null
           id: string
+          rcm_applicable: boolean | null
           start_date: string
           total_fee: number
           updated_at: string
@@ -3552,6 +3556,7 @@ export type Database = {
           allocation_method: string
           annual_escalation_percent?: number | null
           applies_to: string
+          asset_count?: number | null
           authority_name?: string | null
           base_year_fee?: number | null
           billing_cycle: string
@@ -3562,7 +3567,10 @@ export type Database = {
           end_date?: string | null
           fee_type?: string
           filter_json?: Json | null
+          gst_inclusive?: boolean | null
+          gst_percent?: number | null
           id?: string
+          rcm_applicable?: boolean | null
           start_date: string
           total_fee: number
           updated_at?: string
@@ -3573,6 +3581,7 @@ export type Database = {
           allocation_method?: string
           annual_escalation_percent?: number | null
           applies_to?: string
+          asset_count?: number | null
           authority_name?: string | null
           base_year_fee?: number | null
           billing_cycle?: string
@@ -3583,7 +3592,10 @@ export type Database = {
           end_date?: string | null
           fee_type?: string
           filter_json?: Json | null
+          gst_inclusive?: boolean | null
+          gst_percent?: number | null
           id?: string
+          rcm_applicable?: boolean | null
           start_date?: string
           total_fee?: number
           updated_at?: string

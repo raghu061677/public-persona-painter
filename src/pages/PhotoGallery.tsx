@@ -67,6 +67,7 @@ export default function PhotoGallery() {
   const [organizationSettings, setOrganizationSettings] = useState<any>(null);
   const [slideshowOpen, setSlideshowOpen] = useState(false);
   const [slideshowIndex, setSlideshowIndex] = useState(0);
+  const [bulkApproving, setBulkApproving] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   // Filters
@@ -368,6 +369,39 @@ export default function PhotoGallery() {
     setApprovalDialogOpen(false);
   };
 
+  const handleBulkApprove = async () => {
+    if (selectedPhotos.size === 0) return;
+    setBulkApproving(true);
+    try {
+      const ids = Array.from(selectedPhotos);
+      const { error } = await supabase
+        .from('media_photos')
+        .update({
+          approval_status: 'approved',
+          approved_by: user?.id || null,
+          approved_at: new Date().toISOString(),
+        })
+        .in('id', ids);
+
+      if (error) throw error;
+
+      toast({
+        title: "Bulk Approve Complete",
+        description: `${ids.length} photo(s) approved successfully.`,
+      });
+      setSelectedPhotos(new Set());
+      fetchPhotos();
+    } catch (error: any) {
+      toast({
+        title: "Bulk approve failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setBulkApproving(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
@@ -569,6 +603,16 @@ export default function PhotoGallery() {
                 <span className="font-medium">{selectedPhotos.size} photo(s) selected</span>
               </div>
               <div className="flex gap-2">
+                {canApprove && (
+                  <Button
+                    onClick={handleBulkApprove}
+                    disabled={bulkApproving}
+                    variant="default"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    {bulkApproving ? "Approving..." : `Bulk Approve (${selectedPhotos.size})`}
+                  </Button>
+                )}
                 <Button onClick={() => setExportDialogOpen(true)}>
                   <FileDown className="w-4 h-4 mr-2" />
                   Export Selected

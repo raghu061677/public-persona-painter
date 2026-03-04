@@ -374,6 +374,7 @@ export default function MonthClose() {
           <TabsTrigger value="invoices-zero" className="flex-1">Invoices 0% ({invoicesZero.length})</TabsTrigger>
           <TabsTrigger value="expenses" className="flex-1">Expenses ({expenses.length})</TabsTrigger>
           <TabsTrigger value="power-bills" className="flex-1">Power Bills ({powerBills.length})</TabsTrigger>
+          <TabsTrigger value="concession" className="flex-1">Concession</TabsTrigger>
           <TabsTrigger value="validation" className="flex-1">Validation</TabsTrigger>
         </TabsList>
 
@@ -579,6 +580,24 @@ export default function MonthClose() {
                   </Table>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ─── Concession Allocation Tab ──────────────── */}
+        <TabsContent value="concession">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Concession Allocation</CardTitle>
+              <CardDescription>Run concession fee allocation for this month's period</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Allocate concession contract fees to assets for <strong>{format(new Date(monthStart), "MMMM yyyy")}</strong>.
+              </p>
+              <Button onClick={() => navigate(`/admin/finance/concession-allocation`)}>
+                <Eye className="h-4 w-4 mr-1" /> Open Concession Allocation
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

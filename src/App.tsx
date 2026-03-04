@@ -199,6 +199,7 @@ const CompanyCodeSettings = lazy(() => import("./pages/CompanyCodeSettings"));
 const AIAssistant = lazy(() => import("./pages/AIAssistant"));
 const AnalyticsDashboard = lazy(() => import("./pages/AnalyticsDashboard"));
 const ConcessionContracts = lazy(() => import("./pages/ConcessionContracts"));
+const ConcessionAllocation = lazy(() => import("./pages/ConcessionAllocation"));
 // CustomDashboard removed — placeholder
 // const CustomDashboard = lazy(() => import("./pages/CustomDashboard"));
 const BookingRequests = lazy(() => import("./pages/BookingRequests"));
@@ -426,6 +427,7 @@ const App = () => (
               <Route path="finance/month-close" element={<ProtectedRoute requireAuth><ModernAppLayout><MonthClose /></ModernAppLayout></ProtectedRoute>} />
               <Route path="finance/generate-payables" element={<ProtectedRoute requireAuth><ModernAppLayout><GeneratePayables /></ModernAppLayout></ProtectedRoute>} />
               <Route path="finance/override-requests" element={<ProtectedRoute requireAuth><ModernAppLayout><FinanceOverrideRequests /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="finance/concession-allocation" element={<ProtectedRoute requireAuth><ModernAppLayout><ConcessionAllocation /></ModernAppLayout></ProtectedRoute>} />
               <Route path="gallery" element={<Navigate to="/admin/photo-library" replace />} />
               <Route path="photo-library" element={<ProtectedRoute requireAuth><ModernAppLayout><PhotoGallery /></ModernAppLayout></ProtectedRoute>} />
               <Route path="import" element={<Navigate to="/admin/data-export-import" replace />} />

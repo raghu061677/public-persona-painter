@@ -163,6 +163,7 @@ import {
           { label: "Expenses", href: "/admin/expenses", icon: DollarSign },
           { label: "Power Bills", href: "/admin/power-bills", icon: Zap },
           { label: "Month Close", href: "/admin/finance/month-close", icon: CalendarDays },
+          { label: "Concession Allocation", href: "/admin/finance/concession-allocation", icon: Layers },
           { label: "Outstanding", href: "/admin/reports/outstanding", icon: Wallet, badge: "outstanding" },
           { label: "Aging Report", href: "/admin/reports/aging", icon: Clock },
         ],

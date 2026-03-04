@@ -337,6 +337,7 @@ export function ResponsiveSidebar() {
                       <MenuItem icon={DollarSign} label="Expenses" href="/admin/expenses" />
                       <MenuItem icon={Zap} label="Power Bills" href="/admin/power-bills" />
                       <MenuItem icon={CalendarDays} label="Month Close" href="/admin/finance/month-close" />
+                      <MenuItem icon={Layers} label="Concession Allocation" href="/admin/finance/concession-allocation" />
                     </MenuGroup>
                     <MenuGroup icon={Wallet} label="Payables">
                       <MenuItem icon={Zap} label="Generate Payables" href="/admin/finance/generate-payables" />

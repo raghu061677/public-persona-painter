@@ -272,9 +272,11 @@ export default function ConcessionContracts() {
                 <TableHead>Type</TableHead>
                 <TableHead>Authority</TableHead>
                 <TableHead>Cycle</TableHead>
-                <TableHead className="text-right">Base Fee</TableHead>
-                <TableHead className="text-right">Current Fee</TableHead>
-                <TableHead className="text-right">Ad Fee</TableHead>
+                <TableHead className="text-right">Base Year Fee</TableHead>
+                <TableHead className="text-right">Current Year Fee</TableHead>
+                <TableHead className="text-right">Monthly</TableHead>
+                <TableHead className="text-right">Ad Fee/Yr</TableHead>
+                <TableHead className="text-right">Ad Fee/Mo</TableHead>
                 <TableHead>Escalation</TableHead>
                 <TableHead>Method</TableHead>
                 <TableHead>Status</TableHead>
@@ -283,14 +285,14 @@ export default function ConcessionContracts() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow>
-                   <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                  <TableRow>
+                    <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                     Loading…
                   </TableCell>
                 </TableRow>
               ) : !contracts?.length ? (
                 <TableRow>
-                   <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                   <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                     No contracts yet
                   </TableCell>
                 </TableRow>
@@ -313,10 +315,12 @@ export default function ConcessionContracts() {
                     </TableCell>
                     <TableCell className="text-right font-mono text-muted-foreground text-xs">{fmt(baseYearFee)}</TableCell>
                     <TableCell className="text-right font-mono">
-                      {fmt(currentFee)}
-                      {yearNumber > 1 && <span className="text-xs text-muted-foreground ml-1">(Yr {yearNumber})</span>}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">{(c.advertisement_fee ?? 0) > 0 ? fmt(c.advertisement_fee) : "—"}</TableCell>
+                       {fmt(currentFee)}
+                       {yearNumber > 1 && <span className="text-xs text-muted-foreground ml-1">(Yr {yearNumber})</span>}
+                     </TableCell>
+                     <TableCell className="text-right font-mono text-primary font-semibold">{fmt(Math.round(currentFee / 12))}</TableCell>
+                     <TableCell className="text-right font-mono">{(c.advertisement_fee ?? 0) > 0 ? fmt(c.advertisement_fee) : "—"}</TableCell>
+                     <TableCell className="text-right font-mono text-primary">{(c.advertisement_fee ?? 0) > 0 ? fmt(Math.round(c.advertisement_fee / 12)) : "—"}</TableCell>
                     <TableCell className="text-xs">{escalation > 0 ? `${escalation}% / yr` : "—"}</TableCell>
                     <TableCell className="text-xs">{c.allocation_method.replace(/_/g, " ")}</TableCell>
                     <TableCell>
@@ -394,13 +398,18 @@ export default function ConcessionContracts() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Base Year Fee (₹) *</Label>
+                <Label className="text-xs">Base Year Fee (₹/Year) *</Label>
                 <Input
                   type="number"
                   value={form.base_year_fee || form.total_fee}
                   onChange={(e) => setForm({ ...form, base_year_fee: e.target.value, total_fee: e.target.value || form.total_fee })}
-                  placeholder="First year fee amount"
+                  placeholder="Yearly fee for first year"
                 />
+                {(form.base_year_fee || form.total_fee) && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Monthly: {fmt(Math.round(parseFloat(form.base_year_fee || form.total_fee || "0") / 12))}
+                  </p>
+                )}
               </div>
               <div>
                 <Label className="text-xs">Annual Escalation (%)</Label>
@@ -414,23 +423,31 @@ export default function ConcessionContracts() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Current Fee (₹) *</Label>
+                <Label className="text-xs">Current Year Fee (₹/Year) *</Label>
                 <Input type="number" value={form.total_fee} onChange={(e) => setForm({ ...form, total_fee: e.target.value })} placeholder="Fee for current FY" />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {form.base_year_fee && parseFloat(form.annual_escalation_percent) > 0 && form.start_date
-                    ? `Auto-calculated: ${fmt(getEscalatedFee(parseFloat(form.base_year_fee), parseFloat(form.annual_escalation_percent), form.start_date).currentFee)} (Year ${getEscalatedFee(parseFloat(form.base_year_fee), parseFloat(form.annual_escalation_percent), form.start_date).yearNumber})`
-                    : "Set base fee and escalation % to see projection"
+                  {form.total_fee
+                    ? <>Monthly Payment: <strong className="text-primary">{fmt(Math.round(parseFloat(form.total_fee) / 12))}</strong></>
+                    : "Enter yearly fee"
                   }
+                  {form.base_year_fee && parseFloat(form.annual_escalation_percent) > 0 && form.start_date && (
+                    <> · Auto: {fmt(getEscalatedFee(parseFloat(form.base_year_fee), parseFloat(form.annual_escalation_percent), form.start_date).currentFee)}/yr (Year {getEscalatedFee(parseFloat(form.base_year_fee), parseFloat(form.annual_escalation_percent), form.start_date).yearNumber})</>
+                  )}
                 </p>
               </div>
               <div>
-                <Label className="text-xs">Advertisement Fee (₹)</Label>
+                <Label className="text-xs">Advertisement Fee (₹/Year)</Label>
                 <Input
                   type="number"
                   value={form.advertisement_fee}
                   onChange={(e) => setForm({ ...form, advertisement_fee: e.target.value })}
-                  placeholder="Separate ad fee per cycle"
+                  placeholder="Yearly ad fee"
                 />
+                {parseFloat(form.advertisement_fee) > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Monthly: {fmt(Math.round(parseFloat(form.advertisement_fee) / 12))}
+                  </p>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">

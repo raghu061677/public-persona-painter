@@ -241,11 +241,6 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   // Table must always start below the header area.
   const tableStartY = Math.max(yPos, 90);
 
-  // Check if any items have printing or mounting costs
-  const hasPrintingCosts = data.items.some(item => (item.printingCost || 0) > 0);
-  const hasMountingCosts = data.items.some(item => (item.mountingCost || 0) > 0);
-  const hasExtraCosts = hasPrintingCosts || hasMountingCosts;
-
   const tableBody = data.items.map((item) => {
     // LOCATION & DESCRIPTION cell (multi-line)
     const locationDesc = [
@@ -262,17 +257,19 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
     // BOOKING cell
     const bookingCell = `From: ${item.fromDate}\nTo: ${item.toDate}\nDuration: ${item.duration}`;
 
-    if (hasExtraCosts) {
-      return [
-        item.sno.toString(),
-        locationDesc,
-        sizeCell,
-        bookingCell,
-        formatCurrencyForPDF(item.unitPrice),
-        formatCurrencyForPDF(item.printingCost || 0),
-        formatCurrencyForPDF(item.mountingCost || 0),
-        formatCurrencyForPDF(item.subtotal),
-      ];
+    // UNIT PRICE cell - show breakdown inside single cell
+    const printingAmt = item.printingCost || 0;
+    const mountingAmt = item.mountingCost || 0;
+    const hasBreakdown = printingAmt > 0 || mountingAmt > 0;
+
+    let unitPriceCell: string;
+    if (hasBreakdown) {
+      const lines = [`Rent: ${formatCurrencyForPDF(item.unitPrice)}`];
+      if (printingAmt > 0) lines.push(`Print: ${formatCurrencyForPDF(printingAmt)}`);
+      if (mountingAmt > 0) lines.push(`Install: ${formatCurrencyForPDF(mountingAmt)}`);
+      unitPriceCell = lines.join('\n');
+    } else {
+      unitPriceCell = formatCurrencyForPDF(item.unitPrice);
     }
 
     return [
@@ -280,7 +277,7 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
       locationDesc,
       sizeCell,
       bookingCell,
-      formatCurrencyForPDF(item.unitPrice),
+      unitPriceCell,
       formatCurrencyForPDF(item.subtotal),
     ];
   });
@@ -288,29 +285,16 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   // Track page count for header rendering
   let currentPageCount = 1;
 
-  const tableHeaders = hasExtraCosts
-    ? [['#', 'LOCATION & DESCRIPTION', 'SIZE', 'BOOKING', 'DISPLAY COST', 'PRINTING', 'INSTALLATION', 'SUBTOTAL']]
-    : [['#', 'LOCATION & DESCRIPTION', 'SIZE', 'BOOKING', 'UNIT PRICE', 'SUBTOTAL']];
+  const tableHeaders = [['#', 'LOCATION & DESCRIPTION', 'SIZE', 'BOOKING', 'UNIT PRICE', 'SUBTOTAL']];
 
-  const tableColumnStyles = hasExtraCosts
-    ? {
-        0: { cellWidth: 8, halign: 'center' as const, valign: 'middle' as const },
-        1: { cellWidth: 52 },
-        2: { cellWidth: 28, halign: 'left' as const },
-        3: { cellWidth: 30, halign: 'left' as const },
-        4: { cellWidth: 20, halign: 'right' as const },
-        5: { cellWidth: 18, halign: 'right' as const },
-        6: { cellWidth: 18, halign: 'right' as const },
-        7: { cellWidth: 20, halign: 'right' as const },
-      }
-    : {
-        0: { cellWidth: 10, halign: 'center' as const, valign: 'middle' as const },
-        1: { cellWidth: 65 },
-        2: { cellWidth: 30, halign: 'left' as const },
-        3: { cellWidth: 35, halign: 'left' as const },
-        4: { cellWidth: 25, halign: 'right' as const },
-        5: { cellWidth: 25, halign: 'right' as const },
-      };
+  const tableColumnStyles = {
+    0: { cellWidth: 10, halign: 'center' as const, valign: 'middle' as const },
+    1: { cellWidth: 60 },
+    2: { cellWidth: 28, halign: 'left' as const },
+    3: { cellWidth: 32, halign: 'left' as const },
+    4: { cellWidth: 30, halign: 'right' as const },
+    5: { cellWidth: 25, halign: 'right' as const },
+  };
   
   autoTable(doc, {
     startY: tableStartY,
@@ -319,7 +303,7 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
     theme: 'grid',
     styles: {
       font: 'NotoSans',
-      fontSize: hasExtraCosts ? 7 : 8,
+      fontSize: 8,
       textColor: [0, 0, 0],
       cellPadding: 2.5,
       overflow: 'linebreak',
@@ -331,7 +315,7 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
       fillColor: [240, 240, 240],
       textColor: [0, 0, 0],
       fontStyle: 'bold',
-      fontSize: hasExtraCosts ? 7 : 8,
+      fontSize: 8,
       halign: 'center',
       valign: 'middle',
     },

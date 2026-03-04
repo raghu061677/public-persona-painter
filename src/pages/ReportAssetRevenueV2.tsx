@@ -245,15 +245,18 @@ export default function ReportAssetRevenueV2() {
       filteredAssets.forEach((asset) => {
         const assetId = asset.asset_id;
         const existing = assetMap.get(assetId);
-        const revenue = asset.total_price || asset.negotiated_rate || asset.card_rate || 0;
+
+        // Calculate pro-rata revenue: (monthly_rate / 30) * booked_days
+        const monthlyRate = asset.negotiated_rate || asset.card_rate || 0;
         const startDate = new Date(asset.booking_start_date || asset.start_date || asset.campaigns?.start_date);
         const endDate = new Date(asset.booking_end_date || asset.end_date || asset.campaigns?.end_date);
-        const bookedDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        const bookedDays = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+        const proRataRevenue = Math.round(((monthlyRate / 30) * bookedDays) * 100) / 100;
         const ma = mediaAssetMap.get(assetId);
 
         if (existing) {
           existing.total_bookings += 1;
-          existing.total_revenue += revenue;
+          existing.total_revenue += proRataRevenue;
           existing.total_days_booked += bookedDays;
 
           const assetEndDate = asset.booking_end_date || asset.end_date;
@@ -273,13 +276,59 @@ export default function ReportAssetRevenueV2() {
             total_sqft: ma?.total_sqft || 0,
             illumination_type: ma?.illumination_type || "-",
             total_bookings: 1,
-            total_revenue: revenue,
-            avg_rate: revenue,
+            total_revenue: proRataRevenue,
+            avg_rate: proRataRevenue,
             occupancy_percent: 0,
             last_booked_date: asset.booking_end_date || asset.end_date,
             total_days_booked: bookedDays,
           });
         }
+      });
+
+      // Also fetch asset_bookings for assets that may be booked but not in campaign_assets
+      const { data: assetBookings } = await supabase
+        .from("asset_bookings")
+        .select("asset_id, start_date, end_date, status, campaign_id, plan_id")
+        .in("status", ["confirmed", "active", "booked"]);
+
+      // Process asset_bookings to capture bookings not already in campaign_assets
+      (assetBookings || []).forEach((booking) => {
+        const assetId = booking.asset_id;
+        // Skip if already counted via campaign_assets
+        if (assetMap.has(assetId)) return;
+
+        const ma = mediaAssetMap.get(assetId);
+        if (!ma) return; // Not our company's asset
+
+        const sDate = new Date(booking.start_date);
+        const eDate = new Date(booking.end_date);
+
+        // Apply date range filter
+        if (dateRange?.from && dateRange?.to) {
+          if (dateType === "booking_start" && (sDate < dateRange.from || sDate > dateRange.to)) return;
+          if (dateType === "booking_end" && (eDate < dateRange.from || eDate > dateRange.to)) return;
+        }
+
+        const bookedDays = Math.max(1, Math.ceil((eDate.getTime() - sDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+
+        assetMap.set(assetId, {
+          asset_id: assetId,
+          asset_code: ma.media_asset_code || assetId,
+          location: ma.location || "-",
+          city: ma.city || "-",
+          area: ma.area || "-",
+          media_type: ma.media_type || "-",
+          direction: ma.direction || "-",
+          dimensions: ma.dimensions || "-",
+          total_sqft: ma.total_sqft || 0,
+          illumination_type: ma.illumination_type || "-",
+          total_bookings: 1,
+          total_revenue: 0, // No revenue data from asset_bookings
+          avg_rate: 0,
+          occupancy_percent: 0,
+          last_booked_date: booking.end_date,
+          total_days_booked: bookedDays,
+        });
       });
 
       // Add ALL media assets that have NO bookings (so every asset appears)
@@ -296,7 +345,7 @@ export default function ReportAssetRevenueV2() {
             dimensions: ma.dimensions || "-",
             total_sqft: ma.total_sqft || 0,
             illumination_type: ma.illumination_type || "-",
-            total_bookings: 0,
+            total_bookings: ma.status === "Booked" ? 1 : 0,
             total_revenue: 0,
             avg_rate: 0,
             occupancy_percent: 0,
@@ -327,7 +376,11 @@ export default function ReportAssetRevenueV2() {
         prevFiltered.forEach((asset) => {
           const assetId = asset.asset_id;
           const existing = prevAssetMap.get(assetId);
-          const revenue = asset.total_price || asset.negotiated_rate || asset.card_rate || 0;
+          const monthlyRate = asset.negotiated_rate || asset.card_rate || 0;
+          const sDate = new Date(asset.booking_start_date || asset.start_date || asset.campaigns?.start_date);
+          const eDate = new Date(asset.booking_end_date || asset.end_date || asset.campaigns?.end_date);
+          const days = Math.max(1, Math.ceil((eDate.getTime() - sDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+          const revenue = Math.round(((monthlyRate / 30) * days) * 100) / 100;
 
           if (existing) {
             existing.total_bookings += 1;
@@ -394,15 +447,23 @@ export default function ReportAssetRevenueV2() {
       if (error) throw error;
 
       setBookingHistory(
-        (data || []).map((b) => ({
-          campaign_id: b.campaign_id,
-          campaign_name: b.campaigns?.campaign_name || "",
-          client_name: b.campaigns?.client_name || "",
-          start_date: b.booking_start_date || b.campaigns?.start_date || "",
-          end_date: b.booking_end_date || b.campaigns?.end_date || "",
-          value: b.total_price || b.negotiated_rate || b.card_rate || 0,
-          status: b.campaigns?.status || "",
-        }))
+        (data || []).map((b) => {
+          const monthlyRate = b.negotiated_rate || b.card_rate || 0;
+          const sDate = new Date(b.booking_start_date || b.campaigns?.start_date || "");
+          const eDate = new Date(b.booking_end_date || b.campaigns?.end_date || "");
+          const days = Math.max(1, Math.ceil((eDate.getTime() - sDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+          const proRataValue = Math.round(((monthlyRate / 30) * days) * 100) / 100;
+
+          return {
+            campaign_id: b.campaign_id,
+            campaign_name: b.campaigns?.campaign_name || "",
+            client_name: b.campaigns?.client_name || "",
+            start_date: b.booking_start_date || b.campaigns?.start_date || "",
+            end_date: b.booking_end_date || b.campaigns?.end_date || "",
+            value: proRataValue,
+            status: b.campaigns?.status || "",
+          };
+        })
       );
     } catch (error) {
       console.error("Error loading booking history:", error);

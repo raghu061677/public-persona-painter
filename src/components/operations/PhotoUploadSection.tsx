@@ -49,6 +49,7 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
   const [logoUrl, setLogoUrl] = useState<string>();
   const [orgName, setOrgName] = useState<string>();
   const [qrCodeUrl, setQrCodeUrl] = useState<string>();
+  const [streetViewUrl, setStreetViewUrl] = useState<string>();
   const [resolvedMediaAssetId, setResolvedMediaAssetId] = useState<string | null>(null);
 
   // Load company branding for watermark (use company from context, fallback to organization_settings)
@@ -96,15 +97,23 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
       // Store the resolved media asset ID for use in uploads
       setResolvedMediaAssetId(campaignAsset.asset_id);
       
-      // Get the QR code URL from media_assets
+      // Get the QR code URL and coordinates from media_assets
       const { data: mediaAsset } = await supabase
         .from('media_assets')
-        .select('qr_code_url')
+        .select('qr_code_url, latitude, longitude, google_street_view_url')
         .eq('id', campaignAsset.asset_id)
         .single();
       
       if (mediaAsset?.qr_code_url) {
         setQrCodeUrl(mediaAsset.qr_code_url);
+      }
+
+      // Build Street View URL from asset coordinates
+      if (mediaAsset?.google_street_view_url) {
+        setStreetViewUrl(mediaAsset.google_street_view_url);
+      } else if (mediaAsset?.latitude && mediaAsset?.longitude) {
+        const svUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${mediaAsset.latitude},${mediaAsset.longitude}&heading=90&pitch=0&fov=80`;
+        setStreetViewUrl(svUrl);
       }
     };
     loadAssetInfo();
@@ -210,6 +219,7 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
           organizationName: orgName,
           campaignId: campaignId || undefined,
           assetId: assetId || undefined,
+          streetViewUrl: streetViewUrl || undefined,
         },
         (index, progress) => {
           // Optional: show watermarking progress

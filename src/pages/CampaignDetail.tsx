@@ -111,6 +111,22 @@ export default function CampaignDetail() {
     } else {
       setCampaign(data);
       
+      // Fetch signed RO from linked plan
+      if (data?.plan_id) {
+        const { data: planData } = await supabase
+          .from('plans')
+          .select('id, signed_ro_url, signed_ro_uploaded_at')
+          .eq('id', data.plan_id)
+          .maybeSingle();
+        if (planData) {
+          setSignedRoData({
+            planId: planData.id,
+            url: planData.signed_ro_url,
+            uploadedAt: planData.signed_ro_uploaded_at,
+          });
+        }
+      }
+      
       // Fetch company code settings for asset display
       if (data?.company_id) {
         const { data: codeSettings } = await supabase

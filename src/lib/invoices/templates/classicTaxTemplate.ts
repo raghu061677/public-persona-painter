@@ -9,8 +9,8 @@ import { renderPaymentQRSection } from './paymentQR';
 import { renderInvoiceSummaryTable } from './summaryTableHelper';
 import { ensurePdfUnicodeFont } from '@/lib/pdf/fontLoader';
 import { formatCurrencyForPDF } from '@/lib/pdf/pdfHelpers';
-import { renderSellerFooterWithSignatory } from '@/lib/pdf/sections/authorizedSignatory';
 import stampImageUrl from '@/assets/branding/stamp_matrix.png';
+import signatureImageUrl from '@/assets/branding/signature_raghu.png';
 
 // ============= CONSTANTS =============
 

@@ -62,6 +62,11 @@ function getDurationDisplay(days: number): string {
 export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
   const { plan, planItems, options } = data;
 
+  // ===== RELEASE ORDER: Use dedicated RO generator =====
+  if (options.optionType === 'release_order') {
+    return generateROFromPlanData(plan, planItems, options);
+  }
+
   // If user selected the photo-rich format, keep the legacy generator (it has QR + images).
   if (options.format === 'with_photos') {
     // Fetch client details

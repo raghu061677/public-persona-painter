@@ -517,9 +517,8 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
   const sgst = isInterState ? 0 : gstAmount / 2;
 
   // Check if we need a new page for summary + footer sections
-  const requiredSpace = 120;
   const availableSpace = pageHeight - yPos - PAGE_MARGINS.bottom;
-  if (availableSpace < 75) {
+  if (availableSpace < 90) {
     doc.addPage();
     doc.setFillColor(255, 255, 255);
     doc.rect(0, 0, pageWidth, 34, 'F');

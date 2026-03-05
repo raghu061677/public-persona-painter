@@ -375,7 +375,7 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
       fontSize: 6.5,
       halign: 'center',
     },
-    margin: { left: leftMargin, right: rightMargin + 50 },
+    margin: { left: leftMargin, right: rightMargin + 60 },
     tableLineColor: [0, 0, 0],
     tableLineWidth: 0.3,
   });

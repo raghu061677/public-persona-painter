@@ -175,9 +175,8 @@ export function ExportSettingsDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Quotation">Quotation</SelectItem>
-                  <SelectItem value="Estimate">Estimate</SelectItem>
                   <SelectItem value="Proforma Invoice">Proforma Invoice</SelectItem>
-                  <SelectItem value="Work Order">Work Order</SelectItem>
+                  <SelectItem value="Release Order (RO)">Release Order (RO)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

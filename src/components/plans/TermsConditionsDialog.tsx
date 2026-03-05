@@ -25,7 +25,7 @@ interface TermsConditionsDialogProps {
 }
 
 export interface TermsData {
-  optionType: "Quotation" | "Estimate" | "Proforma Invoice" | "Work Order";
+  optionType: "Quotation" | "Estimate" | "Proforma Invoice" | "Work Order" | "Release Order (RO)";
   format: "Full Detail" | "Summary";
   companyName: string;
   gstin: string;
@@ -109,6 +109,7 @@ export function TermsConditionsDialog({
                   <SelectItem value="Estimate">Estimate</SelectItem>
                   <SelectItem value="Proforma Invoice">Proforma Invoice</SelectItem>
                   <SelectItem value="Work Order">Work Order</SelectItem>
+                  <SelectItem value="Release Order (RO)">Release Order (RO)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

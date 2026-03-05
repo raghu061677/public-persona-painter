@@ -717,36 +717,6 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY + 10;
 
-  // ========== AUTHORIZED SIGNATORY (Bottom-right, stamp only) ==========
-  if (yPos > pageHeight - 60) {
-    doc.addPage();
-    yPos = 20;
-  }
-
-  const signBlockWidth = 55;
-  const signX = pageWidth - rightMargin - signBlockWidth;
-  const signCenterX = signX + signBlockWidth / 2;
-
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(0, 0, 0);
-  doc.text('For,', signCenterX, yPos, { align: 'center' });
-
-  doc.setFont('helvetica', 'bold');
-  doc.text(companyName, signCenterX, yPos + 5, { align: 'center' });
-
-  // Stamp image only (no signature line/box)
-  const signatureBase64 = await loadStampImage();
-  if (signatureBase64) {
-    try {
-      const stampSize = 28;
-      doc.addImage(signatureBase64, 'PNG', signCenterX - stampSize / 2, yPos + 8, stampSize, stampSize);
-    } catch {}
-  }
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.text('Authorized Signatory', signCenterX, yPos + 40, { align: 'center' });
 
   return doc.output('blob');
 }

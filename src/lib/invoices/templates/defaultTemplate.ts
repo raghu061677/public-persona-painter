@@ -444,85 +444,29 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY + 6;
 
-  // ========== TOTALS SECTION - FIXED ALIGNMENT ==========
+  // ========== TOTALS SECTION - BOXED TABLE ==========
   const subtotal = parseFloat(data.invoice.sub_total) || 0;
   const gstAmount = parseFloat(data.invoice.gst_amount) || 0;
-  const cgstAmount = isInterState ? 0 : gstAmount / 2;
-  const sgstAmount = isInterState ? 0 : gstAmount / 2;
-  const igstAmount = isInterState ? gstAmount : 0;
   const grandTotal = parseFloat(data.invoice.total_amount) || (subtotal + gstAmount);
   const balanceDue = parseFloat(data.invoice.balance_due) || grandTotal;
 
-  // Totals box dimensions
-  const totalsBoxWidth = 70;
+  const totalsBoxWidth = 80;
   const totalsBoxX = pageWidth - rightMargin - totalsBoxWidth;
 
-  // Amount in words on left
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.text('Total In Words:', leftMargin, yPos);
-  
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  const amountInWords = numberToWords(Math.round(grandTotal));
-  // Calculate available width for wrapping
-  const amountWordsMaxWidth = totalsBoxX - leftMargin - 5;
-  const amountWordsText = `Indian Rupees ${amountInWords} Only`;
-  const wrappedAmountWords = doc.splitTextToSize(amountWordsText, amountWordsMaxWidth);
-  let amountWordsY = yPos + 4;
-  wrappedAmountWords.forEach((line: string) => {
-    doc.text(line, leftMargin, amountWordsY);
-    amountWordsY += 3.5;
+  const summaryEndY = renderInvoiceSummaryTable({
+    doc,
+    x: totalsBoxX,
+    y: yPos,
+    width: totalsBoxWidth,
+    subtotal,
+    gstPercent,
+    gstAmount,
+    grandTotal,
+    balanceDue,
+    isInterState,
   });
 
-  // Totals box on right - FIXED ALIGNMENT
-  const totalsBoxY = yPos - 3;
-  const totalsBoxHeight = isInterState ? 36 : 40;
-  
-  doc.setDrawColor(200, 200, 200);
-  doc.setFillColor(250, 250, 250);
-  doc.rect(totalsBoxX, totalsBoxY, totalsBoxWidth, totalsBoxHeight, 'FD');
-
-  const labelX = totalsBoxX + 4;
-  const valueX = totalsBoxX + totalsBoxWidth - 4;
-  let rowY = totalsBoxY + 6;
-
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(60, 60, 60);
-  doc.text('Sub Total', labelX, rowY);
-  doc.text(formatCurrency(subtotal), valueX, rowY, { align: 'right' });
-
-  rowY += 5;
-  if (isInterState) {
-    doc.text(`IGST (${gstPercent}%)`, labelX, rowY);
-    doc.text(formatCurrency(igstAmount), valueX, rowY, { align: 'right' });
-    rowY += 5;
-  } else {
-    doc.text(`CGST (${gstPercent / 2}%)`, labelX, rowY);
-    doc.text(formatCurrency(cgstAmount), valueX, rowY, { align: 'right' });
-    rowY += 5;
-    doc.text(`SGST (${gstPercent / 2}%)`, labelX, rowY);
-    doc.text(formatCurrency(sgstAmount), valueX, rowY, { align: 'right' });
-    rowY += 5;
-  }
-
-  doc.setDrawColor(180, 180, 180);
-  doc.line(totalsBoxX + 2, rowY - 1, totalsBoxX + totalsBoxWidth - 2, rowY - 1);
-  
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(9);
-  doc.text('Total', labelX, rowY + 2);
-  doc.text(formatCurrency(grandTotal), valueX, rowY + 2, { align: 'right' });
-
-  rowY += 7;
-  doc.setTextColor(220, 38, 38);
-  doc.text('Balance Due', labelX, rowY);
-  doc.text(formatCurrency(balanceDue), valueX, rowY, { align: 'right' });
-
-  yPos = Math.max(amountWordsY, rowY) + 8;
+  yPos = summaryEndY + 6;
 
   // Check page space for bank details + QR
   if (yPos > pageHeight - 90) {

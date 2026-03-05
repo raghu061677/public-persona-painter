@@ -371,90 +371,31 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY + 8;
 
-  // ========== TOTALS SECTION - FIXED ALIGNMENT ==========
+  // ========== TOTALS SECTION - BOXED TABLE ==========
   const subtotal = parseFloat(data.invoice.sub_total) || 0;
   const gstPercent = parseFloat(data.invoice.gst_percent) || 0;
   const gstAmount = parseFloat(data.invoice.gst_amount) || 0;
   const grandTotal = parseFloat(data.invoice.total_amount) || 0;
   const balanceDue = parseFloat(data.invoice.balance_due) || grandTotal;
   const isInterState = data.invoice.tax_type === 'igst';
-  const cgstAmount = isInterState ? 0 : gstAmount / 2;
-  const sgstAmount = isInterState ? 0 : gstAmount / 2;
-  const igstAmount = isInterState ? gstAmount : 0;
 
-  // Amount in words (left side)
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(80, 80, 80);
-  doc.text('Total In Words:', leftMargin, yPos + 2);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(40, 40, 40);
-  const words = numberToWords(Math.round(grandTotal));
-  const amountWordsText = `Indian Rupees ${words} Only`;
-  const wrappedWords = doc.splitTextToSize(amountWordsText, 85);
-  let wordsY = yPos + 6;
-  wrappedWords.forEach((line: string) => {
-    doc.text(line, leftMargin, wordsY);
-    wordsY += 3.5;
+  const totalsBoxWidth = 80;
+  const totalsBoxX = pageWidth - rightMargin - totalsBoxWidth;
+
+  const summaryEndY = renderInvoiceSummaryTable({
+    doc,
+    x: totalsBoxX,
+    y: yPos,
+    width: totalsBoxWidth,
+    subtotal,
+    gstPercent,
+    gstAmount,
+    grandTotal,
+    balanceDue,
+    isInterState,
   });
 
-  // Totals box (right side) - FIXED ALIGNMENT
-  const totalsBoxWidth = 70;
-  const totalsBoxX = pageWidth - rightMargin - totalsBoxWidth;
-  
-  // Draw bordered box for totals
-  doc.setDrawColor(200, 200, 200);
-  doc.setLineWidth(0.3);
-  const totalsBoxHeight = isInterState ? 36 : 40;
-  doc.rect(totalsBoxX, yPos - 2, totalsBoxWidth, totalsBoxHeight);
-  
-  // Totals rows - properly aligned
-  const labelCol = totalsBoxX + 4;
-  const valueCol = totalsBoxX + totalsBoxWidth - 4;
-  let totalsY = yPos + 4;
-  
-  // Sub Total
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(60, 60, 60);
-  doc.text('Sub Total', labelCol, totalsY);
-  doc.text(formatCurrency(subtotal), valueCol, totalsY, { align: 'right' });
-  
-  totalsY += 6;
-  
-  // GST rows
-  if (isInterState) {
-    doc.text(`IGST (${gstPercent}%)`, labelCol, totalsY);
-    doc.text(formatCurrency(igstAmount), valueCol, totalsY, { align: 'right' });
-    totalsY += 6;
-  } else {
-    doc.text(`CGST (${gstPercent / 2}%)`, labelCol, totalsY);
-    doc.text(formatCurrency(cgstAmount), valueCol, totalsY, { align: 'right' });
-    totalsY += 5;
-    doc.text(`SGST (${gstPercent / 2}%)`, labelCol, totalsY);
-    doc.text(formatCurrency(sgstAmount), valueCol, totalsY, { align: 'right' });
-    totalsY += 6;
-  }
-  
-  // Separator line before total
-  doc.setDrawColor(180, 180, 180);
-  doc.line(totalsBoxX + 2, totalsY - 2, totalsBoxX + totalsBoxWidth - 2, totalsY - 2);
-  
-  // Total row
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(30, 30, 30);
-  doc.setFontSize(9);
-  doc.text('Total', labelCol, totalsY + 2);
-  doc.text(formatCurrency(grandTotal), valueCol, totalsY + 2, { align: 'right' });
-  
-  totalsY += 8;
-  
-  // Balance Due
-  doc.setTextColor(220, 38, 38);
-  doc.text('Balance Due', labelCol, totalsY);
-  doc.text(formatCurrency(balanceDue), valueCol, totalsY, { align: 'right' });
-
-  yPos = Math.max(wordsY, totalsY) + 8;
+  yPos = summaryEndY + 6;
 
   // Check page space for remaining content
   if (yPos > pageHeight - 100) {

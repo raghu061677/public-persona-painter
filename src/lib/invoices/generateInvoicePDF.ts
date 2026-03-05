@@ -109,6 +109,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
           campaign_asset_id: ca.id,
           asset_id: ca.asset_id,
           asset_code: maCodeMap.get(ca.asset_id) || null,
+          city: validOrNull(ca.city),
           location: validOrNull(ca.location),
           area: validOrNull(ca.area),
           direction: validOrNull(ca.direction),

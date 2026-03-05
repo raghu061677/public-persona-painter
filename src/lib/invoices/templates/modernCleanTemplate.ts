@@ -268,7 +268,7 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
   const hsnSummary: Record<string, { taxable: number; cgstRate: number; cgstAmount: number; sgstRate: number; sgstAmount: number; igstRate: number; igstAmount: number }> = {};
   
   const tableData = data.items.map((item: any, index: number) => {
-    const assetCode = item.asset_code || item.asset_id || item.id || '-';
+    const assetCode = item.asset_code || '';
     const locationVal = item.location || item.description || '-';
     const areaVal = item.area || item.zone || '-';
     const directionVal = item.direction || '-';
@@ -290,10 +290,10 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
       bookingDisplay = `${formatDate(startDate)}\nto ${formatDate(endDate)}\n${days} Days`;
     }
     
-    // Build rich description - matching user-requested format
+    // Build rich description with asset code
     const descLines: string[] = [];
-    const cityVal = item.city || '';
-    const displayLocation = cityVal && locationVal ? `${cityVal} – ${locationVal}` : locationVal || cityVal || '-';
+    if (assetCode && !/^[0-9a-f]{8}-/.test(assetCode)) descLines.push(`[${assetCode}]`);
+    const displayLocation = locationVal || '-';
     descLines.push(`Location: ${displayLocation}`);
     if (directionVal && directionVal !== '-') descLines.push(`Direction: ${directionVal} | Area: ${areaVal || '-'}`);
     else descLines.push(`Area: ${areaVal || '-'}`);

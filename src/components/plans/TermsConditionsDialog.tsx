@@ -25,7 +25,7 @@ interface TermsConditionsDialogProps {
 }
 
 export interface TermsData {
-  optionType: "Quotation" | "Estimate" | "Proforma Invoice" | "Work Order" | "Release Order (RO)";
+  optionType: "Quotation" | "Proforma Invoice" | "Release Order (RO)";
   format: "Full Detail" | "Summary";
   companyName: string;
   gstin: string;

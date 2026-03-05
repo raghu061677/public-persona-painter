@@ -64,6 +64,7 @@ import { Settings2, CalendarDays } from "lucide-react";
 import { generateProposalExcel } from "@/lib/exports/proposalExcelExport";
 import { PlanAssetsTable } from "@/components/plans/PlanAssetsTable";
 import { SignedROSection } from "@/components/plans/SignedROSection";
+import { SendROSigningLink } from "@/components/plans/SendROSigningLink";
 export default function PlanDetail() {
   const { id } = useParams();
   const navigate = useNavigate();

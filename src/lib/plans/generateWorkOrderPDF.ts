@@ -30,15 +30,17 @@ const BANK_DETAILS = {
 
 const MARGINS = { top: 15, left: 14, right: 14, bottom: 15 };
 
-const WO_TERMS = [
-  'Client confirms booking of the above mentioned outdoor media assets.',
-  'Artwork must be provided minimum 3 days before display start date.',
-  'Printing will be arranged by Matrix Network Solutions unless client provides flex/vinyl.',
+const RO_TERMS = [
+  'The client confirms booking of the above mentioned outdoor media locations.',
+  'Artwork must be supplied minimum 3-5 days before campaign start date in high resolution PDF/CDR format.',
+  'In case of site unavailability due to government action, an equivalent replacement will be provided.',
+  'Media owner reserves the right to relocate site if required by municipal/government authority.',
+  'Printing will be arranged by the service provider unless client provides flex/vinyl material.',
   'Damage due to weather or external reasons will be replaced within reasonable time at additional cost.',
-  'Payment terms: 100% Advance before campaign start date.',
-  'Taxes applicable as per GST rules. GST @ 18% is charged on all services.',
-  'Campaign execution proof photographs will be shared with client within 5 working days of installation.',
+  'Payment must be cleared before campaign start date. 100% advance is mandatory.',
+  'Proof of display photographs will be shared with client within 5 working days of installation.',
   'Renewal of site will only be entertained before 10 days of site expiry.',
+  'Taxes applicable as per GST rules. GST @ 18% is charged on all services.',
 ];
 
 // ============= HELPERS =============
@@ -140,7 +142,7 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
   const ph = doc.internal.pageSize.getHeight();
   const lm = MARGINS.left;
   const rm = MARGINS.right;
-  const cw = pw - lm - rm; // content width
+  const cw = pw - lm - rm;
 
   let y = MARGINS.top;
 
@@ -148,50 +150,35 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
   doc.setFontSize(16);
   doc.setFont('NotoSans', 'bold');
   doc.setTextColor(30, 58, 138);
-  doc.text('WORK ORDER / PURCHASE ORDER', pw / 2, y, { align: 'center' });
-  y += 3;
+  doc.text('MEDIA RELEASE ORDER (RO)', pw / 2, y, { align: 'center' });
+  y += 4;
+  doc.setFontSize(8);
+  doc.setFont('NotoSans', 'normal');
+  doc.setTextColor(100, 100, 100);
+  doc.text('Campaign Authorization Document', pw / 2, y, { align: 'center' });
+  y += 2;
   doc.setDrawColor(30, 58, 138);
   doc.setLineWidth(0.6);
   doc.line(lm, y, pw - rm, y);
   y += 6;
 
-  // ===== WO DETAILS ROW =====
+  // ===== RO DETAILS ROW =====
+  const roNo = `RO-${planId}`;
+  const roDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
   doc.setFontSize(9);
-  doc.setFont('NotoSans', 'normal');
   doc.setTextColor(0, 0, 0);
-
-  const woNo = `WO-${planId}`;
-  const woDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-
   doc.setFont('NotoSans', 'bold');
-  doc.text(`Work Order No:`, lm, y);
+  doc.text('Release Order No:', lm, y);
   doc.setFont('NotoSans', 'normal');
-  doc.text(woNo, lm + 30, y);
-
+  doc.text(roNo, lm + 33, y);
   doc.setFont('NotoSans', 'bold');
-  doc.text(`Date:`, pw / 2, y);
+  doc.text('Date:', pw / 2, y);
   doc.setFont('NotoSans', 'normal');
-  doc.text(woDate, pw / 2 + 15, y);
-  y += 5;
+  doc.text(roDate, pw / 2 + 13, y);
+  y += 7;
 
-  doc.setFont('NotoSans', 'bold');
-  doc.text(`Campaign:`, lm, y);
-  doc.setFont('NotoSans', 'normal');
-  doc.text(plan.plan_name || planId, lm + 30, y);
-
-  doc.setFont('NotoSans', 'bold');
-  doc.text(`Period:`, pw / 2, y);
-  doc.setFont('NotoSans', 'normal');
-  doc.text(`${formatDate(plan.start_date)} to ${formatDate(plan.end_date)}`, pw / 2 + 15, y);
-  y += 5;
-
-  doc.setFont('NotoSans', 'bold');
-  doc.text(`City:`, lm, y);
-  doc.setFont('NotoSans', 'normal');
-  doc.text(clientCity || 'Hyderabad', lm + 30, y);
-  y += 8;
-
-  // ===== TWO-COLUMN: ISSUED BY (Client) | SERVICE PROVIDER (Matrix) =====
+  // ===== TWO-COLUMN: ISSUED BY (Client) | MEDIA OWNER / VENDOR =====
   const colW = cw / 2 - 3;
   const boxH = 42;
   const col1X = lm;
@@ -202,7 +189,7 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
   doc.rect(col1X, y, colW, boxH);
   doc.rect(col2X, y, colW, boxH);
 
-  // --- LEFT: ISSUED BY (Client) ---
+  // --- LEFT: ISSUED BY (Client / Agency) ---
   doc.setFillColor(30, 58, 138);
   doc.rect(col1X, y, colW, 7, 'F');
   doc.setFontSize(9);
@@ -214,8 +201,7 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(10);
   doc.setFont('NotoSans', 'bold');
-  doc.text(clientName, col1X + 3, ly);
-  ly += 5;
+  doc.text(clientName, col1X + 3, ly); ly += 5;
 
   doc.setFontSize(8);
   doc.setFont('NotoSans', 'normal');
@@ -234,20 +220,19 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
   if (client.phone) { doc.text(`Mobile: ${client.phone}`, col1X + 3, ly); ly += 3.5; }
   if (client.email) { doc.text(`Email: ${client.email}`, col1X + 3, ly); }
 
-  // --- RIGHT: SERVICE PROVIDER (Matrix) ---
+  // --- RIGHT: MEDIA OWNER / VENDOR ---
   doc.setFillColor(30, 58, 138);
   doc.rect(col2X, y, colW, 7, 'F');
   doc.setFontSize(9);
   doc.setFont('NotoSans', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text('SERVICE PROVIDER (Supplier)', col2X + 3, y + 5);
+  doc.text('MEDIA OWNER / VENDOR', col2X + 3, y + 5);
 
   let ry = y + 12;
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(10);
   doc.setFont('NotoSans', 'bold');
-  doc.text(supplierName, col2X + 3, ry);
-  ry += 5;
+  doc.text(supplierName, col2X + 3, ry); ry += 5;
 
   doc.setFontSize(8);
   doc.setFont('NotoSans', 'normal');
@@ -261,11 +246,44 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
 
   y += boxH + 6;
 
-  // ===== CAMPAIGN DETAILS TABLE =====
+  // ===== CAMPAIGN INFORMATION =====
   doc.setFontSize(10);
   doc.setFont('NotoSans', 'bold');
   doc.setTextColor(30, 58, 138);
-  doc.text('CAMPAIGN DETAILS', lm, y);
+  doc.text('CAMPAIGN INFORMATION', lm, y);
+  y += 4;
+
+  const campaignInfoRows = [
+    ['Campaign Name', plan.plan_name || planId],
+    ['Brand / Client', clientName],
+    ['City', clientCity || 'Hyderabad'],
+    ['Campaign Duration', `${formatDate(plan.start_date)} to ${formatDate(plan.end_date)} (${getDurationDisplay(days)})`],
+    ['Total Sites', `${planItems?.length || 0}`],
+  ];
+
+  autoTable(doc, {
+    startY: y,
+    body: campaignInfoRows,
+    theme: 'grid',
+    styles: {
+      font: 'NotoSans', fontSize: 8.5, cellPadding: 2.5,
+      lineWidth: 0.2, lineColor: [200, 200, 200], textColor: [0, 0, 0],
+    },
+    columnStyles: {
+      0: { cellWidth: 35, fontStyle: 'bold', fillColor: [245, 245, 245] },
+      1: { cellWidth: cw - 35 },
+    },
+    margin: { left: lm, right: rm },
+    tableWidth: cw,
+  });
+  // @ts-ignore
+  y = doc.lastAutoTable.finalY + 6;
+
+  // ===== MEDIA RELEASE DETAILS TABLE =====
+  doc.setFontSize(10);
+  doc.setFont('NotoSans', 'bold');
+  doc.setTextColor(30, 58, 138);
+  doc.text('MEDIA RELEASE DETAILS', lm, y);
   y += 4;
 
   const tableBody = planItems?.map((item: any, idx: number) => {
@@ -284,14 +302,13 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
       formatDate(plan.end_date),
       getDurationDisplay(days),
       formatCurrencyForPDF(rate),
-      mounting > 0 ? formatCurrencyForPDF(mounting) : '-',
       formatCurrencyForPDF(amount + mounting),
     ];
   }) || [];
 
   autoTable(doc, {
     startY: y,
-    head: [['#', 'Asset Code', 'Location', 'Media Type', 'Size', 'Start', 'End', 'Duration', 'Rate', 'Mounting', 'Total']],
+    head: [['#', 'Site Code', 'Location', 'Media Type', 'Size', 'Start Date', 'End Date', 'Duration', 'Rate', 'Amount']],
     body: tableBody,
     theme: 'grid',
     styles: {
@@ -304,25 +321,23 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
     columnStyles: {
       0: { cellWidth: 8, halign: 'center' },
       1: { cellWidth: 22 },
-      2: { cellWidth: 30 },
+      2: { cellWidth: 32 },
       3: { cellWidth: 18 },
       4: { cellWidth: 16 },
-      5: { cellWidth: 17, halign: 'center' },
-      6: { cellWidth: 17, halign: 'center' },
+      5: { cellWidth: 18, halign: 'center' },
+      6: { cellWidth: 18, halign: 'center' },
       7: { cellWidth: 15, halign: 'center' },
       8: { cellWidth: 18, halign: 'right' },
       9: { cellWidth: 18, halign: 'right' },
-      10: { cellWidth: 18, halign: 'right' },
     },
     margin: { left: lm, right: rm, top: 20, bottom: MARGINS.bottom },
     tableWidth: cw,
     rowPageBreak: 'avoid',
   });
-
   // @ts-ignore
   y = doc.lastAutoTable.finalY + 8;
 
-  // ===== COMMERCIAL SUMMARY =====
+  // ===== CAMPAIGN COST SUMMARY =====
   const displayCost = planItems?.reduce((s, item) => {
     return s + ((item.sales_price || item.card_rate || item.media_assets?.card_rate || 0) - (item.discount_amount || 0));
   }, 0) || 0;
@@ -333,11 +348,11 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
   const sgst = subTotal * 0.09;
   const grandTotal = subTotal + cgst + sgst;
 
-  // Check page break
-  if (y + 90 > ph - MARGINS.bottom) { doc.addPage(); y = MARGINS.top; }
+  // Check page break for summary + terms + signatures
+  if (y + 120 > ph - MARGINS.bottom) { doc.addPage(); y = MARGINS.top; }
 
   // Two columns: Bank left, Summary right
-  const leftColW = cw * 0.52;
+  const leftColW = cw * 0.50;
   const rightStartX = lm + leftColW + 8;
 
   // --- LEFT: Bank Details ---
@@ -345,7 +360,7 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
   doc.setFontSize(10);
   doc.setFont('NotoSans', 'bold');
   doc.setTextColor(30, 58, 138);
-  doc.text('Bank Details (Service Provider)', lm, bkY);
+  doc.text('Bank Details (Media Owner)', lm, bkY);
   bkY += 6;
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(8);
@@ -357,12 +372,12 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
   doc.text(`IFSC: ${BANK_DETAILS.ifsc}`, lm, bkY); bkY += 4;
   doc.text(`MICR: ${BANK_DETAILS.micr}`, lm, bkY);
 
-  // --- RIGHT: Commercial Summary ---
-  const summaryRows = [
-    ['Display Rent (Sub Total)', formatCurrencyForPDF(displayCost)],
+  // --- RIGHT: Campaign Cost Summary ---
+  const summaryRows: string[][] = [
+    ['Media Cost (Rent)', formatCurrencyForPDF(displayCost)],
   ];
-  if (totalMounting > 0) summaryRows.push(['Mounting Charges', formatCurrencyForPDF(totalMounting)]);
-  if (totalPrinting > 0) summaryRows.push(['Printing Charges', formatCurrencyForPDF(totalPrinting)]);
+  if (totalPrinting > 0) summaryRows.push(['Printing Cost', formatCurrencyForPDF(totalPrinting)]);
+  if (totalMounting > 0) summaryRows.push(['Mounting Cost', formatCurrencyForPDF(totalMounting)]);
   summaryRows.push(
     ['Taxable Amount', formatCurrencyForPDF(subTotal)],
     ['CGST @ 9%', formatCurrencyForPDF(cgst)],
@@ -371,7 +386,7 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
 
   autoTable(doc, {
     startY: y - 2,
-    head: [['COMMERCIAL SUMMARY', '']],
+    head: [['CAMPAIGN COST SUMMARY', '']],
     body: summaryRows,
     theme: 'grid',
     styles: { font: 'NotoSans', fontSize: 8.5, cellPadding: 2.5, lineWidth: 0.2, lineColor: [200, 200, 200] },
@@ -383,11 +398,10 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
     margin: { left: rightStartX },
     tableWidth: 70,
   });
-
   // @ts-ignore
   let sumEndY = doc.lastAutoTable.finalY;
 
-  // Grand Total row
+  // Grand Total
   doc.setDrawColor(30, 58, 138);
   doc.setLineWidth(0.6);
   doc.line(rightStartX, sumEndY + 1, rightStartX + 70, sumEndY + 1);
@@ -407,6 +421,41 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
 
   y = Math.max(bkY, sumEndY) + 10;
 
+  // ===== ARTWORK SPECIFICATIONS =====
+  if (y + 30 > ph - MARGINS.bottom) { doc.addPage(); y = MARGINS.top; }
+
+  doc.setFontSize(10);
+  doc.setFont('NotoSans', 'bold');
+  doc.setTextColor(30, 58, 138);
+  doc.text('ARTWORK SPECIFICATIONS', lm, y);
+  y += 5;
+
+  const artworkRows = [
+    ['Material', 'Star Flex / Vinyl'],
+    ['Artwork Format', 'High Resolution PDF / CDR / AI'],
+    ['Submission Deadline', '3-5 days before display start date'],
+    ['Resolution', 'Minimum 150 DPI at actual print size'],
+    ['Colour Mode', 'CMYK'],
+  ];
+
+  autoTable(doc, {
+    startY: y,
+    body: artworkRows,
+    theme: 'grid',
+    styles: {
+      font: 'NotoSans', fontSize: 8, cellPadding: 2,
+      lineWidth: 0.2, lineColor: [200, 200, 200], textColor: [0, 0, 0],
+    },
+    columnStyles: {
+      0: { cellWidth: 40, fontStyle: 'bold', fillColor: [245, 245, 245] },
+      1: { cellWidth: cw - 40 },
+    },
+    margin: { left: lm, right: rm },
+    tableWidth: cw,
+  });
+  // @ts-ignore
+  y = doc.lastAutoTable.finalY + 8;
+
   // ===== TERMS & CONDITIONS =====
   if (y + 50 > ph - MARGINS.bottom) { doc.addPage(); y = MARGINS.top; }
 
@@ -419,7 +468,7 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
   doc.setFont('NotoSans', 'normal');
   doc.setTextColor(0, 0, 0);
 
-  WO_TERMS.forEach((term, idx) => {
+  RO_TERMS.forEach((term, idx) => {
     if (y + 8 > ph - MARGINS.bottom - 30) { doc.addPage(); y = MARGINS.top; }
     const text = `${idx + 1}. ${term}`;
     const lines = doc.splitTextToSize(text, cw);
@@ -440,14 +489,14 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
   const sigCol2 = lm + sigBoxW + 10;
   const sigBoxH = 50;
 
-  // Left: Client signature
+  // Left: Client Authorization (Issuer)
   doc.rect(sigCol1, y, sigBoxW, sigBoxH);
-  doc.setFillColor(245, 245, 245);
+  doc.setFillColor(30, 58, 138);
   doc.rect(sigCol1, y, sigBoxW, 7, 'F');
   doc.setFontSize(9);
   doc.setFont('NotoSans', 'bold');
-  doc.setTextColor(30, 58, 138);
-  doc.text('Issued By (Client)', sigCol1 + 3, y + 5);
+  doc.setTextColor(255, 255, 255);
+  doc.text('Client Authorization', sigCol1 + 3, y + 5);
 
   let slY = y + 14;
   doc.setFontSize(8);
@@ -459,14 +508,14 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
   doc.text(`Signature: ________________________`, sigCol1 + 3, slY); slY += 5;
   doc.text(`Date: ________________________`, sigCol1 + 3, slY);
 
-  // Right: Matrix acceptance
+  // Right: Accepted by Media Owner
   doc.rect(sigCol2, y, sigBoxW, sigBoxH);
-  doc.setFillColor(245, 245, 245);
+  doc.setFillColor(30, 58, 138);
   doc.rect(sigCol2, y, sigBoxW, 7, 'F');
   doc.setFontSize(9);
   doc.setFont('NotoSans', 'bold');
-  doc.setTextColor(30, 58, 138);
-  doc.text('Accepted By (Supplier)', sigCol2 + 3, y + 5);
+  doc.setTextColor(255, 255, 255);
+  doc.text('Accepted by Media Owner', sigCol2 + 3, y + 5);
 
   let srY = y + 14;
   doc.setFontSize(8);

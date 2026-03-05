@@ -21,7 +21,7 @@ export function WorkOrderPDFButton({ planId, planName }: WorkOrderPDFButtonProps
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `WorkOrder_${planId}_${planName || 'Plan'}.pdf`;
+      a.download = `ReleaseOrder_${planId}_${planName || 'Plan'}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -29,13 +29,13 @@ export function WorkOrderPDFButton({ planId, planName }: WorkOrderPDFButtonProps
 
       toast({
         title: 'Success',
-        description: 'Work Order PDF downloaded successfully',
+        description: 'Release Order (RO) PDF downloaded successfully',
       });
     } catch (error: any) {
-      console.error('Error generating Work Order PDF:', error);
+      console.error('Error generating Release Order PDF:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to generate Work Order PDF',
+        description: error.message || 'Failed to generate Release Order PDF',
         variant: 'destructive',
       });
     } finally {
@@ -53,7 +53,7 @@ export function WorkOrderPDFButton({ planId, planName }: WorkOrderPDFButtonProps
       ) : (
         <>
           <FileText className="mr-2 h-4 w-4" />
-          Download Work Order (PDF)
+          Download Release Order (RO)
         </>
       )}
     </Button>

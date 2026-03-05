@@ -10,7 +10,7 @@ import { renderInvoiceSummaryTable } from './summaryTableHelper';
 import { ensurePdfUnicodeFont } from '@/lib/pdf/fontLoader';
 import { formatCurrencyForPDF } from '@/lib/pdf/pdfHelpers';
 import stampImageUrl from '@/assets/branding/stamp_matrix.png';
-import signatureImageUrl from '@/assets/branding/signature_raghu.png';
+
 
 // ============= CONSTANTS =============
 

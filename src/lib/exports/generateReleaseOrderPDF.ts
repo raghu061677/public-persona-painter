@@ -242,41 +242,48 @@ function renderROHeader(doc: jsPDF, data: ROData, pageWidth: number, yPos: numbe
   doc.line(leftMargin, yPos, rightEdge, yPos);
   yPos += 5;
 
-  // Document details row
+  // Document details - Row 1: RO No, Date, City
   doc.setFontSize(9);
   doc.setTextColor(0, 0, 0);
   doc.setFont('NotoSans', 'bold');
 
   const detailsCol1X = leftMargin;
-  const detailsCol2X = leftMargin + 70;
-  const detailsCol3X = leftMargin + 130;
+  const detailsCol2X = leftMargin + 90;
+  const labelOffset = 38;
 
   doc.text('Release Order No:', detailsCol1X, yPos);
   doc.setFont('NotoSans', 'normal');
-  doc.text(`RO-${data.planId}`, detailsCol1X + 35, yPos);
+  doc.text(`RO-${data.planId}`, detailsCol1X + labelOffset, yPos);
 
   doc.setFont('NotoSans', 'bold');
   doc.text('Date:', detailsCol2X, yPos);
   doc.setFont('NotoSans', 'normal');
   doc.text(formatDateDD_MM_YYYY(data.createdAt), detailsCol2X + 12, yPos);
 
-  doc.setFont('NotoSans', 'bold');
-  doc.text('City:', detailsCol3X, yPos);
-  doc.setFont('NotoSans', 'normal');
-  doc.text(data.city || '-', detailsCol3X + 12, yPos);
-
   yPos += 5;
 
+  // Row 2: Campaign name (full width)
   doc.setFont('NotoSans', 'bold');
   doc.text('Campaign:', detailsCol1X, yPos);
   doc.setFont('NotoSans', 'normal');
   const campaignName = data.planName || data.planId;
-  doc.text(campaignName.substring(0, 50), detailsCol1X + 22, yPos);
+  // Truncate to fit available width
+  const maxCampaignWidth = rightEdge - detailsCol1X - labelOffset - 2;
+  const campaignLines = doc.splitTextToSize(campaignName, maxCampaignWidth);
+  doc.text(campaignLines[0], detailsCol1X + labelOffset, yPos);
+
+  yPos += 5;
+
+  // Row 3: Period, City
+  doc.setFont('NotoSans', 'bold');
+  doc.text('Period:', detailsCol1X, yPos);
+  doc.setFont('NotoSans', 'normal');
+  doc.text(`${formatDateDD_MM_YYYY(data.startDate)} to ${formatDateDD_MM_YYYY(data.endDate)}`, detailsCol1X + labelOffset, yPos);
 
   doc.setFont('NotoSans', 'bold');
-  doc.text('Period:', detailsCol2X, yPos);
+  doc.text('City:', detailsCol2X, yPos);
   doc.setFont('NotoSans', 'normal');
-  doc.text(`${formatDateDD_MM_YYYY(data.startDate)} to ${formatDateDD_MM_YYYY(data.endDate)}`, detailsCol2X + 15, yPos);
+  doc.text(data.city || '-', detailsCol2X + 12, yPos);
 
   yPos += 8;
   return yPos;

@@ -1226,7 +1226,7 @@ export default function PlanDetail() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-popover border shadow-md z-50">
-                {/* Unified Export */}
+                {/* Unified Export (Quotation/Proforma/RO with options) */}
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                   <UnifiedExportButton 
                     planId={id!} 
@@ -1239,22 +1239,26 @@ export default function PlanDetail() {
 
                 <DropdownMenuSeparator />
                 
-                {/* Download Actions */}
+                {/* Client Documents */}
                 <DropdownMenuItem onClick={() => handleExportPPT(true)} disabled={exportingPPT}>
                   <Save className="mr-2 h-4 w-4" />
-                  {exportingPPT ? "Uploading..." : "Download PPT"}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExportExcel(true)} disabled={exportingExcel}>
-                  <Save className="mr-2 h-4 w-4" />
-                  {exportingExcel ? "Uploading..." : "Download Excel"}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExportPlanImagesPDF(true)} disabled={exportingImagesPdf}>
-                  <Save className="mr-2 h-4 w-4" />
-                  {exportingImagesPdf ? "Uploading..." : "Download Plan Images (PDF)"}
+                  {exportingPPT ? "Uploading..." : "Download Proposal PPT"}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExportProposalExcel} disabled={exportingProposalExcel}>
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
                   {exportingProposalExcel ? "Generating..." : "Download Proposal Excel"}
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
+                {/* Internal Documents */}
+                <DropdownMenuItem onClick={() => handleExportExcel(true)} disabled={exportingExcel}>
+                  <Save className="mr-2 h-4 w-4" />
+                  {exportingExcel ? "Uploading..." : "Download Plan Excel"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExportPlanImagesPDF(true)} disabled={exportingImagesPdf}>
+                  <Save className="mr-2 h-4 w-4" />
+                  {exportingImagesPdf ? "Uploading..." : "Download Plan Images (PDF)"}
                 </DropdownMenuItem>
                 
                 <DropdownMenuSeparator />

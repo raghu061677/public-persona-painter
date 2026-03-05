@@ -272,13 +272,14 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
     // Build rich description as multi-line (line-wise) text
     const hsnSac = item.hsn_sac || HSN_SAC_CODE;
     const descLines: string[] = [];
-    descLines.push(`[${assetCode}] ${locationVal}`);
-    descLines.push(`Location: ${locationVal || '-'}`);
-    descLines.push(`Direction: ${directionVal || '-'}`);
+    const cityVal = item.city || '';
+    const displayLocation = cityVal && locationVal ? `${cityVal} – ${locationVal}` : locationVal || cityVal || '-';
+    descLines.push(displayLocation);
+    if (directionVal && directionVal !== '-') descLines.push(`Direction: ${directionVal}`);
     descLines.push(`Area: ${areaVal || '-'}`);
     descLines.push(`Media Type: ${mediaTypeVal || '-'}`);
-    descLines.push(`Illumination: ${illuminationVal || '-'}`);
-    descLines.push(`HSN/SAC Code: ${hsnSac || '-'}`);
+    if (illuminationVal && illuminationVal !== '-') descLines.push(`Illumination: ${illuminationVal}`);
+    descLines.push(`HSN/SAC: ${hsnSac || '-'}`);
     const richDescription = descLines.join('\n');
 
     // Size column - line-wise display

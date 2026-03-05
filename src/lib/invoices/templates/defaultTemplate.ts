@@ -376,15 +376,14 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
       bookingDisplay = `Start: ${formatDate(startDate)} - End: ${formatDate(endDate)}\n${days > 45 ? `Month: ${months}` : `Days: ${days}`}`;
     }
     
-    // Build rich description - No internal asset codes, matching RO/Quotation style
+    // Build rich description - matching user-requested format
     const descLines: string[] = [];
     const cityVal = item.city || '';
     const displayLocation = cityVal && locationVal ? `${cityVal} – ${locationVal}` : locationVal || cityVal || '-';
-    descLines.push(displayLocation);
-    if (directionVal && directionVal !== '-') descLines.push(`Direction: ${directionVal}`);
-    descLines.push(`Area: ${areaVal || '-'}`);
-    descLines.push(`Media Type: ${mediaTypeVal}`);
-    if (illuminationVal && illuminationVal !== '-') descLines.push(`Illumination: ${illuminationVal}`);
+    descLines.push(`Location: ${displayLocation}`);
+    if (directionVal && directionVal !== '-') descLines.push(`Direction: ${directionVal} | Area: ${areaVal || '-'}`);
+    else descLines.push(`Area: ${areaVal || '-'}`);
+    descLines.push(`Media: ${mediaTypeVal} | Lit: ${illuminationVal}`);
     descLines.push(`HSN/SAC: ${hsnSac}`);
     const richDescription = descLines.join('\n');
 

@@ -25,7 +25,7 @@ interface ExportSettingsDialogProps {
 }
 
 export interface ExportSettings {
-  optionType: "Quotation" | "Estimate" | "Proforma Invoice" | "Work Order";
+  optionType: "Quotation" | "Proforma Invoice" | "Release Order (RO)";
   format: "Full Detail" | "Summary";
   companyName: string;
   gstin: string;

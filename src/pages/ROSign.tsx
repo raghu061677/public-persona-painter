@@ -119,11 +119,15 @@ export default function ROSign() {
       // Fetch plan items
       const { data: items } = await supabase
         .from("plan_items")
-        .select("id, asset_id, location, area, city, media_type, dimensions, start_date, end_date, sales_price, card_rate, media_asset_code, printing_charges, mounting_charges, duration_days")
+        .select("id, asset_id, location, area, city, media_type, dimensions, start_date, end_date, sales_price, card_rate, printing_charges, mounting_charges, duration_days, media_assets(media_asset_code)")
         .eq("plan_id", planId!)
         .order("created_at");
 
-      setPlanItems((items || []) as PlanItem[]);
+      const mappedItems = (items || []).map((item: any) => ({
+        ...item,
+        media_asset_code: item.media_assets?.media_asset_code || null,
+      }));
+      setPlanItems(mappedItems as PlanItem[]);
 
       // Fetch company name
       if (planData?.company_id) {

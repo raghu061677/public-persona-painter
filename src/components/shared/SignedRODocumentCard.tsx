@@ -64,7 +64,22 @@ export function SignedRODocumentCard({
   };
 
   if (!signedRoUrl) {
-    if (compact) return null;
+    if (compact) {
+      return (
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="gap-1 text-muted-foreground">
+            <FileText className="h-3 w-3" />
+            No RO
+          </Badge>
+          {onViewPlan && (
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onViewPlan}>
+              <ExternalLink className="mr-1 h-3 w-3" />
+              Upload
+            </Button>
+          )}
+        </div>
+      );
+    }
     return (
       <Card className="border-dashed border-muted-foreground/30">
         <CardContent className="py-4 text-center">

@@ -156,6 +156,7 @@ const GeneratePayables = lazy(() => import("./pages/GeneratePayables"));
 const FinanceOverrideRequests = lazy(() => import("./pages/FinanceOverrideRequests"));
 const Install = lazy(() => import("./pages/Install"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const ROSign = lazy(() => import("./pages/ROSign"));
 // ComponentShowcase, DashboardBuilder removed — dev/test pages
 // const ComponentShowcase = lazy(() => import("./pages/ComponentShowcase"));
 // const DashboardBuilder = lazy(() => import("./pages/DashboardBuilder"));

@@ -1150,14 +1150,18 @@ export default function PlanDetail() {
                 size="lg" 
                 className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 animate-pulse-glow"
                 onClick={() => {
-                  // Pre-populate campaign data from plan
                   setCampaignData({
                     campaign_name: plan.plan_name,
                     start_date: plan.start_date,
                     end_date: plan.end_date,
                     notes: plan.notes || "",
                   });
-                  setShowConvertDialog(true);
+                  // Check if signed RO exists
+                  if (!plan.signed_ro_url) {
+                    setShowROWarningDialog(true);
+                  } else {
+                    setShowConvertDialog(true);
+                  }
                 }}
               >
                 <Rocket className="mr-2 h-5 w-5" />

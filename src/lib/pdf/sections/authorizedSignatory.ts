@@ -1,26 +1,45 @@
 import jsPDF from 'jspdf';
+import stampImageUrl from '@/assets/branding/stamp_matrix.png';
 
 interface CompanyInfo {
   name: string;
   gstin?: string;
 }
 
+// Cache the stamp image base64 after first load
+let cachedStampBase64: string | null = null;
+
+async function loadStampImage(): Promise<string | undefined> {
+  if (cachedStampBase64) return cachedStampBase64;
+  try {
+    const res = await fetch(stampImageUrl);
+    if (!res.ok) return undefined;
+    const blob = await res.blob();
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    cachedStampBase64 = base64;
+    return base64;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Renders the Authorized Signatory block (bottom-right aligned)
- * Per Zoho style spec:
- * - "For," + company name
- * - Signature placeholder line
- * - "Authorized Signatory" label
- * - NO GSTIN or PAN in footer
+ * Includes company stamp image if available
  */
-export function renderAuthorizedSignatory(
+export async function renderAuthorizedSignatory(
   doc: jsPDF,
   company: CompanyInfo,
   yPos: number
-): void {
+): Promise<void> {
   const pageWidth = doc.internal.pageSize.getWidth();
   const rightMargin = 14;
-  const x = pageWidth - rightMargin - 50; // Right-aligned position
+  const x = pageWidth - rightMargin - 50;
 
   doc.setFontSize(10);
   doc.setFont('NotoSans', 'normal');
@@ -33,6 +52,17 @@ export function renderAuthorizedSignatory(
   doc.setFont('NotoSans', 'bold');
   doc.text(company.name, x, yPos + 5);
   
+  // Stamp image
+  const stampBase64 = await loadStampImage();
+  if (stampBase64) {
+    try {
+      const stampSize = 22;
+      doc.addImage(stampBase64, 'PNG', x + 25, yPos + 6, stampSize, stampSize);
+    } catch (e) {
+      console.warn('Failed to embed stamp in signatory:', e);
+    }
+  }
+
   // Signature line/space
   doc.setFont('NotoSans', 'normal');
   doc.setDrawColor(100, 100, 100);
@@ -48,12 +78,10 @@ export function renderAuthorizedSignatory(
  * Renders ONLY the authorized signatory block (right side)
  * Footer must NOT contain seller GST/PAN
  */
-export function renderSellerFooterWithSignatory(
+export async function renderSellerFooterWithSignatory(
   doc: jsPDF,
   company: CompanyInfo,
   yPos: number
-): void {
-  // Only render the authorized signatory block on the right
-  // NO seller info with GSTIN on the left per spec
-  renderAuthorizedSignatory(doc, company, yPos);
+): Promise<void> {
+  await renderAuthorizedSignatory(doc, company, yPos);
 }

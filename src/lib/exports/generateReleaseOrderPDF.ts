@@ -529,9 +529,14 @@ function renderCommercialSummary(doc: jsPDF, data: ROData, pageWidth: number, yP
   ];
 
   summaryRows.forEach((row) => {
+    // Add spacing before Total row
+    if (row.highlight) {
+      yPos += 2;
+    }
+
     // Background
     if (row.highlight) {
-      doc.setFillColor(30, 64, 175);
+      doc.setFillColor(30, 64, 175); // #1E40AF
       doc.rect(tableX, yPos, tableWidth, rowH, 'F');
     } else {
       doc.setFillColor(255, 255, 255);
@@ -539,7 +544,7 @@ function renderCommercialSummary(doc: jsPDF, data: ROData, pageWidth: number, yP
     }
 
     // Border
-    doc.setDrawColor(180, 180, 180);
+    doc.setDrawColor(209, 213, 219); // #D1D5DB
     doc.setLineWidth(0.3);
     doc.rect(tableX, yPos, col1W, rowH, 'S');
     doc.rect(tableX + col1W, yPos, col2W, rowH, 'S');
@@ -547,10 +552,10 @@ function renderCommercialSummary(doc: jsPDF, data: ROData, pageWidth: number, yP
     // Label
     doc.setFont('NotoSans', row.bold ? 'bold' : 'normal');
     doc.setFontSize(row.highlight ? 9 : 8.5);
-    doc.setTextColor(row.highlight ? 255 : 0, row.highlight ? 255 : 0, row.highlight ? 255 : 0);
+    doc.setTextColor(row.highlight ? 255 : 17, row.highlight ? 255 : 24, row.highlight ? 255 : 39);
     doc.text(row.label, tableX + 2, yPos + rowH - 2);
 
-    // Value
+    // Value (right-aligned)
     doc.text(formatCurrencyForPDF(row.value), tableX + col1W + col2W - 2, yPos + rowH - 2, { align: 'right' });
 
     yPos += rowH;

@@ -706,7 +706,7 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   doc.text(companyName, signCenterX, yPos + 5, { align: 'center' });
 
   // Stamp image only (no signature line/box)
-  const signatureBase64 = await loadSignatureImage();
+  const signatureBase64 = await loadStampImage();
   if (signatureBase64) {
     try {
       const stampSize = 28;

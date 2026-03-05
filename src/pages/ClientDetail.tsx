@@ -710,6 +710,7 @@ export default function ClientDetail() {
                             planId={plan.id}
                             signedRoUrl={plan.signed_ro_url}
                             signedRoUploadedAt={plan.signed_ro_uploaded_at}
+                            onViewPlan={() => navigate(`/admin/plans/${plan.id}`)}
                             compact
                           />
                         </TableCell>

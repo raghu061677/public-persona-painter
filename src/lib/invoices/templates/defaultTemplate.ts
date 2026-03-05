@@ -483,16 +483,11 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   const totalsBoxWidth = 85;
   const totalsBoxX = pageWidth - rightMargin - totalsBoxWidth;
   const bankBoxWidth = totalsBoxX - leftMargin - 4;
-  const bankBoxHeight = 38;
 
-  // LEFT: Bank Details in bordered box with blue title
-  doc.setDrawColor(209, 213, 219);
-  doc.setLineWidth(0.3);
-  doc.rect(leftMargin, bankStartY, bankBoxWidth, bankBoxHeight, 'S');
-
+  // Bank Details content (draw box border after we know summary height)
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(30, 64, 175); // #1E40AF blue
+  doc.setTextColor(30, 64, 175);
   doc.text('Bank Details', leftMargin + 4, bankStartY + 6);
 
   let bankY = bankStartY + 12;
@@ -508,7 +503,7 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   doc.text('IFSC: HDFC0001555', leftMargin + 4, bankY);
 
   // RIGHT: Financial Summary
-  const summaryEndY = renderInvoiceSummaryTable({
+  const summaryResult = renderInvoiceSummaryTable({
     doc,
     x: totalsBoxX,
     y: bankStartY,
@@ -521,7 +516,13 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     isInterState,
   });
 
-  yPos = Math.max(bankStartY + bankBoxHeight, summaryEndY) + 3;
+  // Draw bank box to match the Total (blue) row bottom
+  const bankBoxHeight = summaryResult.totalRowBottomY - bankStartY;
+  doc.setDrawColor(209, 213, 219);
+  doc.setLineWidth(0.3);
+  doc.rect(leftMargin, bankStartY, bankBoxWidth, bankBoxHeight, 'S');
+
+  yPos = Math.max(bankStartY + bankBoxHeight, summaryResult.endY) + 3;
 
   // ========== SIGNATURE (right-aligned below financial summary) ==========
   const signCenterX = totalsBoxX + totalsBoxWidth / 2;

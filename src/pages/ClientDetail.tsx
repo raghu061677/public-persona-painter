@@ -74,6 +74,8 @@ interface Plan {
   created_at: string;
   start_date: string;
   end_date: string;
+  signed_ro_url: string | null;
+  signed_ro_uploaded_at: string | null;
 }
 
 interface Campaign {

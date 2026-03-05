@@ -402,18 +402,17 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
     const sqft = item.total_sqft || item.sqft || item.meta?.total_sqft || '';
 
     // Location & Description
-    const displayLocation = cityVal && locationVal ? `${cityVal} – ${locationVal}` : locationVal || cityVal || '-';
-    const locLines: string[] = [displayLocation];
-    if (directionVal && directionVal !== '-') locLines.push(`Direction: ${directionVal}`);
-    locLines.push(`Area: ${areaVal || '-'}`);
+    const displayLocation = cityVal && locationVal ? `${locationVal}` : locationVal || cityVal || '-';
+    const locLines: string[] = [`Location: ${displayLocation}`];
+    if (directionVal && directionVal !== '-') locLines.push(`Direction: ${directionVal} | Area: ${areaVal || '-'}`);
+    else locLines.push(`Area: ${areaVal || '-'}`);
     const locationDesc = locLines.join('\n');
 
     // Media Specification
     const mediaSpec = [
-      `Media Type: ${mediaTypeVal}`,
+      `Media: ${mediaTypeVal} | Lit: ${illuminationVal}`,
       dimensions ? `Size: ${dimensions}` : null,
       sqft ? `Sqft: ${sqft}` : null,
-      illuminationVal && illuminationVal !== '-' ? `Illumination: ${illuminationVal}` : null,
       `HSN/SAC: ${item.hsn_sac || HSN_SAC_CODE}`,
     ].filter(Boolean).join('\n');
 
@@ -425,8 +424,7 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
       const start = new Date(startDate);
       const end = new Date(endDate);
       const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      const durationStr = days >= 28 && days <= 31 ? '1 Month' : days > 31 ? `${Math.round(days / 30)} Months` : `${days} Days`;
-      bookingDisplay = `Start: ${formatDate(startDate)}\nEnd: ${formatDate(endDate)}\nDuration: ${durationStr}`;
+      bookingDisplay = `${formatDate(startDate)}\nto ${formatDate(endDate)}\n${days} Days`;
     }
 
     // Unit Price (Commercials)
@@ -436,7 +434,7 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
     const commercials = [
       `Display: ${formatCurrency(baseRate)}`,
       `Printing: ${formatCurrency(printingCost)}`,
-      `Mounting: ${formatCurrency(mountingCost)}`,
+      `Installation: ${formatCurrency(mountingCost)}`,
     ].join('\n');
 
     const itemTotal = item.amount || item.final_price || item.total || (baseRate + printingCost + mountingCost);

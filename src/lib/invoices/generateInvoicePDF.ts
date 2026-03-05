@@ -86,7 +86,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
   if (itemsLackAssetInfo && invoice.campaign_id) {
     const { data: campAssets } = await supabase
       .from('campaign_assets')
-      .select('id, asset_id, location, area, direction, media_type, illumination_type, dimensions, total_sqft, booking_start_date, booking_end_date, rent_amount, printing_cost, mounting_cost, printing_charges, mounting_charges, card_rate, negotiated_rate, daily_rate, booked_days')
+      .select('id, asset_id, city, location, area, direction, media_type, illumination_type, dimensions, total_sqft, booking_start_date, booking_end_date, rent_amount, printing_cost, mounting_cost, printing_charges, mounting_charges, card_rate, negotiated_rate, daily_rate, booked_days')
       .eq('campaign_id', invoice.campaign_id);
 
     if (campAssets && campAssets.length > 0) {
@@ -109,6 +109,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
           campaign_asset_id: ca.id,
           asset_id: ca.asset_id,
           asset_code: maCodeMap.get(ca.asset_id) || null,
+          city: validOrNull(ca.city),
           location: validOrNull(ca.location),
           area: validOrNull(ca.area),
           direction: validOrNull(ca.direction),
@@ -200,14 +201,14 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
       assetIds.length
         ? supabase
             .from('media_assets')
-            .select('id, media_asset_code, location, area, direction, media_type, illumination_type, dimensions, total_sqft')
+            .select('id, media_asset_code, city, location, area, direction, media_type, illumination_type, dimensions, total_sqft')
             .in('id', assetIds)
         : Promise.resolve({ data: null } as any),
       campaignAssetIds.length
         ? supabase
             .from('campaign_assets')
             .select(
-              'id, asset_id, location, area, direction, media_type, illumination_type, dimensions, total_sqft, booking_start_date, booking_end_date, rent_amount, printing_charges, mounting_charges, daily_rate, booked_days'
+              'id, asset_id, city, location, area, direction, media_type, illumination_type, dimensions, total_sqft, booking_start_date, booking_end_date, rent_amount, printing_charges, mounting_charges, daily_rate, booked_days'
             )
             .in('id', campaignAssetIds)
         : Promise.resolve({ data: null } as any),
@@ -243,6 +244,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
         ...item,
         asset_id: item.asset_id || campaignAsset?.asset_id,
         asset_code: mediaAsset?.media_asset_code || (item.asset_code && !/^[0-9a-f]{8}-/.test(item.asset_code) ? item.asset_code : null),
+        city: pick(item.city, campaignAsset?.city, mediaAsset?.city) || '',
         location: pick(item.location, source.location) || '-',
         area: pick(item.area, source.area) || '-',
         direction: pick(item.direction, source.direction) || '-',

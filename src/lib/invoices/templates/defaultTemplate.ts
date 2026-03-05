@@ -372,19 +372,17 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
       const start = new Date(startDate);
       const end = new Date(endDate);
       const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      const months = Math.ceil(days / 30);
-      bookingDisplay = `Start: ${formatDate(startDate)} - End: ${formatDate(endDate)}\n${days > 45 ? `Month: ${months}` : `Days: ${days}`}`;
+      bookingDisplay = `${formatDate(startDate)}\nto ${formatDate(endDate)}\n${days} Days`;
     }
     
-    // Build rich description - No internal asset codes, matching RO/Quotation style
+    // Build rich description - matching user-requested format
     const descLines: string[] = [];
     const cityVal = item.city || '';
     const displayLocation = cityVal && locationVal ? `${cityVal} – ${locationVal}` : locationVal || cityVal || '-';
-    descLines.push(displayLocation);
-    if (directionVal && directionVal !== '-') descLines.push(`Direction: ${directionVal}`);
-    descLines.push(`Area: ${areaVal || '-'}`);
-    descLines.push(`Media Type: ${mediaTypeVal}`);
-    if (illuminationVal && illuminationVal !== '-') descLines.push(`Illumination: ${illuminationVal}`);
+    descLines.push(`Location: ${displayLocation}`);
+    if (directionVal && directionVal !== '-') descLines.push(`Direction: ${directionVal} | Area: ${areaVal || '-'}`);
+    else descLines.push(`Area: ${areaVal || '-'}`);
+    descLines.push(`Media: ${mediaTypeVal} | Lit: ${illuminationVal}`);
     descLines.push(`HSN/SAC: ${hsnSac}`);
     const richDescription = descLines.join('\n');
 
@@ -402,8 +400,8 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     
     // FIXED: Format unit price with full labels
     let unitPriceLines: string[] = [`Display: ${formatCurrency(baseRate)}`];
-    if (printingCost > 0) unitPriceLines.push(`Printing: ${formatCurrency(printingCost)}`);
-    if (mountingCost > 0) unitPriceLines.push(`Installation: ${formatCurrency(mountingCost)}`);
+    unitPriceLines.push(`Printing: ${formatCurrency(printingCost)}`);
+    unitPriceLines.push(`Installation: ${formatCurrency(mountingCost)}`);
     const unitPriceDisplay = unitPriceLines.join('\n');
 
     // Aggregate HSN/SAC summary data
@@ -455,10 +453,10 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     },
     columnStyles: {
       0: { cellWidth: 8, halign: 'center' },
-      1: { cellWidth: 78, halign: 'left' },
-      2: { cellWidth: 20, halign: 'left' },
+      1: { cellWidth: 72, halign: 'left' },
+      2: { cellWidth: 22, halign: 'left' },
       3: { cellWidth: 28, halign: 'left', fontSize: 6 },
-      4: { cellWidth: 26, halign: 'right' },
+      4: { cellWidth: 28, halign: 'left' },
       5: { cellWidth: 22, halign: 'right' },
     },
     margin: { left: leftMargin, right: rightMargin },

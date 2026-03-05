@@ -428,17 +428,18 @@ function renderAssetTable(doc: jsPDF, data: ROData, pageWidth: number, yPos: num
       halign: 'center',
     },
     columnStyles: {
-      0: { cellWidth: 10, halign: 'center' },
-      1: { cellWidth: 20, halign: 'center' },
-      2: { cellWidth: 42 },
-      3: { cellWidth: 20 },
-      4: { cellWidth: 18, halign: 'center' },
-      5: { cellWidth: 20, halign: 'center' },
-      6: { cellWidth: 20, halign: 'center' },
-      7: { cellWidth: 16, halign: 'center' },
-      8: { cellWidth: 18, halign: 'right' },
-      9: { cellWidth: 18, halign: 'right' },
+      0: { cellWidth: 8, halign: 'center' },   // S.No
+      1: { cellWidth: 22, halign: 'center', overflow: 'linebreak' },  // Site Code
+      2: { cellWidth: 38, overflow: 'linebreak' },  // Location
+      3: { cellWidth: 18, halign: 'center' },   // Media Type
+      4: { cellWidth: 16, halign: 'center' },   // Size
+      5: { cellWidth: 18, halign: 'center' },   // From
+      6: { cellWidth: 18, halign: 'center' },   // To
+      7: { cellWidth: 14, halign: 'center' },   // Duration
+      8: { cellWidth: 16, halign: 'right' },    // Rate
+      9: { cellWidth: 16, halign: 'right' },    // Amount
     },
+    tableWidth: pageWidth - MARGINS.left - MARGINS.right,
     margin: { left: leftMargin, right: MARGINS.right },
   });
 

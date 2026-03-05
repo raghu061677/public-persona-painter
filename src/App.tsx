@@ -286,6 +286,7 @@ const App = () => (
             <Route path="/marketplace" element={<PublicLayout><Marketplace /></PublicLayout>} />
             <Route path="/marketplace/asset/:id" element={<PublicLayout><MarketplaceAssetDetail /></PublicLayout>} />
             <Route path="/admin/plans/:id/share/:shareToken" element={<PlanShare />} />
+            <Route path="/ro-sign/:planId/:token" element={<Suspense fallback={<LoadingFallback />}><ROSign /></Suspense>} />
             <Route path="/campaign-track/:token" element={<PublicLayout><PublicCampaignTracking /></PublicLayout>} />
             <Route path="/mounter/tasks" element={<ProtectedRoute requireAuth><PublicLayout><MounterTasks /></PublicLayout></ProtectedRoute>} />
             <Route path="/mobile/*" element={<MobilePage />} />

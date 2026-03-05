@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getSignedUrl } from '@/utils/storage';
 import type { ExportOptions } from '@/components/plans/ExportOptionsDialog';
 import { addWatermarkToImage, loadImageAsDataUrl } from './photoWatermark';
-import { formatAssetDisplayCode } from '@/lib/assets/formatAssetDisplayCode';
+
 import { generateReleaseOrderPDF, type ROData, type ROLineItem } from './generateReleaseOrderPDF';
 
 interface ExportData {

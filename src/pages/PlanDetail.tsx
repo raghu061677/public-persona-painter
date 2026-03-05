@@ -1405,7 +1405,16 @@ export default function PlanDetail() {
           </Card>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Client Authorization - Signed RO */}
+        <SignedROSection
+          planId={plan.id}
+          signedRoUrl={plan.signed_ro_url || null}
+          signedRoUploadedAt={plan.signed_ro_uploaded_at || null}
+          signedRoUploadedBy={plan.signed_ro_uploaded_by || null}
+          onUploadComplete={fetchPlan}
+          canEdit={isAdmin}
+        />
+
           {/* Client Info - Blue Theme */}
           <Card className="border-l-4 border-l-blue-500 shadow-sm">
             <CardHeader className="pb-3">

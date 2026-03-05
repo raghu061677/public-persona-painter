@@ -392,6 +392,7 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
   const tableStartY = Math.max(yPos, 90);
 
   const tableBody = data.items.map((item: any, index: number) => {
+    const assetCode = item.asset_code || '';
     const cityVal = item.city || '';
     const locationVal = item.location || item.description || '-';
     const directionVal = item.direction || '-';
@@ -401,9 +402,11 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
     const dimensions = item.dimensions || item.dimension_text || item.size || item.dimension || '';
     const sqft = item.total_sqft || item.sqft || item.meta?.total_sqft || '';
 
-    // Location & Description
-    const displayLocation = cityVal && locationVal ? `${locationVal}` : locationVal || cityVal || '-';
-    const locLines: string[] = [`Location: ${displayLocation}`];
+    // Location & Description with asset code
+    const locLines: string[] = [];
+    if (assetCode && !/^[0-9a-f]{8}-/.test(assetCode)) locLines.push(`[${assetCode}]`);
+    const displayLocation = locationVal || '-';
+    locLines.push(`Location: ${displayLocation}`);
     if (directionVal && directionVal !== '-') locLines.push(`Direction: ${directionVal} | Area: ${areaVal || '-'}`);
     else locLines.push(`Area: ${areaVal || '-'}`);
     const locationDesc = locLines.join('\n');

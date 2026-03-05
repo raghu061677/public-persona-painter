@@ -54,7 +54,6 @@ function amountToWords(amount: number): string {
 
 // Cache stamp and signature images
 let cachedStampBase64: string | null = null;
-let cachedSignatureBase64: string | null = null;
 
 async function loadImageAsBase64(url: string): Promise<string | undefined> {
   try {

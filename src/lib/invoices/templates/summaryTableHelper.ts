@@ -38,7 +38,7 @@ export function renderInvoiceSummaryTable(options: SummaryTableOptions): number 
   const col2W = width - col1W;
   const rowH = 6.5;
 
-  type SummaryRow = { label: string; value: number; bold?: boolean; highlight?: 'blue' | 'red' };
+  type SummaryRow = { label: string; value: number; bold?: boolean; highlight?: 'blue' | 'gray' };
 
   const rows: SummaryRow[] = [
     { label: 'Sub Total', value: subtotal },

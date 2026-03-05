@@ -616,31 +616,38 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
   bankY += 4;
   doc.text(`IFSC Code: ${BANK_DETAILS.ifsc}`, leftMargin, bankY);
 
-  // Signature block (right)
-  const signX = leftMargin + leftColWidth + 5;
+  // Signature block (right) - centered stamp with name
+  const signBlockWidth = 55;
+  const signX = pageWidth - rightMargin - signBlockWidth;
   const signY = yPos;
-  doc.setFontSize(10);
-  doc.setFont('NotoSans', 'normal');
-  doc.text('For,', signX, signY);
-  doc.setFont('NotoSans', 'bold');
-  doc.text(companyName, signX, signY + 5);
+  const signCenterX = signX + signBlockWidth / 2;
 
-  // Stamp image
-  const stampBase64 = await loadStampImage();
-  if (stampBase64) {
+  // "For," text
+  doc.setFontSize(9);
+  doc.setFont('NotoSans', 'normal');
+  doc.setTextColor(0, 0, 0);
+  doc.text('For,', signCenterX, signY, { align: 'center' });
+
+  // Company name (bold)
+  doc.setFont('NotoSans', 'bold');
+  doc.text(companyName, signCenterX, signY + 5, { align: 'center' });
+
+  // Signature image (centered)
+  const signatureBase64 = await loadSignatureImage();
+  if (signatureBase64) {
     try {
-      doc.addImage(stampBase64, 'PNG', signX + 25, signY + 6, 22, 22);
+      const sigW = 40;
+      const sigH = 40;
+      doc.addImage(signatureBase64, 'PNG', signCenterX - sigW / 2, signY + 7, sigW, sigH);
     } catch {}
   }
 
+  // "Authorized Signatory" label at bottom
   doc.setFont('NotoSans', 'normal');
-  doc.setDrawColor(100, 100, 100);
-  doc.setLineWidth(0.3);
-  doc.line(signX, signY + 20, signX + 50, signY + 20);
   doc.setFontSize(8);
-  doc.text('Authorized Signatory', signX, signY + 25);
+  doc.text('Authorized Signatory', signCenterX, signY + 50, { align: 'center' });
 
-  yPos = Math.max(bankY, signY + 28) + 8;
+  yPos = Math.max(bankY, signY + 53) + 8;
 
   // ========== 8. PAYMENT QR (if applicable) ==========
   const upiId = data.orgSettings?.upi_id || data.company?.upi_id;

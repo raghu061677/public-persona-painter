@@ -52,7 +52,6 @@ export function renderInvoiceSummaryTable(options: SummaryTableOptions): number 
   }
 
   rows.push({ label: 'Total', value: grandTotal, bold: true, highlight: 'blue' });
-  rows.push({ label: 'Balance Due', value: balanceDue, bold: true, highlight: 'gray' });
 
   let currentY = y;
 

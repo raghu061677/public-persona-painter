@@ -394,7 +394,7 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY + 8;
 
-  // ========== TOTALS SECTION - BOXED TABLE ==========
+  // ========== BANK DETAILS + FINANCIAL SUMMARY (Side by Side) ==========
   const subtotal = parseFloat(data.invoice.sub_total) || 0;
   const gstPercent = parseFloat(data.invoice.gst_percent) || 0;
   const gstAmount = parseFloat(data.invoice.gst_amount) || 0;
@@ -402,13 +402,46 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
   const balanceDue = parseFloat(data.invoice.balance_due) || grandTotal;
   const isInterState = data.invoice.tax_type === 'igst';
 
+  // Check page space
+  if (yPos > pageHeight - 90) {
+    doc.addPage();
+    yPos = 20;
+  }
+
+  const bankStartY = yPos;
+
+  // LEFT: Bank Details in bordered box with blue title
+  const bankBoxWidth = contentWidth * 0.48;
+  const bankBoxHeight = 38;
+  doc.setDrawColor(209, 213, 219);
+  doc.setLineWidth(0.3);
+  doc.rect(leftMargin, bankStartY, bankBoxWidth, bankBoxHeight, 'S');
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(30, 64, 175); // #1E40AF blue
+  doc.text('Bank Details', leftMargin + 4, bankStartY + 6);
+
+  let bankY = bankStartY + 12;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(17, 24, 39);
+  doc.text('Bank: HDFC Bank Limited', leftMargin + 4, bankY);
+  bankY += 5;
+  doc.text('Branch: Karkhana Road, Secunderabad 500009', leftMargin + 4, bankY);
+  bankY += 5;
+  doc.text('A/C No: 50200010727301', leftMargin + 4, bankY);
+  bankY += 5;
+  doc.text('IFSC: HDFC0001555', leftMargin + 4, bankY);
+
+  // RIGHT: Financial Summary
   const totalsBoxWidth = 80;
   const totalsBoxX = pageWidth - rightMargin - totalsBoxWidth;
 
   const summaryEndY = renderInvoiceSummaryTable({
     doc,
     x: totalsBoxX,
-    y: yPos,
+    y: bankStartY,
     width: totalsBoxWidth,
     subtotal,
     gstPercent,
@@ -418,31 +451,7 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
     isInterState,
   });
 
-  yPos = summaryEndY + 6;
-
-  // Check page space for remaining content
-  if (yPos > pageHeight - 100) {
-    doc.addPage();
-    yPos = 20;
-  }
-
-  // ========== BANK DETAILS ==========
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(60, 60, 60);
-  doc.text('Bank Details:', leftMargin, yPos);
-  
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.setTextColor(60, 60, 60);
-  yPos += 4;
-  doc.text('HDFC Bank Limited', leftMargin, yPos);
-  yPos += 3;
-  doc.text('Account Branch: KARKHANA ROAD, SECUNDERABAD 500009', leftMargin, yPos);
-  yPos += 3;
-  doc.text('Account No: 50200010727301 | RTGS/NEFT IFSC: HDFC0001555 | MICR: 500240026', leftMargin, yPos);
-
-  yPos += 8;
+  yPos = Math.max(bankStartY + bankBoxHeight, summaryEndY) + 8;
 
   // ========== TERMS & CONDITIONS ==========
   doc.setFontSize(8);

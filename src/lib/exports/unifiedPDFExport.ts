@@ -130,7 +130,7 @@ async function generateROFromPlanData(plan: any, planItems: any[], options: Expo
     clientGSTIN: clientData?.gst_number || undefined,
     clientContactPerson: primaryContact
       ? (primaryContact.first_name ? `${primaryContact.first_name} ${primaryContact.last_name || ''}`.trim() : primaryContact.name)
-      : clientData?.primary_contact_name || 'N/A',
+      : (clientData as any)?.primary_contact_name || 'N/A',
     clientPhone: primaryContact?.phone || clientData?.phone || '',
     clientEmail: primaryContact?.email || clientData?.email || '',
 

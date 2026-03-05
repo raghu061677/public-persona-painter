@@ -405,8 +405,8 @@ export default function ROSign() {
                   className: "w-full h-[200px] rounded-lg",
                   style: { width: "100%", height: "200px" },
                 }}
-                penColor="#1e3a8a"
-                backgroundColor="white"
+                penColor="hsl(var(--primary))"
+                backgroundColor="hsl(0 0% 100%)"
               />
             </div>
 

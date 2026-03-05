@@ -515,7 +515,7 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
     yPos = headerRenderers.compact(doc) + 10;
   }
 
-  renderSellerFooterWithSignatory(doc, { name: data.companyName, gstin: data.companyGSTIN }, yPos);
+  await renderSellerFooterWithSignatory(doc, { name: data.companyName, gstin: data.companyGSTIN }, yPos);
 
   return doc.output('blob');
 }

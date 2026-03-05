@@ -39,6 +39,7 @@ import { SendPortalInviteDialog } from "@/components/clients/SendPortalInviteDia
 import { EditClientDialog } from "@/components/clients/EditClientDialog";
 import { ClientContactsManager } from "@/components/clients/ClientContactsManager";
 import { ClientLedger } from "@/components/finance/ClientLedger";
+import { SignedRODocumentCard } from "@/components/shared/SignedRODocumentCard";
 
 interface Client {
   id: string;

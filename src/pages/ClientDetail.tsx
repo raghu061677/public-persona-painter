@@ -160,10 +160,10 @@ export default function ClientDetail() {
       if (clientError) throw clientError;
       setClient(clientData);
 
-      // Fetch plans
+      // Fetch plans (include signed RO fields)
       const { data: plansData, error: plansError } = await supabase
         .from("plans")
-        .select("*")
+        .select("id, plan_name, status, grand_total, created_at, start_date, end_date, signed_ro_url, signed_ro_uploaded_at")
         .eq("client_id", id)
         .order("created_at", { ascending: false });
 

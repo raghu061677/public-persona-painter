@@ -50,6 +50,7 @@ export default function CampaignDetail() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [assetCodePrefix, setAssetCodePrefix] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [signedRoData, setSignedRoData] = useState<{ planId: string; url: string | null; uploadedAt: string | null } | null>(null);
   const { company } = useCompany();
   const { setBreadcrumbs } = useBreadcrumb();
   const { data: profitability, isLoading: profitLoading } = useCampaignProfitability(id, company?.id, 0);

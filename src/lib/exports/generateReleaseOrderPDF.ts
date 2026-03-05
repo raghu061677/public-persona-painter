@@ -51,18 +51,28 @@ export interface ROData {
 
 export interface ROLineItem {
   sno: number;
-  assetCode: string;
+  // Location & Description
+  city: string;
   location: string;
+  direction: string;
   area: string;
+  // Media Specification
   mediaType: string;
   dimension: string;
+  totalSqft: number;
+  illumination: string;
+  // Booking Period
   startDate: string;
   endDate: string;
   duration: string;
-  rate: number;
-  amount: number;
+  // Commercials
+  rate: number;        // Display cost (pro-rata rent)
   printingCost: number;
   mountingCost: number;
+  // Total
+  amount: number;      // Line item total (rate + printing + mounting)
+  // Legacy (kept for backward compat)
+  assetCode?: string;
 }
 
 // ============= CONSTANTS =============

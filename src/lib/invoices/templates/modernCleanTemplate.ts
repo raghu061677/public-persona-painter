@@ -7,6 +7,27 @@ import autoTable from 'jspdf-autotable';
 import { InvoiceData, formatCurrency, formatDate, numberToWords, COMPANY_ADDRESS, HSN_SAC_CODE } from './types';
 import { renderPaymentQRSection } from './paymentQR';
 import { renderInvoiceSummaryTable } from './summaryTableHelper';
+import signatureImageUrl from '@/assets/branding/signature_raghu.png';
+
+// Cache signature image
+let cachedSignatureBase64: string | null = null;
+async function loadSignatureImage(): Promise<string | undefined> {
+  if (cachedSignatureBase64) return cachedSignatureBase64;
+  try {
+    const res = await fetch(signatureImageUrl);
+    if (!res.ok) return undefined;
+    const blob = await res.blob();
+    cachedSignatureBase64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    return cachedSignatureBase64 || undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob> {
   const doc = new jsPDF({

@@ -203,26 +203,34 @@ function renderROHeader(doc: jsPDF, data: ROData, pageWidth: number, yPos: numbe
   const rightEdge = pageWidth - MARGINS.right;
 
   // Company logo (if available)
+  let logoBottomY = yPos;
   if (data.companyLogoBase64) {
     try {
-      doc.addImage(data.companyLogoBase64, 'PNG', leftMargin, yPos, 25, 25);
+      doc.addImage(data.companyLogoBase64, 'PNG', leftMargin, yPos, 20, 15);
+      logoBottomY = yPos + 15;
     } catch { /* ignore */ }
   }
 
-  const headerX = data.companyLogoBase64 ? leftMargin + 30 : leftMargin;
+  const headerX = data.companyLogoBase64 ? leftMargin + 24 : leftMargin;
 
   // Title
   doc.setFont('NotoSans', 'bold');
   doc.setFontSize(16);
   doc.setTextColor(30, 64, 175); // Deep Blue
-  doc.text('RELEASE ORDER (RO)', headerX, yPos + 8);
+  doc.text('RELEASE ORDER (RO)', headerX, yPos + 6);
 
-  // Horizontal line
-  yPos += 14;
+  // Company name below title
+  doc.setFontSize(8);
+  doc.setFont('NotoSans', 'normal');
+  doc.setTextColor(80, 80, 80);
+  doc.text(data.companyName || SERVICE_PROVIDER.name, headerX, yPos + 11);
+
+  // Horizontal line below logo/title block
+  yPos = Math.max(logoBottomY, yPos + 14) + 2;
   doc.setDrawColor(30, 64, 175);
   doc.setLineWidth(0.8);
   doc.line(leftMargin, yPos, rightEdge, yPos);
-  yPos += 6;
+  yPos += 5;
 
   // Document details row
   doc.setFontSize(9);

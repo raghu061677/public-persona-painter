@@ -677,6 +677,18 @@ export default function CampaignDetail() {
             />
           )}
         </div>
+        {/* Signed Release Order */}
+        {signedRoData && (
+          <div className="mb-6">
+            <SignedRODocumentCard
+              planId={signedRoData.planId}
+              signedRoUrl={signedRoData.url}
+              signedRoUploadedAt={signedRoData.uploadedAt}
+              onViewPlan={() => navigate(`/admin/plans/${signedRoData.planId}`)}
+            />
+          </div>
+        )}
+
         {/* Health Alerts */}
         <div className="mb-6">
           <CampaignHealthAlerts campaignId={campaign.id} />

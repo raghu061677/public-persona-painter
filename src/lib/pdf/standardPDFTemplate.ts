@@ -388,57 +388,63 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   bankY += 4;
   doc.text(`MICR: ${BANK_DETAILS.micr}`, leftMargin, bankY);
 
-  // ----- RIGHT SIDE: Summary Table -----
-  const summaryData = [
-    ['Sub Total', formatCurrencyForPDF(data.untaxedAmount)],
-    ['CGST @ 9%', formatCurrencyForPDF(data.cgst)],
-    ['SGST @ 9%', formatCurrencyForPDF(data.sgst)],
+  // ----- RIGHT SIDE: Boxed Summary Table (matching RO style) -----
+  const tableWidth = rightColWidth - 5;
+  const tableX = summaryStartX;
+  const col1W = tableWidth * 0.58;
+  const col2W = tableWidth - col1W;
+  const rowH = 6.5;
+
+  const summaryRows: { label: string; value: number; bold?: boolean; highlight?: boolean }[] = [
+    { label: 'Sub Total', value: data.untaxedAmount },
+    { label: 'CGST @ 9%', value: data.cgst },
+    { label: 'SGST @ 9%', value: data.sgst },
+    { label: 'Total', value: data.totalInr, bold: true, highlight: true },
   ];
 
-  autoTable(doc, {
-    startY: yPos,
-    body: summaryData,
-    theme: 'plain',
-    styles: {
-      font: 'NotoSans',
-      fontSize: 9,
-      cellPadding: 2,
-    },
-    columnStyles: {
-      0: { cellWidth: 35, halign: 'left' },
-      1: { cellWidth: 35, halign: 'right' },
-    },
-    margin: { left: summaryStartX },
-    tableWidth: rightColWidth - 5,
+  let summaryY = yPos;
+  summaryRows.forEach((row) => {
+    // Background
+    if (row.highlight) {
+      doc.setFillColor(30, 64, 175);
+      doc.rect(tableX, summaryY, tableWidth, rowH, 'F');
+    } else {
+      doc.setFillColor(255, 255, 255);
+      doc.rect(tableX, summaryY, tableWidth, rowH, 'F');
+    }
+
+    // Borders
+    doc.setDrawColor(180, 180, 180);
+    doc.setLineWidth(0.3);
+    doc.rect(tableX, summaryY, col1W, rowH, 'S');
+    doc.rect(tableX + col1W, summaryY, col2W, rowH, 'S');
+
+    // Label
+    doc.setFont('NotoSans', row.bold ? 'bold' : 'normal');
+    doc.setFontSize(row.highlight ? 9 : 8.5);
+    doc.setTextColor(row.highlight ? 255 : 0, row.highlight ? 255 : 0, row.highlight ? 255 : 0);
+    doc.text(row.label, tableX + 2, summaryY + rowH - 2);
+
+    // Value
+    doc.text(formatCurrencyForPDF(row.value), tableX + col1W + col2W - 2, summaryY + rowH - 2, { align: 'right' });
+
+    summaryY += rowH;
   });
 
-  // @ts-ignore
-  let summaryEndY = doc.lastAutoTable.finalY;
-
-  // Total row (emphasized)
-  doc.setDrawColor(100, 100, 100);
-  doc.setLineWidth(0.5);
-  doc.line(summaryStartX, summaryEndY + 1, pageWidth - rightMargin, summaryEndY + 1);
-  
-  summaryEndY += 6;
-  doc.setFont('NotoSans', 'bold');
-  doc.setFontSize(11);
-  doc.text('Total', summaryStartX, summaryEndY);
-  doc.text(formatCurrencyForPDF(data.totalInr), pageWidth - rightMargin, summaryEndY, { align: 'right' });
-
-  // Total in words
-  summaryEndY += 6;
-  doc.setFont('NotoSans', 'normal');
+  // Total in words below the summary table
+  summaryY += 3;
+  doc.setFont('NotoSans', 'italic');
   doc.setFontSize(8);
+  doc.setTextColor(80, 80, 80);
   const totalWords = amountToWords(data.totalInr);
-  // Calculate available width for amount in words (from summaryStartX to right margin)
-  const amountWordsWidth = pageWidth - summaryStartX - rightMargin;
+  const amountWordsWidth = pageWidth - tableX - rightMargin;
   const amountWordsText = `Total (In Words): ${totalWords}`;
   const wrappedAmountWords = doc.splitTextToSize(amountWordsText, amountWordsWidth);
   wrappedAmountWords.forEach((line: string) => {
-    doc.text(line, summaryStartX, summaryEndY);
-    summaryEndY += 4;
+    doc.text(line, tableX, summaryY);
+    summaryY += 4;
   });
+  let summaryEndY = summaryY;
 
   yPos = Math.max(bankY, summaryEndY) + 8;
 

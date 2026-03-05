@@ -77,11 +77,6 @@ async function loadStampImage(): Promise<string | undefined> {
   return cachedStampBase64 || undefined;
 }
 
-async function loadSignatureImage(): Promise<string | undefined> {
-  if (cachedSignatureBase64) return cachedSignatureBase64;
-  cachedSignatureBase64 = (await loadImageAsBase64(signatureImageUrl)) || null;
-  return cachedSignatureBase64 || undefined;
-}
 
 // ============= HEADER RENDERERS =============
 

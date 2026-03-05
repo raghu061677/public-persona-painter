@@ -7,7 +7,7 @@ import autoTable from 'jspdf-autotable';
 import { InvoiceData, formatCurrency, formatDate, numberToWords, COMPANY_ADDRESS, HSN_SAC_CODE } from './types';
 import { renderPaymentQRSection } from './paymentQR';
 import { renderInvoiceSummaryTable } from './summaryTableHelper';
-import signatureImageUrl from '@/assets/branding/signature_raghu.png';
+import stampImageUrl from '@/assets/branding/stamp_matrix.png';
 
 // Cache signature image
 let cachedSignatureBase64: string | null = null;

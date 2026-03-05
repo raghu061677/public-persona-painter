@@ -7,6 +7,27 @@ import autoTable from 'jspdf-autotable';
 import { InvoiceData, formatCurrency, formatDate, numberToWords, COMPANY_ADDRESS, HSN_SAC_CODE } from './types';
 import { renderPaymentQRSection } from './paymentQR';
 import { renderInvoiceSummaryTable } from './summaryTableHelper';
+import signatureImageUrl from '@/assets/branding/signature_raghu.png';
+
+// Cache signature image
+let cachedSignatureBase64: string | null = null;
+async function loadSignatureImage(): Promise<string | undefined> {
+  if (cachedSignatureBase64) return cachedSignatureBase64;
+  try {
+    const res = await fetch(signatureImageUrl);
+    if (!res.ok) return undefined;
+    const blob = await res.blob();
+    cachedSignatureBase64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    return cachedSignatureBase64 || undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob> {
   const doc = new jsPDF({
@@ -573,28 +594,37 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY + 10;
 
-  // ========== SIGNATURE SECTION ==========
-  if (yPos > pageHeight - 30) {
+  // ========== SIGNATURE SECTION (centered stamp style) ==========
+  if (yPos > pageHeight - 60) {
     doc.addPage();
     yPos = 20;
   }
   
-  const signX = pageWidth - rightMargin - 50;
-  
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(40, 40, 40);
-  doc.text(`For ${companyName}`, signX, yPos);
-  
-  yPos += 12;
-  doc.setDrawColor(120, 120, 120);
-  doc.setLineWidth(0.3);
-  doc.line(signX, yPos, signX + 48, yPos);
-  
-  yPos += 4;
-  doc.setFontSize(7);
+  const signBlockWidth = 55;
+  const signX = pageWidth - rightMargin - signBlockWidth;
+  const signCenterX = signX + signBlockWidth / 2;
+
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('Authorized Signatory', signX, yPos);
+  doc.setTextColor(0, 0, 0);
+  doc.text('For,', signCenterX, yPos, { align: 'center' });
+
+  doc.setFont('helvetica', 'bold');
+  doc.text(companyName, signCenterX, yPos + 5, { align: 'center' });
+
+  // Signature image (centered)
+  const signatureBase64 = await loadSignatureImage();
+  if (signatureBase64) {
+    try {
+      const sigW = 40;
+      const sigH = 40;
+      doc.addImage(signatureBase64, 'PNG', signCenterX - sigW / 2, yPos + 7, sigW, sigH);
+    } catch {}
+  }
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text('Authorized Signatory', signCenterX, yPos + 50, { align: 'center' });
 
   return doc.output('blob');
 }

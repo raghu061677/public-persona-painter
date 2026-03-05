@@ -1636,11 +1636,10 @@ export default function PlanDetail() {
           open={showExportDialog}
           onClose={() => setShowExportDialog(false)}
           onExport={(options) => {
-            const docTypeMap: Record<string, "quotation" | "estimate" | "proforma_invoice" | "work_order"> = {
+            const docTypeMap: Record<string, "quotation" | "proforma_invoice" | "release_order"> = {
               "Quotation": "quotation",
-              "Estimate": "estimate",
               "Proforma Invoice": "proforma_invoice",
-              "Work Order": "work_order",
+              "Release Order (RO)": "release_order",
             };
             const docType = docTypeMap[options.optionType] || "quotation";
             exportPlanToPDF(plan, planItems, docType, { organization_name: "Go-Ads 360°" }, options.termsAndConditions);

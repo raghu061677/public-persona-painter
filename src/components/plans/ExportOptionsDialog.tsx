@@ -116,9 +116,8 @@ export function ExportOptionsDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="quotation">Quotation</SelectItem>
-                  <SelectItem value="estimate">Estimate</SelectItem>
                   <SelectItem value="proforma_invoice">Proforma Invoice</SelectItem>
-                  <SelectItem value="work_order">Work Order</SelectItem>
+                  <SelectItem value="release_order">Release Order (RO)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

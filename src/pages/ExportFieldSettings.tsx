@@ -58,7 +58,7 @@ export default function ExportFieldSettings() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [selectedExportType, setSelectedExportType] = useState('EstimatePDF');
+  const [selectedExportType, setSelectedExportType] = useState('QuotationPDF');
   const [fields, setFields] = useState<ExportFieldSetting[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
 

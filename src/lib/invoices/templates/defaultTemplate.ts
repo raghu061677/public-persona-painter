@@ -547,7 +547,7 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   doc.setFontSize(8);
   doc.text('Authorized Signatory', signCenterX, yPos + 40, { align: 'center' });
 
-  yPos = Math.max(yPos + 45, bankStartY + bankBoxHeight + 6);
+  yPos = yPos + 45;
 
   // Check page space for QR
   if (yPos > pageHeight - 50) {

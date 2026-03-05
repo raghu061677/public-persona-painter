@@ -22,12 +22,11 @@ interface SummaryTableOptions {
  * - Sub Total
  * - CGST/SGST or IGST rows
  * - Total row (blue highlighted)
- * - Balance Due row (red highlighted)
  * - Amount in Words below
  * 
- * Returns the Y position after the rendered section.
+ * Returns { endY, totalRowBottomY } where totalRowBottomY is the bottom of the blue Total row.
  */
-export function renderInvoiceSummaryTable(options: SummaryTableOptions): number {
+export function renderInvoiceSummaryTable(options: SummaryTableOptions): { endY: number; totalRowBottomY: number } {
   const { doc, x, y, width, subtotal, gstPercent, gstAmount, grandTotal, balanceDue, isInterState } = options;
 
   const cgstAmount = isInterState ? 0 : gstAmount / 2;
@@ -54,6 +53,7 @@ export function renderInvoiceSummaryTable(options: SummaryTableOptions): number 
   rows.push({ label: 'Total', value: grandTotal, bold: true, highlight: 'blue' });
 
   let currentY = y;
+  let totalRowBottomY = y;
 
   rows.forEach((row) => {
     // Add spacing before Total row
@@ -88,7 +88,7 @@ export function renderInvoiceSummaryTable(options: SummaryTableOptions): number 
 
     // Text color
     const isTotal = row.highlight === 'blue';
-    const textR = isTotal ? 255 : 17;  // #FFFFFF or #111827
+    const textR = isTotal ? 255 : 17;
     const textG = isTotal ? 255 : 24;
     const textB = isTotal ? 255 : 39;
 
@@ -102,6 +102,11 @@ export function renderInvoiceSummaryTable(options: SummaryTableOptions): number 
     doc.text(formatCurrency(row.value), x + col1W + col2W - 3, currentY + rowH - 2, { align: 'right' });
 
     currentY += rowH;
+
+    // Track bottom of Total (blue) row
+    if (row.highlight === 'blue') {
+      totalRowBottomY = currentY;
+    }
   });
 
   // Amount in Words below
@@ -117,5 +122,5 @@ export function renderInvoiceSummaryTable(options: SummaryTableOptions): number 
     currentY += 3.5;
   });
 
-  return currentY;
+  return { endY: currentY, totalRowBottomY };
 }

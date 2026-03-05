@@ -38,6 +38,7 @@ import { CampaignDetailAssetsTable } from "@/components/campaigns/CampaignDetail
 import { computeCampaignTotals } from "@/utils/computeCampaignTotals";
 import { useCampaignProfitability } from "@/hooks/useCampaignProfitability";
 import { CampaignProfitSummary } from "@/components/campaigns/CampaignProfitSummary";
+import { SignedRODocumentCard } from "@/components/shared/SignedRODocumentCard";
 
 export default function CampaignDetail() {
   const { id: routeParam } = useParams();
@@ -50,6 +51,7 @@ export default function CampaignDetail() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [assetCodePrefix, setAssetCodePrefix] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [signedRoData, setSignedRoData] = useState<{ planId: string; url: string | null; uploadedAt: string | null } | null>(null);
   const { company } = useCompany();
   const { setBreadcrumbs } = useBreadcrumb();
   const { data: profitability, isLoading: profitLoading } = useCampaignProfitability(id, company?.id, 0);
@@ -109,6 +111,22 @@ export default function CampaignDetail() {
       navigate('/admin/campaigns');
     } else {
       setCampaign(data);
+      
+      // Fetch signed RO from linked plan
+      if (data?.plan_id) {
+        const { data: planData } = await supabase
+          .from('plans')
+          .select('id, signed_ro_url, signed_ro_uploaded_at')
+          .eq('id', data.plan_id)
+          .maybeSingle();
+        if (planData) {
+          setSignedRoData({
+            planId: planData.id,
+            url: planData.signed_ro_url,
+            uploadedAt: planData.signed_ro_uploaded_at,
+          });
+        }
+      }
       
       // Fetch company code settings for asset display
       if (data?.company_id) {
@@ -659,6 +677,18 @@ export default function CampaignDetail() {
             />
           )}
         </div>
+        {/* Signed Release Order */}
+        {signedRoData && (
+          <div className="mb-6">
+            <SignedRODocumentCard
+              planId={signedRoData.planId}
+              signedRoUrl={signedRoData.url}
+              signedRoUploadedAt={signedRoData.uploadedAt}
+              onViewPlan={() => navigate(`/admin/plans/${signedRoData.planId}`)}
+            />
+          </div>
+        )}
+
         {/* Health Alerts */}
         <div className="mb-6">
           <CampaignHealthAlerts campaignId={campaign.id} />

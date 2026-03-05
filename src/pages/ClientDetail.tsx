@@ -39,6 +39,7 @@ import { SendPortalInviteDialog } from "@/components/clients/SendPortalInviteDia
 import { EditClientDialog } from "@/components/clients/EditClientDialog";
 import { ClientContactsManager } from "@/components/clients/ClientContactsManager";
 import { ClientLedger } from "@/components/finance/ClientLedger";
+import { SignedRODocumentCard } from "@/components/shared/SignedRODocumentCard";
 
 interface Client {
   id: string;
@@ -74,6 +75,8 @@ interface Plan {
   created_at: string;
   start_date: string;
   end_date: string;
+  signed_ro_url: string | null;
+  signed_ro_uploaded_at: string | null;
 }
 
 interface Campaign {
@@ -157,10 +160,10 @@ export default function ClientDetail() {
       if (clientError) throw clientError;
       setClient(clientData);
 
-      // Fetch plans
+      // Fetch plans (include signed RO fields)
       const { data: plansData, error: plansError } = await supabase
         .from("plans")
-        .select("*")
+        .select("id, plan_name, status, grand_total, created_at, start_date, end_date, signed_ro_url, signed_ro_uploaded_at")
         .eq("client_id", id)
         .order("created_at", { ascending: false });
 
@@ -681,6 +684,7 @@ export default function ClientDetail() {
                       <TableHead>Duration</TableHead>
                       <TableHead>Amount</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Signed RO</TableHead>
                       <TableHead>Created</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -700,6 +704,14 @@ export default function ClientDetail() {
                           <Badge className={getStatusBadge(plan.status)}>
                             {plan.status}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <SignedRODocumentCard
+                            planId={plan.id}
+                            signedRoUrl={plan.signed_ro_url}
+                            signedRoUploadedAt={plan.signed_ro_uploaded_at}
+                            compact
+                          />
                         </TableCell>
                         <TableCell>
                           {new Date(plan.created_at).toLocaleDateString('en-US', {

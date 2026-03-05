@@ -461,44 +461,58 @@ function renderCommercialSummary(doc: jsPDF, data: ROData, pageWidth: number, yP
   doc.text('SECTION 4: COMMERCIAL SUMMARY', leftMargin + 3, yPos + 5);
   yPos += 12;
 
-  const summaryX = pageWidth - MARGINS.right - 80;
-  const labelX = summaryX;
-  const valueX = pageWidth - MARGINS.right;
+  // --- Boxed table for commercial summary ---
+  const tableWidth = 90;
+  const tableX = rightEdge - tableWidth;
+  const col1W = 58;
+  const col2W = tableWidth - col1W;
+  const rowH = 6.5;
 
-  const drawSummaryLine = (label: string, value: number, bold = false) => {
-    doc.setFont('NotoSans', bold ? 'bold' : 'normal');
-    doc.setFontSize(9);
-    doc.text(label, labelX, yPos);
-    doc.text(formatCurrencyForPDF(value), valueX, yPos, { align: 'right' });
-    yPos += 5.5;
-  };
-
-  drawSummaryLine('Sub Total (Rent):', data.subTotal);
-  drawSummaryLine('Printing Charges:', data.totalPrinting);
-  drawSummaryLine('Mounting Charges:', data.totalMounting);
-  
-  // Separator
-  doc.setDrawColor(150, 150, 150);
-  doc.setLineWidth(0.3);
-  doc.line(labelX, yPos - 2, valueX, yPos - 2);
-  
   const taxableAmount = data.subTotal + data.totalPrinting + data.totalMounting;
-  drawSummaryLine('Taxable Amount:', taxableAmount);
-  drawSummaryLine('CGST @ 9%:', data.cgst);
-  drawSummaryLine('SGST @ 9%:', data.sgst);
 
-  // Grand Total separator
-  doc.setDrawColor(30, 64, 175);
-  doc.setLineWidth(0.5);
-  doc.line(labelX, yPos - 2, valueX, yPos - 2);
+  const summaryRows: { label: string; value: number; bold?: boolean; highlight?: boolean }[] = [
+    { label: 'Sub Total (Rent)', value: data.subTotal },
+    { label: 'Printing Charges', value: data.totalPrinting },
+    { label: 'Mounting Charges', value: data.totalMounting },
+    { label: 'Taxable Amount', value: taxableAmount, bold: true },
+    { label: 'CGST @ 9%', value: data.cgst },
+    { label: 'SGST @ 9%', value: data.sgst },
+    { label: 'GRAND TOTAL', value: data.grandTotal, bold: true, highlight: true },
+  ];
 
-  doc.setFontSize(11);
-  drawSummaryLine('GRAND TOTAL:', data.grandTotal, true);
+  summaryRows.forEach((row) => {
+    // Background
+    if (row.highlight) {
+      doc.setFillColor(30, 64, 175);
+      doc.rect(tableX, yPos, tableWidth, rowH, 'F');
+    } else {
+      doc.setFillColor(255, 255, 255);
+      doc.rect(tableX, yPos, tableWidth, rowH, 'F');
+    }
 
-  // Total in words
-  yPos += 2;
-  doc.setFont('NotoSans', 'normal');
+    // Border
+    doc.setDrawColor(180, 180, 180);
+    doc.setLineWidth(0.3);
+    doc.rect(tableX, yPos, col1W, rowH, 'S');
+    doc.rect(tableX + col1W, yPos, col2W, rowH, 'S');
+
+    // Label
+    doc.setFont('NotoSans', row.bold ? 'bold' : 'normal');
+    doc.setFontSize(row.highlight ? 9 : 8.5);
+    doc.setTextColor(row.highlight ? 255 : 0, row.highlight ? 255 : 0, row.highlight ? 255 : 0);
+    doc.text(row.label, tableX + 2, yPos + rowH - 2);
+
+    // Value
+    doc.text(formatCurrencyForPDF(row.value), tableX + col1W + col2W - 2, yPos + rowH - 2, { align: 'right' });
+
+    yPos += rowH;
+  });
+
+  // Total in words below the table
+  yPos += 3;
+  doc.setFont('NotoSans', 'italic');
   doc.setFontSize(8);
+  doc.setTextColor(80, 80, 80);
   const totalWords = `${numberToWords(Math.floor(data.grandTotal))} Rupees Only`;
   doc.text(`Amount in Words: ${totalWords}`, leftMargin, yPos);
 

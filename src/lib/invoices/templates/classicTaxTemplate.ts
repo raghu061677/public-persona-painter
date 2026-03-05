@@ -523,25 +523,18 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
   const bankStartY = yPos;
   const totalsBoxWidth = 85;
   const totalsBoxX = pageWidth - rightMargin - totalsBoxWidth;
-  const bankBoxWidth = totalsBoxX - leftMargin - 4; // Gap between boxes
-  const bankBoxHeight = 38;
+  const bankBoxWidth = totalsBoxX - leftMargin - 4;
 
-  // Bank Details border box
-  doc.setDrawColor(209, 213, 219);
-  doc.setLineWidth(0.3);
-  doc.rect(leftMargin, bankStartY, bankBoxWidth, bankBoxHeight, 'S');
-
-  // Bank Details title in blue
+  // Bank Details content (draw box border after we know summary height)
   doc.setFontSize(10);
   doc.setFont('NotoSans', 'bold');
-  doc.setTextColor(30, 64, 175); // #1E40AF
+  doc.setTextColor(30, 64, 175);
   doc.text('Bank Details', leftMargin + 4, bankStartY + 6);
 
-  // Bank details content
   let bankY = bankStartY + 12;
   doc.setFont('NotoSans', 'normal');
   doc.setFontSize(8);
-  doc.setTextColor(17, 24, 39); // #111827
+  doc.setTextColor(17, 24, 39);
   doc.text(`Bank: ${BANK_DETAILS.bankName}`, leftMargin + 4, bankY);
   bankY += 5;
   doc.text(`Branch: ${BANK_DETAILS.branch}`, leftMargin + 4, bankY);
@@ -551,7 +544,7 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
   doc.text(`IFSC: ${BANK_DETAILS.ifsc}`, leftMargin + 4, bankY);
 
   // RIGHT: Boxed Summary Table
-  const summaryEndY = renderInvoiceSummaryTable({
+  const summaryResult = renderInvoiceSummaryTable({
     doc,
     x: totalsBoxX,
     y: bankStartY,
@@ -564,7 +557,13 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
     isInterState,
   });
 
-  yPos = Math.max(bankStartY + bankBoxHeight, summaryEndY) + 3;
+  // Draw bank box to match the Total (blue) row bottom
+  const bankBoxHeight = summaryResult.totalRowBottomY - bankStartY;
+  doc.setDrawColor(209, 213, 219);
+  doc.setLineWidth(0.3);
+  doc.rect(leftMargin, bankStartY, bankBoxWidth, bankBoxHeight, 'S');
+
+  yPos = Math.max(bankStartY + bankBoxHeight, summaryResult.endY) + 3;
 
   // ========== SIGNATURE (right-aligned below financial summary) ==========
   const signBlockWidth = totalsBoxWidth;

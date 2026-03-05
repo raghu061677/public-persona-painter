@@ -480,10 +480,12 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   }
 
   const bankStartY = yPos;
+  const totalsBoxWidth = 85;
+  const totalsBoxX = pageWidth - rightMargin - totalsBoxWidth;
+  const bankBoxWidth = totalsBoxX - leftMargin - 4;
+  const bankBoxHeight = 38;
 
   // LEFT: Bank Details in bordered box with blue title
-  const bankBoxWidth = contentWidth * 0.48;
-  const bankBoxHeight = 38;
   doc.setDrawColor(209, 213, 219);
   doc.setLineWidth(0.3);
   doc.rect(leftMargin, bankStartY, bankBoxWidth, bankBoxHeight, 'S');
@@ -506,9 +508,6 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   doc.text('IFSC: HDFC0001555', leftMargin + 4, bankY);
 
   // RIGHT: Financial Summary
-  const totalsBoxWidth = 80;
-  const totalsBoxX = pageWidth - rightMargin - totalsBoxWidth;
-
   const summaryEndY = renderInvoiceSummaryTable({
     doc,
     x: totalsBoxX,
@@ -522,7 +521,32 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     isInterState,
   });
 
-  yPos = Math.max(bankStartY + bankBoxHeight, summaryEndY) + 6;
+  yPos = Math.max(bankStartY + bankBoxHeight, summaryEndY) + 3;
+
+  // ========== SIGNATURE (right-aligned below financial summary) ==========
+  const signCenterX = totalsBoxX + totalsBoxWidth / 2;
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0, 0, 0);
+  doc.text('For,', signCenterX, yPos, { align: 'center' });
+
+  doc.setFont('helvetica', 'bold');
+  doc.text(companyName, signCenterX, yPos + 5, { align: 'center' });
+
+  const stampBase64 = await loadStampImage();
+  if (stampBase64) {
+    try {
+      const stampSize = 28;
+      doc.addImage(stampBase64, 'PNG', signCenterX - stampSize / 2, yPos + 8, stampSize, stampSize);
+    } catch {}
+  }
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text('Authorized Signatory', signCenterX, yPos + 40, { align: 'center' });
+
+  yPos = Math.max(yPos + 45, bankStartY + bankBoxHeight + 6);
 
   // Check page space for QR
   if (yPos > pageHeight - 50) {
@@ -693,36 +717,6 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY + 10;
 
-  // ========== AUTHORIZED SIGNATORY (Bottom-right, stamp only) ==========
-  if (yPos > pageHeight - 60) {
-    doc.addPage();
-    yPos = 20;
-  }
-
-  const signBlockWidth = 55;
-  const signX = pageWidth - rightMargin - signBlockWidth;
-  const signCenterX = signX + signBlockWidth / 2;
-
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(0, 0, 0);
-  doc.text('For,', signCenterX, yPos, { align: 'center' });
-
-  doc.setFont('helvetica', 'bold');
-  doc.text(companyName, signCenterX, yPos + 5, { align: 'center' });
-
-  // Stamp image only (no signature line/box)
-  const signatureBase64 = await loadStampImage();
-  if (signatureBase64) {
-    try {
-      const stampSize = 28;
-      doc.addImage(signatureBase64, 'PNG', signCenterX - stampSize / 2, yPos + 8, stampSize, stampSize);
-    } catch {}
-  }
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.text('Authorized Signatory', signCenterX, yPos + 40, { align: 'center' });
 
   return doc.output('blob');
 }

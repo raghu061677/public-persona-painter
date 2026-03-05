@@ -244,6 +244,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
         ...item,
         asset_id: item.asset_id || campaignAsset?.asset_id,
         asset_code: mediaAsset?.media_asset_code || (item.asset_code && !/^[0-9a-f]{8}-/.test(item.asset_code) ? item.asset_code : null),
+        city: pick(item.city, campaignAsset?.city, mediaAsset?.city) || '',
         location: pick(item.location, source.location) || '-',
         area: pick(item.area, source.area) || '-',
         direction: pick(item.direction, source.direction) || '-',

@@ -28,7 +28,7 @@ interface ExportOptionsDialogProps {
 }
 
 export interface ExportOptions {
-  optionType: "quotation" | "estimate" | "proforma_invoice" | "work_order";
+  optionType: "quotation" | "proforma_invoice" | "release_order";
   format: "full_detail" | "compact" | "summary_only" | "with_photos";
   exportType: "pdf" | "excel";
   includePhotos: boolean;

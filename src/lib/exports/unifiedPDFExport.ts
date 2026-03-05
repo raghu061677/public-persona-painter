@@ -310,15 +310,12 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
     // Unit price = pro-rata rent + printing + mounting (full per-asset cost)
     const unitPriceTotal = Math.round((proRataRent + printingCharge + mountingCharge) * 100) / 100;
 
-    // Build location code from media_asset_code or asset_id with company prefix
-    const displayCode = formatAssetDisplayCode({
-      mediaAssetCode: item.media_asset_code,
-      fallbackId: item.asset_id,
-      companyName: companyName,
-    });
-    const locationCode = displayCode 
-      ? `[${displayCode}] ${item.location || ''}`.trim()
-      : item.location || 'Display';
+    // Build location description without internal asset codes
+    const cityName = item.city || clientData?.billing_city || '';
+    const locationName = item.location || 'Display';
+    const locationCode = cityName
+      ? `${cityName} - ${locationName}`
+      : locationName;
 
     return {
       sno: index + 1,

@@ -64,6 +64,7 @@ import { Settings2, CalendarDays } from "lucide-react";
 import { generateProposalExcel } from "@/lib/exports/proposalExcelExport";
 import { PlanAssetsTable } from "@/components/plans/PlanAssetsTable";
 import { SignedROSection } from "@/components/plans/SignedROSection";
+import { SendROSigningLink } from "@/components/plans/SendROSigningLink";
 export default function PlanDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -1414,6 +1415,17 @@ export default function PlanDetail() {
           onUploadComplete={fetchPlan}
           canEdit={isAdmin}
         />
+
+        {/* Digital RO Signing Link */}
+        {isAdmin && !plan.signed_ro_url && (
+          <div className="mb-6">
+            <SendROSigningLink
+              planId={plan.id}
+              planName={plan.plan_name}
+              clientName={plan.client_name}
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           {/* Client Info - Blue Theme */}

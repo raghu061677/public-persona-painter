@@ -6,11 +6,150 @@ import { getSignedUrl } from '@/utils/storage';
 import type { ExportOptions } from '@/components/plans/ExportOptionsDialog';
 import { addWatermarkToImage, loadImageAsDataUrl } from './photoWatermark';
 import { formatAssetDisplayCode } from '@/lib/assets/formatAssetDisplayCode';
+import { generateReleaseOrderPDF, type ROData, type ROLineItem } from './generateReleaseOrderPDF';
 
 interface ExportData {
   plan: any;
   planItems: any[];
   options: ExportOptions;
+}
+
+// ============= RELEASE ORDER BRIDGE =============
+
+async function generateROFromPlanData(plan: any, planItems: any[], options: ExportOptions): Promise<Blob> {
+  // Fetch client
+  const { data: clientData } = await supabase
+    .from('clients')
+    .select('*')
+    .eq('id', plan.client_id)
+    .single();
+
+  // Fetch client contacts
+  const { data: clientContacts } = await supabase
+    .from('client_contacts')
+    .select('*')
+    .eq('client_id', plan.client_id)
+    .order('is_primary', { ascending: false })
+    .limit(1);
+
+  // Fetch company
+  const { data: companyData } = await supabase
+    .from('companies')
+    .select('name,gstin,pan,logo_url,address_line1,address_line2,city,state,pincode')
+    .eq('id', plan.company_id)
+    .single();
+
+  const { data: orgSettings } = await supabase
+    .from('organization_settings')
+    .select('logo_url,organization_name')
+    .limit(1)
+    .maybeSingle();
+
+  const companyName = companyData?.name || (orgSettings as any)?.organization_name || options.companyName || 'Matrix Network Solutions';
+
+  // Load logo
+  let logoBase64: string | undefined;
+  const logoUrl = companyData?.logo_url || (orgSettings as any)?.logo_url;
+  if (logoUrl) {
+    try {
+      const res = await fetch(logoUrl, { mode: 'cors' });
+      if (res.ok) {
+        const blob = await res.blob();
+        logoBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      }
+    } catch { /* ignore */ }
+  }
+
+  const totalDays = plan.duration_days || Math.max(1, Math.ceil((new Date(plan.end_date).getTime() - new Date(plan.start_date).getTime()) / (1000 * 60 * 60 * 24)));
+  const primaryContact = clientContacts?.[0];
+
+  const items: ROLineItem[] = (planItems || []).map((item: any, index: number) => {
+    const monthlyRate = Number(item.sales_price || item.card_rate || 0);
+    const printingCharge = Number(item.printing_charges || 0);
+    const mountingCharge = Number(item.mounting_charges || 0);
+    const itemDays = item.duration_days || totalDays;
+    const proRataRent = Math.round(((monthlyRate / 30) * itemDays) * 100) / 100;
+
+    const displayCode = formatAssetDisplayCode({
+      mediaAssetCode: item.media_asset_code,
+      fallbackId: item.asset_id,
+      companyName: companyName,
+    });
+
+    return {
+      sno: index + 1,
+      assetCode: displayCode || item.asset_id || '-',
+      location: item.location || '-',
+      area: item.area || item.city || '-',
+      mediaType: item.media_type || 'OOH Media',
+      dimension: (item.dimensions || '-').toString(),
+      startDate: formatDateToDDMMYYYY(item.start_date || plan.start_date),
+      endDate: formatDateToDDMMYYYY(item.end_date || plan.end_date),
+      duration: getDurationDisplay(itemDays),
+      rate: monthlyRate,
+      amount: proRataRent,
+      printingCost: printingCharge,
+      mountingCost: mountingCharge,
+    };
+  });
+
+  const totalPrinting = items.reduce((s, i) => s + i.printingCost, 0);
+  const totalMounting = items.reduce((s, i) => s + i.mountingCost, 0);
+  const subTotal = items.reduce((s, i) => s + i.amount, 0);
+  const gstTotal = Number(plan.gst_amount || 0);
+  const cgst = Math.round(gstTotal / 2);
+  const sgst = gstTotal - cgst;
+  const grandTotal = Number(plan.grand_total || 0);
+
+  const companyAddress = [
+    companyData?.address_line1,
+    companyData?.address_line2,
+    companyData?.city,
+    companyData?.state,
+    companyData?.pincode ? `- ${companyData.pincode}` : '',
+  ].filter(Boolean).join(', ');
+
+  const roData: ROData = {
+    planId: plan.id,
+    planName: plan.plan_name || plan.id,
+    createdAt: plan.created_at || new Date().toISOString(),
+    startDate: plan.start_date,
+    endDate: plan.end_date,
+    city: clientData?.billing_city || clientData?.city || '',
+
+    clientName: clientData?.name || plan.client_name || 'Client',
+    clientAddress: [clientData?.billing_address_line1, clientData?.billing_address_line2].filter(Boolean).join(', ') || clientData?.address || '-',
+    clientCity: clientData?.billing_city || clientData?.city || '',
+    clientState: clientData?.billing_state || clientData?.state || '',
+    clientPincode: clientData?.billing_pincode || '',
+    clientGSTIN: clientData?.gst_number || undefined,
+    clientContactPerson: primaryContact
+      ? (primaryContact.first_name ? `${primaryContact.first_name} ${primaryContact.last_name || ''}`.trim() : primaryContact.name)
+      : (clientData as any)?.primary_contact_name || 'N/A',
+    clientPhone: primaryContact?.phone || clientData?.phone || '',
+    clientEmail: primaryContact?.email || clientData?.email || '',
+
+    companyName,
+    companyAddress: companyAddress || '',
+    companyGSTIN: companyData?.gstin || options.gstin || '36AATFM4107H2Z3',
+    companyLogoBase64: logoBase64,
+
+    items,
+    subTotal,
+    totalPrinting,
+    totalMounting,
+    cgst,
+    sgst,
+    grandTotal,
+    terms: options.termsAndConditions,
+  };
+
+  return generateReleaseOrderPDF(roData);
 }
 
 // Format date to DD/MM/YYYY
@@ -61,6 +200,11 @@ function getDurationDisplay(days: number): string {
 
 export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
   const { plan, planItems, options } = data;
+
+  // ===== RELEASE ORDER: Use dedicated RO generator =====
+  if (options.optionType === 'release_order') {
+    return generateROFromPlanData(plan, planItems, options);
+  }
 
   // If user selected the photo-rich format, keep the legacy generator (it has QR + images).
   if (options.format === 'with_photos') {

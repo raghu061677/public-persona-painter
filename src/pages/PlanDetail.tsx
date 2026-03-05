@@ -1841,6 +1841,35 @@ export default function PlanDetail() {
             loadPendingApprovals();
           }}
         />
+
+        {/* Signed RO Warning Dialog */}
+        <Dialog open={showROWarningDialog} onOpenChange={setShowROWarningDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Signed Release Order Missing</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                No signed Release Order has been uploaded for this plan.
+                Do you want to convert the plan to a campaign anyway?
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowROWarningDialog(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setShowROWarningDialog(false);
+                    setShowConvertDialog(true);
+                  }}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  Continue
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

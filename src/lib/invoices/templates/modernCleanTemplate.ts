@@ -287,19 +287,17 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
       const start = new Date(startDate);
       const end = new Date(endDate);
       const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      const months = Math.ceil(days / 30);
-      bookingDisplay = `Start: ${formatDate(startDate)} - End: ${formatDate(endDate)}\n${days > 45 ? `Month: ${months}` : `Days: ${days}`}`;
+      bookingDisplay = `${formatDate(startDate)}\nto ${formatDate(endDate)}\n${days} Days`;
     }
     
-    // Build rich description - No internal asset codes, matching RO/Quotation style
+    // Build rich description - matching user-requested format
     const descLines: string[] = [];
     const cityVal = item.city || '';
     const displayLocation = cityVal && locationVal ? `${cityVal} – ${locationVal}` : locationVal || cityVal || '-';
-    descLines.push(displayLocation);
-    if (directionVal && directionVal !== '-') descLines.push(`Direction: ${directionVal}`);
-    descLines.push(`Area: ${areaVal || '-'}`);
-    descLines.push(`Media Type: ${mediaTypeVal}`);
-    if (illuminationVal && illuminationVal !== '-') descLines.push(`Illumination: ${illuminationVal}`);
+    descLines.push(`Location: ${displayLocation}`);
+    if (directionVal && directionVal !== '-') descLines.push(`Direction: ${directionVal} | Area: ${areaVal || '-'}`);
+    else descLines.push(`Area: ${areaVal || '-'}`);
+    descLines.push(`Media: ${mediaTypeVal} | Lit: ${illuminationVal}`);
     descLines.push(`HSN/SAC: ${hsnSac}`);
     const richDescription = descLines.join('\n');
 
@@ -309,7 +307,7 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
      if (sqft !== '' && sqft != null) sizeLines.push(`Sqft: ${sqft}`);
      const sizeDisplay = sizeLines.length ? sizeLines.join('\n') : 'Dimensions: —';
     
-    // Pricing breakdown - FIXED: Full labels
+    // Pricing breakdown - always show all three lines
     const baseRate = item.rate || item.unit_price || item.display_rate || item.negotiated_rate || 0;
     const printingCost = item.printing_charges || item.printing_cost || 0;
     const mountingCost = item.mounting_charges || item.mounting_cost || 0;
@@ -317,8 +315,8 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
     
     // Build unit price display with full labels
     let unitPriceLines: string[] = [`Display: ${formatCurrency(baseRate)}`];
-    if (printingCost > 0) unitPriceLines.push(`Printing: ${formatCurrency(printingCost)}`);
-    if (mountingCost > 0) unitPriceLines.push(`Installation: ${formatCurrency(mountingCost)}`);
+    unitPriceLines.push(`Printing: ${formatCurrency(printingCost)}`);
+    unitPriceLines.push(`Installation: ${formatCurrency(mountingCost)}`);
     const unitPriceDisplay = unitPriceLines.join('\n');
 
     // Aggregate HSN/SAC summary data

@@ -35,13 +35,13 @@ interface ExportFieldSetting {
 }
 
 const EXPORT_TYPES = [
-  { value: 'EstimatePDF', label: 'Estimate PDF' },
-  { value: 'WorkOrderPDF', label: 'Release Order (RO) PDF' },
+  { value: 'QuotationPDF', label: 'Quotation PDF' },
+  { value: 'ReleaseOrderPDF', label: 'Release Order (RO) PDF' },
+  { value: 'ProformaInvoicePDF', label: 'Proforma Invoice PDF' },
   { value: 'InvoicePDF', label: 'Invoice PDF' },
   { value: 'PlanPPT', label: 'Plan PowerPoint' },
   { value: 'ProofPPT', label: 'Proof PowerPoint' },
   { value: 'PlanExcel', label: 'Plan Excel' },
-  { value: 'WorkOrderExcel', label: 'Work Order Excel' },
   { value: 'InvoiceExcel', label: 'Invoice Excel' },
 ];
 

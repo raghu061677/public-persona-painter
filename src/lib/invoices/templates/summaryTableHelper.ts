@@ -52,42 +52,54 @@ export function renderInvoiceSummaryTable(options: SummaryTableOptions): number 
   }
 
   rows.push({ label: 'Total', value: grandTotal, bold: true, highlight: 'blue' });
-  rows.push({ label: 'Balance Due', value: balanceDue, bold: true, highlight: 'red' });
+  rows.push({ label: 'Balance Due', value: balanceDue, bold: true, highlight: 'gray' });
 
   let currentY = y;
 
   rows.forEach((row) => {
+    // Add spacing before Total row
+    if (row.highlight === 'blue') {
+      currentY += 2;
+    }
+
     // Background fill
     if (row.highlight === 'blue') {
-      doc.setFillColor(30, 64, 175);
+      doc.setFillColor(30, 64, 175); // #1E40AF
       doc.rect(x, currentY, width, rowH, 'F');
-    } else if (row.highlight === 'red') {
-      doc.setFillColor(220, 38, 38);
+    } else if (row.highlight === 'gray') {
+      doc.setFillColor(243, 244, 246); // #F3F4F6
       doc.rect(x, currentY, width, rowH, 'F');
     } else {
-      doc.setFillColor(252, 252, 252);
+      doc.setFillColor(255, 255, 255);
       doc.rect(x, currentY, width, rowH, 'F');
     }
 
     // Cell borders
-    doc.setDrawColor(180, 180, 180);
+    doc.setDrawColor(209, 213, 219); // #D1D5DB
     doc.setLineWidth(0.3);
     doc.rect(x, currentY, col1W, rowH, 'S');
     doc.rect(x + col1W, currentY, col2W, rowH, 'S');
 
+    // Balance Due top border emphasis
+    if (row.highlight === 'gray') {
+      doc.setDrawColor(209, 213, 219);
+      doc.setLineWidth(0.5);
+      doc.line(x, currentY, x + width, currentY);
+    }
+
     // Text color
-    const isHighlighted = !!row.highlight;
-    const textR = isHighlighted ? 255 : 30;
-    const textG = isHighlighted ? 255 : 30;
-    const textB = isHighlighted ? 255 : 30;
+    const isTotal = row.highlight === 'blue';
+    const textR = isTotal ? 255 : 17;  // #FFFFFF or #111827
+    const textG = isTotal ? 255 : 24;
+    const textB = isTotal ? 255 : 39;
 
     // Label
     doc.setFont('helvetica', row.bold ? 'bold' : 'normal');
-    doc.setFontSize(isHighlighted ? 8.5 : 8);
+    doc.setFontSize(isTotal ? 8.5 : 8);
     doc.setTextColor(textR, textG, textB);
     doc.text(row.label, x + 3, currentY + rowH - 2);
 
-    // Value
+    // Value (right-aligned)
     doc.text(formatCurrency(row.value), x + col1W + col2W - 3, currentY + rowH - 2, { align: 'right' });
 
     currentY += rowH;

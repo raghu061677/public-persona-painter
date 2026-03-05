@@ -8179,6 +8179,9 @@ export type Database = {
           sgst_percent: number | null
           share_link_active: boolean | null
           share_token: string | null
+          signed_ro_uploaded_at: string | null
+          signed_ro_uploaded_by: string | null
+          signed_ro_url: string | null
           start_date: string
           status: Database["public"]["Enums"]["plan_status"]
           tax_type: string | null
@@ -8214,6 +8217,9 @@ export type Database = {
           sgst_percent?: number | null
           share_link_active?: boolean | null
           share_token?: string | null
+          signed_ro_uploaded_at?: string | null
+          signed_ro_uploaded_by?: string | null
+          signed_ro_url?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["plan_status"]
           tax_type?: string | null
@@ -8249,6 +8255,9 @@ export type Database = {
           sgst_percent?: number | null
           share_link_active?: boolean | null
           share_token?: string | null
+          signed_ro_uploaded_at?: string | null
+          signed_ro_uploaded_by?: string | null
+          signed_ro_url?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["plan_status"]
           tax_type?: string | null

@@ -63,7 +63,7 @@ import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
 import { Settings2, CalendarDays } from "lucide-react";
 import { generateProposalExcel } from "@/lib/exports/proposalExcelExport";
 import { PlanAssetsTable } from "@/components/plans/PlanAssetsTable";
-
+import { SignedROSection } from "@/components/plans/SignedROSection";
 export default function PlanDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -89,6 +89,7 @@ export default function PlanDetail() {
   const [showAddAssetsDialog, setShowAddAssetsDialog] = useState(false);
   const [showSaveAsTemplateDialog, setShowSaveAsTemplateDialog] = useState(false);
   const [showAIProposalDialog, setShowAIProposalDialog] = useState(false);
+  const [showROWarningDialog, setShowROWarningDialog] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [exportingPPT, setExportingPPT] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
@@ -1149,14 +1150,18 @@ export default function PlanDetail() {
                 size="lg" 
                 className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 animate-pulse-glow"
                 onClick={() => {
-                  // Pre-populate campaign data from plan
                   setCampaignData({
                     campaign_name: plan.plan_name,
                     start_date: plan.start_date,
                     end_date: plan.end_date,
                     notes: plan.notes || "",
                   });
-                  setShowConvertDialog(true);
+                  // Check if signed RO exists
+                  if (!plan.signed_ro_url) {
+                    setShowROWarningDialog(true);
+                  } else {
+                    setShowConvertDialog(true);
+                  }
                 }}
               >
                 <Rocket className="mr-2 h-5 w-5" />
@@ -1399,6 +1404,16 @@ export default function PlanDetail() {
             </CardContent>
           </Card>
         )}
+
+        {/* Client Authorization - Signed RO */}
+        <SignedROSection
+          planId={plan.id}
+          signedRoUrl={plan.signed_ro_url || null}
+          signedRoUploadedAt={plan.signed_ro_uploaded_at || null}
+          signedRoUploadedBy={plan.signed_ro_uploaded_by || null}
+          onUploadComplete={fetchPlan}
+          canEdit={isAdmin}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           {/* Client Info - Blue Theme */}
@@ -1826,6 +1841,35 @@ export default function PlanDetail() {
             loadPendingApprovals();
           }}
         />
+
+        {/* Signed RO Warning Dialog */}
+        <Dialog open={showROWarningDialog} onOpenChange={setShowROWarningDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Signed Release Order Missing</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                No signed Release Order has been uploaded for this plan.
+                Do you want to convert the plan to a campaign anyway?
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowROWarningDialog(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setShowROWarningDialog(false);
+                    setShowConvertDialog(true);
+                  }}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  Continue
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,19 +28,18 @@ export function SignedROSection({
   const [uploaderName, setUploaderName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch uploader name
-  useState(() => {
+  useEffect(() => {
     if (signedRoUploadedBy) {
       supabase
-        .from("company_users")
-        .select("name, email")
-        .eq("user_id", signedRoUploadedBy)
+        .from("profiles")
+        .select("username")
+        .eq("id", signedRoUploadedBy)
         .maybeSingle()
         .then(({ data }) => {
-          setUploaderName(data?.name || data?.email || signedRoUploadedBy);
+          setUploaderName(data?.username || signedRoUploadedBy.slice(0, 8));
         });
     }
-  });
+  }, [signedRoUploadedBy]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

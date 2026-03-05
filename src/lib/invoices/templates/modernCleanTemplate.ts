@@ -9,21 +9,21 @@ import { renderPaymentQRSection } from './paymentQR';
 import { renderInvoiceSummaryTable } from './summaryTableHelper';
 import stampImageUrl from '@/assets/branding/stamp_matrix.png';
 
-// Cache signature image
-let cachedSignatureBase64: string | null = null;
-async function loadSignatureImage(): Promise<string | undefined> {
-  if (cachedSignatureBase64) return cachedSignatureBase64;
+// Cache stamp image
+let cachedStampBase64: string | null = null;
+async function loadStampImage(): Promise<string | undefined> {
+  if (cachedStampBase64) return cachedStampBase64;
   try {
-    const res = await fetch(signatureImageUrl);
+    const res = await fetch(stampImageUrl);
     if (!res.ok) return undefined;
     const blob = await res.blob();
-    cachedSignatureBase64 = await new Promise<string>((resolve, reject) => {
+    cachedStampBase64 = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result));
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
-    return cachedSignatureBase64 || undefined;
+    return cachedStampBase64 || undefined;
   } catch {
     return undefined;
   }

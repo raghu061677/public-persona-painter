@@ -594,7 +594,7 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY + 10;
 
-  // ========== SIGNATURE SECTION (centered stamp style) ==========
+  // ========== SIGNATURE SECTION (stamp only, no line/box) ==========
   if (yPos > pageHeight - 60) {
     doc.addPage();
     yPos = 20;
@@ -612,19 +612,18 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
   doc.setFont('helvetica', 'bold');
   doc.text(companyName, signCenterX, yPos + 5, { align: 'center' });
 
-  // Signature image (centered)
+  // Stamp image only (no signature line/box)
   const signatureBase64 = await loadSignatureImage();
   if (signatureBase64) {
     try {
-      const sigW = 40;
-      const sigH = 40;
-      doc.addImage(signatureBase64, 'PNG', signCenterX - sigW / 2, yPos + 7, sigW, sigH);
+      const stampSize = 28;
+      doc.addImage(signatureBase64, 'PNG', signCenterX - stampSize / 2, yPos + 8, stampSize, stampSize);
     } catch {}
   }
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.text('Authorized Signatory', signCenterX, yPos + 50, { align: 'center' });
+  doc.text('Authorized Signatory', signCenterX, yPos + 40, { align: 'center' });
 
   return doc.output('blob');
 }

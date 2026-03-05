@@ -506,7 +506,7 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY + 10;
 
-  // ========== 6. HSN SUMMARY + FINANCIAL SUMMARY (Side by Side) ==========
+  // ========== 6. BANK DETAILS + FINANCIAL SUMMARY (Side by Side) ==========
   const subtotal = parseFloat(data.invoice.sub_total) || 0;
   const gstAmount = parseFloat(data.invoice.gst_amount) || 0;
   const grandTotal = parseFloat(data.invoice.total_amount) || 0;
@@ -525,19 +525,88 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
     yPos = renderCompactHeader(doc, companyName, logoBase64) + 10;
   }
 
-  // LEFT: HSN/SAC Summary
+  // LEFT: Bank Details (beside financial summary)
+  const bankStartY = yPos;
+  
+  // Bank Details border box
+  const bankBoxWidth = contentWidth * 0.48;
+  const bankBoxHeight = 38;
+  doc.setDrawColor(209, 213, 219);
+  doc.setLineWidth(0.3);
+  doc.rect(leftMargin, bankStartY, bankBoxWidth, bankBoxHeight, 'S');
+
+  // Bank Details title in blue
+  doc.setFontSize(10);
+  doc.setFont('NotoSans', 'bold');
+  doc.setTextColor(30, 64, 175); // #1E40AF
+  doc.text('Bank Details', leftMargin + 4, bankStartY + 6);
+
+  // Bank details content
+  let bankY = bankStartY + 12;
+  doc.setFont('NotoSans', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(17, 24, 39); // #111827
+  doc.text(`Bank: ${BANK_DETAILS.bankName}`, leftMargin + 4, bankY);
+  bankY += 5;
+  doc.text(`Branch: ${BANK_DETAILS.branch}`, leftMargin + 4, bankY);
+  bankY += 5;
+  doc.text(`A/C No: ${BANK_DETAILS.accountNo}`, leftMargin + 4, bankY);
+  bankY += 5;
+  doc.text(`IFSC: ${BANK_DETAILS.ifsc}`, leftMargin + 4, bankY);
+
+  // RIGHT: Boxed Summary Table (matching Quotation/RO style)
+  const totalsBoxWidth = 70;
+  const totalsBoxX = pageWidth - rightMargin - totalsBoxWidth;
+
+  const summaryEndY = renderInvoiceSummaryTable({
+    doc,
+    x: totalsBoxX,
+    y: bankStartY,
+    width: totalsBoxWidth,
+    subtotal,
+    gstPercent,
+    gstAmount,
+    grandTotal,
+    balanceDue,
+    isInterState,
+  });
+
+  yPos = Math.max(bankStartY + bankBoxHeight, summaryEndY) + 8;
+
+  // ========== 7. HSN/SAC SUMMARY ==========
+  if (yPos > pageHeight - 50) {
+    doc.addPage();
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, pageWidth, 34, 'F');
+    yPos = renderCompactHeader(doc, companyName, logoBase64) + 10;
+  }
+
   doc.setFontSize(10);
   doc.setFont('NotoSans', 'bold');
   doc.setTextColor(0, 0, 0);
-  doc.text('HSN/SAC Summary', leftMargin, yPos + 4);
+  doc.text('HSN/SAC Summary:', leftMargin, yPos + 4);
 
   const hsnHead = isInterState
-    ? [['HSN/SAC', 'Taxable Amt', 'IGST @18%', 'Total Tax']]
-    : [['HSN/SAC', 'Taxable Amt', 'CGST @9%', 'SGST @9%', 'Total Tax']];
+    ? [['HSN/SAC', 'Taxable Amount', 'IGST Rate', 'IGST Amount', 'Total Tax']]
+    : [['HSN/SAC', 'Taxable Amount', 'CGST Rate', 'CGST Amount', 'SGST Rate', 'SGST Amount', 'Total Tax']];
 
   const hsnBody = isInterState
-    ? [[HSN_SAC_CODE, formatCurrency(subtotal), formatCurrency(gstAmount), formatCurrency(gstAmount)]]
-    : [[HSN_SAC_CODE, formatCurrency(subtotal), formatCurrency(cgst), formatCurrency(sgst), formatCurrency(gstAmount)]];
+    ? [[HSN_SAC_CODE, formatCurrency(subtotal), `${gstPercent}%`, formatCurrency(gstAmount), formatCurrency(gstAmount)]]
+    : [[
+        HSN_SAC_CODE, formatCurrency(subtotal),
+        `${gstPercent / 2}%`, formatCurrency(cgst),
+        `${gstPercent / 2}%`, formatCurrency(sgst),
+        formatCurrency(gstAmount),
+      ],
+      [
+        { content: 'Total', styles: { fontStyle: 'bold' as const } },
+        { content: formatCurrency(subtotal), styles: { fontStyle: 'bold' as const } },
+        '',
+        { content: formatCurrency(cgst), styles: { fontStyle: 'bold' as const } },
+        '',
+        { content: formatCurrency(sgst), styles: { fontStyle: 'bold' as const } },
+        { content: formatCurrency(gstAmount), styles: { fontStyle: 'bold' as const } },
+      ]];
 
   autoTable(doc, {
     startY: yPos + 6,
@@ -556,121 +625,58 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
       halign: 'center',
       font: 'NotoSans',
     },
-    margin: { left: leftMargin, right: rightMargin + 60 },
+    margin: { left: leftMargin, right: rightMargin },
     tableLineColor: [200, 200, 200],
     tableLineWidth: 0.2,
   });
 
   // @ts-ignore
-  const hsnEndY = doc.lastAutoTable.finalY;
+  yPos = doc.lastAutoTable.finalY + 8;
 
-  // RIGHT: Boxed Summary Table (matching Quotation/RO style)
-  const totalsBoxWidth = 70;
-  const totalsBoxX = pageWidth - rightMargin - totalsBoxWidth;
-
-  const summaryEndY = renderInvoiceSummaryTable({
-    doc,
-    x: totalsBoxX,
-    y: yPos,
-    width: totalsBoxWidth,
-    subtotal,
-    gstPercent,
-    gstAmount,
-    grandTotal,
-    balanceDue,
-    isInterState,
-  });
-
-  yPos = Math.max(hsnEndY, summaryEndY) + 8;
-
-  // Check page space for remaining sections
-  if (yPos > pageHeight - 80) {
+  // ========== 8. SIGNATURE (right side - stamp only, no line/box) ==========
+  if (yPos > pageHeight - 65) {
     doc.addPage();
     doc.setFillColor(255, 255, 255);
     doc.rect(0, 0, pageWidth, 34, 'F');
     yPos = renderCompactHeader(doc, companyName, logoBase64) + 10;
   }
 
-  // ========== 7. BANK DETAILS + SIGNATURE (Side by Side) ==========
-  const leftColWidth = contentWidth * 0.55;
-
-  // Bank Details (left)
-  let bankY = yPos;
-  doc.setFontSize(10);
-  doc.setFont('NotoSans', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.text('Bank Details', leftMargin, bankY);
-  bankY += 6;
-  doc.setFont('NotoSans', 'normal');
-  doc.setFontSize(8);
-  doc.setFont('NotoSans', 'bold');
-  doc.text(BANK_DETAILS.bankName, leftMargin, bankY);
-  bankY += 4;
-  doc.setFont('NotoSans', 'normal');
-  doc.text(`Branch: ${BANK_DETAILS.branch}`, leftMargin, bankY);
-  bankY += 4;
-  doc.text(`Account Name: ${BANK_DETAILS.accountName}`, leftMargin, bankY);
-  bankY += 4;
-  doc.text(`Account No: ${BANK_DETAILS.accountNo}`, leftMargin, bankY);
-  bankY += 4;
-  doc.text(`IFSC Code: ${BANK_DETAILS.ifsc}`, leftMargin, bankY);
-
-  // Signature block (right) - centered stamp with name
   const signBlockWidth = 55;
   const signX = pageWidth - rightMargin - signBlockWidth;
-  const signY = yPos;
   const signCenterX = signX + signBlockWidth / 2;
 
   // "For," text
   doc.setFontSize(9);
   doc.setFont('NotoSans', 'normal');
   doc.setTextColor(0, 0, 0);
-  doc.text('For,', signCenterX, signY, { align: 'center' });
+  doc.text('For,', signCenterX, yPos, { align: 'center' });
 
   // Company name (bold)
   doc.setFont('NotoSans', 'bold');
-  doc.text(companyName, signCenterX, signY + 5, { align: 'center' });
+  doc.text(companyName, signCenterX, yPos + 5, { align: 'center' });
 
-  // Signature image (centered)
-  const signatureBase64 = await loadSignatureImage();
-  if (signatureBase64) {
+  // Stamp image (centered)
+  const stampBase64 = await loadStampImage();
+  if (stampBase64) {
     try {
-      const sigW = 40;
-      const sigH = 40;
-      doc.addImage(signatureBase64, 'PNG', signCenterX - sigW / 2, signY + 7, sigW, sigH);
+      const stampSize = 28;
+      doc.addImage(stampBase64, 'PNG', signCenterX - stampSize / 2, yPos + 8, stampSize, stampSize);
     } catch {}
   }
 
-  // "Authorized Signatory" label at bottom
+  // "Authorized Signatory" label only once
   doc.setFont('NotoSans', 'normal');
   doc.setFontSize(8);
-  doc.text('Authorized Signatory', signCenterX, signY + 50, { align: 'center' });
+  doc.text('Authorized Signatory', signCenterX, yPos + 40, { align: 'center' });
 
-  yPos = Math.max(bankY, signY + 53) + 8;
+  yPos = yPos + 45;
 
-  // ========== 8. PAYMENT QR (if applicable) ==========
-  const upiId = data.orgSettings?.upi_id || data.company?.upi_id;
-  const upiName = data.orgSettings?.upi_name || data.company?.upi_name;
-  const invoiceStatus = data.invoice.status || 'Draft';
-
-  if (upiId && upiName) {
-    const qrX = pageWidth - rightMargin - 32;
-    if (yPos + 35 > pageHeight - PAGE_MARGINS.bottom) {
-      doc.addPage();
-      doc.setFillColor(255, 255, 255);
-      doc.rect(0, 0, pageWidth, 34, 'F');
-      yPos = renderCompactHeader(doc, companyName, logoBase64) + 10;
-    }
-    const qrHeight = await renderPaymentQRSection(doc, {
-      upiId,
-      upiName,
-      balanceDue,
-      invoiceNo: data.invoice.id || data.invoice.invoice_no,
-      invoiceStatus,
-      x: qrX,
-      y: yPos,
-    });
-    yPos += qrHeight + 5;
+  // Check page space for terms
+  if (yPos > pageHeight - 40) {
+    doc.addPage();
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, pageWidth, 34, 'F');
+    yPos = renderCompactHeader(doc, companyName, logoBase64) + 10;
   }
 
   // ========== 9. TERMS & CONDITIONS ==========

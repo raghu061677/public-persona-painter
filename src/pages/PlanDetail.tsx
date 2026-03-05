@@ -1416,6 +1416,17 @@ export default function PlanDetail() {
           canEdit={isAdmin}
         />
 
+        {/* Digital RO Signing Link */}
+        {isAdmin && !plan.signed_ro_url && (
+          <div className="mb-6">
+            <SendROSigningLink
+              planId={plan.id}
+              planName={plan.plan_name}
+              clientName={plan.client_name}
+            />
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           {/* Client Info - Blue Theme */}
           <Card className="border-l-4 border-l-blue-500 shadow-sm">

@@ -242,42 +242,38 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   const tableStartY = Math.max(yPos, 90);
 
   const tableBody = data.items.map((item) => {
-    // LOCATION & DESCRIPTION cell (multi-line)
-    const locationDesc = [
-      item.locationCode,
-      `Area: ${item.area}`,
-      `Media: ${item.mediaType}`,
-      item.route ? `Route: ${item.route}` : null,
-      item.illumination ? `Lit: ${item.illumination}` : null,
-    ].filter(Boolean).join('\n');
+    // Column 2: Location & Description
+    const locationParts: string[] = [];
+    const mainLocation = item.locationCode.replace(/\[.*?\]\s*/, ''); // strip asset codes like [MNS-HYD-BQS-0032]
+    if (mainLocation) locationParts.push(mainLocation);
+    if (item.route && item.route !== '-') locationParts.push(`Direction: ${item.route}`);
+    if (item.area && item.area !== '-') locationParts.push(`Area: ${item.area}`);
+    const locationDesc = locationParts.join('\n') || '-';
 
-    // SIZE cell
-    const sizeCell = `Dimension: ${item.dimension}\nTotal Sqft: ${item.totalSqft}`;
+    // Column 3: Media Specification
+    const mediaSpec = [
+      `Media Type: ${item.mediaType}`,
+      `Size: ${item.dimension}`,
+      `Area: ${item.totalSqft || 0} Sqft`,
+      `Illumination: ${item.illumination || 'Non-Lit'}`,
+    ].join('\n');
 
-    // BOOKING cell
-    const bookingCell = `From: ${item.fromDate}\nTo: ${item.toDate}\nDuration: ${item.duration}`;
+    // Column 4: Booking Period
+    const bookingCell = `Start: ${item.fromDate}\nEnd: ${item.toDate}\nDuration: ${item.duration}`;
 
-    // UNIT PRICE cell - show breakdown inside single cell
-    const printingAmt = item.printingCost || 0;
-    const mountingAmt = item.mountingCost || 0;
-    const hasBreakdown = printingAmt > 0 || mountingAmt > 0;
-
-    let unitPriceCell: string;
-    if (hasBreakdown) {
-      const lines = [`Rent: ${formatCurrencyForPDF(item.unitPrice)}`];
-      if (printingAmt > 0) lines.push(`Print: ${formatCurrencyForPDF(printingAmt)}`);
-      if (mountingAmt > 0) lines.push(`Install: ${formatCurrencyForPDF(mountingAmt)}`);
-      unitPriceCell = lines.join('\n');
-    } else {
-      unitPriceCell = formatCurrencyForPDF(item.unitPrice);
-    }
+    // Column 5: Commercials
+    const commercials = [
+      `Display: ${formatCurrencyForPDF(item.unitPrice)}`,
+      `Printing: ${formatCurrencyForPDF(item.printingCost || 0)}`,
+      `Mounting: ${formatCurrencyForPDF(item.mountingCost || 0)}`,
+    ].join('\n');
 
     return [
       item.sno.toString(),
       locationDesc,
-      sizeCell,
+      mediaSpec,
       bookingCell,
-      unitPriceCell,
+      commercials,
       formatCurrencyForPDF(item.subtotal),
     ];
   });
@@ -285,15 +281,15 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   // Track page count for header rendering
   let currentPageCount = 1;
 
-  const tableHeaders = [['#', 'LOCATION & DESCRIPTION', 'SIZE', 'BOOKING', 'UNIT PRICE', 'SUBTOTAL']];
+  const tableHeaders = [['S.No', 'LOCATION &\nDESCRIPTION', 'MEDIA\nSPECIFICATION', 'BOOKING\nPERIOD', 'COMMERCIALS', 'TOTAL\nAMOUNT']];
 
   const tableColumnStyles = {
     0: { cellWidth: 10, halign: 'center' as const, valign: 'middle' as const },
-    1: { cellWidth: 60 },
-    2: { cellWidth: 28, halign: 'left' as const },
+    1: { cellWidth: 52 },
+    2: { cellWidth: 35, halign: 'left' as const },
     3: { cellWidth: 32, halign: 'left' as const },
     4: { cellWidth: 30, halign: 'right' as const },
-    5: { cellWidth: 25, halign: 'right' as const },
+    5: { cellWidth: 23, halign: 'right' as const, fontStyle: 'bold' as const },
   };
   
   autoTable(doc, {

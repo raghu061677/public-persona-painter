@@ -467,19 +467,52 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   // @ts-ignore
   yPos = doc.lastAutoTable.finalY + 6;
 
-  // ========== TOTALS SECTION - BOXED TABLE ==========
+  // ========== BANK DETAILS + FINANCIAL SUMMARY (Side by Side) ==========
   const subtotal = parseFloat(data.invoice.sub_total) || 0;
   const gstAmount = parseFloat(data.invoice.gst_amount) || 0;
   const grandTotal = parseFloat(data.invoice.total_amount) || (subtotal + gstAmount);
   const balanceDue = parseFloat(data.invoice.balance_due) || grandTotal;
 
+  // Check page space
+  if (yPos > pageHeight - 90) {
+    doc.addPage();
+    yPos = 20;
+  }
+
+  const bankStartY = yPos;
+
+  // LEFT: Bank Details in bordered box with blue title
+  const bankBoxWidth = contentWidth * 0.48;
+  const bankBoxHeight = 38;
+  doc.setDrawColor(209, 213, 219);
+  doc.setLineWidth(0.3);
+  doc.rect(leftMargin, bankStartY, bankBoxWidth, bankBoxHeight, 'S');
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(30, 64, 175); // #1E40AF blue
+  doc.text('Bank Details', leftMargin + 4, bankStartY + 6);
+
+  let bankY = bankStartY + 12;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(17, 24, 39);
+  doc.text('Bank: HDFC Bank Limited', leftMargin + 4, bankY);
+  bankY += 5;
+  doc.text('Branch: Karkhana Road, Secunderabad 500009', leftMargin + 4, bankY);
+  bankY += 5;
+  doc.text('A/C No: 50200010727301', leftMargin + 4, bankY);
+  bankY += 5;
+  doc.text('IFSC: HDFC0001555', leftMargin + 4, bankY);
+
+  // RIGHT: Financial Summary
   const totalsBoxWidth = 80;
   const totalsBoxX = pageWidth - rightMargin - totalsBoxWidth;
 
   const summaryEndY = renderInvoiceSummaryTable({
     doc,
     x: totalsBoxX,
-    y: yPos,
+    y: bankStartY,
     width: totalsBoxWidth,
     subtotal,
     gstPercent,
@@ -489,21 +522,21 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     isInterState,
   });
 
-  yPos = summaryEndY + 6;
+  yPos = Math.max(bankStartY + bankBoxHeight, summaryEndY) + 6;
 
-  // Check page space for bank details + QR
-  if (yPos > pageHeight - 90) {
+  // Check page space for QR
+  if (yPos > pageHeight - 50) {
     doc.addPage();
     yPos = 20;
   }
 
-  // ========== PAYMENT QR CODE (Right side) ==========
+  // ========== PAYMENT QR CODE ==========
   const upiId = data.orgSettings?.upi_id || data.company?.upi_id;
   const upiName = data.orgSettings?.upi_name || data.company?.upi_name;
   const invoiceStatus = data.invoice.status || 'Draft';
   const qrX = pageWidth - rightMargin - 30;
   const qrY = yPos;
-  
+
   const qrHeight = await renderPaymentQRSection(doc, {
     upiId,
     upiName,
@@ -514,33 +547,6 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     y: qrY,
   });
 
-  // ========== BANK DETAILS (Left side) ==========
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Bank Details', leftMargin, yPos);
-
-  yPos += 4;
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(60, 60, 60);
-
-  const bankDetails = [
-    { label: 'Bank:', value: 'HDFC Bank Limited' },
-    { label: 'Branch:', value: 'Karkhana Road, Secunderabad 500009' },
-    { label: 'A/C No:', value: '50200010727301' },
-    { label: 'IFSC:', value: 'HDFC0001555' },
-  ];
-
-  bankDetails.forEach(({ label, value }) => {
-    doc.setFont('helvetica', 'normal');
-    doc.text(label, leftMargin, yPos);
-    doc.setFont('helvetica', 'bold');
-    doc.text(value, leftMargin + 16, yPos);
-    yPos += 3.5;
-  });
-
-  // Adjust Y position if QR is taller than bank details
   yPos = Math.max(yPos, qrY + qrHeight) + 4;
 
   // ========== TERMS & CONDITIONS ==========

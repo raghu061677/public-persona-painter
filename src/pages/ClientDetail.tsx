@@ -706,6 +706,14 @@ export default function ClientDetail() {
                           </Badge>
                         </TableCell>
                         <TableCell>
+                          <SignedRODocumentCard
+                            planId={plan.id}
+                            signedRoUrl={plan.signed_ro_url}
+                            signedRoUploadedAt={plan.signed_ro_uploaded_at}
+                            compact
+                          />
+                        </TableCell>
+                        <TableCell>
                           {new Date(plan.created_at).toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',

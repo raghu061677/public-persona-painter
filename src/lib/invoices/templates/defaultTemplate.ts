@@ -577,25 +577,31 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   yPos = Math.max(yPos, qrY + qrHeight) + 4;
 
   // ========== TERMS & CONDITIONS ==========
+  // Check if terms section fits on current page (need ~20mm)
+  if (yPos + 20 > pageHeight - 15) {
+    doc.addPage();
+    yPos = 20;
+  }
+
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.text('Terms & Conditions', leftMargin, yPos);
+  doc.text('TERMS & CONDITIONS', leftMargin, yPos);
 
   yPos += 4;
-  doc.setFontSize(6);
+  doc.setFontSize(6.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(80, 80, 80);
 
   const terms = [
     '1. Sites are subject to availability at the time of written confirmation.',
-    '2. Matrix will not be responsible for flex Theft, Torn, Damage.',
+    '2. Matrix will not be responsible for flex Theft, Torn, Damage. Govt taxes applicable.',
     '3. Payment should be made in advance. Any dispute shall be settled at Telangana Jurisdiction.',
   ];
 
   terms.forEach((term) => {
     doc.text(term, leftMargin, yPos);
-    yPos += 3;
+    yPos += 3.5;
   });
 
   yPos += 4;

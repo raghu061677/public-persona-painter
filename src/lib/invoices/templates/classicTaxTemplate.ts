@@ -330,12 +330,12 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
       cellPadding: 2,
     },
     columnStyles: {
-      0: { cellWidth: 8, halign: 'center' },
-      1: { cellWidth: 82, halign: 'left' },
-      2: { cellWidth: 16, halign: 'center' },
-      3: { cellWidth: 28, halign: 'left', fontSize: 6 },
-      4: { cellWidth: 24, halign: 'right' },
-      5: { cellWidth: 20, halign: 'right' },
+      0: { cellWidth: 7, halign: 'center' },
+      1: { cellWidth: 75, halign: 'left' },
+      2: { cellWidth: 18, halign: 'center' },
+      3: { cellWidth: 30, halign: 'left', fontSize: 6 },
+      4: { cellWidth: 26, halign: 'right' },
+      5: { cellWidth: 22, halign: 'right' },
     },
     margin: { left: leftMargin, right: rightMargin },
     tableLineColor: [0, 0, 0],
@@ -512,13 +512,21 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
   yPos = Math.max(yPos + 22, qrY + qrHeight);
 
   // ========== TERMS BOX ==========
-  doc.rect(leftMargin, yPos, contentWidth, 16);
+  const termsBoxHeight = 18;
+  // Check if terms box fits on current page
+  if (yPos + termsBoxHeight > pageHeight - 10) {
+    doc.addPage();
+    yPos = 20;
+  }
+
+  doc.rect(leftMargin, yPos, contentWidth, termsBoxHeight);
   
   doc.setFillColor(230, 230, 230);
   doc.rect(leftMargin, yPos, contentWidth, 4.5, 'F');
   
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
   doc.text('TERMS & CONDITIONS', leftMargin + 2, yPos + 3.5);
 
   doc.setFontSize(6);
@@ -531,7 +539,7 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
   ];
   terms.forEach(term => {
     doc.text(term, leftMargin + 2, termY);
-    termY += 2.8;
+    termY += 3;
   });
 
   return doc.output('blob');

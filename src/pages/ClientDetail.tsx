@@ -204,7 +204,7 @@ export default function ClientDetail() {
       const totalPaid = totalRevenue - totalDue;
 
       const activeCampaigns = campaignsData?.filter(c => 
-        ["Planned", "Assigned", "InProgress"].includes(c.status)
+        ["Planned", "Assigned", "InProgress", "Running", "Draft", "Upcoming"].includes(c.status)
       ).length || 0;
 
       const completedCampaigns = campaignsData?.filter(c => 

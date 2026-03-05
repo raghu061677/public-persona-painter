@@ -270,15 +270,16 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
       bookingDisplay = `Start: ${formatDate(startDate)} - End: ${formatDate(endDate)}\n${days > 45 ? `Month: ${months}` : `Days: ${days}`}`;
     }
     
-    // FIXED: Build rich description - Asset ID only on first line, Location on second line
+    // Build rich description - No internal asset codes, matching RO/Quotation style
     const descLines: string[] = [];
-    descLines.push(`[${assetCode}]`);  // Asset ID only on first line
-    descLines.push(`Location: ${locationVal}`);  // Location on second line
-    descLines.push(`Direction: ${directionVal}`);
-    descLines.push(`Area: ${areaVal}`);
+    const cityVal = item.city || '';
+    const displayLocation = cityVal && locationVal ? `${cityVal} – ${locationVal}` : locationVal || cityVal || '-';
+    descLines.push(displayLocation);
+    if (directionVal && directionVal !== '-') descLines.push(`Direction: ${directionVal}`);
+    descLines.push(`Area: ${areaVal || '-'}`);
     descLines.push(`Media Type: ${mediaTypeVal}`);
-    descLines.push(`Illumination: ${illuminationVal}`);
-    descLines.push(`HSN/SAC Code: ${hsnSac}`);
+    if (illuminationVal && illuminationVal !== '-') descLines.push(`Illumination: ${illuminationVal}`);
+    descLines.push(`HSN/SAC: ${hsnSac}`);
     const richDescription = descLines.join('\n');
 
     // Size column

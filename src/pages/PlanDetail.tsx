@@ -526,7 +526,7 @@ export default function PlanDetail() {
     }
   };
 
-  const handleGenerateAndUploadPDF = async (docType: "quotation" | "estimate" | "proforma_invoice" | "work_order") => {
+  const handleGenerateAndUploadPDF = async (docType: "quotation" | "proforma_invoice" | "release_order") => {
     try {
       const { data: orgSettings } = await supabase
         .from('organization_settings')

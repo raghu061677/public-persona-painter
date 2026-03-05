@@ -522,7 +522,15 @@ export function CampaignBillingTab({
                   : 'Generate a single pro-rata invoice for this short campaign.'}
               </p>
             </div>
-            {/* Invoice generation buttons removed — use Billing & Invoices module */}
+            {totals.billingPeriods.length > 1 && existingInvoices.length === 0 && (
+              <Button
+                onClick={() => setShowBulkDialog(true)}
+                disabled={generating}
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Generate All Invoices
+              </Button>
+            )}
           </div>
 
           {/* Info Alert */}
@@ -628,9 +636,22 @@ export function CampaignBillingTab({
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No invoices generated yet. Use the <strong>Billing &amp; Invoices</strong> module to create invoices.
-              </p>
+              <div className="text-center py-4 space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  No invoices generated yet for this campaign.
+                </p>
+                <Button
+                  onClick={handleGenerateSingleInvoice}
+                  disabled={generating}
+                >
+                  {generating ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileText className="mr-2 h-4 w-4" />
+                  )}
+                  Generate Single Invoice
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>

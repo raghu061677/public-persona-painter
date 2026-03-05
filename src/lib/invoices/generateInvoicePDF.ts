@@ -86,7 +86,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
   if (itemsLackAssetInfo && invoice.campaign_id) {
     const { data: campAssets } = await supabase
       .from('campaign_assets')
-      .select('id, asset_id, location, area, direction, media_type, illumination_type, dimensions, total_sqft, booking_start_date, booking_end_date, rent_amount, printing_cost, mounting_cost, printing_charges, mounting_charges, card_rate, negotiated_rate, daily_rate, booked_days')
+      .select('id, asset_id, city, location, area, direction, media_type, illumination_type, dimensions, total_sqft, booking_start_date, booking_end_date, rent_amount, printing_cost, mounting_cost, printing_charges, mounting_charges, card_rate, negotiated_rate, daily_rate, booked_days')
       .eq('campaign_id', invoice.campaign_id);
 
     if (campAssets && campAssets.length > 0) {

@@ -110,7 +110,7 @@ export function renderInvoiceSummaryTable(options: SummaryTableOptions): number 
   doc.setFontSize(7.5);
   doc.setTextColor(80, 80, 80);
   const totalWords = numberToWords(Math.round(grandTotal));
-  const amountWordsText = `Total (In Words): Indian Rupees ${totalWords} Only`;
+  const amountWordsText = `Total (In Words): ${totalWords} Rupees Only`;
   const wrappedAmountWords = doc.splitTextToSize(amountWordsText, width);
   wrappedAmountWords.forEach((line: string) => {
     doc.text(line, x, currentY);

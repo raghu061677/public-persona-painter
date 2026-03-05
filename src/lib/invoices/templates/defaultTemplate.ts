@@ -372,8 +372,7 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
       const start = new Date(startDate);
       const end = new Date(endDate);
       const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      const months = Math.ceil(days / 30);
-      bookingDisplay = `Start: ${formatDate(startDate)} - End: ${formatDate(endDate)}\n${days > 45 ? `Month: ${months}` : `Days: ${days}`}`;
+      bookingDisplay = `${formatDate(startDate)}\nto ${formatDate(endDate)}\n${days} Days`;
     }
     
     // Build rich description - matching user-requested format

@@ -1122,7 +1122,7 @@ export async function exportPlanToExcel(
 export async function exportPlanToPDF(
   plan: any,
   planItems: PlanItem[],
-  docType: "quotation" | "estimate" | "proforma_invoice" | "work_order",
+  docType: "quotation" | "proforma_invoice" | "release_order",
   orgSettings?: any,
   termsAndConditions?: string[],
   uploadToCloud: boolean = false

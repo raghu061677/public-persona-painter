@@ -201,7 +201,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
       assetIds.length
         ? supabase
             .from('media_assets')
-            .select('id, media_asset_code, location, area, direction, media_type, illumination_type, dimensions, total_sqft')
+            .select('id, media_asset_code, city, location, area, direction, media_type, illumination_type, dimensions, total_sqft')
             .in('id', assetIds)
         : Promise.resolve({ data: null } as any),
       campaignAssetIds.length

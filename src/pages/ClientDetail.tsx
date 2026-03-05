@@ -353,12 +353,12 @@ export default function ClientDetail() {
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
             <DollarSign className="h-4 w-4 text-blue-500" />
           </CardHeader>
-          <CardContent>
+           <CardContent>
             <div className="text-2xl font-bold">{formatINR(stats.totalRevenue)}</div>
             <div className="flex items-center gap-2 mt-2">
-              <Progress value={(stats.totalPaid / stats.totalRevenue) * 100} className="h-2" />
+              <Progress value={stats.totalRevenue > 0 ? (stats.totalPaid / stats.totalRevenue) * 100 : 0} className="h-2" />
               <span className="text-xs text-muted-foreground">
-                {Math.round((stats.totalPaid / stats.totalRevenue) * 100)}%
+                {stats.totalRevenue > 0 ? Math.round((stats.totalPaid / stats.totalRevenue) * 100) : 0}%
               </span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">

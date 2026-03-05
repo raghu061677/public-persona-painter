@@ -526,7 +526,7 @@ export default function PlanDetail() {
     }
   };
 
-  const handleGenerateAndUploadPDF = async (docType: "quotation" | "estimate" | "proforma_invoice" | "work_order") => {
+  const handleGenerateAndUploadPDF = async (docType: "quotation" | "proforma_invoice" | "release_order") => {
     try {
       const { data: orgSettings } = await supabase
         .from('organization_settings')
@@ -566,14 +566,13 @@ export default function PlanDetail() {
 
   const handleExportPDF = async (terms?: TermsData) => {
     try {
-      const docTypeMap: Record<string, "quotation" | "estimate" | "proforma_invoice" | "work_order"> = {
+      const docTypeMap: Record<string, "quotation" | "proforma_invoice" | "release_order"> = {
         "Quotation": "quotation",
-        "Estimate": "estimate",
         "Proforma Invoice": "proforma_invoice",
-        "Work Order": "work_order",
+        "Release Order (RO)": "release_order",
       };
       
-      const docType = terms?.optionType ? docTypeMap[terms.optionType] : "quotation";
+      const docType = terms?.optionType ? (docTypeMap[terms.optionType] || "quotation") : "quotation";
       
       await exportPlanToPDF(
         plan,
@@ -1227,7 +1226,7 @@ export default function PlanDetail() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-popover border shadow-md z-50">
-                {/* Unified Export */}
+                {/* Unified Export (Quotation/Proforma/RO with options) */}
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                   <UnifiedExportButton 
                     planId={id!} 
@@ -1240,22 +1239,26 @@ export default function PlanDetail() {
 
                 <DropdownMenuSeparator />
                 
-                {/* Download Actions */}
+                {/* Client Documents */}
                 <DropdownMenuItem onClick={() => handleExportPPT(true)} disabled={exportingPPT}>
                   <Save className="mr-2 h-4 w-4" />
-                  {exportingPPT ? "Uploading..." : "Download PPT"}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExportExcel(true)} disabled={exportingExcel}>
-                  <Save className="mr-2 h-4 w-4" />
-                  {exportingExcel ? "Uploading..." : "Download Excel"}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExportPlanImagesPDF(true)} disabled={exportingImagesPdf}>
-                  <Save className="mr-2 h-4 w-4" />
-                  {exportingImagesPdf ? "Uploading..." : "Download Plan Images (PDF)"}
+                  {exportingPPT ? "Uploading..." : "Download Proposal PPT"}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExportProposalExcel} disabled={exportingProposalExcel}>
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
                   {exportingProposalExcel ? "Generating..." : "Download Proposal Excel"}
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
+                {/* Internal Documents */}
+                <DropdownMenuItem onClick={() => handleExportExcel(true)} disabled={exportingExcel}>
+                  <Save className="mr-2 h-4 w-4" />
+                  {exportingExcel ? "Uploading..." : "Download Plan Excel"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExportPlanImagesPDF(true)} disabled={exportingImagesPdf}>
+                  <Save className="mr-2 h-4 w-4" />
+                  {exportingImagesPdf ? "Uploading..." : "Download Plan Images (PDF)"}
                 </DropdownMenuItem>
                 
                 <DropdownMenuSeparator />
@@ -1636,11 +1639,10 @@ export default function PlanDetail() {
           open={showExportDialog}
           onClose={() => setShowExportDialog(false)}
           onExport={(options) => {
-            const docTypeMap: Record<string, "quotation" | "estimate" | "proforma_invoice" | "work_order"> = {
+            const docTypeMap: Record<string, "quotation" | "proforma_invoice" | "release_order"> = {
               "Quotation": "quotation",
-              "Estimate": "estimate",
               "Proforma Invoice": "proforma_invoice",
-              "Work Order": "work_order",
+              "Release Order (RO)": "release_order",
             };
             const docType = docTypeMap[options.optionType] || "quotation";
             exportPlanToPDF(plan, planItems, docType, { organization_name: "Go-Ads 360°" }, options.termsAndConditions);

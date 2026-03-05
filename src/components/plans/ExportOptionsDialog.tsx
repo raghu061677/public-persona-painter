@@ -28,7 +28,7 @@ interface ExportOptionsDialogProps {
 }
 
 export interface ExportOptions {
-  optionType: "quotation" | "estimate" | "proforma_invoice" | "work_order";
+  optionType: "quotation" | "proforma_invoice" | "release_order";
   format: "full_detail" | "compact" | "summary_only" | "with_photos";
   exportType: "pdf" | "excel";
   includePhotos: boolean;
@@ -116,9 +116,8 @@ export function ExportOptionsDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="quotation">Quotation</SelectItem>
-                  <SelectItem value="estimate">Estimate</SelectItem>
                   <SelectItem value="proforma_invoice">Proforma Invoice</SelectItem>
-                  <SelectItem value="work_order">Work Order</SelectItem>
+                  <SelectItem value="release_order">Release Order (RO)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

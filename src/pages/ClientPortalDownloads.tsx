@@ -231,7 +231,7 @@ export default function ClientPortalDownloads() {
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="invoice">Invoices</SelectItem>
-                  <SelectItem value="work_order">Work Orders</SelectItem>
+                  <SelectItem value="work_order">Release Orders</SelectItem>
                   <SelectItem value="proof">Proof Presentations</SelectItem>
                   <SelectItem value="report">Campaign Reports</SelectItem>
                 </SelectContent>

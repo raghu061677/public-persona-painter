@@ -42,9 +42,8 @@ function formatDateToDDMonYY(dateString: string): string {
 function getDocumentHeading(optionType: string): string {
   const headings: Record<string, string> = {
     quotation: 'QUOTATION',
-    estimate: 'ESTIMATE',
     proforma_invoice: 'PROFORMA INVOICE',
-    work_order: 'WORK ORDER',
+    release_order: 'RELEASE ORDER (RO)',
   };
   return headings[optionType] || 'QUOTATION';
 }

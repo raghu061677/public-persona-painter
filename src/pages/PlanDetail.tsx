@@ -89,6 +89,7 @@ export default function PlanDetail() {
   const [showAddAssetsDialog, setShowAddAssetsDialog] = useState(false);
   const [showSaveAsTemplateDialog, setShowSaveAsTemplateDialog] = useState(false);
   const [showAIProposalDialog, setShowAIProposalDialog] = useState(false);
+  const [showROWarningDialog, setShowROWarningDialog] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [exportingPPT, setExportingPPT] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);

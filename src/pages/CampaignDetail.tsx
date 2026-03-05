@@ -37,6 +37,7 @@ import { CampaignBillingTab } from "@/components/campaigns/billing";
 import { CampaignDetailAssetsTable } from "@/components/campaigns/CampaignDetailAssetsTable";
 import { computeCampaignTotals } from "@/utils/computeCampaignTotals";
 import { useCampaignProfitability } from "@/hooks/useCampaignProfitability";
+import { CampaignProfitSummary } from "@/components/campaigns/CampaignProfitSummary";
 import { SignedRODocumentCard } from "@/components/shared/SignedRODocumentCard";
 
 export default function CampaignDetail() {

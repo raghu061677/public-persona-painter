@@ -402,33 +402,66 @@ function renderAssetTable(doc: jsPDF, data: ROData, pageWidth: number, yPos: num
   doc.text('SECTION 3: MEDIA RELEASE DETAILS', leftMargin + 3, yPos + 5);
   yPos += 10;
 
-  const tableBody = data.items.map(item => [
-    String(item.sno),
-    item.assetCode,
-    `${item.location}\n${item.area}`,
-    item.mediaType,
-    item.dimension,
-    item.startDate,
-    item.endDate,
-    item.duration,
-    formatCurrencyForPDF(item.rate),
-    formatCurrencyForPDF(item.amount),
-  ]);
+  const tableBody = data.items.map(item => {
+    // Column 2: Location & Description
+    const locationDesc = [
+      `${item.city || ''} - ${item.location || ''}`.replace(/^\s*-\s*/, '').replace(/\s*-\s*$/, '') || '-',
+      item.direction ? `Direction: ${item.direction}` : null,
+      item.area ? `Area: ${item.area}` : null,
+    ].filter(Boolean).join('\n');
+
+    // Column 3: Media Specification
+    const mediaSpec = [
+      `Media Type: ${item.mediaType || '-'}`,
+      `Size: ${item.dimension || '-'}`,
+      `Area: ${item.totalSqft || 0} Sqft`,
+      `Illumination: ${item.illumination || 'Non-Lit'}`,
+    ].join('\n');
+
+    // Column 4: Booking Period
+    const bookingPeriod = [
+      `Start: ${item.startDate}`,
+      `End: ${item.endDate}`,
+      `Duration: ${item.duration}`,
+    ].join('\n');
+
+    // Column 5: Commercials
+    const commercials = [
+      `Display: ${formatCurrencyForPDF(item.rate)}`,
+      `Printing: ${formatCurrencyForPDF(item.printingCost)}`,
+      `Mounting: ${formatCurrencyForPDF(item.mountingCost)}`,
+    ].join('\n');
+
+    return [
+      String(item.sno),
+      locationDesc,
+      mediaSpec,
+      bookingPeriod,
+      commercials,
+      formatCurrencyForPDF(item.amount),
+    ];
+  });
 
   autoTable(doc, {
     startY: yPos,
     head: [[
-      'S.No', 'Site Code', 'Location', 'Media Type', 'Size',
-      'From', 'To', 'Duration', 'Rate', 'Amount',
+      'S.No',
+      'LOCATION & DESCRIPTION',
+      'MEDIA SPECIFICATION',
+      'BOOKING PERIOD',
+      'COMMERCIALS',
+      'TOTAL\nAMOUNT',
     ]],
     body: tableBody,
     theme: 'grid',
     styles: {
       font: 'NotoSans',
       fontSize: 7.5,
-      cellPadding: 2,
+      cellPadding: 2.5,
       lineColor: [200, 200, 200],
       lineWidth: 0.3,
+      overflow: 'linebreak',
+      valign: 'top',
     },
     headStyles: {
       fillColor: [30, 64, 175],
@@ -436,21 +469,19 @@ function renderAssetTable(doc: jsPDF, data: ROData, pageWidth: number, yPos: num
       fontStyle: 'bold',
       fontSize: 7.5,
       halign: 'center',
+      valign: 'middle',
     },
     columnStyles: {
-      0: { cellWidth: 8, halign: 'center' },   // S.No
-      1: { cellWidth: 22, halign: 'center', overflow: 'linebreak' },  // Site Code
-      2: { cellWidth: 38, overflow: 'linebreak' },  // Location
-      3: { cellWidth: 18, halign: 'center' },   // Media Type
-      4: { cellWidth: 16, halign: 'center' },   // Size
-      5: { cellWidth: 18, halign: 'center' },   // From
-      6: { cellWidth: 18, halign: 'center' },   // To
-      7: { cellWidth: 14, halign: 'center' },   // Duration
-      8: { cellWidth: 16, halign: 'right' },    // Rate
-      9: { cellWidth: 16, halign: 'right' },    // Amount
+      0: { cellWidth: 10, halign: 'center', valign: 'middle' },
+      1: { cellWidth: 52 },
+      2: { cellWidth: 35 },
+      3: { cellWidth: 32 },
+      4: { cellWidth: 30, halign: 'right' },
+      5: { cellWidth: 23, halign: 'right', valign: 'middle', fontStyle: 'bold' },
     },
     tableWidth: pageWidth - MARGINS.left - MARGINS.right,
-    margin: { left: leftMargin, right: MARGINS.right },
+    margin: { left: leftMargin, right: MARGINS.right, top: 35, bottom: MARGINS.bottom },
+    rowPageBreak: 'avoid',
   });
 
   // @ts-ignore

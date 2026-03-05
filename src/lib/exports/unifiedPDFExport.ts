@@ -74,27 +74,25 @@ async function generateROFromPlanData(plan: any, planItems: any[], options: Expo
     const mountingCharge = Number(item.mounting_charges || 0);
     const itemDays = item.duration_days || totalDays;
     const proRataRent = Math.round(((monthlyRate / 30) * itemDays) * 100) / 100;
-
-    const displayCode = formatAssetDisplayCode({
-      mediaAssetCode: item.media_asset_code,
-      fallbackId: item.asset_id,
-      companyName: companyName,
-    });
+    const lineTotal = Math.round((proRataRent + printingCharge + mountingCharge) * 100) / 100;
 
     return {
       sno: index + 1,
-      assetCode: displayCode || item.asset_id || '-',
+      city: item.city || clientData?.billing_city || '',
       location: item.location || '-',
-      area: item.area || item.city || '-',
+      direction: item.direction || item.route || '-',
+      area: item.area || '-',
       mediaType: item.media_type || 'OOH Media',
       dimension: (item.dimensions || '-').toString(),
+      totalSqft: item.total_sqft || 0,
+      illumination: item.illumination_type || item.illumination || 'Non-Lit',
       startDate: formatDateToDDMMYYYY(item.start_date || plan.start_date),
       endDate: formatDateToDDMMYYYY(item.end_date || plan.end_date),
       duration: getDurationDisplay(itemDays),
-      rate: monthlyRate,
-      amount: proRataRent,
+      rate: proRataRent,
       printingCost: printingCharge,
       mountingCost: mountingCharge,
+      amount: lineTotal,
     };
   });
 

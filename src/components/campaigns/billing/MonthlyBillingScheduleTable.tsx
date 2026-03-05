@@ -224,7 +224,7 @@ export function MonthlyBillingScheduleTable({
                 {/* Actions */}
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
-                    {hasInvoice && (
+                    {hasInvoice ? (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -233,8 +233,21 @@ export function MonthlyBillingScheduleTable({
                         <Eye className="mr-1 h-4 w-4" />
                         View
                       </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onGenerateInvoice(period, selection.printing && !printingBilled, selection.mounting && !mountingBilled)}
+                        disabled={isGenerating}
+                      >
+                        {isGenerating ? (
+                          <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Plus className="mr-1 h-4 w-4" />
+                        )}
+                        Generate
+                      </Button>
                     )}
-                    {/* Generate button removed — use Billing & Invoices module */}
                   </div>
                 </TableCell>
               </TableRow>

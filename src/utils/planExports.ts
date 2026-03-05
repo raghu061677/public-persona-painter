@@ -1248,13 +1248,11 @@ export async function exportPlanToPDF(
     const totalInr = Number(plan.grand_total || 0);
 
     const docTitle =
-      docType === 'work_order'
-        ? 'WORK ORDER'
-        : docType === 'estimate'
-          ? 'ESTIMATE'
-          : docType === 'proforma_invoice'
-            ? 'PROFORMA INVOICE'
-            : 'QUOTATION';
+      docType === 'release_order'
+        ? 'RELEASE ORDER (RO)'
+        : docType === 'proforma_invoice'
+          ? 'PROFORMA INVOICE'
+          : 'QUOTATION';
 
     // Logo: support both data URLs and normal URLs (convert to base64)
     const logoBase64 = typeof companyData?.logo_url === 'string'

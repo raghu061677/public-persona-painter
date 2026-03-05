@@ -566,14 +566,13 @@ export default function PlanDetail() {
 
   const handleExportPDF = async (terms?: TermsData) => {
     try {
-      const docTypeMap: Record<string, "quotation" | "estimate" | "proforma_invoice" | "work_order"> = {
+      const docTypeMap: Record<string, "quotation" | "proforma_invoice" | "release_order"> = {
         "Quotation": "quotation",
-        "Estimate": "estimate",
         "Proforma Invoice": "proforma_invoice",
-        "Work Order": "work_order",
+        "Release Order (RO)": "release_order",
       };
       
-      const docType = terms?.optionType ? docTypeMap[terms.optionType] : "quotation";
+      const docType = terms?.optionType ? (docTypeMap[terms.optionType] || "quotation") : "quotation";
       
       await exportPlanToPDF(
         plan,

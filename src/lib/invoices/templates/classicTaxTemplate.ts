@@ -52,25 +52,36 @@ function amountToWords(amount: number): string {
   return `Indian Rupees ${numberToWords(rupees)} Only`;
 }
 
-// Cache stamp
+// Cache stamp and signature images
 let cachedStampBase64: string | null = null;
-async function loadStampImage(): Promise<string | undefined> {
-  if (cachedStampBase64) return cachedStampBase64;
+let cachedSignatureBase64: string | null = null;
+
+async function loadImageAsBase64(url: string): Promise<string | undefined> {
   try {
-    const res = await fetch(stampImageUrl);
+    const res = await fetch(url);
     if (!res.ok) return undefined;
     const blob = await res.blob();
-    const base64 = await new Promise<string>((resolve, reject) => {
+    return await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result));
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
-    cachedStampBase64 = base64;
-    return base64;
   } catch {
     return undefined;
   }
+}
+
+async function loadStampImage(): Promise<string | undefined> {
+  if (cachedStampBase64) return cachedStampBase64;
+  cachedStampBase64 = (await loadImageAsBase64(stampImageUrl)) || null;
+  return cachedStampBase64 || undefined;
+}
+
+async function loadSignatureImage(): Promise<string | undefined> {
+  if (cachedSignatureBase64) return cachedSignatureBase64;
+  cachedSignatureBase64 = (await loadImageAsBase64(signatureImageUrl)) || null;
+  return cachedSignatureBase64 || undefined;
 }
 
 // ============= HEADER RENDERERS =============

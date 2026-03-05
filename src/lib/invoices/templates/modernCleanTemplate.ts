@@ -373,10 +373,10 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
     },
     columnStyles: {
       0: { cellWidth: 8, halign: 'center' },
-      1: { cellWidth: 78, halign: 'left' },
-      2: { cellWidth: 18, halign: 'center' },
+      1: { cellWidth: 72, halign: 'left' },
+      2: { cellWidth: 22, halign: 'left' },
       3: { cellWidth: 28, halign: 'left', fontSize: 6 },
-      4: { cellWidth: 26, halign: 'right' },
+      4: { cellWidth: 28, halign: 'left' },
       5: { cellWidth: 22, halign: 'right' },
     },
     margin: { left: leftMargin, right: rightMargin },

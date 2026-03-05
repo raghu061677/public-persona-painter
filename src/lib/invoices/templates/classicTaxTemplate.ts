@@ -476,10 +476,10 @@ export async function renderClassicTaxTemplate(data: InvoiceData): Promise<Blob>
     },
     columnStyles: {
       0: { cellWidth: 10, halign: 'center', valign: 'middle' },
-      1: { cellWidth: 52 },
+      1: { cellWidth: 52, halign: 'left' },
       2: { cellWidth: 35, halign: 'left' },
       3: { cellWidth: 32, halign: 'left' },
-      4: { cellWidth: 30, halign: 'right' },
+      4: { cellWidth: 30, halign: 'left' },
       5: { cellWidth: 23, halign: 'right', fontStyle: 'bold' },
     },
     margin: { top: 35, left: leftMargin, right: rightMargin, bottom: PAGE_MARGINS.bottom },

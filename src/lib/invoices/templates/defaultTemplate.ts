@@ -401,8 +401,8 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     
     // FIXED: Format unit price with full labels
     let unitPriceLines: string[] = [`Display: ${formatCurrency(baseRate)}`];
-    if (printingCost > 0) unitPriceLines.push(`Printing: ${formatCurrency(printingCost)}`);
-    if (mountingCost > 0) unitPriceLines.push(`Installation: ${formatCurrency(mountingCost)}`);
+    unitPriceLines.push(`Printing: ${formatCurrency(printingCost)}`);
+    unitPriceLines.push(`Installation: ${formatCurrency(mountingCost)}`);
     const unitPriceDisplay = unitPriceLines.join('\n');
 
     // Aggregate HSN/SAC summary data

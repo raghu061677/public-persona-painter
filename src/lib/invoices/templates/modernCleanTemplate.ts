@@ -6,6 +6,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { InvoiceData, formatCurrency, formatDate, numberToWords, COMPANY_ADDRESS, HSN_SAC_CODE } from './types';
 import { renderPaymentQRSection } from './paymentQR';
+import { renderInvoiceSummaryTable } from './summaryTableHelper';
 
 export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob> {
   const doc = new jsPDF({

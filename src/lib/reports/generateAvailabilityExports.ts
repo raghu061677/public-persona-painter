@@ -221,7 +221,7 @@ export async function generateAvailabilityExcel(data: ExportData): Promise<void>
     r.getCell(8).numFmt = '#,##0.00';
 
     r.eachCell((cell, colNumber) => {
-      cell.alignment = { horizontal: colNumber === 5 ? 'left' : 'center', vertical: 'middle' };
+      cell.alignment = { horizontal: 'left', vertical: 'middle' };
       cell.border = {
         top: { style: 'thin', color: { argb: 'FFD1D5DB' } },
         left: { style: 'thin', color: { argb: 'FFD1D5DB' } },

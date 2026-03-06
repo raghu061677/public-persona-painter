@@ -8189,6 +8189,8 @@ export type Database = {
       }
       plans: {
         Row: {
+          archived_at: string | null
+          archived_reason: string | null
           cgst_amount: number | null
           cgst_percent: number | null
           client_id: string
@@ -8208,6 +8210,7 @@ export type Database = {
           id: string
           igst_amount: number | null
           igst_percent: number | null
+          is_archived: boolean
           months_count: number | null
           notes: string | null
           owner_company_id: string | null
@@ -8227,6 +8230,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          archived_at?: string | null
+          archived_reason?: string | null
           cgst_amount?: number | null
           cgst_percent?: number | null
           client_id: string
@@ -8246,6 +8251,7 @@ export type Database = {
           id: string
           igst_amount?: number | null
           igst_percent?: number | null
+          is_archived?: boolean
           months_count?: number | null
           notes?: string | null
           owner_company_id?: string | null
@@ -8265,6 +8271,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          archived_at?: string | null
+          archived_reason?: string | null
           cgst_amount?: number | null
           cgst_percent?: number | null
           client_id?: string
@@ -8284,6 +8292,7 @@ export type Database = {
           id?: string
           igst_amount?: number | null
           igst_percent?: number | null
+          is_archived?: boolean
           months_count?: number | null
           notes?: string | null
           owner_company_id?: string | null

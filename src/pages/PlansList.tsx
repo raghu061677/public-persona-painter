@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket, Download, Sparkles, ChevronDown, Info, FolderOpen, Edit, ClipboardList, Users, TrendingUp, CopyPlus, Search, X } from "lucide-react";
+import { Plus, Eye, Trash2, MoreVertical, Share2, Copy, Ban, Activity, ExternalLink, FileText, Rocket, Download, Sparkles, ChevronDown, Info, FolderOpen, Edit, ClipboardList, Users, TrendingUp, CopyPlus, Search, X, Archive, ArchiveRestore } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -90,7 +90,8 @@ export default function PlansList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
-  const [statusTab, setStatusTab] = useState<"pending" | "approved" | "converted" | "rejected" | "all">("all");
+  const [statusTab, setStatusTab] = useState<"current_month" | "all_active" | "archived" | "all">("current_month");
+  const [viewMode, setViewMode] = useState<"current_month" | "all_active" | "archived" | "all">("current_month");
   const [selectedPlans, setSelectedPlans] = useState<Set<string>>(new Set());
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
   const [showTemplatesDialog, setShowTemplatesDialog] = useState(false);
@@ -340,12 +341,22 @@ export default function PlansList() {
 
   // Filter plans first
   const baseFilteredPlans = useMemo(() => {
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
     return globalSearchFiltered.filter(plan => {
-      // Status tab filter
-      if (statusTab !== "all") {
-        const planStatus = plan.status?.toLowerCase() || "pending";
-        if (planStatus !== statusTab) return false;
+      // View mode filter
+      if (viewMode === "current_month") {
+        if (plan.is_archived) return false;
+        const planDate = new Date(plan.created_at);
+        if (planDate < currentMonthStart || planDate > currentMonthEnd) return false;
+      } else if (viewMode === "all_active") {
+        if (plan.is_archived) return false;
+      } else if (viewMode === "archived") {
+        if (!plan.is_archived) return false;
       }
+      // "all" shows everything
       
       // Search filter
       if (searchTerm) {
@@ -363,7 +374,7 @@ export default function PlansList() {
       
       return true;
     });
-  }, [globalSearchFiltered, statusTab, searchTerm, filterStatus]);
+  }, [globalSearchFiltered, viewMode, searchTerm, filterStatus]);
 
   // Apply sorting
   const { sortedData: filteredPlans, sortConfig, handleSort } = useSortableData(baseFilteredPlans);
@@ -470,6 +481,39 @@ export default function PlansList() {
       toast({
         title: "Success",
         description: "Plan rejected successfully",
+      });
+      fetchPlans();
+    }
+  };
+
+  const handleUnarchive = async (plan: any) => {
+    const { error } = await supabase
+      .from('plans')
+      .update({ is_archived: false, archived_at: null })
+      .eq('id', plan.id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to unarchive plan",
+        variant: "destructive",
+      });
+    } else {
+      // Log the unarchive activity
+      try {
+        await supabase.from('activity_logs').insert({
+          action: 'plan_unarchived',
+          resource_type: 'plan',
+          resource_id: plan.id,
+          resource_name: plan.plan_name || plan.id,
+          details: { previous_archived_reason: plan.archived_reason },
+        });
+      } catch (e) {
+        console.warn('Failed to log unarchive activity:', e);
+      }
+      toast({
+        title: "Success",
+        description: "Plan unarchived successfully",
       });
       fetchPlans();
     }
@@ -673,49 +717,45 @@ export default function PlansList() {
           <CardContent className="p-2">
             <div className="flex items-center gap-1 overflow-x-auto pb-1">
               <Button
-                variant={statusTab === "all" ? "default" : "ghost"}
+                variant={viewMode === "current_month" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setStatusTab("all")}
+                onClick={() => setViewMode("current_month")}
                 className="whitespace-nowrap"
               >
                 <ClipboardList className="mr-1.5 h-4 w-4" />
-                All Plans ({plans.length})
+                Current Month ({plans.filter(p => {
+                  if (p.is_archived) return false;
+                  const d = new Date(p.created_at);
+                  const now = new Date();
+                  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                }).length})
               </Button>
               <Button
-                variant={statusTab === "pending" ? "default" : "ghost"}
+                variant={viewMode === "all_active" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setStatusTab("pending")}
+                onClick={() => setViewMode("all_active")}
                 className="whitespace-nowrap"
               >
                 <Activity className="mr-1.5 h-4 w-4" />
-                Pending ({plans.filter(p => (p.status?.toLowerCase() || "pending") === "pending").length})
+                All Active ({plans.filter(p => !p.is_archived).length})
               </Button>
               <Button
-                variant={statusTab === "approved" ? "default" : "ghost"}
+                variant={viewMode === "archived" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setStatusTab("approved")}
+                onClick={() => setViewMode("archived")}
                 className="whitespace-nowrap"
               >
-                <Rocket className="mr-1.5 h-4 w-4" />
-                Approved ({plans.filter(p => (p.status?.toLowerCase() || "") === "approved").length})
+                <Archive className="mr-1.5 h-4 w-4" />
+                Archived ({plans.filter(p => p.is_archived).length})
               </Button>
               <Button
-                variant={statusTab === "converted" ? "default" : "ghost"}
+                variant={viewMode === "all" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setStatusTab("converted")}
+                onClick={() => setViewMode("all")}
                 className="whitespace-nowrap"
               >
-                <TrendingUp className="mr-1.5 h-4 w-4" />
-                Converted ({plans.filter(p => (p.status?.toLowerCase() || "") === "converted").length})
-              </Button>
-              <Button
-                variant={statusTab === "rejected" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setStatusTab("rejected")}
-                className="whitespace-nowrap"
-              >
-                <Ban className="mr-1.5 h-4 w-4" />
-                Rejected ({plans.filter(p => (p.status?.toLowerCase() || "") === "rejected").length})
+                <FolderOpen className="mr-1.5 h-4 w-4" />
+                All Plans ({plans.length})
               </Button>
             </div>
           </CardContent>
@@ -1147,12 +1187,20 @@ export default function PlansList() {
                       )}
                       {visibleColumns.includes("status") && (
                         <TableCell className="px-4 py-3">
-          <Badge 
-            variant={getPlanStatusConfig(plan.status).variant}
-            className={getPlanStatusConfig(plan.status).className}
-          >
-            {getPlanStatusConfig(plan.status).label}
-          </Badge>
+                          <div className="flex items-center gap-1.5">
+                            <Badge 
+                              variant={getPlanStatusConfig(plan.status).variant}
+                              className={getPlanStatusConfig(plan.status).className}
+                            >
+                              {getPlanStatusConfig(plan.status).label}
+                            </Badge>
+                            {plan.is_archived && (
+                              <Badge variant="outline" className="text-xs bg-muted text-muted-foreground">
+                                <Archive className="mr-1 h-3 w-3" />
+                                Archived
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                       )}
                       {visibleColumns.includes("actions") && (
@@ -1269,6 +1317,15 @@ export default function PlansList() {
                                   <Activity className="mr-2 h-4 w-4" />
                                   Activity
                                 </DropdownMenuItem>
+                                {plan.is_archived && isAdmin && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => handleUnarchive(plan)} className="text-primary">
+                                      <ArchiveRestore className="mr-2 h-4 w-4" />
+                                      Unarchive Plan
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>

@@ -284,3 +284,6 @@ verify_jwt = false
 
 [functions.run-concession-allocation]
 verify_jwt = false
+
+[functions.archive-stale-plans]
+verify_jwt = false

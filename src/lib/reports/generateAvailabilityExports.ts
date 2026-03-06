@@ -3,6 +3,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import pptxgen from "pptxgenjs";
 import { format } from "date-fns";
+import { addProfessionalFooter } from "../exports/excelFooterSection";
 
 import {
   EXPORT_COLUMNS,

@@ -165,29 +165,16 @@ export function CustomExportDialog({
         <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button
-            variant="outline"
-            onClick={() => handleExport("ppt")}
-            disabled={!!exporting || selectedFields.length === 0}
+            onClick={handleExport}
+            disabled={exporting || selectedFields.length === 0}
             className="gap-2"
           >
-            {exporting === "ppt" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Presentation className="h-4 w-4 text-orange-600" />
-            )}
-            {exporting === "ppt" ? "Exporting..." : "Export PPT"}
-          </Button>
-          <Button
-            onClick={() => handleExport("excel")}
-            disabled={!!exporting || selectedFields.length === 0}
-            className="gap-2"
-          >
-            {exporting === "excel" ? (
+            {exporting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <FileSpreadsheet className="h-4 w-4" />
             )}
-            {exporting === "excel" ? "Exporting..." : "Export Excel"}
+            {exporting ? "Exporting..." : "Export Excel"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -435,7 +435,7 @@ export default function UserManagement() {
                         <Avatar className="h-10 w-10">
                           <AvatarImage src={user.avatar_url} />
                           <AvatarFallback>
-                            {user.username.substring(0, 2).toUpperCase()}
+                            {getUserInitials(user)}
                           </AvatarFallback>
                         </Avatar>
                         <div>

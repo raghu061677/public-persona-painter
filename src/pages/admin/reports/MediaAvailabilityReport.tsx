@@ -1105,7 +1105,6 @@ export default function MediaAvailabilityReport() {
         startDate={startDate}
         endDate={endDate}
         companyName={company?.name}
-        themeColor={company?.theme_color}
       />
 
       {/* Hold Dialog */}

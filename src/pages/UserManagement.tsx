@@ -67,6 +67,21 @@ interface UserProfile {
   status?: string;
 }
 
+const getSafeText = (value: any) => String(value ?? "");
+
+const getUserDisplayName = (user: any) =>
+  getSafeText(user?.username ?? user?.name ?? user?.full_name ?? user?.display_name ?? user?.email ?? "User");
+
+const getUserInitials = (user: any) => {
+  const displayName = getUserDisplayName(user).trim();
+  if (!displayName) return "U";
+  const parts = displayName.split(" ").filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase();
+  }
+  return displayName.substring(0, 2).toUpperCase();
+};
+
 const MODULES = [
   { key: 'sales', label: 'Sales' },
   { key: 'planning', label: 'Planning' },

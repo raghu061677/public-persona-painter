@@ -19,7 +19,6 @@ import {
   FIELD_GROUPS,
   generateCustomAvailabilityExcel,
 } from "@/lib/reports/generateCustomAvailabilityExcel";
-import { generateCustomAvailabilityPpt } from "@/lib/reports/generateCustomAvailabilityPpt";
 import { useToast } from "@/hooks/use-toast";
 
 interface CustomExportDialogProps {

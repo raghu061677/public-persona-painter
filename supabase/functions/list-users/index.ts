@@ -14,7 +14,7 @@ Deno.serve(withAuth(async (req) => {
   // Fetch all users with their auth info, scoped to requesting user's company
   const { data: companyUsers, error: cuError } = await serviceClient
     .from('company_users')
-    .select('user_id, name, email, phone, role, status, company_id, created_at')
+    .select('user_id, role, status, company_id, joined_at, is_primary')
     .eq('company_id', ctx.companyId)
     .eq('status', 'active');
 

@@ -142,7 +142,7 @@ export async function exportListExcel<T = any>(opts: ExportListExcelOptions<T>):
         cell.numFmt = f.format ?? "dd-mm-yyyy";
       }
       cell.alignment = {
-        horizontal: f.key === "location" || f.key === "description" ? "left" : "center",
+        horizontal: "left",
         vertical: "middle",
         wrapText: f.key === "location" || f.key === "description",
       };

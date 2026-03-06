@@ -10,6 +10,7 @@
  */
 
 import ExcelJS from 'exceljs';
+import { addProfessionalFooter } from './excelFooterSection';
 
 export interface ProposalAsset {
   // Asset info (from media_assets)

@@ -74,28 +74,24 @@ export function CustomExportDialog({
   const selectAll = () => setSelectedFields(ALL_EXPORT_FIELDS.map(f => f.key));
   const resetToDefault = () => setSelectedFields([...DEFAULT_CUSTOM_FIELDS]);
 
-  const handleExport = async (type: "excel" | "ppt") => {
+  const handleExport = async () => {
     if (selectedFields.length === 0) {
       toast({ title: "No Fields", description: "Select at least one field to export", variant: "destructive" });
       return;
     }
-    setExporting(type);
+    setExporting(true);
     try {
-      if (type === "excel") {
-        await generateCustomAvailabilityExcel(rows, selectedFields, startDate, endDate, companyName);
-      } else {
-        await generateCustomAvailabilityPpt(rows, selectedFields, startDate, endDate, companyName, themeColor);
-      }
+      await generateCustomAvailabilityExcel(rows, selectedFields, startDate, endDate, companyName);
       toast({
         title: "Export Complete",
-        description: `${type === "excel" ? "Excel" : "PPT"} exported with ${selectedFields.length} columns`,
+        description: `Excel exported with ${selectedFields.length} columns`,
       });
       onOpenChange(false);
     } catch (err) {
       console.error("Custom export error:", err);
-      toast({ title: "Export Failed", description: `Could not generate ${type.toUpperCase()}`, variant: "destructive" });
+      toast({ title: "Export Failed", description: "Could not generate Excel", variant: "destructive" });
     } finally {
-      setExporting(null);
+      setExporting(false);
     }
   };
 

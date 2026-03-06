@@ -87,33 +87,41 @@ serve(withAuth(async (req) => {
   }
 
   // Generate campaign code using v2 format: CAM-YYYYMM-####
-  let campaign_code: string;
-  const { data: codeData, error: codeError } = await supabase.rpc('generate_campaign_id_v2', {
-    p_user_id: null,
-  });
+  // Always use fallback that queries max existing ID to avoid duplicates
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const period = `${year}${month}`;
+  const prefix = `CAM-${period}-`;
 
-  if (codeData && !codeError) {
-    campaign_code = codeData;
-  } else {
-    // Fallback: generate CAM-YYYYMM-#### client-side
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const period = `${year}${month}`;
-    const prefix = `CAM-${period}-`;
-    const { data: existing } = await supabase
-      .from('campaigns')
-      .select('id')
-      .like('id', `${prefix}%`)
-      .order('id', { ascending: false })
-      .limit(1);
-    let nextSeq = 1;
-    if (existing?.length) {
-      const match = existing[0].id.match(/CAM-\d{6}-(\d+)$/);
-      if (match) nextSeq = parseInt(match[1], 10) + 1;
-    }
-    campaign_code = `${prefix}${String(nextSeq).padStart(4, '0')}`;
+  // Query ALL matching campaigns to find true max sequence
+  const { data: existing } = await supabase
+    .from('campaigns')
+    .select('id')
+    .like('id', `${prefix}%`)
+    .order('id', { ascending: false })
+    .limit(1);
+
+  let nextSeq = 1;
+  if (existing?.length) {
+    const match = existing[0].id.match(/CAM-\d{6}-(\d+)$/);
+    if (match) nextSeq = parseInt(match[1], 10) + 1;
   }
+  let campaign_code = `${prefix}${String(nextSeq).padStart(4, '0')}`;
+
+  // Also try RPC as a cross-check, use whichever is higher
+  try {
+    const { data: codeData } = await supabase.rpc('generate_campaign_id_v2', { p_user_id: null });
+    if (codeData) {
+      const rpcMatch = (codeData as string).match(/CAM-\d{6}-(\d+)$/);
+      if (rpcMatch) {
+        const rpcSeq = parseInt(rpcMatch[1], 10);
+        if (rpcSeq >= nextSeq) {
+          campaign_code = codeData as string;
+        }
+      }
+    }
+  } catch (_) { /* ignore RPC failure */ }
 
   // Calculate totals
   let subtotal = 0, printing_total = 0, mounting_total = 0;

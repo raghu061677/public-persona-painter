@@ -1317,6 +1317,15 @@ export default function PlansList() {
                                   <Activity className="mr-2 h-4 w-4" />
                                   Activity
                                 </DropdownMenuItem>
+                                {plan.is_archived && isAdmin && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => handleUnarchive(plan)} className="text-primary">
+                                      <ArchiveRestore className="mr-2 h-4 w-4" />
+                                      Unarchive Plan
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>

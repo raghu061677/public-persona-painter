@@ -486,6 +486,39 @@ export default function PlansList() {
     }
   };
 
+  const handleUnarchive = async (plan: any) => {
+    const { error } = await supabase
+      .from('plans')
+      .update({ is_archived: false, archived_at: null })
+      .eq('id', plan.id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to unarchive plan",
+        variant: "destructive",
+      });
+    } else {
+      // Log the unarchive activity
+      try {
+        await supabase.from('activity_logs').insert({
+          action: 'plan_unarchived',
+          resource_type: 'plan',
+          resource_id: plan.id,
+          resource_name: plan.plan_name || plan.id,
+          details: { previous_archived_reason: plan.archived_reason },
+        });
+      } catch (e) {
+        console.warn('Failed to log unarchive activity:', e);
+      }
+      toast({
+        title: "Success",
+        description: "Plan unarchived successfully",
+      });
+      fetchPlans();
+    }
+  };
+
   const handleBulkAction = async (actionId: string) => {
     const selectedIds = Array.from(selectedPlans);
     

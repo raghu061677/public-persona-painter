@@ -684,49 +684,46 @@ export default function PlansList() {
           <CardContent className="p-2">
             <div className="flex items-center gap-1 overflow-x-auto pb-1">
               <Button
-                variant={statusTab === "all" ? "default" : "ghost"}
+                variant={viewMode === "current_month" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setStatusTab("all")}
+                onClick={() => setViewMode("current_month")}
                 className="whitespace-nowrap"
               >
                 <ClipboardList className="mr-1.5 h-4 w-4" />
-                All Plans ({plans.length})
+                Current Month ({plans.filter(p => {
+                  if (p.is_archived) return false;
+                  const d = new Date(p.created_at);
+                  const now = new Date();
+                  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                }).length})
               </Button>
               <Button
-                variant={statusTab === "pending" ? "default" : "ghost"}
+                variant={viewMode === "all_active" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setStatusTab("pending")}
+                onClick={() => setViewMode("all_active")}
                 className="whitespace-nowrap"
               >
                 <Activity className="mr-1.5 h-4 w-4" />
-                Pending ({plans.filter(p => (p.status?.toLowerCase() || "pending") === "pending").length})
+                All Active ({plans.filter(p => !p.is_archived).length})
               </Button>
               <Button
-                variant={statusTab === "approved" ? "default" : "ghost"}
+                variant={viewMode === "archived" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setStatusTab("approved")}
+                onClick={() => setViewMode("archived")}
                 className="whitespace-nowrap"
               >
-                <Rocket className="mr-1.5 h-4 w-4" />
-                Approved ({plans.filter(p => (p.status?.toLowerCase() || "") === "approved").length})
+                <Archive className="mr-1.5 h-4 w-4" />
+                Archived ({plans.filter(p => p.is_archived).length})
               </Button>
               <Button
-                variant={statusTab === "converted" ? "default" : "ghost"}
+                variant={viewMode === "all" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setStatusTab("converted")}
+                onClick={() => setViewMode("all")}
                 className="whitespace-nowrap"
               >
-                <TrendingUp className="mr-1.5 h-4 w-4" />
-                Converted ({plans.filter(p => (p.status?.toLowerCase() || "") === "converted").length})
+                <FolderOpen className="mr-1.5 h-4 w-4" />
+                All Plans ({plans.length})
               </Button>
-              <Button
-                variant={statusTab === "rejected" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setStatusTab("rejected")}
-                className="whitespace-nowrap"
-              >
-                <Ban className="mr-1.5 h-4 w-4" />
-                Rejected ({plans.filter(p => (p.status?.toLowerCase() || "") === "rejected").length})
               </Button>
             </div>
           </CardContent>

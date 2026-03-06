@@ -643,7 +643,7 @@ export async function generateProposalPpt(opts: ProposalPptOptions): Promise<voi
   const cityTag = cityFilter && cityFilter !== "all" ? cityFilter : "All";
   const startTag = startDate.replace(/-/g, "").slice(6, 8) + startDate.replace(/-/g, "").slice(4, 6) + startDate.replace(/-/g, "").slice(0, 4);
   const endTag = endDate.replace(/-/g, "").slice(6, 8) + endDate.replace(/-/g, "").slice(4, 6) + endDate.replace(/-/g, "").slice(0, 4);
-  const fileName = `Vacant_Media_Proposal_Premium_${cityTag}_${startTag}-${endTag}.pptx`;
+  const fileName = `Matrix_Media_Availability.pptx`;
 
   await pptx.writeFile({ fileName });
 }

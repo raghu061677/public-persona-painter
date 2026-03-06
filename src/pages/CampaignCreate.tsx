@@ -520,7 +520,22 @@ export default function CampaignCreate() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Extract detailed error from edge function response
+        let errorMessage = 'Failed to create campaign';
+        try {
+          const errorContext = error?.context;
+          if (errorContext && typeof errorContext === 'object') {
+            const body = await errorContext.json?.();
+            if (body?.error) errorMessage = body.error;
+          } else if (error.message) {
+            errorMessage = error.message;
+          }
+        } catch (_) {
+          if (error.message) errorMessage = error.message;
+        }
+        throw new Error(errorMessage);
+      }
 
       toast({
         title: 'Success',

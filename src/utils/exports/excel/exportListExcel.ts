@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { addProfessionalFooter } from "@/lib/exports/excelFooterSection";
 
 export type ExcelFieldDef<T = any> = {
   key: string;

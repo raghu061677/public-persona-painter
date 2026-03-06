@@ -724,7 +724,6 @@ export default function PlansList() {
                 <FolderOpen className="mr-1.5 h-4 w-4" />
                 All Plans ({plans.length})
               </Button>
-              </Button>
             </div>
           </CardContent>
         </Card>

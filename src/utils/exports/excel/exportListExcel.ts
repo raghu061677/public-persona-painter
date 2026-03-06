@@ -164,13 +164,9 @@ export async function exportListExcel<T = any>(opts: ExportListExcelOptions<T>):
     }
   });
 
-  // Footer
+  // Professional footer (Note, Contact, Terms & Conditions)
   const footerRowIdx = startRow + opts.rows.length + 1;
-  ws.mergeCells(footerRowIdx, 1, footerRowIdx, colCount);
-  const footerCell = ws.getRow(footerRowIdx).getCell(1);
-  footerCell.value = "Go-Ads 360° | OOH Media Management Platform";
-  footerCell.font = { size: 10, italic: true, color: { argb: "FF6B7280" } };
-  footerCell.alignment = { horizontal: "center" };
+  addProfessionalFooter(ws, colCount, footerRowIdx);
 
   // Download
   const buffer = await wb.xlsx.writeBuffer();

@@ -60,7 +60,7 @@ export default function CampaignsList() {
   const [selectedCampaigns, setSelectedCampaigns] = useState<Set<string>>(new Set());
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [advancedFilters, setAdvancedFilters] = useState<CampaignFilters>({});
+  const [advancedFilters, setAdvancedFilters] = useState<CampaignFilters>({ status: ["Running"] });
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; campaign: any | null }>({ open: false, campaign: null });
   const [extendDialog, setExtendDialog] = useState<{ open: boolean; campaign: any | null }>({ open: false, campaign: null });
   const [duplicateDialog, setDuplicateDialog] = useState<{ open: boolean; campaign: any | null }>({ open: false, campaign: null });

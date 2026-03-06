@@ -213,7 +213,7 @@ export default function MediaAvailabilityReport() {
       asset_id: (r: any) => r.media_asset_code || r.asset_id,
       availability_status: (r: any) =>
         r.availability_status === "VACANT_NOW" ? "Available" :
-        r.availability_status === "AVAILABLE_SOON" ? `Available Soon (${formatDateIN(r.available_from)})` :
+        r.availability_status === "AVAILABLE_SOON" ? `Available From (${formatDateIN(r.available_from)})` :
         r.availability_status === "HELD" ? "Held/Blocked" : "Booked",
       available_from: (r: any) => formatDateIN(r.available_from),
       booked_till: (r: any) => formatDateIN(r.booked_till),

@@ -42,7 +42,7 @@ export function CustomExportDialog({
 }: CustomExportDialogProps) {
   const { toast } = useToast();
   const [selectedFields, setSelectedFields] = useState<string[]>([...DEFAULT_CUSTOM_FIELDS]);
-  const [exporting, setExporting] = useState<"excel" | "ppt" | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const toggleField = (key: string) => {
     setSelectedFields(prev =>

@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { format } from "date-fns";
+import { addProfessionalFooter } from "../exports/excelFooterSection";
 import { 
   VacantAssetExportData, 
   ExportSortOrder, 

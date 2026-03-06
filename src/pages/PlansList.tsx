@@ -1154,12 +1154,20 @@ export default function PlansList() {
                       )}
                       {visibleColumns.includes("status") && (
                         <TableCell className="px-4 py-3">
-          <Badge 
-            variant={getPlanStatusConfig(plan.status).variant}
-            className={getPlanStatusConfig(plan.status).className}
-          >
-            {getPlanStatusConfig(plan.status).label}
-          </Badge>
+                          <div className="flex items-center gap-1.5">
+                            <Badge 
+                              variant={getPlanStatusConfig(plan.status).variant}
+                              className={getPlanStatusConfig(plan.status).className}
+                            >
+                              {getPlanStatusConfig(plan.status).label}
+                            </Badge>
+                            {plan.is_archived && (
+                              <Badge variant="outline" className="text-xs bg-muted text-muted-foreground">
+                                <Archive className="mr-1 h-3 w-3" />
+                                Archived
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                       )}
                       {visibleColumns.includes("actions") && (

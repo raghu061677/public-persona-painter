@@ -93,7 +93,7 @@ export function useListViewExport(options: UseListViewExportOptions) {
           fields: buildExcelFields(keys),
           rows,
           rowStyleRules: options.excelRules,
-          fileName: `${options.title.replace(/\s+/g, "_")}_export.xlsx`,
+          fileName: `Matrix_Media_Availability.xlsx`,
         });
         toast({ title: "Export Complete", description: "Excel downloaded" });
       } catch (err) {

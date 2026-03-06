@@ -236,6 +236,9 @@ export async function generateAvailabilityExcel(data: ExportData): Promise<void>
     row++;
   });
 
+  // Professional footer (Note, Contact, Terms & Conditions)
+  addProfessionalFooter(worksheet, 12, row);
+
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   const url = URL.createObjectURL(blob);

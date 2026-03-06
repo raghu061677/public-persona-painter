@@ -150,11 +150,10 @@ export async function generateVacantMediaExcel(
     }
 
     dataRow.eachCell((cell, colNumber) => {
-      // Alignment: Location left-aligned, others center
       cell.alignment = { 
-        horizontal: colNumber === 5 ? "left" : "center", 
+        horizontal: "left", 
         vertical: "middle",
-        wrapText: colNumber === 5, // Wrap location text
+        wrapText: colNumber === 5,
       };
       cell.border = {
         top: { style: "thin", color: { argb: "FFD1D5DB" } },

@@ -341,12 +341,22 @@ export default function PlansList() {
 
   // Filter plans first
   const baseFilteredPlans = useMemo(() => {
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
     return globalSearchFiltered.filter(plan => {
-      // Status tab filter
-      if (statusTab !== "all") {
-        const planStatus = plan.status?.toLowerCase() || "pending";
-        if (planStatus !== statusTab) return false;
+      // View mode filter
+      if (viewMode === "current_month") {
+        if (plan.is_archived) return false;
+        const planDate = new Date(plan.created_at);
+        if (planDate < currentMonthStart || planDate > currentMonthEnd) return false;
+      } else if (viewMode === "all_active") {
+        if (plan.is_archived) return false;
+      } else if (viewMode === "archived") {
+        if (!plan.is_archived) return false;
       }
+      // "all" shows everything
       
       // Search filter
       if (searchTerm) {
@@ -364,7 +374,7 @@ export default function PlansList() {
       
       return true;
     });
-  }, [globalSearchFiltered, statusTab, searchTerm, filterStatus]);
+  }, [globalSearchFiltered, viewMode, searchTerm, filterStatus]);
 
   // Apply sorting
   const { sortedData: filteredPlans, sortConfig, handleSort } = useSortableData(baseFilteredPlans);

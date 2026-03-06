@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { format } from "date-fns";
+import { addProfessionalFooter } from "@/lib/exports/excelFooterSection";
 
 export interface CustomExportField {
   key: string;
@@ -172,13 +173,8 @@ export async function generateCustomAvailabilityExcel(
     currentRow++;
   });
 
-  // Footer
-  currentRow++;
-  worksheet.mergeCells(currentRow, 1, currentRow, colCount);
-  const footerRow = worksheet.getRow(currentRow);
-  footerRow.getCell(1).value = "Go-Ads 360° | OOH Media Management Platform";
-  footerRow.getCell(1).font = { size: 10, italic: true, color: { argb: "FF6B7280" } };
-  footerRow.getCell(1).alignment = { horizontal: "center" };
+  // Professional footer (Note, Contact, T&C)
+  addProfessionalFooter(worksheet, colCount, currentRow);
 
   // Download
   const buffer = await workbook.xlsx.writeBuffer();

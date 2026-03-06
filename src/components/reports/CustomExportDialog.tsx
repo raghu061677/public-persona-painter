@@ -28,7 +28,6 @@ interface CustomExportDialogProps {
   startDate: string;
   endDate: string;
   companyName?: string;
-  themeColor?: string;
 }
 
 export function CustomExportDialog({
@@ -38,7 +37,6 @@ export function CustomExportDialog({
   startDate,
   endDate,
   companyName,
-  themeColor,
 }: CustomExportDialogProps) {
   const { toast } = useToast();
   const [selectedFields, setSelectedFields] = useState<string[]>([...DEFAULT_CUSTOM_FIELDS]);

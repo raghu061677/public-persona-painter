@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { format } from "date-fns";
+import { addProfessionalFooter } from "../exports/excelFooterSection";
 import { 
   VacantAssetExportData, 
   ExportSortOrder, 
@@ -173,13 +174,8 @@ export async function generateVacantMediaExcel(
     currentRow++;
   });
 
-  // Footer
-  currentRow++;
-  worksheet.mergeCells(`A${currentRow}:L${currentRow}`);
-  const footerRow = worksheet.getRow(currentRow);
-  footerRow.getCell(1).value = "Go-Ads 360° | OOH Media Management Platform";
-  footerRow.getCell(1).font = { size: 10, italic: true, color: { argb: "FF6B7280" } };
-  footerRow.getCell(1).alignment = { horizontal: "center" };
+  // Professional footer (Note, Contact, Terms & Conditions)
+  addProfessionalFooter(worksheet, 12, currentRow);
 
   // Generate file
   const buffer = await workbook.xlsx.writeBuffer();

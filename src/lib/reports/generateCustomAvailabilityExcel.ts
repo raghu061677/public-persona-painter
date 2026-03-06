@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { format } from "date-fns";
+import { addProfessionalFooter } from "@/lib/exports/excelFooterSection";
 
 export interface CustomExportField {
   key: string;

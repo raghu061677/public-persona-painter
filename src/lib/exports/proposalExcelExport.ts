@@ -268,10 +268,10 @@ export async function generateProposalExcel(data: ProposalExportData): Promise<B
   });
 
   // Add borders to all cells
-  const lastRow = sheet.lastRow?.number || 1;
+  const lastDataRow = sheet.lastRow?.number || 1;
   const lastCol = 14;
   
-  for (let row = 1; row <= lastRow; row++) {
+  for (let row = 1; row <= lastDataRow; row++) {
     for (let col = 1; col <= lastCol; col++) {
       const cell = sheet.getCell(row, col);
       cell.border = {
@@ -282,6 +282,9 @@ export async function generateProposalExcel(data: ProposalExportData): Promise<B
       };
     }
   }
+
+  // Add professional footer (Note, Contact, T&C)
+  addProfessionalFooter(sheet, lastCol, lastDataRow + 1);
 
   // Generate blob
   const buffer = await workbook.xlsx.writeBuffer();

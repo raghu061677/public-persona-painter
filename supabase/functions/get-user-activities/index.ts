@@ -13,7 +13,7 @@ Deno.serve(withAuth(async (req) => {
   // Platform admins see all users; company admins see only their company's users
   const isAdmin = await isPlatformAdmin(ctx.userId);
 
-  let profilesQuery = serviceClient.from('company_users').select('user_id, name, email, role, company_id');
+  let profilesQuery = serviceClient.from('company_users').select('user_id, role, company_id');
   if (!isAdmin) {
     profilesQuery = profilesQuery.eq('company_id', ctx.companyId);
   }
@@ -21,6 +21,20 @@ Deno.serve(withAuth(async (req) => {
 
   const { data: companyUsers, error: cuError } = await profilesQuery;
   if (cuError) throw cuError;
+
+  // Fetch user emails from auth.users via admin API
+  const userEmailMap: Record<string, { email: string; name: string }> = {};
+  for (const cu of (companyUsers || [])) {
+    try {
+      const { data: authUser } = await serviceClient.auth.admin.getUserById(cu.user_id);
+      userEmailMap[cu.user_id] = {
+        email: authUser?.user?.email || '',
+        name: authUser?.user?.user_metadata?.username || authUser?.user?.email?.split('@')[0] || 'Unknown',
+      };
+    } catch {
+      userEmailMap[cu.user_id] = { email: '', name: 'Unknown' };
+    }
+  }
 
   const activitiesData = await Promise.all(
     (companyUsers || []).map(async (cu: any) => {

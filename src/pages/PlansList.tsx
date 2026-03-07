@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { useSensitiveFieldMask } from "@/components/rbac/SensitiveField";
+import { useScopedQuery } from "@/hooks/useScopedQuery";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { ListToolbar } from "@/components/list-views";

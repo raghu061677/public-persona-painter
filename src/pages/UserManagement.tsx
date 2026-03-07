@@ -83,15 +83,20 @@ const getUserInitials = (user: any) => {
 };
 
 const MODULES = [
-  { key: 'sales', label: 'Sales' },
-  { key: 'planning', label: 'Planning' },
-  { key: 'execution', label: 'Execution' },
-  { key: 'inventory', label: 'Inventory' },
+  { key: 'dashboard', label: 'Dashboard' },
+  { key: 'media_assets', label: 'Media Assets' },
+  { key: 'clients', label: 'Clients' },
+  { key: 'plans', label: 'Plans' },
+  { key: 'campaigns', label: 'Campaigns' },
+  { key: 'operations', label: 'Operations' },
+  { key: 'monitoring', label: 'Monitoring' },
   { key: 'finance', label: 'Finance' },
-  { key: 'administration', label: 'Administration' },
+  { key: 'reports', label: 'Reports' },
+  { key: 'users', label: 'Users' },
+  { key: 'settings', label: 'Settings' },
 ];
 
-const ROLES = ['admin', 'sales', 'operations', 'finance'];
+const ROLES = ['admin', 'sales', 'operations_manager', 'mounting', 'monitoring', 'finance', 'viewer'];
 
 export default function UserManagement() {
   const { isAdmin, user } = useAuth();

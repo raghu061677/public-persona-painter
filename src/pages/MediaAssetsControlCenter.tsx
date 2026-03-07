@@ -260,6 +260,7 @@ export default function MediaAssetsControlCenter() {
   );
 
   return (
+    <ModuleGuard module="media_assets">
     <div className="min-h-screen flex flex-col bg-background">
       {/* Main Content */}
       <div className="flex-1">

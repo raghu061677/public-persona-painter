@@ -344,7 +344,7 @@ export default function CampaignDetail() {
                       isEnabled={campaign.public_share_enabled}
                       onUpdate={refreshData}
                     />
-                  </>
+                  </ActionGuard>
                 )}
                 <CampaignPDFReport campaign={campaign} campaignAssets={campaignAssets} />
                 <CampaignComparisonDialog currentCampaignId={campaign.id} />

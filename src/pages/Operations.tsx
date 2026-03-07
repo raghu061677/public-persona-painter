@@ -259,37 +259,45 @@ export default function Operations() {
   return (
     <ModuleGuard module="operations">
       <div className="flex-1 space-y-4 p-4 sm:p-6 pt-4">
-        {/* ── Header ──────────────────────────────────── */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Operations Control Center</h2>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Manage mounting, monitoring, proof capture & verification
-              </p>
+        {/* ── Command Center Header ───────────────────── */}
+        <div className="rounded-xl bg-gradient-to-r from-primary/5 via-primary/3 to-transparent border p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate("/dashboard")}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Operations Command Center</h2>
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Mounting · Monitoring · Proof Capture · Verification
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
-            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing} className="gap-1.5">
-              <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
-              <span className="hidden sm:inline">Refresh</span>
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate("/admin/operations-analytics")} className="gap-1.5">
-              <TrendingUp className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Analytics</span>
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate("/admin/operations-calendar")} className="gap-1.5">
-              <Calendar className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Calendar</span>
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate("/admin/mobile-operations")} className="gap-1.5">
-              <Smartphone className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Mobile</span>
-            </Button>
-            <OperationsNotifications />
+            <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing} className="gap-1.5">
+                <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
+                <span className="hidden sm:inline">Refresh</span>
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin/operations-analytics")} className="gap-1.5">
+                <TrendingUp className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Analytics</span>
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin/operations-calendar")} className="gap-1.5">
+                <Calendar className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Calendar</span>
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin/mobile-operations")} className="gap-1.5">
+                <Smartphone className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Mobile</span>
+              </Button>
+              <OperationsNotifications />
+            </div>
           </div>
         </div>
 

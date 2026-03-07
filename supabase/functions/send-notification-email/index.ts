@@ -63,7 +63,7 @@ Deno.serve(withAuth(async (req) => {
     method: 'POST',
     headers: { Authorization: `Bearer ${resendApiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      from: `${companyName} <notifications@go-ads.app>`,
+      from: `${companyName} <notifications@go-ads.in>`,
       to: recipientEmail,
       subject: emailTemplate.subject,
       html: emailTemplate.html,

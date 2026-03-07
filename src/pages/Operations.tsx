@@ -237,6 +237,7 @@ export default function Operations() {
   };
 
   return (
+    <ModuleGuard module="operations">
     <div className="flex-1 space-y-4 p-4 sm:p-8 pt-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

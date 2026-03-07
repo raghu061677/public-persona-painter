@@ -213,5 +213,6 @@ export default function FinanceDashboard() {
         </Tabs>
       </div>
     </div>
+    </ModuleGuard>
   );
 }

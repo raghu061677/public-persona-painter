@@ -556,5 +556,6 @@ export default function CampaignsList() {
         />
       </PageContainer>
     </div>
+    </ModuleGuard>
   );
 }

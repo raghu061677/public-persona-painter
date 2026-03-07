@@ -1128,5 +1128,6 @@ export default function ClientsList() {
         </Dialog>
       </PageContainer>
     </div>
+    </ModuleGuard>
   );
 }

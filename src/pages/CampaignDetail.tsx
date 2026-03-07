@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { useCampaignResolver, getCampaignDisplayCode } from "@/hooks/useCampaignResolver";
 import { useBreadcrumb } from "@/contexts/BreadcrumbContext";

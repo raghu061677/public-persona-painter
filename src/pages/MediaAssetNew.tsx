@@ -303,6 +303,7 @@ export default function MediaAssetNew() {
   const showPowerFields = formData.illumination_type && ['Frontlit', 'Backlit', 'Digital'].includes(formData.illumination_type);
 
   return (
+    <ModuleGuard module="media_assets">
     <form onSubmit={handleSubmit} className="container mx-auto px-6 py-8 max-w-6xl">
       <header className="flex items-center justify-between pb-4 mb-4 border-b">
         <div className="flex items-center gap-4">

@@ -1,172 +1,92 @@
+/**
+ * useRBAC hook - Updated to use enterprise DB-driven permissions
+ * while maintaining backward-compatible API surface.
+ */
 import { useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
-
-/**
- * Role hierarchy and mapping
- * Platform level: platform_admin
- * Company level: company_admin, sales, operations, accounts (finance)
- */
+import { useEnterpriseRBAC } from './useEnterpriseRBAC';
+import type { ModuleKey } from '@/lib/rbac/permissions';
 
 export type PlatformRole = 'platform_admin';
-export type CompanyRole = 'company_admin' | 'sales' | 'operations' | 'accounts' | 'installation' | 'monitor';
-export type ModuleName = 
-  | 'media_assets' 
-  | 'clients' 
-  | 'plans' 
-  | 'campaigns' 
-  | 'operations' 
-  | 'finance' 
-  | 'reports'
-  | 'settings'
-  | 'platform_admin'
-  | 'company_management';
+export type CompanyRole = 'company_admin' | 'admin' | 'sales' | 'operations' | 'operations_manager' | 'accounts' | 'finance' | 'installation' | 'mounting' | 'monitor' | 'monitoring' | 'viewer';
+export type ModuleName = ModuleKey | 'platform_admin' | 'company_management';
 
 interface RBACPermissions {
-  // Platform checks
   isPlatformAdmin: boolean;
   hasPlatformRole: (role: PlatformRole) => boolean;
-  
-  // Company workspace checks
   isCompanyAdmin: boolean;
   hasCompanyRole: (role: CompanyRole | CompanyRole[]) => boolean;
-  
-  // Module access
   canAccessModule: (module: ModuleName) => boolean;
   canViewModule: (module: ModuleName) => boolean;
   canEditModule: (module: ModuleName) => boolean;
   canDeleteModule: (module: ModuleName) => boolean;
-  
-  // Company user info
   companyRole: CompanyRole | null;
 }
 
-/**
- * Map database roles to new role structure
- * admin -> company_admin (within company) OR platform_admin (if platform company)
- * finance -> accounts
- * Keep: sales, operations, installation, monitor
- */
-const mapDatabaseRole = (dbRole: string, isPlatform: boolean): CompanyRole | PlatformRole | null => {
-  if (dbRole === 'admin') {
-    return isPlatform ? 'platform_admin' : 'company_admin';
-  }
-  if (dbRole === 'finance') return 'accounts';
-  if (dbRole === 'sales') return 'sales';
-  if (dbRole === 'operations') return 'operations';
-  if (dbRole === 'installation') return 'installation';
-  if (dbRole === 'monitor') return 'monitor';
-  return null;
-};
-
-/**
- * Module access rules per role
- */
-const MODULE_ACCESS_RULES: Record<CompanyRole | PlatformRole, {
-  modules: ModuleName[];
-  readOnly?: ModuleName[];
-}> = {
-  platform_admin: {
-    modules: ['media_assets', 'clients', 'plans', 'campaigns', 'operations', 'finance', 'reports', 'settings', 'platform_admin', 'company_management'],
-  },
-  company_admin: {
-    modules: ['media_assets', 'clients', 'plans', 'campaigns', 'operations', 'finance', 'reports', 'settings'],
-  },
-  sales: {
-    modules: ['media_assets', 'clients', 'plans', 'campaigns', 'reports'],
-    readOnly: ['operations'], // Can view operations for context
-  },
-  operations: {
-    modules: ['operations', 'campaigns'],
-    readOnly: ['media_assets', 'plans'], // Can view for context
-  },
-  accounts: {
-    modules: ['finance', 'reports', 'campaigns'],
-    readOnly: ['clients', 'media_assets'], // Can view for billing context
-  },
-  installation: {
-    modules: ['operations'], // Can upload installation/mounting photos
-    readOnly: ['campaigns', 'media_assets'], // Can view assigned campaigns and assets
-  },
-  monitor: {
-    modules: ['operations'], // Can upload monitoring photos
-    readOnly: ['campaigns', 'media_assets'], // Can view ongoing campaigns and assets
-  },
-};
-
 export function useRBAC(): RBACPermissions {
-  const { roles, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const { isPlatformAdmin, companyUser } = useCompany();
-  
-  const mappedRole = useMemo(() => {
-    // Platform admin check
-    if (isPlatformAdmin) return 'platform_admin';
-    
-    // Check company user role
-    if (companyUser?.role) {
-      const mapped = mapDatabaseRole(companyUser.role, false);
-      if (mapped && mapped !== 'platform_admin') return mapped as CompanyRole;
-    }
-    
-    // Fallback to auth roles
-    if (isAdmin) return 'company_admin';
-    if (roles.includes('finance')) return 'accounts';
-    if (roles.includes('sales')) return 'sales';
-    if (roles.includes('operations')) return 'operations';
-    
-    return null;
-  }, [isPlatformAdmin, companyUser, roles, isAdmin]);
+  const enterprise = useEnterpriseRBAC();
+
+  const companyRole = useMemo((): CompanyRole | null => {
+    if (isPlatformAdmin) return null;
+    const raw = companyUser?.role;
+    if (!raw) return null;
+    return raw as CompanyRole;
+  }, [isPlatformAdmin, companyUser]);
 
   const hasPlatformRole = (role: PlatformRole): boolean => {
-    return mappedRole === role;
+    return isPlatformAdmin;
   };
 
   const hasCompanyRole = (role: CompanyRole | CompanyRole[]): boolean => {
-    if (!mappedRole) return false;
-    if (mappedRole === 'platform_admin') return true; // Platform admin has all company roles
-    
+    if (isPlatformAdmin || isAdmin) return true;
+    if (!companyRole) return false;
     const rolesToCheck = Array.isArray(role) ? role : [role];
-    return rolesToCheck.includes(mappedRole as CompanyRole);
+    
+    // Check direct match or normalized match
+    return rolesToCheck.some(r => {
+      if (companyRole === r) return true;
+      // Handle aliases
+      if (r === 'company_admin' && companyRole === 'admin') return true;
+      if (r === 'accounts' && companyRole === 'finance') return true;
+      if (r === 'operations' && (companyRole === 'operations_manager' || companyRole === 'operations')) return true;
+      if (r === 'installation' && (companyRole === 'mounting' || companyRole === 'installation')) return true;
+      if (r === 'monitor' && (companyRole === 'monitoring' || companyRole === 'monitor')) return true;
+      return false;
+    });
   };
 
   const canAccessModule = (module: ModuleName): boolean => {
-    if (!mappedRole) return false;
-    
-    const rules = MODULE_ACCESS_RULES[mappedRole];
-    if (!rules) return false;
-    
-    // Check if module is in allowed modules or read-only modules
-    return rules.modules.includes(module) || (rules.readOnly?.includes(module) ?? false);
+    if (isPlatformAdmin || isAdmin) return true;
+    if (module === 'platform_admin') return isPlatformAdmin;
+    if (module === 'company_management') return isPlatformAdmin || isAdmin;
+    return enterprise.canViewModule(module as ModuleKey);
   };
 
-  const canViewModule = (module: ModuleName): boolean => {
-    return canAccessModule(module);
-  };
+  const canViewModule = (module: ModuleName): boolean => canAccessModule(module);
 
   const canEditModule = (module: ModuleName): boolean => {
-    if (!mappedRole) return false;
-    
-    const rules = MODULE_ACCESS_RULES[mappedRole];
-    if (!rules) return false;
-    
-    // Can edit if in modules list but NOT in readOnly list
-    return rules.modules.includes(module) && !(rules.readOnly?.includes(module) ?? false);
+    if (isPlatformAdmin || isAdmin) return true;
+    if (module === 'platform_admin' || module === 'company_management') return isPlatformAdmin;
+    return enterprise.canEdit(module as ModuleKey);
   };
 
   const canDeleteModule = (module: ModuleName): boolean => {
-    // Only admins can delete
-    return mappedRole === 'platform_admin' || mappedRole === 'company_admin';
+    if (isPlatformAdmin || isAdmin) return true;
+    return false; // Only admins can delete
   };
 
   return {
     isPlatformAdmin,
     hasPlatformRole,
-    isCompanyAdmin: mappedRole === 'company_admin' || isPlatformAdmin,
+    isCompanyAdmin: isPlatformAdmin || isAdmin || companyRole === 'admin',
     hasCompanyRole,
     canAccessModule,
     canViewModule,
     canEditModule,
     canDeleteModule,
-    companyRole: (mappedRole !== 'platform_admin' ? mappedRole : null) as CompanyRole | null,
+    companyRole,
   };
 }

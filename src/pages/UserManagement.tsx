@@ -452,10 +452,10 @@ export default function UserManagement() {
                     </TableCell>
                     <TableCell>
                       {user.roles && user.roles.length > 0 ? (
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 flex-wrap">
                           {user.roles.map(role => (
-                            <Badge key={role} variant="secondary" className="capitalize">
-                              {role}
+                            <Badge key={role} className={`${getRoleBadgeVariant(role)} text-xs`}>
+                              {getRoleLabel(role)}
                             </Badge>
                           ))}
                         </div>

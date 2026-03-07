@@ -233,11 +233,13 @@ export default function ClientsList() {
     const selectedCompanyId = localStorage.getItem('selected_company_id') || companyUserData.company_id;
 
     // CRITICAL: Filter by company_id for multi-tenant isolation
-    const { data, error } = await supabase
+    let query = supabase
       .from('clients')
       .select('*')
       .eq('company_id', selectedCompanyId)
       .order('name');
+
+    const { data, error } = await query;
 
     if (error) {
       toast({
@@ -246,10 +248,12 @@ export default function ClientsList() {
         variant: "destructive",
       });
     } else {
-      setClients(data || []);
+      // Apply RBAC scope filtering (sales see own, admin see all)
+      const scoped = clientScopeFilter(data || []);
+      setClients(scoped);
+      setGlobalSearchFiltered(scoped);
     }
     setLoading(false);
-    setGlobalSearchFiltered(data || []);
   };
 
   const handleBulkAction = async (actionId: string) => {

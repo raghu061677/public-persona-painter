@@ -1,5 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
+import { useScopedQuery } from "@/hooks/useScopedQuery";
+import { useSensitiveFieldMask } from "@/components/rbac/SensitiveField";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { ListToolbar } from "@/components/list-views";

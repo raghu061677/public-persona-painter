@@ -1,5 +1,8 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
+import { useScopedQuery } from "@/hooks/useScopedQuery";
+import { useSensitiveFieldMask } from "@/components/rbac/SensitiveField";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";

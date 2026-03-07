@@ -724,5 +724,6 @@ export default function ExpensesList() {
         />
       </div>
     </div>
+    </ModuleGuard>
   );
 }

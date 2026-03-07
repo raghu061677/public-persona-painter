@@ -24,6 +24,7 @@ import { AssetHeatMap } from "@/components/charts/AssetHeatMap";
 export default function ReportsDashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const { canSee: canSeeReportField } = useSensitiveFieldMask('reports');
   const [stats, setStats] = useState({
     totalAssets: 0,
     bookedAssets: 0,

@@ -126,7 +126,7 @@ export function ClientPortalAccessCard({ clientId, clientName, clientEmail, onIn
           role: createRole,
           is_active: true,
           invited_at: new Date().toISOString(),
-        }, { onConflict: "client_id,email" });
+        }, { onConflict: "client_id" });
 
       if (error) throw error;
       toast.success("Portal access created successfully");

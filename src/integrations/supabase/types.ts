@@ -2973,14 +2973,14 @@ export type Database = {
           {
             foreignKeyName: "client_portal_users_client_id_fkey"
             columns: ["client_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "client_portal_users_client_id_fkey"
             columns: ["client_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "clients_basic"
             referencedColumns: ["id"]
           },

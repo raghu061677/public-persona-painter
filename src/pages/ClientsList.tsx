@@ -626,7 +626,7 @@ export default function ClientsList() {
           ]}
           actions={
             <>
-              {isAdmin && (
+              <ActionGuard module="clients" action="create">
                 <Button 
                   onClick={() => navigate(ROUTES.CLIENTS_NEW)}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -635,7 +635,7 @@ export default function ClientsList() {
                   <Plus className="mr-2 h-5 w-5" />
                   Add Client
                 </Button>
-              )}
+              </ActionGuard>
               <Button variant="outline" onClick={exportToExcel}>
                 <Download className="mr-2 h-4 w-4" />
                 Export

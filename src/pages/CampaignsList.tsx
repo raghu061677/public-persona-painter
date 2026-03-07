@@ -520,16 +520,16 @@ export default function CampaignsList() {
                           <TableCell className={`px-4 py-3 text-right ${getCellClassName()}`}>
                             <div className="flex items-center justify-end gap-1">
                               <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/campaigns/${campaign.id}`)} title="View Campaign"><Eye className="h-4 w-4" /></Button>
-                              {isAdmin && (
-                                <>
+                              <ActionGuard module="campaigns" action="edit" record={campaign}>
                                   {['Running', 'Completed', 'Upcoming'].includes(campaign.status) && (
                                     <Button variant="ghost" size="icon" onClick={() => setExtendDialog({ open: true, campaign })} title="Extend/Renew" className="text-primary hover:text-primary hover:bg-primary/10"><RefreshCw className="h-4 w-4" /></Button>
                                   )}
                                   <Button variant="ghost" size="icon" onClick={() => setDuplicateDialog({ open: true, campaign })} title="Duplicate" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"><CopyPlus className="h-4 w-4" /></Button>
                                   <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/campaigns/edit/${campaign.id}`)} title="Edit"><Pencil className="h-4 w-4" /></Button>
+                              </ActionGuard>
+                              <ActionGuard module="campaigns" action="delete" record={campaign}>
                                   <Button variant="ghost" size="icon" onClick={() => setDeleteDialog({ open: true, campaign })} title="Delete"><Trash2 className="h-4 w-4" /></Button>
-                                </>
-                              )}
+                              </ActionGuard>
                             </div>
                           </TableCell>
                         </TableRow>

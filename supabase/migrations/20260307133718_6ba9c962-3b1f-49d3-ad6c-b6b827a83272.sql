@@ -1,0 +1,1 @@
+ALTER TABLE public.client_portal_users ADD CONSTRAINT client_portal_users_client_id_email_key UNIQUE (client_id, email);

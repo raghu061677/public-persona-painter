@@ -135,6 +135,7 @@ export default function InvoiceDetail() {
   const canEdit = isAdmin && !isLocked;
 
   return (
+    <ModuleGuard module="finance">
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8 space-y-6">
         {/* Finalize Lock Warning */}

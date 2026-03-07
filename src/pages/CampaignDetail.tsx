@@ -291,6 +291,7 @@ export default function CampaignDetail() {
   const manualDiscount = totals.manualDiscountAmount;
 
   return (
+    <ModuleGuard module="campaigns">
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 sm:px-6 py-6 max-w-7xl">
         <Button

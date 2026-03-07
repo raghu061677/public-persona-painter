@@ -899,6 +899,16 @@ export default function ClientDetail() {
         </TabsContent>
 
         {/* Activity Log Tab */}
+        {/* Portal Access Tab */}
+        <TabsContent value="portal">
+          <ClientPortalAccessCard
+            clientId={client.id}
+            clientName={client.name}
+            clientEmail={client.email}
+            onInviteClick={() => setShowInviteDialog(true)}
+          />
+        </TabsContent>
+
         <TabsContent value="activity">
           <Card>
             <CardHeader>

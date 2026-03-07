@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -133,6 +135,7 @@ export default function InvoiceDetail() {
   const canEdit = isAdmin && !isLocked;
 
   return (
+    <ModuleGuard module="finance">
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8 space-y-6">
         {/* Finalize Lock Warning */}
@@ -166,6 +169,7 @@ export default function InvoiceDetail() {
               {invoice.status}
             </Badge>
             <InvoicePDFExport invoiceId={invoice.id} clientName={invoice.client_name} />
+            <ActionGuard module="finance" action="edit">
             {isAdmin && invoice.status !== 'Draft' && (
               <ShareInvoiceButton invoiceId={invoice.id} invoiceNo={invoice.id} />
             )}
@@ -175,18 +179,23 @@ export default function InvoiceDetail() {
                 Mark as Sent
               </Button>
             )}
+            </ActionGuard>
+            <ActionGuard module="finance" action="delete">
             {isAdmin && invoice.status === 'Draft' && (
               <Button variant="destructive" onClick={handleDelete}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
               </Button>
             )}
+            </ActionGuard>
+            <ActionGuard module="finance" action="approve">
             {isAdmin && invoice.status !== 'Draft' && (
               <Button variant="outline" onClick={() => setCreditNoteDialogOpen(true)}>
                 <FileText className="mr-2 h-4 w-4" />
                 Credit Note
               </Button>
             )}
+            </ActionGuard>
           </div>
         </div>
 
@@ -286,5 +295,6 @@ export default function InvoiceDetail() {
         )}
       </div>
     </div>
+    </ModuleGuard>
   );
 }

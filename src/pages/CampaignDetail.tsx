@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { useCampaignResolver, getCampaignDisplayCode } from "@/hooks/useCampaignResolver";
 import { useBreadcrumb } from "@/contexts/BreadcrumbContext";
@@ -289,6 +291,7 @@ export default function CampaignDetail() {
   const manualDiscount = totals.manualDiscountAmount;
 
   return (
+    <ModuleGuard module="campaigns">
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 sm:px-6 py-6 max-w-7xl">
         <Button
@@ -328,7 +331,7 @@ export default function CampaignDetail() {
               </div>
               <div className="flex gap-2 flex-wrap">
                 {isAdmin && company && (
-                  <>
+                  <ActionGuard module="campaigns" action="assign">
                     <AutoAssignMountersButton
                       campaignId={campaign.id}
                       companyId={company.id}
@@ -341,7 +344,7 @@ export default function CampaignDetail() {
                       isEnabled={campaign.public_share_enabled}
                       onUpdate={refreshData}
                     />
-                  </>
+                  </ActionGuard>
                 )}
                 <CampaignPDFReport campaign={campaign} campaignAssets={campaignAssets} />
                 <CampaignComparisonDialog currentCampaignId={campaign.id} />
@@ -362,6 +365,7 @@ export default function CampaignDetail() {
                   <TrendingUp className="mr-2 h-4 w-4" />
                   Budget Tracker
                 </Button>
+                <ActionGuard module="campaigns" action="edit">
                 {isAdmin && !isDeleted && (
                   <>
                     {campaign.status !== 'Completed' && new Date(campaign.end_date) < new Date() && (
@@ -382,12 +386,17 @@ export default function CampaignDetail() {
                       <Pencil className="mr-2 h-4 w-4" />
                       Edit
                     </Button>
+                  </>
+                )}
+                </ActionGuard>
+                <ActionGuard module="campaigns" action="delete">
+                {isAdmin && !isDeleted && (
                     <Button variant="destructive" size="sm" onClick={openDeleteDialog}>
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete
                     </Button>
-                  </>
                 )}
+                </ActionGuard>
               </div>
             </div>
           </CardContent>
@@ -812,5 +821,6 @@ export default function CampaignDetail() {
         />
       </div>
     </div>
+    </ModuleGuard>
   );
 }

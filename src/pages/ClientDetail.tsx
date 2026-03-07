@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -304,6 +306,7 @@ export default function ClientDetail() {
   }
 
   return (
+    <ModuleGuard module="clients">
     <div className="p-8 space-y-6">
       <PageHeader
         title={client.name}
@@ -975,5 +978,6 @@ export default function ClientDetail() {
         }}
       />
     </div>
+    </ModuleGuard>
   );
 }

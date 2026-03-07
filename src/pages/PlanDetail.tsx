@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
+import { SensitiveField } from "@/components/rbac/SensitiveField";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -985,6 +988,7 @@ export default function PlanDetail() {
   }
 
   return (
+    <ModuleGuard module="plans">
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8">
         <Button
@@ -1884,5 +1888,6 @@ export default function PlanDetail() {
         </Dialog>
       </div>
     </div>
+    </ModuleGuard>
   );
 }

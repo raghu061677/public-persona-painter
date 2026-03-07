@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -215,6 +216,7 @@ export default function InvoiceCreate() {
     (profitability.marginPercent < getMinMarginThreshold(companyId) || profitability.calcFailed);
 
   return (
+    <ModuleGuard module="finance">
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8 space-y-6">
         {/* Header */}
@@ -388,5 +390,6 @@ export default function InvoiceCreate() {
         />
       )}
     </div>
+    </ModuleGuard>
   );
 }

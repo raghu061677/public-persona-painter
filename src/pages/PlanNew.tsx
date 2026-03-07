@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -616,6 +617,7 @@ export default function PlanNew() {
   };
 
   return (
+    <ModuleGuard module="plans">
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8 max-w-7xl">
         <Button
@@ -875,5 +877,6 @@ export default function PlanNew() {
         />
       </div>
     </div>
+    </ModuleGuard>
   );
 }

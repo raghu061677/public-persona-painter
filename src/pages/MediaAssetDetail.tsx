@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { AssetDetails } from "@/components/media-assets/asset-details";
@@ -137,6 +138,7 @@ export default function MediaAssetDetail() {
   const displayCode = asset.media_asset_code || asset.id;
 
   return (
+    <ModuleGuard module="media_assets">
     <div className="flex-1 space-y-4 p-4 sm:p-8 pt-6">
       <PageHeader
         title={displayCode}
@@ -167,5 +169,6 @@ export default function MediaAssetDetail() {
         onQrGenerated={handleQRGenerated}
       />
     </div>
+    </ModuleGuard>
   );
 }

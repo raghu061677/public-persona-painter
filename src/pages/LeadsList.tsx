@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/navigation/PageHeader";
@@ -128,15 +130,18 @@ export default function LeadsList() {
   }
 
   return (
+    <ModuleGuard module="clients">
     <div className="container mx-auto p-6 space-y-6">
       <PageHeader
         title="Leads"
         description={`${filteredLeads?.length || 0} leads found`}
         actions={
-          <Button onClick={() => navigate("/admin/leads/new")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Lead
-          </Button>
+          <ActionGuard module="clients" action="create">
+            <Button onClick={() => navigate("/admin/leads/new")}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Lead
+            </Button>
+          </ActionGuard>
         }
       />
 
@@ -273,5 +278,6 @@ export default function LeadsList() {
         />
       )}
     </div>
+    </ModuleGuard>
   );
 }

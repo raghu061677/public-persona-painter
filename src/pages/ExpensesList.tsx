@@ -277,7 +277,7 @@ export default function ExpensesList() {
         variant: "destructive",
       });
     } else {
-      setExpenses(data || []);
+      setExpenses(expenseScopeFilter(data || []));
     }
     setLoading(false);
   };

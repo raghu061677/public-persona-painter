@@ -180,7 +180,7 @@ export default function CampaignsList() {
     if (error) {
       toast({ title: "Error", description: "Failed to fetch campaigns", variant: "destructive" });
     } else {
-      setCampaigns(data || []);
+      setCampaigns(campaignScopeFilter(data || []));
     }
     setLoading(false);
   };

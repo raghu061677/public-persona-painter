@@ -190,7 +190,7 @@ export default function InvoicesList() {
     if (error) {
       toast({ title: "Error", description: "Failed to fetch invoices", variant: "destructive" });
     } else {
-      setInvoices(data || []);
+      setInvoices(invoiceScopeFilter(data || []));
     }
     setLoading(false);
   };

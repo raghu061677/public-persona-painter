@@ -192,7 +192,7 @@ export default function Operations() {
         asset => asset.campaign?.id && campaigns.some(c => c.id === asset.campaign_id)
       );
       
-      setCampaignAssets(data || []);
+      setCampaignAssets(opsScopeFilter(data || []));
     } catch (error: any) {
       console.error("Error fetching campaign assets:", error);
       toast({

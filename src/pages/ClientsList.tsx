@@ -131,6 +131,8 @@ export default function ClientsList() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
   
+  // RBAC scope filtering for clients
+  const { filterByScope: clientScopeFilter } = useScopedQuery('clients', { ownerColumn: 'created_by', additionalOwnerColumns: ['assigned_to'] });
   // Filtering states (kept for backward compatibility)
   const [filterState, setFilterState] = useState<string>("");
   const [filterCity, setFilterCity] = useState<string>("");

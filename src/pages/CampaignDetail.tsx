@@ -365,6 +365,7 @@ export default function CampaignDetail() {
                   <TrendingUp className="mr-2 h-4 w-4" />
                   Budget Tracker
                 </Button>
+                <ActionGuard module="campaigns" action="edit">
                 {isAdmin && !isDeleted && (
                   <>
                     {campaign.status !== 'Completed' && new Date(campaign.end_date) < new Date() && (
@@ -385,12 +386,17 @@ export default function CampaignDetail() {
                       <Pencil className="mr-2 h-4 w-4" />
                       Edit
                     </Button>
+                  </>
+                )}
+                </ActionGuard>
+                <ActionGuard module="campaigns" action="delete">
+                {isAdmin && !isDeleted && (
                     <Button variant="destructive" size="sm" onClick={openDeleteDialog}>
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete
                     </Button>
-                  </>
                 )}
+                </ActionGuard>
               </div>
             </div>
           </CardContent>

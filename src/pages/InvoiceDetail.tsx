@@ -169,6 +169,7 @@ export default function InvoiceDetail() {
               {invoice.status}
             </Badge>
             <InvoicePDFExport invoiceId={invoice.id} clientName={invoice.client_name} />
+            <ActionGuard module="finance" action="edit">
             {isAdmin && invoice.status !== 'Draft' && (
               <ShareInvoiceButton invoiceId={invoice.id} invoiceNo={invoice.id} />
             )}
@@ -178,18 +179,23 @@ export default function InvoiceDetail() {
                 Mark as Sent
               </Button>
             )}
+            </ActionGuard>
+            <ActionGuard module="finance" action="delete">
             {isAdmin && invoice.status === 'Draft' && (
               <Button variant="destructive" onClick={handleDelete}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
               </Button>
             )}
+            </ActionGuard>
+            <ActionGuard module="finance" action="approve">
             {isAdmin && invoice.status !== 'Draft' && (
               <Button variant="outline" onClick={() => setCreditNoteDialogOpen(true)}>
                 <FileText className="mr-2 h-4 w-4" />
                 Credit Note
               </Button>
             )}
+            </ActionGuard>
           </div>
         </div>
 

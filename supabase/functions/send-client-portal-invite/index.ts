@@ -52,20 +52,17 @@ serve(async (req) => {
       throw new Error("Client not found");
     }
 
-    // Create portal access record
-    const { error: insertError } = await supabase
-      .from("client_portal_access")
-      .insert({
-        client_id: clientId,
-        email,
-        token,
-        expires_at: expiresAt.toISOString(),
-        created_by: user.id,
-        is_active: true,
-      });
+    // Update the existing client_portal_users record with magic link token
+    const { error: updateError } = await supabase
+      .from("client_portal_users")
+      .update({
+        magic_link_token: token,
+        magic_link_expires_at: expiresAt.toISOString(),
+      })
+      .eq("client_id", clientId);
 
-    if (insertError) {
-      throw insertError;
+    if (updateError) {
+      throw updateError;
     }
 
     // Generate magic link

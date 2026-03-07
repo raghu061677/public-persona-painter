@@ -467,6 +467,7 @@ export default function InvoicesList() {
                 <div className="text-lg sm:text-xl font-bold text-amber-600">
                   {canSeeInvField('outstanding') ? formatINR(pendingAmount) : '••••••'}
                 </div>
+              </CardContent>
             </Card>
             <Card className="border-l-4 border-l-red-500">
               <CardHeader className="pb-2">

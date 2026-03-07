@@ -169,5 +169,6 @@ export default function MediaAssetDetail() {
         onQrGenerated={handleQRGenerated}
       />
     </div>
+    </ModuleGuard>
   );
 }

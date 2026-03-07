@@ -1888,5 +1888,6 @@ export default function PlanDetail() {
         </Dialog>
       </div>
     </div>
+    </ModuleGuard>
   );
 }

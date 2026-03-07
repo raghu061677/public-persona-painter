@@ -289,5 +289,6 @@ export default function InvoiceDetail() {
         )}
       </div>
     </div>
+    </ModuleGuard>
   );
 }

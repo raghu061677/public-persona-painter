@@ -815,5 +815,6 @@ export default function CampaignDetail() {
         />
       </div>
     </div>
+    </ModuleGuard>
   );
 }

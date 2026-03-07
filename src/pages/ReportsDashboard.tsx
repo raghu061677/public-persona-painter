@@ -162,6 +162,7 @@ export default function ReportsDashboard() {
   ];
 
   return (
+    <ModuleGuard module="reports">
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8">
         <div className="space-y-6">

@@ -478,5 +478,6 @@ export default function Operations() {
         </TabsContent>
       </Tabs>
     </div>
+    </ModuleGuard>
   );
 }

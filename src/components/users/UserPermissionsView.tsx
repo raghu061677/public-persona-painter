@@ -41,7 +41,13 @@ export default function UserPermissionsView() {
       if (usersError) throw usersError;
 
       if (usersData?.users) {
-        setUsers(usersData.users);
+        // Map list-users response to UserProfile shape
+        setUsers(usersData.users.map((u: any) => ({
+          id: u.user_id,
+          username: u.name || u.auth_email?.split('@')[0] || u.email?.split('@')[0] || 'Unknown',
+          email: u.auth_email || u.email || '',
+          roles: u.role ? [u.role] : [],
+        })));
       } else {
         setUsers([]);
       }
@@ -106,7 +112,7 @@ export default function UserPermissionsView() {
                 <Avatar className="h-12 w-12">
                   <AvatarImage src={user.avatar_url} />
                   <AvatarFallback>
-                    {user.username.substring(0, 2).toUpperCase()}
+                    {(user.username || 'U').substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">

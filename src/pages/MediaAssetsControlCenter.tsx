@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { HeaderBar, type ViewMode, type ThemeMode } from "@/components/media-assets/control-center/HeaderBar";
@@ -259,6 +260,7 @@ export default function MediaAssetsControlCenter() {
   );
 
   return (
+    <ModuleGuard module="media_assets">
     <div className="min-h-screen flex flex-col bg-background">
       {/* Main Content */}
       <div className="flex-1">
@@ -354,5 +356,6 @@ export default function MediaAssetsControlCenter() {
       {/* God Mode HUD */}
       <GodModeHUD assets={filteredAssets} isVisible={isGodModeVisible} />
     </div>
+    </ModuleGuard>
   );
 }

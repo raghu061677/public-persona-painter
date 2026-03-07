@@ -1,4 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -332,6 +334,7 @@ export default function CampaignsList() {
   }
 
   return (
+    <ModuleGuard module="campaigns">
     <div className="min-h-screen bg-background">
       <PageContainer>
         {/* Header */}
@@ -349,12 +352,14 @@ export default function CampaignsList() {
                   onUpdate={fetchCampaigns}
                   onClearSelection={() => setSelectedCampaigns(new Set())}
                 />
+                <ActionGuard module="campaigns" action="create">
                 <Button onClick={() => navigate('/admin/campaigns/create')} size="lg" variant="outline" className="transition-smooth">
                   <Plus className="mr-2 h-5 w-5" />Direct Campaign
                 </Button>
                 <Button onClick={() => setShowCreateDialog(true)} size="lg" className="bg-gradient-primary hover:shadow-glow transition-smooth">
                   <Plus className="mr-2 h-5 w-5" />From Plan
                 </Button>
+                </ActionGuard>
               </>
             )}
           </div>
@@ -515,16 +520,16 @@ export default function CampaignsList() {
                           <TableCell className={`px-4 py-3 text-right ${getCellClassName()}`}>
                             <div className="flex items-center justify-end gap-1">
                               <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/campaigns/${campaign.id}`)} title="View Campaign"><Eye className="h-4 w-4" /></Button>
-                              {isAdmin && (
-                                <>
+                              <ActionGuard module="campaigns" action="edit" record={campaign}>
                                   {['Running', 'Completed', 'Upcoming'].includes(campaign.status) && (
                                     <Button variant="ghost" size="icon" onClick={() => setExtendDialog({ open: true, campaign })} title="Extend/Renew" className="text-primary hover:text-primary hover:bg-primary/10"><RefreshCw className="h-4 w-4" /></Button>
                                   )}
                                   <Button variant="ghost" size="icon" onClick={() => setDuplicateDialog({ open: true, campaign })} title="Duplicate" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"><CopyPlus className="h-4 w-4" /></Button>
                                   <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/campaigns/edit/${campaign.id}`)} title="Edit"><Pencil className="h-4 w-4" /></Button>
+                              </ActionGuard>
+                              <ActionGuard module="campaigns" action="delete" record={campaign}>
                                   <Button variant="ghost" size="icon" onClick={() => setDeleteDialog({ open: true, campaign })} title="Delete"><Trash2 className="h-4 w-4" /></Button>
-                                </>
-                              )}
+                              </ActionGuard>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -553,5 +558,6 @@ export default function CampaignsList() {
         />
       </PageContainer>
     </div>
+    </ModuleGuard>
   );
 }

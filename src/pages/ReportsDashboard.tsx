@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -161,6 +162,7 @@ export default function ReportsDashboard() {
   ];
 
   return (
+    <ModuleGuard module="reports">
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8">
         <div className="space-y-6">
@@ -225,5 +227,6 @@ export default function ReportsDashboard() {
         </div>
       </div>
     </div>
+    </ModuleGuard>
   );
 }

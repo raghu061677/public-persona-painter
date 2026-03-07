@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { generateClientCode } from "@/lib/codeGenerator";
 import { PageContainer } from "@/components/ui/page-container";
@@ -612,6 +614,7 @@ export default function ClientsList() {
   }
 
   return (
+    <ModuleGuard module="clients">
     <div className="min-h-screen bg-background">
       <PageContainer>
         <PageHeader
@@ -623,7 +626,7 @@ export default function ClientsList() {
           ]}
           actions={
             <>
-              {isAdmin && (
+              <ActionGuard module="clients" action="create">
                 <Button 
                   onClick={() => navigate(ROUTES.CLIENTS_NEW)}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -632,7 +635,7 @@ export default function ClientsList() {
                   <Plus className="mr-2 h-5 w-5" />
                   Add Client
                 </Button>
-              )}
+              </ActionGuard>
               <Button variant="outline" onClick={exportToExcel}>
                 <Download className="mr-2 h-4 w-4" />
                 Export
@@ -1125,5 +1128,6 @@ export default function ClientsList() {
         </Dialog>
       </PageContainer>
     </div>
+    </ModuleGuard>
   );
 }

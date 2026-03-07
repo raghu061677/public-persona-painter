@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -74,6 +75,7 @@ export default function EstimationsList() {
   ];
 
   return (
+    <ModuleGuard module="finance">
     <FinanceModuleLayout
       title="Estimations & Quotations"
       subtitle="Approved plans and converted quotations"
@@ -93,5 +95,6 @@ export default function EstimationsList() {
       emptyTitle="No estimations found"
       emptyDescription="Estimations appear when plans are approved"
     />
+    </ModuleGuard>
   );
 }

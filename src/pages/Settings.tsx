@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -318,6 +319,7 @@ export default function Settings() {
   }
 
   return (
+    <ModuleGuard module="settings">
     <div className="space-y-6 max-w-4xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
@@ -741,5 +743,6 @@ export default function Settings() {
         </TabsContent>
       </Tabs>
     </div>
+    </ModuleGuard>
   );
 }

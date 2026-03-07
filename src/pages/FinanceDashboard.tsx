@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -115,6 +116,7 @@ export default function FinanceDashboard() {
   ];
 
   return (
+    <ModuleGuard module="finance">
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-8">
@@ -211,5 +213,6 @@ export default function FinanceDashboard() {
         </Tabs>
       </div>
     </div>
+    </ModuleGuard>
   );
 }

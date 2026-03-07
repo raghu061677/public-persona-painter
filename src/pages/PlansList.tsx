@@ -1,5 +1,8 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
+import { useSensitiveFieldMask } from "@/components/rbac/SensitiveField";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { ListToolbar } from "@/components/list-views";
@@ -657,6 +660,7 @@ export default function PlansList() {
   ];
 
   return (
+    <ModuleGuard module="plans">
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-7xl space-y-4">
         {/* Header Section */}
@@ -677,6 +681,7 @@ export default function PlansList() {
               <FolderOpen className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Templates</span>
             </Button>
+            <ActionGuard module="plans" action="create">
             <Button
               onClick={() => navigate('/admin/plans/new')}
               size="default"
@@ -685,6 +690,7 @@ export default function PlansList() {
               <span className="hidden sm:inline">Add Plan</span>
               <span className="sm:hidden">Add</span>
             </Button>
+            </ActionGuard>
           </div>
         </div>
 
@@ -1281,8 +1287,7 @@ export default function PlansList() {
                                     <DropdownMenuSeparator />
                                   </>
                                 )}
-                                {isAdmin && (
-                                  <>
+                                <ActionGuard module="plans" action="delete" record={plan}>
                                     <DropdownMenuItem onClick={() => handleDelete(plan.id)}>
                                       <Trash2 className="mr-2 h-4 w-4" />
                                       Delete
@@ -1292,8 +1297,7 @@ export default function PlansList() {
                                       Reject
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
-                                  </>
-                                )}
+                                </ActionGuard>
                                 <DropdownMenuItem onClick={() => handleCopy(plan.id)}>
                                   <Copy className="mr-2 h-4 w-4" />
                                   Copy ID
@@ -1371,5 +1375,6 @@ export default function PlansList() {
         />
       )}
     </div>
+    </ModuleGuard>
   );
 }

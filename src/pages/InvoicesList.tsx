@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -367,6 +368,7 @@ export default function InvoicesList() {
   if (!isReady) return null;
 
   return (
+    <ModuleGuard module="finance">
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Header */}
@@ -646,5 +648,6 @@ export default function InvoicesList() {
         onReset={handleResetFilters}
       />
     </div>
+    </ModuleGuard>
   );
 }

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { useSensitiveFieldMask } from "@/components/rbac/SensitiveField";
+import { useScopedQuery } from "@/hooks/useScopedQuery";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { ListToolbar } from "@/components/list-views";
@@ -80,6 +81,10 @@ export default function PlansList() {
   const navigate = useNavigate();
   const { company } = useCompany();
   const [plans, setPlans] = useState<any[]>([]);
+
+  // RBAC scope filtering and sensitive field masking
+  const { filterByScope: planScopeFilter } = useScopedQuery('plans', { ownerColumn: 'created_by', additionalOwnerColumns: ['sales_owner_id'] });
+  const { mask: maskPlanField, canSee: canSeePlanField } = useSensitiveFieldMask('plans');
 
   // Global List View System
   const lv = useListView("plans.list");
@@ -328,8 +333,9 @@ export default function PlansList() {
         })
       );
 
-      setPlans(plansWithSqft);
-      setGlobalSearchFiltered(plansWithSqft);
+      const scopedPlans = planScopeFilter(plansWithSqft);
+      setPlans(scopedPlans);
+      setGlobalSearchFiltered(scopedPlans);
       setLoading(false);
     } catch (error: any) {
       console.error('Error in fetchPlans:', error);
@@ -1181,7 +1187,9 @@ export default function PlansList() {
                       )}
                       {visibleColumns.includes("amount") && (
                         <TableCell className="px-4 py-3 text-right font-medium">
-                          {formatCurrencyUtil(plan.grand_total, settings.currencyFormat, settings.currencySymbol, settings.compactNumbers)}
+                          {canSeePlanField('grand_total', plan)
+                            ? formatCurrencyUtil(plan.grand_total, settings.currencyFormat, settings.currencySymbol, settings.compactNumbers)
+                            : <span className="text-muted-foreground select-none">••••••</span>}
                         </TableCell>
                       )}
                       {visibleColumns.includes("qos") && (

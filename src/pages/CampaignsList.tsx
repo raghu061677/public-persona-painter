@@ -1,6 +1,8 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { ActionGuard } from "@/components/rbac/ActionGuard";
+import { useScopedQuery } from "@/hooks/useScopedQuery";
+import { useSensitiveFieldMask } from "@/components/rbac/SensitiveField";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -41,6 +43,10 @@ export default function CampaignsList() {
   const navigate = useNavigate();
   const { company } = useCompany();
   const [campaigns, setCampaigns] = useState<any[]>([]);
+
+  // RBAC scope filtering and sensitive field masking
+  const { filterByScope: campaignScopeFilter } = useScopedQuery('campaigns', { ownerColumn: 'created_by', additionalOwnerColumns: ['sales_owner_id'] });
+  const { mask: maskField, canSee: canSeeField } = useSensitiveFieldMask('campaigns');
 
   // Global List View System
   const lv = useListView("campaigns.list");
@@ -174,7 +180,7 @@ export default function CampaignsList() {
     if (error) {
       toast({ title: "Error", description: "Failed to fetch campaigns", variant: "destructive" });
     } else {
-      setCampaigns(data || []);
+      setCampaigns(campaignScopeFilter(data || []));
     }
     setLoading(false);
   };
@@ -515,7 +521,9 @@ export default function CampaignsList() {
                           </TableCell>
                           <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{campaign.total_assets || 0}</TableCell>
                           <TableCell className={`px-4 py-3 text-right ${getCellClassName()}`}>
-                            {formatCurrencyUtil(campaign.grand_total, settings.currencyFormat, settings.currencySymbol, settings.compactNumbers)}
+                            {canSeeField('grand_total', campaign)
+                              ? formatCurrencyUtil(campaign.grand_total, settings.currencyFormat, settings.currencySymbol, settings.compactNumbers)
+                              : <span className="text-muted-foreground select-none">••••••</span>}
                           </TableCell>
                           <TableCell className={`px-4 py-3 text-right ${getCellClassName()}`}>
                             <div className="flex items-center justify-end gap-1">

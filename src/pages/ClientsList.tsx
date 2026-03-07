@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { ActionGuard } from "@/components/rbac/ActionGuard";
+import { useScopedQuery } from "@/hooks/useScopedQuery";
 import { supabase } from "@/integrations/supabase/client";
 import { generateClientCode } from "@/lib/codeGenerator";
 import { PageContainer } from "@/components/ui/page-container";
@@ -130,6 +131,8 @@ export default function ClientsList() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
   
+  // RBAC scope filtering for clients
+  const { filterByScope: clientScopeFilter } = useScopedQuery('clients', { ownerColumn: 'created_by', additionalOwnerColumns: ['assigned_to'] });
   // Filtering states (kept for backward compatibility)
   const [filterState, setFilterState] = useState<string>("");
   const [filterCity, setFilterCity] = useState<string>("");
@@ -232,11 +235,13 @@ export default function ClientsList() {
     const selectedCompanyId = localStorage.getItem('selected_company_id') || companyUserData.company_id;
 
     // CRITICAL: Filter by company_id for multi-tenant isolation
-    const { data, error } = await supabase
+    let query = supabase
       .from('clients')
       .select('*')
       .eq('company_id', selectedCompanyId)
       .order('name');
+
+    const { data, error } = await query;
 
     if (error) {
       toast({
@@ -245,10 +250,12 @@ export default function ClientsList() {
         variant: "destructive",
       });
     } else {
-      setClients(data || []);
+      // Apply RBAC scope filtering (sales see own, admin see all)
+      const scoped = clientScopeFilter(data || []);
+      setClients(scoped);
+      setGlobalSearchFiltered(scoped);
     }
     setLoading(false);
-    setGlobalSearchFiltered(data || []);
   };
 
   const handleBulkAction = async (actionId: string) => {

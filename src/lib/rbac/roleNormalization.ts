@@ -162,6 +162,20 @@ export const SENSITIVE_FIELDS = [
   'printing_cost_default',
   'mounting_rate_per_sqft',
   'printing_rate_per_sqft',
+  // Additional financial fields used in list views
+  'grand_total',
+  'total_amount',
+  'balance_due',
+  'paid_amount',
+  'subtotal',
+  'cgst_amount',
+  'sgst_amount',
+  'igst_amount',
+  'taxable_amount',
+  'discount_amount',
+  'amount',
+  'amount_before_tax',
+  'net_payable',
 ] as const;
 
 export type SensitiveField = typeof SENSITIVE_FIELDS[number];

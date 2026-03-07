@@ -1,5 +1,8 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
+import { useScopedQuery } from "@/hooks/useScopedQuery";
+import { useSensitiveFieldMask } from "@/components/rbac/SensitiveField";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -40,6 +43,10 @@ export default function InvoicesList() {
   const { company } = useCompany();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // RBAC scope filtering and sensitive field masking
+  const { filterByScope: invoiceScopeFilter } = useScopedQuery('finance', { ownerColumn: 'created_by' });
+  const { mask: maskInvField, canSee: canSeeInvField } = useSensitiveFieldMask('finance');
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const urlFiltersAppliedRef = useRef(false);
@@ -183,7 +190,7 @@ export default function InvoicesList() {
     if (error) {
       toast({ title: "Error", description: "Failed to fetch invoices", variant: "destructive" });
     } else {
-      setInvoices(data || []);
+      setInvoices(invoiceScopeFilter(data || []));
     }
     setLoading(false);
   };
@@ -457,7 +464,9 @@ export default function InvoicesList() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-lg sm:text-xl font-bold text-amber-600">{formatINR(pendingAmount)}</div>
+                <div className="text-lg sm:text-xl font-bold text-amber-600">
+                  {canSeeInvField('outstanding') ? formatINR(pendingAmount) : '••••••'}
+                </div>
               </CardContent>
             </Card>
             <Card className="border-l-4 border-l-red-500">
@@ -613,8 +622,12 @@ export default function InvoicesList() {
                                 </SelectContent>
                               </Select>
                             </TableCell>
-                            <TableCell className="px-4 py-3 text-right">{formatINR(invoice.total_amount)}</TableCell>
-                            <TableCell className="px-4 py-3 text-right">{formatINR(invoice.balance_due)}</TableCell>
+                            <TableCell className="px-4 py-3 text-right">
+                              {canSeeInvField('total_amount', invoice) ? formatINR(invoice.total_amount) : <span className="text-muted-foreground select-none">••••••</span>}
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-right">
+                              {canSeeInvField('balance_due', invoice) ? formatINR(invoice.balance_due) : <span className="text-muted-foreground select-none">••••••</span>}
+                            </TableCell>
                             <TableCell className="px-4 py-3 text-right">
                               <div className="flex items-center justify-end gap-2">
                                 <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(invoice.id)}`)}>

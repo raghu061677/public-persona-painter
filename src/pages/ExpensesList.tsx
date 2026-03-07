@@ -1,5 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
+import { useScopedQuery } from "@/hooks/useScopedQuery";
+import { useSensitiveFieldMask } from "@/components/rbac/SensitiveField";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { ListToolbar } from "@/components/list-views";
@@ -44,6 +47,10 @@ import { ExpenseQuickChips } from "@/components/expenses/ExpenseQuickChips";
 export default function ExpensesList() {
   const { company } = useCompany();
   const [expenses, setExpenses] = useState<any[]>([]);
+
+  // RBAC scope filtering and sensitive field masking
+  const { filterByScope: expenseScopeFilter } = useScopedQuery('finance', { ownerColumn: 'created_by' });
+  const { mask: maskExpField } = useSensitiveFieldMask('finance');
 
   // Global List View System
   const lv = useListView("finance.expenses");
@@ -270,7 +277,7 @@ export default function ExpensesList() {
         variant: "destructive",
       });
     } else {
-      setExpenses(data || []);
+      setExpenses(expenseScopeFilter(data || []));
     }
     setLoading(false);
   };

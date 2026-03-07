@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
+import { useScopedQuery } from "@/hooks/useScopedQuery";
 import { supabase } from "@/integrations/supabase/client";
 import { ListToolbar } from "@/components/list-views";
 import { useListView } from "@/hooks/useListView";
@@ -61,6 +62,13 @@ interface CampaignAsset {
 export default function Operations() {
   const navigate = useNavigate();
   const { company } = useCompany();
+
+  // RBAC scope filtering for operations (mounting/monitoring see assigned only)
+  const { filterByScope: opsScopeFilter } = useScopedQuery('operations', { 
+    ownerColumn: 'created_by', 
+    assignmentColumn: 'assigned_mounter_id',
+    additionalAssignmentColumns: ['mounter_name'],
+  });
 
   // Global List View System
   const lv = useListView("ops.campaign_assets");
@@ -184,7 +192,7 @@ export default function Operations() {
         asset => asset.campaign?.id && campaigns.some(c => c.id === asset.campaign_id)
       );
       
-      setCampaignAssets(data || []);
+      setCampaignAssets(opsScopeFilter(data || []));
     } catch (error: any) {
       console.error("Error fetching campaign assets:", error);
       toast({

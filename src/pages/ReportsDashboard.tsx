@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
+import { useSensitiveFieldMask } from "@/components/rbac/SensitiveField";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +24,7 @@ import { AssetHeatMap } from "@/components/charts/AssetHeatMap";
 export default function ReportsDashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const { canSee: canSeeReportField } = useSensitiveFieldMask('reports');
   const [stats, setStats] = useState({
     totalAssets: 0,
     bookedAssets: 0,
@@ -112,7 +114,7 @@ export default function ReportsDashboard() {
       color: "text-purple-600",
       bgColor: "bg-purple-50 dark:bg-purple-950",
       route: "/reports/revenue",
-      stat: formatINR(stats.revenue),
+      stat: canSeeReportField('gross_revenue') ? formatINR(stats.revenue) : '••••••',
     },
     {
       title: "Client Performance",

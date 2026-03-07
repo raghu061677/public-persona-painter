@@ -1,5 +1,16 @@
- import type { ModuleName } from "@/hooks/useRBAC";
+import type { ModuleName } from "@/hooks/useRBAC";
 import {
+  Database,
+  Upload,
+  Download,
+  HardDrive,
+  Activity,
+  Lock,
+  Mail,
+  MessageSquare,
+  UsersRound,
+  ListChecks as ListChecksIcon,
+  ClipboardList,
   LayoutDashboard,
   Map,
   Calendar,

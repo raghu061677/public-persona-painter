@@ -306,6 +306,7 @@ export default function ClientDetail() {
   }
 
   return (
+    <ModuleGuard module="clients">
     <div className="p-8 space-y-6">
       <PageHeader
         title={client.name}

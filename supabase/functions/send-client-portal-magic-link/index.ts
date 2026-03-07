@@ -3,11 +3,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
 import { logSecurityAudit } from '../_shared/auth.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from '../_shared/cors.ts';
 
 // Rate limiter: 3 requests per minute per IP (magic link send is expensive)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();

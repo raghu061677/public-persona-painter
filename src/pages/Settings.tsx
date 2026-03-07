@@ -319,6 +319,7 @@ export default function Settings() {
   }
 
   return (
+    <ModuleGuard module="settings">
     <div className="space-y-6 max-w-4xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>

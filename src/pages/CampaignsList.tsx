@@ -521,7 +521,9 @@ export default function CampaignsList() {
                           </TableCell>
                           <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{campaign.total_assets || 0}</TableCell>
                           <TableCell className={`px-4 py-3 text-right ${getCellClassName()}`}>
-                            {formatCurrencyUtil(campaign.grand_total, settings.currencyFormat, settings.currencySymbol, settings.compactNumbers)}
+                            {canSeeField('grand_total', campaign)
+                              ? formatCurrencyUtil(campaign.grand_total, settings.currencyFormat, settings.currencySymbol, settings.compactNumbers)
+                              : <span className="text-muted-foreground select-none">••••••</span>}
                           </TableCell>
                           <TableCell className={`px-4 py-3 text-right ${getCellClassName()}`}>
                             <div className="flex items-center justify-end gap-1">

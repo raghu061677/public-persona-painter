@@ -1187,7 +1187,9 @@ export default function PlansList() {
                       )}
                       {visibleColumns.includes("amount") && (
                         <TableCell className="px-4 py-3 text-right font-medium">
-                          {formatCurrencyUtil(plan.grand_total, settings.currencyFormat, settings.currencySymbol, settings.compactNumbers)}
+                          {canSeePlanField('grand_total', plan)
+                            ? formatCurrencyUtil(plan.grand_total, settings.currencyFormat, settings.currencySymbol, settings.compactNumbers)
+                            : <span className="text-muted-foreground select-none">••••••</span>}
                         </TableCell>
                       )}
                       {visibleColumns.includes("qos") && (

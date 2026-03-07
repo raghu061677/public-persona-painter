@@ -620,8 +620,12 @@ export default function InvoicesList() {
                                 </SelectContent>
                               </Select>
                             </TableCell>
-                            <TableCell className="px-4 py-3 text-right">{formatINR(invoice.total_amount)}</TableCell>
-                            <TableCell className="px-4 py-3 text-right">{formatINR(invoice.balance_due)}</TableCell>
+                            <TableCell className="px-4 py-3 text-right">
+                              {canSeeInvField('total_amount', invoice) ? formatINR(invoice.total_amount) : <span className="text-muted-foreground select-none">••••••</span>}
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-right">
+                              {canSeeInvField('balance_due', invoice) ? formatINR(invoice.balance_due) : <span className="text-muted-foreground select-none">••••••</span>}
+                            </TableCell>
                             <TableCell className="px-4 py-3 text-right">
                               <div className="flex items-center justify-end gap-2">
                                 <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/invoices/view/${encodeURIComponent(invoice.id)}`)}>

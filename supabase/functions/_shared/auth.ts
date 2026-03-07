@@ -226,7 +226,10 @@ export async function isPlatformAdmin(userId: string): Promise<boolean> {
 // ─── Role Enforcement ────────────────────────────────────────────────
 
 export function requireRole(ctx: AuthContext, allowedRoles: AppRole[]): void {
-  if (!allowedRoles.includes(ctx.role)) {
+  const normalizedCtxRole = normalizeRoleBackend(ctx.role);
+  const normalizedAllowed = allowedRoles.map(r => normalizeRoleBackend(r));
+  
+  if (!normalizedAllowed.includes(normalizedCtxRole) && !normalizedAllowed.includes(ctx.role)) {
     throw new AuthError(
       `Forbidden – role '${ctx.role}' not in allowed roles: ${allowedRoles.join(', ')}`,
       403

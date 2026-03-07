@@ -50,10 +50,11 @@ Deno.serve(withAuth(async (req) => {
         .order('created_at', { ascending: false })
         .limit(5);
 
+      const userInfo = userEmailMap[cu.user_id] || { email: '', name: 'Unknown' };
       return {
         id: cu.user_id,
-        username: cu.name || 'Unknown',
-        email: cu.email || '',
+        username: userInfo.name,
+        email: userInfo.email,
         role: cu.role,
         total_actions: count || 0,
         recent_actions: (recentActions || []).map((action: any) => ({

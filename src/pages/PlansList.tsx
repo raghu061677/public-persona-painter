@@ -1287,8 +1287,7 @@ export default function PlansList() {
                                     <DropdownMenuSeparator />
                                   </>
                                 )}
-                                {isAdmin && (
-                                  <>
+                                <ActionGuard module="plans" action="delete" record={plan}>
                                     <DropdownMenuItem onClick={() => handleDelete(plan.id)}>
                                       <Trash2 className="mr-2 h-4 w-4" />
                                       Delete
@@ -1298,8 +1297,7 @@ export default function PlansList() {
                                       Reject
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
-                                  </>
-                                )}
+                                </ActionGuard>
                                 <DropdownMenuItem onClick={() => handleCopy(plan.id)}>
                                   <Copy className="mr-2 h-4 w-4" />
                                   Copy ID

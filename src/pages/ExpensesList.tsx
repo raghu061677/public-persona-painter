@@ -48,6 +48,10 @@ export default function ExpensesList() {
   const { company } = useCompany();
   const [expenses, setExpenses] = useState<any[]>([]);
 
+  // RBAC scope filtering and sensitive field masking
+  const { filterByScope: expenseScopeFilter } = useScopedQuery('finance', { ownerColumn: 'created_by' });
+  const { mask: maskExpField } = useSensitiveFieldMask('finance');
+
   // Global List View System
   const lv = useListView("finance.expenses");
   const { handleExportExcel, handleExportPdf } = useListViewExport({

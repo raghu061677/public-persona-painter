@@ -743,5 +743,6 @@ export default function Settings() {
         </TabsContent>
       </Tabs>
     </div>
+    </ModuleGuard>
   );
 }

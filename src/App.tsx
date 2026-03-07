@@ -311,6 +311,7 @@ const App = () => (
             <Route path="/clients" element={<Navigate to="/admin/clients" replace />} />
             <Route path="/plans" element={<Navigate to="/admin/plans" replace />} />
             <Route path="/campaigns" element={<Navigate to="/admin/campaigns" replace />} />
+            <Route path="/settings/profile" element={<ProtectedRoute requireAuth><ModernAppLayout><ProfileSettings /></ModernAppLayout></ProtectedRoute>} />
             {/* Bare /admin/reports → financial summary */}
             <Route path="/admin/reports" element={<Navigate to="/admin/reports/financial" replace />} />
             

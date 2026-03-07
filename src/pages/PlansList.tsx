@@ -333,8 +333,9 @@ export default function PlansList() {
         })
       );
 
-      setPlans(plansWithSqft);
-      setGlobalSearchFiltered(plansWithSqft);
+      const scopedPlans = planScopeFilter(plansWithSqft);
+      setPlans(scopedPlans);
+      setGlobalSearchFiltered(scopedPlans);
       setLoading(false);
     } catch (error: any) {
       console.error('Error in fetchPlans:', error);

@@ -114,7 +114,7 @@ export default function ReportsDashboard() {
       color: "text-purple-600",
       bgColor: "bg-purple-50 dark:bg-purple-950",
       route: "/reports/revenue",
-      stat: formatINR(stats.revenue),
+      stat: canSeeReportField('gross_revenue') ? formatINR(stats.revenue) : '••••••',
     },
     {
       title: "Client Performance",

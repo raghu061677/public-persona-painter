@@ -444,6 +444,8 @@ const App = () => (
               <Route path="finance/ops-payables" element={<Navigate to="/admin/reports/ops-payables" replace />} />
               <Route path="branding-settings" element={<Navigate to="/admin/company-settings/branding" replace />} />
               <Route path="reports/dashboard" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportsDashboard /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="power-bills" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsDashboard /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="power-bills-analytics" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsAnalytics /></ModernAppLayout></ProtectedRoute>} />
               <Route path="power-bills-bulk-payment" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsBulkPayment /></ModernAppLayout></ProtectedRoute>} />
               <Route path="power-bills/bulk-upload" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsBulkUpload /></ModernAppLayout></ProtectedRoute>} />
               <Route path="power-bills/reconciliation" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsReconciliation /></ModernAppLayout></ProtectedRoute>} />

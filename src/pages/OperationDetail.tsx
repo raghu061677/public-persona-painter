@@ -257,5 +257,6 @@ export default function OperationDetail() {
         </Card>
       </div>
     </div>
+    </ModuleGuard>
   );
 }

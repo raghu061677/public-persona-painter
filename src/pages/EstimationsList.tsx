@@ -75,6 +75,7 @@ export default function EstimationsList() {
   ];
 
   return (
+    <ModuleGuard module="finance">
     <FinanceModuleLayout
       title="Estimations & Quotations"
       subtitle="Approved plans and converted quotations"
@@ -94,5 +95,6 @@ export default function EstimationsList() {
       emptyTitle="No estimations found"
       emptyDescription="Estimations appear when plans are approved"
     />
+    </ModuleGuard>
   );
 }

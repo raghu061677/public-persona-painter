@@ -193,6 +193,23 @@ export default function ClientCampaignView() {
     );
   }
 
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-8">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-6 text-center space-y-4">
+            <ShieldAlert className="h-12 w-12 text-destructive mx-auto" />
+            <h2 className="text-xl font-semibold">Access Denied</h2>
+            <p className="text-muted-foreground">You do not have permission to view this campaign.</p>
+            <Button variant="outline" onClick={() => navigate('/portal/dashboard')}>
+              Back to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!campaign) {
     return (
       <div className="min-h-screen bg-background p-8">

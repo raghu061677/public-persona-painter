@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import {
-  ClipboardList, Clock, Wrench, Camera, CheckCircle2, AlertTriangle,
-  Eye, CalendarCheck
+  ClipboardList, Wrench, Camera, CheckCircle2, AlertTriangle,
+  Eye, CalendarCheck, ShieldCheck, Activity
 } from "lucide-react";
 
 interface OpsKpiCardsProps {
@@ -15,6 +16,7 @@ interface KpiTile {
   icon: any;
   color: string;
   bgColor: string;
+  pulse?: boolean;
 }
 
 export function OpsKpiCards({ assets }: OpsKpiCardsProps) {
@@ -40,9 +42,7 @@ export function OpsKpiCards({ assets }: OpsKpiCardsProps) {
       if (s === "pending" || s === "assigned") pendingMounting++;
       if (s === "installed" || s === "mounted") pendingMonitoring++;
       if (s === "photouploaded") verificationPending++;
-      // Proof pending = mounted but no photos
       if ((s === "installed" || s === "mounted") && !hasPhotos(a)) proofPending++;
-      // Issue detection placeholder - assets stuck > 7 days without progress
       if (s === "assigned" && a.assigned_at) {
         const daysSinceAssigned = Math.floor(
           (Date.now() - new Date(a.assigned_at).getTime()) / (1000 * 60 * 60 * 24)
@@ -56,26 +56,35 @@ export function OpsKpiCards({ assets }: OpsKpiCardsProps) {
 
   const tiles: KpiTile[] = [
     { label: "Assigned Today", value: stats.assignedToday, icon: CalendarCheck, color: "text-primary", bgColor: "bg-primary/10" },
-    { label: "Pending Mounting", value: stats.pendingMounting, icon: Wrench, color: "text-amber-600 dark:text-amber-400", bgColor: "bg-amber-500/10" },
-    { label: "Pending Monitoring", value: stats.pendingMonitoring, icon: Eye, color: "text-blue-600 dark:text-blue-400", bgColor: "bg-blue-500/10" },
-    { label: "Proof Pending", value: stats.proofPending, icon: Camera, color: "text-cyan-600 dark:text-cyan-400", bgColor: "bg-cyan-500/10" },
-    { label: "Verification Pending", value: stats.verificationPending, icon: ClipboardList, color: "text-purple-600 dark:text-purple-400", bgColor: "bg-purple-500/10" },
+    { label: "Mounting Queue", value: stats.pendingMounting, icon: Wrench, color: "text-amber-600 dark:text-amber-400", bgColor: "bg-amber-500/10", pulse: stats.pendingMounting > 0 },
+    { label: "Monitoring", value: stats.pendingMonitoring, icon: Eye, color: "text-blue-600 dark:text-blue-400", bgColor: "bg-blue-500/10" },
+    { label: "Proof Pending", value: stats.proofPending, icon: Camera, color: "text-cyan-600 dark:text-cyan-400", bgColor: "bg-cyan-500/10", pulse: stats.proofPending > 0 },
+    { label: "Verification", value: stats.verificationPending, icon: ShieldCheck, color: "text-purple-600 dark:text-purple-400", bgColor: "bg-purple-500/10" },
     { label: "Completed Today", value: stats.completedToday, icon: CheckCircle2, color: "text-emerald-600 dark:text-emerald-400", bgColor: "bg-emerald-500/10" },
-    { label: "Issues / Overdue", value: stats.issueCount, icon: AlertTriangle, color: "text-destructive", bgColor: "bg-destructive/10" },
-    { label: "Total Tasks", value: stats.total, icon: ClipboardList, color: "text-foreground", bgColor: "bg-muted" },
+    { label: "Issues", value: stats.issueCount, icon: AlertTriangle, color: "text-destructive", bgColor: "bg-destructive/10", pulse: stats.issueCount > 0 },
+    { label: "Total", value: stats.total, icon: Activity, color: "text-foreground", bgColor: "bg-muted" },
   ];
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
       {tiles.map((t) => (
-        <Card key={t.label} className="border shadow-sm">
+        <Card key={t.label} className={cn(
+          "border shadow-sm transition-all hover:shadow-md group relative overflow-hidden",
+          t.pulse && t.value > 0 && "ring-1 ring-offset-1 ring-offset-background",
+          t.pulse && t.value > 0 && t.color.includes("amber") && "ring-amber-500/40",
+          t.pulse && t.value > 0 && t.color.includes("cyan") && "ring-cyan-500/40",
+          t.pulse && t.value > 0 && t.color.includes("destructive") && "ring-destructive/40",
+        )}>
           <CardContent className="p-3 flex items-center gap-2.5">
-            <div className={`h-8 w-8 rounded-lg ${t.bgColor} flex items-center justify-center shrink-0`}>
-              <t.icon className={`h-4 w-4 ${t.color}`} />
+            <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-105", t.bgColor)}>
+              <t.icon className={cn("h-4 w-4", t.color)} />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] text-muted-foreground leading-tight truncate">{t.label}</p>
-              <p className={`text-lg font-bold leading-tight ${t.value > 0 ? t.color : "text-muted-foreground"}`}>
+              <p className="text-[10px] text-muted-foreground leading-tight truncate uppercase tracking-wider font-medium">{t.label}</p>
+              <p className={cn(
+                "text-xl font-bold leading-tight tabular-nums",
+                t.value > 0 ? t.color : "text-muted-foreground/50"
+              )}>
                 {t.value}
               </p>
             </div>

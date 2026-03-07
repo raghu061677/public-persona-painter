@@ -877,5 +877,6 @@ export default function PlanNew() {
         />
       </div>
     </div>
+    </ModuleGuard>
   );
 }

@@ -435,6 +435,7 @@ export default function ClientDetail() {
                 <TabsTrigger value="invoices">Invoices ({invoices.length})</TabsTrigger>
                 <TabsTrigger value="ledger">Ledger</TabsTrigger>
                 <TabsTrigger value="documents">Documents</TabsTrigger>
+                <TabsTrigger value="portal">Portal Access</TabsTrigger>
                 <TabsTrigger value="activity">Activity Log</TabsTrigger>
               </TabsList>
 

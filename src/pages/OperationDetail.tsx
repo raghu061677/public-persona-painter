@@ -110,6 +110,7 @@ export default function OperationDetail() {
   };
 
   return (
+    <ModuleGuard module="operations">
     <div className="min-h-screen bg-background">
       {/* Sticky Campaign Context Header */}
       <CampaignContextHeader />

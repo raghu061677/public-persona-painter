@@ -648,5 +648,6 @@ export default function InvoicesList() {
         onReset={handleResetFilters}
       />
     </div>
+    </ModuleGuard>
   );
 }

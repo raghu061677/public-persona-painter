@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { ListToolbar } from "@/components/list-views";

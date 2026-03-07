@@ -485,6 +485,7 @@ const App = () => (
                 <Route path="taxes" element={<CompanyTaxes />} />
                 <Route path="direct-taxes" element={<CompanyDirectTaxes />} />
                 <Route path="einvoicing" element={<CompanyEInvoicing />} />
+                <Route path="e-invoicing" element={<Navigate to="/admin/company-settings/einvoicing" replace />} />
                 <Route path="general" element={<CompanyGeneral />} />
                 <Route path="currencies" element={<CompanyCurrencies />} />
                 <Route path="reminders" element={<CompanyReminders />} />

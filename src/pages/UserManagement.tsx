@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getRoleLabel, getRoleBadgeVariant } from "@/lib/rbac/roleNormalization";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { useCompany } from "@/contexts/CompanyContext";
 import { ROUTES } from "@/lib/routes";
 import { useNavigate } from "react-router-dom";

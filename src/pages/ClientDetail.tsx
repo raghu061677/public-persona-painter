@@ -978,5 +978,6 @@ export default function ClientDetail() {
         }}
       />
     </div>
+    </ModuleGuard>
   );
 }

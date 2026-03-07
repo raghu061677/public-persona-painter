@@ -42,6 +42,7 @@ import { EditClientDialog } from "@/components/clients/EditClientDialog";
 import { ClientContactsManager } from "@/components/clients/ClientContactsManager";
 import { ClientLedger } from "@/components/finance/ClientLedger";
 import { SignedRODocumentCard } from "@/components/shared/SignedRODocumentCard";
+import { ClientPortalAccessCard } from "@/components/clients/ClientPortalAccessCard";
 
 interface Client {
   id: string;
@@ -434,6 +435,7 @@ export default function ClientDetail() {
                 <TabsTrigger value="invoices">Invoices ({invoices.length})</TabsTrigger>
                 <TabsTrigger value="ledger">Ledger</TabsTrigger>
                 <TabsTrigger value="documents">Documents</TabsTrigger>
+                <TabsTrigger value="portal">Portal Access</TabsTrigger>
                 <TabsTrigger value="activity">Activity Log</TabsTrigger>
               </TabsList>
 
@@ -897,6 +899,16 @@ export default function ClientDetail() {
         </TabsContent>
 
         {/* Activity Log Tab */}
+        {/* Portal Access Tab */}
+        <TabsContent value="portal">
+          <ClientPortalAccessCard
+            clientId={client.id}
+            clientName={client.name}
+            clientEmail={client.email}
+            onInviteClick={() => setShowInviteDialog(true)}
+          />
+        </TabsContent>
+
         <TabsContent value="activity">
           <Card>
             <CardHeader>

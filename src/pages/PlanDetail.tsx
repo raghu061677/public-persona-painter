@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
+import { SensitiveField } from "@/components/rbac/SensitiveField";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

@@ -136,10 +136,12 @@ export default function LeadsList() {
         title="Leads"
         description={`${filteredLeads?.length || 0} leads found`}
         actions={
-          <Button onClick={() => navigate("/admin/leads/new")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Lead
-          </Button>
+          <ActionGuard module="clients" action="create">
+            <Button onClick={() => navigate("/admin/leads/new")}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Lead
+            </Button>
+          </ActionGuard>
         }
       />
 

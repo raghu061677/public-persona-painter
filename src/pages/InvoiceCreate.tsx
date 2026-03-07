@@ -216,6 +216,7 @@ export default function InvoiceCreate() {
     (profitability.marginPercent < getMinMarginThreshold(companyId) || profitability.calcFailed);
 
   return (
+    <ModuleGuard module="finance">
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8 space-y-6">
         {/* Header */}

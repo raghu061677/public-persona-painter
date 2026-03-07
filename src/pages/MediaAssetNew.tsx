@@ -745,5 +745,6 @@ export default function MediaAssetNew() {
         </div>
       )}
     </form>
+    </ModuleGuard>
   );
 }

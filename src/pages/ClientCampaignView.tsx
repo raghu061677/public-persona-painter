@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, MapPin, Calendar } from "lucide-react";
+import { Download, MapPin, Calendar, ShieldAlert } from "lucide-react";
 import { UnifiedPhotoGallery, UnifiedPhoto } from "@/components/common/UnifiedPhotoGallery";
 import { CampaignTimeline, TimelineEvent } from "@/components/portal/CampaignTimeline";
+import { useClientPortal } from "@/contexts/ClientPortalContext";
 import { format } from "date-fns";
 
 interface CampaignAsset {
@@ -22,29 +23,33 @@ interface CampaignAsset {
 
 export default function ClientCampaignView() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { portalUser, loading: portalLoading } = useClientPortal();
   const [campaign, setCampaign] = useState<any>(null);
   const [assets, setAssets] = useState<CampaignAsset[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
   const [photos, setPhotos] = useState<UnifiedPhoto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
-    if (id) {
+    if (id && !portalLoading && portalUser) {
       loadCampaignData();
-      loadPhotos();
+    } else if (!portalLoading && !portalUser) {
+      // Not a portal user — allow load without ownership check (public/shared context)
+      loadCampaignDataUnscopied();
     }
-  }, [id]);
+  }, [id, portalLoading, portalUser]);
 
-  const loadCampaignData = async () => {
+  const loadCampaignDataUnscopied = async () => {
+    // Fallback for non-portal contexts (shared links rendered via this component)
     try {
-      // Load campaign details
       const { data: campaignData } = await supabase
         .from('campaigns')
         .select('*')
         .eq('id', id)
         .single();
 
-      // Load campaign assets
       const { data: assetsData } = await supabase
         .from('campaign_assets')
         .select('*')
@@ -52,6 +57,45 @@ export default function ClientCampaignView() {
 
       setCampaign(campaignData);
       setAssets(assetsData || []);
+      loadPhotos();
+    } catch (error) {
+      console.error('Error loading campaign:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadCampaignData = async () => {
+    try {
+      // Load campaign and verify client ownership
+      const { data: campaignData } = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (!campaignData) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Enforce client ownership: campaign must belong to logged-in portal user's client
+      if (portalUser && campaignData.client_id !== portalUser.client_id) {
+        console.warn('Client ownership mismatch — access denied');
+        setAccessDenied(true);
+        setIsLoading(false);
+        return;
+      }
+
+      // Load campaign assets only after ownership is confirmed
+      const { data: assetsData } = await supabase
+        .from('campaign_assets')
+        .select('*')
+        .eq('campaign_id', id);
+
+      setCampaign(campaignData);
+      setAssets(assetsData || []);
+      loadPhotos();
     } catch (error) {
       console.error('Error loading campaign:', error);
     } finally {
@@ -145,6 +189,23 @@ export default function ClientCampaignView() {
         <div className="max-w-7xl mx-auto">
           <p className="text-center text-muted-foreground">Loading campaign...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-8">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-6 text-center space-y-4">
+            <ShieldAlert className="h-12 w-12 text-destructive mx-auto" />
+            <h2 className="text-xl font-semibold">Access Denied</h2>
+            <p className="text-muted-foreground">You do not have permission to view this campaign.</p>
+            <Button variant="outline" onClick={() => navigate('/portal/dashboard')}>
+              Back to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, MapPin, Calendar } from "lucide-react";
+import { Download, MapPin, Calendar, ShieldAlert } from "lucide-react";
 import { UnifiedPhotoGallery, UnifiedPhoto } from "@/components/common/UnifiedPhotoGallery";
 import { CampaignTimeline, TimelineEvent } from "@/components/portal/CampaignTimeline";
+import { useClientPortal } from "@/contexts/ClientPortalContext";
 import { format } from "date-fns";
 
 interface CampaignAsset {

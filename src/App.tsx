@@ -312,6 +312,8 @@ const App = () => (
             <Route path="/plans" element={<Navigate to="/admin/plans" replace />} />
             <Route path="/campaigns" element={<Navigate to="/admin/campaigns" replace />} />
             <Route path="/settings/profile" element={<ProtectedRoute requireAuth><ModernAppLayout><ProfileSettings /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/settings/notifications" element={<ProtectedRoute requireAuth><ModernAppLayout><NotificationSettings /></ModernAppLayout></ProtectedRoute>} />
+            <Route path="/settings/theme" element={<ProtectedRoute requireAuth><ModernAppLayout><ThemeSettings /></ModernAppLayout></ProtectedRoute>} />
             {/* Bare /admin/reports → financial summary */}
             <Route path="/admin/reports" element={<Navigate to="/admin/reports/financial" replace />} />
             
@@ -435,7 +437,13 @@ const App = () => (
               <Route path="photo-library" element={<ProtectedRoute requireAuth><ModernAppLayout><PhotoGallery /></ModernAppLayout></ProtectedRoute>} />
               <Route path="import" element={<Navigate to="/admin/data-export-import" replace />} />
               <Route path="export" element={<Navigate to="/admin/data-export-import" replace />} />
+              <Route path="import-data" element={<Navigate to="/admin/data-export-import" replace />} />
+              <Route path="export-data" element={<Navigate to="/admin/data-export-import" replace />} />
               <Route path="data-export-import" element={<ProtectedRoute requireAuth><ModernAppLayout><DataExportImport /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="finance/dashboard" element={<ProtectedRoute requireAuth><ModernAppLayout><FinanceDashboard /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="finance/ops-payables" element={<Navigate to="/admin/reports/ops-payables" replace />} />
+              <Route path="branding-settings" element={<Navigate to="/admin/company-settings/branding" replace />} />
+              <Route path="reports/dashboard" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportsDashboard /></ModernAppLayout></ProtectedRoute>} />
               <Route path="power-bills" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsDashboard /></ModernAppLayout></ProtectedRoute>} />
               <Route path="power-bills-analytics" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsAnalytics /></ModernAppLayout></ProtectedRoute>} />
               <Route path="power-bills-bulk-payment" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsBulkPayment /></ModernAppLayout></ProtectedRoute>} />
@@ -477,6 +485,7 @@ const App = () => (
                 <Route path="taxes" element={<CompanyTaxes />} />
                 <Route path="direct-taxes" element={<CompanyDirectTaxes />} />
                 <Route path="einvoicing" element={<CompanyEInvoicing />} />
+                <Route path="e-invoicing" element={<Navigate to="/admin/company-settings/einvoicing" replace />} />
                 <Route path="general" element={<CompanyGeneral />} />
                 <Route path="currencies" element={<CompanyCurrencies />} />
                 <Route path="reminders" element={<CompanyReminders />} />

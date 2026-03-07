@@ -334,6 +334,7 @@ export default function CampaignsList() {
   }
 
   return (
+    <ModuleGuard module="campaigns">
     <div className="min-h-screen bg-background">
       <PageContainer>
         {/* Header */}

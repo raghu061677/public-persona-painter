@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { resolveAssetDisplayCode } from "@/lib/assets/getAssetDisplayCode";
+import { OpsProofCompleteness } from "./OpsProofCompleteness";
 
 interface OpsTaskCardProps {
   asset: any;
@@ -32,19 +33,13 @@ export function OpsTaskCard({ asset, onViewDetails, onUploadProof, compact }: Op
   const hasGps = !!(asset.latitude || asset.longitude || asset.media_assets?.latitude || asset.media_assets?.longitude);
   const campaignName = asset.campaign?.campaign_name || asset.campaigns?.campaign_name || "—";
   const clientName = asset.campaign?.client_name || asset.campaigns?.client_name || "";
-  const hasProofPhotos = hasPhotos(asset);
-
-  // Determine proof completeness
-  const proofTypes = ["mounting", "geotag", "newspaper", "traffic_1", "traffic_2"];
-  const uploadedTypes = getUploadedProofTypes(asset.photos);
-  const missingTypes = proofTypes.filter(t => !uploadedTypes.includes(t));
 
   return (
     <Card className={cn("border-l-4 transition-shadow hover:shadow-md", config.borderColor)}>
-      <CardContent className={cn("p-4", compact && "p-3")}>
-        <div className="flex items-start justify-between gap-3">
+      <CardContent className={cn("p-4 sm:p-5", compact && "p-3")}>
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
           {/* Left: info */}
-          <div className="flex-1 min-w-0 space-y-1.5">
+          <div className="flex-1 min-w-0 space-y-2 w-full">
             {/* Asset code + status */}
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-mono text-sm font-semibold truncate">{displayCode}</span>
@@ -53,9 +48,15 @@ export function OpsTaskCard({ asset, onViewDetails, onUploadProof, compact }: Op
                 {config.label}
               </Badge>
               {hasGps && (
-                <Badge variant="outline" className="text-[10px] gap-1 shrink-0">
+                <Badge variant="outline" className="text-[10px] gap-1 shrink-0 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30">
                   <Navigation className="h-2.5 w-2.5" />
                   GPS
+                </Badge>
+              )}
+              {!hasGps && (
+                <Badge variant="outline" className="text-[10px] gap-1 shrink-0 bg-destructive/10 text-destructive border-destructive/30">
+                  <Navigation className="h-2.5 w-2.5" />
+                  No GPS
                 </Badge>
               )}
             </div>
@@ -87,46 +88,32 @@ export function OpsTaskCard({ asset, onViewDetails, onUploadProof, compact }: Op
               )}
             </div>
 
-            {/* Proof completeness */}
+            {/* Proof completeness - always show */}
             {!compact && (
-              <div className="flex items-center gap-1 flex-wrap pt-1">
-                {proofTypes.map((type) => {
-                  const uploaded = uploadedTypes.includes(type);
-                  return (
-                    <Badge
-                      key={type}
-                      variant={uploaded ? "secondary" : "outline"}
-                      className={cn(
-                        "text-[9px] capitalize",
-                        uploaded ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" : "opacity-50"
-                      )}
-                    >
-                      {uploaded ? "✓" : "○"} {type.replace("_", " ")}
-                    </Badge>
-                  );
-                })}
+              <div className="pt-1">
+                <OpsProofCompleteness photos={asset.photos} hasGps={hasGps} />
               </div>
             )}
           </div>
 
-          {/* Right: actions */}
-          <div className="flex flex-col gap-1.5 shrink-0">
+          {/* Right: actions - larger buttons for mobile */}
+          <div className="flex sm:flex-col gap-2 shrink-0 w-full sm:w-auto">
             {onUploadProof && status !== "Verified" && status !== "Completed" && (
               <Button
-                size="sm"
+                size="default"
                 variant="default"
-                className="h-9 text-xs gap-1.5"
+                className="flex-1 sm:flex-none h-11 sm:h-9 text-sm sm:text-xs gap-1.5 font-medium"
                 onClick={() => onUploadProof(asset)}
               >
-                <Camera className="h-3.5 w-3.5" />
+                <Camera className="h-4 w-4" />
                 Upload Proof
               </Button>
             )}
             {onViewDetails && (
               <Button
-                size="sm"
+                size="default"
                 variant="outline"
-                className="h-8 text-xs gap-1"
+                className="flex-1 sm:flex-none h-11 sm:h-9 text-sm sm:text-xs gap-1"
                 onClick={() => onViewDetails(asset)}
               >
                 Details
@@ -138,27 +125,4 @@ export function OpsTaskCard({ asset, onViewDetails, onUploadProof, compact }: Op
       </CardContent>
     </Card>
   );
-}
-
-function hasPhotos(asset: any): boolean {
-  if (!asset.photos) return false;
-  if (typeof asset.photos === "string") {
-    try {
-      return Object.values(JSON.parse(asset.photos)).some(Boolean);
-    } catch { return false; }
-  }
-  if (typeof asset.photos === "object") {
-    return Object.values(asset.photos).some(Boolean);
-  }
-  return false;
-}
-
-function getUploadedProofTypes(photos: any): string[] {
-  if (!photos) return [];
-  let obj = photos;
-  if (typeof photos === "string") {
-    try { obj = JSON.parse(photos); } catch { return []; }
-  }
-  if (typeof obj !== "object") return [];
-  return Object.keys(obj).filter(k => !!obj[k]);
 }

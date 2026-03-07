@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Loader2, CheckCircle } from "lucide-react";
 
+const PORTAL_USER_KEY = 'go_ads_portal_user';
+
 export default function MagicLinkAuth() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -17,8 +19,19 @@ export default function MagicLinkAuth() {
   const [verifying, setVerifying] = useState(false);
   const [linkSent, setLinkSent] = useState(false);
 
-  // Check for token in URL on mount
+  // Check if already logged in
   useEffect(() => {
+    try {
+      const stored = localStorage.getItem(PORTAL_USER_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.id && parsed?.client_id && parsed?.is_active) {
+          navigate('/portal/dashboard', { replace: true });
+          return;
+        }
+      }
+    } catch { /* ignore */ }
+
     const token = searchParams.get("token");
     if (token) {
       verifyMagicLink(token);
@@ -85,8 +98,8 @@ export default function MagicLinkAuth() {
       }
 
       if (data?.success && data?.user) {
-        // Store user session in localStorage
-        localStorage.setItem('portal_user', JSON.stringify(data.user));
+        // Store portal user session in localStorage
+        localStorage.setItem(PORTAL_USER_KEY, JSON.stringify(data.user));
         
         toast({
           title: "Welcome!",
@@ -94,8 +107,11 @@ export default function MagicLinkAuth() {
         });
 
         // Redirect to portal dashboard
-        navigate('/portal/dashboard');
+        navigate('/portal/dashboard', { replace: true });
+        return;
       }
+
+      throw new Error('Verification did not return expected data');
     } catch (error: any) {
       console.error('Error verifying magic link:', error);
       toast({

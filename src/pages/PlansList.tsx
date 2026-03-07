@@ -681,6 +681,7 @@ export default function PlansList() {
               <FolderOpen className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Templates</span>
             </Button>
+            <ActionGuard module="plans" action="create">
             <Button
               onClick={() => navigate('/admin/plans/new')}
               size="default"
@@ -689,6 +690,7 @@ export default function PlansList() {
               <span className="hidden sm:inline">Add Plan</span>
               <span className="sm:hidden">Add</span>
             </Button>
+            </ActionGuard>
           </div>
         </div>
 

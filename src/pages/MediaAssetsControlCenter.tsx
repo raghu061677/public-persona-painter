@@ -356,5 +356,6 @@ export default function MediaAssetsControlCenter() {
       {/* God Mode HUD */}
       <GodModeHUD assets={filteredAssets} isVisible={isGodModeVisible} />
     </div>
+    </ModuleGuard>
   );
 }

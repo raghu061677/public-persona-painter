@@ -2,7 +2,8 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-type AppRole = 'admin' | 'user' | 'sales' | 'finance' | 'operations';
+// Expanded to include all known role values from the app_role enum
+type AppRole = 'admin' | 'user' | 'sales' | 'finance' | 'operations' | 'operations_manager' | 'manager' | 'installation' | 'mounting' | 'monitoring' | 'monitor' | 'viewer';
 
 interface AuthContextType {
   user: User | null;
@@ -105,9 +106,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAdmin = roles.includes('admin');
   const isSales = roles.includes('sales');
   const isFinance = roles.includes('finance');
-  const isOperations = roles.includes('operations');
+  const isOperations = roles.includes('operations') || roles.includes('operations_manager');
   
-  const hasRole = (role: AppRole) => roles.includes(role);
+  const hasRole = (role: AppRole) => {
+    if (roles.includes(role)) return true;
+    // Handle aliases
+    if (role === 'operations' && roles.includes('operations_manager')) return true;
+    if (role === 'operations_manager' && roles.includes('operations')) return true;
+    if (role === 'mounting' && roles.includes('installation')) return true;
+    if (role === 'installation' && roles.includes('mounting')) return true;
+    if (role === 'monitoring' && roles.includes('monitor')) return true;
+    if (role === 'monitor' && roles.includes('monitoring')) return true;
+    return false;
+  };
 
   return (
     <AuthContext.Provider value={{ user, session, roles, isAdmin, isSales, isFinance, isOperations, hasRole, loading }}>

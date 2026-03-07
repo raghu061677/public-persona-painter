@@ -87,7 +87,18 @@ export function withHmac(handler: (req: Request, rawBody: string) => Promise<Res
 
 // ─── Types ───────────────────────────────────────────────────────────
 
-export type AppRole = 'admin' | 'finance' | 'sales' | 'ops' | 'viewer';
+export type AppRole = 'admin' | 'finance' | 'sales' | 'ops' | 'viewer' | 'operations' | 'operations_manager' | 'mounting' | 'installation' | 'monitoring' | 'monitor' | 'manager' | 'user';
+
+/** Normalize legacy role names to canonical roles for permission checks */
+function normalizeRoleBackend(role: string): string {
+  const mapping: Record<string, string> = {
+    ops: 'operations',
+    accounts: 'finance',
+    company_admin: 'admin',
+    mounter: 'mounting',
+  };
+  return mapping[role] ?? role;
+}
 
 export interface AuthContext {
   userId: string;
@@ -215,7 +226,10 @@ export async function isPlatformAdmin(userId: string): Promise<boolean> {
 // ─── Role Enforcement ────────────────────────────────────────────────
 
 export function requireRole(ctx: AuthContext, allowedRoles: AppRole[]): void {
-  if (!allowedRoles.includes(ctx.role)) {
+  const normalizedCtxRole = normalizeRoleBackend(ctx.role);
+  const normalizedAllowed = allowedRoles.map(r => normalizeRoleBackend(r));
+  
+  if (!normalizedAllowed.includes(normalizedCtxRole) && !normalizedAllowed.includes(ctx.role)) {
     throw new AuthError(
       `Forbidden – role '${ctx.role}' not in allowed roles: ${allowedRoles.join(', ')}`,
       403

@@ -142,10 +142,17 @@ export const ROUTES = {
 /**
  * Role-specific default landing pages
  */
-export const ROLE_DASHBOARDS = {
+export const ROLE_DASHBOARDS: Record<string, string> = {
   admin: ROUTES.DASHBOARD,
   sales: ROUTES.PLANS,
   operations: ROUTES.OPERATIONS,
+  operations_manager: ROUTES.OPERATIONS,
+  manager: ROUTES.OPERATIONS,
   finance: ROUTES.FINANCE_DASHBOARD,
+  mounting: '/mobile',
+  installation: '/mobile',
+  monitoring: '/mobile',
+  monitor: '/mobile',
+  viewer: ROUTES.DASHBOARD,
   user: ROUTES.DASHBOARD,
-} as const;
+};

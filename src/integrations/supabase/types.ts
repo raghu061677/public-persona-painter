@@ -8760,39 +8760,71 @@ export type Database = {
       }
       role_permissions: {
         Row: {
+          can_approve: boolean
+          can_assign: boolean
           can_create: boolean | null
           can_delete: boolean | null
+          can_edit: boolean
+          can_export: boolean
           can_update: boolean | null
+          can_upload_proof: boolean
           can_view: boolean | null
+          can_view_sensitive: boolean
+          company_id: string | null
           created_at: string | null
           id: string
           module: string
           role: string
+          scope_mode: string
           updated_at: string | null
         }
         Insert: {
+          can_approve?: boolean
+          can_assign?: boolean
           can_create?: boolean | null
           can_delete?: boolean | null
+          can_edit?: boolean
+          can_export?: boolean
           can_update?: boolean | null
+          can_upload_proof?: boolean
           can_view?: boolean | null
+          can_view_sensitive?: boolean
+          company_id?: string | null
           created_at?: string | null
           id?: string
           module: string
           role: string
+          scope_mode?: string
           updated_at?: string | null
         }
         Update: {
+          can_approve?: boolean
+          can_assign?: boolean
           can_create?: boolean | null
           can_delete?: boolean | null
+          can_edit?: boolean
+          can_export?: boolean
           can_update?: boolean | null
+          can_upload_proof?: boolean
           can_view?: boolean | null
+          can_view_sensitive?: boolean
+          company_id?: string | null
           created_at?: string | null
           id?: string
           module?: string
           role?: string
+          scope_mode?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       saved_searches: {
         Row: {
@@ -10953,6 +10985,21 @@ export type Database = {
         }
         Returns: number
       }
+      get_role_permission: {
+        Args: { p_company_id?: string; p_module: string; p_role: string }
+        Returns: {
+          can_approve: boolean
+          can_assign: boolean
+          can_create: boolean
+          can_delete: boolean
+          can_edit: boolean
+          can_export: boolean
+          can_upload_proof: boolean
+          can_view: boolean
+          can_view_sensitive: boolean
+          scope_mode: string
+        }[]
+      }
       get_unused_asset_codes: {
         Args: never
         Returns: {
@@ -11175,6 +11222,7 @@ export type Database = {
         Returns: Json
       }
       match_campaign_token: { Args: { p_token: string }; Returns: string }
+      normalize_role: { Args: { raw_role: string }; Returns: string }
       process_plan_approval: {
         Args: {
           p_approval_id: string
@@ -11250,6 +11298,9 @@ export type Database = {
         | "installation"
         | "monitoring"
         | "monitor"
+        | "operations_manager"
+        | "mounting"
+        | "viewer"
       approval_level: "L1" | "L2" | "L3"
       approval_status: "pending" | "approved" | "rejected"
       asset_installation_status:
@@ -11488,6 +11539,9 @@ export const Constants = {
         "installation",
         "monitoring",
         "monitor",
+        "operations_manager",
+        "mounting",
+        "viewer",
       ],
       approval_level: ["L1", "L2", "L3"],
       approval_status: ["pending", "approved", "rejected"],

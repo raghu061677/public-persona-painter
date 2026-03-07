@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { getRoleLabel, getRoleBadgeVariant } from "@/lib/rbac/roleNormalization";
 import { useCompany } from "@/contexts/CompanyContext";
 import { ROUTES } from "@/lib/routes";
 import { useNavigate } from "react-router-dom";
@@ -83,15 +84,20 @@ const getUserInitials = (user: any) => {
 };
 
 const MODULES = [
-  { key: 'sales', label: 'Sales' },
-  { key: 'planning', label: 'Planning' },
-  { key: 'execution', label: 'Execution' },
-  { key: 'inventory', label: 'Inventory' },
+  { key: 'dashboard', label: 'Dashboard' },
+  { key: 'media_assets', label: 'Media Assets' },
+  { key: 'clients', label: 'Clients' },
+  { key: 'plans', label: 'Plans' },
+  { key: 'campaigns', label: 'Campaigns' },
+  { key: 'operations', label: 'Operations' },
+  { key: 'monitoring', label: 'Monitoring' },
   { key: 'finance', label: 'Finance' },
-  { key: 'administration', label: 'Administration' },
+  { key: 'reports', label: 'Reports' },
+  { key: 'users', label: 'Users' },
+  { key: 'settings', label: 'Settings' },
 ];
 
-const ROLES = ['admin', 'sales', 'operations', 'finance'];
+const ROLES = ['admin', 'sales', 'operations_manager', 'mounting', 'monitoring', 'finance', 'viewer'];
 
 export default function UserManagement() {
   const { isAdmin, user } = useAuth();
@@ -446,10 +452,10 @@ export default function UserManagement() {
                     </TableCell>
                     <TableCell>
                       {user.roles && user.roles.length > 0 ? (
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 flex-wrap">
                           {user.roles.map(role => (
-                            <Badge key={role} variant="secondary" className="capitalize">
-                              {role}
+                            <Badge key={role} className={`${getRoleBadgeVariant(role)} text-xs`}>
+                              {getRoleLabel(role)}
                             </Badge>
                           ))}
                         </div>

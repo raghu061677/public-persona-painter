@@ -614,6 +614,7 @@ export default function ClientsList() {
   }
 
   return (
+    <ModuleGuard module="clients">
     <div className="min-h-screen bg-background">
       <PageContainer>
         <PageHeader

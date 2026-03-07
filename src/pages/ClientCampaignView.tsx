@@ -23,29 +23,33 @@ interface CampaignAsset {
 
 export default function ClientCampaignView() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { portalUser, loading: portalLoading } = useClientPortal();
   const [campaign, setCampaign] = useState<any>(null);
   const [assets, setAssets] = useState<CampaignAsset[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
   const [photos, setPhotos] = useState<UnifiedPhoto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
-    if (id) {
+    if (id && !portalLoading && portalUser) {
       loadCampaignData();
-      loadPhotos();
+    } else if (!portalLoading && !portalUser) {
+      // Not a portal user — allow load without ownership check (public/shared context)
+      loadCampaignDataUnscopied();
     }
-  }, [id]);
+  }, [id, portalLoading, portalUser]);
 
-  const loadCampaignData = async () => {
+  const loadCampaignDataUnscopied = async () => {
+    // Fallback for non-portal contexts (shared links rendered via this component)
     try {
-      // Load campaign details
       const { data: campaignData } = await supabase
         .from('campaigns')
         .select('*')
         .eq('id', id)
         .single();
 
-      // Load campaign assets
       const { data: assetsData } = await supabase
         .from('campaign_assets')
         .select('*')
@@ -53,6 +57,45 @@ export default function ClientCampaignView() {
 
       setCampaign(campaignData);
       setAssets(assetsData || []);
+      loadPhotos();
+    } catch (error) {
+      console.error('Error loading campaign:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadCampaignData = async () => {
+    try {
+      // Load campaign and verify client ownership
+      const { data: campaignData } = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (!campaignData) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Enforce client ownership: campaign must belong to logged-in portal user's client
+      if (portalUser && campaignData.client_id !== portalUser.client_id) {
+        console.warn('Client ownership mismatch — access denied');
+        setAccessDenied(true);
+        setIsLoading(false);
+        return;
+      }
+
+      // Load campaign assets only after ownership is confirmed
+      const { data: assetsData } = await supabase
+        .from('campaign_assets')
+        .select('*')
+        .eq('campaign_id', id);
+
+      setCampaign(campaignData);
+      setAssets(assetsData || []);
+      loadPhotos();
     } catch (error) {
       console.error('Error loading campaign:', error);
     } finally {

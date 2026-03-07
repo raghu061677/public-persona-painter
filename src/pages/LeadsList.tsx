@@ -278,5 +278,6 @@ export default function LeadsList() {
         />
       )}
     </div>
+    </ModuleGuard>
   );
 }

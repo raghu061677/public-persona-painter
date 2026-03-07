@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { ListToolbar } from "@/components/list-views";
 import { useListView } from "@/hooks/useListView";

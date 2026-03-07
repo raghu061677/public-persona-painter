@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { generateClientCode } from "@/lib/codeGenerator";
 import { PageContainer } from "@/components/ui/page-container";

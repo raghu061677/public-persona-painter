@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

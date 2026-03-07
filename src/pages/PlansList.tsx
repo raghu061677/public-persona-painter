@@ -1377,5 +1377,6 @@ export default function PlansList() {
         />
       )}
     </div>
+    </ModuleGuard>
   );
 }

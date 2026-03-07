@@ -437,9 +437,13 @@ const App = () => (
               <Route path="photo-library" element={<ProtectedRoute requireAuth><ModernAppLayout><PhotoGallery /></ModernAppLayout></ProtectedRoute>} />
               <Route path="import" element={<Navigate to="/admin/data-export-import" replace />} />
               <Route path="export" element={<Navigate to="/admin/data-export-import" replace />} />
+              <Route path="import-data" element={<Navigate to="/admin/data-export-import" replace />} />
+              <Route path="export-data" element={<Navigate to="/admin/data-export-import" replace />} />
               <Route path="data-export-import" element={<ProtectedRoute requireAuth><ModernAppLayout><DataExportImport /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="power-bills" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsDashboard /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="power-bills-analytics" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsAnalytics /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="finance/dashboard" element={<ProtectedRoute requireAuth><ModernAppLayout><FinanceDashboard /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="finance/ops-payables" element={<Navigate to="/admin/reports/ops-payables" replace />} />
+              <Route path="branding-settings" element={<Navigate to="/admin/company-settings/branding" replace />} />
+              <Route path="reports/dashboard" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportsDashboard /></ModernAppLayout></ProtectedRoute>} />
               <Route path="power-bills-bulk-payment" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsBulkPayment /></ModernAppLayout></ProtectedRoute>} />
               <Route path="power-bills/bulk-upload" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsBulkUpload /></ModernAppLayout></ProtectedRoute>} />
               <Route path="power-bills/reconciliation" element={<ProtectedRoute requireAuth><ModernAppLayout><PowerBillsReconciliation /></ModernAppLayout></ProtectedRoute>} />

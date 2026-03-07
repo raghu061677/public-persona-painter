@@ -220,43 +220,50 @@ import {
        ],
      },
  
-     // Settings
-     {
-       id: "settings",
-       label: "Settings",
-       icon: Settings,
-       requiresAdmin: true,
-       children: [
-          {
-            id: "organization",
-            label: "Organization",
-            icon: Building2,
-            items: [
-              { label: "Organization", href: "/admin/company-settings/profile", icon: Building2 },
-              { label: "Branding", href: "/admin/company-settings/branding", icon: Palette },
-              { label: "Subscription", href: "/admin/company-settings", icon: CreditCard },
-              { label: "Email & WhatsApp Alerts", href: "/admin/company-settings/alerts", icon: Bell },
-            ],
-          },
-         {
-           id: "users-access",
-           label: "Users & Access",
-           icon: UserCog,
-           items: [
-             { label: "Users", href: "/admin/users", icon: Users },
-             { label: "Roles", href: "/admin/company-settings/roles", icon: Shield },
-           ],
-         },
-         {
-           id: "data-management",
-           label: "Data Management",
-           icon: Settings,
-           items: [
-             { label: "Asset Validation", href: "/admin/media-assets-validation", icon: FileCheck },
-           ],
-         },
-       ],
-     },
+    // Settings
+    {
+      id: "settings",
+      label: "Settings",
+      icon: Settings,
+      requiresAdmin: true,
+      children: [
+        {
+          id: "organization",
+          label: "Organization",
+          icon: Building2,
+          items: [
+            { label: "Company Profile", href: "/admin/company-settings/profile", icon: Building2 },
+            { label: "Branding / Logo", href: "/admin/company-settings/branding", icon: Palette },
+            { label: "Email Settings", href: "/admin/company-settings/email-notifications", icon: Mail },
+            { label: "Notification Settings", href: "/admin/company-settings/alerts", icon: Bell },
+          ],
+        },
+        {
+          id: "users-access",
+          label: "Users & Access",
+          icon: UserCog,
+          items: [
+            { label: "User Management", href: "/admin/users", icon: Users },
+            { label: "Role Permissions", href: "/admin/company-settings/roles", icon: Shield },
+            { label: "Access Control", href: "/admin/access-control", icon: Lock },
+            { label: "Teams", href: "/admin/teams", icon: UsersRound },
+            { label: "Access Requests", href: "/admin/access-requests", icon: ClipboardList },
+            { label: "Activity & Audit Logs", href: "/admin/audit-logs", icon: Activity },
+          ],
+        },
+        {
+          id: "data-management",
+          label: "Data Management",
+          icon: Database,
+          items: [
+            { label: "Import Data", href: "/admin/import-data", icon: Upload },
+            { label: "Export Data", href: "/admin/export-data", icon: Download },
+            { label: "Backup", href: "/admin/backup", icon: HardDrive },
+            { label: "System Activity", href: "/admin/system-activity", icon: Activity },
+          ],
+        },
+      ],
+    },
    ],
  
    // Account items (bottom pinned)

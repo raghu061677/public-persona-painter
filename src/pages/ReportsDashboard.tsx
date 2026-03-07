@@ -227,5 +227,6 @@ export default function ReportsDashboard() {
         </div>
       </div>
     </div>
+    </ModuleGuard>
   );
 }

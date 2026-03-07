@@ -43,6 +43,10 @@ export default function InvoicesList() {
   const { company } = useCompany();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // RBAC scope filtering and sensitive field masking
+  const { filterByScope: invoiceScopeFilter } = useScopedQuery('finance', { ownerColumn: 'created_by' });
+  const { mask: maskInvField, canSee: canSeeInvField } = useSensitiveFieldMask('finance');
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const urlFiltersAppliedRef = useRef(false);

@@ -1,13 +1,9 @@
 // supabase/functions/verify-magic-link/index.ts
-// v2.0 - Phase-5: Rate limiting + audit logging for public magic link verification
+// v3.0 - Fixed CORS + proper token verification for portal login
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { corsHeaders } from '../_shared/cors.ts';
 import { logSecurityAudit } from '../_shared/auth.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 // Rate limiter: 5 requests per minute per IP
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -118,7 +114,7 @@ Deno.serve(async (req) => {
       client_id: portalUser.client_id,
       action: 'magic_link_verified',
       metadata: { email: portalUser.email, portal_user_id: portalUser.id },
-    });
+    }).catch(() => { /* ignore if table doesn't exist */ });
 
     await logSecurityAudit({
       functionName: 'verify-magic-link',
@@ -135,7 +131,9 @@ Deno.serve(async (req) => {
           email: portalUser.email,
           name: portalUser.name,
           client_id: portalUser.client_id,
-          client_name: portalUser.clients.name,
+          client_name: portalUser.clients?.name || null,
+          role: portalUser.role || 'viewer',
+          is_active: portalUser.is_active,
         },
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

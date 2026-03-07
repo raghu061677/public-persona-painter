@@ -309,6 +309,16 @@ export async function validateRecipientInCompany(
 ): Promise<boolean> {
   const serviceClient = supabaseServiceClient();
 
+  // Check company's own email first
+  const { data: companyMatch } = await serviceClient
+    .from('companies')
+    .select('id')
+    .eq('id', companyId)
+    .ilike('email', email)
+    .limit(1);
+
+  if (companyMatch && companyMatch.length > 0) return true;
+
   // Check clients table
   const { data: clientMatch } = await serviceClient
     .from('clients')
@@ -339,7 +349,27 @@ export async function validateRecipientInCompany(
     .ilike('email', email)
     .limit(1);
 
-  return (companyUserMatch && companyUserMatch.length > 0) || false;
+  // Check profiles table (user emails)
+  if (companyUserMatch && companyUserMatch.length > 0) return true;
+
+  const { data: profileMatch } = await serviceClient
+    .from('profiles')
+    .select('id')
+    .ilike('email', email)
+    .limit(1);
+
+  if (profileMatch && profileMatch.length > 0) {
+    // Verify this profile user belongs to the company
+    const { data: memberCheck } = await serviceClient
+      .from('company_users')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('user_id', (profileMatch[0] as any).id)
+      .limit(1);
+    return (memberCheck && memberCheck.length > 0) || false;
+  }
+
+  return false;
 }
 
 // ─── Error Handling ──────────────────────────────────────────────────

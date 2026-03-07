@@ -81,6 +81,10 @@ export default function PlansList() {
   const { company } = useCompany();
   const [plans, setPlans] = useState<any[]>([]);
 
+  // RBAC scope filtering and sensitive field masking
+  const { filterByScope: planScopeFilter } = useScopedQuery('plans', { ownerColumn: 'created_by', additionalOwnerColumns: ['sales_owner_id'] });
+  const { mask: maskPlanField, canSee: canSeePlanField } = useSensitiveFieldMask('plans');
+
   // Global List View System
   const lv = useListView("plans.list");
   const { handleExportExcel, handleExportPdf } = useListViewExport({

@@ -112,7 +112,7 @@ export default function UserPermissionsView() {
                 <Avatar className="h-12 w-12">
                   <AvatarImage src={user.avatar_url} />
                   <AvatarFallback>
-                    {user.username.substring(0, 2).toUpperCase()}
+                    {(user.username || 'U').substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">

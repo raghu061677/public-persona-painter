@@ -672,5 +672,6 @@ export default function UserManagement() {
         />
       )}
     </div>
+    </ModuleGuard>
   );
 }

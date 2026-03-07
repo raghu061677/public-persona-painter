@@ -660,6 +660,7 @@ export default function PlansList() {
   ];
 
   return (
+    <ModuleGuard module="plans">
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-7xl space-y-4">
         {/* Header Section */}

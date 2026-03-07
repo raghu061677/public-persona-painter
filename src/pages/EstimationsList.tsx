@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";

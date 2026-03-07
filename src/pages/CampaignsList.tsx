@@ -352,12 +352,14 @@ export default function CampaignsList() {
                   onUpdate={fetchCampaigns}
                   onClearSelection={() => setSelectedCampaigns(new Set())}
                 />
+                <ActionGuard module="campaigns" action="create">
                 <Button onClick={() => navigate('/admin/campaigns/create')} size="lg" variant="outline" className="transition-smooth">
                   <Plus className="mr-2 h-5 w-5" />Direct Campaign
                 </Button>
                 <Button onClick={() => setShowCreateDialog(true)} size="lg" className="bg-gradient-primary hover:shadow-glow transition-smooth">
                   <Plus className="mr-2 h-5 w-5" />From Plan
                 </Button>
+                </ActionGuard>
               </>
             )}
           </div>

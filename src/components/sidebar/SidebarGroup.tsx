@@ -1,5 +1,5 @@
 import { ReactNode, useState } from "react";
-import { ChevronDown, LucideIcon } from "lucide-react";
+import { ChevronRight, LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -16,12 +16,12 @@ export function SidebarGroup({ icon: Icon, label, children, defaultOpen = true, 
 
   if (collapsed) {
     return (
-      <div className="px-1 py-1">
+      <div className="flex items-center justify-center py-0.5">
         <div 
-          className="flex items-center justify-center p-2.5 rounded-xl hover:bg-accent/50 transition-colors"
+          className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-accent/80 transition-colors cursor-default"
           title={label}
         >
-          <Icon className="h-5 w-5 text-muted-foreground" />
+          <Icon className="h-[18px] w-[18px] text-muted-foreground/70" />
         </div>
       </div>
     );
@@ -29,18 +29,20 @@ export function SidebarGroup({ icon: Icon, label, children, defaultOpen = true, 
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="flex items-center gap-2 w-full px-4 py-2 mx-2 rounded-xl hover:bg-accent/50 transition-colors group">
-        <Icon className="h-4 w-4 text-muted-foreground" />
-        <span className="flex-1 text-left text-sm font-medium text-muted-foreground">{label}</span>
-        <ChevronDown
+      <CollapsibleTrigger className="flex items-center gap-2 w-full px-3 py-[7px] rounded-lg hover:bg-accent/60 transition-colors group cursor-pointer">
+        <Icon className="h-4 w-4 text-muted-foreground/70 shrink-0" />
+        <span className="flex-1 text-left text-[13px] font-medium text-muted-foreground/90">{label}</span>
+        <ChevronRight
           className={cn(
-            "h-4 w-4 text-muted-foreground transition-transform duration-200",
-            open && "rotate-180"
+            "h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-200",
+            open && "rotate-90"
           )}
         />
       </CollapsibleTrigger>
-      <CollapsibleContent className="pl-6 mt-1 space-y-0.5">
-        {children}
+      <CollapsibleContent>
+        <div className="ml-3 pl-3 mt-0.5 space-y-0.5 border-l border-border/40">
+          {children}
+        </div>
       </CollapsibleContent>
     </Collapsible>
   );

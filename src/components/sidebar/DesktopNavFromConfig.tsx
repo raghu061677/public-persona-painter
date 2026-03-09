@@ -168,16 +168,16 @@
            // Handle logout specially
            if (item.href === "#logout") {
              return (
-               <button
-                 key="logout"
-                 onClick={onLogout}
-                 className={cn(
-                   "flex items-center rounded-xl text-sm font-medium text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-all duration-200",
-                   collapsed ? "justify-center w-full p-2.5 mx-1" : "gap-3 w-full px-4 py-2.5 mx-2"
-                 )}
+                <button
+                  key="logout"
+                  onClick={onLogout}
+                  className={cn(
+                    "flex items-center rounded-lg text-[13px] font-medium text-muted-foreground/70 hover:bg-destructive/8 hover:text-destructive transition-all duration-150",
+                    collapsed ? "justify-center w-9 h-9 mx-auto" : "gap-2.5 w-full px-3 py-[7px]"
+                  )}
                  title={collapsed ? item.label : undefined}
                >
-                 <LogOut className="h-5 w-5 shrink-0" />
+                 <LogOut className="h-4 w-4 shrink-0" />
                  {!collapsed && <span className="truncate">{item.label}</span>}
                </button>
              );

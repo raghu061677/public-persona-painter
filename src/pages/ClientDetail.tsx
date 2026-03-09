@@ -733,7 +733,7 @@ export default function ClientDetail() {
                           {' - '}
                           {new Date(plan.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </TableCell>
-                        <TableCell>{formatINR(plan.grand_total)}</TableCell>
+                        {canSeeSensitive && <TableCell>{formatINR(plan.grand_total)}</TableCell>}
                         <TableCell>
                           <Badge className={getStatusBadge(plan.status)}>
                             {plan.status}

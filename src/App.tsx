@@ -362,10 +362,10 @@ const App = () => (
               <Route path="media-assets" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetsList /></ModernAppLayout></ProtectedRoute>} />
               <Route path="media-assets/new" element={<ProtectedRoute requiredModule="media_assets" requiredAction="create"><ModernAppLayout><MediaAssetNew /></ModernAppLayout></ProtectedRoute>} />
               <Route path="media-assets/import" element={<ProtectedRoute requiredModule="media_assets" requiredAction="create"><ModernAppLayout><MediaAssetsImport /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="media-assets/validate" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetsValidation /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="media-assets/duplicates" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetDuplicates /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="media-assets-validation" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetsValidation /></ModernAppLayout></ProtectedRoute>} />
-              <Route path="media-assets-health" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetsHealthReport /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="media-assets/validate" element={<ProtectedRoute requiredRole={['admin', 'finance']}><ModernAppLayout><MediaAssetsValidation /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="media-assets/duplicates" element={<ProtectedRoute requiredRole={['admin', 'finance']}><ModernAppLayout><MediaAssetDuplicates /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="media-assets-validation" element={<ProtectedRoute requiredRole={['admin', 'finance']}><ModernAppLayout><MediaAssetsValidation /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="media-assets-health" element={<ProtectedRoute requiredRole={['admin', 'finance']}><ModernAppLayout><MediaAssetsHealthReport /></ModernAppLayout></ProtectedRoute>} />
               <Route path="clients/import" element={<ProtectedRoute requiredModule="clients" requiredAction="create"><ModernAppLayout><ClientsImport /></ModernAppLayout></ProtectedRoute>} />
               <Route path="media-assets/edit/:code" element={<ProtectedRoute requiredModule="media_assets" requiredAction="update"><ModernAppLayout><MediaAssetEdit /></ModernAppLayout></ProtectedRoute>} />
               <Route path="media-assets/:code" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetDetail /></ModernAppLayout></ProtectedRoute>} />

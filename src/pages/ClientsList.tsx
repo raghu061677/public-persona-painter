@@ -133,6 +133,7 @@ export default function ClientsList() {
   
   // RBAC scope filtering for clients
   const { filterByScope: clientScopeFilter } = useScopedQuery('clients', { ownerColumn: 'created_by', additionalOwnerColumns: ['assigned_to'] });
+  const { mask: maskClientField, canSee: canSeeClientField } = useSensitiveFieldMask('clients');
   // Filtering states (kept for backward compatibility)
   const [filterState, setFilterState] = useState<string>("");
   const [filterCity, setFilterCity] = useState<string>("");

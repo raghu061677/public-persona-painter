@@ -657,7 +657,7 @@ export default function PlanNew() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Plan ID</Label>
-                  <Input value={formData.id} disabled className="h-10 bg-muted/30" />
+                  <Input value="Auto-generated on save" disabled className="h-10 bg-muted/30 text-muted-foreground italic" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Client *</Label>

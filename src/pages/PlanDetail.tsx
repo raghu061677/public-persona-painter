@@ -1621,6 +1621,7 @@ export default function PlanDetail() {
               </div>
             </CardContent>
           </Card>
+          )}
         </div>
 
         {/* Plan Items */}

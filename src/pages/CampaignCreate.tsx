@@ -18,6 +18,7 @@ import { Separator } from '@/components/ui/separator';
 import { AssetSelectionTable } from '@/components/plans/AssetSelectionTable';
 import { formatCurrency } from '@/utils/mediaAssets';
 import { useAssetConflictCheck } from '@/hooks/useAssetConflictCheck';
+import { resolveEffectiveDates, formatConflictSummary } from '@/utils/bookingEngine';
 import { ConflictWarning } from '@/components/campaigns/ConflictWarning';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
@@ -162,17 +163,17 @@ export default function CampaignCreate() {
         }
       }));
 
-      // Check for conflicts when dates are set
+      // Check for conflicts using per-asset effective dates via booking engine
       if (formData.start_date && formData.end_date) {
-        const conflictResult = await checkConflict(
-          assetId,
-          formData.start_date,
-          formData.end_date
+        const { startDate, endDate } = resolveEffectiveDates(
+          { display_from: formData.start_date, display_to: formData.end_date },
+          { start_date: formData.start_date, end_date: formData.end_date }
         );
+        const conflictResult = await checkConflict(assetId, startDate, endDate);
         if (conflictResult.has_conflict) {
           setAssetConflicts(prev => ({
             ...prev,
-            [assetId]: conflictResult.conflicting_campaigns,
+            [assetId]: conflictResult.conflicting_campaigns || [],
           }));
         }
       }

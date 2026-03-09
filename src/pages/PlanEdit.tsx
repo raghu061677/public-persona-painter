@@ -63,6 +63,7 @@ export default function PlanEdit() {
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [assetPricing, setAssetPricing] = useState<Record<string, any>>({});
   const [companyState, setCompanyState] = useState<string>("");
+  const [planRecord, setPlanRecord] = useState<any>(null);
   const [manualTaxOverride, setManualTaxOverride] = useState(false);
   
   const [formData, setFormData] = useState({

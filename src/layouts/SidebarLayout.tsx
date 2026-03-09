@@ -22,9 +22,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { DesktopNavFromConfig } from "@/components/sidebar/DesktopNavFromConfig";
 
-// Feature flag: Toggle between config-driven and hardcoded desktop menu
-// Set to false to revert to original hardcoded menu as fallback
-const USE_NAV_CONFIG_DESKTOP = true;
+// All legacy hardcoded nav blocks removed - using config-driven nav only
 
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const { open, toggle } = useSidebarStore();
@@ -92,11 +90,11 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         <ScrollArea className="flex-1">
           <div className="pb-4">
             {/* CONFIG-DRIVEN DESKTOP NAV for tenant companies */}
-            {USE_NAV_CONFIG_DESKTOP && company && company.type !== 'platform_admin' && (
+            {company && company.type !== 'platform_admin' && (
               <DesktopNavFromConfig
                 collapsed={collapsed}
                 badges={{
-                  pendingApprovals: 0, // Wire to actual data later
+                  pendingApprovals: 0,
                   proofUploads: 0,
                   outstanding: 0,
                 }}
@@ -104,7 +102,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               />
             )}
 
-            {/* PLATFORM ADMINISTRATION - Only show when active company is platform_admin (unchanged) */}
+            {/* PLATFORM ADMINISTRATION - Only show when active company is platform_admin */}
             {isPlatformAdmin && company?.type === 'platform_admin' && (
               <>
                 <SidebarSection label="Platform Administration" collapsed={collapsed}>
@@ -115,7 +113,6 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                     collapsed={collapsed}
                   />
                   
-                  {/* Companies Management Group */}
                   <SidebarGroup icon={Building2} label="Companies Management" collapsed={collapsed}>
                     <SidebarItem
                       icon={Building2}
@@ -131,7 +128,6 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                     />
                   </SidebarGroup>
 
-                  {/* User Management Group */}
                   <SidebarGroup icon={UserCog} label="User Management" collapsed={collapsed}>
                     <SidebarItem
                       icon={UserCog}
@@ -161,7 +157,6 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                     collapsed={collapsed}
                   />
 
-                  {/* Platform Reports & Analytics Group */}
                   <SidebarGroup icon={BarChart3} label="Platform Reports & Analytics" collapsed={collapsed}>
                     <SidebarItem
                       icon={BarChart3}
@@ -203,412 +198,33 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                   />
                 </SidebarSection>
                 <Separator className="my-4" />
-              </>
-            )}
 
-            {/* LEGACY HARDCODED COMPANY WORKSPACE - Fallback when feature flag is off */}
-            {!USE_NAV_CONFIG_DESKTOP && company && company.type !== 'platform_admin' && (
-              <>
-                <SidebarSection label="Company Workspace" collapsed={collapsed}>
+                <SidebarSection label="My Account" collapsed={collapsed}>
                   <SidebarItem
-                    icon={LayoutDashboard}
-                    label="Dashboard"
-                    href="/admin/dashboard"
+                    icon={User}
+                    label="My Profile"
+                    href="/settings/profile"
                     collapsed={collapsed}
                   />
                   <SidebarItem
-                    icon={Map}
-                    label="Media Assets"
-                    href="/admin/media-assets"
+                    icon={Bell}
+                    label="Notifications"
+                    href="/settings/notifications"
                     collapsed={collapsed}
                   />
-                  <SidebarItem
-                    icon={Users}
-                    label="Clients"
-                    href="/admin/clients"
-                    collapsed={collapsed}
-                  />
-                  <SidebarItem
-                    icon={Layers}
-                    label="Plans"
-                    href="/admin/plans"
-                    collapsed={collapsed}
-                  />
-                  <SidebarItem
-                    icon={Briefcase}
-                    label="Campaigns"
-                    href="/admin/campaigns"
-                    collapsed={collapsed}
-                  />
-                  {/* Operations Group - Operations & Admin */}
-                  {rbac.canViewModule('operations') && (
-                    <SidebarGroup icon={TrendingUp} label="Operations" collapsed={collapsed}>
-                      <SidebarItem
-                        icon={Image}
-                        label="Creative Received"
-                        href="/admin/operations/creatives"
-                        collapsed={collapsed}
-                      />
-                      <SidebarItem
-                        icon={FileCheck}
-                        label="Printing Status"
-                        href="/admin/operations/printing"
-                        collapsed={collapsed}
-                      />
-                      <SidebarItem
-                        icon={TrendingUp}
-                        label="Mounting Assignment"
-                        href="/admin/operations"
-                        collapsed={collapsed}
-                      />
-                      <SidebarItem
-                        icon={Image}
-                        label="Proof Photo Uploads"
-                        href="/admin/operations/proof-uploads"
-                        collapsed={collapsed}
-                      />
-                    </SidebarGroup>
-                  )}
-
-                  {/* Finance Group - Finance & Admin only */}
-                  {rbac.canViewModule('finance') && (
-                    <SidebarGroup icon={DollarSign} label="Finance" collapsed={collapsed}>
-                      <SidebarItem
-                        icon={FileSpreadsheet}
-                        label="Quotations"
-                        href="/admin/estimations"
-                        collapsed={collapsed}
-                      />
-                      <SidebarItem
-                        icon={FileText}
-                        label="Sales Orders"
-                        href="/admin/sales-orders"
-                        collapsed={collapsed}
-                      />
-                      <SidebarItem
-                        icon={FileCheck}
-                        label="Purchase Orders"
-                        href="/admin/purchase-orders"
-                        collapsed={collapsed}
-                      />
-                      <SidebarItem
-                        icon={FileCheck}
-                        label="Proforma Invoice"
-                        href="/admin/proformas"
-                        collapsed={collapsed}
-                      />
-                      <SidebarItem
-                        icon={Receipt}
-                        label="Invoices"
-                        href="/admin/invoices"
-                        collapsed={collapsed}
-                      />
-                      <SidebarItem
-                        icon={CreditCard}
-                        label="Payments"
-                        href="/admin/payments"
-                        collapsed={collapsed}
-                      />
-                      <SidebarItem
-                        icon={DollarSign}
-                        label="Expenses"
-                        href="/admin/expenses"
-                        collapsed={collapsed}
-                      />
-                      <SidebarItem
-                        icon={Zap}
-                        label="Power Bills"
-                        href="/admin/power-bills"
-                        collapsed={collapsed}
-                      />
-                      <SidebarItem
-                        icon={Layers}
-                        label="Concession Allocation"
-                        href="/admin/finance/concession-allocation"
-                        collapsed={collapsed}
-                      />
-                    </SidebarGroup>
-                  )}
-
-                  {/* Workspace Reports Group - All can view reports */}
-                  {rbac.canViewModule('reports') && (
-                    <SidebarGroup icon={BarChart3} label="Workspace Reports" collapsed={collapsed}>
-                      <SidebarItem
-                        icon={Map}
-                        label="Media Availability"
-                        href="/admin/reports/vacant-media"
-                        collapsed={collapsed}
-                      />
-                      <SidebarItem
-                        icon={Calendar}
-                        label="Booked Media"
-                        href="/admin/reports/booked-media"
-                        collapsed={collapsed}
-                      />
-                      <SidebarItem
-                        icon={CalendarDays}
-                        label="Monthly Campaigns"
-                        href="/admin/reports/monthly-campaigns"
-                        collapsed={collapsed}
-                      />
-                      <SidebarItem
-                        icon={Users}
-                        label="Client-wise Bookings"
-                        href="/admin/reports/client-bookings"
-                        collapsed={collapsed}
-                      />
-                      <SidebarItem
-                        icon={Briefcase}
-                        label="Campaign-wise Bookings"
-                        href="/admin/reports/campaigns"
-                        collapsed={collapsed}
-                      />
-                      <SidebarItem
-                        icon={TrendingUp}
-                        label="Asset-wise Revenue"
-                        href="/admin/reports/revenue"
-                        collapsed={collapsed}
-                      />
-                      <SidebarItem
-                        icon={DollarSign}
-                        label="Financial Summary"
-                        href="/admin/reports/financial"
-                        collapsed={collapsed}
-                      />
-                      <SidebarItem
-                        icon={Image}
-                        label="Proof-of-Execution"
-                        href="/admin/reports/proof-execution"
-                        collapsed={collapsed}
-                      />
-                    </SidebarGroup>
-                  )}
-
+                  <button
+                    onClick={handleLogout}
+                    className={cn(
+                      "flex items-center rounded-xl text-sm font-medium text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-all duration-200",
+                      collapsed ? "justify-center w-full p-2.5 mx-1" : "gap-3 w-full px-4 py-2.5 mx-2"
+                    )}
+                    title={collapsed ? "Logout" : undefined}
+                  >
+                    <LogOut className="h-5 w-5 shrink-0" />
+                    {!collapsed && <span className="truncate">Logout</span>}
+                  </button>
                 </SidebarSection>
-                <Separator className="my-4" />
               </>
-            )}
-
-            {/* LEGACY TOOLS & UTILITIES - Fallback when feature flag is off */}
-            {!USE_NAV_CONFIG_DESKTOP && company && company.type !== 'platform_admin' && (
-              <>
-                <SidebarSection label="Tools" collapsed={collapsed}>
-                  <SidebarItem
-                    icon={Sparkles}
-                    label="AI Assistant"
-                    href="/admin/ai-assistant"
-                    collapsed={collapsed}
-                  />
-                  <SidebarItem
-                    icon={Smartphone}
-                    label="Mobile Field App"
-                    href="/mobile"
-                    collapsed={collapsed}
-                  />
-                  <SidebarItem
-                    icon={Image}
-                    label="Photo Library"
-                    href="/admin/photo-library"
-                    collapsed={collapsed}
-                  />
-                  <SidebarItem
-                    icon={Globe}
-                    label="Marketplace"
-                    href="/marketplace"
-                    collapsed={collapsed}
-                  />
-                  <SidebarItem
-                    icon={ShoppingBag}
-                    label="Booking Requests"
-                    href="/admin/booking-requests"
-                    collapsed={collapsed}
-                  />
-                </SidebarSection>
-                <Separator className="my-4" />
-              </>
-            )}
-
-            {/* LEGACY COMPANY SETTINGS - Fallback when feature flag is off */}
-            {!USE_NAV_CONFIG_DESKTOP && company && company.type !== 'platform_admin' && (isCompanyAdmin || isPlatformAdmin) && (
-              <>
-                <SidebarSection label="Company Settings" collapsed={collapsed}>
-                  {/* Organization Settings */}
-                  <SidebarGroup icon={Building2} label="Organization" collapsed={collapsed}>
-                    <SidebarItem
-                      icon={Building2}
-                      label="Profile"
-                      href="/admin/company-settings/profile"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={Palette}
-                      label="Branding"
-                      href="/admin/company-settings/branding"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={CreditCard}
-                      label="Subscription"
-                      href="/admin/company-settings"
-                      collapsed={collapsed}
-                    />
-                  </SidebarGroup>
-
-                  {/* Users & Access */}
-                  <SidebarGroup icon={UserCog} label="Users & Access" collapsed={collapsed}>
-                    <SidebarItem
-                      icon={Users}
-                      label="Users"
-                      href="/admin/users"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={Shield}
-                      label="Roles & Permissions"
-                      href="/admin/company-settings/roles"
-                      collapsed={collapsed}
-                    />
-                  </SidebarGroup>
-
-                  {/* Compliance */}
-                  <SidebarGroup icon={FileCheck} label="Compliance" collapsed={collapsed}>
-                    <SidebarItem
-                      icon={Receipt}
-                      label="Taxes"
-                      href="/admin/company-settings/taxes"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={FileText}
-                      label="e-Invoicing"
-                      href="/admin/company-settings/e-invoicing"
-                      collapsed={collapsed}
-                    />
-                  </SidebarGroup>
-
-                  {/* Configuration */}
-                  <SidebarGroup icon={Settings} label="Configuration" collapsed={collapsed}>
-                    <SidebarItem
-                      icon={Settings}
-                      label="General"
-                      href="/admin/company-settings/general"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={Globe}
-                      label="Currencies"
-                      href="/admin/company-settings/currencies"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={Bell}
-                      label="Reminders"
-                      href="/admin/company-settings/reminders"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={Users}
-                      label="Client Portal"
-                      href="/admin/company-settings/client-portal"
-                      collapsed={collapsed}
-                    />
-                  </SidebarGroup>
-
-                  {/* Customization */}
-                  <SidebarGroup icon={Palette} label="Customization" collapsed={collapsed}>
-                    <SidebarItem
-                      icon={FileText}
-                      label="PDF Templates"
-                      href="/admin/company-settings/pdf-templates"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={Mail}
-                      label="Email Notifications"
-                      href="/admin/company-settings/email-notifications"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={MessageSquare}
-                      label="SMS Notifications"
-                      href="/admin/company-settings/sms-notifications"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={Lock}
-                      label="Digital Signature"
-                      href="/admin/company-settings/digital-signature"
-                      collapsed={collapsed}
-                    />
-                  </SidebarGroup>
-
-                  {/* Data Management */}
-                  <SidebarGroup icon={Database} label="Data Management" collapsed={collapsed}>
-                    <SidebarItem
-                      icon={Upload}
-                      label="Import Data"
-                      href="/admin/import-data"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={Download}
-                      label="Export Data"
-                      href="/admin/export-data"
-                      collapsed={collapsed}
-                    />
-                    <SidebarItem
-                      icon={HardDrive}
-                      label="Storage Usage"
-                      href="/admin/company-settings"
-                      collapsed={collapsed}
-                    />
-                  </SidebarGroup>
-
-                  <SidebarItem
-                    icon={Zap}
-                    label="Integrations"
-                    href="/admin/company-settings/integrations"
-                    collapsed={collapsed}
-                  />
-                </SidebarSection>
-                <Separator className="my-4" />
-              </>
-            )}
-
-            {/* LEGACY USER PERSONAL MENU - Only show when feature flag is off OR platform admin */}
-            {(!USE_NAV_CONFIG_DESKTOP || (company && company.type === 'platform_admin')) && (
-            <SidebarSection label="My Account" collapsed={collapsed}>
-              <SidebarItem
-                icon={User}
-                label="My Profile"
-                href="/settings/profile"
-                collapsed={collapsed}
-              />
-              <SidebarItem
-                icon={Bell}
-                label="Notifications"
-                href="/settings/notifications"
-                collapsed={collapsed}
-              />
-              <SidebarItem
-                icon={Palette}
-                label="Theme Picker"
-                href="/settings/theme"
-                collapsed={collapsed}
-              />
-              
-              <button
-                onClick={handleLogout}
-                className={cn(
-                  "flex items-center rounded-xl text-sm font-medium text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-all duration-200",
-                  collapsed ? "justify-center w-full p-2.5 mx-1" : "gap-3 w-full px-4 py-2.5 mx-2"
-                )}
-                title={collapsed ? "Logout" : undefined}
-              >
-                <LogOut className="h-5 w-5 shrink-0" />
-                {!collapsed && <span className="truncate">Logout</span>}
-              </button>
-            </SidebarSection>
             )}
           </div>
         </ScrollArea>

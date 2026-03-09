@@ -791,7 +791,7 @@ export default function ClientDetail() {
                       <TableHead>Name</TableHead>
                       <TableHead>Duration</TableHead>
                       <TableHead>Assets</TableHead>
-                      <TableHead>Amount</TableHead>
+                      {canSeeSensitive && <TableHead>Amount</TableHead>}
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>

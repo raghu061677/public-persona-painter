@@ -112,43 +112,82 @@ export const RolePermissionsMatrix = forwardRef<RolePermissionsMatrixRef>(functi
     }
   };
 
-  const getPermission = (role: AppRole, module: string) => {
-    return permissions.find(p => p.role === role && p.module === module);
+  const getPermission = (role: AppRole, module: string): RolePermission => {
+    const found = permissions.find(p => p.role === role && p.module === module);
+    if (found) return found;
+    // Return a default (all false) for missing entries
+    return {
+      id: `new-${role}-${module}`,
+      role,
+      module,
+      can_view: false,
+      can_create: false,
+      can_update: false,
+      can_delete: false,
+    };
   };
 
   const togglePermission = (role: AppRole, module: string, field: keyof Omit<RolePermission, 'id' | 'role' | 'module'>) => {
     setPermissions(prev => {
       const existing = prev.find(p => p.role === role && p.module === module);
-      if (!existing) return prev;
-
-      return prev.map(p => 
-        p.id === existing.id 
-          ? { ...p, [field]: !p[field] }
-          : p
-      );
+      if (existing) {
+        return prev.map(p => 
+          p.id === existing.id 
+            ? { ...p, [field]: !p[field] }
+            : p
+        );
+      }
+      // Create new entry for previously missing permission
+      const newPerm: RolePermission = {
+        id: `new-${role}-${module}`,
+        role,
+        module,
+        can_view: false,
+        can_create: false,
+        can_update: false,
+        can_delete: false,
+        [field]: true,
+      };
+      return [...prev, newPerm];
     });
   };
 
   const savePermissions = async () => {
     setSaving(true);
     try {
-      const updates = permissions.map(perm => ({
-        id: perm.id,
+      // Separate new entries (need insert) from existing (need update)
+      const newEntries = permissions.filter(p => p.id.startsWith('new-'));
+      const existingEntries = permissions.filter(p => !p.id.startsWith('new-'));
+
+      const formatPerm = (perm: RolePermission) => ({
         role: perm.role,
         module: perm.module,
         can_view: perm.can_view,
         can_create: perm.can_create,
         can_update: perm.can_update,
         can_delete: perm.can_delete,
-      }));
+      });
 
-      const { error } = await supabase
-        .from('role_permissions')
-        .upsert(updates);
+      // Upsert existing
+      if (existingEntries.length > 0) {
+        const updates = existingEntries.map(perm => ({
+          id: perm.id,
+          ...formatPerm(perm),
+        }));
+        const { error } = await supabase.from('role_permissions').upsert(updates);
+        if (error) throw error;
+      }
 
-      if (error) throw error;
+      // Insert new entries
+      if (newEntries.length > 0) {
+        const inserts = newEntries.map(formatPerm);
+        const { error } = await supabase.from('role_permissions').insert(inserts);
+        if (error) throw error;
+      }
 
       toast.success('Permissions saved successfully');
+      // Reload to get proper IDs for newly inserted rows
+      await loadPermissions();
     } catch (error) {
       console.error('Error saving permissions:', error);
       toast.error('Failed to save permissions');
@@ -225,7 +264,6 @@ export const RolePermissionsMatrix = forwardRef<RolePermissionsMatrixRef>(functi
             <tbody>
               {MODULES.map(module => {
                 const perm = getPermission(selectedRole, module.id);
-                if (!perm) return null;
 
                 return (
                   <tr key={module.id} className="border-b hover:bg-muted/50 transition-colors">

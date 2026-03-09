@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { SettingsCard, SectionHeader, InfoAlert, InputRow } from "@/components/settings/zoho-style";
@@ -23,6 +23,12 @@ const DEFAULT_ROLES = [
 export default function CompanyRoles() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [allowRoleSwitching, setAllowRoleSwitching] = useState(() => {
+    return localStorage.getItem('goads-allow-role-switching') === 'true';
+  });
+  const [enforceHierarchy, setEnforceHierarchy] = useState(() => {
+    return localStorage.getItem('goads-enforce-role-hierarchy') === 'true';
+  });
   const matrixRef = useRef<RolePermissionsMatrixRef>(null);
   const matrixSectionRef = useRef<HTMLDivElement>(null);
 
@@ -96,14 +102,28 @@ export default function CompanyRoles() {
           label="Allow Role Switching"
           description="Let admins temporarily switch to other roles for testing"
         >
-          <Switch />
+          <Switch
+            checked={allowRoleSwitching}
+            onCheckedChange={(checked) => {
+              setAllowRoleSwitching(checked);
+              localStorage.setItem('goads-allow-role-switching', String(checked));
+              toast({ title: checked ? "Role switching enabled" : "Role switching disabled" });
+            }}
+          />
         </InputRow>
 
         <InputRow
           label="Enforce Role Hierarchy"
           description="Lower roles cannot modify data created by higher roles"
         >
-          <Switch />
+          <Switch
+            checked={enforceHierarchy}
+            onCheckedChange={(checked) => {
+              setEnforceHierarchy(checked);
+              localStorage.setItem('goads-enforce-role-hierarchy', String(checked));
+              toast({ title: checked ? "Role hierarchy enforced" : "Role hierarchy disabled" });
+            }}
+          />
         </InputRow>
       </SettingsCard>
     </div>

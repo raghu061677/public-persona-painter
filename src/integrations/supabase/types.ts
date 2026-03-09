@@ -189,6 +189,50 @@ export type Database = {
           },
         ]
       }
+      ai_recommendations: {
+        Row: {
+          company_id: string | null
+          confidence_score: number | null
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          is_dismissed: boolean | null
+          recommendation_text: string
+          recommendation_type: string
+        }
+        Insert: {
+          company_id?: string | null
+          confidence_score?: number | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          is_dismissed?: boolean | null
+          recommendation_text: string
+          recommendation_type: string
+        }
+        Update: {
+          company_id?: string | null
+          confidence_score?: number | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          is_dismissed?: boolean | null
+          recommendation_text?: string
+          recommendation_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_recommendations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       alert_email_templates: {
         Row: {
           body_template: string
@@ -624,6 +668,47 @@ export type Database = {
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_demand_scores: {
+        Row: {
+          asset_id: string
+          bookings_last_12_months: number | null
+          company_id: string | null
+          demand_score: number | null
+          id: string
+          revenue_generated: number | null
+          updated_at: string | null
+          vacancy_days: number | null
+        }
+        Insert: {
+          asset_id: string
+          bookings_last_12_months?: number | null
+          company_id?: string | null
+          demand_score?: number | null
+          id?: string
+          revenue_generated?: number | null
+          updated_at?: string | null
+          vacancy_days?: number | null
+        }
+        Update: {
+          asset_id?: string
+          bookings_last_12_months?: number | null
+          company_id?: string | null
+          demand_score?: number | null
+          id?: string
+          revenue_generated?: number | null
+          updated_at?: string | null
+          vacancy_days?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_demand_scores_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -1350,6 +1435,91 @@ export type Database = {
           },
         ]
       }
+      automation_logs: {
+        Row: {
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          error_message: string | null
+          execution_time: number | null
+          id: string
+          rule_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          error_message?: string | null
+          execution_time?: number | null
+          id?: string
+          rule_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          error_message?: string | null
+          execution_time?: number | null
+          id?: string
+          rule_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_logs_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_rules: {
+        Row: {
+          actions: Json | null
+          company_id: string
+          conditions: Json | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          rule_name: string
+          trigger_event: string
+          updated_at: string | null
+        }
+        Insert: {
+          actions?: Json | null
+          company_id: string
+          conditions?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          rule_name: string
+          trigger_event: string
+          updated_at?: string | null
+        }
+        Update: {
+          actions?: Json | null
+          company_id?: string
+          conditions?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          rule_name?: string
+          trigger_event?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bill_reminders: {
         Row: {
           bill_id: string
@@ -1543,6 +1713,50 @@ export type Database = {
           {
             foreignKeyName: "booking_requests_requester_company_id_fkey"
             columns: ["requester_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_analytics: {
+        Row: {
+          area_demand_score: number | null
+          campaign_id: string
+          company_id: string | null
+          created_at: string | null
+          id: string
+          impressions_estimated: number | null
+          traffic_score: number | null
+          updated_at: string | null
+          visibility_score: number | null
+        }
+        Insert: {
+          area_demand_score?: number | null
+          campaign_id: string
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          impressions_estimated?: number | null
+          traffic_score?: number | null
+          updated_at?: string | null
+          visibility_score?: number | null
+        }
+        Update: {
+          area_demand_score?: number | null
+          campaign_id?: string
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          impressions_estimated?: number | null
+          traffic_score?: number | null
+          updated_at?: string | null
+          visibility_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_analytics_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]

@@ -231,6 +231,8 @@ const RevenueForecast = lazy(() => import("./pages/RevenueForecast"));
 const MediaAssetDuplicates = lazy(() => import("./pages/admin/MediaAssetDuplicates"));
 const PaymentConfirmations = lazy(() => import("./pages/PaymentConfirmations"));
 const AlertsSettings = lazy(() => import("./pages/AlertsSettings"));
+const AutomationRules = lazy(() => import("./pages/AutomationRules"));
+const IntelligenceDashboard = lazy(() => import("./pages/IntelligenceDashboard"));
 
 // Public website pages
 const PublicAbout = lazy(() => import("./pages/public/About"));
@@ -427,6 +429,7 @@ const App = () => (
               <Route path="assistant" element={<Navigate to="/admin/ai-assistant" replace />} />
               <Route path="tenant-analytics" element={<Navigate to="/admin/analytics-dashboard" replace />} />
               <Route path="analytics-dashboard" element={<ProtectedRoute requireAuth><ModernAppLayout><AnalyticsDashboard /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="intelligence" element={<ProtectedRoute requireAuth><ModernAppLayout><IntelligenceDashboard /></ModernAppLayout></ProtectedRoute>} />
               <Route path="analytics/inventory" element={<ProtectedRoute requireAuth><ModernAppLayout><InventoryUtilization /></ModernAppLayout></ProtectedRoute>} />
               <Route path="analytics/revenue-forecast" element={<Navigate to="/admin/reports/revenue?tab=forecast" replace />} />
               <Route path="proformas" element={<ProtectedRoute requireAuth><ModernAppLayout><ProformasList /></ModernAppLayout></ProtectedRoute>} />
@@ -508,6 +511,7 @@ const App = () => (
                 <Route path="rate-settings" element={<RateSettings />} />
                 <Route path="alerts" element={<AlertsSettings />} />
                 <Route path="concession-contracts" element={<ConcessionContracts />} />
+                <Route path="automation" element={<AutomationRules />} />
               </Route>
             </Route>
             {/* ===== END GLOBAL ADMIN AUTH GATE ===== */}

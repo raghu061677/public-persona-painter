@@ -108,6 +108,7 @@ const navigationGroups: NavGroup[] = [
       { label: "Integrations", path: "/admin/company-settings/integrations", icon: Zap },
       { label: "API & Webhooks", path: "/admin/company-settings/developer", icon: Code2 },
       { label: "Workflows", path: "/admin/company-settings/workflows", icon: Workflow },
+      { label: "Automation Rules", path: "/admin/company-settings/automation", icon: Zap },
     ]
   }
 ];

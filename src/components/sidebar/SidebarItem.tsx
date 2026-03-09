@@ -17,24 +17,34 @@ export function SidebarItem({ icon: Icon, label, href, collapsed, badge }: Sideb
       to={href}
       className={({ isActive }) =>
         cn(
-          "flex items-center transition-all duration-200 relative rounded-xl text-sm font-medium",
-          collapsed ? "justify-center p-2.5 mx-1" : "gap-3 px-4 py-2.5 mx-2",
-          "hover:bg-primary/10 hover:text-primary",
+          "group flex items-center rounded-lg text-[13px] font-medium transition-all duration-150 relative",
+          collapsed ? "justify-center p-2 mx-auto w-9 h-9" : "gap-2.5 px-3 py-[7px]",
+          // Hover
+          "hover:bg-accent/80 hover:text-accent-foreground",
+          // Active
           isActive && [
-            "bg-primary/10 text-primary font-semibold",
-            !collapsed && "before:absolute before:left-0 before:top-1 before:bottom-1 before:w-1 before:bg-primary before:rounded-r-full"
+            "bg-primary/8 text-primary font-semibold",
+            "shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.12)]",
+            !collapsed && "before:absolute before:left-0 before:top-[6px] before:bottom-[6px] before:w-[3px] before:bg-primary before:rounded-full"
           ],
-          !isActive && "text-muted-foreground"
+          // Inactive
+          !isActive && "text-muted-foreground/80"
         )
       }
       title={collapsed ? label : undefined}
     >
-      <Icon className="h-5 w-5 shrink-0" />
+      <Icon className={cn(
+        "shrink-0 transition-colors",
+        collapsed ? "h-[18px] w-[18px]" : "h-4 w-4"
+      )} />
       {!collapsed && (
-        <span className="flex-1 truncate">{label}</span>
+        <span className="flex-1 truncate leading-tight">{label}</span>
       )}
       {!collapsed && badge !== undefined && badge > 0 && (
-        <Badge variant="secondary" className="ml-auto h-5 min-w-[20px] px-1.5 text-xs">
+        <Badge 
+          variant="secondary" 
+          className="ml-auto h-[18px] min-w-[18px] px-1 text-[10px] font-semibold rounded-full bg-primary/10 text-primary border-0"
+        >
           {badge > 99 ? "99+" : badge}
         </Badge>
       )}

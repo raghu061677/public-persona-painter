@@ -517,7 +517,7 @@ export default function PlanNew() {
         const totalWithGst = subtotal + itemGst;
 
         return {
-          plan_id: formData.id,
+          plan_id: plan.id,
           asset_id: assetId,
           // Complete media asset snapshot for exports and campaign conversion
           media_type: asset.media_type,

@@ -210,6 +210,36 @@ export function useEnterpriseRBAC(): EnterpriseRBACResult {
     return null;
   }, [isEffectiveAdmin, canViewSensitive]);
 
+  const canViewFinancialFn = useCallback((module: ModuleKey) => {
+    if (isEffectiveAdmin) return true;
+    const perm = permissions[module];
+    return (perm as any)?.can_view_financial ?? perm?.can_view_sensitive ?? false;
+  }, [permissions, isEffectiveAdmin]);
+
+  const canViewContactsFn = useCallback((module: ModuleKey) => {
+    if (isEffectiveAdmin) return true;
+    const perm = permissions[module];
+    return (perm as any)?.can_view_contacts ?? perm?.can_view_sensitive ?? false;
+  }, [permissions, isEffectiveAdmin]);
+
+  const getFieldAccess = useCallback((module: ModuleKey, record?: any): FieldAccessContext => {
+    if (isEffectiveAdmin) {
+      return { canViewFinancial: true, canViewContacts: true, canViewInternal: true };
+    }
+    // Check ownership for record-level override
+    const isOwner = record && user?.id ? (
+      record.created_by === user.id ||
+      record.owner_id === user.id ||
+      (Array.isArray(record.secondary_owner_ids) && record.secondary_owner_ids.includes(user.id))
+    ) : false;
+
+    return {
+      canViewFinancial: isOwner || canViewFinancialFn(module),
+      canViewContacts: isOwner || canViewContactsFn(module),
+      canViewInternal: isOwner || canViewFinancialFn(module),
+    };
+  }, [isEffectiveAdmin, user, canViewFinancialFn, canViewContactsFn]);
+
   return {
     loading,
     permissions,
@@ -228,5 +258,8 @@ export function useEnterpriseRBAC(): EnterpriseRBACResult {
     isPlatformAdmin,
     isCompanyAdmin: isEffectiveAdmin,
     maskSensitiveValue,
+    canViewFinancial: canViewFinancialFn,
+    canViewContacts: canViewContactsFn,
+    getFieldAccess,
   };
 }

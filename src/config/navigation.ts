@@ -181,11 +181,55 @@ import {
         label: "Reports",
         icon: BarChart3,
         requiresModule: "reports",
+        children: [
+          {
+            id: "booking-reports",
+            label: "Booking Reports",
+            icon: Users,
+            items: [
+              { label: "Client Bookings", href: "/admin/reports/client-bookings", icon: Users },
+              { label: "Campaign Bookings", href: "/admin/reports/campaigns", icon: Briefcase },
+              { label: "Booked Media", href: "/admin/reports/booked-media", icon: Map },
+              { label: "Monthly Campaigns", href: "/admin/reports/monthly-campaigns", icon: CalendarDays },
+            ],
+          },
+          {
+            id: "revenue-profitability",
+            label: "Revenue & Profitability",
+            icon: TrendingUp,
+            items: [
+              { label: "Revenue Center", href: "/admin/reports/revenue", icon: TrendingUp },
+              { label: "OOH Revenue", href: "/admin/reports/ooh-revenue", icon: DollarSign },
+              { label: "Asset Profitability", href: "/admin/reports/profitability", icon: BarChart3 },
+              { label: "Campaign Profitability", href: "/admin/reports/campaign-profitability", icon: Briefcase },
+              { label: "OOH KPIs", href: "/admin/reports/ooh-kpis", icon: TrendingUp },
+            ],
+          },
+          {
+            id: "financial-reports",
+            label: "Financial Reports",
+            icon: DollarSign,
+            items: [
+              { label: "Financial Summary", href: "/admin/reports/financial", icon: DollarSign },
+              { label: "Cash Flow Forecast", href: "/admin/reports/cashflow-forecast", icon: Wallet },
+              { label: "Expense Allocation", href: "/admin/reports/expense-allocation", icon: DollarSign },
+              { label: "Concession Risk", href: "/admin/reports/concession-risk", icon: Layers },
+              { label: "Aging by Client", href: "/admin/reports/aging-by-client", icon: Clock },
+            ],
+          },
+          {
+            id: "operations-reports",
+            label: "Operations Reports",
+            icon: TrendingUp,
+            items: [
+              { label: "Proof Execution", href: "/admin/reports/proof-execution", icon: FileCheck },
+              { label: "Ops Billables", href: "/admin/reports/ops-billables", icon: Wallet },
+              { label: "Ops Margin", href: "/admin/reports/ops-margin", icon: TrendingUp },
+            ],
+          },
+        ],
         items: [
-          { label: "Client Bookings", href: "/admin/reports/clients", icon: Users },
-          { label: "Campaign Bookings", href: "/admin/reports/campaigns", icon: Briefcase },
-          { label: "Revenue Center", href: "/admin/reports/revenue", icon: TrendingUp },
-          { label: "Financial Summary", href: "/admin/reports/financial", icon: DollarSign },
+          { label: "Executive Dashboard", href: "/admin/reports/executive", icon: LayoutDashboard },
         ],
       },
 

@@ -98,6 +98,8 @@ interface PlanAssetsTableProps {
   onAddAssets?: () => void;
   onBulkPrintingMounting?: () => void;
   onPrintingInstallation?: () => void;
+  /** When false, all financial columns (rates, costs, totals) are hidden */
+  canViewFinancials?: boolean;
 }
 
 type SortDirection = 'asc' | 'desc' | null;

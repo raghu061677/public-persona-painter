@@ -12,6 +12,7 @@ import {
   EMPTY_PERMISSION, FULL_PERMISSION, ALL_MODULES,
   checkScopeAccess, mergePermissions,
 } from '@/lib/rbac/permissions';
+import type { FieldAccessContext } from '@/lib/rbac/restrictedFields';
 
 export interface EnterpriseRBACResult {
   loading: boolean;
@@ -39,6 +40,11 @@ export interface EnterpriseRBACResult {
   
   // Field masking
   maskSensitiveValue: (module: ModuleKey, fieldName: string, value: any, record?: any) => any;
+  
+  // Granular field access (from role_permissions)
+  canViewFinancial: (module: ModuleKey) => boolean;
+  canViewContacts: (module: ModuleKey) => boolean;
+  getFieldAccess: (module: ModuleKey, record?: any) => FieldAccessContext;
 }
 
 export function useEnterpriseRBAC(): EnterpriseRBACResult {
@@ -74,7 +80,7 @@ export function useEnterpriseRBAC(): EnterpriseRBACResult {
         
         const { data, error } = await supabase
           .from('role_permissions')
-          .select('module, can_view, can_create, can_edit, can_update, can_delete, can_assign, can_approve, can_export, can_upload_proof, can_view_sensitive, scope_mode')
+          .select('module, can_view, can_create, can_edit, can_update, can_delete, can_assign, can_approve, can_export, can_upload_proof, can_view_sensitive, can_view_financial, can_view_contacts, scope_mode')
           .eq('role', queryRole)
           .is('company_id', null); // Global defaults
 
@@ -98,6 +104,8 @@ export function useEnterpriseRBAC(): EnterpriseRBACResult {
             can_export: row.can_export ?? false,
             can_upload_proof: row.can_upload_proof ?? false,
             can_view_sensitive: row.can_view_sensitive ?? false,
+            can_view_financial: row.can_view_financial ?? row.can_view_sensitive ?? false,
+            can_view_contacts: row.can_view_contacts ?? row.can_view_sensitive ?? false,
             scope_mode: (row.scope_mode as ScopeMode) ?? 'none',
           };
         });
@@ -202,6 +210,36 @@ export function useEnterpriseRBAC(): EnterpriseRBACResult {
     return null;
   }, [isEffectiveAdmin, canViewSensitive]);
 
+  const canViewFinancialFn = useCallback((module: ModuleKey) => {
+    if (isEffectiveAdmin) return true;
+    const perm = permissions[module];
+    return (perm as any)?.can_view_financial ?? perm?.can_view_sensitive ?? false;
+  }, [permissions, isEffectiveAdmin]);
+
+  const canViewContactsFn = useCallback((module: ModuleKey) => {
+    if (isEffectiveAdmin) return true;
+    const perm = permissions[module];
+    return (perm as any)?.can_view_contacts ?? perm?.can_view_sensitive ?? false;
+  }, [permissions, isEffectiveAdmin]);
+
+  const getFieldAccess = useCallback((module: ModuleKey, record?: any): FieldAccessContext => {
+    if (isEffectiveAdmin) {
+      return { canViewFinancial: true, canViewContacts: true, canViewInternal: true };
+    }
+    // Check ownership for record-level override
+    const isOwner = record && user?.id ? (
+      record.created_by === user.id ||
+      record.owner_id === user.id ||
+      (Array.isArray(record.secondary_owner_ids) && record.secondary_owner_ids.includes(user.id))
+    ) : false;
+
+    return {
+      canViewFinancial: isOwner || canViewFinancialFn(module),
+      canViewContacts: isOwner || canViewContactsFn(module),
+      canViewInternal: isOwner || canViewFinancialFn(module),
+    };
+  }, [isEffectiveAdmin, user, canViewFinancialFn, canViewContactsFn]);
+
   return {
     loading,
     permissions,
@@ -220,5 +258,8 @@ export function useEnterpriseRBAC(): EnterpriseRBACResult {
     isPlatformAdmin,
     isCompanyAdmin: isEffectiveAdmin,
     maskSensitiveValue,
+    canViewFinancial: canViewFinancialFn,
+    canViewContacts: canViewContactsFn,
+    getFieldAccess,
   };
 }

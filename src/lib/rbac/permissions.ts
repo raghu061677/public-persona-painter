@@ -28,6 +28,8 @@ export interface ModulePermission {
   can_export: boolean;
   can_upload_proof: boolean;
   can_view_sensitive: boolean;
+  can_view_financial: boolean;
+  can_view_contacts: boolean;
   scope_mode: ScopeMode;
 }
 
@@ -44,6 +46,8 @@ export const EMPTY_PERMISSION: ModulePermission = {
   can_export: false,
   can_upload_proof: false,
   can_view_sensitive: false,
+  can_view_financial: false,
+  can_view_contacts: false,
   scope_mode: 'none',
 };
 
@@ -58,6 +62,8 @@ export const FULL_PERMISSION: ModulePermission = {
   can_export: true,
   can_upload_proof: true,
   can_view_sensitive: true,
+  can_view_financial: true,
+  can_view_contacts: true,
   scope_mode: 'all',
 };
 
@@ -138,6 +144,8 @@ export function mergePermissions(perms: ModulePermission[]): ModulePermission {
     can_export: merged.can_export || perm.can_export,
     can_upload_proof: merged.can_upload_proof || perm.can_upload_proof,
     can_view_sensitive: merged.can_view_sensitive || perm.can_view_sensitive,
+    can_view_financial: merged.can_view_financial || perm.can_view_financial,
+    can_view_contacts: merged.can_view_contacts || perm.can_view_contacts,
     scope_mode: scopePriority.indexOf(merged.scope_mode) <= scopePriority.indexOf(perm.scope_mode)
       ? merged.scope_mode
       : perm.scope_mode,

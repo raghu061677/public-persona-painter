@@ -226,34 +226,13 @@ export default function LeadDetail() {
         )}`}
         actions={
           !isConverted && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="default"
-                  disabled={converting}
-                  className="bg-gradient-to-r from-primary to-primary/80"
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Convert to Client
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Convert Lead to Client?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will create a new client record with the lead's
-                    information. The system will check for duplicates before
-                    creating.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={convertToClient}>
-                    Convert
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <Button
+              variant="default"
+              onClick={() => setConvertDialogOpen(true)}
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Convert to Client
+            </Button>
           )
         }
       />

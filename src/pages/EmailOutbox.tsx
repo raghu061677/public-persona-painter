@@ -68,7 +68,7 @@ export default function EmailOutbox() {
 
   return (
     <SettingsContentWrapper>
-      <SectionHeader title="Email Outbox" description="View queued and sent emails. Retry failed deliveries." />
+      <SectionHeader title="Email Outbox & Logs" description="View queued, sent, and failed emails. Retry failed deliveries." />
 
       <div className="flex items-center gap-3 mb-4">
         <Input placeholder="Search by recipient or subject…" value={search} onChange={e => setSearch(e.target.value)} className="max-w-xs" />

@@ -3,32 +3,32 @@ import { cn } from "@/lib/utils";
 import {
   Building2,
   Users,
-  FileText,
   Settings,
-  Server,
   Palette,
-  Receipt,
-  Globe,
   Bell,
+  Mail,
+  FileText,
+  Zap,
+  Globe,
+  Code2,
+  Calculator,
+  FileBarChart,
+  Receipt,
   DollarSign,
+  CreditCard,
   ShoppingCart,
   Package,
   Boxes,
-  Code2,
   Workflow,
   LayoutGrid,
-  UserCog,
   Shield,
-  Calculator,
-  FileBarChart,
-  Mail,
-  MessageSquare,
-  FileSignature,
   Hash,
   FileType,
-  Calendar,
-  CreditCard,
-  Zap
+  MessageSquare,
+  FileSignature,
+  Inbox,
+  Send,
+  Clock,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -46,18 +46,20 @@ interface NavGroup {
 
 const navigationGroups: NavGroup[] = [
   {
-    title: "Organization Settings",
+    title: "Organization",
     items: [
-      { label: "Profile", path: "/admin/company-settings/profile", icon: Building2 },
-      { label: "Branding", path: "/admin/company-settings/branding", icon: Palette },
+      { label: "Company Profile", path: "/admin/company-settings/profile", icon: Building2 },
+      { label: "Branding & Logo", path: "/admin/company-settings/branding", icon: Palette },
     ]
   },
   {
-    title: "Users & Roles",
+    title: "Email & Notifications",
     items: [
-      { label: "Company Users", path: "/admin/company-settings/users", icon: Users },
-      { label: "User Management", path: "/admin/users", icon: UserCog },
-      { label: "Roles", path: "/admin/company-settings/roles", icon: Shield },
+      { label: "Email Providers", path: "/admin/company-settings/email-providers", icon: Mail },
+      { label: "Email Templates", path: "/admin/company-settings/email-templates", icon: FileText },
+      { label: "Email Outbox & Logs", path: "/admin/company-settings/email-outbox", icon: Send },
+      { label: "Alerts", path: "/admin/company-settings/alerts", icon: Bell },
+      { label: "Reminders", path: "/admin/company-settings/reminders", icon: Clock },
     ]
   },
   {
@@ -69,31 +71,11 @@ const navigationGroups: NavGroup[] = [
     ]
   },
   {
-    title: "Setup & Configurations",
+    title: "Module Settings",
     items: [
       { label: "General", path: "/admin/company-settings/general", icon: Settings },
       { label: "Currencies", path: "/admin/company-settings/currencies", icon: DollarSign },
-      { label: "Reminders", path: "/admin/company-settings/reminders", icon: Bell },
       { label: "Client Portal", path: "/admin/company-settings/client-portal", icon: Globe },
-    ]
-  },
-  {
-    title: "Customization",
-    items: [
-      { label: "Number Series", path: "/admin/code-management", icon: Hash },
-      { label: "PDF Templates", path: "/admin/company-settings/pdf-templates", icon: FileType },
-      { label: "Email Settings", path: "/admin/company-settings/smtp-settings", icon: Server },
-      { label: "Email Templates", path: "/admin/company-settings/email-templates", icon: FileText },
-      { label: "Email Outbox & Logs", path: "/admin/company-settings/email-outbox", icon: Mail },
-      { label: "SMS Notifications", path: "/admin/company-settings/sms-notifications", icon: MessageSquare },
-      { label: "Digital Signature", path: "/admin/company-settings/digital-signature", icon: FileSignature },
-      { label: "Email & WhatsApp Alerts", path: "/admin/company-settings/alerts", icon: Bell },
-    ]
-  },
-  {
-    title: "Module Settings",
-    items: [
-      { label: "General", path: "/admin/company-settings/module-general", icon: LayoutGrid },
       { label: "Online Payments", path: "/admin/company-settings/payments", icon: CreditCard },
       { label: "Sales", path: "/admin/company-settings/sales", icon: ShoppingCart },
       { label: "Operations", path: "/admin/operations-settings", icon: Package },
@@ -102,12 +84,21 @@ const navigationGroups: NavGroup[] = [
     ]
   },
   {
-    title: "Developer & Extensions",
+    title: "Customization",
     items: [
+      { label: "Number Series", path: "/admin/code-management", icon: Hash },
+      { label: "PDF Templates", path: "/admin/company-settings/pdf-templates", icon: FileType },
+      { label: "SMS Notifications", path: "/admin/company-settings/sms-notifications", icon: MessageSquare },
+      { label: "Digital Signature", path: "/admin/company-settings/digital-signature", icon: FileSignature },
+    ]
+  },
+  {
+    title: "Automation & Integrations",
+    items: [
+      { label: "Automation Rules", path: "/admin/company-settings/automation", icon: Zap },
+      { label: "Workflows", path: "/admin/company-settings/workflows", icon: Workflow },
       { label: "Integrations", path: "/admin/company-settings/integrations", icon: Zap },
       { label: "API & Webhooks", path: "/admin/company-settings/developer", icon: Code2 },
-      { label: "Workflows", path: "/admin/company-settings/workflows", icon: Workflow },
-      { label: "Automation Rules", path: "/admin/company-settings/automation", icon: Zap },
     ]
   }
 ];

@@ -46,6 +46,8 @@ export const EMPTY_PERMISSION: ModulePermission = {
   can_export: false,
   can_upload_proof: false,
   can_view_sensitive: false,
+  can_view_financial: false,
+  can_view_contacts: false,
   scope_mode: 'none',
 };
 

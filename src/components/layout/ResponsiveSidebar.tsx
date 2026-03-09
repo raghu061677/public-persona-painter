@@ -374,10 +374,32 @@ export function ResponsiveSidebar() {
                 <>
                   {!collapsed && <SidebarGroupLabel className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">Reports</SidebarGroupLabel>}
                   <SidebarMenu>
-                    <MenuItem icon={Users} label="Client Bookings" href="/admin/reports/client-bookings" />
-                    <MenuItem icon={Briefcase} label="Campaign Bookings" href="/admin/reports/campaigns" />
-                    <MenuItem icon={TrendingUp} label="Revenue Center" href="/admin/reports/revenue" />
-                    <MenuItem icon={DollarSign} label="Financial Summary" href="/admin/reports/financial" />
+                    <MenuGroup icon={Users} label="Booking Reports">
+                      <MenuItem icon={Users} label="Client Bookings" href="/admin/reports/client-bookings" />
+                      <MenuItem icon={Briefcase} label="Campaign Bookings" href="/admin/reports/campaigns" />
+                      <MenuItem icon={Map} label="Booked Media" href="/admin/reports/booked-media" />
+                      <MenuItem icon={CalendarDays} label="Monthly Campaigns" href="/admin/reports/monthly-campaigns" />
+                    </MenuGroup>
+                    <MenuGroup icon={TrendingUp} label="Revenue & Profitability">
+                      <MenuItem icon={TrendingUp} label="Revenue Center" href="/admin/reports/revenue" />
+                      <MenuItem icon={DollarSign} label="OOH Revenue" href="/admin/reports/ooh-revenue" />
+                      <MenuItem icon={BarChart3} label="Asset Profitability" href="/admin/reports/profitability" />
+                      <MenuItem icon={Briefcase} label="Campaign Profitability" href="/admin/reports/campaign-profitability" />
+                      <MenuItem icon={TrendingUp} label="OOH KPIs" href="/admin/reports/ooh-kpis" />
+                    </MenuGroup>
+                    <MenuGroup icon={DollarSign} label="Financial Reports">
+                      <MenuItem icon={DollarSign} label="Financial Summary" href="/admin/reports/financial" />
+                      <MenuItem icon={Wallet} label="Cash Flow Forecast" href="/admin/reports/cashflow-forecast" />
+                      <MenuItem icon={DollarSign} label="Expense Allocation" href="/admin/reports/expense-allocation" />
+                      <MenuItem icon={Layers} label="Concession Risk" href="/admin/reports/concession-risk" />
+                      <MenuItem icon={Clock} label="Aging by Client" href="/admin/reports/aging-by-client" />
+                    </MenuGroup>
+                    <MenuGroup icon={TrendingUp} label="Operations Reports">
+                      <MenuItem icon={FileCheck} label="Proof Execution" href="/admin/reports/proof-execution" />
+                      <MenuItem icon={Wallet} label="Ops Billables" href="/admin/reports/ops-billables" />
+                      <MenuItem icon={TrendingUp} label="Ops Margin" href="/admin/reports/ops-margin" />
+                    </MenuGroup>
+                    <MenuItem icon={LayoutDashboard} label="Executive Dashboard" href="/admin/reports/executive" />
                   </SidebarMenu>
                   <Separator className="my-2" />
                 </>

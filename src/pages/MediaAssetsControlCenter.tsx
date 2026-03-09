@@ -216,16 +216,31 @@ export default function MediaAssetsControlCenter() {
 
   // Memoized filtered assets for performance
   const filteredAssets = useMemo(() => {
-    if (!searchQuery) return assets;
-    const query = searchQuery.toLowerCase();
-    return assets.filter((asset) => 
-      asset.id?.toLowerCase().includes(query) ||
-      asset.location?.toLowerCase().includes(query) ||
-      asset.area?.toLowerCase().includes(query) ||
-      asset.city?.toLowerCase().includes(query) ||
-      asset.media_type?.toLowerCase().includes(query)
-    );
-  }, [assets, searchQuery]);
+    let result = assets;
+    if (statusFilter) {
+      result = result.filter(a => a.status === statusFilter);
+    }
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter((asset) => 
+        asset.id?.toLowerCase().includes(query) ||
+        asset.location?.toLowerCase().includes(query) ||
+        asset.area?.toLowerCase().includes(query) ||
+        asset.city?.toLowerCase().includes(query) ||
+        asset.media_type?.toLowerCase().includes(query)
+      );
+    }
+    return result;
+  }, [assets, searchQuery, statusFilter]);
+
+  const statusOptions = useMemo(() => {
+    const counts: Record<string, number> = {};
+    assets.forEach(a => {
+      const s = a.status || 'Unknown';
+      counts[s] = (counts[s] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [assets]);
 
   // Memoized statistics calculation
   const stats = useMemo(() => ({

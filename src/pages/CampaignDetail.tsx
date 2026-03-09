@@ -58,6 +58,10 @@ export default function CampaignDetail() {
   const { company } = useCompany();
   const { setBreadcrumbs } = useBreadcrumb();
   const { data: profitability, isLoading: profitLoading } = useCampaignProfitability(id, company?.id, 0);
+  
+  // Enterprise RBAC access mode
+  const perms = useRecordPermissions(campaign, 'campaigns');
+  const isAdmin = perms.canEditRecord;
 
   // Enable automated workflows
   useCampaignWorkflows(id);

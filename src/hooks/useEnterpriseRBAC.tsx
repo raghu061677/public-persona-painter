@@ -12,6 +12,7 @@ import {
   EMPTY_PERMISSION, FULL_PERMISSION, ALL_MODULES,
   checkScopeAccess, mergePermissions,
 } from '@/lib/rbac/permissions';
+import type { FieldAccessContext } from '@/lib/rbac/restrictedFields';
 
 export interface EnterpriseRBACResult {
   loading: boolean;

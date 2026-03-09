@@ -639,7 +639,42 @@ export default function ClientNew() {
         </div>
       )}
 
-      {/* Clear Draft Confirmation Dialog */}
+      {/* Duplicate Client Detection Banner */}
+      {duplicateMatch && (
+        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 space-y-3">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-destructive">Duplicate Client Detected</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                A client with matching details already exists. You cannot create a duplicate.
+              </p>
+              <div className="mt-2 p-3 bg-card rounded-md border text-sm space-y-1">
+                <p><span className="font-medium">Name:</span> {duplicateMatch.name}</p>
+                {duplicateMatch.gst_number && <p><span className="font-medium">GST:</span> {duplicateMatch.gst_number}</p>}
+                <p><span className="font-medium">Location:</span> {[duplicateMatch.billing_city || duplicateMatch.city, duplicateMatch.billing_state || duplicateMatch.state].filter(Boolean).join(', ') || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2 ml-8">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/admin/clients/${duplicateMatch.id}`)}
+            >
+              View Existing Client
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => navigate(`/admin/clients/${duplicateMatch.id}?edit=true`)}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add Contact Person
+            </Button>
+          </div>
+        </div>
+      )}
       <AlertDialog open={showClearDraftDialog} onOpenChange={setShowClearDraftDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>

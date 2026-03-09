@@ -333,6 +333,7 @@ export default function ClientDetail() {
         showBackButton
         backPath={ROUTES.CLIENTS}
         actions={
+          canSeeSensitive ? (
           <>
             <Button
               variant="outline"
@@ -360,6 +361,7 @@ export default function ClientDetail() {
               Edit Client
             </Button>
           </>
+          ) : undefined
         }
       />
 

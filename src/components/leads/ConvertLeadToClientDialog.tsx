@@ -12,13 +12,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle, AlertCircle, AlertTriangle, UserPlus, Eye, Merge, PlusCircle } from "lucide-react";
 import { generateClientCode } from "@/lib/codeGenerator";
 import { getStateCode } from "@/lib/stateCodeMapping";
+import { type MatchResult, getMergeAction } from "@/lib/leadClientMatching";
+import { useNavigate } from "react-router-dom";
 
 interface Lead {
   id: string;
@@ -31,16 +33,7 @@ interface Lead {
   source: string;
   client_id: string | null;
   converted_at: string | null;
-}
-
-interface ExistingClient {
-  id: string;
-  name: string;
-  company: string | null;
-  email: string | null;
-  phone: string | null;
-  city: string | null;
-  state: string | null;
+  metadata?: Record<string, any> | null;
 }
 
 interface ConvertLeadToClientDialogProps {
@@ -57,68 +50,119 @@ export function ConvertLeadToClientDialog({
   onConverted,
 }: ConvertLeadToClientDialogProps) {
   const { company } = useCompany();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [checkingDuplicates, setCheckingDuplicates] = useState(false);
-  const [existingClients, setExistingClients] = useState<ExistingClient[]>([]);
-  const [conversionType, setConversionType] = useState<"existing" | "new">("new");
-  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [checking, setChecking] = useState(false);
+  const [matches, setMatches] = useState<MatchResult[]>([]);
+  const [step, setStep] = useState<'checking' | 'auto_merge' | 'review' | 'no_match'>('checking');
   const [newClientData, setNewClientData] = useState({
     name: "",
     company: "",
-    state: "Telangana", // Default state
+    state: "Telangana",
   });
 
   useEffect(() => {
     if (open && lead) {
-      // Prefill new client data from lead
       setNewClientData({
         name: lead.name || lead.company || "",
         company: lead.company || "",
         state: "Telangana",
       });
-      
-      // Check for duplicate clients
-      checkForDuplicates();
+      setMatches([]);
+      setStep('checking');
+      runMatchCheck();
     }
   }, [open, lead]);
 
-  const checkForDuplicates = async () => {
+  const runMatchCheck = async () => {
     if (!company?.id || !lead) return;
-    
-    setCheckingDuplicates(true);
+    setChecking(true);
     try {
-      const filters = [];
-      if (lead.email) filters.push(`email.eq.${lead.email}`);
-      if (lead.phone) filters.push(`phone.eq.${lead.phone}`);
-
-      if (filters.length === 0) {
-        setExistingClients([]);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("clients")
-        .select("id, name, company, email, phone, city, state")
-        .eq("company_id", company.id)
-        .or(filters.join(","));
+      const { data, error } = await supabase.functions.invoke('lead-client-match', {
+        body: {
+          action: 'check_match',
+          lead: {
+            name: lead.name,
+            company: lead.company,
+            email: lead.email,
+            phone: lead.phone,
+            location: lead.location,
+            metadata: lead.metadata,
+          },
+        },
+      });
 
       if (error) throw error;
-      
-      setExistingClients(data || []);
-      if (data && data.length > 0) {
-        setConversionType("existing");
-        setSelectedClientId(data[0].id);
+
+      const foundMatches = (data?.matches || []) as MatchResult[];
+      setMatches(foundMatches);
+
+      if (foundMatches.length > 0) {
+        const best = foundMatches[0];
+        const action = getMergeAction(best.confidence);
+        setStep(action === 'auto_merge' ? 'auto_merge' : action === 'needs_review' ? 'review' : 'no_match');
+      } else {
+        setStep('no_match');
       }
-    } catch (error) {
-      console.error("Error checking duplicates:", error);
+    } catch (err: any) {
+      console.error('Match check failed:', err);
+      toast.error('Match check failed, proceeding with manual flow');
+      setStep('no_match');
     } finally {
-      setCheckingDuplicates(false);
+      setChecking(false);
     }
   };
 
-  const handleConvert = async () => {
+  const handleMerge = async (clientId: string, confidence: number, reason: string) => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.functions.invoke('lead-client-match', {
+        body: {
+          action: 'execute_merge',
+          lead_id: lead.id,
+          client_id: clientId,
+          merge_reason: reason,
+          confidence,
+        },
+      });
+      if (error) throw error;
+      toast.success('Lead merged into existing client successfully');
+      onOpenChange(false);
+      onConverted?.();
+    } catch (err: any) {
+      toast.error(err.message || 'Merge failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendToReview = async (match: MatchResult) => {
+    setLoading(true);
+    try {
+      await supabase.from('leads').update({
+        matched_client_id: match.clientId,
+        merge_status: 'needs_review',
+        merge_confidence: match.confidence,
+        merge_reason: match.reason,
+      } as any).eq('id', lead.id);
+
+      toast.success('Lead sent to merge review queue');
+      onOpenChange(false);
+      onConverted?.();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to submit for review');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateNew = async () => {
     if (!company?.id) {
       toast.error("Company information not available");
+      return;
+    }
+    if (!newClientData.name || !newClientData.state) {
+      toast.error("Name and state are required");
       return;
     }
 
@@ -127,82 +171,77 @@ export function ConvertLeadToClientDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const now = new Date().toISOString();
+      const stateCode = getStateCode(newClientData.state);
+      const clientId = await generateClientCode(stateCode);
 
-      if (conversionType === "existing") {
-        // Link to existing client
-        if (!selectedClientId) {
-          toast.error("Please select a client");
-          setLoading(false);
-          return;
-        }
+      const { data: newClient, error: clientError } = await supabase
+        .from("clients")
+        .insert({
+          id: clientId,
+          company_id: company.id,
+          name: newClientData.name,
+          company: newClientData.company || null,
+          email: lead.email || null,
+          phone: lead.phone || null,
+          state: newClientData.state,
+          city: lead.location || null,
+          notes: `Converted from lead. Source: ${lead.source}. Requirement: ${lead.requirement || 'N/A'}`,
+          created_by: user.id,
+        })
+        .select("*")
+        .single();
 
-        const { error } = await supabase
-          .from("leads")
-          .update({
-            client_id: selectedClientId,
-            converted_at: now,
-            assigned_to: user.id,
-            status: "won",
-          })
-          .eq("id", lead.id);
+      if (clientError) throw clientError;
 
-        if (error) throw error;
+      await supabase.from("leads").update({
+        client_id: newClient.id,
+        converted_at: new Date().toISOString(),
+        assigned_to: user.id,
+        status: "won",
+        merge_status: 'new_client_created',
+      } as any).eq("id", lead.id);
 
-        toast.success("Lead linked to existing client");
-      } else {
-        // Create new client
-        if (!newClientData.name || !newClientData.state) {
-          toast.error("Name and state are required");
-          setLoading(false);
-          return;
-        }
-
-        const stateCode = getStateCode(newClientData.state);
-        const clientId = await generateClientCode(stateCode);
-
-        const { data: newClient, error: clientError } = await supabase
-          .from("clients")
-          .insert({
-            id: clientId,
-            company_id: company.id,
-            name: newClientData.name,
-            company: newClientData.company || null,
-            email: lead.email || null,
-            phone: lead.phone || null,
-            state: newClientData.state,
-            city: lead.location || null,
-            notes: `Converted from lead. Source: ${lead.source}. Requirement: ${lead.requirement || 'N/A'}`,
-          })
-          .select("*")
-          .single();
-
-        if (clientError) throw clientError;
-
-        // Update lead with new client
-        const { error: leadError } = await supabase
-          .from("leads")
-          .update({
-            client_id: newClient.id,
-            converted_at: now,
-            assigned_to: user.id,
-            status: "won",
-          })
-          .eq("id", lead.id);
-
-        if (leadError) throw leadError;
-
-        toast.success(`New client created: ${clientId}`);
+      // Add contact person
+      if (lead.phone || lead.email) {
+        await supabase.from('client_contacts').insert({
+          client_id: newClient.id,
+          company_id: company.id,
+          name: lead.name || 'Primary Contact',
+          phone: lead.phone,
+          mobile: lead.phone,
+          email: lead.email,
+          is_primary: true,
+          created_by: user.id,
+        });
       }
 
+      toast.success(`New client created: ${clientId}`);
       onOpenChange(false);
       onConverted?.();
-    } catch (error: any) {
-      console.error("Error converting lead:", error);
-      toast.error(error.message || "Failed to convert lead");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create client");
     } finally {
       setLoading(false);
     }
+  };
+
+  const getConfidenceBadge = (confidence: number) => {
+    if (confidence >= 90) return <Badge className="bg-red-500 text-white">Auto Merge ({confidence}%)</Badge>;
+    if (confidence >= 60) return <Badge className="bg-yellow-500 text-white">Review ({confidence}%)</Badge>;
+    return <Badge variant="secondary">Low ({confidence}%)</Badge>;
+  };
+
+  const getReasonLabel = (reason: string) => {
+    const labels: Record<string, string> = {
+      gst_match: 'GST Number Match',
+      email_match: 'Email Match',
+      phone_match: 'Phone Match',
+      company_name_match: 'Company Name Match',
+      name_city_match: 'Name + City Match',
+      domain_match: 'Email Domain + City Match',
+      address_match: 'Address Similarity',
+    };
+    return labels[reason] || reason;
   };
 
   return (
@@ -211,172 +250,175 @@ export function ConvertLeadToClientDialog({
         <DialogHeader>
           <DialogTitle>Convert Lead to Client</DialogTitle>
           <DialogDescription>
-            Link this lead to an existing client or create a new one
+            Smart duplicate detection will match this lead against existing clients
           </DialogDescription>
         </DialogHeader>
 
-        {/* Lead Details */}
+        {/* Lead Info */}
         <div className="rounded-lg border p-4 bg-muted/50">
           <h4 className="font-semibold mb-2">Lead Information</h4>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>
-              <span className="text-muted-foreground">Name:</span>{" "}
-              <span className="font-medium">{lead.name || "N/A"}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Company:</span>{" "}
-              <span className="font-medium">{lead.company || "N/A"}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Email:</span>{" "}
-              <span className="font-medium">{lead.email || "N/A"}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Phone:</span>{" "}
-              <span className="font-medium">{lead.phone || "N/A"}</span>
-            </div>
-            <div className="col-span-2">
-              <span className="text-muted-foreground">Source:</span>{" "}
-              <Badge variant="outline">{lead.source}</Badge>
-            </div>
+            <div><span className="text-muted-foreground">Name:</span> <span className="font-medium">{lead.name || "N/A"}</span></div>
+            <div><span className="text-muted-foreground">Company:</span> <span className="font-medium">{lead.company || "N/A"}</span></div>
+            <div><span className="text-muted-foreground">Email:</span> <span className="font-medium">{lead.email || "N/A"}</span></div>
+            <div><span className="text-muted-foreground">Phone:</span> <span className="font-medium">{lead.phone || "N/A"}</span></div>
+            <div><span className="text-muted-foreground">Location:</span> <span className="font-medium">{lead.location || "N/A"}</span></div>
+            <div><span className="text-muted-foreground">Source:</span> <Badge variant="outline">{lead.source}</Badge></div>
           </div>
         </div>
 
         <Separator />
 
-        {/* Duplicate Check Result */}
-        {checkingDuplicates ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Checking for existing clients...
+        {/* Checking state */}
+        {checking && (
+          <div className="flex flex-col items-center gap-3 py-6">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Running duplicate detection...</p>
           </div>
-        ) : existingClients.length > 0 ? (
-          <div className="rounded-lg border border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 p-3">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 mt-0.5" />
-              <div>
-                <p className="font-medium text-yellow-900 dark:text-yellow-100">
-                  Possible duplicate clients found
-                </p>
-                <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                  {existingClients.length} client(s) with matching email or phone
-                </p>
+        )}
+
+        {/* Auto-merge suggestion */}
+        {!checking && step === 'auto_merge' && matches.length > 0 && (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 p-4">
+              <div className="flex items-start gap-2 mb-3">
+                <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-red-900 dark:text-red-100">Exact Match Found</p>
+                  <p className="text-sm text-red-700 dark:text-red-300">
+                    This lead matches an existing client with high confidence. We recommend merging.
+                  </p>
+                </div>
               </div>
+              <MatchCard match={matches[0]} getConfidenceBadge={getConfidenceBadge} getReasonLabel={getReasonLabel} />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => handleMerge(matches[0].clientId, matches[0].confidence, matches[0].reason)} disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Merge className="mr-2 h-4 w-4" /> Merge to Existing Client
+              </Button>
+              <Button variant="outline" onClick={() => navigate(`/admin/clients/${matches[0].clientId}`)}>
+                <Eye className="mr-2 h-4 w-4" /> View Existing Client
+              </Button>
+              <Button variant="ghost" onClick={() => setStep('no_match')}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Create New Anyway
+              </Button>
             </div>
           </div>
-        ) : (
-          <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 p-3">
-            <div className="flex items-start gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-500 mt-0.5" />
-              <div>
-                <p className="font-medium text-green-900 dark:text-green-100">
-                  No duplicate clients found
-                </p>
-                <p className="text-sm text-green-700 dark:text-green-300">
-                  You can safely create a new client
-                </p>
+        )}
+
+        {/* Review suggestion */}
+        {!checking && step === 'review' && matches.length > 0 && (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 p-4">
+              <div className="flex items-start gap-2 mb-3">
+                <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-yellow-900 dark:text-yellow-100">Possible Match Found</p>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                    This lead might match an existing client. Please review.
+                  </p>
+                </div>
+              </div>
+              {matches.slice(0, 3).map((match) => (
+                <MatchCard key={match.clientId} match={match} getConfidenceBadge={getConfidenceBadge} getReasonLabel={getReasonLabel} />
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => handleSendToReview(matches[0])} disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Send to Review Queue
+              </Button>
+              <Button onClick={() => handleMerge(matches[0].clientId, matches[0].confidence, matches[0].reason)} disabled={loading}>
+                <Merge className="mr-2 h-4 w-4" /> Merge Anyway
+              </Button>
+              <Button variant="ghost" onClick={() => setStep('no_match')}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Create New Client
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* No match — create new */}
+        {!checking && step === 'no_match' && (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 p-3">
+              <div className="flex items-start gap-2">
+                <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-green-900 dark:text-green-100">No Duplicate Found</p>
+                  <p className="text-sm text-green-700 dark:text-green-300">You can safely create a new client</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label>Client Name *</Label>
+                <Input
+                  value={newClientData.name}
+                  onChange={(e) => setNewClientData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter client name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Company Name</Label>
+                <Input
+                  value={newClientData.company}
+                  onChange={(e) => setNewClientData(prev => ({ ...prev, company: e.target.value }))}
+                  placeholder="Company name (optional)"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>State *</Label>
+                <Input
+                  value={newClientData.state}
+                  onChange={(e) => setNewClientData(prev => ({ ...prev, state: e.target.value }))}
+                  placeholder="State name"
+                />
               </div>
             </div>
           </div>
         )}
 
-        <Separator />
-
-        {/* Conversion Options */}
-        <RadioGroup value={conversionType} onValueChange={(v) => setConversionType(v as "existing" | "new")}>
-          {/* Option A: Link to existing */}
-          {existingClients.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="existing" id="existing" />
-                <Label htmlFor="existing" className="text-base font-medium cursor-pointer">
-                  Link to Existing Client
-                </Label>
-              </div>
-              {conversionType === "existing" && (
-                <div className="ml-6 space-y-2">
-                  <RadioGroup value={selectedClientId} onValueChange={setSelectedClientId}>
-                    {existingClients.map((client) => (
-                      <div key={client.id} className="flex items-start space-x-2 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-                        <RadioGroupItem value={client.id} id={client.id} className="mt-1" />
-                        <Label htmlFor={client.id} className="flex-1 cursor-pointer">
-                          <div className="font-medium">{client.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {client.company && <div>{client.company}</div>}
-                            {client.email && <div>{client.email}</div>}
-                            {client.phone && <div>{client.phone}</div>}
-                            <div className="text-xs mt-1">
-                              <Badge variant="secondary" className="text-xs">
-                                {client.id}
-                              </Badge>
-                            </div>
-                          </div>
-                        </Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Option B: Create new */}
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="new" id="new" />
-              <Label htmlFor="new" className="text-base font-medium cursor-pointer">
-                Create New Client
-              </Label>
-            </div>
-            {conversionType === "new" && (
-              <div className="ml-6 space-y-3">
-                <div className="space-y-2">
-                  <Label>Client Name *</Label>
-                  <Input
-                    value={newClientData.name}
-                    onChange={(e) => setNewClientData((prev) => ({ ...prev, name: e.target.value }))}
-                    placeholder="Enter client name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Company Name</Label>
-                  <Input
-                    value={newClientData.company}
-                    onChange={(e) => setNewClientData((prev) => ({ ...prev, company: e.target.value }))}
-                    placeholder="Company name (optional)"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>State *</Label>
-                  <Input
-                    value={newClientData.state}
-                    onChange={(e) => setNewClientData((prev) => ({ ...prev, state: e.target.value }))}
-                    placeholder="State name"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Client ID will be generated based on state
-                  </p>
-                </div>
-                <div className="rounded-lg border p-3 bg-muted/30 text-sm">
-                  <p className="text-muted-foreground">
-                    Email and phone from the lead will be automatically added to the new client.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </RadioGroup>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-            Cancel
-          </Button>
-          <Button onClick={handleConvert} disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Convert Lead
-          </Button>
-        </DialogFooter>
+        {!checking && step === 'no_match' && (
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>Cancel</Button>
+            <Button onClick={handleCreateNew} disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Create New Client
+            </Button>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function MatchCard({ match, getConfidenceBadge, getReasonLabel }: {
+  match: MatchResult;
+  getConfidenceBadge: (c: number) => React.ReactNode;
+  getReasonLabel: (r: string) => string;
+}) {
+  return (
+    <div className="rounded-lg border bg-background p-3 mt-2">
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-semibold">{match.clientName}</span>
+        {getConfidenceBadge(match.confidence)}
+      </div>
+      <div className="grid grid-cols-2 gap-1 text-sm text-muted-foreground">
+        {match.company && <div>Company: {match.company}</div>}
+        {match.gstNumber && <div>GST: {match.gstNumber}</div>}
+        {match.email && <div>Email: {match.email}</div>}
+        {match.phone && <div>Phone: {match.phone}</div>}
+        {match.city && <div>City: {match.city}</div>}
+      </div>
+      <div className="mt-2 flex items-center gap-2">
+        <Progress value={match.confidence} className="flex-1 h-2" />
+        <Badge variant="outline" className="text-xs">{getReasonLabel(match.reason)}</Badge>
+      </div>
+    </div>
   );
 }

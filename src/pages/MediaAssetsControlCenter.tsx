@@ -11,7 +11,8 @@ import { RightPanel } from "@/components/media-assets/control-center/RightPanel"
 import { CommandPalette } from "@/components/media-assets/control-center/CommandPalette";
 import { MediaAssetsTable } from "@/components/media-assets/media-assets-table";
 import { Button } from "@/components/ui/button";
-import { Plus, Settings2 } from "lucide-react";
+import { Plus, Settings2, Filter } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { MediaAssetsCustomExportDialog } from "@/components/media-assets/MediaAssetsCustomExportDialog";
 import { BulkQRGenerationButton } from "@/components/media-assets/BulkQRGenerationButton";
 import { useNavigate } from "react-router-dom";

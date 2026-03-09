@@ -18,6 +18,7 @@ import { Separator } from '@/components/ui/separator';
 import { AssetSelectionTable } from '@/components/plans/AssetSelectionTable';
 import { formatCurrency } from '@/utils/mediaAssets';
 import { useAssetConflictCheck } from '@/hooks/useAssetConflictCheck';
+import { resolveEffectiveDates, formatConflictSummary } from '@/utils/bookingEngine';
 import { ConflictWarning } from '@/components/campaigns/ConflictWarning';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';

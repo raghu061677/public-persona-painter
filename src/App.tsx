@@ -510,6 +510,7 @@ const App = () => (
                 <Route path="rate-settings" element={<RateSettings />} />
                 <Route path="alerts" element={<AlertsSettings />} />
                 <Route path="concession-contracts" element={<ConcessionContracts />} />
+                <Route path="automation" element={<AutomationRules />} />
               </Route>
             </Route>
             {/* ===== END GLOBAL ADMIN AUTH GATE ===== */}

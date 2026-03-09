@@ -59,16 +59,11 @@ export default function UserActivityDashboard() {
       if (error) throw error;
 
       if (data?.data) {
-        // Map edge function response — derive last_login from recent_actions
-        const mapped = (data.data as any[]).map((u) => {
-          const loginActions = (u.recent_actions || []).filter(
-            (a: any) => a.activity_type === "login"
-          );
-          return {
-            ...u,
-            last_login: loginActions.length > 0 ? loginActions[0].created_at : null,
-          };
-        });
+        // Use last_sign_in_at from auth.users (returned by edge function)
+        const mapped = (data.data as any[]).map((u) => ({
+          ...u,
+          last_login: u.last_sign_in_at || null,
+        }));
         setActivities(mapped);
       } else {
         setActivities([]);

@@ -68,6 +68,8 @@ import { generateProposalExcel } from "@/lib/exports/proposalExcelExport";
 import { PlanAssetsTable } from "@/components/plans/PlanAssetsTable";
 import { SignedROSection } from "@/components/plans/SignedROSection";
 import { SendROSigningLink } from "@/components/plans/SendROSigningLink";
+import { useRecordPermissions } from "@/hooks/useRecordAccessMode";
+import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
 export default function PlanDetail() {
   const { id } = useParams();
   const navigate = useNavigate();

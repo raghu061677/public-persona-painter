@@ -107,7 +107,6 @@ import {
         items: [
           { label: "Leads", href: "/admin/leads", icon: UserPlus },
           { label: "Clients", href: "/admin/clients", icon: Users },
-          { label: "Booking Requests", href: "/admin/booking-requests", icon: ShoppingBag },
           { label: "Plans", href: "/admin/plans", icon: Layers },
           { label: "Campaigns", href: "/admin/campaigns", icon: Briefcase },
         ],

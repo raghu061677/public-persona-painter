@@ -363,7 +363,13 @@ export default function ClientDetail() {
         }
       />
 
-      {/* Key Stats Cards */}
+      {/* Restricted Banner for non-owners */}
+      {!canSeeSensitive && (
+        <RestrictedBanner module="client" />
+      )}
+
+      {/* Key Stats Cards - Financial stats hidden for non-owners */}
+      {canSeeSensitive && (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-l-4 border-l-blue-500 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -428,6 +434,7 @@ export default function ClientDetail() {
           </CardContent>
         </Card>
       </div>
+      )}
 
       {/* Overdue Alert */}
       {stats.overdueInvoices > 0 && (

@@ -241,6 +241,7 @@ import {
           { label: "Browse Media", href: "/admin/marketplace", icon: Globe },
           { label: "My Listings", href: "/admin/marketplace/listings", icon: Layers },
           { label: "Booking Requests", href: "/admin/booking-requests", icon: ShoppingBag },
+          { label: "Marketplace Requests", href: "/admin/marketplace/requests", icon: ShoppingBag },
           { label: "Transactions", href: "/admin/marketplace/transactions", icon: CreditCard },
         ],
       },

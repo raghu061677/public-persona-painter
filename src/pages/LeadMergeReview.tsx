@@ -76,7 +76,7 @@ export default function LeadMergeReview() {
 
       {(!reviewLeads || reviewLeads.length === 0) ? (
         <EmptyState
-          icon={<CheckCircle className="h-12 w-12 text-green-500" />}
+          icon={CheckCircle}
           title="All Clear"
           description="No leads pending merge review"
         />

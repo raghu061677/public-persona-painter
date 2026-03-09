@@ -31,6 +31,7 @@ export default function MediaAssetsControlCenter() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [isGodModeVisible, setIsGodModeVisible] = useState(false);
+  const [customExportOpen, setCustomExportOpen] = useState(false);
 
   useEffect(() => {
     fetchAssets();

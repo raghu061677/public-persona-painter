@@ -24,7 +24,7 @@ interface ScopeFilterOptions {
 }
 
 export function useScopedQuery(module: ModuleKey, options: ScopeFilterOptions = {}) {
-  const { getScopeMode, isPlatformAdmin, isCompanyAdmin } = useEnterpriseRBAC();
+  const { getScopeMode, isPlatformAdmin, isCompanyAdmin, loading: rbacLoading } = useEnterpriseRBAC();
   const { user } = useAuth();
 
   const {
@@ -36,6 +36,8 @@ export function useScopedQuery(module: ModuleKey, options: ScopeFilterOptions = 
 
   const applyScopeFilter = useCallback(
     (query: any) => {
+      // While RBAC is still loading, don't restrict — return all (will re-filter after load)
+      if (rbacLoading) return query;
       // Admins see everything
       if (isPlatformAdmin || isCompanyAdmin) return query;
 
@@ -81,7 +83,7 @@ export function useScopedQuery(module: ModuleKey, options: ScopeFilterOptions = 
           return query;
       }
     },
-    [getScopeMode, isPlatformAdmin, isCompanyAdmin, user, module, ownerColumn, additionalOwnerColumns, assignmentColumn, additionalAssignmentColumns]
+    [rbacLoading, getScopeMode, isPlatformAdmin, isCompanyAdmin, user, module, ownerColumn, additionalOwnerColumns, assignmentColumn, additionalAssignmentColumns]
   );
 
   /**
@@ -89,6 +91,8 @@ export function useScopedQuery(module: ModuleKey, options: ScopeFilterOptions = 
    */
   const filterByScope = useCallback(
     (records: any[]) => {
+      // While RBAC is still loading, return all records (will re-filter after load)
+      if (rbacLoading) return records;
       if (isPlatformAdmin || isCompanyAdmin) return records;
 
       const scopeMode = getScopeMode(module);
@@ -118,7 +122,7 @@ export function useScopedQuery(module: ModuleKey, options: ScopeFilterOptions = 
           return records;
       }
     },
-    [getScopeMode, isPlatformAdmin, isCompanyAdmin, user, module, ownerColumn, additionalOwnerColumns, assignmentColumn, additionalAssignmentColumns]
+    [rbacLoading, getScopeMode, isPlatformAdmin, isCompanyAdmin, user, module, ownerColumn, additionalOwnerColumns, assignmentColumn, additionalAssignmentColumns]
   );
 
   return { applyScopeFilter, filterByScope, scopeMode: getScopeMode(module) };

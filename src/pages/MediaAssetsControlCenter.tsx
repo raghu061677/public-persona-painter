@@ -107,7 +107,7 @@ export default function MediaAssetsControlCenter() {
 
     let query = supabase
       .from('media_assets')
-      .select('id, media_asset_code, city, area, location, media_type, status, card_rate, dimensions, latitude, longitude, illumination_type, created_at, primary_photo_url, company_id, total_sqft, is_public, ownership, qr_code_url');
+      .select('id, media_asset_code, city, area, district, state, location, direction, media_type, status, card_rate, dimensions, latitude, longitude, illumination_type, created_at, primary_photo_url, company_id, total_sqft, is_public, ownership, qr_code_url, municipal_id, municipal_authority, consumer_name, service_number, unique_service_number, ero, section_name');
 
     // Filter by company_id unless platform admin viewing all
     if (companyUserData?.company_id) {

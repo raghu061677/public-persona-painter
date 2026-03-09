@@ -11,7 +11,8 @@ import { RightPanel } from "@/components/media-assets/control-center/RightPanel"
 import { CommandPalette } from "@/components/media-assets/control-center/CommandPalette";
 import { MediaAssetsTable } from "@/components/media-assets/media-assets-table";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Settings2 } from "lucide-react";
+import { MediaAssetsCustomExportDialog } from "@/components/media-assets/MediaAssetsCustomExportDialog";
 import { BulkQRGenerationButton } from "@/components/media-assets/BulkQRGenerationButton";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ export default function MediaAssetsControlCenter() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [isGodModeVisible, setIsGodModeVisible] = useState(false);
+  const [customExportOpen, setCustomExportOpen] = useState(false);
 
   useEffect(() => {
     fetchAssets();
@@ -295,6 +297,10 @@ export default function MediaAssetsControlCenter() {
 
               {/* Action Buttons */}
               <div className="flex gap-2 flex-wrap">
+                <Button variant="outline" onClick={() => setCustomExportOpen(true)} className="gap-2">
+                  <Settings2 className="h-4 w-4" />
+                  Custom Fields Export
+                </Button>
                 <BulkQRGenerationButton />
                 <ActionGuard module="media_assets" action="create">
                 <Button onClick={() => navigate("/admin/media-assets/new")} className="gap-2">
@@ -358,6 +364,13 @@ export default function MediaAssetsControlCenter() {
 
       {/* God Mode HUD */}
       <GodModeHUD assets={filteredAssets} isVisible={isGodModeVisible} />
+
+      {/* Custom Export Dialog */}
+      <MediaAssetsCustomExportDialog
+        open={customExportOpen}
+        onOpenChange={setCustomExportOpen}
+        rows={filteredAssets}
+      />
     </div>
     </ModuleGuard>
   );

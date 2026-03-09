@@ -43,6 +43,9 @@ import { ClientContactsManager } from "@/components/clients/ClientContactsManage
 import { ClientLedger } from "@/components/finance/ClientLedger";
 import { SignedRODocumentCard } from "@/components/shared/SignedRODocumentCard";
 import { ClientPortalAccessCard } from "@/components/clients/ClientPortalAccessCard";
+import { useEnterpriseRBAC } from "@/hooks/useEnterpriseRBAC";
+import { useAuth } from "@/contexts/AuthContext";
+import { isRecordOwner } from "@/lib/rbac/permissions";
 
 interface Client {
   id: string;

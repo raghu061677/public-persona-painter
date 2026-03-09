@@ -1004,7 +1004,8 @@ export default function PlanEdit() {
             </CardContent>
           </Card>
 
-          {/* Actions */}
+          {/* Actions - Hidden for non-owners */}
+          {perms.canEditRecord && (
           <div className="flex justify-end gap-4 pt-4 pb-8">
             <Button
               type="button"
@@ -1031,6 +1032,7 @@ export default function PlanEdit() {
               {loading ? "Updating..." : "Update Plan"}
             </Button>
           </div>
+          )}
         </form>
       </div>
     </div>

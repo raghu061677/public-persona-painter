@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { ActionGuard } from "@/components/rbac/ActionGuard";
@@ -43,9 +43,7 @@ import { ClientContactsManager } from "@/components/clients/ClientContactsManage
 import { ClientLedger } from "@/components/finance/ClientLedger";
 import { SignedRODocumentCard } from "@/components/shared/SignedRODocumentCard";
 import { ClientPortalAccessCard } from "@/components/clients/ClientPortalAccessCard";
-import { useEnterpriseRBAC } from "@/hooks/useEnterpriseRBAC";
-import { useAuth } from "@/contexts/AuthContext";
-import { isRecordOwner } from "@/lib/rbac/permissions";
+import { useRecordPermissions } from "@/hooks/useRecordAccessMode";
 import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
 
 interface Client {
@@ -61,6 +59,10 @@ interface Client {
   contact_person: string | null;
   notes: string | null;
   created_at: string;
+  created_by?: string | null;
+  owner_id?: string | null;
+  secondary_owner_ids?: string[] | null;
+  company_id?: string | null;
   billing_address_line1: string | null;
   billing_address_line2: string | null;
   billing_city: string | null;
@@ -120,8 +122,6 @@ export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user } = useAuth();
-  const rbac = useEnterpriseRBAC();
   const [loading, setLoading] = useState(true);
   const [client, setClient] = useState<Client | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -131,13 +131,10 @@ export default function ClientDetail() {
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   
-  // Check if current user owns this client record
-  const isOwner = useMemo(() => {
-    if (!client || !user) return false;
-    return isRecordOwner(client, user.id);
-  }, [client, user]);
-  
-  const canSeeSensitive = rbac.isCompanyAdmin || rbac.isPlatformAdmin || isOwner;
+  // Enterprise RBAC: unified ownership-based access
+  const perms = useRecordPermissions(client, 'clients');
+  const canSeeSensitive = perms.canViewSensitiveContacts;
+  const isOwner = perms.canEditRecord;
   
   const [stats, setStats] = useState({
     totalRevenue: 0,

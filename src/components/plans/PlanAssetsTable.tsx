@@ -98,6 +98,8 @@ interface PlanAssetsTableProps {
   onAddAssets?: () => void;
   onBulkPrintingMounting?: () => void;
   onPrintingInstallation?: () => void;
+  /** When false, all financial columns (rates, costs, totals) are hidden */
+  canViewFinancials?: boolean;
 }
 
 type SortDirection = 'asc' | 'desc' | null;
@@ -114,6 +116,7 @@ export function PlanAssetsTable({
   onAddAssets,
   onBulkPrintingMounting,
   onPrintingInstallation,
+  canViewFinancials = true,
 }: PlanAssetsTableProps) {
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -530,6 +533,7 @@ export function PlanAssetsTable({
                 </TableHead>
               )}
               {showBillingMode && <TableHead>Billing Mode</TableHead>}
+              {canViewFinancials && (
               <TableHead 
                 className="text-right cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('card_rate')}
@@ -538,7 +542,9 @@ export function PlanAssetsTable({
                   Card Rate {getSortIcon('card_rate')}
                 </div>
               </TableHead>
-              {showBaseRate && <TableHead className="text-right">Base Rate</TableHead>}
+              )}
+              {canViewFinancials && showBaseRate && <TableHead className="text-right">Base Rate</TableHead>}
+              {canViewFinancials && (
               <TableHead 
                 className="text-right cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('negotiated')}
@@ -547,16 +553,17 @@ export function PlanAssetsTable({
                   Negotiated {getSortIcon('negotiated')}
                 </div>
               </TableHead>
-              <TableHead className="text-right">Pro-Rata</TableHead>
-              {showDiscount && <TableHead className="text-right">Discount</TableHead>}
-              {showProfit && <TableHead className="text-right">Profit</TableHead>}
-              {showPrintingRate && <TableHead className="text-right">Print Rate</TableHead>}
-              <TableHead className="text-right">Printing</TableHead>
-              {showMountingCost && <TableHead className="text-right">Mounting</TableHead>}
-              <TableHead className="text-right">Installation</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead className="text-right">GST</TableHead>
-              <TableHead className="text-right">Total + GST</TableHead>
+              )}
+              {canViewFinancials && <TableHead className="text-right">Pro-Rata</TableHead>}
+              {canViewFinancials && showDiscount && <TableHead className="text-right">Discount</TableHead>}
+              {canViewFinancials && showProfit && <TableHead className="text-right">Profit</TableHead>}
+              {canViewFinancials && showPrintingRate && <TableHead className="text-right">Print Rate</TableHead>}
+              {canViewFinancials && <TableHead className="text-right">Printing</TableHead>}
+              {canViewFinancials && showMountingCost && <TableHead className="text-right">Mounting</TableHead>}
+              {canViewFinancials && <TableHead className="text-right">Installation</TableHead>}
+              {canViewFinancials && <TableHead className="text-right">Total</TableHead>}
+              {canViewFinancials && <TableHead className="text-right">GST</TableHead>}
+              {canViewFinancials && <TableHead className="text-right">Total + GST</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -634,35 +641,39 @@ export function PlanAssetsTable({
                       {item.billing_mode || 'PRORATA_30'}
                     </TableCell>
                   )}
-                  <TableCell className="text-right">{formatCurrency(item.card_rate)}</TableCell>
-                  {showBaseRate && <TableCell className="text-right">{formatCurrency(baseRent)}</TableCell>}
-                  <TableCell className="text-right font-medium">{formatCurrency(effectivePrice)}</TableCell>
-                  <TableCell className="text-right text-purple-600">{formatCurrency(proRataAmount)}</TableCell>
-                  {showDiscount && (
+                  {canViewFinancials && <TableCell className="text-right">{formatCurrency(item.card_rate)}</TableCell>}
+                  {canViewFinancials && showBaseRate && <TableCell className="text-right">{formatCurrency(baseRent)}</TableCell>}
+                  {canViewFinancials && <TableCell className="text-right font-medium">{formatCurrency(effectivePrice)}</TableCell>}
+                  {canViewFinancials && <TableCell className="text-right text-purple-600">{formatCurrency(proRataAmount)}</TableCell>}
+                  {canViewFinancials && showDiscount && (
                     <TableCell className="text-right text-blue-600 font-medium">
                       -{formatCurrency(discountAmount)} ({discountPercent.toFixed(1)}%)
                     </TableCell>
                   )}
-                  {showProfit && (
+                  {canViewFinancials && showProfit && (
                     <TableCell className="text-right text-green-600 font-medium">
                       {formatCurrency(profitAmount)} ({profitPercent.toFixed(1)}%)
                     </TableCell>
                   )}
-                  {showPrintingRate && (
+                  {canViewFinancials && showPrintingRate && (
                     <TableCell className="text-right">{formatCurrency(item.printing_rate || 0)}/sqft</TableCell>
                   )}
-                  <TableCell className="text-right">{formatCurrency(printingCost)}</TableCell>
-                  {showMountingCost && (
+                  {canViewFinancials && <TableCell className="text-right">{formatCurrency(printingCost)}</TableCell>}
+                  {canViewFinancials && showMountingCost && (
                     <TableCell className="text-right">{formatCurrency(item.installation_rate || 0)}</TableCell>
                   )}
-                  <TableCell className="text-right">{formatCurrency(mountingCost)}</TableCell>
-                  <TableCell className="text-right font-medium">{formatCurrency(lineTotal)}</TableCell>
-                  <TableCell className="text-right text-red-600">
-                    {gstPercent > 0 ? formatCurrency(rowGstAmount) : '₹0'}
-                  </TableCell>
-                  <TableCell className="text-right font-semibold text-lg">
-                    {formatCurrency(rowTotalWithGst)}
-                  </TableCell>
+                  {canViewFinancials && <TableCell className="text-right">{formatCurrency(mountingCost)}</TableCell>}
+                  {canViewFinancials && <TableCell className="text-right font-medium">{formatCurrency(lineTotal)}</TableCell>}
+                  {canViewFinancials && (
+                    <TableCell className="text-right text-red-600">
+                      {gstPercent > 0 ? formatCurrency(rowGstAmount) : '₹0'}
+                    </TableCell>
+                  )}
+                  {canViewFinancials && (
+                    <TableCell className="text-right font-semibold text-lg">
+                      {formatCurrency(rowTotalWithGst)}
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             })}

@@ -107,7 +107,7 @@ export default function EditUserDialog({
       await logAudit({
         action: 'update_user',
         resourceType: 'user_role',
-        resourceId: user.id,
+        resourceId: targetUserId,
         details: {
           old_values: { username: user.username, role: user.roles?.[0], status: user.status },
           new_values: { username, role: selectedRole, status: isActive ? 'Active' : 'Suspended' },

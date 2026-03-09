@@ -23,6 +23,12 @@ const DEFAULT_ROLES = [
 export default function CompanyRoles() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [allowRoleSwitching, setAllowRoleSwitching] = useState(() => {
+    return localStorage.getItem('goads-allow-role-switching') === 'true';
+  });
+  const [enforceHierarchy, setEnforceHierarchy] = useState(() => {
+    return localStorage.getItem('goads-enforce-role-hierarchy') === 'true';
+  });
   const matrixRef = useRef<RolePermissionsMatrixRef>(null);
   const matrixSectionRef = useRef<HTMLDivElement>(null);
 

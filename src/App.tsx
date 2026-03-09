@@ -234,11 +234,7 @@ const PaymentConfirmations = lazy(() => import("./pages/PaymentConfirmations"));
 const AlertsSettings = lazy(() => import("./pages/AlertsSettings"));
 const AutomationRules = lazy(() => import("./pages/AutomationRules"));
 const IntelligenceDashboard = lazy(() => import("./pages/IntelligenceDashboard"));
-const EmailProviderSettings = lazy(() => import("./pages/EmailProviderSettings"));
-const EmailTemplateManager = lazy(() => import("./pages/EmailTemplateManager"));
 const EmailOutbox = lazy(() => import("./pages/EmailOutbox"));
-const EmailDeliveryLogs = lazy(() => import("./pages/EmailDeliveryLogs"));
-const EmailSuppressions = lazy(() => import("./pages/EmailSuppressions"));
 
 // Public website pages
 const PublicAbout = lazy(() => import("./pages/public/About"));

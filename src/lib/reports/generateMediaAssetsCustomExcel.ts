@@ -21,7 +21,10 @@ export const ALL_ASSET_EXPORT_FIELDS: AssetExportField[] = [
   // Location
   { key: 'city', label: 'City', group: 'Location', getValue: (r) => r.city || '', width: 14 },
   { key: 'area', label: 'Area', group: 'Location', getValue: (r) => r.area || '', width: 15 },
+  { key: 'district', label: 'District', group: 'Location', getValue: (r) => r.district || '', width: 15 },
+  { key: 'state', label: 'State', group: 'Location', getValue: (r) => r.state || '', width: 15 },
   { key: 'location', label: 'Location', group: 'Location', getValue: (r) => r.location || '', width: 30 },
+  { key: 'direction', label: 'Direction', group: 'Location', getValue: (r) => r.direction || r.facing || '', width: 14 },
 
   // Specifications
   { key: 'dimension', label: 'Dimensions', group: 'Specifications', getValue: (r) => r.dimensions || r.dimension || '', width: 14 },
@@ -31,6 +34,10 @@ export const ALL_ASSET_EXPORT_FIELDS: AssetExportField[] = [
   // Pricing
   { key: 'card_rate', label: 'Card Rate', group: 'Pricing', getValue: (r) => r.card_rate || 0, width: 14, numFmt: '₹#,##0' },
 
+  // Municipal
+  { key: 'municipal_id', label: 'Municipal Ref. ID', group: 'Municipal', getValue: (r) => r.municipal_id || '', width: 18 },
+  { key: 'municipal_authority', label: 'Municipal Authority', group: 'Municipal', getValue: (r) => r.municipal_authority || '', width: 18 },
+
   // Ownership
   { key: 'ownership', label: 'Ownership', group: 'Ownership', getValue: (r) => r.ownership || '', width: 14 },
   { key: 'is_public', label: 'Public', group: 'Ownership', getValue: (r) => r.is_public ? 'Yes' : 'No', width: 10 },
@@ -38,6 +45,13 @@ export const ALL_ASSET_EXPORT_FIELDS: AssetExportField[] = [
   // Geo Coordinates
   { key: 'latitude', label: 'Latitude', group: 'Geo Coordinates', getValue: (r) => r.latitude ?? '', width: 14, numFmt: '0.000000' },
   { key: 'longitude', label: 'Longitude', group: 'Geo Coordinates', getValue: (r) => r.longitude ?? '', width: 14, numFmt: '0.000000' },
+
+  // Power Bill Details
+  { key: 'consumer_name', label: 'Consumer Name', group: 'Power Bill', getValue: (r) => r.consumer_name || '', width: 20 },
+  { key: 'service_number', label: 'Service Number', group: 'Power Bill', getValue: (r) => r.service_number || '', width: 18 },
+  { key: 'unique_service_number', label: 'Unique Service No.', group: 'Power Bill', getValue: (r) => r.unique_service_number || '', width: 18 },
+  { key: 'ero', label: 'ERO', group: 'Power Bill', getValue: (r) => r.ero || r.ero_name || '', width: 14 },
+  { key: 'section_name', label: 'Section Name', group: 'Power Bill', getValue: (r) => r.section_name || '', width: 16 },
 ];
 
 export const DEFAULT_ASSET_CUSTOM_FIELDS = [

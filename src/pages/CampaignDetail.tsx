@@ -577,7 +577,8 @@ export default function CampaignDetail() {
           )}
         </div>
 
-        {/* Profitability Summary */}
+        {/* Profitability Summary - Hidden for non-owners */}
+        {perms.canViewFinancials && (
         <div className="mb-6">
           {profitability && (
             <CampaignProfitSummary
@@ -587,6 +588,7 @@ export default function CampaignDetail() {
             />
           )}
         </div>
+        )}
         {/* Signed Release Order */}
         {signedRoData && (
           <div className="mb-6">

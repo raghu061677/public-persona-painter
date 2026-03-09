@@ -669,10 +669,12 @@ export default function ClientsList() {
                 </Button>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={bulkExportToExcel}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export Selected
-                </Button>
+                <ActionGuard module="clients" action="export">
+                  <Button variant="outline" size="sm" onClick={bulkExportToExcel}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export Selected
+                  </Button>
+                </ActionGuard>
                 <Button variant="outline" size="sm" onClick={() => setBulkEmailDialogOpen(true)}>
                   <Mail className="mr-2 h-4 w-4" />
                   Send Email

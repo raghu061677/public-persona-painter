@@ -11,7 +11,8 @@ import { RightPanel } from "@/components/media-assets/control-center/RightPanel"
 import { CommandPalette } from "@/components/media-assets/control-center/CommandPalette";
 import { MediaAssetsTable } from "@/components/media-assets/media-assets-table";
 import { Button } from "@/components/ui/button";
-import { Plus, Settings2 } from "lucide-react";
+import { Plus, Settings2, Filter } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { MediaAssetsCustomExportDialog } from "@/components/media-assets/MediaAssetsCustomExportDialog";
 import { BulkQRGenerationButton } from "@/components/media-assets/BulkQRGenerationButton";
 import { useNavigate } from "react-router-dom";
@@ -32,6 +33,7 @@ export default function MediaAssetsControlCenter() {
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [isGodModeVisible, setIsGodModeVisible] = useState(false);
   const [customExportOpen, setCustomExportOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAssets();
@@ -214,16 +216,31 @@ export default function MediaAssetsControlCenter() {
 
   // Memoized filtered assets for performance
   const filteredAssets = useMemo(() => {
-    if (!searchQuery) return assets;
-    const query = searchQuery.toLowerCase();
-    return assets.filter((asset) => 
-      asset.id?.toLowerCase().includes(query) ||
-      asset.location?.toLowerCase().includes(query) ||
-      asset.area?.toLowerCase().includes(query) ||
-      asset.city?.toLowerCase().includes(query) ||
-      asset.media_type?.toLowerCase().includes(query)
-    );
-  }, [assets, searchQuery]);
+    let result = assets;
+    if (statusFilter) {
+      result = result.filter(a => a.status === statusFilter);
+    }
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter((asset) => 
+        asset.id?.toLowerCase().includes(query) ||
+        asset.location?.toLowerCase().includes(query) ||
+        asset.area?.toLowerCase().includes(query) ||
+        asset.city?.toLowerCase().includes(query) ||
+        asset.media_type?.toLowerCase().includes(query)
+      );
+    }
+    return result;
+  }, [assets, searchQuery, statusFilter]);
+
+  const statusOptions = useMemo(() => {
+    const counts: Record<string, number> = {};
+    assets.forEach(a => {
+      const s = a.status || 'Unknown';
+      counts[s] = (counts[s] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [assets]);
 
   // Memoized statistics calculation
   const stats = useMemo(() => ({
@@ -294,6 +311,28 @@ export default function MediaAssetsControlCenter() {
                 newThisMonth={stats.newThisMonth}
                 totalValue={stats.totalValue}
               />
+
+              {/* Quick Filters */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <Badge
+                  variant={statusFilter === null ? "default" : "outline"}
+                  className="cursor-pointer select-none"
+                  onClick={() => setStatusFilter(null)}
+                >
+                  All ({assets.length})
+                </Badge>
+                {statusOptions.map(([status, count]) => (
+                  <Badge
+                    key={status}
+                    variant={statusFilter === status ? "default" : "outline"}
+                    className="cursor-pointer select-none"
+                    onClick={() => setStatusFilter(statusFilter === status ? null : status)}
+                  >
+                    {status} ({count})
+                  </Badge>
+                ))}
+              </div>
 
               {/* Action Buttons */}
               <div className="flex gap-2 flex-wrap">

@@ -82,9 +82,9 @@ Deno.serve(withAuth(async (req) => {
   await logSecurityAudit({
     functionName: 'send-user-invite', userId: ctx.userId,
     companyId: ctx.companyId, action: 'invite_user',
-    recordIds: [userData.user.id], status: 'success', req,
+    recordIds: [userId], status: 'success', req,
     metadata: { invitedEmail: email, role },
   });
 
-  return jsonSuccess({ message: 'User invited successfully', userId: userData.user.id });
+  return jsonSuccess({ message: 'User invited successfully', userId });
 }));

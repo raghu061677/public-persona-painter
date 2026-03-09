@@ -1518,7 +1518,8 @@ export default function PlanDetail() {
             </CardContent>
           </Card>
 
-          {/* Financial Summary - Orange Theme */}
+          {/* Financial Summary - Orange Theme - Hidden for non-owners */}
+          {perms.canViewFinancials && (
           <Card className="border-l-4 border-l-orange-500 shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-orange-600 dark:text-orange-400">

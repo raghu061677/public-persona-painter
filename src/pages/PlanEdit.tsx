@@ -234,7 +234,7 @@ export default function PlanEdit() {
     }
   };
 
-  const toggleAssetSelection = (assetId: string, asset: any) => {
+  const toggleAssetSelection = async (assetId: string, asset: any) => {
     const newSelected = new Set(selectedAssets);
     if (newSelected.has(assetId)) {
       newSelected.delete(assetId);
@@ -254,10 +254,42 @@ export default function PlanEdit() {
       const profit = calcProfit(baseRate, cardRate);
       
       // Initialize with plan-level dates for per-asset duration
-      const planStart = formatForSupabase(toDateOnly(formData.start_date));
-      const planEnd = formatForSupabase(toDateOnly(formData.end_date));
+      let planStart = formatForSupabase(toDateOnly(formData.start_date));
+      let planEnd = formatForSupabase(toDateOnly(formData.end_date));
+      let assetDays = days;
+      
+      // Check if this asset has a running campaign and auto-set start date
+      try {
+        const { data: activeBookings } = await supabase
+          .from('campaign_assets')
+          .select('booking_end_date, end_date')
+          .eq('asset_id', assetId)
+          .in('status', ['assigned', 'installed', 'proof_uploaded'])
+          .order('booking_end_date', { ascending: false })
+          .limit(1);
+        
+        if (activeBookings && activeBookings.length > 0) {
+          const campaignEndDate = activeBookings[0].booking_end_date || activeBookings[0].end_date;
+          if (campaignEndDate) {
+            const endDate = new Date(campaignEndDate);
+            const newStart = addDays(endDate, 1);
+            // Only adjust if the campaign end is after plan start
+            if (newStart > new Date(formData.start_date)) {
+              planStart = formatForSupabase(toDateOnly(newStart));
+              assetDays = calculateDurationDays(newStart, new Date(formData.end_date));
+              toast({
+                title: "Start Date Adjusted",
+                description: `Asset is booked until ${campaignEndDate}. Start date set to ${planStart}.`,
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error checking active bookings:', err);
+      }
+      
       const dailyRate = cardRate / BILLING_CYCLE_DAYS;
-      const rentAmount = dailyRate * days;
+      const rentAmount = dailyRate * assetDays;
       
       setAssetPricing(prev => ({
         ...prev,
@@ -270,10 +302,13 @@ export default function PlanEdit() {
           profit_percent: profit.percent,
           printing_charges: asset.printing_charges || 0,
           mounting_charges: asset.mounting_charges || 0,
-          // Per-asset duration fields initialized from plan
+          printing_rate: 0,
+          mounting_rate: 0,
+          mounting_mode: 'sqft',
+          // Per-asset duration fields initialized from plan (or adjusted for bookings)
           start_date: planStart,
           end_date: planEnd,
-          booked_days: days,
+          booked_days: assetDays,
           billing_mode: 'PRORATA_30',
           daily_rate: dailyRate,
           rent_amount: rentAmount,

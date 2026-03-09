@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Building2, Map, Layers, Briefcase, Users, TrendingUp,
   FileText, Receipt, Zap, UserCog, Palette, FileSpreadsheet,
   Shield, DollarSign, Smartphone, Image, Settings, FileCheck, 
-  CreditCard, Globe, ShoppingBag, BarChart3, Sparkles, Menu, CheckCircle2, History, ListChecks, UserPlus, Clock, Wallet, Calendar, CalendarDays, Mail
+  CreditCard, Globe, ShoppingBag, BarChart3, Sparkles, Menu, CheckCircle2, History, ListChecks, UserPlus, Clock, Wallet, Calendar, CalendarDays, Mail, Bell, AlertTriangle
 } from "lucide-react";
 import {
   Sidebar,
@@ -419,18 +419,16 @@ export function ResponsiveSidebar() {
               {(isCompanyAdmin || isPlatformAdmin) && (
                 <>
                   {!collapsed && <SidebarGroupLabel className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">System</SidebarGroupLabel>}
-                  <SidebarMenu>
-                    <MenuGroup icon={Building2} label="Organization">
+                    <SidebarMenu>
+                    <MenuGroup icon={Building2} label="Company Settings">
                       <MenuItem icon={Building2} label="Company Profile" href="/admin/company-settings/profile" />
                       <MenuItem icon={Palette} label="Branding / Logo" href="/admin/company-settings/branding" />
-                      <MenuItem icon={Globe} label="Email Settings" href="/admin/company-settings/smtp-settings" />
+                      <MenuItem icon={Globe} label="Email Settings" href="/admin/company-settings/email-providers" />
                       <MenuItem icon={Mail} label="Email Templates" href="/admin/company-settings/email-templates" />
-                      <MenuItem icon={Shield} label="Alerts & Reminders" href="/admin/company-settings/alerts" />
-                    </MenuGroup>
-
-                    <MenuGroup icon={UserCog} label="Users & Access">
-                      <MenuItem icon={Users} label="User Management" href="/admin/users" />
-                      <MenuItem icon={Shield} label="Role Permissions" href="/admin/company-settings/roles" />
+                      <MenuItem icon={Bell} label="Reminders" href="/admin/company-settings/reminders" />
+                      <MenuItem icon={AlertTriangle} label="Alerts" href="/admin/company-settings/alerts" />
+                      <MenuItem icon={Users} label="User Management" href="/admin/company-settings/users" />
+                      <MenuItem icon={Shield} label="Roles & Permissions" href="/admin/company-settings/roles" />
                     </MenuGroup>
 
                     <MenuGroup icon={Settings} label="Data Management">

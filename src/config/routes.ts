@@ -107,6 +107,17 @@ export const ROUTES = {
   SETTINGS_TAXES: '/admin/settings/taxes',
   SETTINGS_PAYMENTS: '/admin/settings/payments',
   SETTINGS_APPROVALS: '/admin/settings/approvals',
+
+  // Company Settings (canonical)
+  COMPANY_SETTINGS: '/admin/company-settings',
+  COMPANY_SETTINGS_PROFILE: '/admin/company-settings/profile',
+  COMPANY_SETTINGS_BRANDING: '/admin/company-settings/branding',
+  COMPANY_SETTINGS_EMAIL_PROVIDERS: '/admin/company-settings/email-providers',
+  COMPANY_SETTINGS_EMAIL_TEMPLATES: '/admin/company-settings/email-templates',
+  COMPANY_SETTINGS_REMINDERS: '/admin/company-settings/reminders',
+  COMPANY_SETTINGS_ALERTS: '/admin/company-settings/alerts',
+  COMPANY_SETTINGS_USERS: '/admin/company-settings/users',
+  COMPANY_SETTINGS_ROLES: '/admin/company-settings/roles',
   
   // Tools
   IMPORT_DATA: '/admin/import',
@@ -216,4 +227,13 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.CLIENT_PORTAL_INVOICES]: 'Invoices',
   [ROUTES.AI_ASSISTANT]: 'AI Assistant',
   [ROUTES.AUDIT_LOGS]: 'Audit Logs',
+  [ROUTES.COMPANY_SETTINGS]: 'Company Settings',
+  [ROUTES.COMPANY_SETTINGS_PROFILE]: 'Company Profile',
+  [ROUTES.COMPANY_SETTINGS_BRANDING]: 'Branding',
+  [ROUTES.COMPANY_SETTINGS_EMAIL_PROVIDERS]: 'Email Settings',
+  [ROUTES.COMPANY_SETTINGS_EMAIL_TEMPLATES]: 'Email Templates',
+  [ROUTES.COMPANY_SETTINGS_REMINDERS]: 'Reminders',
+  [ROUTES.COMPANY_SETTINGS_ALERTS]: 'Alerts',
+  [ROUTES.COMPANY_SETTINGS_USERS]: 'User Management',
+  [ROUTES.COMPANY_SETTINGS_ROLES]: 'Roles & Permissions',
 };

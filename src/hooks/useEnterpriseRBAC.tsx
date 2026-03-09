@@ -54,7 +54,10 @@ export function useEnterpriseRBAC(): EnterpriseRBACResult {
     return rawRole;
   }, [isPlatformAdmin, companyUser, authRoles]);
 
-  const isEffectiveAdmin = isPlatformAdmin || isAdmin || effectiveRole === 'admin';
+  // Only platform_admin and explicit company 'admin' role get full permission bypass.
+  // The AuthContext `isAdmin` flag from user_roles is NOT used here to prevent
+  // privilege escalation — company-level permissions must come from role_permissions table.
+  const isEffectiveAdmin = isPlatformAdmin || effectiveRole === 'admin';
 
   // Load permissions from DB
   useEffect(() => {

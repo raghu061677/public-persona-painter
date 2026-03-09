@@ -84,18 +84,11 @@ export default function EmailProviderSettings() {
 
   const handleSave = async () => {
     setSaving(true);
-    const { error } = await supabase.from("email_provider_configs").insert({
-      provider_type: formType,
+    const insertData: Record<string, any> = {
       provider_name: formName || formPreset,
       from_name: fromName || null,
       from_email: fromEmail || null,
       reply_to_email: replyTo || null,
-      smtp_host: formType === "smtp" ? smtpHost : null,
-      smtp_port: formType === "smtp" ? smtpPort : null,
-      smtp_secure: formType === "smtp" ? smtpSecure : null,
-      smtp_username: formType === "smtp" ? smtpUsername : null,
-      smtp_password_encrypted: formType === "smtp" ? smtpPassword : null,
-      resend_api_key_encrypted: formType === "resend" ? resendKey : null,
       daily_limit: dailyLimit,
       is_active: false,
       is_default: false,

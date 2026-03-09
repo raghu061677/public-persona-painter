@@ -48,6 +48,8 @@ import { generateProposalExcel } from "@/lib/exports/proposalExcelExport";
 import { calculatePrintingCost, calculateMountingCost, getAssetSqft } from "@/utils/effectivePricing";
 import { computeRentAmount, BillingMode } from "@/utils/perAssetPricing";
 import { addDays } from "date-fns";
+import { useRecordPermissions } from "@/hooks/useRecordAccessMode";
+import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
 
 type TaxType = 'CGST_SGST' | 'IGST';
 
@@ -61,7 +63,11 @@ export default function PlanEdit() {
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [assetPricing, setAssetPricing] = useState<Record<string, any>>({});
   const [companyState, setCompanyState] = useState<string>("");
+  const [planRecord, setPlanRecord] = useState<any>(null);
   const [manualTaxOverride, setManualTaxOverride] = useState(false);
+  
+  // Enterprise RBAC: determine access mode for this plan
+  const perms = useRecordPermissions(planRecord, 'plans');
   
   const [formData, setFormData] = useState({
     id: "",
@@ -142,6 +148,9 @@ export default function PlanEdit() {
       .single();
 
     if (plan) {
+      // Store raw plan for RBAC access check
+      setPlanRecord(plan);
+      
       const days = calculateDurationDays(new Date(plan.start_date), new Date(plan.end_date));
       const months = plan.months_count || calculateMonthsFromDays(days);
       
@@ -725,11 +734,16 @@ export default function PlanEdit() {
           Back to Plan
         </Button>
 
+        {/* Restricted Mode Banner */}
+        {perms.isReadOnly && <RestrictedBanner module="plan" />}
+
         <div className="mb-8 space-y-2">
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-            Edit Plan
+            {perms.isReadOnly ? 'View Plan' : 'Edit Plan'}
           </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">Update plan details and modify asset selection</p>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            {perms.isReadOnly ? 'Read-only summary view' : 'Update plan details and modify asset selection'}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -911,7 +925,8 @@ export default function PlanEdit() {
               </div>
             </SectionCard>
 
-            {/* Plan Summary - Now with Orange Border */}
+            {/* Plan Summary - Hidden for non-owners */}
+            {perms.canViewFinancials && (
             <div className="lg:col-span-1">
               <SectionCard
                 title="Financial Summary"
@@ -929,9 +944,9 @@ export default function PlanEdit() {
                   subtotal={totals.subtotal}
                   discount={totals.totalDiscount}
                   manualDiscount={totals.manualDiscount}
-                  onManualDiscountChange={(val) => setFormData(prev => ({ ...prev, manual_discount_amount: val }))}
+                  onManualDiscountChange={perms.isReadOnly ? undefined : (val) => setFormData(prev => ({ ...prev, manual_discount_amount: val }))}
                   manualDiscountReason={formData.manual_discount_reason}
-                  onManualDiscountReasonChange={(val) => setFormData(prev => ({ ...prev, manual_discount_reason: val }))}
+                  onManualDiscountReasonChange={perms.isReadOnly ? undefined : (val) => setFormData(prev => ({ ...prev, manual_discount_reason: val }))}
                   netTotal={totals.netTotal}
                   profit={totals.totalProfit}
                   gstPercent={parseFloat(formData.gst_percent)}
@@ -942,6 +957,7 @@ export default function PlanEdit() {
                 />
               </SectionCard>
             </div>
+            )}
           </div>
 
           {/* Selected Assets - Full Width */}
@@ -969,7 +985,8 @@ export default function PlanEdit() {
             </CardContent>
           </Card>
 
-          {/* Available Assets - Full Width */}
+          {/* Available Assets - Hidden in read-only mode */}
+          {perms.canEditRecord && (
           <Card className="rounded-2xl shadow-md hover:shadow-lg transition-all duration-200">
             <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/20 dark:to-blue-900/20">
               <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-700 dark:text-slate-200">
@@ -987,8 +1004,10 @@ export default function PlanEdit() {
               />
             </CardContent>
           </Card>
+          )}
 
-          {/* Actions */}
+          {/* Actions - Hidden for non-owners */}
+          {perms.canEditRecord && (
           <div className="flex justify-end gap-4 pt-4 pb-8">
             <Button
               type="button"
@@ -1015,6 +1034,7 @@ export default function PlanEdit() {
               {loading ? "Updating..." : "Update Plan"}
             </Button>
           </div>
+          )}
         </form>
       </div>
     </div>

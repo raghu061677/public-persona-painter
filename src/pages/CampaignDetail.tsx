@@ -41,6 +41,8 @@ import { computeCampaignTotals } from "@/utils/computeCampaignTotals";
 import { useCampaignProfitability } from "@/hooks/useCampaignProfitability";
 import { CampaignProfitSummary } from "@/components/campaigns/CampaignProfitSummary";
 import { SignedRODocumentCard } from "@/components/shared/SignedRODocumentCard";
+import { useRecordPermissions } from "@/hooks/useRecordAccessMode";
+import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
 
 export default function CampaignDetail() {
   const { id: routeParam } = useParams();
@@ -50,13 +52,16 @@ export default function CampaignDetail() {
   const [campaign, setCampaign] = useState<any>(null);
   const [campaignAssets, setCampaignAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [assetCodePrefix, setAssetCodePrefix] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [signedRoData, setSignedRoData] = useState<{ planId: string; url: string | null; uploadedAt: string | null } | null>(null);
   const { company } = useCompany();
   const { setBreadcrumbs } = useBreadcrumb();
   const { data: profitability, isLoading: profitLoading } = useCampaignProfitability(id, company?.id, 0);
+  
+  // Enterprise RBAC access mode
+  const perms = useRecordPermissions(campaign, 'campaigns');
+  const isAdmin = perms.canEditRecord;
 
   // Enable automated workflows
   useCampaignWorkflows(id);
@@ -82,20 +87,8 @@ export default function CampaignDetail() {
 
   useEffect(() => {
     if (!id || resolving) return;
-    checkAdminStatus();
     refreshData();
   }, [id, resolving]);
-
-  const checkAdminStatus = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
-      setIsAdmin(data?.some(r => r.role === 'admin') || false);
-    }
-  };
 
   const fetchCampaign = async () => {
     const { data, error } = await supabase
@@ -302,6 +295,9 @@ export default function CampaignDetail() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Campaigns
         </Button>
+
+        {/* Restricted Mode Banner */}
+        {perms.isReadOnly && <RestrictedBanner module="campaign" />}
 
         {/* Deleted Campaign Banner */}
         {isDeleted && (
@@ -531,7 +527,8 @@ export default function CampaignDetail() {
             </CardContent>
           </Card>
 
-          {/* Financial Summary - Orange */}
+          {/* Financial Summary - Hidden for non-owners */}
+          {perms.canViewFinancials && (
           <Card className="border-l-4 border-l-orange-500 shadow-md">
             <CardHeader className="pb-3">
               <CardTitle className="text-base text-orange-600 dark:text-orange-400">Financial Summary</CardTitle>
@@ -542,138 +539,42 @@ export default function CampaignDetail() {
                   <div className="flex justify-between text-sm items-center">
                     <div className="flex items-center gap-1">
                       <span className="text-muted-foreground font-medium">Display Cost</span>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Info className="h-3.5 w-3.5 text-muted-foreground" />
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-xs">
-                          <p className="font-semibold mb-1">Pro-rata Calculation:</p>
-                          <p className="text-xs">
-                            For each asset: (Card Rate ÷ 30 days) × {durationDays} days
-                          </p>
-                          <p className="text-xs mt-1 text-muted-foreground">
-                            Campaign: {formatDate(campaign.start_date)} to {formatDate(campaign.end_date)}
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
                     </div>
                     <span className="font-medium">{formatCurrency(roundedDisplayCost)}</span>
                   </div>
-                  
                   {printingTotal > 0 && (
                     <div className="flex justify-between text-sm items-center">
-                      <div className="flex items-center gap-1">
-                        <span className="text-muted-foreground">Printing Cost</span>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Info className="h-3.5 w-3.5 text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
-                            <p className="font-semibold mb-1">Printing Cost Breakdown:</p>
-                            <p className="text-xs">
-                              ₹15 per sqft × Total sqft of all assets
-                            </p>
-                            <p className="text-xs mt-1 text-muted-foreground">
-                              {campaignAssets.length} assets with combined {campaignAssets.reduce((sum, a) => sum + (a.total_sqft || 0), 0).toFixed(0)} sqft
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
+                      <span className="text-muted-foreground">Printing Cost</span>
                       <span>{formatCurrency(printingTotal)}</span>
                     </div>
                   )}
-                  
                   <div className="flex justify-between text-sm items-center">
-                    <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground">Mounting Cost</span>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Info className="h-3.5 w-3.5 text-muted-foreground" />
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-xs">
-                          <p className="font-semibold mb-1">Mounting Cost Breakdown:</p>
-                          <p className="text-xs">
-                            ₹1,500 per asset × {campaignAssets.length} assets
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
+                    <span className="text-muted-foreground">Mounting Cost</span>
                     <span>{formatCurrency(mountingTotal)}</span>
                   </div>
-                  
                   {manualDiscount > 0 && (
                     <div className="flex justify-between text-sm text-green-600 dark:text-green-400 items-center">
-                      <div className="flex items-center gap-1">
-                        <span className="font-medium">Discount (Before GST)</span>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Info className="h-3.5 w-3.5" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
-                            <p className="font-semibold mb-1">Manual Discount:</p>
-                            <p className="text-xs">
-                              Applied before GST calculation
-                            </p>
-                            <p className="text-xs mt-1 text-muted-foreground">
-                              Gross: {formatCurrency(totals.grossAmount)} - Discount: {formatCurrency(manualDiscount)}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
+                      <span className="font-medium">Discount</span>
                       <span className="font-medium">- {formatCurrency(manualDiscount)}</span>
                     </div>
                   )}
-                  
                   <div className="flex justify-between pt-2 border-t border-border">
                     <span className="text-sm font-semibold">Taxable Amount</span>
                     <span className="font-semibold">{formatCurrency(totals.taxableAmount)}</span>
                   </div>
-                  
                   <div className="flex justify-between text-sm items-center">
-                    <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground">GST ({totals.gstRate}%)</span>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Info className="h-3.5 w-3.5 text-muted-foreground" />
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-xs">
-                          <p className="font-semibold mb-1">GST Calculation:</p>
-                          <p className="text-xs">
-                            Taxable Amount × {totals.gstRate}%
-                          </p>
-                          <p className="text-xs mt-1 text-muted-foreground">
-                            {formatCurrency(totals.taxableAmount)} × {totals.gstRate}% = {formatCurrency(totals.gstAmount)}
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
+                    <span className="text-muted-foreground">GST ({totals.gstRate}%)</span>
                     <span>{formatCurrency(totals.gstAmount)}</span>
                   </div>
-                  
                   <div className="flex justify-between pt-3 border-t-2 border-border items-center">
-                    <div className="flex items-center gap-1">
-                      <span className="text-base font-bold">Grand Total</span>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Info className="h-3.5 w-3.5" />
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-xs">
-                          <p className="font-semibold mb-1">Grand Total:</p>
-                          <p className="text-xs">
-                            Taxable Amount + GST
-                          </p>
-                          <p className="text-xs mt-1 text-muted-foreground">
-                            {formatCurrency(totals.taxableAmount)} + {formatCurrency(totals.gstAmount)}
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
+                    <span className="text-base font-bold">Grand Total</span>
                     <span className="text-lg font-bold text-orange-600 dark:text-orange-400">{formatCurrency(totals.grandTotal)}</span>
                   </div>
                 </div>
               </TooltipProvider>
             </CardContent>
           </Card>
+          )}
         </div>
 
         {/* Profitability Summary */}

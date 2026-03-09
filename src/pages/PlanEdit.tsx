@@ -531,6 +531,8 @@ export default function PlanEdit() {
           sgst_amount: totals.sgstAmount,
           igst_amount: totals.igstAmount,
           notes: formData.notes,
+          manual_discount_amount: formData.manual_discount_amount || 0,
+          manual_discount_reason: formData.manual_discount_reason || null,
         } as any)
         .eq('id', id);
 

@@ -91,6 +91,8 @@ export function useScopedQuery(module: ModuleKey, options: ScopeFilterOptions = 
    */
   const filterByScope = useCallback(
     (records: any[]) => {
+      // While RBAC is still loading, return all records (will re-filter after load)
+      if (rbacLoading) return records;
       if (isPlatformAdmin || isCompanyAdmin) return records;
 
       const scopeMode = getScopeMode(module);

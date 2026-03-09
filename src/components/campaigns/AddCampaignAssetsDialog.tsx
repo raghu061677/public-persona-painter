@@ -23,7 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Search, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, X } from "lucide-react";
+import { Plus, Search, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, X, Clock, Check } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -36,15 +36,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { format } from "date-fns";
-
-interface ConflictInfo {
-  campaign_id: string;
-  campaign_name: string;
-  client_name: string;
-  start_date: string;
-  end_date: string;
-  status: string;
-}
+import {
+  batchCheckConflicts,
+  getAssetBookingInfo,
+  formatConflictSummary,
+  type BookingConflict,
+  type BookingDisplayStatus,
+} from "@/utils/bookingEngine";
 
 type SortField = 'media_asset_code' | 'location' | 'city' | 'area' | 'media_type' | 'card_rate' | 'status';
 type SortDirection = 'asc' | 'desc' | null;
@@ -54,16 +52,15 @@ interface SortConfig {
   direction: SortDirection;
 }
 
+type StatusFilter = 'all' | 'available_for_dates' | 'available_now' | 'conflict' | 'upcoming';
+
 interface AddCampaignAssetsDialogProps {
   open: boolean;
   onClose: () => void;
   existingAssetIds: string[];
   onAddAssets: (assets: any[]) => void;
-  /** Campaign ID to exclude from conflict check */
   campaignId?: string;
-  /** Campaign start date for conflict checking */
   campaignStartDate?: Date | string;
-  /** Campaign end date for conflict checking */
   campaignEndDate?: Date | string;
 }
 
@@ -82,10 +79,10 @@ export function AddCampaignAssetsDialog({
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [areaFilter, setAreaFilter] = useState<string>("all");
   const [mediaTypeFilter, setMediaTypeFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("available_for_dates");
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [companyPrefix, setCompanyPrefix] = useState<string | null>(null);
-  const [assetConflicts, setAssetConflicts] = useState<Map<string, ConflictInfo[]>>(new Map());
+  const [conflictMap, setConflictMap] = useState<Map<string, BookingConflict[]>>(new Map());
   const [checkingConflicts, setCheckingConflicts] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: null, direction: null });
 
@@ -118,20 +115,24 @@ export function AddCampaignAssetsDialog({
     if (open) {
       fetchAllAssets();
       setSelectedAssets(new Set());
-      setAssetConflicts(new Map());
+      setConflictMap(new Map());
+      // Default to 'available_for_dates' when dates exist, 'all' otherwise
+      setStatusFilter(campaignStartDate && campaignEndDate ? 'available_for_dates' : 'all');
     }
   }, [open]);
 
-  const formatDateForConflict = (date: Date | string | undefined): string | null => {
+  const formatDateStr = (date: Date | string | undefined): string | null => {
     if (!date) return null;
     if (typeof date === 'string') return date.split('T')[0];
     return format(date, 'yyyy-MM-dd');
   };
 
+  const startDateStr = formatDateStr(campaignStartDate);
+  const endDateStr = formatDateStr(campaignEndDate);
+
   const fetchAllAssets = async () => {
     setLoading(true);
     try {
-      // Fetch ALL assets regardless of status for filtering
       const { data, error } = await supabase
         .from('media_assets')
         .select('*')
@@ -139,16 +140,22 @@ export function AddCampaignAssetsDialog({
 
       if (error) throw error;
 
-      // Filter out assets already in the campaign
       const filteredAssets = data?.filter(
         asset => !existingAssetIds.includes(asset.id)
       ) || [];
 
       setAssets(filteredAssets);
 
-      // Check conflicts for all assets if we have campaign dates
-      if (campaignStartDate && campaignEndDate && filteredAssets.length > 0) {
-        await checkConflictsForAssets(filteredAssets);
+      // Run batch conflict check using the booking engine RPC
+      if (startDateStr && endDateStr && filteredAssets.length > 0) {
+        setCheckingConflicts(true);
+        try {
+          const assetIds = filteredAssets.map(a => a.id);
+          const conflicts = await batchCheckConflicts(assetIds, startDateStr, endDateStr, campaignId);
+          setConflictMap(conflicts);
+        } finally {
+          setCheckingConflicts(false);
+        }
       }
     } catch (error: any) {
       toast({
@@ -158,48 +165,6 @@ export function AddCampaignAssetsDialog({
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const checkConflictsForAssets = async (assetList: any[]) => {
-    setCheckingConflicts(true);
-    const conflictMap = new Map<string, ConflictInfo[]>();
-
-    const startDate = formatDateForConflict(campaignStartDate);
-    const endDate = formatDateForConflict(campaignEndDate);
-
-    if (!startDate || !endDate) {
-      setCheckingConflicts(false);
-      return;
-    }
-
-    try {
-      const batchSize = 10;
-      for (let i = 0; i < assetList.length; i += batchSize) {
-        const batch = assetList.slice(i, i + batchSize);
-        
-        await Promise.all(batch.map(async (asset) => {
-          const { data, error } = await supabase.rpc('check_asset_conflict', {
-            p_asset_id: asset.id,
-            p_start_date: startDate,
-            p_end_date: endDate,
-            p_exclude_campaign_id: campaignId || null,
-          });
-
-          if (!error && data) {
-            const result = data as unknown as { has_conflict: boolean; conflicting_campaigns: ConflictInfo[] };
-            if (result.has_conflict && result.conflicting_campaigns?.length > 0) {
-              conflictMap.set(asset.id, result.conflicting_campaigns);
-            }
-          }
-        }));
-      }
-
-      setAssetConflicts(conflictMap);
-    } catch (error) {
-      console.error('Error checking conflicts:', error);
-    } finally {
-      setCheckingConflicts(false);
     }
   };
 
@@ -222,24 +187,19 @@ export function AddCampaignAssetsDialog({
     [assets]
   );
 
-  const hasConflict = (assetId: string): boolean => {
-    return assetConflicts.has(assetId);
-  };
-
-  const getConflicts = (assetId: string): ConflictInfo[] => {
-    return assetConflicts.get(assetId) || [];
-  };
-
-  // Determine effective status for display and filtering
-  const getEffectiveStatus = (asset: any): 'available' | 'booked' | 'conflict' => {
-    // If there's a date overlap conflict, mark as conflict
-    if (hasConflict(asset.id)) return 'conflict';
-    // If campaign dates are provided and no conflict was found, asset is available for those dates
-    // even if currently marked as 'Booked' (future booking scenario)
-    if (campaignStartDate && campaignEndDate) return 'available';
-    // Fallback to asset status when no campaign dates provided
-    if (asset.status === 'Available') return 'available';
-    return 'booked';
+  /**
+   * Get booking info for an asset using the booking engine.
+   * This replaces the old getEffectiveStatus / hasConflict logic.
+   */
+  const getBookingInfo = (asset: any): { status: BookingDisplayStatus; info: ReturnType<typeof getAssetBookingInfo> } => {
+    const info = getAssetBookingInfo(
+      asset.id,
+      conflictMap,
+      asset.status,
+      asset.booking_end_date || asset.next_available_from,
+      startDateStr
+    );
+    return { status: info.displayStatus, info };
   };
 
   // Filter and sort assets
@@ -273,13 +233,22 @@ export function AddCampaignAssetsDialog({
       filtered = filtered.filter(asset => asset.media_type === mediaTypeFilter);
     }
 
-    // Status filter
+    // Status filter using booking engine
     if (statusFilter !== "all") {
       filtered = filtered.filter(asset => {
-        const effectiveStatus = getEffectiveStatus(asset);
-        if (statusFilter === "available") return effectiveStatus === 'available';
-        if (statusFilter === "booked") return effectiveStatus === 'booked' || effectiveStatus === 'conflict';
-        return true;
+        const { status } = getBookingInfo(asset);
+        switch (statusFilter) {
+          case 'available_for_dates':
+            return status === 'available' || status === 'available_soon';
+          case 'conflict':
+            return status === 'conflict';
+          case 'available_now':
+            return status === 'available' && asset.status !== 'Booked';
+          case 'upcoming':
+            return status === 'upcoming' || status === 'available_soon';
+          default:
+            return true;
+        }
       });
     }
 
@@ -290,36 +259,31 @@ export function AddCampaignAssetsDialog({
         let bValue: any;
 
         if (sortConfig.field === 'status') {
-          aValue = getEffectiveStatus(a);
-          bValue = getEffectiveStatus(b);
+          aValue = getBookingInfo(a).status;
+          bValue = getBookingInfo(b).status;
         } else if (sortConfig.field === 'media_asset_code') {
           aValue = a.media_asset_code || a.id || '';
           bValue = b.media_asset_code || b.id || '';
+        } else if (sortConfig.field === 'card_rate') {
+          return sortConfig.direction === 'asc' 
+            ? (Number(a.card_rate) || 0) - (Number(b.card_rate) || 0)
+            : (Number(b.card_rate) || 0) - (Number(a.card_rate) || 0);
         } else {
-          aValue = a[sortConfig.field] ?? '';
-          bValue = b[sortConfig.field] ?? '';
+          aValue = a[sortConfig.field!] ?? '';
+          bValue = b[sortConfig.field!] ?? '';
         }
 
-        // Numeric comparison for card_rate
-        if (sortConfig.field === 'card_rate') {
-          aValue = Number(aValue) || 0;
-          bValue = Number(bValue) || 0;
-          return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
-        }
-
-        // String comparison
         const comparison = String(aValue).localeCompare(String(bValue));
         return sortConfig.direction === 'asc' ? comparison : -comparison;
       });
     }
 
     return filtered;
-  }, [assets, searchTerm, cityFilter, areaFilter, mediaTypeFilter, statusFilter, sortConfig, assetConflicts]);
+  }, [assets, searchTerm, cityFilter, areaFilter, mediaTypeFilter, statusFilter, sortConfig, conflictMap]);
 
   const handleSort = (field: SortField) => {
     setSortConfig(current => {
       if (current.field === field) {
-        // Cycle: null -> asc -> desc -> null
         if (current.direction === null) return { field, direction: 'asc' };
         if (current.direction === 'asc') return { field, direction: 'desc' };
         return { field: null, direction: null };
@@ -339,19 +303,18 @@ export function AddCampaignAssetsDialog({
   };
 
   const toggleAssetSelection = (assetId: string) => {
-    // Block only if there is an actual date overlap conflict
-    if (hasConflict(assetId)) {
-      const conflicts = getConflicts(assetId);
+    const { info } = getBookingInfo(assets.find(a => a.id === assetId) || {});
+    
+    // Block only based on RPC conflict result
+    if (!info.isSelectable) {
       toast({
         title: "Asset has booking conflict",
-        description: `This asset is already booked in: ${conflicts.map(c => c.campaign_name).join(', ')}`,
+        description: formatConflictSummary(info.conflicts),
         variant: "destructive",
       });
       return;
     }
 
-    // Allow selection: asset may be currently booked but available for requested future dates
-    // Conflict check (above) already validated date overlap — no need to check asset.status
     const newSelected = new Set(selectedAssets);
     if (newSelected.has(assetId)) {
       newSelected.delete(assetId);
@@ -385,9 +348,78 @@ export function AddCampaignAssetsDialog({
     statusFilter !== "all" ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
-  const conflictCount = Array.from(assetConflicts.keys()).length;
-  const availableCount = filteredAndSortedAssets.filter(a => getEffectiveStatus(a) === 'available').length;
-  const bookedCount = filteredAndSortedAssets.filter(a => getEffectiveStatus(a) !== 'available').length;
+  // Counts using booking engine
+  const conflictCount = conflictMap.size;
+  const availableCount = filteredAndSortedAssets.filter(a => {
+    const s = getBookingInfo(a).status;
+    return s === 'available' || s === 'available_soon';
+  }).length;
+
+  const renderStatusBadge = (asset: any) => {
+    const { status, info } = getBookingInfo(asset);
+    
+    switch (status) {
+      case 'conflict':
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="text-destructive border-destructive cursor-help">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  Conflict
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <div className="text-sm">
+                  <p className="font-semibold mb-1">Booking Conflict:</p>
+                  {info.conflicts.map((c, i) => (
+                    <div key={i} className="mb-1">
+                      <span className="font-medium">{c.campaign_name || c.source_type || 'Booking'}</span>
+                      <br />
+                      <span className="text-xs text-muted-foreground">
+                        {c.start_date ? format(new Date(c.start_date), 'dd MMM yyyy') : '?'} to{' '}
+                        {c.end_date ? format(new Date(c.end_date), 'dd MMM yyyy') : '?'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      
+      case 'available_soon':
+        return (
+          <Badge variant="outline" className="text-blue-600 border-blue-500">
+            <Clock className="w-3 h-3 mr-1" />
+            Available From {info.availableFrom ? format(new Date(info.availableFrom), 'dd MMM') : ''}
+          </Badge>
+        );
+      
+      case 'upcoming':
+        return (
+          <Badge variant="outline" className="text-amber-600 border-amber-500">
+            <Clock className="w-3 h-3 mr-1" />
+            Upcoming
+          </Badge>
+        );
+      
+      case 'blocked':
+        return (
+          <Badge variant="outline" className="text-destructive border-destructive">
+            Blocked
+          </Badge>
+        );
+      
+      default:
+        return (
+          <Badge variant="outline" className="text-green-600 border-green-500">
+            <Check className="w-3 h-3 mr-1" />
+            Available
+          </Badge>
+        );
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -396,7 +428,7 @@ export function AddCampaignAssetsDialog({
           <DialogTitle className="flex items-center gap-2">
             Add Assets to Campaign
             {conflictCount > 0 && (
-              <Badge variant="outline" className="text-amber-600 border-amber-500">
+              <Badge variant="outline" className="text-destructive border-destructive">
                 <AlertTriangle className="w-3 h-3 mr-1" />
                 {conflictCount} conflict(s)
               </Badge>
@@ -416,22 +448,34 @@ export function AddCampaignAssetsDialog({
                 className="pl-9"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Status" />
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Availability" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="available">
+                <SelectItem value="all">All Assets</SelectItem>
+                <SelectItem value="available_for_dates">
                   <span className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                    Available ({assets.filter(a => getEffectiveStatus(a) === 'available').length})
+                    Available for Selected Dates
                   </span>
                 </SelectItem>
-                <SelectItem value="booked">
+                <SelectItem value="available_now">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                    Available Now
+                  </span>
+                </SelectItem>
+                <SelectItem value="conflict">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-destructive"></span>
+                    Conflicting
+                  </span>
+                </SelectItem>
+                <SelectItem value="upcoming">
                   <span className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                    Booked ({assets.filter(a => getEffectiveStatus(a) !== 'available').length})
+                    Upcoming
                   </span>
                 </SelectItem>
               </SelectContent>
@@ -482,7 +526,9 @@ export function AddCampaignAssetsDialog({
             <div className="flex items-center gap-2 ml-auto text-sm text-muted-foreground">
               <Badge variant="secondary">{filteredAndSortedAssets.length} assets</Badge>
               <Badge variant="outline" className="text-green-600 border-green-500">{availableCount} available</Badge>
-              <Badge variant="outline" className="text-amber-600 border-amber-500">{bookedCount} booked</Badge>
+              {conflictCount > 0 && (
+                <Badge variant="outline" className="text-destructive border-destructive">{conflictCount} conflicts</Badge>
+              )}
             </div>
           </div>
 
@@ -548,11 +594,11 @@ export function AddCampaignAssetsDialog({
                     </div>
                   </TableHead>
                   <TableHead 
-                    className="w-24 cursor-pointer hover:bg-muted/50 select-none"
+                    className="w-32 cursor-pointer hover:bg-muted/50 select-none"
                     onClick={() => handleSort('status')}
                   >
                     <div className="flex items-center">
-                      Status
+                      Availability
                       {getSortIcon('status')}
                     </div>
                   </TableHead>
@@ -573,20 +619,18 @@ export function AddCampaignAssetsDialog({
                   </TableRow>
                 ) : (
                   filteredAndSortedAssets.map((asset, index) => {
-                    const conflicts = getConflicts(asset.id);
-                    const effectiveStatus = getEffectiveStatus(asset);
-                    const isSelectable = effectiveStatus === 'available';
+                    const { info } = getBookingInfo(asset);
 
                     return (
                       <TableRow 
                         key={asset.id}
-                        className={effectiveStatus !== 'available' ? "bg-amber-50/50 dark:bg-amber-950/20" : ""}
+                        className={!info.isSelectable ? "bg-destructive/5" : ""}
                       >
                         <TableCell>
                           <Checkbox
                             checked={selectedAssets.has(asset.id)}
                             onCheckedChange={() => toggleAssetSelection(asset.id)}
-                            disabled={!isSelectable}
+                            disabled={!info.isSelectable}
                           />
                         </TableCell>
                         <TableCell className="text-center font-medium text-muted-foreground">
@@ -609,40 +653,7 @@ export function AddCampaignAssetsDialog({
                           {formatCurrency(asset.card_rate)}
                         </TableCell>
                         <TableCell>
-                          {effectiveStatus === 'conflict' ? (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Badge variant="outline" className="text-amber-600 border-amber-500 cursor-help">
-                                    <AlertTriangle className="w-3 h-3 mr-1" />
-                                    Conflict
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent className="max-w-xs">
-                                  <div className="text-sm">
-                                    <p className="font-semibold mb-1">Booked in:</p>
-                                    {conflicts.map((c, i) => (
-                                      <div key={i} className="mb-1">
-                                        <span className="font-medium">{c.campaign_name}</span>
-                                        <br />
-                                        <span className="text-xs text-muted-foreground">
-                                          {c.start_date} to {c.end_date}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ) : effectiveStatus === 'booked' ? (
-                            <Badge variant="outline" className="text-amber-600 border-amber-500">
-                              {asset.status}
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-green-600 border-green-500">
-                              Available
-                            </Badge>
-                          )}
+                          {renderStatusBadge(asset)}
                         </TableCell>
                       </TableRow>
                     );
@@ -656,7 +667,7 @@ export function AddCampaignAssetsDialog({
             <p className="text-sm text-muted-foreground">
               {selectedAssets.size} asset(s) selected
               {conflictCount > 0 && (
-                <span className="ml-2 text-amber-600">
+                <span className="ml-2 text-destructive">
                   • {conflictCount} asset(s) unavailable due to conflicts
                 </span>
               )}

@@ -1071,6 +1071,9 @@ export default function PlanDetail() {
           </Card>
         )}
 
+        {/* Restricted Mode Banner for non-owner sales users */}
+        {perms.isReadOnly && <RestrictedBanner module="plan" />}
+
         {/* Header */}
         <div className="flex items-start justify-between mb-8">
           <div className="flex items-center gap-4">

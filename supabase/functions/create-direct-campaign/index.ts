@@ -71,17 +71,21 @@ serve(withAuth(async (req) => {
   if (clientErr || !client) return jsonError('Client not found', 404);
   if (client.company_id !== companyId) return jsonError('Client does not belong to your company', 403);
 
-  // Check asset conflicts (skip for historical)
+  // Check asset conflicts using per-asset dates (skip for historical)
   if (!is_historical_entry) {
     for (const asset of assets as AssetItem[]) {
+      // Use per-asset dates if available, fallback to campaign-level dates
+      const requestedStart = asset.display_from || start_date;
+      const requestedEnd = asset.display_to || end_date;
+      
       const { data: conflicts } = await supabase.rpc('check_asset_conflict', {
         p_asset_id: asset.asset_id,
-        p_start_date: start_date,
-        p_end_date: end_date,
+        p_start_date: requestedStart,
+        p_end_date: requestedEnd,
         p_exclude_campaign_id: null,
       });
       if (conflicts && conflicts.has_conflict) {
-        return jsonError(`Asset ${asset.asset_id} already booked for overlapping period`, 409);
+        return jsonError(`Asset ${asset.asset_id} already booked for ${requestedStart} to ${requestedEnd}`, 409);
       }
     }
   }

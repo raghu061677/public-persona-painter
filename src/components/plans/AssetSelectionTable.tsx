@@ -103,7 +103,10 @@ export function AssetSelectionTable({
   const [searchTerm, setSearchTerm] = useState("");
   const [cityFilter, setCityFilter] = useState("all");
   const [mediaTypeFilter, setMediaTypeFilter] = useState("all");
-  const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilter>("available_now");
+  // Default to 'available_by_date' when plan dates are provided (future booking support)
+  const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilter>(
+    planStartDate ? "available_by_date" : "available_now"
+  );
   const [availableFromDate, setAvailableFromDate] = useState<Date | undefined>(planStartDate);
   const [checkedAssets, setCheckedAssets] = useState<Set<string>>(new Set());
   const [sortConfig, setSortConfig] = useState<SortConfig>({ column: null, direction: null });

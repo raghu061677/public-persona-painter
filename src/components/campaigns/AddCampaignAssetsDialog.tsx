@@ -232,7 +232,12 @@ export function AddCampaignAssetsDialog({
 
   // Determine effective status for display and filtering
   const getEffectiveStatus = (asset: any): 'available' | 'booked' | 'conflict' => {
+    // If there's a date overlap conflict, mark as conflict
     if (hasConflict(asset.id)) return 'conflict';
+    // If campaign dates are provided and no conflict was found, asset is available for those dates
+    // even if currently marked as 'Booked' (future booking scenario)
+    if (campaignStartDate && campaignEndDate) return 'available';
+    // Fallback to asset status when no campaign dates provided
     if (asset.status === 'Available') return 'available';
     return 'booked';
   };

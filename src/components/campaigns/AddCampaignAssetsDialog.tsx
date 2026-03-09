@@ -232,7 +232,12 @@ export function AddCampaignAssetsDialog({
 
   // Determine effective status for display and filtering
   const getEffectiveStatus = (asset: any): 'available' | 'booked' | 'conflict' => {
+    // If there's a date overlap conflict, mark as conflict
     if (hasConflict(asset.id)) return 'conflict';
+    // If campaign dates are provided and no conflict was found, asset is available for those dates
+    // even if currently marked as 'Booked' (future booking scenario)
+    if (campaignStartDate && campaignEndDate) return 'available';
+    // Fallback to asset status when no campaign dates provided
     if (asset.status === 'Available') return 'available';
     return 'booked';
   };
@@ -334,6 +339,7 @@ export function AddCampaignAssetsDialog({
   };
 
   const toggleAssetSelection = (assetId: string) => {
+    // Block only if there is an actual date overlap conflict
     if (hasConflict(assetId)) {
       const conflicts = getConflicts(assetId);
       toast({
@@ -344,17 +350,8 @@ export function AddCampaignAssetsDialog({
       return;
     }
 
-    // Check if asset is not available
-    const asset = assets.find(a => a.id === assetId);
-    if (asset && asset.status !== 'Available') {
-      toast({
-        title: "Asset not available",
-        description: `This asset is currently ${asset.status}`,
-        variant: "destructive",
-      });
-      return;
-    }
-
+    // Allow selection: asset may be currently booked but available for requested future dates
+    // Conflict check (above) already validated date overlap — no need to check asset.status
     const newSelected = new Set(selectedAssets);
     if (newSelected.has(assetId)) {
       newSelected.delete(assetId);

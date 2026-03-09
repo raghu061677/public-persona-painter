@@ -505,10 +505,13 @@ export default function CampaignCreate() {
           gst_percent: gstPercent,
           assets: Array.from(selectedAssets).map(assetId => {
             const pricing = assetPricing[assetId];
+            // Use per-asset dates if available, fallback to campaign dates
+            const assetStart = pricing?.start_date || formData.start_date;
+            const assetEnd = pricing?.end_date || formData.end_date;
             return {
               asset_id: assetId,
-              display_from: formData.start_date,
-              display_to: formData.end_date,
+              display_from: typeof assetStart === 'string' ? assetStart : format(new Date(assetStart), 'yyyy-MM-dd'),
+              display_to: typeof assetEnd === 'string' ? assetEnd : format(new Date(assetEnd), 'yyyy-MM-dd'),
               sales_price: pricing.negotiated_price || 0,
               printing_cost: pricing.printing_charges || 0,
               mounting_cost: pricing.mounting_charges || 0,

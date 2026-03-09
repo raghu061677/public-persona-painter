@@ -264,7 +264,7 @@ export default function PlanEdit() {
           .from('campaign_assets')
           .select('booking_end_date, end_date')
           .eq('asset_id', assetId)
-          .in('status', ['assigned', 'installed', 'proof_uploaded'])
+          .in('status', ['Assigned', 'Installed', 'Mounted', 'In Progress', 'PhotoUploaded'])
           .order('booking_end_date', { ascending: false })
           .limit(1);
         

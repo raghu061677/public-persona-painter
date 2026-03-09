@@ -297,6 +297,10 @@ export default function MediaAssetsControlCenter() {
 
               {/* Action Buttons */}
               <div className="flex gap-2 flex-wrap">
+                <Button variant="outline" onClick={() => setCustomExportOpen(true)} className="gap-2">
+                  <Settings2 className="h-4 w-4" />
+                  Custom Fields Export
+                </Button>
                 <BulkQRGenerationButton />
                 <ActionGuard module="media_assets" action="create">
                 <Button onClick={() => navigate("/admin/media-assets/new")} className="gap-2">

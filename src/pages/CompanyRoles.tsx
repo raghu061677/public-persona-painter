@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { SettingsCard, SectionHeader, InfoAlert, InputRow } from "@/components/settings/zoho-style";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Shield, Plus, Edit, Trash2 } from "lucide-react";
-import { RolePermissionsMatrix } from "@/components/users/RolePermissionsMatrix";
+import { RolePermissionsMatrix, RolePermissionsMatrixRef } from "@/components/users/RolePermissionsMatrix";
 import { PageHeader } from "@/components/navigation/PageHeader";
 import { ROUTES, ROUTE_LABELS } from "@/config/routes";
 
@@ -21,9 +21,17 @@ const DEFAULT_ROLES = [
 export default function CompanyRoles() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const matrixRef = useRef<RolePermissionsMatrixRef>(null);
+  const matrixSectionRef = useRef<HTMLDivElement>(null);
+
+  const handleConfigureRole = (roleName: string) => {
+    matrixRef.current?.selectRole(roleName);
+    matrixSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <div className="space-y-6">
+{/* keep existing PageHeader + InfoAlert unchanged */}
       <PageHeader
         title={ROUTE_LABELS[ROUTES.SETTINGS_ROLES]}
         description="Manage user roles and their access permissions"
@@ -57,7 +65,7 @@ export default function CompanyRoles() {
                 </div>
                 <p className="text-sm text-muted-foreground">{role.description}</p>
               </div>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => handleConfigureRole(role.name)}>
                 <Edit className="h-4 w-4 mr-2" />
                 Configure
               </Button>
@@ -66,13 +74,15 @@ export default function CompanyRoles() {
         </div>
       </SettingsCard>
 
-      <SettingsCard>
-        <SectionHeader
-          title="Permission Matrix"
-          description="Detailed view of what each role can access"
-        />
-        <RolePermissionsMatrix />
-      </SettingsCard>
+      <div ref={matrixSectionRef}>
+        <SettingsCard>
+          <SectionHeader
+            title="Permission Matrix"
+            description="Detailed view of what each role can access"
+          />
+          <RolePermissionsMatrix ref={matrixRef} />
+        </SettingsCard>
+      </div>
 
       <SettingsCard>
         <SectionHeader

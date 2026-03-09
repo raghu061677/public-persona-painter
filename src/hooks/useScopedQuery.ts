@@ -83,7 +83,7 @@ export function useScopedQuery(module: ModuleKey, options: ScopeFilterOptions = 
           return query;
       }
     },
-    [getScopeMode, isPlatformAdmin, isCompanyAdmin, user, module, ownerColumn, additionalOwnerColumns, assignmentColumn, additionalAssignmentColumns]
+    [rbacLoading, getScopeMode, isPlatformAdmin, isCompanyAdmin, user, module, ownerColumn, additionalOwnerColumns, assignmentColumn, additionalAssignmentColumns]
   );
 
   /**

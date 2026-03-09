@@ -785,14 +785,16 @@ export default function ClientsList() {
               Showing {paginatedClients.length} of {filteredAndSortedClients.length} clients
               {(searchTerm || filterState || filterCity || filterGst || filterClientType) && ` (filtered from ${clients.length} total)`}
             </div>
-            <Button 
-              variant="outline" 
-              onClick={exportToExcel}
-              disabled={filteredAndSortedClients.length === 0}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Export to Excel
-            </Button>
+            <ActionGuard module="clients" action="export">
+              <Button 
+                variant="outline" 
+                onClick={exportToExcel}
+                disabled={filteredAndSortedClients.length === 0}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export to Excel
+              </Button>
+            </ActionGuard>
           </CardContent>
         </Card>
 

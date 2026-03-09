@@ -388,8 +388,8 @@ export default function CampaignsList() {
           onPresetUpdate={lv.updateCurrentView}
           onPresetDelete={lv.deletePreset}
           onPresetDuplicate={lv.duplicatePreset}
-          onExportExcel={(fields) => handleExportExcel(filteredCampaigns, fields)}
-          onExportPdf={(fields) => handleExportPdf(filteredCampaigns, fields)}
+          onExportExcel={actions.canExport() ? (fields) => handleExportExcel(filteredCampaigns, fields) : undefined}
+          onExportPdf={actions.canExport() ? (fields) => handleExportPdf(filteredCampaigns, fields) : undefined}
           onReset={() => { lv.resetToDefaults(); setAdvancedFilters({}); }}
           extraActions={
             <Button

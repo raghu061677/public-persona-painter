@@ -717,8 +717,8 @@ export default function PlansList() {
           onPresetUpdate={lv.updateCurrentView}
           onPresetDelete={lv.deletePreset}
           onPresetDuplicate={lv.duplicatePreset}
-          onExportExcel={(fields) => handleExportExcel(filteredPlans, fields)}
-          onExportPdf={(fields) => handleExportPdf(filteredPlans, fields)}
+          onExportExcel={actions.canExport() ? (fields) => handleExportExcel(filteredPlans, fields) : undefined}
+          onExportPdf={actions.canExport() ? (fields) => handleExportPdf(filteredPlans, fields) : undefined}
           onReset={lv.resetToDefaults}
         />
 

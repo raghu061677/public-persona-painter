@@ -21,6 +21,8 @@ type ClientContact = Database['public']['Tables']['client_contacts']['Row'];
 
 interface ClientContactsManagerProps {
   clientId: string;
+  canSeeSensitive?: boolean;
+  isOwner?: boolean;
 }
 
 export function ClientContactsManager({ clientId }: ClientContactsManagerProps) {

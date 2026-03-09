@@ -925,7 +925,8 @@ export default function PlanEdit() {
               </div>
             </SectionCard>
 
-            {/* Plan Summary - Now with Orange Border */}
+            {/* Plan Summary - Hidden for non-owners */}
+            {perms.canViewFinancials && (
             <div className="lg:col-span-1">
               <SectionCard
                 title="Financial Summary"
@@ -943,9 +944,9 @@ export default function PlanEdit() {
                   subtotal={totals.subtotal}
                   discount={totals.totalDiscount}
                   manualDiscount={totals.manualDiscount}
-                  onManualDiscountChange={(val) => setFormData(prev => ({ ...prev, manual_discount_amount: val }))}
+                  onManualDiscountChange={perms.isReadOnly ? undefined : (val) => setFormData(prev => ({ ...prev, manual_discount_amount: val }))}
                   manualDiscountReason={formData.manual_discount_reason}
-                  onManualDiscountReasonChange={(val) => setFormData(prev => ({ ...prev, manual_discount_reason: val }))}
+                  onManualDiscountReasonChange={perms.isReadOnly ? undefined : (val) => setFormData(prev => ({ ...prev, manual_discount_reason: val }))}
                   netTotal={totals.netTotal}
                   profit={totals.totalProfit}
                   gstPercent={parseFloat(formData.gst_percent)}
@@ -956,6 +957,7 @@ export default function PlanEdit() {
                 />
               </SectionCard>
             </div>
+            )}
           </div>
 
           {/* Selected Assets - Full Width */}

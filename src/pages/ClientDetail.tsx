@@ -689,6 +689,7 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </Card>
+          )}
         </TabsContent>
 
         {/* Plans Tab */}

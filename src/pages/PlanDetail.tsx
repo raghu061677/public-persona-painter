@@ -110,6 +110,9 @@ export default function PlanDetail() {
   });
   const [showDiscount, setShowDiscount] = useState(true);
 
+  // Enterprise RBAC: determine access mode for this plan
+  const perms = useRecordPermissions(plan, 'plans');
+
   const loadPendingApprovals = async () => {
     if (!id) return;
     const { data, error } = await supabase

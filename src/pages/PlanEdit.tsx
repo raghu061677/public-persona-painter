@@ -917,21 +917,25 @@ export default function PlanEdit() {
                 className="h-full"
               >
                 <PlanSummaryCard
-                selectedCount={selectedAssets.size}
-                duration={durationDays}
-                displayCost={totals.displayCost}
-                printingCost={totals.printingCost}
-                mountingCost={totals.mountingCost}
-                subtotal={totals.subtotal}
-                discount={totals.totalDiscount}
-                netTotal={totals.netTotal}
-                profit={totals.totalProfit}
-                gstPercent={parseFloat(formData.gst_percent)}
-                gstAmount={totals.gstAmount}
-                grandTotal={totals.grandTotal}
-                baseRent={totals.totalBaseRent}
-                withCard={false}
-              />
+                  selectedCount={selectedAssets.size}
+                  duration={durationDays}
+                  displayCost={totals.displayCost}
+                  printingCost={totals.printingCost}
+                  mountingCost={totals.mountingCost}
+                  subtotal={totals.subtotal}
+                  discount={totals.totalDiscount}
+                  manualDiscount={totals.manualDiscount}
+                  onManualDiscountChange={(val) => setFormData(prev => ({ ...prev, manual_discount_amount: val }))}
+                  manualDiscountReason={formData.manual_discount_reason}
+                  onManualDiscountReasonChange={(val) => setFormData(prev => ({ ...prev, manual_discount_reason: val }))}
+                  netTotal={totals.netTotal}
+                  profit={totals.totalProfit}
+                  gstPercent={parseFloat(formData.gst_percent)}
+                  gstAmount={totals.gstAmount}
+                  grandTotal={totals.grandTotal}
+                  baseRent={totals.totalBaseRent}
+                  withCard={false}
+                />
               </SectionCard>
             </div>
           </div>

@@ -24,7 +24,8 @@ import { logAudit } from "@/utils/auditLog";
 import { STANDARD_COMPANY_ROLES, normalizeRole, getRoleLabel } from "@/lib/rbac/roleNormalization";
 
 interface UserProfile {
-  id: string;
+  id?: string;
+  user_id?: string;
   username: string;
   email?: string;
   roles?: string[];

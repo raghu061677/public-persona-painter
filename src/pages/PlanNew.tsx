@@ -60,7 +60,6 @@ export default function PlanNew() {
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   
   const [formData, setFormData] = useState({
-    id: "",
     client_id: "",
     client_name: "",
     plan_name: "",

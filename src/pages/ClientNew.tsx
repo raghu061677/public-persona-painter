@@ -120,10 +120,16 @@ export default function ClientNew() {
   const [showClearDraftDialog, setShowClearDraftDialog] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
   
+  // Duplicate detection state
+  const [duplicateMatch, setDuplicateMatch] = useState<any>(null);
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
+  
   // Track if the form has been initialized to prevent resets
   const formInitializedRef = useRef(false);
   // Track if user has started typing (dirty form)
   const formTouchedRef = useRef(false);
+  // Debounce timer for duplicate check
+  const duplicateTimerRef = useRef<ReturnType<typeof setTimeout>>();
   
   // Initialize form with draft from sessionStorage immediately (before company loads)
   const [formData, setFormData] = useState(() => {
@@ -166,6 +172,59 @@ export default function ClientNew() {
     return [];
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Duplicate client detection - check by name or GST
+  const checkForDuplicates = useCallback(async (name: string, gstNumber: string) => {
+    if (!company?.id) return;
+    if (!name && !gstNumber) {
+      setDuplicateMatch(null);
+      return;
+    }
+    
+    setCheckingDuplicate(true);
+    try {
+      let query = supabase
+        .from('clients')
+        .select('id, name, company, gst_number, billing_address_line1, billing_city, billing_state, city, state')
+        .eq('company_id', company.id);
+      
+      // Check GST first (exact match), then name (case-insensitive)
+      if (gstNumber && gstNumber.length >= 15) {
+        query = query.eq('gst_number', gstNumber.toUpperCase());
+      } else if (name && name.length >= 3) {
+        query = query.ilike('name', name.trim());
+      } else {
+        setDuplicateMatch(null);
+        setCheckingDuplicate(false);
+        return;
+      }
+      
+      const { data, error } = await query.limit(1);
+      
+      if (!error && data && data.length > 0) {
+        setDuplicateMatch(data[0]);
+      } else {
+        setDuplicateMatch(null);
+      }
+    } catch (err) {
+      console.error('Duplicate check error:', err);
+    } finally {
+      setCheckingDuplicate(false);
+    }
+  }, [company?.id]);
+
+  // Debounced duplicate check when company name or GST changes
+  useEffect(() => {
+    if (duplicateTimerRef.current) clearTimeout(duplicateTimerRef.current);
+    duplicateTimerRef.current = setTimeout(() => {
+      const nameToCheck = formData.customer_type === 'business' ? formData.company : 
+        [formData.first_name, formData.last_name].filter(Boolean).join(' ');
+      checkForDuplicates(nameToCheck, formData.gst_number);
+    }, 500);
+    return () => {
+      if (duplicateTimerRef.current) clearTimeout(duplicateTimerRef.current);
+    };
+  }, [formData.company, formData.first_name, formData.last_name, formData.gst_number, formData.customer_type, checkForDuplicates]);
 
   // Get storage key based on company
   const storageKey = getDraftStorageKey(company?.id);

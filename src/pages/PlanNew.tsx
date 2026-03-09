@@ -409,55 +409,42 @@ export default function PlanNew() {
       // Ensure months_count is at least 0.5 (database constraint)
       const monthsCount = Math.max(0.5, calculateMonthsFromDays(durationDays));
 
-      // Try insert with retry on duplicate key (23505)
-      let plan: any = null;
-      let planId = formData.id;
+      // Generate plan ID server-side via atomic RPC
+      const { data: planId, error: idError } = await supabase.rpc('generate_plan_number', {
+        p_company_id: companyUser.company_id,
+      });
       
-      for (let attempt = 0; attempt < 3; attempt++) {
-        if (attempt > 0) {
-          // Regenerate plan ID on duplicate
-          planId = await generatePlanCode();
-        }
-        
-        const { data: planData, error: planError } = await supabase
-          .from('plans')
-          .insert({
-            id: planId,
-            client_id: formData.client_id,
-            client_name: formData.client_name,
-            plan_name: formData.plan_name,
-            plan_type: formData.plan_type,
-            start_date: formatForSupabase(toDateOnly(formData.start_date)),
-            end_date: formatForSupabase(toDateOnly(formData.end_date)),
-            duration_days: durationDays,
-            duration_mode: formData.duration_mode,
-            months_count: monthsCount,
-            status: 'Draft',
-            total_amount: netTotal,
-            gst_percent: parseFloat(formData.gst_percent),
-            gst_amount: gstAmount,
-            grand_total: grandTotal,
-            notes: formData.notes,
-            created_by: user.id,
-            company_id: companyUser.company_id,
-          } as any)
-          .select()
-          .single();
-        
-        if (planError) {
-          // Retry on duplicate key conflict
-          if (planError.code === '23505' && attempt < 2) {
-            console.warn(`Plan ID ${planId} conflict, retrying...`);
-            continue;
-          }
-          throw planError;
-        }
-        
-        plan = planData;
-        break;
+      if (idError || !planId) {
+        throw new Error(idError?.message || 'Failed to generate plan number');
       }
+
+      const { data: plan, error: planError } = await supabase
+        .from('plans')
+        .insert({
+          id: planId,
+          client_id: formData.client_id,
+          client_name: formData.client_name,
+          plan_name: formData.plan_name,
+          plan_type: formData.plan_type,
+          start_date: formatForSupabase(toDateOnly(formData.start_date)),
+          end_date: formatForSupabase(toDateOnly(formData.end_date)),
+          duration_days: durationDays,
+          duration_mode: formData.duration_mode,
+          months_count: monthsCount,
+          status: 'Draft',
+          total_amount: netTotal,
+          gst_percent: parseFloat(formData.gst_percent),
+          gst_amount: gstAmount,
+          grand_total: grandTotal,
+          notes: formData.notes,
+          created_by: user.id,
+          company_id: companyUser.company_id,
+        } as any)
+        .select()
+        .single();
       
-      if (!plan) throw new Error("Failed to create plan after retries");
+      if (planError) throw planError;
+      if (!plan) throw new Error("Failed to create plan");
 
       // Create plan items with FULL media asset snapshot and per-asset duration
       const items = Array.from(selectedAssets).map(assetId => {

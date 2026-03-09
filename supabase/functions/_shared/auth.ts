@@ -87,15 +87,20 @@ export function withHmac(handler: (req: Request, rawBody: string) => Promise<Res
 
 // ─── Types ───────────────────────────────────────────────────────────
 
-export type AppRole = 'admin' | 'finance' | 'sales' | 'ops' | 'viewer' | 'operations' | 'operations_manager' | 'mounting' | 'installation' | 'monitoring' | 'monitor' | 'manager' | 'user';
+export type AppRole = 'admin' | 'sales' | 'operations_manager' | 'mounting' | 'monitoring' | 'finance' | 'viewer' | 'ops' | 'operations' | 'installation' | 'monitor' | 'manager' | 'user' | 'accounts' | 'company_admin' | 'mounter';
 
 /** Normalize legacy role names to canonical roles for permission checks */
 function normalizeRoleBackend(role: string): string {
   const mapping: Record<string, string> = {
-    ops: 'operations',
+    ops: 'operations_manager',
+    operations: 'operations_manager',
+    manager: 'operations_manager',
+    installation: 'mounting',
+    mounter: 'mounting',
+    monitor: 'monitoring',
     accounts: 'finance',
     company_admin: 'admin',
-    mounter: 'mounting',
+    user: 'viewer',
   };
   return mapping[role] ?? role;
 }

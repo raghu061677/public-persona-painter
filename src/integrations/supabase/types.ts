@@ -2852,10 +2852,12 @@ export type Database = {
           mounting_total: number | null
           notes: string | null
           notification_settings: Json | null
+          owner_id: string | null
           plan_id: string | null
           printing_total: number | null
           public_share_enabled: boolean | null
           public_tracking_token: string | null
+          secondary_owner_ids: string[] | null
           start_date: string
           status: Database["public"]["Enums"]["campaign_status"]
           subtotal: number | null
@@ -2890,10 +2892,12 @@ export type Database = {
           mounting_total?: number | null
           notes?: string | null
           notification_settings?: Json | null
+          owner_id?: string | null
           plan_id?: string | null
           printing_total?: number | null
           public_share_enabled?: boolean | null
           public_tracking_token?: string | null
+          secondary_owner_ids?: string[] | null
           start_date: string
           status?: Database["public"]["Enums"]["campaign_status"]
           subtotal?: number | null
@@ -2928,10 +2932,12 @@ export type Database = {
           mounting_total?: number | null
           notes?: string | null
           notification_settings?: Json | null
+          owner_id?: string | null
           plan_id?: string | null
           printing_total?: number | null
           public_share_enabled?: boolean | null
           public_tracking_token?: string | null
+          secondary_owner_ids?: string[] | null
           start_date?: string
           status?: Database["public"]["Enums"]["campaign_status"]
           subtotal?: number | null
@@ -3287,8 +3293,10 @@ export type Database = {
           is_gst_applicable: boolean | null
           name: string
           notes: string | null
+          owner_id: string | null
           phone: string | null
           search_vector: unknown
+          secondary_owner_ids: string[] | null
           shipping_address_line1: string | null
           shipping_address_line2: string | null
           shipping_city: string | null
@@ -3319,8 +3327,10 @@ export type Database = {
           is_gst_applicable?: boolean | null
           name: string
           notes?: string | null
+          owner_id?: string | null
           phone?: string | null
           search_vector?: unknown
+          secondary_owner_ids?: string[] | null
           shipping_address_line1?: string | null
           shipping_address_line2?: string | null
           shipping_city?: string | null
@@ -3351,8 +3361,10 @@ export type Database = {
           is_gst_applicable?: boolean | null
           name?: string
           notes?: string | null
+          owner_id?: string | null
           phone?: string | null
           search_vector?: unknown
+          secondary_owner_ids?: string[] | null
           shipping_address_line1?: string | null
           shipping_address_line2?: string | null
           shipping_city?: string | null
@@ -9315,8 +9327,10 @@ export type Database = {
           months_count: number | null
           notes: string | null
           owner_company_id: string | null
+          owner_id: string | null
           plan_name: string
           plan_type: Database["public"]["Enums"]["plan_type"]
+          secondary_owner_ids: string[] | null
           sgst_amount: number | null
           sgst_percent: number | null
           share_link_active: boolean | null
@@ -9358,8 +9372,10 @@ export type Database = {
           months_count?: number | null
           notes?: string | null
           owner_company_id?: string | null
+          owner_id?: string | null
           plan_name: string
           plan_type?: Database["public"]["Enums"]["plan_type"]
+          secondary_owner_ids?: string[] | null
           sgst_amount?: number | null
           sgst_percent?: number | null
           share_link_active?: boolean | null
@@ -9401,8 +9417,10 @@ export type Database = {
           months_count?: number | null
           notes?: string | null
           owner_company_id?: string | null
+          owner_id?: string | null
           plan_name?: string
           plan_type?: Database["public"]["Enums"]["plan_type"]
+          secondary_owner_ids?: string[] | null
           sgst_amount?: number | null
           sgst_percent?: number | null
           share_link_active?: boolean | null
@@ -11674,6 +11692,10 @@ export type Database = {
           location: string
           media_asset_code: string
         }[]
+      }
+      check_record_detail_access: {
+        Args: { p_record_id: string; p_table_name: string; p_user_id: string }
+        Returns: boolean
       }
       check_role_permission: {
         Args: { p_action: string; p_module: string; p_user_id: string }

@@ -8211,6 +8211,8 @@ export type Database = {
           igst_amount: number | null
           igst_percent: number | null
           is_archived: boolean
+          manual_discount_amount: number | null
+          manual_discount_reason: string | null
           months_count: number | null
           notes: string | null
           owner_company_id: string | null
@@ -8252,6 +8254,8 @@ export type Database = {
           igst_amount?: number | null
           igst_percent?: number | null
           is_archived?: boolean
+          manual_discount_amount?: number | null
+          manual_discount_reason?: string | null
           months_count?: number | null
           notes?: string | null
           owner_company_id?: string | null
@@ -8293,6 +8297,8 @@ export type Database = {
           igst_amount?: number | null
           igst_percent?: number | null
           is_archived?: boolean
+          manual_discount_amount?: number | null
+          manual_discount_reason?: string | null
           months_count?: number | null
           notes?: string | null
           owner_company_id?: string | null

@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { AlertCircle, TrendingUp, Download } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -13,6 +14,10 @@ interface PlanSummaryCardProps {
   mountingCost: number;
   subtotal: number;
   discount: number;
+  manualDiscount?: number;
+  onManualDiscountChange?: (value: number) => void;
+  manualDiscountReason?: string;
+  onManualDiscountReasonChange?: (value: string) => void;
   netTotal: number;
   profit: number;
   gstPercent: number;
@@ -31,6 +36,10 @@ export function PlanSummaryCard({
   mountingCost,
   subtotal,
   discount,
+  manualDiscount = 0,
+  onManualDiscountChange,
+  manualDiscountReason = "",
+  onManualDiscountReasonChange,
   netTotal,
   profit,
   gstPercent,
@@ -109,8 +118,40 @@ export function PlanSummaryCard({
         <div className="space-y-3 pt-2 border-t">
           {showDiscount && discount > 0 && (
             <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-destructive">Discount</span>
+              <span className="text-sm font-medium text-destructive">Auto Discount</span>
               <span className="font-semibold text-destructive">-{formatCurrency(discount)}</span>
+            </div>
+          )}
+          
+          {/* Manual Discount Input */}
+          {onManualDiscountChange && (
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-orange-600 dark:text-orange-400">Manual Discount</span>
+                <Input
+                  type="number"
+                  min={0}
+                  value={manualDiscount || ''}
+                  onChange={(e) => onManualDiscountChange(parseFloat(e.target.value) || 0)}
+                  className="h-7 w-32 text-right text-sm"
+                  placeholder="₹0"
+                />
+              </div>
+              {onManualDiscountReasonChange && manualDiscount > 0 && (
+                <Input
+                  type="text"
+                  value={manualDiscountReason}
+                  onChange={(e) => onManualDiscountReasonChange(e.target.value)}
+                  className="h-7 text-xs"
+                  placeholder="Discount reason (optional)"
+                />
+              )}
+            </div>
+          )}
+          {!onManualDiscountChange && manualDiscount > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium text-orange-600 dark:text-orange-400">Manual Discount</span>
+              <span className="font-semibold text-orange-600 dark:text-orange-400">-{formatCurrency(manualDiscount)}</span>
             </div>
           )}
           

@@ -45,6 +45,9 @@ import { PlanSummaryCard } from "@/components/plans/PlanSummaryCard";
 import { calcProRata, calcDiscount, calcProfit } from "@/utils/pricing";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { generateProposalExcel } from "@/lib/exports/proposalExcelExport";
+import { calculatePrintingCost, calculateMountingCost, getAssetSqft } from "@/utils/effectivePricing";
+import { computeRentAmount, BillingMode } from "@/utils/perAssetPricing";
+import { addDays } from "date-fns";
 
 type TaxType = 'CGST_SGST' | 'IGST';
 
@@ -74,6 +77,8 @@ export default function PlanEdit() {
     gst_percent: "18",
     tax_type: "CGST_SGST" as TaxType,
     notes: "",
+    manual_discount_amount: 0,
+    manual_discount_reason: "",
   });
 
   useEffect(() => {
@@ -159,9 +164,9 @@ export default function PlanEdit() {
         gst_percent: plan.gst_percent.toString(),
         tax_type: ((plan as any).tax_type as TaxType) || 'CGST_SGST',
         notes: plan.notes || "",
+        manual_discount_amount: (plan as any).manual_discount_amount || 0,
+        manual_discount_reason: (plan as any).manual_discount_reason || "",
       });
-
-      // Fetch plan items
       const { data: items } = await supabase
         .from('plan_items')
         .select('*')
@@ -229,7 +234,7 @@ export default function PlanEdit() {
     }
   };
 
-  const toggleAssetSelection = (assetId: string, asset: any) => {
+  const toggleAssetSelection = async (assetId: string, asset: any) => {
     const newSelected = new Set(selectedAssets);
     if (newSelected.has(assetId)) {
       newSelected.delete(assetId);
@@ -249,10 +254,42 @@ export default function PlanEdit() {
       const profit = calcProfit(baseRate, cardRate);
       
       // Initialize with plan-level dates for per-asset duration
-      const planStart = formatForSupabase(toDateOnly(formData.start_date));
-      const planEnd = formatForSupabase(toDateOnly(formData.end_date));
+      let planStart = formatForSupabase(toDateOnly(formData.start_date));
+      let planEnd = formatForSupabase(toDateOnly(formData.end_date));
+      let assetDays = days;
+      
+      // Check if this asset has a running campaign and auto-set start date
+      try {
+        const { data: activeBookings } = await supabase
+          .from('campaign_assets')
+          .select('booking_end_date, end_date')
+          .eq('asset_id', assetId)
+          .in('status', ['Assigned', 'Installed', 'Mounted', 'In Progress', 'PhotoUploaded'])
+          .order('booking_end_date', { ascending: false })
+          .limit(1);
+        
+        if (activeBookings && activeBookings.length > 0) {
+          const campaignEndDate = activeBookings[0].booking_end_date || activeBookings[0].end_date;
+          if (campaignEndDate) {
+            const endDate = new Date(campaignEndDate);
+            const newStart = addDays(endDate, 1);
+            // Only adjust if the campaign end is after plan start
+            if (newStart > new Date(formData.start_date)) {
+              planStart = formatForSupabase(toDateOnly(newStart));
+              assetDays = calculateDurationDays(newStart, new Date(formData.end_date));
+              toast({
+                title: "Start Date Adjusted",
+                description: `Asset is booked until ${campaignEndDate}. Start date set to ${planStart}.`,
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error checking active bookings:', err);
+      }
+      
       const dailyRate = cardRate / BILLING_CYCLE_DAYS;
-      const rentAmount = dailyRate * days;
+      const rentAmount = dailyRate * assetDays;
       
       setAssetPricing(prev => ({
         ...prev,
@@ -265,10 +302,13 @@ export default function PlanEdit() {
           profit_percent: profit.percent,
           printing_charges: asset.printing_charges || 0,
           mounting_charges: asset.mounting_charges || 0,
-          // Per-asset duration fields initialized from plan
+          printing_rate: 0,
+          mounting_rate: 0,
+          mounting_mode: 'sqft',
+          // Per-asset duration fields initialized from plan (or adjusted for bookings)
           start_date: planStart,
           end_date: planEnd,
-          booked_days: days,
+          booked_days: assetDays,
           billing_mode: 'PRORATA_30',
           daily_rate: dailyRate,
           rent_amount: rentAmount,
@@ -358,17 +398,34 @@ export default function PlanEdit() {
       const asset = availableAssets.find(a => a.id === assetId);
       
       if (pricing && asset) {
-        // Use per-asset booked_days if available, fallback to plan duration
-        const assetDays = pricing.booked_days || formData.duration_days;
-        
         const cardRate = asset.card_rate || 0;
         const baseRate = asset.base_rate || 0;
         const negotiatedPrice = pricing.negotiated_price || cardRate;
-        const printing = pricing.printing_charges || 0;
-        const mounting = pricing.mounting_charges || 0;
         
-        // Calculate pro-rata based on negotiated price using per-asset days
-        const proRata = calcProRata(negotiatedPrice, assetDays);
+        // Use per-asset dates if available, fallback to plan dates
+        const assetStartDate = pricing.start_date 
+          ? new Date(pricing.start_date) 
+          : new Date(formData.start_date);
+        const assetEndDate = pricing.end_date 
+          ? new Date(pricing.end_date) 
+          : new Date(formData.end_date);
+        const billingMode: BillingMode = pricing.billing_mode || 'PRORATA_30';
+        
+        // Use computeRentAmount to match SelectedAssetsTable calculation exactly
+        const rentResult = computeRentAmount(negotiatedPrice, assetStartDate, assetEndDate, billingMode);
+        const assetDays = rentResult.booked_days;
+        const rentAmount = rentResult.rent_amount;
+        
+        // Calculate printing cost using rate × sqft (same as SelectedAssetsTable)
+        const printingRate = pricing.printing_rate || 0;
+        const mountingRate = pricing.mounting_rate || 0;
+        const mountingMode = pricing.mounting_mode || 'sqft';
+        
+        const printingResult = calculatePrintingCost(asset, printingRate);
+        const mountingResult = calculateMountingCost(asset, mountingRate);
+        
+        const printing = printingResult.cost;
+        const mounting = mountingMode === 'fixed' ? mountingRate : mountingResult.cost;
         
         // Calculate discount: (Card Rate - Negotiated Price) pro-rated
         const discountMonthly = cardRate - negotiatedPrice;
@@ -378,17 +435,18 @@ export default function PlanEdit() {
         const profitMonthly = negotiatedPrice - baseRate;
         const profitProRata = calcProRata(profitMonthly, assetDays);
         
-        displayCost += proRata;
+        displayCost += rentAmount;
         printingCost += printing;
         mountingCost += mounting;
         totalDiscount += discountProRata;
         totalProfit += profitProRata;
-        totalBaseRent += calcProRata(baseRate, assetDays);  // Pro-rate the base rate
+        totalBaseRent += calcProRata(baseRate, assetDays);
       }
     });
 
     const subtotal = displayCost + printingCost + mountingCost;
-    const netTotal = subtotal;
+    const manualDiscount = formData.manual_discount_amount || 0;
+    const netTotal = subtotal - manualDiscount;
     const gstPercent = parseFloat(formData.gst_percent);
     const totalGst = (netTotal * gstPercent) / 100;
     
@@ -411,6 +469,7 @@ export default function PlanEdit() {
       printingCost,
       mountingCost,
       subtotal,
+      manualDiscount,
       totalDiscount,
       netTotal,
       totalProfit,
@@ -472,6 +531,8 @@ export default function PlanEdit() {
           sgst_amount: totals.sgstAmount,
           igst_amount: totals.igstAmount,
           notes: formData.notes,
+          manual_discount_amount: formData.manual_discount_amount || 0,
+          manual_discount_reason: formData.manual_discount_reason || null,
         } as any)
         .eq('id', id);
 
@@ -856,21 +917,25 @@ export default function PlanEdit() {
                 className="h-full"
               >
                 <PlanSummaryCard
-                selectedCount={selectedAssets.size}
-                duration={durationDays}
-                displayCost={totals.displayCost}
-                printingCost={totals.printingCost}
-                mountingCost={totals.mountingCost}
-                subtotal={totals.subtotal}
-                discount={totals.totalDiscount}
-                netTotal={totals.netTotal}
-                profit={totals.totalProfit}
-                gstPercent={parseFloat(formData.gst_percent)}
-                gstAmount={totals.gstAmount}
-                grandTotal={totals.grandTotal}
-                baseRent={totals.totalBaseRent}
-                withCard={false}
-              />
+                  selectedCount={selectedAssets.size}
+                  duration={durationDays}
+                  displayCost={totals.displayCost}
+                  printingCost={totals.printingCost}
+                  mountingCost={totals.mountingCost}
+                  subtotal={totals.subtotal}
+                  discount={totals.totalDiscount}
+                  manualDiscount={totals.manualDiscount}
+                  onManualDiscountChange={(val) => setFormData(prev => ({ ...prev, manual_discount_amount: val }))}
+                  manualDiscountReason={formData.manual_discount_reason}
+                  onManualDiscountReasonChange={(val) => setFormData(prev => ({ ...prev, manual_discount_reason: val }))}
+                  netTotal={totals.netTotal}
+                  profit={totals.totalProfit}
+                  gstPercent={parseFloat(formData.gst_percent)}
+                  gstAmount={totals.gstAmount}
+                  grandTotal={totals.grandTotal}
+                  baseRent={totals.totalBaseRent}
+                  withCard={false}
+                />
               </SectionCard>
             </div>
           </div>

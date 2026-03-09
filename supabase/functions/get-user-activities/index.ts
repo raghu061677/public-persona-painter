@@ -23,16 +23,17 @@ Deno.serve(withAuth(async (req) => {
   if (cuError) throw cuError;
 
   // Fetch user emails from auth.users via admin API
-  const userEmailMap: Record<string, { email: string; name: string }> = {};
+  const userEmailMap: Record<string, { email: string; name: string; last_sign_in_at: string | null }> = {};
   for (const cu of (companyUsers || [])) {
     try {
       const { data: authUser } = await serviceClient.auth.admin.getUserById(cu.user_id);
       userEmailMap[cu.user_id] = {
         email: authUser?.user?.email || '',
         name: authUser?.user?.user_metadata?.username || authUser?.user?.email?.split('@')[0] || 'Unknown',
+        last_sign_in_at: authUser?.user?.last_sign_in_at || null,
       };
     } catch {
-      userEmailMap[cu.user_id] = { email: '', name: 'Unknown' };
+      userEmailMap[cu.user_id] = { email: '', name: 'Unknown', last_sign_in_at: null };
     }
   }
 
@@ -56,6 +57,7 @@ Deno.serve(withAuth(async (req) => {
         username: userInfo.name,
         email: userInfo.email,
         role: cu.role,
+        last_sign_in_at: userInfo.last_sign_in_at,
         total_actions: count || 0,
         recent_actions: (recentActions || []).map((action: any) => ({
           activity_type: action.action,

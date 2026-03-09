@@ -53,6 +53,7 @@ const ClientDetail = lazy(() => import("./pages/ClientDetail"));
 const LeadsList = lazy(() => import("./pages/LeadsList"));
 const LeadDetail = lazy(() => import("./pages/LeadDetail"));
 const LeadNew = lazy(() => import("./pages/LeadNew"));
+const LeadMergeReview = lazy(() => import("./pages/LeadMergeReview"));
 const PlansList = lazy(() => import("./pages/PlansList"));
 const PlanNew = lazy(() => import("./pages/PlanNew"));
 const PlanEdit = lazy(() => import("./pages/PlanEdit"));

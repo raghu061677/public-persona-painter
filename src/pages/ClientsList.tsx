@@ -3,6 +3,7 @@ import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { useScopedQuery } from "@/hooks/useScopedQuery";
 import { useSensitiveFieldMask } from "@/components/rbac/SensitiveField";
+import { supabase } from "@/integrations/supabase/client";
 import { generateClientCode } from "@/lib/codeGenerator";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/navigation/PageHeader";

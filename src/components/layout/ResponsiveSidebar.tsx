@@ -303,7 +303,9 @@ export function ResponsiveSidebar() {
               <SidebarMenu>
                 <MenuItem icon={Map} label="Media Assets" href="/admin/media-assets" />
                 <MenuItem icon={Calendar} label="Media Availability" href="/admin/reports/vacant-media" />
-                <MenuItem icon={FileCheck} label="Asset Validation" href="/admin/media-assets-validation" />
+                {(isCompanyAdmin || companyUser?.role === 'finance') && (
+                  <MenuItem icon={FileCheck} label="Asset Validation" href="/admin/media-assets-validation" />
+                )}
               </SidebarMenu>
               <Separator className="my-2" />
 

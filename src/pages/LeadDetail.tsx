@@ -401,6 +401,27 @@ export default function LeadDetail() {
           </div>
         </Card>
       )}
+
+      {lead && (
+        <ConvertLeadToClientDialog
+          lead={{
+            id: lead.id,
+            name: lead.name,
+            company: lead.company,
+            email: lead.email,
+            phone: lead.phone,
+            location: lead.location,
+            requirement: lead.requirement,
+            source: lead.source,
+            client_id: lead.client_id,
+            converted_at: lead.converted_at,
+            metadata: lead.metadata as Record<string, any> | null,
+          }}
+          open={convertDialogOpen}
+          onOpenChange={setConvertDialogOpen}
+          onConverted={() => queryClient.invalidateQueries({ queryKey: ["lead", id] })}
+        />
+      )}
     </div>
   );
 }

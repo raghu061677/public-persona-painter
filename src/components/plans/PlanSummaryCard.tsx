@@ -13,6 +13,10 @@ interface PlanSummaryCardProps {
   mountingCost: number;
   subtotal: number;
   discount: number;
+  manualDiscount?: number;
+  onManualDiscountChange?: (value: number) => void;
+  manualDiscountReason?: string;
+  onManualDiscountReasonChange?: (value: string) => void;
   netTotal: number;
   profit: number;
   gstPercent: number;

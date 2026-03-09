@@ -6340,6 +6340,115 @@ export type Database = {
           },
         ]
       }
+      marketplace_requests: {
+        Row: {
+          campaign_name: string | null
+          client_name: string | null
+          counter_notes: string | null
+          counter_offer_price: number | null
+          created_at: string
+          created_campaign_id: string | null
+          end_date: string
+          id: string
+          listing_id: string
+          notes: string | null
+          offer_price: number
+          rejection_reason: string | null
+          requested_by: string | null
+          requesting_company_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_name?: string | null
+          client_name?: string | null
+          counter_notes?: string | null
+          counter_offer_price?: number | null
+          created_at?: string
+          created_campaign_id?: string | null
+          end_date: string
+          id?: string
+          listing_id: string
+          notes?: string | null
+          offer_price?: number
+          rejection_reason?: string | null
+          requested_by?: string | null
+          requesting_company_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_name?: string | null
+          client_name?: string | null
+          counter_notes?: string | null
+          counter_offer_price?: number | null
+          created_at?: string
+          created_campaign_id?: string | null
+          end_date?: string
+          id?: string
+          listing_id?: string
+          notes?: string | null
+          offer_price?: number
+          rejection_reason?: string | null
+          requested_by?: string | null
+          requesting_company_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_requests_created_campaign_id_fkey"
+            columns: ["created_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_requests_created_campaign_id_fkey"
+            columns: ["created_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_requests_created_campaign_id_fkey"
+            columns: ["created_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_requests_created_campaign_id_fkey"
+            columns: ["created_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_forecast"
+            referencedColumns: ["campaign_id"]
+          },
+          {
+            foreignKeyName: "marketplace_requests_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_requests_requesting_company_id_fkey"
+            columns: ["requesting_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketplace_transactions: {
         Row: {
           booking_request_id: string | null
@@ -6352,6 +6461,7 @@ export type Database = {
           notes: string | null
           platform_fee: number
           platform_fee_percent: number
+          platform_fee_type: string
           seller_company_id: string
           status: string
           transaction_value: number
@@ -6368,6 +6478,7 @@ export type Database = {
           notes?: string | null
           platform_fee?: number
           platform_fee_percent?: number
+          platform_fee_type?: string
           seller_company_id: string
           status?: string
           transaction_value?: number
@@ -6384,6 +6495,7 @@ export type Database = {
           notes?: string | null
           platform_fee?: number
           platform_fee_percent?: number
+          platform_fee_type?: string
           seller_company_id?: string
           status?: string
           transaction_value?: number

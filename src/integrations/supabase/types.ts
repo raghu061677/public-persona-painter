@@ -4264,6 +4264,53 @@ export type Database = {
           },
         ]
       }
+      email_delivery_logs: {
+        Row: {
+          attempt_no: number
+          created_at: string
+          error_message: string | null
+          id: string
+          outbox_id: string | null
+          provider_name: string | null
+          provider_type: string | null
+          request_payload_meta: Json | null
+          response_meta: Json | null
+          status: string
+        }
+        Insert: {
+          attempt_no?: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          outbox_id?: string | null
+          provider_name?: string | null
+          provider_type?: string | null
+          request_payload_meta?: Json | null
+          response_meta?: Json | null
+          status?: string
+        }
+        Update: {
+          attempt_no?: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          outbox_id?: string | null
+          provider_name?: string | null
+          provider_type?: string | null
+          request_payload_meta?: Json | null
+          response_meta?: Json | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_delivery_logs_outbox_id_fkey"
+            columns: ["outbox_id"]
+            isOneToOne: false
+            referencedRelation: "email_outbox"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_logs: {
         Row: {
           ai_parsed_data: Json | null
@@ -4307,6 +4354,155 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_outbox: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          html_rendered: string
+          id: string
+          last_error: string | null
+          provider_config_id: string | null
+          recipient_bcc: string | null
+          recipient_cc: string | null
+          recipient_to: string
+          retry_count: number
+          scheduled_at: string | null
+          sent_at: string | null
+          status: string
+          subject_rendered: string
+          template_key: string | null
+          text_rendered: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          html_rendered: string
+          id?: string
+          last_error?: string | null
+          provider_config_id?: string | null
+          recipient_bcc?: string | null
+          recipient_cc?: string | null
+          recipient_to: string
+          retry_count?: number
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string
+          subject_rendered: string
+          template_key?: string | null
+          text_rendered?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          html_rendered?: string
+          id?: string
+          last_error?: string | null
+          provider_config_id?: string | null
+          recipient_bcc?: string | null
+          recipient_cc?: string | null
+          recipient_to?: string
+          retry_count?: number
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string
+          subject_rendered?: string
+          template_key?: string | null
+          text_rendered?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_outbox_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_outbox_provider_config_id_fkey"
+            columns: ["provider_config_id"]
+            isOneToOne: false
+            referencedRelation: "email_provider_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_provider_configs: {
+        Row: {
+          company_id: string
+          created_at: string
+          daily_limit: number | null
+          from_email: string | null
+          from_name: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          provider_name: string
+          provider_type: string
+          reply_to_email: string | null
+          resend_api_key_encrypted: string | null
+          smtp_host: string | null
+          smtp_password_encrypted: string | null
+          smtp_port: number | null
+          smtp_secure: boolean | null
+          smtp_username: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          daily_limit?: number | null
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          provider_name?: string
+          provider_type?: string
+          reply_to_email?: string | null
+          resend_api_key_encrypted?: string | null
+          smtp_host?: string | null
+          smtp_password_encrypted?: string | null
+          smtp_port?: number | null
+          smtp_secure?: boolean | null
+          smtp_username?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          daily_limit?: number | null
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          provider_name?: string
+          provider_type?: string
+          reply_to_email?: string | null
+          resend_api_key_encrypted?: string | null
+          smtp_host?: string | null
+          smtp_password_encrypted?: string | null
+          smtp_port?: number | null
+          smtp_secure?: boolean | null
+          smtp_username?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_provider_configs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -4426,49 +4622,137 @@ export type Database = {
           },
         ]
       }
-      email_templates: {
+      email_suppressions: {
         Row: {
-          company_id: string
-          created_at: string | null
-          html_body: string
+          company_id: string | null
+          created_at: string
+          email: string
           id: string
-          is_active: boolean | null
-          subject: string
-          template_key: string
-          template_name: string
-          text_body: string | null
-          updated_at: string | null
-          variables: Json | null
+          is_active: boolean
+          reason: string
         }
         Insert: {
-          company_id: string
-          created_at?: string | null
-          html_body?: string
+          company_id?: string | null
+          created_at?: string
+          email: string
           id?: string
-          is_active?: boolean | null
-          subject: string
-          template_key: string
-          template_name: string
-          text_body?: string | null
-          updated_at?: string | null
-          variables?: Json | null
+          is_active?: boolean
+          reason?: string
         }
         Update: {
-          company_id?: string
+          company_id?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          is_active?: boolean
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_suppressions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          channel: string
+          company_id: string
+          created_at: string | null
+          html_template: string
+          id: string
+          is_active: boolean | null
+          is_system: boolean
+          subject_template: string
+          template_key: string
+          template_name: string
+          text_template: string | null
+          updated_at: string | null
+          variables_json: Json | null
+          version: number
+        }
+        Insert: {
+          channel?: string
+          company_id: string
           created_at?: string | null
-          html_body?: string
+          html_template?: string
           id?: string
           is_active?: boolean | null
-          subject?: string
+          is_system?: boolean
+          subject_template: string
+          template_key: string
+          template_name: string
+          text_template?: string | null
+          updated_at?: string | null
+          variables_json?: Json | null
+          version?: number
+        }
+        Update: {
+          channel?: string
+          company_id?: string
+          created_at?: string | null
+          html_template?: string
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean
+          subject_template?: string
           template_key?: string
           template_name?: string
-          text_body?: string | null
+          text_template?: string | null
           updated_at?: string | null
-          variables?: Json | null
+          variables_json?: Json | null
+          version?: number
         }
         Relationships: [
           {
             foreignKeyName: "email_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_webhook_events: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          event_at: string | null
+          event_type: string
+          external_message_id: string | null
+          id: string
+          payload: Json | null
+          provider_type: string
+          recipient_email: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          event_at?: string | null
+          event_type: string
+          external_message_id?: string | null
+          id?: string
+          payload?: Json | null
+          provider_type: string
+          recipient_email?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          event_at?: string | null
+          event_type?: string
+          external_message_id?: string | null
+          id?: string
+          payload?: Json | null
+          provider_type?: string
+          recipient_email?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_webhook_events_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"

@@ -291,20 +291,30 @@ export function ResponsiveSidebar() {
             </>
           )}
 
-          {/* Company Workspace */}
+          {/* MEDIA INVENTORY */}
           {company && company.type !== 'platform_admin' && (
             <>
-              {!collapsed && <SidebarGroupLabel className="px-4">Company Workspace</SidebarGroupLabel>}
               <SidebarMenu>
                 <MenuItem icon={LayoutDashboard} label="Dashboard" href="/admin/dashboard" />
-                
+              </SidebarMenu>
+              <Separator className="my-2" />
+
+              {!collapsed && <SidebarGroupLabel className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">Media Inventory</SidebarGroupLabel>}
+              <SidebarMenu>
                 <MenuItem icon={Map} label="Media Assets" href="/admin/media-assets" />
-                
+                <MenuItem icon={Calendar} label="Media Availability" href="/admin/reports/vacant-media" />
+                <MenuItem icon={FileCheck} label="Asset Validation" href="/admin/media-assets-validation" />
+              </SidebarMenu>
+              <Separator className="my-2" />
+
+              {/* SALES & CAMPAIGNS */}
+              {!collapsed && <SidebarGroupLabel className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">Sales & Campaigns</SidebarGroupLabel>}
+              <SidebarMenu>
                 <MenuItem icon={UserPlus} label="Leads" href="/admin/leads" />
-                
                 <MenuItem icon={Users} label="Clients" href="/admin/clients" />
-                
+                <MenuItem icon={ShoppingBag} label="Booking Requests" href="/admin/booking-requests" />
                 <MenuItem icon={Layers} label="Plans" href="/admin/plans" />
+                <MenuItem icon={Briefcase} label="Campaigns" href="/admin/campaigns" />
 
                 <MenuGroup icon={CheckCircle2} label="Approvals">
                   <MenuItem icon={ListChecks} label="Pending Approvals" href="/admin/approvals" badge={pendingApprovalsCount} />
@@ -313,88 +323,99 @@ export function ResponsiveSidebar() {
                     <MenuItem icon={Settings} label="Approval Rules" href="/admin/approvals/rules" />
                   )}
                 </MenuGroup>
-                
-                <MenuItem icon={Briefcase} label="Campaigns" href="/admin/campaigns" />
+              </SidebarMenu>
+              <Separator className="my-2" />
 
-                {rbac.canViewModule('operations') && (
-                  <MenuGroup icon={TrendingUp} label="Operations">
+              {/* OPERATIONS */}
+              {rbac.canViewModule('operations') && (
+                <>
+                  {!collapsed && <SidebarGroupLabel className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">Operations</SidebarGroupLabel>}
+                  <SidebarMenu>
+                    <MenuItem icon={TrendingUp} label="Operations" href="/admin/operations" />
                     <MenuItem icon={Image} label="Creative Received" href="/admin/operations/creatives" />
                     <MenuItem icon={FileCheck} label="Printing Status" href="/admin/operations/printing" />
-                    <MenuItem icon={TrendingUp} label="Mounting Assignment" href="/admin/operations" />
                     <MenuItem icon={Image} label="Proof Uploads" href="/admin/operations/proof-uploads" />
-                  </MenuGroup>
-                )}
+                    <MenuItem icon={Image} label="Proof Execution" href="/admin/reports/proof-execution" />
+                  </SidebarMenu>
+                  <Separator className="my-2" />
+                </>
+              )}
 
-                {rbac.canViewModule('finance') && (
-                  <>
-                    <MenuGroup icon={DollarSign} label="Finance">
-                      <MenuItem icon={FileSpreadsheet} label="Quotations" href="/admin/estimations" />
-                      <MenuItem icon={FileText} label="Sales Orders" href="/admin/sales-orders" />
-                      <MenuItem icon={FileCheck} label="Purchase Orders" href="/admin/purchase-orders" />
-                      <MenuItem icon={FileCheck} label="Proforma Invoice" href="/admin/proformas" />
-                      <MenuItem icon={Receipt} label="Invoices" href="/admin/invoices" />
-                      <MenuItem icon={CreditCard} label="Payments" href="/admin/payments" />
-                      <MenuItem icon={DollarSign} label="Expenses" href="/admin/expenses" />
-                      <MenuItem icon={Zap} label="Power Bills" href="/admin/power-bills" />
-                      <MenuItem icon={CalendarDays} label="Month Close" href="/admin/finance/month-close" />
-                      <MenuItem icon={Layers} label="Concession Allocation" href="/admin/finance/concession-allocation" />
-                    </MenuGroup>
+              {/* FINANCE */}
+              {rbac.canViewModule('finance') && (
+                <>
+                  {!collapsed && <SidebarGroupLabel className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">Finance</SidebarGroupLabel>}
+                  <SidebarMenu>
+                    <MenuItem icon={FileSpreadsheet} label="Quotations" href="/admin/estimations" />
+                    <MenuItem icon={FileText} label="Sales Orders" href="/admin/sales-orders" />
+                    <MenuItem icon={FileCheck} label="Purchase Orders" href="/admin/purchase-orders" />
+                    <MenuItem icon={FileCheck} label="Proforma Invoice" href="/admin/proformas" />
+                    <MenuItem icon={Receipt} label="Invoices" href="/admin/invoices" />
+                    <MenuItem icon={CreditCard} label="Payments" href="/admin/payments" />
+                    <MenuItem icon={DollarSign} label="Expenses" href="/admin/expenses" />
+                    <MenuItem icon={Zap} label="Power Bills" href="/admin/power-bills" />
+                    <MenuItem icon={CalendarDays} label="Month Close" href="/admin/finance/month-close" />
+                    <MenuItem icon={Layers} label="Concession Allocation" href="/admin/finance/concession-allocation" />
                     <MenuGroup icon={Wallet} label="Payables">
                       <MenuItem icon={Zap} label="Generate Payables" href="/admin/finance/generate-payables" />
                       <MenuItem icon={FileText} label="Vendor Ledger" href="/admin/reports/vendor-ledger" />
                       <MenuItem icon={FileText} label="Printer Ledger" href="/admin/reports/printer-ledger" />
                       <MenuItem icon={Wallet} label="Ops Payables" href="/admin/reports/ops-payables" />
                     </MenuGroup>
-                  </>
-                )}
+                    <MenuItem icon={Wallet} label="Outstanding" href="/admin/reports/outstanding" />
+                    <MenuItem icon={Clock} label="Aging Report" href="/admin/reports/aging" />
+                  </SidebarMenu>
+                  <Separator className="my-2" />
+                </>
+              )}
 
-                {rbac.canViewModule('reports') && (
-                  <MenuGroup icon={BarChart3} label="Reports">
-                    <MenuItem icon={Map} label="Media Availability" href="/admin/reports/vacant-media" />
-                    <MenuItem icon={Calendar} label="Booked Media" href="/admin/reports/booked-media" />
-                    <MenuItem icon={CalendarDays} label="Monthly Campaigns" href="/admin/reports/monthly-campaigns" />
+              {/* REPORTS */}
+              {rbac.canViewModule('reports') && (
+                <>
+                  {!collapsed && <SidebarGroupLabel className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">Reports</SidebarGroupLabel>}
+                  <SidebarMenu>
                     <MenuItem icon={Users} label="Client Bookings" href="/admin/reports/client-bookings" />
                     <MenuItem icon={Briefcase} label="Campaign Bookings" href="/admin/reports/campaigns" />
-                    <MenuItem icon={TrendingUp} label="Asset Revenue" href="/admin/reports/revenue" />
+                    <MenuItem icon={TrendingUp} label="Revenue Center" href="/admin/reports/revenue" />
                     <MenuItem icon={DollarSign} label="Financial Summary" href="/admin/reports/financial" />
-                    <MenuItem icon={Image} label="Proof Execution" href="/admin/reports/proof-execution" />
-                    <MenuItem icon={Clock} label="Aging Report" href="/admin/reports/aging" />
-                    <MenuItem icon={Wallet} label="Outstanding" href="/admin/reports/outstanding" />
-                  </MenuGroup>
-                )}
-              </SidebarMenu>
-              <Separator className="my-2" />
+                  </SidebarMenu>
+                  <Separator className="my-2" />
+                </>
+              )}
 
-              {/* Tools */}
-              {!collapsed && <SidebarGroupLabel className="px-4">Tools</SidebarGroupLabel>}
+              {/* TOOLS */}
+              {!collapsed && <SidebarGroupLabel className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">Tools</SidebarGroupLabel>}
               <SidebarMenu>
                 <MenuItem icon={Sparkles} label="AI Assistant" href="/admin/ai-assistant" />
-                <MenuItem icon={Smartphone} label="Mobile Field App" href="/mobile" />
                 <MenuItem icon={Image} label="Photo Library" href="/admin/photo-library" />
+                <MenuItem icon={Smartphone} label="Mobile Field App" href="/mobile" />
                 <MenuItem icon={Globe} label="Marketplace" href="/marketplace" />
-                <MenuItem icon={ShoppingBag} label="Booking Requests" href="/admin/booking-requests" />
               </SidebarMenu>
               <Separator className="my-2" />
 
-              {/* Company Settings */}
+              {/* SYSTEM / SETTINGS */}
               {(isCompanyAdmin || isPlatformAdmin) && (
                 <>
-                  {!collapsed && <SidebarGroupLabel className="px-4">Settings</SidebarGroupLabel>}
+                  {!collapsed && <SidebarGroupLabel className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">System</SidebarGroupLabel>}
                   <SidebarMenu>
                     <MenuGroup icon={Building2} label="Organization">
-                      <MenuItem icon={Building2} label="Profile" href="/admin/company-settings/profile" />
-                      <MenuItem icon={Palette} label="Branding" href="/admin/company-settings/branding" />
-                      <MenuItem icon={CreditCard} label="Subscription" href="/admin/company-settings" />
+                      <MenuItem icon={Building2} label="Company Profile" href="/admin/company-settings/profile" />
+                      <MenuItem icon={Palette} label="Branding / Logo" href="/admin/company-settings/branding" />
+                      <MenuItem icon={Globe} label="Email Settings" href="/admin/company-settings/email-notifications" />
+                      <MenuItem icon={Shield} label="Notification Settings" href="/admin/company-settings/alerts" />
                     </MenuGroup>
 
                     <MenuGroup icon={UserCog} label="Users & Access">
-                      <MenuItem icon={Users} label="Users" href="/admin/users" />
-                      <MenuItem icon={Shield} label="Roles" href="/admin/company-settings/roles" />
+                      <MenuItem icon={Users} label="User Management" href="/admin/users" />
+                      <MenuItem icon={Shield} label="Role Permissions" href="/admin/company-settings/roles" />
                     </MenuGroup>
 
                     <MenuGroup icon={Settings} label="Data Management">
-                      <MenuItem icon={FileCheck} label="Asset Validation" href="/admin/media-assets-validation" />
+                      <MenuItem icon={FileCheck} label="Import Data" href="/admin/import-data" />
+                      <MenuItem icon={FileCheck} label="Export Data" href="/admin/export-data" />
                     </MenuGroup>
+
+                    <MenuItem icon={CreditCard} label="Subscription" href="/admin/company-settings" />
                   </SidebarMenu>
                 </>
               )}

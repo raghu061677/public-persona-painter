@@ -71,11 +71,17 @@ Deno.serve(withAuth(async (req) => {
   let sendResult: { success: boolean; error?: string; id?: string };
 
   if (smtpConfig && smtpConfig.smtp_host) {
-    // Use tenant SMTP — via Deno SMTP client
+    // Attempt tenant SMTP
     providerUsed = 'smtp';
     sendResult = await sendViaSmtp(smtpConfig, to, finalSubject, finalHtml);
+    // If SMTP fails, fallback to Resend
+    if (!sendResult.success) {
+      console.warn('[send-tenant-email] SMTP failed, falling back to Resend:', sendResult.error);
+      providerUsed = 'resend';
+      sendResult = await sendViaResend(to, finalSubject, finalHtml, ctx.companyId, sb);
+    }
   } else {
-    // Fallback to Resend
+    // Use Resend directly
     sendResult = await sendViaResend(to, finalSubject, finalHtml, ctx.companyId, sb);
   }
 

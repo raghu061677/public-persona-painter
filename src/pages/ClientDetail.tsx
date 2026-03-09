@@ -455,11 +455,11 @@ export default function ClientDetail() {
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="plans">Plans ({plans.length})</TabsTrigger>
                 <TabsTrigger value="campaigns">Campaigns ({campaigns.length})</TabsTrigger>
-                <TabsTrigger value="invoices">Invoices ({invoices.length})</TabsTrigger>
-                <TabsTrigger value="ledger">Ledger</TabsTrigger>
+                {canSeeSensitive && <TabsTrigger value="invoices">Invoices ({invoices.length})</TabsTrigger>}
+                {canSeeSensitive && <TabsTrigger value="ledger">Ledger</TabsTrigger>}
                 <TabsTrigger value="documents">Documents</TabsTrigger>
-                <TabsTrigger value="portal">Portal Access</TabsTrigger>
-                <TabsTrigger value="activity">Activity Log</TabsTrigger>
+                {canSeeSensitive && <TabsTrigger value="portal">Portal Access</TabsTrigger>}
+                {canSeeSensitive && <TabsTrigger value="activity">Activity Log</TabsTrigger>}
               </TabsList>
 
         {/* Overview Tab */}

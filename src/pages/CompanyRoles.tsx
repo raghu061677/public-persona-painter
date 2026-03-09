@@ -13,8 +13,10 @@ import { ROUTES, ROUTE_LABELS } from "@/config/routes";
 const DEFAULT_ROLES = [
   { name: "admin", label: "Administrator", description: "Full system access", color: "destructive" },
   { name: "sales", label: "Sales", description: "Manage clients, plans, campaigns", color: "default" },
-  { name: "operations", label: "Operations", description: "Handle installations and proofs", color: "default" },
+  { name: "operations_manager", label: "Operations Manager", description: "Handle installations and proofs", color: "default" },
   { name: "finance", label: "Finance", description: "Manage invoices and expenses", color: "default" },
+  { name: "mounting", label: "Mounting", description: "Field mounting tasks", color: "default" },
+  { name: "monitoring", label: "Monitoring", description: "Campaign monitoring", color: "default" },
   { name: "viewer", label: "Viewer", description: "Read-only access", color: "secondary" },
 ];
 

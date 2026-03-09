@@ -60,9 +60,9 @@ Deno.serve(async (req: Request) => {
 
     // 3. Load alert settings
     const { data: settings } = await svc
-      .from("alert_digest_settings")
+      .from("daily_digest_settings")
       .select("*")
-      .eq("company_id", companyId)
+      .limit(1)
       .maybeSingle();
 
     const recipients = settings?.recipients_to ?? [];

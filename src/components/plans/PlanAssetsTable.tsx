@@ -116,6 +116,7 @@ export function PlanAssetsTable({
   onAddAssets,
   onBulkPrintingMounting,
   onPrintingInstallation,
+  canViewFinancials = true,
 }: PlanAssetsTableProps) {
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");

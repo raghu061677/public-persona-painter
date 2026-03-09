@@ -296,10 +296,12 @@ export default function MediaAssetsControlCenter() {
               {/* Action Buttons */}
               <div className="flex gap-2 flex-wrap">
                 <BulkQRGenerationButton />
-                <Button onClick={() => navigate("/media-assets/new")} className="gap-2">
+                <ActionGuard module="media_assets" action="create">
+                <Button onClick={() => navigate("/admin/media-assets/new")} className="gap-2">
                   <Plus className="h-4 w-4" />
                   Add New Asset
                 </Button>
+                </ActionGuard>
               </div>
 
               {/* View Content */}

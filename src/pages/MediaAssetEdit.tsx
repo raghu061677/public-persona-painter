@@ -290,10 +290,14 @@ export default function MediaAssetEdit() {
                   </p>
                 </div>
               </div>
+              <ActionGuard module="media_assets" action="edit" fallback={
+                <Button disabled title="No permission">No Permission</Button>
+              }>
               <Button type="submit" disabled={loading} size="lg" className="shadow-lg">
                 <Save className="mr-2 h-4 w-4" />
                 {loading ? 'Saving...' : 'Save Changes'}
               </Button>
+              </ActionGuard>
             </div>
           </div>
 

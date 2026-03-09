@@ -149,6 +149,7 @@ export function ActionCell({
           variant="ghost"
         />
         
+        <ActionGuard module="media_assets" action="delete" record={asset}>
         <Button
           variant="ghost"
           size="icon"
@@ -158,6 +159,7 @@ export function ActionCell({
         >
           <Trash2 className="h-4 w-4" />
         </Button>
+        </ActionGuard>
       </div>
 
       <AssetHoldDialog

@@ -533,6 +533,7 @@ export function PlanAssetsTable({
                 </TableHead>
               )}
               {showBillingMode && <TableHead>Billing Mode</TableHead>}
+              {canViewFinancials && (
               <TableHead 
                 className="text-right cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('card_rate')}
@@ -541,7 +542,9 @@ export function PlanAssetsTable({
                   Card Rate {getSortIcon('card_rate')}
                 </div>
               </TableHead>
-              {showBaseRate && <TableHead className="text-right">Base Rate</TableHead>}
+              )}
+              {canViewFinancials && showBaseRate && <TableHead className="text-right">Base Rate</TableHead>}
+              {canViewFinancials && (
               <TableHead 
                 className="text-right cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('negotiated')}
@@ -550,16 +553,17 @@ export function PlanAssetsTable({
                   Negotiated {getSortIcon('negotiated')}
                 </div>
               </TableHead>
-              <TableHead className="text-right">Pro-Rata</TableHead>
-              {showDiscount && <TableHead className="text-right">Discount</TableHead>}
-              {showProfit && <TableHead className="text-right">Profit</TableHead>}
-              {showPrintingRate && <TableHead className="text-right">Print Rate</TableHead>}
-              <TableHead className="text-right">Printing</TableHead>
-              {showMountingCost && <TableHead className="text-right">Mounting</TableHead>}
-              <TableHead className="text-right">Installation</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead className="text-right">GST</TableHead>
-              <TableHead className="text-right">Total + GST</TableHead>
+              )}
+              {canViewFinancials && <TableHead className="text-right">Pro-Rata</TableHead>}
+              {canViewFinancials && showDiscount && <TableHead className="text-right">Discount</TableHead>}
+              {canViewFinancials && showProfit && <TableHead className="text-right">Profit</TableHead>}
+              {canViewFinancials && showPrintingRate && <TableHead className="text-right">Print Rate</TableHead>}
+              {canViewFinancials && <TableHead className="text-right">Printing</TableHead>}
+              {canViewFinancials && showMountingCost && <TableHead className="text-right">Mounting</TableHead>}
+              {canViewFinancials && <TableHead className="text-right">Installation</TableHead>}
+              {canViewFinancials && <TableHead className="text-right">Total</TableHead>}
+              {canViewFinancials && <TableHead className="text-right">GST</TableHead>}
+              {canViewFinancials && <TableHead className="text-right">Total + GST</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>

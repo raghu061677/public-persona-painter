@@ -250,4 +250,4 @@ export const RolePermissionsMatrix = forwardRef<RolePermissionsMatrixRef>(functi
       </CardContent>
     </Card>
   );
-}
+});

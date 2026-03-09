@@ -34,7 +34,7 @@ export default function MediaAssetEdit() {
   const [formData, setFormData] = useState<any>(null);
 
   useEffect(() => {
-    if (!isAdmin) {
+    if (!rbac.loading && !rbac.canEdit('media_assets')) {
       toast({
         title: "Access Denied",
         description: "You don't have permission to edit media assets",
@@ -43,8 +43,10 @@ export default function MediaAssetEdit() {
       navigate('/admin/media-assets');
       return;
     }
-    fetchAsset();
-  }, [code, isAdmin]);
+    if (!rbac.loading) {
+      fetchAsset();
+    }
+  }, [code, rbac.loading]);
 
   // Fetch municipal authorities
   useEffect(() => {

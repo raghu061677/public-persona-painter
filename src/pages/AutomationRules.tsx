@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useToast } from "@/hooks/use-toast";
 import { SectionHeader } from "@/components/ui/section-header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, Zap, History, PlayCircle, PauseCircle, Settings2 } from "lucide-react";
 import { format } from "date-fns";
+import type { Json } from "@/integrations/supabase/types";
 
 const TRIGGER_EVENTS = [
   { group: "Plans", events: [
@@ -51,72 +52,52 @@ const ACTION_TYPES = [
   { value: "send_client_notification", label: "Send Client Notification", icon: "📤" },
 ];
 
-interface AutomationRule {
-  id: string;
-  company_id: string;
-  rule_name: string;
-  trigger_event: string;
-  conditions: Record<string, unknown>;
-  actions: Array<{ type: string; config: Record<string, unknown> }>;
-  is_active: boolean;
-  created_at: string;
-}
-
-interface AutomationLog {
-  id: string;
-  rule_id: string;
-  entity_type: string;
-  entity_id: string;
-  status: string;
-  execution_time: number | null;
-  error_message: string | null;
-  created_at: string;
+interface ActionConfig {
+  type: string;
+  config: Record<string, string>;
 }
 
 export default function AutomationRules() {
-  const { currentCompany } = useCompany();
+  const { company } = useCompany();
   const { toast } = useToast();
-  const [rules, setRules] = useState<AutomationRule[]>([]);
-  const [logs, setLogs] = useState<AutomationLog[]>([]);
+  const [rules, setRules] = useState<any[]>([]);
+  const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
-  const [editingRule, setEditingRule] = useState<AutomationRule | null>(null);
+  const [editingRule, setEditingRule] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState("rules");
 
-  // Form state
   const [ruleName, setRuleName] = useState("");
   const [triggerEvent, setTriggerEvent] = useState("");
-  const [actions, setActions] = useState<Array<{ type: string; config: Record<string, unknown> }>>([]);
+  const [actions, setActions] = useState<ActionConfig[]>([]);
 
   useEffect(() => {
-    if (currentCompany?.id) {
+    if (company?.id) {
       fetchRules();
       fetchLogs();
     }
-  }, [currentCompany?.id]);
+  }, [company?.id]);
 
   const fetchRules = async () => {
-    if (!currentCompany?.id) return;
+    if (!company?.id) return;
     setLoading(true);
     const { data, error } = await supabase
       .from("automation_rules")
       .select("*")
-      .eq("company_id", currentCompany.id)
+      .eq("company_id", company.id)
       .order("created_at", { ascending: false });
-
-    if (!error && data) setRules(data as AutomationRule[]);
+    if (!error && data) setRules(data);
     setLoading(false);
   };
 
   const fetchLogs = async () => {
-    if (!currentCompany?.id) return;
+    if (!company?.id) return;
     const { data } = await supabase
       .from("automation_logs")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(100);
-
-    if (data) setLogs(data as AutomationLog[]);
+    if (data) setLogs(data);
   };
 
   const openNewRule = () => {
@@ -127,11 +108,12 @@ export default function AutomationRules() {
     setShowDialog(true);
   };
 
-  const openEditRule = (rule: AutomationRule) => {
+  const openEditRule = (rule: any) => {
     setEditingRule(rule);
     setRuleName(rule.rule_name);
     setTriggerEvent(rule.trigger_event);
-    setActions(rule.actions || []);
+    const ruleActions = Array.isArray(rule.actions) ? rule.actions : [];
+    setActions(ruleActions.map((a: any) => ({ type: a.type || "notify_user", config: a.config || {} })));
     setShowDialog(true);
   };
 
@@ -154,17 +136,17 @@ export default function AutomationRules() {
   };
 
   const saveRule = async () => {
-    if (!currentCompany?.id || !ruleName || !triggerEvent) {
+    if (!company?.id || !ruleName || !triggerEvent) {
       toast({ title: "Please fill required fields", variant: "destructive" });
       return;
     }
 
     const payload = {
-      company_id: currentCompany.id,
+      company_id: company.id,
       rule_name: ruleName,
       trigger_event: triggerEvent,
-      conditions: {},
-      actions: actions,
+      conditions: {} as Json,
+      actions: actions as unknown as Json,
       is_active: true,
     };
 
@@ -184,12 +166,11 @@ export default function AutomationRules() {
     }
   };
 
-  const toggleRule = async (rule: AutomationRule) => {
+  const toggleRule = async (rule: any) => {
     const { error } = await supabase
       .from("automation_rules")
       .update({ is_active: !rule.is_active })
       .eq("id", rule.id);
-
     if (!error) {
       fetchRules();
       toast({ title: `Rule ${rule.is_active ? "disabled" : "enabled"}` });
@@ -198,10 +179,7 @@ export default function AutomationRules() {
 
   const deleteRule = async (id: string) => {
     const { error } = await supabase.from("automation_rules").delete().eq("id", id);
-    if (!error) {
-      fetchRules();
-      toast({ title: "Rule deleted" });
-    }
+    if (!error) { fetchRules(); toast({ title: "Rule deleted" }); }
   };
 
   const getTriggerLabel = (event: string) => {
@@ -212,26 +190,22 @@ export default function AutomationRules() {
     return event;
   };
 
+  const getRuleActions = (rule: any): ActionConfig[] => {
+    return Array.isArray(rule.actions) ? rule.actions : [];
+  };
+
   return (
     <div className="space-y-6 p-6">
       <SectionHeader
         title="Automation Rules"
         description="Create workflow automation rules triggered by business events"
-        actions={
-          <Button onClick={openNewRule}>
-            <Plus className="h-4 w-4 mr-2" /> New Rule
-          </Button>
-        }
+        actions={<Button onClick={openNewRule}><Plus className="h-4 w-4 mr-2" /> New Rule</Button>}
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="rules">
-            <Settings2 className="h-4 w-4 mr-2" /> Rules ({rules.length})
-          </TabsTrigger>
-          <TabsTrigger value="logs">
-            <History className="h-4 w-4 mr-2" /> Execution Logs
-          </TabsTrigger>
+          <TabsTrigger value="rules"><Settings2 className="h-4 w-4 mr-2" /> Rules ({rules.length})</TabsTrigger>
+          <TabsTrigger value="logs"><History className="h-4 w-4 mr-2" /> Execution Logs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="rules" className="space-y-4">
@@ -254,17 +228,13 @@ export default function AutomationRules() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
-                          {rule.is_active ? (
-                            <PlayCircle className="h-5 w-5 text-emerald-500" />
-                          ) : (
-                            <PauseCircle className="h-5 w-5 text-muted-foreground" />
-                          )}
+                          {rule.is_active ? <PlayCircle className="h-5 w-5 text-emerald-500" /> : <PauseCircle className="h-5 w-5 text-muted-foreground" />}
                           <div>
                             <h4 className="font-medium">{rule.rule_name}</h4>
                             <p className="text-sm text-muted-foreground">
                               When: <Badge variant="secondary">{getTriggerLabel(rule.trigger_event)}</Badge>
                               {" → "}
-                              {(rule.actions || []).map((a, i) => (
+                              {getRuleActions(rule).map((a: ActionConfig, i: number) => (
                                 <Badge key={i} variant="outline" className="ml-1">
                                   {ACTION_TYPES.find(t => t.value === a.type)?.label || a.type}
                                 </Badge>
@@ -303,32 +273,20 @@ export default function AutomationRules() {
                 </TableHeader>
                 <TableBody>
                   {logs.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        No automation logs yet
+                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No automation logs yet</TableCell></TableRow>
+                  ) : logs.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell className="text-sm">{format(new Date(log.created_at), "MMM dd, HH:mm:ss")}</TableCell>
+                      <TableCell><span className="text-sm">{log.entity_type}/{log.entity_id}</span></TableCell>
+                      <TableCell>
+                        <Badge variant={log.status === "success" ? "default" : log.status === "skipped" ? "secondary" : "destructive"}>
+                          {log.status}
+                        </Badge>
                       </TableCell>
+                      <TableCell>{log.execution_time ? `${log.execution_time}ms` : "-"}</TableCell>
+                      <TableCell className="text-sm text-destructive max-w-[200px] truncate">{log.error_message || "-"}</TableCell>
                     </TableRow>
-                  ) : (
-                    logs.map((log) => (
-                      <TableRow key={log.id}>
-                        <TableCell className="text-sm">
-                          {format(new Date(log.created_at), "MMM dd, HH:mm:ss")}
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">{log.entity_type}/{log.entity_id}</span>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={log.status === "success" ? "default" : log.status === "skipped" ? "secondary" : "destructive"}>
-                            {log.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{log.execution_time ? `${log.execution_time}ms` : "-"}</TableCell>
-                        <TableCell className="text-sm text-destructive max-w-[200px] truncate">
-                          {log.error_message || "-"}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
+                  ))}
                 </TableBody>
               </Table>
             </CardContent>
@@ -336,19 +294,14 @@ export default function AutomationRules() {
         </TabsContent>
       </Tabs>
 
-      {/* Rule Builder Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingRule ? "Edit Rule" : "Create Automation Rule"}</DialogTitle>
-          </DialogHeader>
-
+          <DialogHeader><DialogTitle>{editingRule ? "Edit Rule" : "Create Automation Rule"}</DialogTitle></DialogHeader>
           <div className="space-y-6">
             <div className="space-y-2">
               <Label>Rule Name *</Label>
               <Input value={ruleName} onChange={(e) => setRuleName(e.target.value)} placeholder="e.g., Notify on plan approval" />
             </div>
-
             <div className="space-y-2">
               <Label>Trigger Event *</Label>
               <Select value={triggerEvent} onValueChange={setTriggerEvent}>
@@ -365,15 +318,11 @@ export default function AutomationRules() {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label>Actions</Label>
-                <Button variant="outline" size="sm" onClick={addAction}>
-                  <Plus className="h-4 w-4 mr-1" /> Add Action
-                </Button>
+                <Button variant="outline" size="sm" onClick={addAction}><Plus className="h-4 w-4 mr-1" /> Add Action</Button>
               </div>
-
               {actions.map((action, index) => (
                 <Card key={index}>
                   <CardContent className="p-4 space-y-3">
@@ -381,48 +330,24 @@ export default function AutomationRules() {
                       <Select value={action.type} onValueChange={(v) => updateAction(index, "type", v)}>
                         <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {ACTION_TYPES.map((at) => (
-                            <SelectItem key={at.value} value={at.value}>{at.icon} {at.label}</SelectItem>
-                          ))}
+                          {ACTION_TYPES.map((at) => (<SelectItem key={at.value} value={at.value}>{at.icon} {at.label}</SelectItem>))}
                         </SelectContent>
                       </Select>
-                      <Button variant="ghost" size="sm" onClick={() => removeAction(index)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => removeAction(index)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
-
                     <div className="space-y-2">
-                      <Input
-                        placeholder="Title / Subject"
-                        value={String(action.config.title || "")}
-                        onChange={(e) => updateAction(index, "title", e.target.value)}
-                      />
-                      <Textarea
-                        placeholder="Message body (use {{variable}} for dynamic values)"
-                        value={String(action.config.message || "")}
-                        onChange={(e) => updateAction(index, "message", e.target.value)}
-                        rows={2}
-                      />
+                      <Input placeholder="Title / Subject" value={action.config.title || ""} onChange={(e) => updateAction(index, "title", e.target.value)} />
+                      <Textarea placeholder="Message body (use {{variable}} for dynamic values)" value={action.config.message || ""} onChange={(e) => updateAction(index, "message", e.target.value)} rows={2} />
                       {action.type === "send_email" && (
-                        <Input
-                          placeholder="Template key (e.g., plan_approved)"
-                          value={String(action.config.template_key || "")}
-                          onChange={(e) => updateAction(index, "template_key", e.target.value)}
-                        />
+                        <Input placeholder="Template key (e.g., plan_approved)" value={action.config.template_key || ""} onChange={(e) => updateAction(index, "template_key", e.target.value)} />
                       )}
                     </div>
                   </CardContent>
                 </Card>
               ))}
-
-              {actions.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Add at least one action to execute when the trigger fires
-                </p>
-              )}
+              {actions.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Add at least one action to execute when the trigger fires</p>}
             </div>
           </div>
-
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDialog(false)}>Cancel</Button>
             <Button onClick={saveRule}>{editingRule ? "Update Rule" : "Create Rule"}</Button>

@@ -176,10 +176,8 @@ const CompanyRoles = lazy(() => import("./pages/CompanyRoles"));
 const CompanyDirectTaxes = lazy(() => import("./pages/CompanyDirectTaxes"));
 const CompanyEInvoicing = lazy(() => import("./pages/CompanyEInvoicing"));
 const CompanyGeneral = lazy(() => import("./pages/CompanyGeneral"));
-const CompanyEmailNotifications = lazy(() => import("./pages/CompanyEmailNotifications"));
 const EmailSmtpSettings = lazy(() => import("./pages/EmailSmtpSettings"));
 const EmailTemplateEditor = lazy(() => import("./pages/EmailTemplateEditor"));
-const EmailSendLogs = lazy(() => import("./pages/EmailSendLogs"));
 const CompanySMSNotifications = lazy(() => import("./pages/CompanySMSNotifications"));
 const CompanyDigitalSignature = lazy(() => import("./pages/CompanyDigitalSignature"));
 const CompanyPayments = lazy(() => import("./pages/CompanyPayments"));
@@ -236,11 +234,7 @@ const PaymentConfirmations = lazy(() => import("./pages/PaymentConfirmations"));
 const AlertsSettings = lazy(() => import("./pages/AlertsSettings"));
 const AutomationRules = lazy(() => import("./pages/AutomationRules"));
 const IntelligenceDashboard = lazy(() => import("./pages/IntelligenceDashboard"));
-const EmailProviderSettings = lazy(() => import("./pages/EmailProviderSettings"));
-const EmailTemplateManager = lazy(() => import("./pages/EmailTemplateManager"));
 const EmailOutbox = lazy(() => import("./pages/EmailOutbox"));
-const EmailDeliveryLogs = lazy(() => import("./pages/EmailDeliveryLogs"));
-const EmailSuppressions = lazy(() => import("./pages/EmailSuppressions"));
 
 // Public website pages
 const PublicAbout = lazy(() => import("./pages/public/About"));
@@ -508,10 +502,10 @@ const App = () => (
                 <Route path="reminders" element={<CompanyReminders />} />
                 <Route path="client-portal" element={<CompanyClientPortal />} />
                 <Route path="pdf-templates" element={<CompanyPDFTemplates />} />
-                <Route path="email-notifications" element={<CompanyEmailNotifications />} />
+                <Route path="email-notifications" element={<Navigate to="/admin/company-settings/smtp-settings" replace />} />
                 <Route path="smtp-settings" element={<EmailSmtpSettings />} />
                 <Route path="email-templates" element={<EmailTemplateEditor />} />
-                <Route path="email-logs" element={<EmailSendLogs />} />
+                <Route path="email-logs" element={<Navigate to="/admin/company-settings/email-outbox" replace />} />
                 <Route path="sms-notifications" element={<CompanySMSNotifications />} />
                 <Route path="digital-signature" element={<CompanyDigitalSignature />} />
                 <Route path="payments" element={<CompanyPayments />} />
@@ -523,11 +517,11 @@ const App = () => (
                 <Route path="alerts" element={<AlertsSettings />} />
                 <Route path="concession-contracts" element={<ConcessionContracts />} />
                 <Route path="automation" element={<AutomationRules />} />
-                <Route path="email-providers" element={<EmailProviderSettings />} />
-                <Route path="email-template-manager" element={<EmailTemplateManager />} />
+                <Route path="email-providers" element={<Navigate to="/admin/company-settings/smtp-settings" replace />} />
+                <Route path="email-template-manager" element={<Navigate to="/admin/company-settings/email-templates" replace />} />
                 <Route path="email-outbox" element={<EmailOutbox />} />
-                <Route path="email-delivery-logs" element={<EmailDeliveryLogs />} />
-                <Route path="email-suppressions" element={<EmailSuppressions />} />
+                <Route path="email-delivery-logs" element={<Navigate to="/admin/company-settings/email-outbox" replace />} />
+                <Route path="email-suppressions" element={<Navigate to="/admin/company-settings/smtp-settings" replace />} />
               </Route>
             </Route>
             {/* ===== END GLOBAL ADMIN AUTH GATE ===== */}

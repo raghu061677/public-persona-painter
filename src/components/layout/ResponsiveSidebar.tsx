@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Building2, Map, Layers, Briefcase, Users, TrendingUp,
   FileText, Receipt, Zap, UserCog, Palette, FileSpreadsheet,
   Shield, DollarSign, Smartphone, Image, Settings, FileCheck, 
-  CreditCard, Globe, ShoppingBag, BarChart3, Sparkles, Menu, CheckCircle2, History, ListChecks, UserPlus, Clock, Wallet, Calendar, CalendarDays
+  CreditCard, Globe, ShoppingBag, BarChart3, Sparkles, Menu, CheckCircle2, History, ListChecks, UserPlus, Clock, Wallet, Calendar, CalendarDays, Mail
 } from "lucide-react";
 import {
   Sidebar,
@@ -423,8 +423,9 @@ export function ResponsiveSidebar() {
                     <MenuGroup icon={Building2} label="Organization">
                       <MenuItem icon={Building2} label="Company Profile" href="/admin/company-settings/profile" />
                       <MenuItem icon={Palette} label="Branding / Logo" href="/admin/company-settings/branding" />
-                      <MenuItem icon={Globe} label="Email Settings" href="/admin/company-settings/email-notifications" />
-                      <MenuItem icon={Shield} label="Notification Settings" href="/admin/company-settings/alerts" />
+                      <MenuItem icon={Globe} label="Email Settings" href="/admin/company-settings/smtp-settings" />
+                      <MenuItem icon={Mail} label="Email Templates" href="/admin/company-settings/email-templates" />
+                      <MenuItem icon={Shield} label="Alerts & Reminders" href="/admin/company-settings/alerts" />
                     </MenuGroup>
 
                     <MenuGroup icon={UserCog} label="Users & Access">

@@ -4,13 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Activity, Clock, TrendingUp } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Activity, Clock, TrendingUp, Loader2 } from "lucide-react";
 
 interface UserActivity {
   id: string;
   username: string;
   email: string;
+  role?: string;
   last_login: string | null;
   total_actions: number;
   recent_actions: Array<{
@@ -38,7 +38,6 @@ export default function UserActivityDashboard() {
 
   const loadUserActivities = async () => {
     try {
-      // Get current session
       const { data: sessionData } = await supabase.auth.getSession();
       
       if (!sessionData.session) {
@@ -51,7 +50,6 @@ export default function UserActivityDashboard() {
         return;
       }
 
-      // Invoke function with Authorization header
       const { data, error } = await supabase.functions.invoke("get-user-activities", {
         headers: {
           Authorization: `Bearer ${sessionData.session.access_token}`
@@ -61,11 +59,22 @@ export default function UserActivityDashboard() {
       if (error) throw error;
 
       if (data?.data) {
-        setActivities(data.data);
+        // Map edge function response — derive last_login from recent_actions
+        const mapped = (data.data as any[]).map((u) => {
+          const loginActions = (u.recent_actions || []).filter(
+            (a: any) => a.activity_type === "login"
+          );
+          return {
+            ...u,
+            last_login: loginActions.length > 0 ? loginActions[0].created_at : null,
+          };
+        });
+        setActivities(mapped);
       } else {
         setActivities([]);
       }
     } catch (error: any) {
+      console.error("Failed to load user activities:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to load user activities",
@@ -112,7 +121,12 @@ export default function UserActivityDashboard() {
   };
 
   if (loading) {
-    return <div>Loading activity data...</div>;
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <span className="ml-2 text-muted-foreground">Loading activity data...</span>
+      </div>
+    );
   }
 
   return (
@@ -162,51 +176,59 @@ export default function UserActivityDashboard() {
           <CardDescription>Last login and recent actions for each user</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Last Login</TableHead>
-                <TableHead>Total Actions</TableHead>
-                <TableHead>Recent Activity</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {activities.map((activity) => (
-                <TableRow 
-                  key={activity.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => setSelectedUser(activity.id)}
-                >
-                  <TableCell className="font-medium">{activity.username}</TableCell>
-                  <TableCell>{activity.email}</TableCell>
-                  <TableCell>
-                    {activity.last_login 
-                      ? new Date(activity.last_login).toLocaleString()
-                      : 'Never'
-                    }
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{activity.total_actions}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {activity.recent_actions.slice(0, 3).map((action, idx) => (
-                        <Badge 
-                          key={idx} 
-                          variant={getActivityBadgeColor(action.activity_type)}
-                          className="text-xs"
-                        >
-                          {action.activity_type}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
+          {activities.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">No activity data found.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Last Login</TableHead>
+                  <TableHead>Total Actions</TableHead>
+                  <TableHead>Recent Activity</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {activities.map((activity) => (
+                  <TableRow 
+                    key={activity.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => setSelectedUser(activity.id)}
+                  >
+                    <TableCell className="font-medium">{activity.username}</TableCell>
+                    <TableCell>{activity.email}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">{activity.role || '—'}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {activity.last_login 
+                        ? new Date(activity.last_login).toLocaleString()
+                        : 'Never'
+                      }
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{activity.total_actions}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {activity.recent_actions.slice(0, 3).map((action, idx) => (
+                          <Badge 
+                            key={idx} 
+                            variant={getActivityBadgeColor(action.activity_type)}
+                            className="text-xs"
+                          >
+                            {action.activity_type}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -219,28 +241,36 @@ export default function UserActivityDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Timestamp</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {detailedLogs.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell>
-                      <Badge variant={getActivityBadgeColor(log.activity_type)}>
-                        {log.activity_type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{log.activity_description || 'No description'}</TableCell>
-                    <TableCell>{new Date(log.created_at).toLocaleString()}</TableCell>
+            {detailedLogs.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No detailed logs found for this user.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Action</TableHead>
+                    <TableHead>Resource</TableHead>
+                    <TableHead>Details</TableHead>
+                    <TableHead>Timestamp</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {detailedLogs.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell>
+                        <Badge variant={getActivityBadgeColor(log.action)}>
+                          {log.action}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{log.resource_type || '—'}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">
+                        {log.resource_name || (log.details ? JSON.stringify(log.details).slice(0, 60) : '—')}
+                      </TableCell>
+                      <TableCell>{new Date(log.created_at).toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       )}

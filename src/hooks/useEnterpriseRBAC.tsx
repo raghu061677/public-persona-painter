@@ -80,7 +80,7 @@ export function useEnterpriseRBAC(): EnterpriseRBACResult {
         
         const { data, error } = await supabase
           .from('role_permissions')
-          .select('module, can_view, can_create, can_edit, can_update, can_delete, can_assign, can_approve, can_export, can_upload_proof, can_view_sensitive, scope_mode')
+          .select('module, can_view, can_create, can_edit, can_update, can_delete, can_assign, can_approve, can_export, can_upload_proof, can_view_sensitive, can_view_financial, can_view_contacts, scope_mode')
           .eq('role', queryRole)
           .is('company_id', null); // Global defaults
 
@@ -104,6 +104,8 @@ export function useEnterpriseRBAC(): EnterpriseRBACResult {
             can_export: row.can_export ?? false,
             can_upload_proof: row.can_upload_proof ?? false,
             can_view_sensitive: row.can_view_sensitive ?? false,
+            can_view_financial: row.can_view_financial ?? row.can_view_sensitive ?? false,
+            can_view_contacts: row.can_view_contacts ?? row.can_view_sensitive ?? false,
             scope_mode: (row.scope_mode as ScopeMode) ?? 'none',
           };
         });

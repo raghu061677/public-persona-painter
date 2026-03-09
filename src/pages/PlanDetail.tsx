@@ -1101,7 +1101,7 @@ export default function PlanDetail() {
           {/* Action Buttons */}
           <div className="flex gap-2 flex-wrap items-start">
             {/* Edit Plan Button - Standalone */}
-            {isAdmin && (['pending', 'approved', 'draft', 'sent'].includes(plan.status?.toLowerCase())) && (
+            {(isAdmin || perms.canEditRecord) && (['pending', 'approved', 'draft', 'sent'].includes(plan.status?.toLowerCase())) && (
               <Button
                 onClick={() => navigate(`/admin/plans/edit/${id}`)}
                 size="sm"

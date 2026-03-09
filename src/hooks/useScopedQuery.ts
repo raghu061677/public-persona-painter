@@ -36,6 +36,8 @@ export function useScopedQuery(module: ModuleKey, options: ScopeFilterOptions = 
 
   const applyScopeFilter = useCallback(
     (query: any) => {
+      // While RBAC is still loading, don't restrict — return all (will re-filter after load)
+      if (rbacLoading) return query;
       // Admins see everything
       if (isPlatformAdmin || isCompanyAdmin) return query;
 

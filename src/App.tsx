@@ -495,6 +495,9 @@ const App = () => (
                 <Route path="client-portal" element={<CompanyClientPortal />} />
                 <Route path="pdf-templates" element={<CompanyPDFTemplates />} />
                 <Route path="email-notifications" element={<CompanyEmailNotifications />} />
+                <Route path="smtp-settings" element={<EmailSmtpSettings />} />
+                <Route path="email-templates" element={<EmailTemplateEditor />} />
+                <Route path="email-logs" element={<EmailSendLogs />} />
                 <Route path="sms-notifications" element={<CompanySMSNotifications />} />
                 <Route path="digital-signature" element={<CompanyDigitalSignature />} />
                 <Route path="payments" element={<CompanyPayments />} />

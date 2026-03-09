@@ -47,11 +47,18 @@ const ROLES: { id: AppRole; label: string; color: string }[] = [
   { id: 'user', label: 'User', color: 'bg-gray-100 text-gray-800' },
 ];
 
-export function RolePermissionsMatrix() {
+export const RolePermissionsMatrix = forwardRef<RolePermissionsMatrixRef>(function RolePermissionsMatrix(_props, ref) {
   const [permissions, setPermissions] = useState<RolePermission[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedRole, setSelectedRole] = useState<AppRole>('sales');
+
+  useImperativeHandle(ref, () => ({
+    selectRole: (role: string) => {
+      const match = ROLES.find(r => r.id === role);
+      if (match) setSelectedRole(match.id);
+    },
+  }));
 
   useEffect(() => {
     loadPermissions();

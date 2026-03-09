@@ -28,6 +28,8 @@ export interface ModulePermission {
   can_export: boolean;
   can_upload_proof: boolean;
   can_view_sensitive: boolean;
+  can_view_financial: boolean;
+  can_view_contacts: boolean;
   scope_mode: ScopeMode;
 }
 

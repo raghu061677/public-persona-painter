@@ -27,6 +27,7 @@ export default function MediaAssetEdit() {
   const { code } = useParams();
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
+  const rbac = useEnterpriseRBAC();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [municipalAuthorities, setMunicipalAuthorities] = useState<{ label: string; value: string }[]>([]);

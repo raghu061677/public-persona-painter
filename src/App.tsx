@@ -371,6 +371,8 @@ const App = () => (
               <Route path="media-assets/:code" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetDetail /></ModernAppLayout></ProtectedRoute>} />
               <Route path="media-assets-map" element={<ProtectedRoute requiredModule="media_assets" requiredAction="view"><ModernAppLayout><MediaAssetsMap /></ModernAppLayout></ProtectedRoute>} />
               <Route path="marketplace" element={<ProtectedRoute requireAuth><ModernAppLayout><Marketplace /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="marketplace/listings" element={<ProtectedRoute requireAuth><ModernAppLayout><MarketplaceListings /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="marketplace/transactions" element={<ProtectedRoute requireAuth><ModernAppLayout><MarketplaceTransactions /></ModernAppLayout></ProtectedRoute>} />
               <Route path="plans" element={<ProtectedRoute requiredModule="plans" requiredAction="view"><ModernAppLayout><PlansList /></ModernAppLayout></ProtectedRoute>} />
               <Route path="plans/new" element={<ProtectedRoute requiredModule="plans" requiredAction="create"><ModernAppLayout><PlanNew /></ModernAppLayout></ProtectedRoute>} />
               <Route path="plans/edit/:id" element={<ProtectedRoute requiredModule="plans" requiredAction="update"><ModernAppLayout><PlanEdit /></ModernAppLayout></ProtectedRoute>} />

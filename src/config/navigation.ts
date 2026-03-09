@@ -233,6 +233,19 @@ import {
         ],
       },
 
+      // Marketplace
+      {
+        id: "marketplace",
+        label: "Marketplace",
+        icon: Globe,
+        items: [
+          { label: "Browse Media", href: "/admin/marketplace", icon: Globe },
+          { label: "My Listings", href: "/admin/marketplace/listings", icon: Layers },
+          { label: "Booking Requests", href: "/admin/booking-requests", icon: ShoppingBag },
+          { label: "Transactions", href: "/admin/marketplace/transactions", icon: CreditCard },
+        ],
+      },
+
       // Tools & Intelligence
       {
         id: "tools",
@@ -243,7 +256,6 @@ import {
           { label: "Campaign Intelligence", href: "/admin/intelligence", icon: TrendingUp },
           { label: "Photo Library", href: "/admin/photo-library", icon: Image },
           { label: "Mobile Field App", href: "/mobile", icon: Smartphone },
-          { label: "Marketplace", href: "/marketplace", icon: Globe },
         ],
       },
 

@@ -4,6 +4,7 @@ import { Eye, Edit, Trash2, MapPin, Shield, ShieldOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { QRCodeButton } from "./QRCodeButton";
 import { AssetHoldDialog } from "@/components/reports/AssetHoldDialog";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { ReleaseHoldDialog } from "@/components/reports/ReleaseHoldDialog";
 import {
   Tooltip,

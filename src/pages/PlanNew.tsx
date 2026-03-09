@@ -568,7 +568,7 @@ export default function PlanNew() {
         title: "Success",
         description: "Plan created successfully",
       });
-      navigate(`/admin/plans/${formData.id}`);
+      navigate(`/admin/plans/${plan.id}`);
     } catch (error: any) {
       toast({
         title: "Error",

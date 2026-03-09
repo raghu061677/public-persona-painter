@@ -1,11 +1,27 @@
 /**
- * SensitiveField component - masks commercial data for unauthorized users.
+ * SensitiveField component - masks commercial/contact data for unauthorized users.
+ * Now backed by the centralized Restricted Fields Framework.
+ * 
  * Usage: <SensitiveField module="plans" field="negotiated_rate" value={plan.negotiated_rate} record={plan} />
  */
 import { ReactNode } from 'react';
 import { useEnterpriseRBAC } from '@/hooks/useEnterpriseRBAC';
 import type { ModuleKey } from '@/lib/rbac/permissions';
-import { SENSITIVE_FIELDS } from '@/lib/rbac/roleNormalization';
+import type { RestrictedModule, FieldAccessContext } from '@/lib/rbac/restrictedFields';
+import { isFieldRestricted, getMaskedValue } from '@/lib/rbac/restrictedFields';
+
+// Map ModuleKey to RestrictedModule where applicable
+function toRestrictedModule(module: ModuleKey): RestrictedModule | null {
+  const map: Partial<Record<ModuleKey, RestrictedModule>> = {
+    clients: 'clients',
+    plans: 'plans',
+    campaigns: 'campaigns',
+    finance: 'invoices',
+    media_assets: 'media_assets',
+    operations: 'operations',
+  };
+  return map[module] ?? null;
+}
 
 interface SensitiveFieldProps {
   module: ModuleKey;
@@ -28,13 +44,24 @@ export function SensitiveField({
   format,
   children,
 }: SensitiveFieldProps) {
-  const { canViewSensitive, isPlatformAdmin, isCompanyAdmin } = useEnterpriseRBAC();
+  const { isPlatformAdmin, isCompanyAdmin, getFieldAccess } = useEnterpriseRBAC();
 
-  // Check if this field is in the sensitive list
-  const isSensitive = (SENSITIVE_FIELDS as readonly string[]).includes(field);
-  
-  // If not sensitive, or user has access, show the real value
-  if (!isSensitive || isPlatformAdmin || isCompanyAdmin || canViewSensitive(module, record)) {
+  // Admin bypass
+  if (isPlatformAdmin || isCompanyAdmin) {
+    if (children) return <>{children(value, false)}</>;
+    if (format) return <>{format(value)}</>;
+    return <>{value ?? '—'}</>;
+  }
+
+  const restrictedModule = toRestrictedModule(module);
+  const access: FieldAccessContext = getFieldAccess(module, record);
+
+  // Check restriction using centralized registry
+  const restricted = restrictedModule
+    ? isFieldRestricted(restrictedModule, field, access)
+    : false;
+
+  if (!restricted) {
     if (children) return <>{children(value, false)}</>;
     if (format) return <>{format(value)}</>;
     return <>{value ?? '—'}</>;
@@ -49,22 +76,27 @@ export function SensitiveField({
 
 /**
  * Hook version for programmatic use in tables/lists.
+ * Now delegates to the Restricted Fields Framework.
  */
 export function useSensitiveFieldMask(module: ModuleKey) {
-  const { canViewSensitive, isPlatformAdmin, isCompanyAdmin, maskSensitiveValue } = useEnterpriseRBAC();
+  const { isPlatformAdmin, isCompanyAdmin, getFieldAccess } = useEnterpriseRBAC();
+  const restrictedModule = toRestrictedModule(module);
 
   return {
     mask: (field: string, value: any, record?: any) => {
-      const isSensitive = (SENSITIVE_FIELDS as readonly string[]).includes(field);
-      if (!isSensitive || isPlatformAdmin || isCompanyAdmin || canViewSensitive(module, record)) {
-        return value;
-      }
-      return typeof value === 'number' ? null : '••••••';
+      if (isPlatformAdmin || isCompanyAdmin) return value;
+      if (!restrictedModule) return value;
+      
+      const access = getFieldAccess(module, record);
+      const { value: masked } = getMaskedValue(restrictedModule, field, value, access);
+      return masked ?? value;
     },
     canSee: (field: string, record?: any) => {
-      const isSensitive = (SENSITIVE_FIELDS as readonly string[]).includes(field);
-      if (!isSensitive) return true;
-      return isPlatformAdmin || isCompanyAdmin || canViewSensitive(module, record);
+      if (isPlatformAdmin || isCompanyAdmin) return true;
+      if (!restrictedModule) return true;
+      
+      const access = getFieldAccess(module, record);
+      return !isFieldRestricted(restrictedModule, field, access);
     },
   };
 }

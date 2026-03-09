@@ -5,8 +5,6 @@ import { AlertCircle, TrendingUp, Download } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
 
 interface PlanSummaryCardProps {
   selectedCount: number;

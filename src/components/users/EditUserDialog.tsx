@@ -24,7 +24,8 @@ import { logAudit } from "@/utils/auditLog";
 import { STANDARD_COMPANY_ROLES, normalizeRole, getRoleLabel } from "@/lib/rbac/roleNormalization";
 
 interface UserProfile {
-  id: string;
+  id?: string;
+  user_id?: string;
   username: string;
   email?: string;
   roles?: string[];
@@ -63,6 +64,11 @@ export default function EditUserDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    const targetUserId = user.user_id || user.id;
+    if (!targetUserId) {
+      toast({ title: "Error", description: "Cannot identify user to update", variant: "destructive" });
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -83,7 +89,7 @@ export default function EditUserDialog({
           Authorization: `Bearer ${session.access_token}`
         },
         body: {
-          userId: user.id,
+          userId: targetUserId,
           name: username,
           role: selectedRole,
           status: isActive ? 'active' : 'suspended',
@@ -101,7 +107,7 @@ export default function EditUserDialog({
       await logAudit({
         action: 'update_user',
         resourceType: 'user_role',
-        resourceId: user.id,
+        resourceId: targetUserId,
         details: {
           old_values: { username: user.username, role: user.roles?.[0], status: user.status },
           new_values: { username, role: selectedRole, status: isActive ? 'Active' : 'Suspended' },

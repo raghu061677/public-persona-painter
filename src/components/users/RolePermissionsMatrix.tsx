@@ -130,13 +130,25 @@ export const RolePermissionsMatrix = forwardRef<RolePermissionsMatrixRef>(functi
   const togglePermission = (role: AppRole, module: string, field: keyof Omit<RolePermission, 'id' | 'role' | 'module'>) => {
     setPermissions(prev => {
       const existing = prev.find(p => p.role === role && p.module === module);
-      if (!existing) return prev;
-
-      return prev.map(p => 
-        p.id === existing.id 
-          ? { ...p, [field]: !p[field] }
-          : p
-      );
+      if (existing) {
+        return prev.map(p => 
+          p.id === existing.id 
+            ? { ...p, [field]: !p[field] }
+            : p
+        );
+      }
+      // Create new entry for previously missing permission
+      const newPerm: RolePermission = {
+        id: `new-${role}-${module}`,
+        role,
+        module,
+        can_view: false,
+        can_create: false,
+        can_update: false,
+        can_delete: false,
+        [field]: true,
+      };
+      return [...prev, newPerm];
     });
   };
 

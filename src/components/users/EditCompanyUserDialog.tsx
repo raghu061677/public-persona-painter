@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
+import { STANDARD_COMPANY_ROLES, normalizeRole, getRoleLabel } from "@/lib/rbac/roleNormalization";
 
 interface CompanyUser {
   id: string;
@@ -37,8 +38,6 @@ interface EditCompanyUserDialogProps {
   onSuccess: () => void;
 }
 
-const ROLES = ['admin', 'sales', 'operations', 'finance', 'user'];
-
 export function EditCompanyUserDialog({
   user,
   open,
@@ -53,8 +52,9 @@ export function EditCompanyUserDialog({
 
   useEffect(() => {
     if (user) {
-      setUsername(user.username);
-      setSelectedRole(user.role);
+      setUsername(user.username || "");
+      // Normalize any legacy role to canonical
+      setSelectedRole(normalizeRole(user.role));
       setIsActive(user.status === "active");
     }
   }, [user]);
@@ -85,12 +85,15 @@ export function EditCompanyUserDialog({
           company_id: company.id,
           name: username,
           role: selectedRole,
-          status: isActive ? "active" : "inactive",
+          status: isActive ? "active" : "suspended",
         },
       });
 
       if (error) {
-        throw error;
+        const errorMsg = typeof data === 'object' && data?.error
+          ? data.error
+          : error.message || 'Failed to update user';
+        throw new Error(errorMsg);
       }
 
       toast({
@@ -131,6 +134,7 @@ export function EditCompanyUserDialog({
               disabled
               className="bg-muted"
             />
+            <p className="text-xs text-muted-foreground">Email cannot be changed here</p>
           </div>
 
           <div className="space-y-2">
@@ -150,9 +154,9 @@ export function EditCompanyUserDialog({
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent>
-                {ROLES.map((role) => (
+                {STANDARD_COMPANY_ROLES.map((role) => (
                   <SelectItem key={role} value={role}>
-                    {role.charAt(0).toUpperCase() + role.slice(1)}
+                    {getRoleLabel(role)}
                   </SelectItem>
                 ))}
               </SelectContent>

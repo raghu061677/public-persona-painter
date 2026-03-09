@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -21,6 +21,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { logAudit } from "@/utils/auditLog";
+import { STANDARD_COMPANY_ROLES, normalizeRole, getRoleLabel } from "@/lib/rbac/roleNormalization";
 
 interface UserProfile {
   id: string;
@@ -37,8 +38,6 @@ interface EditUserDialogProps {
   onSuccess: () => void;
 }
 
-const ROLES = ['admin', 'sales', 'operations', 'finance'];
-
 export default function EditUserDialog({
   user,
   open,
@@ -46,10 +45,20 @@ export default function EditUserDialog({
   onSuccess,
 }: EditUserDialogProps) {
   const { user: currentUser } = useAuth();
-  const [username, setUsername] = useState(user?.username || "");
-  const [selectedRole, setSelectedRole] = useState<string>(user?.roles?.[0] || "sales");
-  const [isActive, setIsActive] = useState(user?.status === 'Active');
+  const [username, setUsername] = useState("");
+  const [selectedRole, setSelectedRole] = useState<string>("sales");
+  const [isActive, setIsActive] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setUsername(user.username || "");
+      // Normalize any legacy role to canonical
+      const rawRole = user.roles?.[0] || "viewer";
+      setSelectedRole(normalizeRole(rawRole));
+      setIsActive(user.status === 'Active' || user.status === 'active');
+    }
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +66,6 @@ export default function EditUserDialog({
 
     setSubmitting(true);
     try {
-      // Get current session for authorization
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
@@ -70,41 +78,33 @@ export default function EditUserDialog({
         return;
       }
 
-      const oldValues = {
-        username: user.username,
-        role: user.roles?.[0],
-        status: user.status,
-      };
-
-      // Call edge function to update user with Authorization header
-      const { error: updateError } = await supabase.functions.invoke('update-user', {
+      const { data, error: updateError } = await supabase.functions.invoke('update-user', {
         headers: {
           Authorization: `Bearer ${session.access_token}`
         },
         body: {
           userId: user.id,
-          username,
+          name: username,
           role: selectedRole,
-          isActive,
+          status: isActive ? 'active' : 'suspended',
         },
       });
 
       if (updateError) {
-        throw new Error(updateError.message || 'Failed to update user');
+        // Try to extract the real error message from the response
+        const errorMsg = typeof data === 'object' && data?.error
+          ? data.error
+          : updateError.message || 'Failed to update user';
+        throw new Error(errorMsg);
       }
 
-      // Log audit
       await logAudit({
         action: 'update_user',
         resourceType: 'user_role',
         resourceId: user.id,
         details: {
-          old_values: oldValues,
-          new_values: {
-            username,
-            role: selectedRole,
-            status: isActive ? 'Active' : 'Suspended',
-          },
+          old_values: { username: user.username, role: user.roles?.[0], status: user.status },
+          new_values: { username, role: selectedRole, status: isActive ? 'Active' : 'Suspended' },
         },
       });
 
@@ -119,7 +119,7 @@ export default function EditUserDialog({
       console.error("Error updating user:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to update user",
         variant: "destructive",
       });
     } finally {
@@ -146,13 +146,14 @@ export default function EditUserDialog({
               disabled
               className="mt-2 bg-muted"
             />
+            <p className="text-xs text-muted-foreground mt-1">Email cannot be changed here</p>
           </div>
           <div>
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="username">Name</Label>
             <Input
               id="username"
               type="text"
-              placeholder="Enter username"
+              placeholder="Enter name"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="mt-2"
@@ -165,9 +166,9 @@ export default function EditUserDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {ROLES.map(role => (
-                  <SelectItem key={role} value={role} className="capitalize">
-                    {role}
+                {STANDARD_COMPANY_ROLES.map(role => (
+                  <SelectItem key={role} value={role}>
+                    {getRoleLabel(role)}
                   </SelectItem>
                 ))}
               </SelectContent>

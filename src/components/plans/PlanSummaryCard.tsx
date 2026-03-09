@@ -1,7 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { AlertCircle, TrendingUp, Download } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 

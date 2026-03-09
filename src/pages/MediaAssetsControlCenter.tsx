@@ -312,6 +312,28 @@ export default function MediaAssetsControlCenter() {
                 totalValue={stats.totalValue}
               />
 
+              {/* Quick Filters */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <Badge
+                  variant={statusFilter === null ? "default" : "outline"}
+                  className="cursor-pointer select-none"
+                  onClick={() => setStatusFilter(null)}
+                >
+                  All ({assets.length})
+                </Badge>
+                {statusOptions.map(([status, count]) => (
+                  <Badge
+                    key={status}
+                    variant={statusFilter === status ? "default" : "outline"}
+                    className="cursor-pointer select-none"
+                    onClick={() => setStatusFilter(statusFilter === status ? null : status)}
+                  >
+                    {status} ({count})
+                  </Badge>
+                ))}
+              </div>
+
               {/* Action Buttons */}
               <div className="flex gap-2 flex-wrap">
                 <Button variant="outline" onClick={() => setCustomExportOpen(true)} className="gap-2">

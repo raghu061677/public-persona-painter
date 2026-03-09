@@ -645,10 +645,12 @@ export default function ClientsList() {
                   Add Client
                 </Button>
               </ActionGuard>
-              <Button variant="outline" onClick={exportToExcel}>
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
+              <ActionGuard module="clients" action="export">
+                <Button variant="outline" onClick={exportToExcel}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </ActionGuard>
             </>
           }
         />

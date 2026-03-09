@@ -248,7 +248,6 @@ export const RolePermissionsMatrix = forwardRef<RolePermissionsMatrixRef>(functi
             <tbody>
               {MODULES.map(module => {
                 const perm = getPermission(selectedRole, module.id);
-                if (!perm) return null;
 
                 return (
                   <tr key={module.id} className="border-b hover:bg-muted/50 transition-colors">

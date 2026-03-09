@@ -57,6 +57,7 @@ Deno.serve(withAuth(async (req) => {
         username: userInfo.name,
         email: userInfo.email,
         role: cu.role,
+        last_sign_in_at: userInfo.last_sign_in_at,
         total_actions: count || 0,
         recent_actions: (recentActions || []).map((action: any) => ({
           activity_type: action.action,

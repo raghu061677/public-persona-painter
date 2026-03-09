@@ -122,7 +122,7 @@ export function useScopedQuery(module: ModuleKey, options: ScopeFilterOptions = 
           return records;
       }
     },
-    [getScopeMode, isPlatformAdmin, isCompanyAdmin, user, module, ownerColumn, additionalOwnerColumns, assignmentColumn, additionalAssignmentColumns]
+    [rbacLoading, getScopeMode, isPlatformAdmin, isCompanyAdmin, user, module, ownerColumn, additionalOwnerColumns, assignmentColumn, additionalAssignmentColumns]
   );
 
   return { applyScopeFilter, filterByScope, scopeMode: getScopeMode(module) };

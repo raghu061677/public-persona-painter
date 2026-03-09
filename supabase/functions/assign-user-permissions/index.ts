@@ -1,15 +1,12 @@
-// v3.0 - Phase-5: withAuth + getAuthContext + requireRole + audit
-import { corsHeaders } from '../_shared/cors.ts';
+/**
+ * assign-user-permissions — Production-safe permission assignment.
+ * Validates roles against canonical set.
+ */
 import {
   getAuthContext, requireRole, logSecurityAudit,
   supabaseServiceClient, jsonError, jsonSuccess, withAuth,
 } from '../_shared/auth.ts';
-
-const ALL_MODULES = [
-  'clients', 'media_assets', 'plans', 'campaigns', 'operations',
-  'finance', 'invoices', 'expenses', 'power_bills', 'reports',
-  'settings', 'users', 'companies',
-];
+import { validateRole, CANONICAL_ROLES } from '../_shared/roles.ts';
 
 Deno.serve(withAuth(async (req) => {
   const ctx = await getAuthContext(req);
@@ -37,14 +34,22 @@ Deno.serve(withAuth(async (req) => {
     return jsonError('User not found in your company', 404);
   }
 
-  // Prevent non-platform-admin from assigning admin role
-  if (role === 'admin' && ctx.role !== 'admin') {
-    return jsonError('Only admins can assign admin role', 403);
+  const updates: Record<string, unknown> = {};
+
+  // Validate and normalize role if provided
+  if (role) {
+    try {
+      updates.role = validateRole(role);
+    } catch (e) {
+      return jsonError(`Invalid role: "${role}". Valid roles: ${CANONICAL_ROLES.join(', ')}`, 400);
+    }
   }
 
-  const updates: any = {};
-  if (role) updates.role = role;
   if (permissions) updates.permissions = permissions;
+
+  if (Object.keys(updates).length === 0) {
+    return jsonError('No changes to apply', 400);
+  }
 
   const { error: updateError } = await serviceClient
     .from('company_users')
@@ -52,12 +57,15 @@ Deno.serve(withAuth(async (req) => {
     .eq('user_id', targetUserId)
     .eq('company_id', ctx.companyId);
 
-  if (updateError) throw updateError;
+  if (updateError) {
+    console.error('[assign-perms] Error:', updateError);
+    return jsonError('Failed to update permissions: ' + updateError.message, 500);
+  }
 
   // Update user_roles table if role changed
-  if (role) {
+  if (updates.role) {
     await serviceClient.from('user_roles').upsert(
-      { user_id: targetUserId, role },
+      { user_id: targetUserId, role: updates.role as string },
       { onConflict: 'user_id,role' }
     );
   }
@@ -66,7 +74,7 @@ Deno.serve(withAuth(async (req) => {
     functionName: 'assign-user-permissions', userId: ctx.userId,
     companyId: ctx.companyId, action: 'assign_permissions',
     recordIds: [targetUserId], status: 'success', req,
-    metadata: { role, permissions },
+    metadata: { role: updates.role, permissions },
   });
 
   return jsonSuccess({ message: 'Permissions updated successfully' });

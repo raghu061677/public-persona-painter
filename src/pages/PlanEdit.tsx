@@ -262,9 +262,10 @@ export default function PlanEdit() {
       try {
         const { data: activeBookings } = await supabase
           .from('campaign_assets')
-          .select('booking_end_date, end_date')
+          .select('booking_end_date, end_date, campaigns!inner(status, is_deleted)')
           .eq('asset_id', assetId)
-          .in('status', ['Assigned', 'Installed', 'Mounted', 'In Progress', 'PhotoUploaded'])
+          .in('campaigns.status', ['Running', 'Planned', 'InProgress', 'Upcoming'])
+          .eq('campaigns.is_deleted', false)
           .order('booking_end_date', { ascending: false })
           .limit(1);
         

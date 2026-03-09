@@ -665,9 +665,11 @@ export function SelectedAssetsTable({
                 const printingResult = calculatePrintingCost(asset, printingRate);
                 const mountingResult = calculateMountingCost(asset, mountingRate);
                 
-                // Get the calculated costs - respect mounting mode
-                const printing = printingResult.cost;
-                const mounting = mountingMode === 'fixed' ? mountingRate : mountingResult.cost;
+                // Get the calculated costs - respect mounting mode, fallback to stored charges
+                const printing = printingResult.cost > 0 ? printingResult.cost : (pricing.printing_charges || 0);
+                const mounting = mountingMode === 'fixed' 
+                  ? mountingRate 
+                  : (mountingResult.cost > 0 ? mountingResult.cost : (pricing.mounting_charges || 0));
                 
                 // FIXED: Row Total (Line Total) = Rent Amount + Printing + Mounting
                 // This is the pro-rated line total for the plan row

@@ -85,6 +85,7 @@ export default function PlansList() {
   // RBAC scope filtering and sensitive field masking
   const { filterByScope: planScopeFilter } = useScopedQuery('plans', { ownerColumn: 'created_by', additionalOwnerColumns: ['sales_owner_id'] });
   const { mask: maskPlanField, canSee: canSeePlanField } = useSensitiveFieldMask('plans');
+  const actions = useModuleActions('plans');
 
   // Global List View System
   const lv = useListView("plans.list");

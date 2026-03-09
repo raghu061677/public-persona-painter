@@ -478,7 +478,9 @@ export default function ClientDetail() {
                     <Mail className="h-4 w-4 mt-1 text-muted-foreground" />
                     <div>
                       <p className="text-sm font-medium">Email</p>
-                      <p className="text-sm text-muted-foreground">{client.email || "Not provided"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {canSeeSensitive ? (client.email || "Not provided") : <span className="select-none">••••••</span>}
+                      </p>
                     </div>
                   </div>
                   
@@ -486,7 +488,9 @@ export default function ClientDetail() {
                     <Phone className="h-4 w-4 mt-1 text-muted-foreground" />
                     <div>
                       <p className="text-sm font-medium">Phone</p>
-                      <p className="text-sm text-muted-foreground">{client.phone || "Not provided"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {canSeeSensitive ? (client.phone || "Not provided") : <span className="select-none">••••••</span>}
+                      </p>
                     </div>
                   </div>
 

@@ -517,42 +517,66 @@ export type Database = {
       asset_bookings: {
         Row: {
           asset_id: string
+          booking_end_date: string | null
+          booking_start_date: string | null
+          booking_status: string | null
           booking_type: string
           campaign_id: string | null
+          company_id: string | null
           created_at: string | null
           created_by: string | null
           end_date: string
           id: string
           notes: string | null
           plan_id: string | null
+          priority: number | null
+          source_id: string | null
+          source_item_id: string | null
+          source_type: string | null
           start_date: string
           status: string
           updated_at: string | null
         }
         Insert: {
           asset_id: string
+          booking_end_date?: string | null
+          booking_start_date?: string | null
+          booking_status?: string | null
           booking_type: string
           campaign_id?: string | null
+          company_id?: string | null
           created_at?: string | null
           created_by?: string | null
           end_date: string
           id?: string
           notes?: string | null
           plan_id?: string | null
+          priority?: number | null
+          source_id?: string | null
+          source_item_id?: string | null
+          source_type?: string | null
           start_date: string
           status?: string
           updated_at?: string | null
         }
         Update: {
           asset_id?: string
+          booking_end_date?: string | null
+          booking_start_date?: string | null
+          booking_status?: string | null
           booking_type?: string
           campaign_id?: string | null
+          company_id?: string | null
           created_at?: string | null
           created_by?: string | null
           end_date?: string
           id?: string
           notes?: string | null
           plan_id?: string | null
+          priority?: number | null
+          source_id?: string | null
+          source_item_id?: string | null
+          source_type?: string | null
           start_date?: string
           status?: string
           updated_at?: string | null
@@ -4263,6 +4287,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      document_sequences: {
+        Row: {
+          company_id: string
+          doc_type: string
+          id: string
+          last_number: number
+          period_key: string
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          doc_type: string
+          id?: string
+          last_number?: number
+          period_key: string
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          doc_type?: string
+          id?: string
+          last_number?: number
+          period_key?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       email_delivery_logs: {
         Row: {
@@ -11581,6 +11632,16 @@ export type Database = {
         }
         Returns: Json
       }
+      check_booking_conflict: {
+        Args: {
+          p_asset_id: string
+          p_end_date: string
+          p_exclude_source_id?: string
+          p_exclude_source_type?: string
+          p_start_date: string
+        }
+        Returns: Json
+      }
       check_existing_monthly_invoice: {
         Args: {
           p_billing_month: string
@@ -11683,6 +11744,10 @@ export type Database = {
         Returns: boolean
       }
       delete_user_account: { Args: never; Returns: undefined }
+      derive_asset_display_status: {
+        Args: { p_asset_id: string }
+        Returns: string
+      }
       detect_media_asset_duplicates: {
         Args: never
         Returns: {
@@ -11798,6 +11863,10 @@ export type Database = {
         | { Args: never; Returns: string }
         | { Args: { p_user_id?: string }; Returns: string }
       generate_campaign_id_v2: { Args: { p_user_id?: string }; Returns: string }
+      generate_campaign_number: {
+        Args: { p_company_id: string }
+        Returns: string
+      }
       generate_client_id: {
         Args: { p_company_id: string; p_state_code: string }
         Returns: string
@@ -11851,6 +11920,7 @@ export type Database = {
         Returns: string
       }
       generate_plan_id: { Args: never; Returns: string }
+      generate_plan_number: { Args: { p_company_id: string }; Returns: string }
       generate_receipt_number: {
         Args: { p_company_id: string; p_receipt_date: string }
         Returns: string

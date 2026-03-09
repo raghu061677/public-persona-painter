@@ -109,18 +109,7 @@ export default function PlanNew() {
     }
   }, [formData.start_date, formData.end_date]);
 
-  const generateNewPlanId = async () => {
-    try {
-      const planId = await generatePlanCode();
-      setFormData(prev => ({ ...prev, id: planId }));
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to generate plan ID",
-        variant: "destructive",
-      });
-    }
-  };
+  // Plan ID is now generated server-side at insert time via generate_plan_number RPC
 
   const fetchClients = async () => {
     const { data } = await supabase

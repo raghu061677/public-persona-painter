@@ -9892,6 +9892,8 @@ export type Database = {
           can_update: boolean | null
           can_upload_proof: boolean
           can_view: boolean | null
+          can_view_contacts: boolean
+          can_view_financial: boolean
           can_view_sensitive: boolean
           company_id: string | null
           created_at: string | null
@@ -9911,6 +9913,8 @@ export type Database = {
           can_update?: boolean | null
           can_upload_proof?: boolean
           can_view?: boolean | null
+          can_view_contacts?: boolean
+          can_view_financial?: boolean
           can_view_sensitive?: boolean
           company_id?: string | null
           created_at?: string | null
@@ -9930,6 +9934,8 @@ export type Database = {
           can_update?: boolean | null
           can_upload_proof?: boolean
           can_view?: boolean | null
+          can_view_contacts?: boolean
+          can_view_financial?: boolean
           can_view_sensitive?: boolean
           company_id?: string | null
           created_at?: string | null

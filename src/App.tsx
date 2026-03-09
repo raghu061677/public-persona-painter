@@ -198,6 +198,8 @@ const CompanyManagement = lazy(() => import("./pages/CompanyManagement"));
 // const OnboardingTest = lazy(() => import("./pages/OnboardingTest"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
 const MarketplaceAssetDetail = lazy(() => import("./pages/MarketplaceAssetDetail"));
+const MarketplaceListings = lazy(() => import("./pages/MarketplaceListings"));
+const MarketplaceTransactions = lazy(() => import("./pages/MarketplaceTransactions"));
 const CompanyUsersSettings = lazy(() => import("./pages/CompanyUsersSettings"));
 const CompanyCodeSettings = lazy(() => import("./pages/CompanyCodeSettings"));
 const AIAssistant = lazy(() => import("./pages/AIAssistant"));

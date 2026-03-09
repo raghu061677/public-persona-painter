@@ -296,6 +296,9 @@ export default function CampaignDetail() {
           Back to Campaigns
         </Button>
 
+        {/* Restricted Mode Banner */}
+        {perms.isReadOnly && <RestrictedBanner module="campaign" />}
+
         {/* Deleted Campaign Banner */}
         {isDeleted && (
           <Alert variant="destructive" className="mb-4">

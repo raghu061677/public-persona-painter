@@ -28,6 +28,8 @@ interface ClientContactsManagerProps {
 
 export function ClientContactsManager({ clientId, canSeeSensitive = true, isOwner = true }: ClientContactsManagerProps) {
   const { company } = useCompany();
+  const { user } = useAuth();
+  const currentUserId = user?.id;
   const [contacts, setContacts] = useState<ClientContact[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

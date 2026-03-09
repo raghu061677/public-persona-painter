@@ -144,6 +144,8 @@ export function mergePermissions(perms: ModulePermission[]): ModulePermission {
     can_export: merged.can_export || perm.can_export,
     can_upload_proof: merged.can_upload_proof || perm.can_upload_proof,
     can_view_sensitive: merged.can_view_sensitive || perm.can_view_sensitive,
+    can_view_financial: merged.can_view_financial || perm.can_view_financial,
+    can_view_contacts: merged.can_view_contacts || perm.can_view_contacts,
     scope_mode: scopePriority.indexOf(merged.scope_mode) <= scopePriority.indexOf(perm.scope_mode)
       ? merged.scope_mode
       : perm.scope_mode,

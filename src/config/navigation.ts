@@ -233,13 +233,14 @@ import {
         ],
       },
 
-      // Tools
+      // Tools & Intelligence
       {
         id: "tools",
         label: "Tools",
         icon: Sparkles,
         items: [
           { label: "AI Assistant", href: "/admin/ai-assistant", icon: Sparkles },
+          { label: "Campaign Intelligence", href: "/admin/intelligence", icon: TrendingUp },
           { label: "Photo Library", href: "/admin/photo-library", icon: Image },
           { label: "Mobile Field App", href: "/mobile", icon: Smartphone },
           { label: "Marketplace", href: "/marketplace", icon: Globe },

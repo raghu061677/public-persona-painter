@@ -33,6 +33,7 @@ export default function MediaAssetsControlCenter() {
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [isGodModeVisible, setIsGodModeVisible] = useState(false);
   const [customExportOpen, setCustomExportOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAssets();

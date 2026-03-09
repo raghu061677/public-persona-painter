@@ -528,7 +528,7 @@ export default function ClientDetail() {
                 <CardTitle>Contact Persons</CardTitle>
               </CardHeader>
               <CardContent>
-                <ClientContactsManager clientId={client.id} />
+                <ClientContactsManager clientId={client.id} canSeeSensitive={canSeeSensitive} isOwner={isOwner} />
               </CardContent>
             </Card>
 

@@ -1,6 +1,6 @@
 /**
  * update-company-user — Production-safe company user update.
- * Validates and normalizes roles to canonical set.
+ * company_users columns: id, company_id, user_id, role, is_primary, status, joined_at, invited_by
  */
 import {
   getAuthContext, requireRole, logSecurityAudit,
@@ -15,10 +15,9 @@ Deno.serve(withAuth(async (req) => {
   const body = await req.json().catch(() => null);
   if (!body) return jsonError('Invalid JSON body', 400);
 
-  const { user_id, company_id, name, phone, role, status } = body;
+  const { user_id, company_id, name, role, status } = body;
   if (!user_id || typeof user_id !== 'string') return jsonError('user_id is required', 400);
 
-  // Company scoping
   const targetCompany = company_id || ctx.companyId;
   if (targetCompany !== ctx.companyId) {
     return jsonError('Cannot update users in other companies', 403);
@@ -26,7 +25,7 @@ Deno.serve(withAuth(async (req) => {
 
   const serviceClient = supabaseServiceClient();
 
-  // Verify target user exists in company
+  // Verify target user exists (only select existing columns)
   const { data: existing } = await serviceClient
     .from('company_users')
     .select('id')
@@ -37,11 +36,8 @@ Deno.serve(withAuth(async (req) => {
   if (!existing) return jsonError('User not found in your company', 404);
 
   const updates: Record<string, unknown> = {};
-  if (name) updates.name = name;
-  if (phone !== undefined) updates.phone = phone;
   if (status) updates.status = status;
 
-  // Validate and normalize role
   if (role) {
     try {
       updates.role = validateRole(role);
@@ -53,26 +49,40 @@ Deno.serve(withAuth(async (req) => {
     }
   }
 
-  if (Object.keys(updates).length === 0) {
+  if (Object.keys(updates).length === 0 && !name) {
     return jsonError('No valid fields to update', 400);
   }
 
-  const { error } = await serviceClient
-    .from('company_users')
-    .update(updates)
-    .eq('user_id', user_id)
-    .eq('company_id', ctx.companyId);
+  // Update company_users table fields
+  if (Object.keys(updates).length > 0) {
+    const { error } = await serviceClient
+      .from('company_users')
+      .update(updates)
+      .eq('user_id', user_id)
+      .eq('company_id', ctx.companyId);
 
-  if (error) {
-    console.error('[update-company-user] Error:', error);
-    return jsonError('Failed to update user: ' + error.message, 500);
+    if (error) {
+      console.error('[update-company-user] Error:', error);
+      return jsonError('Failed to update user: ' + error.message, 500);
+    }
+  }
+
+  // Name goes to auth metadata
+  if (name && typeof name === 'string' && name.trim()) {
+    try {
+      await serviceClient.auth.admin.updateUserById(user_id, {
+        user_metadata: { username: name.trim() },
+      });
+    } catch (e) {
+      console.warn('[update-company-user] Auth metadata warning:', e);
+    }
   }
 
   await logSecurityAudit({
     functionName: 'update-company-user', userId: ctx.userId,
     companyId: ctx.companyId, action: 'update_company_user',
     recordIds: [user_id], status: 'success', req,
-    metadata: { updatedFields: Object.keys(updates) },
+    metadata: { updatedFields: [...Object.keys(updates), ...(name ? ['name'] : [])] },
   });
 
   return jsonSuccess({ message: 'Company user updated successfully' });

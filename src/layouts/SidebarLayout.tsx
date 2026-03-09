@@ -22,9 +22,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { DesktopNavFromConfig } from "@/components/sidebar/DesktopNavFromConfig";
 
-// Feature flag: Toggle between config-driven and hardcoded desktop menu
-// Set to false to revert to original hardcoded menu as fallback
-const USE_NAV_CONFIG_DESKTOP = true;
+// All legacy hardcoded nav blocks removed - using config-driven nav only
 
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const { open, toggle } = useSidebarStore();

@@ -78,7 +78,6 @@ export default function PlanNew() {
   useEffect(() => {
     fetchClients();
     fetchAvailableAssets();
-    generateNewPlanId();
     loadTemplateFromSession();
   }, []);
 

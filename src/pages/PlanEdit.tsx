@@ -48,6 +48,8 @@ import { generateProposalExcel } from "@/lib/exports/proposalExcelExport";
 import { calculatePrintingCost, calculateMountingCost, getAssetSqft } from "@/utils/effectivePricing";
 import { computeRentAmount, BillingMode } from "@/utils/perAssetPricing";
 import { addDays } from "date-fns";
+import { useRecordPermissions } from "@/hooks/useRecordAccessMode";
+import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
 
 type TaxType = 'CGST_SGST' | 'IGST';
 

@@ -73,7 +73,8 @@ export const RolePermissionsMatrix = forwardRef<RolePermissionsMatrixRef>(functi
 
   useImperativeHandle(ref, () => ({
     selectRole: (role: string) => {
-      const match = ROLES.find(r => r.id === role);
+      const canonical = ROLE_ALIAS_MAP[role] || role;
+      const match = ROLES.find(r => r.id === canonical);
       if (match) setSelectedRole(match.id);
     },
   }));

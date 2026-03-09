@@ -37,7 +37,6 @@ import {
   BILLING_CYCLE_DAYS,
 } from "@/utils/billingEngine";
 import { LineItemDurationControl } from "@/components/plans/LineItemDurationControl";
-import { generatePlanCode } from "@/lib/codeGenerator";
 import { ArrowLeft, Calendar as CalendarIcon, Info, Sparkles, FileText, FileSpreadsheet, Loader2 } from "lucide-react";
 import { ClientSelect } from "@/components/shared/ClientSelect";
 import { cn } from "@/lib/utils";
@@ -61,7 +60,6 @@ export default function PlanNew() {
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   
   const [formData, setFormData] = useState({
-    id: "",
     client_id: "",
     client_name: "",
     plan_name: "",
@@ -78,7 +76,6 @@ export default function PlanNew() {
   useEffect(() => {
     fetchClients();
     fetchAvailableAssets();
-    generateNewPlanId();
     loadTemplateFromSession();
   }, []);
 
@@ -110,18 +107,7 @@ export default function PlanNew() {
     }
   }, [formData.start_date, formData.end_date]);
 
-  const generateNewPlanId = async () => {
-    try {
-      const planId = await generatePlanCode();
-      setFormData(prev => ({ ...prev, id: planId }));
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to generate plan ID",
-        variant: "destructive",
-      });
-    }
-  };
+  // Plan ID is now generated server-side at insert time via generate_plan_number RPC
 
   const fetchClients = async () => {
     const { data } = await supabase
@@ -421,55 +407,42 @@ export default function PlanNew() {
       // Ensure months_count is at least 0.5 (database constraint)
       const monthsCount = Math.max(0.5, calculateMonthsFromDays(durationDays));
 
-      // Try insert with retry on duplicate key (23505)
-      let plan: any = null;
-      let planId = formData.id;
+      // Generate plan ID server-side via atomic RPC
+      const { data: planId, error: idError } = await supabase.rpc('generate_plan_number', {
+        p_company_id: companyUser.company_id,
+      });
       
-      for (let attempt = 0; attempt < 3; attempt++) {
-        if (attempt > 0) {
-          // Regenerate plan ID on duplicate
-          planId = await generatePlanCode();
-        }
-        
-        const { data: planData, error: planError } = await supabase
-          .from('plans')
-          .insert({
-            id: planId,
-            client_id: formData.client_id,
-            client_name: formData.client_name,
-            plan_name: formData.plan_name,
-            plan_type: formData.plan_type,
-            start_date: formatForSupabase(toDateOnly(formData.start_date)),
-            end_date: formatForSupabase(toDateOnly(formData.end_date)),
-            duration_days: durationDays,
-            duration_mode: formData.duration_mode,
-            months_count: monthsCount,
-            status: 'Draft',
-            total_amount: netTotal,
-            gst_percent: parseFloat(formData.gst_percent),
-            gst_amount: gstAmount,
-            grand_total: grandTotal,
-            notes: formData.notes,
-            created_by: user.id,
-            company_id: companyUser.company_id,
-          } as any)
-          .select()
-          .single();
-        
-        if (planError) {
-          // Retry on duplicate key conflict
-          if (planError.code === '23505' && attempt < 2) {
-            console.warn(`Plan ID ${planId} conflict, retrying...`);
-            continue;
-          }
-          throw planError;
-        }
-        
-        plan = planData;
-        break;
+      if (idError || !planId) {
+        throw new Error(idError?.message || 'Failed to generate plan number');
       }
+
+      const { data: plan, error: planError } = await supabase
+        .from('plans')
+        .insert({
+          id: planId,
+          client_id: formData.client_id,
+          client_name: formData.client_name,
+          plan_name: formData.plan_name,
+          plan_type: formData.plan_type,
+          start_date: formatForSupabase(toDateOnly(formData.start_date)),
+          end_date: formatForSupabase(toDateOnly(formData.end_date)),
+          duration_days: durationDays,
+          duration_mode: formData.duration_mode,
+          months_count: monthsCount,
+          status: 'Draft',
+          total_amount: netTotal,
+          gst_percent: parseFloat(formData.gst_percent),
+          gst_amount: gstAmount,
+          grand_total: grandTotal,
+          notes: formData.notes,
+          created_by: user.id,
+          company_id: companyUser.company_id,
+        } as any)
+        .select()
+        .single();
       
-      if (!plan) throw new Error("Failed to create plan after retries");
+      if (planError) throw planError;
+      if (!plan) throw new Error("Failed to create plan");
 
       // Create plan items with FULL media asset snapshot and per-asset duration
       const items = Array.from(selectedAssets).map(assetId => {
@@ -517,7 +490,7 @@ export default function PlanNew() {
         const totalWithGst = subtotal + itemGst;
 
         return {
-          plan_id: formData.id,
+          plan_id: plan.id,
           asset_id: assetId,
           // Complete media asset snapshot for exports and campaign conversion
           media_type: asset.media_type,
@@ -568,7 +541,7 @@ export default function PlanNew() {
         title: "Success",
         description: "Plan created successfully",
       });
-      navigate(`/admin/plans/${formData.id}`);
+      navigate(`/admin/plans/${plan.id}`);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -606,7 +579,7 @@ export default function PlanNew() {
     setExportingProposal(true);
     try {
       const blob = await generateProposalExcel({
-        planId: formData.id || 'NEW-PLAN',
+        planId: 'NEW-PLAN',
         planName: formData.plan_name || 'New Plan',
         clientName: formData.client_name || '',
         assets: selectedAssetsArray,
@@ -684,7 +657,7 @@ export default function PlanNew() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Plan ID</Label>
-                  <Input value={formData.id} disabled className="h-10 bg-muted/30" />
+                  <Input value="Auto-generated on save" disabled className="h-10 bg-muted/30 text-muted-foreground italic" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Client *</Label>
@@ -809,7 +782,7 @@ export default function PlanNew() {
                 durationDays={formData.duration_days}
                 planStartDate={formData.start_date}
                 planEndDate={formData.end_date}
-                planId={formData.id}
+                planId=""
                 planClientId={formData.client_id}
                 planClientName={formData.client_name}
               />

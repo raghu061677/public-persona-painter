@@ -440,7 +440,7 @@ export default function ClientDetail() {
       )}
 
       {/* Overdue Alert */}
-      {stats.overdueInvoices > 0 && (
+      {canSeeSensitive && stats.overdueInvoices > 0 && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>

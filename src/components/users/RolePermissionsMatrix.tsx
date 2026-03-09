@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -8,6 +8,10 @@ import { Loader2, Save, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 type AppRole = 'admin' | 'sales' | 'operations' | 'finance' | 'installation' | 'monitor' | 'user';
+
+export interface RolePermissionsMatrixRef {
+  selectRole: (role: string) => void;
+}
 
 interface RolePermission {
   id: string;

@@ -502,26 +502,20 @@ const App = () => (
                 <Route path="reminders" element={<CompanyReminders />} />
                 <Route path="client-portal" element={<CompanyClientPortal />} />
                 <Route path="pdf-templates" element={<CompanyPDFTemplates />} />
-                <Route path="email-notifications" element={<Navigate to="/admin/company-settings/smtp-settings" replace />} />
-                <Route path="smtp-settings" element={<EmailSmtpSettings />} />
+                {/* Email Providers (canonical) — formerly smtp-settings */}
+                <Route path="email-providers" element={<EmailSmtpSettings />} />
+                <Route path="smtp-settings" element={<Navigate to="/admin/company-settings/email-providers" replace />} />
+                <Route path="email-notifications" element={<Navigate to="/admin/company-settings/email-providers" replace />} />
+                <Route path="email-suppressions" element={<Navigate to="/admin/company-settings/email-providers" replace />} />
+
+                {/* Email Templates (canonical) */}
                 <Route path="email-templates" element={<EmailTemplateEditor />} />
-                <Route path="email-logs" element={<Navigate to="/admin/company-settings/email-outbox" replace />} />
-                <Route path="sms-notifications" element={<CompanySMSNotifications />} />
-                <Route path="digital-signature" element={<CompanyDigitalSignature />} />
-                <Route path="payments" element={<CompanyPayments />} />
-                <Route path="sales" element={<CompanySales />} />
-                <Route path="integrations" element={<CompanyIntegrations />} />
-                <Route path="developer" element={<CompanyDeveloper />} />
-                <Route path="workflows" element={<CompanyWorkflows />} />
-                <Route path="rate-settings" element={<RateSettings />} />
-                <Route path="alerts" element={<AlertsSettings />} />
-                <Route path="concession-contracts" element={<ConcessionContracts />} />
-                <Route path="automation" element={<AutomationRules />} />
-                <Route path="email-providers" element={<Navigate to="/admin/company-settings/smtp-settings" replace />} />
                 <Route path="email-template-manager" element={<Navigate to="/admin/company-settings/email-templates" replace />} />
+
+                {/* Email Outbox & Logs (canonical) */}
                 <Route path="email-outbox" element={<EmailOutbox />} />
+                <Route path="email-logs" element={<Navigate to="/admin/company-settings/email-outbox" replace />} />
                 <Route path="email-delivery-logs" element={<Navigate to="/admin/company-settings/email-outbox" replace />} />
-                <Route path="email-suppressions" element={<Navigate to="/admin/company-settings/smtp-settings" replace />} />
               </Route>
             </Route>
             {/* ===== END GLOBAL ADMIN AUTH GATE ===== */}

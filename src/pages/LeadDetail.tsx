@@ -27,6 +27,7 @@ export default function LeadDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [converting, setConverting] = useState(false);
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
 
   const { data: lead, isLoading } = useQuery({
     queryKey: ["lead", id],

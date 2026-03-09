@@ -25,7 +25,7 @@ interface ClientContactsManagerProps {
   isOwner?: boolean;
 }
 
-export function ClientContactsManager({ clientId }: ClientContactsManagerProps) {
+export function ClientContactsManager({ clientId, canSeeSensitive = true, isOwner = true }: ClientContactsManagerProps) {
   const { company } = useCompany();
   const [contacts, setContacts] = useState<ClientContact[]>([]);
   const [loading, setLoading] = useState(true);

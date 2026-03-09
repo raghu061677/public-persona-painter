@@ -17,6 +17,8 @@ import { parseDimensions, buildSearchTokens } from "@/utils/mediaAssets";
 import { buildStreetViewUrl } from "@/lib/streetview";
 import { ArrowLeft, Save, Calendar as CalendarIcon, ExternalLink, HelpCircle, MapPin, DollarSign, FileText, QrCode, Download } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEnterpriseRBAC } from "@/hooks/useEnterpriseRBAC";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { format } from "date-fns";
 import { PhotoUploadSection } from "@/components/media-assets/PhotoUploadSection";
 import { UnifiedPhotoGallery } from "@/components/common/UnifiedPhotoGallery";

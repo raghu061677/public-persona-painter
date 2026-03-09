@@ -1,5 +1,6 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
+import { validateRole, CANONICAL_ROLES } from '../_shared/roles.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,15 +16,9 @@ serve(async (req) => {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
+      { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Get current user from auth header
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
     
@@ -37,7 +32,7 @@ serve(async (req) => {
     }
 
     // Check if user is platform admin
-    const { data: companyUsers, error: roleError } = await supabaseClient
+    const { data: companyUsers } = await supabaseClient
       .from('company_users')
       .select('role, companies(type)')
       .eq('user_id', user.id)
@@ -47,14 +42,13 @@ serve(async (req) => {
       cu.role === 'admin' && (cu.companies as any)?.type === 'platform_admin'
     );
 
-    if (roleError || !isPlatformAdmin) {
+    if (!isPlatformAdmin) {
       return new Response(
         JSON.stringify({ error: 'Forbidden - Platform admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Parse request body
     const { company_id, email, name, phone, role } = await req.json();
 
     if (!company_id || !email || !name) {
@@ -64,15 +58,23 @@ serve(async (req) => {
       );
     }
 
-    console.log('create-company-user: Creating user for company:', company_id);
+    // Validate and normalize role
+    let canonicalRole: string;
+    try {
+      canonicalRole = validateRole(role || 'viewer');
+    } catch (e) {
+      return new Response(
+        JSON.stringify({ error: `Invalid role: "${role}". Valid: ${CANONICAL_ROLES.join(', ')}` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    // Create auth user
+    console.log('create-company-user: Creating user for company:', company_id, 'role:', canonicalRole);
+
     const { data: newUser, error: createError } = await supabaseClient.auth.admin.createUser({
       email,
       email_confirm: true,
-      user_metadata: {
-        username: name
-      }
+      user_metadata: { username: name }
     });
 
     if (createError) {
@@ -80,26 +82,17 @@ serve(async (req) => {
       throw createError;
     }
 
-    // Create profile
     const { error: profileError } = await supabaseClient
       .from('profiles')
-      .insert({
-        id: newUser.user.id,
-        username: name
-      });
+      .insert({ id: newUser.user.id, username: name });
+    if (profileError) console.warn('Profile warning:', profileError.message);
 
-    if (profileError) {
-      console.error('Error creating profile:', profileError);
-      // Don't fail completely, profile might already exist
-    }
-
-    // Create company_users association
     const { error: companyUserError } = await supabaseClient
       .from('company_users')
       .insert({
         company_id,
         user_id: newUser.user.id,
-        role: role || 'user',
+        role: canonicalRole,
         status: 'active',
         is_primary: false,
         invited_by: user.id
@@ -110,8 +103,6 @@ serve(async (req) => {
       throw companyUserError;
     }
 
-    console.log('create-company-user: Successfully created user:', newUser.user.id);
-
     return new Response(
       JSON.stringify({
         success: true,
@@ -119,7 +110,7 @@ serve(async (req) => {
           id: newUser.user.id,
           email: newUser.user.email,
           username: name,
-          role: role || 'user',
+          role: canonicalRole,
           status: 'active',
           company_id
         }

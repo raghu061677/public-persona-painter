@@ -4,6 +4,7 @@ import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { useSensitiveFieldMask } from "@/components/rbac/SensitiveField";
 import { useScopedQuery } from "@/hooks/useScopedQuery";
+import { useModuleActions } from "@/hooks/useModuleActions";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { ListToolbar } from "@/components/list-views";
@@ -85,6 +86,7 @@ export default function PlansList() {
   // RBAC scope filtering and sensitive field masking
   const { filterByScope: planScopeFilter } = useScopedQuery('plans', { ownerColumn: 'created_by', additionalOwnerColumns: ['sales_owner_id'] });
   const { mask: maskPlanField, canSee: canSeePlanField } = useSensitiveFieldMask('plans');
+  const actions = useModuleActions('plans');
 
   // Global List View System
   const lv = useListView("plans.list");
@@ -717,8 +719,8 @@ export default function PlansList() {
           onPresetUpdate={lv.updateCurrentView}
           onPresetDelete={lv.deletePreset}
           onPresetDuplicate={lv.duplicatePreset}
-          onExportExcel={(fields) => handleExportExcel(filteredPlans, fields)}
-          onExportPdf={(fields) => handleExportPdf(filteredPlans, fields)}
+          onExportExcel={actions.canExport() ? (fields) => handleExportExcel(filteredPlans, fields) : undefined}
+          onExportPdf={actions.canExport() ? (fields) => handleExportPdf(filteredPlans, fields) : undefined}
           onReset={lv.resetToDefaults}
         />
 

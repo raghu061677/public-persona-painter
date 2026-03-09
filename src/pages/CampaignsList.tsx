@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { useScopedQuery } from "@/hooks/useScopedQuery";
+import { useModuleActions } from "@/hooks/useModuleActions";
 import { useSensitiveFieldMask } from "@/components/rbac/SensitiveField";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,6 +48,7 @@ export default function CampaignsList() {
   // RBAC scope filtering and sensitive field masking
   const { filterByScope: campaignScopeFilter } = useScopedQuery('campaigns', { ownerColumn: 'created_by', additionalOwnerColumns: ['sales_owner_id'] });
   const { mask: maskField, canSee: canSeeField } = useSensitiveFieldMask('campaigns');
+  const actions = useModuleActions('campaigns');
 
   // Global List View System
   const lv = useListView("campaigns.list");
@@ -388,8 +390,8 @@ export default function CampaignsList() {
           onPresetUpdate={lv.updateCurrentView}
           onPresetDelete={lv.deletePreset}
           onPresetDuplicate={lv.duplicatePreset}
-          onExportExcel={(fields) => handleExportExcel(filteredCampaigns, fields)}
-          onExportPdf={(fields) => handleExportPdf(filteredCampaigns, fields)}
+          onExportExcel={actions.canExport() ? (fields) => handleExportExcel(filteredCampaigns, fields) : undefined}
+          onExportPdf={actions.canExport() ? (fields) => handleExportPdf(filteredCampaigns, fields) : undefined}
           onReset={() => { lv.resetToDefaults(); setAdvancedFilters({}); }}
           extraActions={
             <Button

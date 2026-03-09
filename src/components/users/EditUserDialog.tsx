@@ -89,7 +89,7 @@ export default function EditUserDialog({
           Authorization: `Bearer ${session.access_token}`
         },
         body: {
-          userId: user.id,
+          userId: targetUserId,
           name: username,
           role: selectedRole,
           status: isActive ? 'active' : 'suspended',

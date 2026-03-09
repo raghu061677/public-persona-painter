@@ -68,6 +68,8 @@ import { generateProposalExcel } from "@/lib/exports/proposalExcelExport";
 import { PlanAssetsTable } from "@/components/plans/PlanAssetsTable";
 import { SignedROSection } from "@/components/plans/SignedROSection";
 import { SendROSigningLink } from "@/components/plans/SendROSigningLink";
+import { useRecordPermissions } from "@/hooks/useRecordAccessMode";
+import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
 export default function PlanDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -107,6 +109,9 @@ export default function PlanDetail() {
     notes: "",
   });
   const [showDiscount, setShowDiscount] = useState(true);
+
+  // Enterprise RBAC: determine access mode for this plan
+  const perms = useRecordPermissions(plan, 'plans');
 
   const loadPendingApprovals = async () => {
     if (!id) return;
@@ -1066,6 +1071,9 @@ export default function PlanDetail() {
           </Card>
         )}
 
+        {/* Restricted Mode Banner for non-owner sales users */}
+        {perms.isReadOnly && <RestrictedBanner module="plan" />}
+
         {/* Header */}
         <div className="flex items-start justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -1096,7 +1104,7 @@ export default function PlanDetail() {
           {/* Action Buttons */}
           <div className="flex gap-2 flex-wrap items-start">
             {/* Edit Plan Button - Standalone */}
-            {isAdmin && (['pending', 'approved', 'draft', 'sent'].includes(plan.status?.toLowerCase())) && (
+            {(isAdmin || perms.canEditRecord) && (['pending', 'approved', 'draft', 'sent'].includes(plan.status?.toLowerCase())) && (
               <Button
                 onClick={() => navigate(`/admin/plans/edit/${id}`)}
                 size="sm"
@@ -1236,7 +1244,8 @@ export default function PlanDetail() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-popover border shadow-md z-50">
-                {/* Unified Export (Quotation/Proforma/RO with options) */}
+                {/* Unified Export (Quotation/Proforma/RO with options) - Financial */}
+                {perms.canViewFinancials && (
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                   <UnifiedExportButton 
                     planId={id!} 
@@ -1246,10 +1255,13 @@ export default function PlanDetail() {
                     className="w-full justify-start font-normal h-auto p-0"
                   />
                 </DropdownMenuItem>
+                )}
 
-                <DropdownMenuSeparator />
+                {perms.canViewFinancials && <DropdownMenuSeparator />}
                 
-                {/* Client Documents */}
+                {/* Client Documents - Financial exports restricted */}
+                {perms.canViewFinancials && (
+                <>
                 <DropdownMenuItem onClick={() => handleExportPPT(true)} disabled={exportingPPT}>
                   <Save className="mr-2 h-4 w-4" />
                   {exportingPPT ? "Uploading..." : "Download Proposal PPT"}
@@ -1266,6 +1278,8 @@ export default function PlanDetail() {
                   <Save className="mr-2 h-4 w-4" />
                   {exportingExcel ? "Uploading..." : "Download Plan Excel"}
                 </DropdownMenuItem>
+                </>
+                )}
                 <DropdownMenuItem onClick={() => handleExportPlanImagesPDF(true)} disabled={exportingImagesPdf}>
                   <Save className="mr-2 h-4 w-4" />
                   {exportingImagesPdf ? "Uploading..." : "Download Plan Images (PDF)"}
@@ -1513,7 +1527,8 @@ export default function PlanDetail() {
             </CardContent>
           </Card>
 
-          {/* Financial Summary - Orange Theme */}
+          {/* Financial Summary - Orange Theme - Hidden for non-owners */}
+          {perms.canViewFinancials && (
           <Card className="border-l-4 border-l-orange-500 shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-orange-600 dark:text-orange-400">
@@ -1615,6 +1630,7 @@ export default function PlanDetail() {
               </div>
             </CardContent>
           </Card>
+          )}
         </div>
 
         {/* Plan Items */}
@@ -1747,6 +1763,7 @@ export default function PlanDetail() {
           onClose={() => setShowAIProposalDialog(false)}
           planId={plan.id}
         />
+
 
 
         {/* Submit for Approval Dialog */}

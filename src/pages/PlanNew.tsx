@@ -579,7 +579,7 @@ export default function PlanNew() {
     setExportingProposal(true);
     try {
       const blob = await generateProposalExcel({
-        planId: formData.id || 'NEW-PLAN',
+        planId: 'NEW-PLAN',
         planName: formData.plan_name || 'New Plan',
         clientName: formData.client_name || '',
         assets: selectedAssetsArray,

@@ -24,7 +24,7 @@ interface ScopeFilterOptions {
 }
 
 export function useScopedQuery(module: ModuleKey, options: ScopeFilterOptions = {}) {
-  const { getScopeMode, isPlatformAdmin, isCompanyAdmin } = useEnterpriseRBAC();
+  const { getScopeMode, isPlatformAdmin, isCompanyAdmin, loading: rbacLoading } = useEnterpriseRBAC();
   const { user } = useAuth();
 
   const {

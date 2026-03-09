@@ -37,7 +37,6 @@ import {
   BILLING_CYCLE_DAYS,
 } from "@/utils/billingEngine";
 import { LineItemDurationControl } from "@/components/plans/LineItemDurationControl";
-import { generatePlanCode } from "@/lib/codeGenerator";
 import { ArrowLeft, Calendar as CalendarIcon, Info, Sparkles, FileText, FileSpreadsheet, Loader2 } from "lucide-react";
 import { ClientSelect } from "@/components/shared/ClientSelect";
 import { cn } from "@/lib/utils";

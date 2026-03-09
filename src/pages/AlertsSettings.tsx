@@ -277,24 +277,36 @@ export default function AlertsSettings() {
   const handleTestEmail = async () => {
     setTesting(true);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const jwt = sessionData?.session?.access_token;
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-daily-alerts?mode=test`;
-
-      const res = await fetch(url, {
+      const { data, error } = await supabase.functions.invoke("send-alert-test-email", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
+        body: {},
       });
 
-      const text = await res.text();
-      if (!res.ok) throw new Error(text || "Test email failed");
-      toast.success("Test email sent successfully!");
+      if (error) {
+        // Try to extract a readable message from the error
+        const msg = typeof error === 'object' && 'message' in error
+          ? error.message
+          : String(error);
+        throw new Error(msg || "Test email failed");
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      const recipientList = data?.recipients?.join(", ") ?? "";
+      toast.success(`Test email sent successfully${recipientList ? ` to ${recipientList}` : ""}!`);
     } catch (e: any) {
-      toast.error(e.message ?? "Test email failed");
+      const msg = e.message ?? "Test email failed";
+      if (msg.includes("No recipients")) {
+        toast.error("No recipients configured. Add email addresses in the Recipients section first.");
+      } else if (msg.includes("API key not configured") || msg.includes("provider")) {
+        toast.error("Email provider not configured. Contact your administrator.");
+      } else if (msg.includes("Forbidden") || msg.includes("Unauthorized")) {
+        toast.error("You don't have permission to send test emails. Admin role required.");
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setTesting(false);
     }

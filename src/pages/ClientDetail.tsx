@@ -46,6 +46,7 @@ import { ClientPortalAccessCard } from "@/components/clients/ClientPortalAccessC
 import { useEnterpriseRBAC } from "@/hooks/useEnterpriseRBAC";
 import { useAuth } from "@/contexts/AuthContext";
 import { isRecordOwner } from "@/lib/rbac/permissions";
+import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
 
 interface Client {
   id: string;

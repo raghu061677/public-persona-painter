@@ -1244,7 +1244,8 @@ export default function PlanDetail() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-popover border shadow-md z-50">
-                {/* Unified Export (Quotation/Proforma/RO with options) */}
+                {/* Unified Export (Quotation/Proforma/RO with options) - Financial */}
+                {perms.canViewFinancials && (
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                   <UnifiedExportButton 
                     planId={id!} 
@@ -1254,10 +1255,13 @@ export default function PlanDetail() {
                     className="w-full justify-start font-normal h-auto p-0"
                   />
                 </DropdownMenuItem>
+                )}
 
-                <DropdownMenuSeparator />
+                {perms.canViewFinancials && <DropdownMenuSeparator />}
                 
-                {/* Client Documents */}
+                {/* Client Documents - Financial exports restricted */}
+                {perms.canViewFinancials && (
+                <>
                 <DropdownMenuItem onClick={() => handleExportPPT(true)} disabled={exportingPPT}>
                   <Save className="mr-2 h-4 w-4" />
                   {exportingPPT ? "Uploading..." : "Download Proposal PPT"}
@@ -1274,6 +1278,8 @@ export default function PlanDetail() {
                   <Save className="mr-2 h-4 w-4" />
                   {exportingExcel ? "Uploading..." : "Download Plan Excel"}
                 </DropdownMenuItem>
+                </>
+                )}
                 <DropdownMenuItem onClick={() => handleExportPlanImagesPDF(true)} disabled={exportingImagesPdf}>
                   <Save className="mr-2 h-4 w-4" />
                   {exportingImagesPdf ? "Uploading..." : "Download Plan Images (PDF)"}

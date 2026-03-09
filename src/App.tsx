@@ -502,6 +502,17 @@ const App = () => (
                 <Route path="reminders" element={<CompanyReminders />} />
                 <Route path="client-portal" element={<CompanyClientPortal />} />
                 <Route path="pdf-templates" element={<CompanyPDFTemplates />} />
+                <Route path="sales" element={<CompanySales />} />
+                <Route path="payments" element={<CompanyPayments />} />
+                <Route path="rate-settings" element={<RateSettings />} />
+                <Route path="concession-contracts" element={<ConcessionContracts />} />
+                <Route path="sms-notifications" element={<CompanySMSNotifications />} />
+                <Route path="digital-signature" element={<CompanyDigitalSignature />} />
+                <Route path="alerts" element={<AlertsSettings />} />
+                <Route path="automation" element={<AutomationRules />} />
+                <Route path="workflows" element={<CompanyWorkflows />} />
+                <Route path="integrations" element={<CompanyIntegrations />} />
+                <Route path="developer" element={<CompanyDeveloper />} />
                 {/* Email Providers (canonical) — formerly smtp-settings */}
                 <Route path="email-providers" element={<EmailSmtpSettings />} />
                 <Route path="smtp-settings" element={<Navigate to="/admin/company-settings/email-providers" replace />} />

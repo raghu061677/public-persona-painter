@@ -636,7 +636,8 @@ export default function ClientDetail() {
             </Card>
           </div>
 
-          {/* Payment Timeline */}
+          {/* Payment Timeline - hidden for non-owners */}
+          {canSeeSensitive && (
           <Card>
             <CardHeader>
               <CardTitle>Payment Overview</CardTitle>

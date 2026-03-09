@@ -177,7 +177,7 @@
                   )}
                  title={collapsed ? item.label : undefined}
                >
-                 <LogOut className="h-5 w-5 shrink-0" />
+                 <LogOut className="h-4 w-4 shrink-0" />
                  {!collapsed && <span className="truncate">{item.label}</span>}
                </button>
              );

@@ -107,12 +107,12 @@ import { useSidebar } from "@/components/ui/sidebar";
          key={item.href}
          to={item.href}
          className={cn(
-           "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-           "min-h-[44px] touch-manipulation select-none pointer-events-auto",
-           "hover:bg-accent hover:text-accent-foreground",
-           "active:scale-[0.98]",
-           nested && "ml-4",
-           active && "bg-primary/10 text-primary border-l-2 border-primary font-semibold"
+            "flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors",
+            "min-h-[44px] touch-manipulation select-none pointer-events-auto",
+            "hover:bg-accent/80 hover:text-accent-foreground",
+            "active:scale-[0.98]",
+            nested && "ml-3 pl-3 border-l border-border/40",
+            active && "bg-primary/8 text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.12)] font-semibold"
          )}
        >
          {Icon && <Icon className="h-4 w-4 shrink-0" />}

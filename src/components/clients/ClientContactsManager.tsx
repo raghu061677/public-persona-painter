@@ -145,13 +145,20 @@ export function ClientContactsManager({ clientId, canSeeSensitive = true, isOwne
     );
   }
 
+  // Check if current user created a specific contact
+  const isContactOwner = (contact: ClientContact) => {
+    return contact.created_by === currentUserId;
+  };
+
   return (
     <div className="space-y-4">
       {/* Existing Contacts */}
       {contacts.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-medium text-muted-foreground">Existing Contacts</h3>
-          {contacts.map((contact) => (
+          {contacts.map((contact) => {
+            const canSeeContactDetails = canSeeSensitive || isContactOwner(contact);
+            return (
             <Card key={contact.id} className="p-4">
               <div className="flex items-start justify-between">
                 <div className="space-y-2 flex-1">
@@ -162,31 +169,42 @@ export function ClientContactsManager({ clientId, canSeeSensitive = true, isOwne
                     {contact.is_primary && (
                       <Badge variant="default" className="text-xs">Primary</Badge>
                     )}
+                    {isContactOwner(contact) && !canSeeSensitive && (
+                      <Badge variant="outline" className="text-xs">Your Contact</Badge>
+                    )}
                   </div>
-                  {contact.designation && (
+                  {canSeeContactDetails && contact.designation && (
                     <p className="text-sm text-muted-foreground">{contact.designation}</p>
                   )}
                   <div className="space-y-1">
-                    {contact.email && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{contact.email}</span>
-                      </div>
-                    )}
-                    {contact.mobile && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{contact.mobile}</span>
-                      </div>
-                    )}
-                    {contact.work_phone && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{contact.work_phone} (Work)</span>
-                      </div>
+                    {canSeeContactDetails ? (
+                      <>
+                        {contact.email && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span>{contact.email}</span>
+                          </div>
+                        )}
+                        {contact.mobile && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span>{contact.mobile}</span>
+                          </div>
+                        )}
+                        {contact.work_phone && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span>{contact.work_phone} (Work)</span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">Contact details restricted</p>
                     )}
                   </div>
                 </div>
+                {/* Only show delete for contacts the user created, or if user is admin/owner */}
+                {(canSeeSensitive || isContactOwner(contact)) && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -194,9 +212,11 @@ export function ClientContactsManager({ clientId, canSeeSensitive = true, isOwne
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
+                )}
               </div>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
 

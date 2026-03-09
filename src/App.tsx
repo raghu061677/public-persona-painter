@@ -502,10 +502,10 @@ const App = () => (
                 <Route path="reminders" element={<CompanyReminders />} />
                 <Route path="client-portal" element={<CompanyClientPortal />} />
                 <Route path="pdf-templates" element={<CompanyPDFTemplates />} />
-                <Route path="email-notifications" element={<CompanyEmailNotifications />} />
+                <Route path="email-notifications" element={<Navigate to="/admin/company-settings/smtp-settings" replace />} />
                 <Route path="smtp-settings" element={<EmailSmtpSettings />} />
                 <Route path="email-templates" element={<EmailTemplateEditor />} />
-                <Route path="email-logs" element={<EmailSendLogs />} />
+                <Route path="email-logs" element={<Navigate to="/admin/company-settings/email-outbox" replace />} />
                 <Route path="sms-notifications" element={<CompanySMSNotifications />} />
                 <Route path="digital-signature" element={<CompanyDigitalSignature />} />
                 <Route path="payments" element={<CompanyPayments />} />

@@ -6181,11 +6181,17 @@ export type Database = {
           email: string | null
           id: string
           location: string | null
+          matched_client_id: string | null
+          merge_confidence: number | null
+          merge_reason: string | null
+          merge_status: string
           metadata: Json | null
           name: string
           phone: string | null
           raw_message: string | null
           requirement: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           source: string
           status: string
           synced_to_zoho: boolean | null
@@ -6202,11 +6208,17 @@ export type Database = {
           email?: string | null
           id?: string
           location?: string | null
+          matched_client_id?: string | null
+          merge_confidence?: number | null
+          merge_reason?: string | null
+          merge_status?: string
           metadata?: Json | null
           name: string
           phone?: string | null
           raw_message?: string | null
           requirement?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source: string
           status?: string
           synced_to_zoho?: boolean | null
@@ -6223,11 +6235,17 @@ export type Database = {
           email?: string | null
           id?: string
           location?: string | null
+          matched_client_id?: string | null
+          merge_confidence?: number | null
+          merge_reason?: string | null
+          merge_status?: string
           metadata?: Json | null
           name?: string
           phone?: string | null
           raw_message?: string | null
           requirement?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source?: string
           status?: string
           synced_to_zoho?: boolean | null
@@ -6254,6 +6272,20 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_matched_client_id_fkey"
+            columns: ["matched_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_matched_client_id_fkey"
+            columns: ["matched_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_basic"
             referencedColumns: ["id"]
           },
         ]

@@ -262,9 +262,10 @@ export default function PlanEdit() {
       try {
         const { data: activeBookings } = await supabase
           .from('campaign_assets')
-          .select('booking_end_date, end_date')
+          .select('booking_end_date, end_date, campaigns!inner(status, is_deleted)')
           .eq('asset_id', assetId)
-          .in('status', ['Assigned', 'Installed', 'Mounted', 'In Progress', 'PhotoUploaded'])
+          .in('campaigns.status', ['Running', 'Planned', 'InProgress', 'Upcoming'])
+          .eq('campaigns.is_deleted', false)
           .order('booking_end_date', { ascending: false })
           .limit(1);
         
@@ -416,7 +417,7 @@ export default function PlanEdit() {
         const assetDays = rentResult.booked_days;
         const rentAmount = rentResult.rent_amount;
         
-        // Calculate printing cost using rate × sqft (same as SelectedAssetsTable)
+        // Calculate printing cost using rate × sqft, fallback to stored charges
         const printingRate = pricing.printing_rate || 0;
         const mountingRate = pricing.mounting_rate || 0;
         const mountingMode = pricing.mounting_mode || 'sqft';
@@ -424,8 +425,11 @@ export default function PlanEdit() {
         const printingResult = calculatePrintingCost(asset, printingRate);
         const mountingResult = calculateMountingCost(asset, mountingRate);
         
-        const printing = printingResult.cost;
-        const mounting = mountingMode === 'fixed' ? mountingRate : mountingResult.cost;
+        // Use rate-based calculation if rate > 0, otherwise fallback to stored charges
+        const printing = printingResult.cost > 0 ? printingResult.cost : (pricing.printing_charges || 0);
+        const mounting = mountingMode === 'fixed' 
+          ? mountingRate 
+          : (mountingResult.cost > 0 ? mountingResult.cost : (pricing.mounting_charges || 0));
         
         // Calculate discount: (Card Rate - Negotiated Price) pro-rated
         const discountMonthly = cardRate - negotiatedPrice;

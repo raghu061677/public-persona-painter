@@ -272,9 +272,10 @@ import {
             icon: Building2,
             items: [
               { label: "Company Profile", href: "/admin/company-settings/profile", icon: Building2 },
-              { label: "Branding / Logo", href: "/admin/company-settings/branding", icon: Palette },
-              { label: "Email Settings", href: "/admin/company-settings/email-notifications", icon: Mail },
-              { label: "Notification Settings", href: "/admin/company-settings/alerts", icon: Bell },
+              { label: "Branding & Logo", href: "/admin/company-settings/branding", icon: Palette },
+              { label: "Email & Notifications", href: "/admin/company-settings/email-providers", icon: Mail },
+              { label: "Reminders", href: "/admin/company-settings/reminders", icon: Bell },
+              { label: "Alerts", href: "/admin/company-settings/alerts", icon: Bell },
             ],
           },
           {
@@ -283,10 +284,6 @@ import {
             icon: UserCog,
             items: [
               { label: "User Management", href: "/admin/users", icon: Users },
-              { label: "Role Permissions", href: "/admin/company-settings/roles", icon: Shield },
-              { label: "Access Control", href: "/admin/access-control", icon: Lock },
-              { label: "Teams", href: "/admin/teams", icon: UsersRound },
-              { label: "Access Requests", href: "/admin/access-requests", icon: ClipboardList },
               { label: "Activity & Audit Logs", href: "/admin/audit-logs", icon: Activity },
             ],
           },
@@ -295,10 +292,25 @@ import {
             label: "Data Management",
             icon: Database,
             items: [
-              { label: "Import Data", href: "/admin/import-data", icon: Upload },
-              { label: "Export Data", href: "/admin/export-data", icon: Download },
-              { label: "Backup", href: "/admin/backup", icon: HardDrive },
-              { label: "System Activity", href: "/admin/system-activity", icon: Activity },
+              { label: "Import / Export Data", href: "/admin/data-export-import", icon: Download },
+            ],
+          },
+          {
+            id: "automation-intelligence",
+            label: "Automation & Intelligence",
+            icon: Zap,
+            items: [
+              { label: "Automation Rules", href: "/admin/company-settings/automation", icon: Zap },
+            ],
+          },
+          {
+            id: "marketplace-integrations",
+            label: "Marketplace & Integrations",
+            icon: Globe,
+            items: [
+              { label: "Email Providers", href: "/admin/company-settings/email-providers", icon: Mail },
+              { label: "Integrations", href: "/admin/company-settings/integrations", icon: Zap },
+              { label: "API & Webhooks", href: "/admin/company-settings/developer", icon: Settings },
             ],
           },
         ],

@@ -1,0 +1,1 @@
+UPDATE role_permissions SET can_export = false WHERE role = 'sales' AND module IN ('clients', 'plans', 'campaigns');

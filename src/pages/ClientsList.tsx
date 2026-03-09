@@ -949,10 +949,14 @@ export default function ClientsList() {
                       </TableCell>
                     )}
                     {visibleColumns.includes("email") && (
-                      <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{client.email || '-'}</TableCell>
+                      <TableCell className={`px-4 py-3 ${getCellClassName()}`}>
+                        {canSeeClientField('email', client) ? (client.email || '-') : <span className="text-muted-foreground select-none">••••••</span>}
+                      </TableCell>
                     )}
                     {visibleColumns.includes("phone") && (
-                      <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{client.phone || '-'}</TableCell>
+                      <TableCell className={`px-4 py-3 ${getCellClassName()}`}>
+                        {canSeeClientField('phone', client) ? (client.phone || '-') : <span className="text-muted-foreground select-none">••••••</span>}
+                      </TableCell>
                     )}
                     {visibleColumns.includes("city") && (
                       <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{client.city || '-'}</TableCell>

@@ -148,6 +148,9 @@ export default function PlanEdit() {
       .single();
 
     if (plan) {
+      // Store raw plan for RBAC access check
+      setPlanRecord(plan);
+      
       const days = calculateDurationDays(new Date(plan.start_date), new Date(plan.end_date));
       const months = plan.months_count || calculateMonthsFromDays(days);
       

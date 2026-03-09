@@ -40,6 +40,11 @@ export interface EnterpriseRBACResult {
   
   // Field masking
   maskSensitiveValue: (module: ModuleKey, fieldName: string, value: any, record?: any) => any;
+  
+  // Granular field access (from role_permissions)
+  canViewFinancial: (module: ModuleKey) => boolean;
+  canViewContacts: (module: ModuleKey) => boolean;
+  getFieldAccess: (module: ModuleKey, record?: any) => FieldAccessContext;
 }
 
 export function useEnterpriseRBAC(): EnterpriseRBACResult {

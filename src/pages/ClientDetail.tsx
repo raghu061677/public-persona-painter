@@ -807,7 +807,7 @@ export default function ClientDetail() {
                           {new Date(campaign.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </TableCell>
                         <TableCell>{campaign.total_assets || 0}</TableCell>
-                        <TableCell>{formatINR(campaign.grand_total)}</TableCell>
+                        {canSeeSensitive && <TableCell>{formatINR(campaign.grand_total)}</TableCell>}
                         <TableCell>
                           <Badge className={getStatusBadge(campaign.status)}>
                             {campaign.status}

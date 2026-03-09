@@ -619,12 +619,14 @@ export default function CampaignDetail() {
         {/* Tabs - Enhanced with border */}
         <Card className="border-2">
           <Tabs defaultValue="assets" className="p-4">
-            <TabsList className="grid grid-cols-6 w-full max-w-4xl">
+            <TabsList className={`grid w-full max-w-4xl ${perms.canViewFinancials ? 'grid-cols-6' : 'grid-cols-5'}`}>
               <TabsTrigger value="assets">Assets ({campaignAssets.length})</TabsTrigger>
               <TabsTrigger value="creatives">Creatives</TabsTrigger>
               <TabsTrigger value="operations">Operations</TabsTrigger>
               <TabsTrigger value="proof">Proof Gallery</TabsTrigger>
-              <TabsTrigger value="billing">Billing & Invoices</TabsTrigger>
+              {perms.canViewFinancials && (
+                <TabsTrigger value="billing">Billing & Invoices</TabsTrigger>
+              )}
               <TabsTrigger value="timeline">Timeline</TabsTrigger>
             </TabsList>
 

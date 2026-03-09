@@ -166,13 +166,21 @@ export function useEnterpriseRBAC(): EnterpriseRBACResult {
 
   const canViewSensitive = useCallback((module: ModuleKey, record?: any) => {
     const perm = getModulePerm(module);
-    if (!perm.can_view_sensitive) return false;
-    if (!record) return true;
-    // For 'own' scope, can see sensitive data only on own records
-    if (perm.scope_mode === 'own') {
-      return checkScopeAccess('own', record, user?.id);
+    // If explicitly granted can_view_sensitive, check scope as normal
+    if (perm.can_view_sensitive) {
+      if (!record) return true;
+      if (perm.scope_mode === 'own') {
+        return checkScopeAccess('own', record, user?.id);
+      }
+      return true;
     }
-    return true;
+    // Even without can_view_sensitive, allow seeing sensitive data on OWN records
+    // This supports "all scope + no sensitive" pattern (e.g., sales seeing all clients
+    // but only their own contacts/financial details)
+    if (record && user?.id) {
+      return checkScopeAccess('own', record, user.id);
+    }
+    return false;
   }, [getModulePerm, user]);
 
   const getScopeMode = useCallback((module: ModuleKey): ScopeMode => {

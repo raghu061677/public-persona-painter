@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -120,10 +120,16 @@ export default function ClientNew() {
   const [showClearDraftDialog, setShowClearDraftDialog] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
   
+  // Duplicate detection state
+  const [duplicateMatch, setDuplicateMatch] = useState<any>(null);
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
+  
   // Track if the form has been initialized to prevent resets
   const formInitializedRef = useRef(false);
   // Track if user has started typing (dirty form)
   const formTouchedRef = useRef(false);
+  // Debounce timer for duplicate check
+  const duplicateTimerRef = useRef<ReturnType<typeof setTimeout>>();
   
   // Initialize form with draft from sessionStorage immediately (before company loads)
   const [formData, setFormData] = useState(() => {
@@ -166,6 +172,59 @@ export default function ClientNew() {
     return [];
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Duplicate client detection - check by name or GST
+  const checkForDuplicates = useCallback(async (name: string, gstNumber: string) => {
+    if (!company?.id) return;
+    if (!name && !gstNumber) {
+      setDuplicateMatch(null);
+      return;
+    }
+    
+    setCheckingDuplicate(true);
+    try {
+      let query = supabase
+        .from('clients')
+        .select('id, name, company, gst_number, billing_address_line1, billing_city, billing_state, city, state')
+        .eq('company_id', company.id);
+      
+      // Check GST first (exact match), then name (case-insensitive)
+      if (gstNumber && gstNumber.length >= 15) {
+        query = query.eq('gst_number', gstNumber.toUpperCase());
+      } else if (name && name.length >= 3) {
+        query = query.ilike('name', name.trim());
+      } else {
+        setDuplicateMatch(null);
+        setCheckingDuplicate(false);
+        return;
+      }
+      
+      const { data, error } = await query.limit(1);
+      
+      if (!error && data && data.length > 0) {
+        setDuplicateMatch(data[0]);
+      } else {
+        setDuplicateMatch(null);
+      }
+    } catch (err) {
+      console.error('Duplicate check error:', err);
+    } finally {
+      setCheckingDuplicate(false);
+    }
+  }, [company?.id]);
+
+  // Debounced duplicate check when company name or GST changes
+  useEffect(() => {
+    if (duplicateTimerRef.current) clearTimeout(duplicateTimerRef.current);
+    duplicateTimerRef.current = setTimeout(() => {
+      const nameToCheck = formData.customer_type === 'business' ? formData.company : 
+        [formData.first_name, formData.last_name].filter(Boolean).join(' ');
+      checkForDuplicates(nameToCheck, formData.gst_number);
+    }, 500);
+    return () => {
+      if (duplicateTimerRef.current) clearTimeout(duplicateTimerRef.current);
+    };
+  }, [formData.company, formData.first_name, formData.last_name, formData.gst_number, formData.customer_type, checkForDuplicates]);
 
   // Get storage key based on company
   const storageKey = getDraftStorageKey(company?.id);
@@ -343,6 +402,13 @@ export default function ClientNew() {
     try {
       setLoading(true);
       setErrors({});
+
+      // Block if duplicate detected
+      if (duplicateMatch) {
+        toast.error("A client with this name or GST already exists. Please add a contact person to the existing client instead.");
+        setLoading(false);
+        return;
+      }
 
       // Check if company data is available
       if (!company?.id) {
@@ -580,7 +646,42 @@ export default function ClientNew() {
         </div>
       )}
 
-      {/* Clear Draft Confirmation Dialog */}
+      {/* Duplicate Client Detection Banner */}
+      {duplicateMatch && (
+        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 space-y-3">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-destructive">Duplicate Client Detected</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                A client with matching details already exists. You cannot create a duplicate.
+              </p>
+              <div className="mt-2 p-3 bg-card rounded-md border text-sm space-y-1">
+                <p><span className="font-medium">Name:</span> {duplicateMatch.name}</p>
+                {duplicateMatch.gst_number && <p><span className="font-medium">GST:</span> {duplicateMatch.gst_number}</p>}
+                <p><span className="font-medium">Location:</span> {[duplicateMatch.billing_city || duplicateMatch.city, duplicateMatch.billing_state || duplicateMatch.state].filter(Boolean).join(', ') || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2 ml-8">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/admin/clients/${duplicateMatch.id}`)}
+            >
+              View Existing Client
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => navigate(`/admin/clients/${duplicateMatch.id}?edit=true`)}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add Contact Person
+            </Button>
+          </div>
+        </div>
+      )}
       <AlertDialog open={showClearDraftDialog} onOpenChange={setShowClearDraftDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>

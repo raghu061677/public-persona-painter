@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { useScopedQuery } from "@/hooks/useScopedQuery";
+import { useSensitiveFieldMask } from "@/components/rbac/SensitiveField";
 import { supabase } from "@/integrations/supabase/client";
 import { generateClientCode } from "@/lib/codeGenerator";
 import { PageContainer } from "@/components/ui/page-container";
@@ -133,6 +134,7 @@ export default function ClientsList() {
   
   // RBAC scope filtering for clients
   const { filterByScope: clientScopeFilter } = useScopedQuery('clients', { ownerColumn: 'created_by', additionalOwnerColumns: ['assigned_to'] });
+  const { mask: maskClientField, canSee: canSeeClientField } = useSensitiveFieldMask('clients');
   // Filtering states (kept for backward compatibility)
   const [filterState, setFilterState] = useState<string>("");
   const [filterCity, setFilterCity] = useState<string>("");
@@ -947,10 +949,14 @@ export default function ClientsList() {
                       </TableCell>
                     )}
                     {visibleColumns.includes("email") && (
-                      <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{client.email || '-'}</TableCell>
+                      <TableCell className={`px-4 py-3 ${getCellClassName()}`}>
+                        {canSeeClientField('email', client) ? (client.email || '-') : <span className="text-muted-foreground select-none">••••••</span>}
+                      </TableCell>
                     )}
                     {visibleColumns.includes("phone") && (
-                      <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{client.phone || '-'}</TableCell>
+                      <TableCell className={`px-4 py-3 ${getCellClassName()}`}>
+                        {canSeeClientField('phone', client) ? (client.phone || '-') : <span className="text-muted-foreground select-none">••••••</span>}
+                      </TableCell>
                     )}
                     {visibleColumns.includes("city") && (
                       <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{client.city || '-'}</TableCell>

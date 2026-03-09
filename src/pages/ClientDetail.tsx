@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { ActionGuard } from "@/components/rbac/ActionGuard";
@@ -43,6 +43,9 @@ import { ClientContactsManager } from "@/components/clients/ClientContactsManage
 import { ClientLedger } from "@/components/finance/ClientLedger";
 import { SignedRODocumentCard } from "@/components/shared/SignedRODocumentCard";
 import { ClientPortalAccessCard } from "@/components/clients/ClientPortalAccessCard";
+import { useEnterpriseRBAC } from "@/hooks/useEnterpriseRBAC";
+import { useAuth } from "@/contexts/AuthContext";
+import { isRecordOwner } from "@/lib/rbac/permissions";
 
 interface Client {
   id: string;
@@ -116,6 +119,8 @@ export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useAuth();
+  const rbac = useEnterpriseRBAC();
   const [loading, setLoading] = useState(true);
   const [client, setClient] = useState<Client | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -124,6 +129,14 @@ export default function ClientDetail() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  
+  // Check if current user owns this client record
+  const isOwner = useMemo(() => {
+    if (!client || !user) return false;
+    return isRecordOwner(client, user.id);
+  }, [client, user]);
+  
+  const canSeeSensitive = rbac.isCompanyAdmin || rbac.isPlatformAdmin || isOwner;
   
   const [stats, setStats] = useState({
     totalRevenue: 0,
@@ -465,7 +478,9 @@ export default function ClientDetail() {
                     <Mail className="h-4 w-4 mt-1 text-muted-foreground" />
                     <div>
                       <p className="text-sm font-medium">Email</p>
-                      <p className="text-sm text-muted-foreground">{client.email || "Not provided"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {canSeeSensitive ? (client.email || "Not provided") : <span className="select-none">••••••</span>}
+                      </p>
                     </div>
                   </div>
                   
@@ -473,7 +488,9 @@ export default function ClientDetail() {
                     <Phone className="h-4 w-4 mt-1 text-muted-foreground" />
                     <div>
                       <p className="text-sm font-medium">Phone</p>
-                      <p className="text-sm text-muted-foreground">{client.phone || "Not provided"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {canSeeSensitive ? (client.phone || "Not provided") : <span className="select-none">••••••</span>}
+                      </p>
                     </div>
                   </div>
 
@@ -511,7 +528,7 @@ export default function ClientDetail() {
                 <CardTitle>Contact Persons</CardTitle>
               </CardHeader>
               <CardContent>
-                <ClientContactsManager clientId={client.id} />
+                <ClientContactsManager clientId={client.id} canSeeSensitive={canSeeSensitive} isOwner={isOwner} />
               </CardContent>
             </Card>
 

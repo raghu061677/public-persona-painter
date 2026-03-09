@@ -176,6 +176,13 @@ export const SENSITIVE_FIELDS = [
   'amount',
   'amount_before_tax',
   'net_payable',
+  // Client contact fields - sensitive for non-owners
+  'email',
+  'phone',
+  'contact_person',
+  'mobile',
+  'work_phone',
+  'designation',
 ] as const;
 
 export type SensitiveField = typeof SENSITIVE_FIELDS[number];

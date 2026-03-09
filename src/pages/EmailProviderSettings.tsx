@@ -92,7 +92,17 @@ export default function EmailProviderSettings() {
       daily_limit: dailyLimit,
       is_active: false,
       is_default: false,
-    });
+    };
+    if (formType === "smtp") {
+      insertData.smtp_host = smtpHost;
+      insertData.smtp_port = smtpPort;
+      insertData.smtp_secure = smtpSecure;
+      insertData.smtp_username = smtpUsername;
+      insertData.smtp_password_encrypted = smtpPassword;
+    } else {
+      insertData.resend_api_key_encrypted = resendKey;
+    }
+    const { error } = await supabase.from("email_provider_configs").insert(insertData as any);
     setSaving(false);
     if (error) {
       toast({ variant: "destructive", title: "Error", description: error.message });

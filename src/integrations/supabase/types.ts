@@ -6207,6 +6207,247 @@ export type Database = {
           },
         ]
       }
+      marketplace_listings: {
+        Row: {
+          asset_id: string
+          availability_end: string
+          availability_start: string
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          inquiries_count: number | null
+          min_booking_days: number | null
+          rate: number
+          status: string
+          updated_at: string
+          views_count: number | null
+        }
+        Insert: {
+          asset_id: string
+          availability_end: string
+          availability_start: string
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          inquiries_count?: number | null
+          min_booking_days?: number | null
+          rate?: number
+          status?: string
+          updated_at?: string
+          views_count?: number | null
+        }
+        Update: {
+          asset_id?: string
+          availability_end?: string
+          availability_start?: string
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          inquiries_count?: number | null
+          min_booking_days?: number | null
+          rate?: number
+          status?: string
+          updated_at?: string
+          views_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_listings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_profitability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_revenue_summary"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_utilization"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_forecast"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_calendar_heatmap"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "public_media_assets_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_availability"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_booking_windows"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_default"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "v_assets_vacant_today"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_transactions: {
+        Row: {
+          booking_request_id: string | null
+          buyer_company_id: string
+          campaign_id: string | null
+          created_at: string
+          id: string
+          listing_id: string | null
+          net_amount: number
+          notes: string | null
+          platform_fee: number
+          platform_fee_percent: number
+          seller_company_id: string
+          status: string
+          transaction_value: number
+          updated_at: string
+        }
+        Insert: {
+          booking_request_id?: string | null
+          buyer_company_id: string
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          listing_id?: string | null
+          net_amount?: number
+          notes?: string | null
+          platform_fee?: number
+          platform_fee_percent?: number
+          seller_company_id: string
+          status?: string
+          transaction_value?: number
+          updated_at?: string
+        }
+        Update: {
+          booking_request_id?: string | null
+          buyer_company_id?: string
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          listing_id?: string | null
+          net_amount?: number
+          notes?: string | null
+          platform_fee?: number
+          platform_fee_percent?: number
+          seller_company_id?: string
+          status?: string
+          transaction_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_transactions_booking_request_id_fkey"
+            columns: ["booking_request_id"]
+            isOneToOne: false
+            referencedRelation: "booking_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_transactions_buyer_company_id_fkey"
+            columns: ["buyer_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_transactions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_transactions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_transactions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_transactions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_forecast"
+            referencedColumns: ["campaign_id"]
+          },
+          {
+            foreignKeyName: "marketplace_transactions_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_transactions_seller_company_id_fkey"
+            columns: ["seller_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_asset_faces: {
         Row: {
           asset_id: string

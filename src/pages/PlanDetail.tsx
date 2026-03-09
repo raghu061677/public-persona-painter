@@ -1650,6 +1650,7 @@ export default function PlanDetail() {
               onAddAssets={() => setShowAddAssetsDialog(true)}
               onBulkPrintingMounting={() => setShowBulkPrintingDialog(true)}
               onPrintingInstallation={() => setShowPrintingInstallationDialog(true)}
+              canViewFinancials={perms.canViewFinancials}
             />
           </CardContent>
         </Card>

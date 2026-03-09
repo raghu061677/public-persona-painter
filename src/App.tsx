@@ -429,6 +429,7 @@ const App = () => (
               <Route path="assistant" element={<Navigate to="/admin/ai-assistant" replace />} />
               <Route path="tenant-analytics" element={<Navigate to="/admin/analytics-dashboard" replace />} />
               <Route path="analytics-dashboard" element={<ProtectedRoute requireAuth><ModernAppLayout><AnalyticsDashboard /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="intelligence" element={<ProtectedRoute requireAuth><ModernAppLayout><IntelligenceDashboard /></ModernAppLayout></ProtectedRoute>} />
               <Route path="analytics/inventory" element={<ProtectedRoute requireAuth><ModernAppLayout><InventoryUtilization /></ModernAppLayout></ProtectedRoute>} />
               <Route path="analytics/revenue-forecast" element={<Navigate to="/admin/reports/revenue?tab=forecast" replace />} />
               <Route path="proformas" element={<ProtectedRoute requireAuth><ModernAppLayout><ProformasList /></ModernAppLayout></ProtectedRoute>} />

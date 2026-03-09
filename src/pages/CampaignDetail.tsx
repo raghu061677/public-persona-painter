@@ -41,6 +41,8 @@ import { computeCampaignTotals } from "@/utils/computeCampaignTotals";
 import { useCampaignProfitability } from "@/hooks/useCampaignProfitability";
 import { CampaignProfitSummary } from "@/components/campaigns/CampaignProfitSummary";
 import { SignedRODocumentCard } from "@/components/shared/SignedRODocumentCard";
+import { useRecordPermissions } from "@/hooks/useRecordAccessMode";
+import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
 
 export default function CampaignDetail() {
   const { id: routeParam } = useParams();

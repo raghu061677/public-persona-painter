@@ -79,6 +79,7 @@ export function ActionCell({
           <Eye className="h-4 w-4" />
         </Button>
         
+        <ActionGuard module="media_assets" action="edit" record={asset}>
         <Button
           variant="ghost"
           size="icon"
@@ -88,6 +89,7 @@ export function ActionCell({
         >
           <Edit className="h-4 w-4" />
         </Button>
+        </ActionGuard>
         
         {hasLocation && (
           <Button

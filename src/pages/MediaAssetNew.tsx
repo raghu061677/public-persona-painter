@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -315,9 +316,13 @@ export default function MediaAssetNew() {
             <p className="text-sm text-muted-foreground">Fill in details and save to generate MNS code</p>
           </div>
         </div>
+        <ActionGuard module="media_assets" action="create" fallback={
+          <Button disabled title="You don't have permission to create assets">No Permission</Button>
+        }>
         <Button type="submit" disabled={loading || !formData.city || !formData.media_type}>
           {loading ? 'Saving...' : 'Create Asset'}
         </Button>
+        </ActionGuard>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

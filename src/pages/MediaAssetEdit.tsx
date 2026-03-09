@@ -17,6 +17,8 @@ import { parseDimensions, buildSearchTokens } from "@/utils/mediaAssets";
 import { buildStreetViewUrl } from "@/lib/streetview";
 import { ArrowLeft, Save, Calendar as CalendarIcon, ExternalLink, HelpCircle, MapPin, DollarSign, FileText, QrCode, Download } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEnterpriseRBAC } from "@/hooks/useEnterpriseRBAC";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { format } from "date-fns";
 import { PhotoUploadSection } from "@/components/media-assets/PhotoUploadSection";
 import { UnifiedPhotoGallery } from "@/components/common/UnifiedPhotoGallery";
@@ -25,13 +27,14 @@ export default function MediaAssetEdit() {
   const { code } = useParams();
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
+  const rbac = useEnterpriseRBAC();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [municipalAuthorities, setMunicipalAuthorities] = useState<{ label: string; value: string }[]>([]);
   const [formData, setFormData] = useState<any>(null);
 
   useEffect(() => {
-    if (!isAdmin) {
+    if (!rbac.loading && !rbac.canEdit('media_assets')) {
       toast({
         title: "Access Denied",
         description: "You don't have permission to edit media assets",
@@ -40,8 +43,10 @@ export default function MediaAssetEdit() {
       navigate('/admin/media-assets');
       return;
     }
-    fetchAsset();
-  }, [code, isAdmin]);
+    if (!rbac.loading) {
+      fetchAsset();
+    }
+  }, [code, rbac.loading]);
 
   // Fetch municipal authorities
   useEffect(() => {
@@ -285,10 +290,14 @@ export default function MediaAssetEdit() {
                   </p>
                 </div>
               </div>
+              <ActionGuard module="media_assets" action="edit" fallback={
+                <Button disabled title="No permission">No Permission</Button>
+              }>
               <Button type="submit" disabled={loading} size="lg" className="shadow-lg">
                 <Save className="mr-2 h-4 w-4" />
                 {loading ? 'Saving...' : 'Save Changes'}
               </Button>
+              </ActionGuard>
             </div>
           </div>
 

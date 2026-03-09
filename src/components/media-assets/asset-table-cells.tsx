@@ -4,6 +4,7 @@ import { Eye, Edit, Trash2, MapPin, Shield, ShieldOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { QRCodeButton } from "./QRCodeButton";
 import { AssetHoldDialog } from "@/components/reports/AssetHoldDialog";
+import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { ReleaseHoldDialog } from "@/components/reports/ReleaseHoldDialog";
 import {
   Tooltip,
@@ -78,6 +79,7 @@ export function ActionCell({
           <Eye className="h-4 w-4" />
         </Button>
         
+        <ActionGuard module="media_assets" action="edit" record={asset}>
         <Button
           variant="ghost"
           size="icon"
@@ -87,6 +89,7 @@ export function ActionCell({
         >
           <Edit className="h-4 w-4" />
         </Button>
+        </ActionGuard>
         
         {hasLocation && (
           <Button
@@ -146,6 +149,7 @@ export function ActionCell({
           variant="ghost"
         />
         
+        <ActionGuard module="media_assets" action="delete" record={asset}>
         <Button
           variant="ghost"
           size="icon"
@@ -155,6 +159,7 @@ export function ActionCell({
         >
           <Trash2 className="h-4 w-4" />
         </Button>
+        </ActionGuard>
       </div>
 
       <AssetHoldDialog

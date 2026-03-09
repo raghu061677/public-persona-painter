@@ -11582,6 +11582,10 @@ export type Database = {
           media_asset_code: string
         }[]
       }
+      check_role_permission: {
+        Args: { p_action: string; p_module: string; p_user_id: string }
+        Returns: boolean
+      }
       check_subscription_user_limit: {
         Args: { p_company_id: string }
         Returns: boolean

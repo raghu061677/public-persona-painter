@@ -71,11 +71,17 @@ Deno.serve(withAuth(async (req) => {
   let sendResult: { success: boolean; error?: string; id?: string };
 
   if (smtpConfig && smtpConfig.smtp_host) {
-    // Use tenant SMTP — via Deno SMTP client
+    // Attempt tenant SMTP
     providerUsed = 'smtp';
     sendResult = await sendViaSmtp(smtpConfig, to, finalSubject, finalHtml);
+    // If SMTP fails, fallback to Resend
+    if (!sendResult.success) {
+      console.warn('[send-tenant-email] SMTP failed, falling back to Resend:', sendResult.error);
+      providerUsed = 'resend';
+      sendResult = await sendViaResend(to, finalSubject, finalHtml, ctx.companyId, sb);
+    }
   } else {
-    // Fallback to Resend
+    // Use Resend directly
     sendResult = await sendViaResend(to, finalSubject, finalHtml, ctx.companyId, sb);
   }
 
@@ -170,41 +176,12 @@ async function sendViaSmtp(
   subject: string,
   html: string
 ): Promise<{ success: boolean; error?: string; id?: string }> {
-  // Use Deno's built-in SMTP capabilities
-  // For edge functions, we use a simple HTTP-to-SMTP bridge approach
-  // Since Deno edge functions can't directly connect to SMTP ports,
-  // we'll attempt a direct connection using Deno.connect for TCP
-  try {
-    const { SmtpClient } = await import("https://deno.land/x/smtp@v0.7.0/mod.ts");
-    
-    const client = new SmtpClient();
-    
-    const connectConfig: any = {
-      hostname: config.smtp_host,
-      port: config.smtp_port,
-      username: config.smtp_user,
-      password: config.smtp_password,
-    };
-
-    if (config.smtp_secure) {
-      await client.connectTLS(connectConfig);
-    } else {
-      await client.connect(connectConfig);
-    }
-
-    await client.send({
-      from: config.from_email,
-      to: to,
-      subject: subject,
-      content: "Please view this email in an HTML-compatible client.",
-      html: html,
-    });
-
-    await client.close();
-    
-    return { success: true, id: `smtp-${Date.now()}` };
-  } catch (err: any) {
-    console.error('SMTP send error:', err);
-    return { success: false, error: `SMTP error: ${err.message}` };
-  }
+  // Supabase Edge Runtime does not support raw TCP/TLS connections
+  // required by SMTP. Log a warning and return a descriptive error
+  // so the caller can fall back to Resend.
+  console.warn('[send-tenant-email] SMTP is not supported in edge runtime. Falling back.');
+  return {
+    success: false,
+    error: 'SMTP sending is not supported in edge functions. Configure Resend as your provider or use the platform default.',
+  };
 }

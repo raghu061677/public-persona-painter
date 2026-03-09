@@ -1755,8 +1755,7 @@ export default function PlanDetail() {
           planId={plan.id}
         />
 
-        {/* Restricted Mode Banner for non-owner sales users */}
-        {perms.isReadOnly && <RestrictedBanner module="plan" />}
+
 
         {/* Submit for Approval Dialog */}
         <Dialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>

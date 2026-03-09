@@ -75,95 +75,77 @@ import {
   * Complete navigation configuration for Go-Ads 360
   * This is the single source of truth for all sidebar navigation
   */
- export const NAV_CONFIG: NavConfig = {
-   sections: [
-     // Workspace
-     {
-       id: "workspace",
-       label: "Workspace",
-       icon: LayoutDashboard,
-       items: [
-         { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-       ],
-     },
- 
-     // Inventory
-     {
-       id: "inventory",
-       label: "Inventory",
-       icon: Map,
-       items: [
-         { label: "Media Assets", href: "/admin/media-assets", icon: Map },
-         { label: "Media Availability", href: "/admin/reports/vacant-media", icon: Calendar },
-         { label: "Asset Validation", href: "/admin/media-assets-validation", icon: FileCheck },
-       ],
-     },
- 
-     // Leads & Clients
-     {
-       id: "leads-clients",
-       label: "Leads & Clients",
-       icon: Users,
-       items: [
-         { label: "Leads", href: "/admin/leads", icon: UserPlus },
-         { label: "Clients", href: "/admin/clients", icon: Users },
-         { label: "Booking Requests", href: "/admin/booking-requests", icon: ShoppingBag },
-       ],
-     },
- 
-     // Plans & Approvals
-     {
-       id: "plans-approvals",
-       label: "Plans & Approvals",
-       icon: Layers,
-       items: [
-         { label: "Plans", href: "/admin/plans", icon: Layers },
-       ],
-       children: [
-         {
-           id: "approvals",
-           label: "Approvals",
-           icon: CheckCircle2,
-           items: [
-             { label: "Pending Approvals", href: "/admin/approvals", icon: ListChecks, badge: "pendingApprovals" },
-             { label: "Approval History", href: "/admin/approval-history", icon: History },
-             { label: "Approval Rules", href: "/admin/approvals/rules", icon: Settings },
-           ],
-         },
-       ],
-     },
- 
-     // Campaigns
-     {
-       id: "campaigns",
-       label: "Campaigns",
-       icon: Briefcase,
-       items: [
-         { label: "Campaigns", href: "/admin/campaigns", icon: Briefcase },
-       ],
-     },
- 
-     // Operations
-     {
-       id: "operations",
-       label: "Operations",
-       icon: TrendingUp,
-       requiresModule: "operations",
-       items: [
-         { label: "Creative Received", href: "/admin/operations/creatives", icon: Image },
-         { label: "Printing Status", href: "/admin/operations/printing", icon: FileCheck },
-         { label: "Mounting Assignment", href: "/admin/operations", icon: TrendingUp },
-         { label: "Proof Uploads", href: "/admin/operations/proof-uploads", icon: Image, badge: "proofUploads" },
-         { label: "Proof Execution", href: "/admin/reports/proof-execution", icon: FileCheck },
-       ],
-     },
- 
-     // Finance
-     {
-       id: "finance",
-       label: "Finance",
-       icon: DollarSign,
-       requiresModule: "finance",
+  export const NAV_CONFIG: NavConfig = {
+    sections: [
+      // Dashboard
+      {
+        id: "workspace",
+        label: "Dashboard",
+        icon: LayoutDashboard,
+        items: [
+          { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+        ],
+      },
+
+      // Media Inventory
+      {
+        id: "media-inventory",
+        label: "Media Inventory",
+        icon: Map,
+        items: [
+          { label: "Media Assets", href: "/admin/media-assets", icon: Map },
+          { label: "Media Availability", href: "/admin/reports/vacant-media", icon: Calendar },
+          { label: "Asset Validation", href: "/admin/media-assets-validation", icon: FileCheck },
+        ],
+      },
+
+      // Sales & Campaigns
+      {
+        id: "sales-campaigns",
+        label: "Sales & Campaigns",
+        icon: Briefcase,
+        items: [
+          { label: "Leads", href: "/admin/leads", icon: UserPlus },
+          { label: "Clients", href: "/admin/clients", icon: Users },
+          { label: "Booking Requests", href: "/admin/booking-requests", icon: ShoppingBag },
+          { label: "Plans", href: "/admin/plans", icon: Layers },
+          { label: "Campaigns", href: "/admin/campaigns", icon: Briefcase },
+        ],
+        children: [
+          {
+            id: "approvals",
+            label: "Approvals",
+            icon: CheckCircle2,
+            items: [
+              { label: "Pending Approvals", href: "/admin/approvals", icon: ListChecks, badge: "pendingApprovals" },
+              { label: "Approval History", href: "/admin/approval-history", icon: History },
+              { label: "Approval Rules", href: "/admin/approvals/rules", icon: Settings },
+            ],
+          },
+        ],
+      },
+
+      // Operations
+      {
+        id: "operations",
+        label: "Operations",
+        icon: TrendingUp,
+        requiresModule: "operations",
+        items: [
+          { label: "Operations", href: "/admin/operations", icon: TrendingUp },
+          { label: "Creative Received", href: "/admin/operations/creatives", icon: Image },
+          { label: "Printing Status", href: "/admin/operations/printing", icon: FileCheck },
+          { label: "Proof Uploads", href: "/admin/operations/proof-uploads", icon: Image, badge: "proofUploads" },
+          { label: "Proof Execution", href: "/admin/reports/proof-execution", icon: FileCheck },
+        ],
+      },
+
+      // Finance
+      {
+        id: "finance",
+        label: "Finance",
+        icon: DollarSign,
+        requiresModule: "finance",
         items: [
           { label: "Quotations", href: "/admin/estimations", icon: FileSpreadsheet },
           { label: "Sales Orders", href: "/admin/sales-orders", icon: FileText },
@@ -192,79 +174,79 @@ import {
           },
         ],
       },
- 
-     // Reports
-     {
-       id: "reports",
-       label: "Reports",
-       icon: BarChart3,
-       requiresModule: "reports",
-       items: [
-         { label: "Client Bookings", href: "/admin/reports/clients", icon: Users },
-         { label: "Campaign Bookings", href: "/admin/reports/campaigns", icon: Briefcase },
-         { label: "Revenue Center", href: "/admin/reports/revenue", icon: TrendingUp },
-         { label: "Financial Summary", href: "/admin/reports/financial", icon: DollarSign },
-       ],
-     },
- 
-     // Tools
-     {
-       id: "tools",
-       label: "Tools",
-       icon: Sparkles,
-       items: [
-         { label: "AI Assistant", href: "/admin/ai-assistant", icon: Sparkles },
-         { label: "Photo Library", href: "/admin/photo-library", icon: Image },
-         { label: "Mobile Field App", href: "/mobile", icon: Smartphone },
-         { label: "Marketplace", href: "/marketplace", icon: Globe },
-       ],
-     },
- 
-    // Settings
-    {
-      id: "settings",
-      label: "Settings",
-      icon: Settings,
-      requiresAdmin: true,
-      children: [
-        {
-          id: "organization",
-          label: "Organization",
-          icon: Building2,
-          items: [
-            { label: "Company Profile", href: "/admin/company-settings/profile", icon: Building2 },
-            { label: "Branding / Logo", href: "/admin/company-settings/branding", icon: Palette },
-            { label: "Email Settings", href: "/admin/company-settings/email-notifications", icon: Mail },
-            { label: "Notification Settings", href: "/admin/company-settings/alerts", icon: Bell },
-          ],
-        },
-        {
-          id: "users-access",
-          label: "Users & Access",
-          icon: UserCog,
-          items: [
-            { label: "User Management", href: "/admin/users", icon: Users },
-            { label: "Role Permissions", href: "/admin/company-settings/roles", icon: Shield },
-            { label: "Access Control", href: "/admin/access-control", icon: Lock },
-            { label: "Teams", href: "/admin/teams", icon: UsersRound },
-            { label: "Access Requests", href: "/admin/access-requests", icon: ClipboardList },
-            { label: "Activity & Audit Logs", href: "/admin/audit-logs", icon: Activity },
-          ],
-        },
-        {
-          id: "data-management",
-          label: "Data Management",
-          icon: Database,
-          items: [
-            { label: "Import Data", href: "/admin/import-data", icon: Upload },
-            { label: "Export Data", href: "/admin/export-data", icon: Download },
-            { label: "Backup", href: "/admin/backup", icon: HardDrive },
-            { label: "System Activity", href: "/admin/system-activity", icon: Activity },
-          ],
-        },
-      ],
-    },
-   ],
+
+      // Reports
+      {
+        id: "reports",
+        label: "Reports",
+        icon: BarChart3,
+        requiresModule: "reports",
+        items: [
+          { label: "Client Bookings", href: "/admin/reports/clients", icon: Users },
+          { label: "Campaign Bookings", href: "/admin/reports/campaigns", icon: Briefcase },
+          { label: "Revenue Center", href: "/admin/reports/revenue", icon: TrendingUp },
+          { label: "Financial Summary", href: "/admin/reports/financial", icon: DollarSign },
+        ],
+      },
+
+      // Tools
+      {
+        id: "tools",
+        label: "Tools",
+        icon: Sparkles,
+        items: [
+          { label: "AI Assistant", href: "/admin/ai-assistant", icon: Sparkles },
+          { label: "Photo Library", href: "/admin/photo-library", icon: Image },
+          { label: "Mobile Field App", href: "/mobile", icon: Smartphone },
+          { label: "Marketplace", href: "/marketplace", icon: Globe },
+        ],
+      },
+
+      // System / Settings
+      {
+        id: "settings",
+        label: "System",
+        icon: Settings,
+        requiresAdmin: true,
+        children: [
+          {
+            id: "organization",
+            label: "Organization",
+            icon: Building2,
+            items: [
+              { label: "Company Profile", href: "/admin/company-settings/profile", icon: Building2 },
+              { label: "Branding / Logo", href: "/admin/company-settings/branding", icon: Palette },
+              { label: "Email Settings", href: "/admin/company-settings/email-notifications", icon: Mail },
+              { label: "Notification Settings", href: "/admin/company-settings/alerts", icon: Bell },
+            ],
+          },
+          {
+            id: "users-access",
+            label: "Users & Access",
+            icon: UserCog,
+            items: [
+              { label: "User Management", href: "/admin/users", icon: Users },
+              { label: "Role Permissions", href: "/admin/company-settings/roles", icon: Shield },
+              { label: "Access Control", href: "/admin/access-control", icon: Lock },
+              { label: "Teams", href: "/admin/teams", icon: UsersRound },
+              { label: "Access Requests", href: "/admin/access-requests", icon: ClipboardList },
+              { label: "Activity & Audit Logs", href: "/admin/audit-logs", icon: Activity },
+            ],
+          },
+          {
+            id: "data-management",
+            label: "Data Management",
+            icon: Database,
+            items: [
+              { label: "Import Data", href: "/admin/import-data", icon: Upload },
+              { label: "Export Data", href: "/admin/export-data", icon: Download },
+              { label: "Backup", href: "/admin/backup", icon: HardDrive },
+              { label: "System Activity", href: "/admin/system-activity", icon: Activity },
+            ],
+          },
+        ],
+      },
+    ],
  
    // Account items (bottom pinned)
    accountItems: [

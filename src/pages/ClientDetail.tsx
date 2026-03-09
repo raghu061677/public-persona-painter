@@ -716,7 +716,7 @@ export default function ClientDetail() {
                       <TableHead>Plan ID</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Duration</TableHead>
-                      <TableHead>Amount</TableHead>
+                        {canSeeSensitive && <TableHead>Amount</TableHead>}
                       <TableHead>Status</TableHead>
                       <TableHead>Signed RO</TableHead>
                       <TableHead>Created</TableHead>

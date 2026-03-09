@@ -517,11 +517,11 @@ const App = () => (
                 <Route path="alerts" element={<AlertsSettings />} />
                 <Route path="concession-contracts" element={<ConcessionContracts />} />
                 <Route path="automation" element={<AutomationRules />} />
-                <Route path="email-providers" element={<EmailProviderSettings />} />
-                <Route path="email-template-manager" element={<EmailTemplateManager />} />
+                <Route path="email-providers" element={<Navigate to="/admin/company-settings/smtp-settings" replace />} />
+                <Route path="email-template-manager" element={<Navigate to="/admin/company-settings/email-templates" replace />} />
                 <Route path="email-outbox" element={<EmailOutbox />} />
-                <Route path="email-delivery-logs" element={<EmailDeliveryLogs />} />
-                <Route path="email-suppressions" element={<EmailSuppressions />} />
+                <Route path="email-delivery-logs" element={<Navigate to="/admin/company-settings/email-outbox" replace />} />
+                <Route path="email-suppressions" element={<Navigate to="/admin/company-settings/smtp-settings" replace />} />
               </Route>
             </Route>
             {/* ===== END GLOBAL ADMIN AUTH GATE ===== */}

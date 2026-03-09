@@ -155,23 +155,39 @@ export const RolePermissionsMatrix = forwardRef<RolePermissionsMatrixRef>(functi
   const savePermissions = async () => {
     setSaving(true);
     try {
-      const updates = permissions.map(perm => ({
-        id: perm.id,
+      // Separate new entries (need insert) from existing (need update)
+      const newEntries = permissions.filter(p => p.id.startsWith('new-'));
+      const existingEntries = permissions.filter(p => !p.id.startsWith('new-'));
+
+      const formatPerm = (perm: RolePermission) => ({
         role: perm.role,
         module: perm.module,
         can_view: perm.can_view,
         can_create: perm.can_create,
         can_update: perm.can_update,
         can_delete: perm.can_delete,
-      }));
+      });
 
-      const { error } = await supabase
-        .from('role_permissions')
-        .upsert(updates);
+      // Upsert existing
+      if (existingEntries.length > 0) {
+        const updates = existingEntries.map(perm => ({
+          id: perm.id,
+          ...formatPerm(perm),
+        }));
+        const { error } = await supabase.from('role_permissions').upsert(updates);
+        if (error) throw error;
+      }
 
-      if (error) throw error;
+      // Insert new entries
+      if (newEntries.length > 0) {
+        const inserts = newEntries.map(formatPerm);
+        const { error } = await supabase.from('role_permissions').insert(inserts);
+        if (error) throw error;
+      }
 
       toast.success('Permissions saved successfully');
+      // Reload to get proper IDs for newly inserted rows
+      await loadPermissions();
     } catch (error) {
       console.error('Error saving permissions:', error);
       toast.error('Failed to save permissions');

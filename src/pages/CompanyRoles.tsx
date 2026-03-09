@@ -102,14 +102,28 @@ export default function CompanyRoles() {
           label="Allow Role Switching"
           description="Let admins temporarily switch to other roles for testing"
         >
-          <Switch />
+          <Switch
+            checked={allowRoleSwitching}
+            onCheckedChange={(checked) => {
+              setAllowRoleSwitching(checked);
+              localStorage.setItem('goads-allow-role-switching', String(checked));
+              toast({ title: checked ? "Role switching enabled" : "Role switching disabled" });
+            }}
+          />
         </InputRow>
 
         <InputRow
           label="Enforce Role Hierarchy"
           description="Lower roles cannot modify data created by higher roles"
         >
-          <Switch />
+          <Switch
+            checked={enforceHierarchy}
+            onCheckedChange={(checked) => {
+              setEnforceHierarchy(checked);
+              localStorage.setItem('goads-enforce-role-hierarchy', String(checked));
+              toast({ title: checked ? "Role hierarchy enforced" : "Role hierarchy disabled" });
+            }}
+          />
         </InputRow>
       </SettingsCard>
     </div>

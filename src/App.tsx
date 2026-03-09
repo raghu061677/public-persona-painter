@@ -177,6 +177,9 @@ const CompanyDirectTaxes = lazy(() => import("./pages/CompanyDirectTaxes"));
 const CompanyEInvoicing = lazy(() => import("./pages/CompanyEInvoicing"));
 const CompanyGeneral = lazy(() => import("./pages/CompanyGeneral"));
 const CompanyEmailNotifications = lazy(() => import("./pages/CompanyEmailNotifications"));
+const EmailSmtpSettings = lazy(() => import("./pages/EmailSmtpSettings"));
+const EmailTemplateEditor = lazy(() => import("./pages/EmailTemplateEditor"));
+const EmailSendLogs = lazy(() => import("./pages/EmailSendLogs"));
 const CompanySMSNotifications = lazy(() => import("./pages/CompanySMSNotifications"));
 const CompanyDigitalSignature = lazy(() => import("./pages/CompanyDigitalSignature"));
 const CompanyPayments = lazy(() => import("./pages/CompanyPayments"));
@@ -492,6 +495,9 @@ const App = () => (
                 <Route path="client-portal" element={<CompanyClientPortal />} />
                 <Route path="pdf-templates" element={<CompanyPDFTemplates />} />
                 <Route path="email-notifications" element={<CompanyEmailNotifications />} />
+                <Route path="smtp-settings" element={<EmailSmtpSettings />} />
+                <Route path="email-templates" element={<EmailTemplateEditor />} />
+                <Route path="email-logs" element={<EmailSendLogs />} />
                 <Route path="sms-notifications" element={<CompanySMSNotifications />} />
                 <Route path="digital-signature" element={<CompanyDigitalSignature />} />
                 <Route path="payments" element={<CompanyPayments />} />

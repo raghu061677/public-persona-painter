@@ -4097,6 +4097,171 @@ export type Database = {
           },
         ]
       }
+      email_providers: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          from_email: string
+          from_name: string | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          provider_type: string
+          reply_to_email: string | null
+          smtp_host: string | null
+          smtp_password: string | null
+          smtp_port: number | null
+          smtp_secure: boolean | null
+          smtp_user: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          from_email: string
+          from_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          provider_type?: string
+          reply_to_email?: string | null
+          smtp_host?: string | null
+          smtp_password?: string | null
+          smtp_port?: number | null
+          smtp_secure?: boolean | null
+          smtp_user?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          from_email?: string
+          from_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          provider_type?: string
+          reply_to_email?: string | null
+          smtp_host?: string | null
+          smtp_password?: string | null
+          smtp_port?: number | null
+          smtp_secure?: boolean | null
+          smtp_user?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_providers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_send_logs: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          provider_used: string | null
+          recipient_email: string
+          recipient_name: string | null
+          sent_at: string | null
+          status: string
+          subject: string
+          template_key: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          provider_used?: string | null
+          recipient_email: string
+          recipient_name?: string | null
+          sent_at?: string | null
+          status?: string
+          subject: string
+          template_key?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          provider_used?: string | null
+          recipient_email?: string
+          recipient_name?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          template_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_send_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          html_body: string
+          id: string
+          is_active: boolean | null
+          subject: string
+          template_key: string
+          template_name: string
+          text_body: string | null
+          updated_at: string | null
+          variables: Json | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          html_body?: string
+          id?: string
+          is_active?: boolean | null
+          subject: string
+          template_key: string
+          template_name: string
+          text_body?: string | null
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          html_body?: string
+          id?: string
+          is_active?: boolean | null
+          subject?: string
+          template_key?: string
+          template_name?: string
+          text_body?: string | null
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       estimations: {
         Row: {
           client_id: string

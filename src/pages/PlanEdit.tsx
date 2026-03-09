@@ -734,11 +734,16 @@ export default function PlanEdit() {
           Back to Plan
         </Button>
 
+        {/* Restricted Mode Banner */}
+        {perms.isReadOnly && <RestrictedBanner module="plan" />}
+
         <div className="mb-8 space-y-2">
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-            Edit Plan
+            {perms.isReadOnly ? 'View Plan' : 'Edit Plan'}
           </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">Update plan details and modify asset selection</p>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            {perms.isReadOnly ? 'Read-only summary view' : 'Update plan details and modify asset selection'}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">

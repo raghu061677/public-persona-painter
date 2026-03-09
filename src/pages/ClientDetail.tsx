@@ -46,6 +46,7 @@ import { ClientPortalAccessCard } from "@/components/clients/ClientPortalAccessC
 import { useEnterpriseRBAC } from "@/hooks/useEnterpriseRBAC";
 import { useAuth } from "@/contexts/AuthContext";
 import { isRecordOwner } from "@/lib/rbac/permissions";
+import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
 
 interface Client {
   id: string;
@@ -333,6 +334,7 @@ export default function ClientDetail() {
         showBackButton
         backPath={ROUTES.CLIENTS}
         actions={
+          canSeeSensitive ? (
           <>
             <Button
               variant="outline"
@@ -360,10 +362,17 @@ export default function ClientDetail() {
               Edit Client
             </Button>
           </>
+          ) : undefined
         }
       />
 
-      {/* Key Stats Cards */}
+      {/* Restricted Banner for non-owners */}
+      {!canSeeSensitive && (
+        <RestrictedBanner module="client" />
+      )}
+
+      {/* Key Stats Cards - Financial stats hidden for non-owners */}
+      {canSeeSensitive && (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-l-4 border-l-blue-500 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -428,9 +437,10 @@ export default function ClientDetail() {
           </CardContent>
         </Card>
       </div>
+      )}
 
       {/* Overdue Alert */}
-      {stats.overdueInvoices > 0 && (
+      {canSeeSensitive && stats.overdueInvoices > 0 && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
@@ -445,11 +455,11 @@ export default function ClientDetail() {
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="plans">Plans ({plans.length})</TabsTrigger>
                 <TabsTrigger value="campaigns">Campaigns ({campaigns.length})</TabsTrigger>
-                <TabsTrigger value="invoices">Invoices ({invoices.length})</TabsTrigger>
-                <TabsTrigger value="ledger">Ledger</TabsTrigger>
+                {canSeeSensitive && <TabsTrigger value="invoices">Invoices ({invoices.length})</TabsTrigger>}
+                {canSeeSensitive && <TabsTrigger value="ledger">Ledger</TabsTrigger>}
                 <TabsTrigger value="documents">Documents</TabsTrigger>
-                <TabsTrigger value="portal">Portal Access</TabsTrigger>
-                <TabsTrigger value="activity">Activity Log</TabsTrigger>
+                {canSeeSensitive && <TabsTrigger value="portal">Portal Access</TabsTrigger>}
+                {canSeeSensitive && <TabsTrigger value="activity">Activity Log</TabsTrigger>}
               </TabsList>
 
         {/* Overview Tab */}
@@ -512,7 +522,7 @@ export default function ClientDetail() {
                     </div>
                   )}
 
-                  {client.notes && (
+                  {client.notes && canSeeSensitive && (
                     <div className="pt-2 border-t">
                       <p className="text-sm font-medium mb-1">Notes</p>
                       <p className="text-sm text-muted-foreground">{client.notes}</p>
@@ -626,7 +636,8 @@ export default function ClientDetail() {
             </Card>
           </div>
 
-          {/* Payment Timeline */}
+          {/* Payment Timeline - hidden for non-owners */}
+          {canSeeSensitive && (
           <Card>
             <CardHeader>
               <CardTitle>Payment Overview</CardTitle>
@@ -678,6 +689,7 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </Card>
+          )}
         </TabsContent>
 
         {/* Plans Tab */}
@@ -704,7 +716,7 @@ export default function ClientDetail() {
                       <TableHead>Plan ID</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Duration</TableHead>
-                      <TableHead>Amount</TableHead>
+                        {canSeeSensitive && <TableHead>Amount</TableHead>}
                       <TableHead>Status</TableHead>
                       <TableHead>Signed RO</TableHead>
                       <TableHead>Created</TableHead>
@@ -721,7 +733,7 @@ export default function ClientDetail() {
                           {' - '}
                           {new Date(plan.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </TableCell>
-                        <TableCell>{formatINR(plan.grand_total)}</TableCell>
+                        {canSeeSensitive && <TableCell>{formatINR(plan.grand_total)}</TableCell>}
                         <TableCell>
                           <Badge className={getStatusBadge(plan.status)}>
                             {plan.status}
@@ -779,7 +791,7 @@ export default function ClientDetail() {
                       <TableHead>Name</TableHead>
                       <TableHead>Duration</TableHead>
                       <TableHead>Assets</TableHead>
-                      <TableHead>Amount</TableHead>
+                      {canSeeSensitive && <TableHead>Amount</TableHead>}
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -795,7 +807,7 @@ export default function ClientDetail() {
                           {new Date(campaign.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </TableCell>
                         <TableCell>{campaign.total_assets || 0}</TableCell>
-                        <TableCell>{formatINR(campaign.grand_total)}</TableCell>
+                        {canSeeSensitive && <TableCell>{formatINR(campaign.grand_total)}</TableCell>}
                         <TableCell>
                           <Badge className={getStatusBadge(campaign.status)}>
                             {campaign.status}

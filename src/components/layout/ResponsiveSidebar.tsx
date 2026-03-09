@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Building2, Map, Layers, Briefcase, Users, TrendingUp,
   FileText, Receipt, Zap, UserCog, Palette, FileSpreadsheet,
   Shield, DollarSign, Smartphone, Image, Settings, FileCheck, 
-  CreditCard, Globe, ShoppingBag, BarChart3, Sparkles, Menu, CheckCircle2, History, ListChecks, UserPlus, Clock, Wallet, Calendar, CalendarDays, Mail
+  CreditCard, Globe, ShoppingBag, BarChart3, Sparkles, Menu, CheckCircle2, History, ListChecks, UserPlus, Clock, Wallet, Calendar, CalendarDays, Mail, Bell, AlertTriangle
 } from "lucide-react";
 import {
   Sidebar,

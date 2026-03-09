@@ -107,6 +107,17 @@ export const ROUTES = {
   SETTINGS_TAXES: '/admin/settings/taxes',
   SETTINGS_PAYMENTS: '/admin/settings/payments',
   SETTINGS_APPROVALS: '/admin/settings/approvals',
+
+  // Company Settings (canonical)
+  COMPANY_SETTINGS: '/admin/company-settings',
+  COMPANY_SETTINGS_PROFILE: '/admin/company-settings/profile',
+  COMPANY_SETTINGS_BRANDING: '/admin/company-settings/branding',
+  COMPANY_SETTINGS_EMAIL_PROVIDERS: '/admin/company-settings/email-providers',
+  COMPANY_SETTINGS_EMAIL_TEMPLATES: '/admin/company-settings/email-templates',
+  COMPANY_SETTINGS_REMINDERS: '/admin/company-settings/reminders',
+  COMPANY_SETTINGS_ALERTS: '/admin/company-settings/alerts',
+  COMPANY_SETTINGS_USERS: '/admin/company-settings/users',
+  COMPANY_SETTINGS_ROLES: '/admin/company-settings/roles',
   
   // Tools
   IMPORT_DATA: '/admin/import',

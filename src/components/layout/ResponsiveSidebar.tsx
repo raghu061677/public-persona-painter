@@ -194,7 +194,7 @@ export function ResponsiveSidebar() {
            </>
          )}
        </Link>
-       <p className="text-xs text-muted-foreground mt-1">Company Workspace</p>
+       <p className="text-xs text-muted-foreground mt-1">{company?.type === 'media_owner' ? 'Media Owner' : company?.type === 'agency' ? 'Agency' : 'Workspace'}</p>
      </div>
    );
  

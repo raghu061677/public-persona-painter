@@ -112,8 +112,19 @@ export const RolePermissionsMatrix = forwardRef<RolePermissionsMatrixRef>(functi
     }
   };
 
-  const getPermission = (role: AppRole, module: string) => {
-    return permissions.find(p => p.role === role && p.module === module);
+  const getPermission = (role: AppRole, module: string): RolePermission => {
+    const found = permissions.find(p => p.role === role && p.module === module);
+    if (found) return found;
+    // Return a default (all false) for missing entries
+    return {
+      id: `new-${role}-${module}`,
+      role,
+      module,
+      can_view: false,
+      can_create: false,
+      can_update: false,
+      can_delete: false,
+    };
   };
 
   const togglePermission = (role: AppRole, module: string, field: keyof Omit<RolePermission, 'id' | 'role' | 'module'>) => {

@@ -62,6 +62,8 @@ export const FULL_PERMISSION: ModulePermission = {
   can_export: true,
   can_upload_proof: true,
   can_view_sensitive: true,
+  can_view_financial: true,
+  can_view_contacts: true,
   scope_mode: 'all',
 };
 

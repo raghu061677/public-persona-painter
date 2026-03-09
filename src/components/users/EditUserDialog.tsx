@@ -64,6 +64,11 @@ export default function EditUserDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    const targetUserId = user.user_id || user.id;
+    if (!targetUserId) {
+      toast({ title: "Error", description: "Cannot identify user to update", variant: "destructive" });
+      return;
+    }
 
     setSubmitting(true);
     try {

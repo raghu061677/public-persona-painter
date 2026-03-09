@@ -80,9 +80,11 @@ export function isRecordOwner(record: any, userId: string | undefined): boolean 
   if (!userId || !record) return false;
   return (
     record.created_by === userId ||
+    record.owner_id === userId ||
     record.sales_owner_id === userId ||
     record.assigned_to === userId ||
-    record.user_id === userId
+    record.user_id === userId ||
+    (Array.isArray(record.secondary_owner_ids) && record.secondary_owner_ids.includes(userId))
   );
 }
 

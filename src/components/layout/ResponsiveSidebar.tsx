@@ -313,6 +313,9 @@ export function ResponsiveSidebar() {
               {!collapsed && <SidebarGroupLabel className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">Sales & Campaigns</SidebarGroupLabel>}
               <SidebarMenu>
                 <MenuItem icon={UserPlus} label="Leads" href="/admin/leads" />
+                {(isCompanyAdmin || userRole === 'sales') && (
+                  <MenuItem icon={Merge} label="Merge Review" href="/admin/leads/merge-review" />
+                )}
                 <MenuItem icon={Users} label="Clients" href="/admin/clients" />
                 <MenuItem icon={ShoppingBag} label="Booking Requests" href="/admin/booking-requests" />
                 <MenuItem icon={Layers} label="Plans" href="/admin/plans" />

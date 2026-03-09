@@ -87,20 +87,8 @@ export default function CampaignDetail() {
 
   useEffect(() => {
     if (!id || resolving) return;
-    checkAdminStatus();
     refreshData();
   }, [id, resolving]);
-
-  const checkAdminStatus = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
-      setIsAdmin(data?.some(r => r.role === 'admin') || false);
-    }
-  };
 
   const fetchCampaign = async () => {
     const { data, error } = await supabase

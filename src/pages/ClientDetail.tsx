@@ -119,6 +119,8 @@ export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useAuth();
+  const rbac = useEnterpriseRBAC();
   const [loading, setLoading] = useState(true);
   const [client, setClient] = useState<Client | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -127,6 +129,14 @@ export default function ClientDetail() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  
+  // Check if current user owns this client record
+  const isOwner = useMemo(() => {
+    if (!client || !user) return false;
+    return isRecordOwner(client, user.id);
+  }, [client, user]);
+  
+  const canSeeSensitive = rbac.isCompanyAdmin || rbac.isPlatformAdmin || isOwner;
   
   const [stats, setStats] = useState({
     totalRevenue: 0,

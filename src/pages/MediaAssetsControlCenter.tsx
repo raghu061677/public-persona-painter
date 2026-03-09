@@ -364,6 +364,13 @@ export default function MediaAssetsControlCenter() {
 
       {/* God Mode HUD */}
       <GodModeHUD assets={filteredAssets} isVisible={isGodModeVisible} />
+
+      {/* Custom Export Dialog */}
+      <MediaAssetsCustomExportDialog
+        open={customExportOpen}
+        onOpenChange={setCustomExportOpen}
+        rows={filteredAssets}
+      />
     </div>
     </ModuleGuard>
   );

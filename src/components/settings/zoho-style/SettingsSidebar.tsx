@@ -5,6 +5,7 @@ import {
   Users,
   FileText,
   Settings,
+  Server,
   Palette,
   Receipt,
   Globe,

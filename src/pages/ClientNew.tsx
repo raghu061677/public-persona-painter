@@ -403,6 +403,13 @@ export default function ClientNew() {
       setLoading(true);
       setErrors({});
 
+      // Block if duplicate detected
+      if (duplicateMatch) {
+        toast.error("A client with this name or GST already exists. Please add a contact person to the existing client instead.");
+        setLoading(false);
+        return;
+      }
+
       // Check if company data is available
       if (!company?.id) {
         toast.error("Company information not available. Please refresh the page.");

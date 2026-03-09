@@ -1,0 +1,164 @@
+import ExcelJS from "exceljs";
+import { format } from "date-fns";
+import { addProfessionalFooter } from "@/lib/exports/excelFooterSection";
+
+export interface AssetExportField {
+  key: string;
+  label: string;
+  group: string;
+  getValue: (row: any, idx: number) => string | number;
+  width?: number;
+  numFmt?: string;
+}
+
+export const ALL_ASSET_EXPORT_FIELDS: AssetExportField[] = [
+  // Core
+  { key: 'sno', label: 'S.No', group: 'Core', getValue: (_r, i) => i + 1, width: 6 },
+  { key: 'asset_id', label: 'Asset Code', group: 'Core', getValue: (r) => r.media_asset_code || r.id || '', width: 20 },
+  { key: 'media_type', label: 'Media Type', group: 'Core', getValue: (r) => r.media_type || '', width: 16 },
+  { key: 'status', label: 'Status', group: 'Core', getValue: (r) => r.status || '', width: 14 },
+
+  // Location
+  { key: 'city', label: 'City', group: 'Location', getValue: (r) => r.city || '', width: 14 },
+  { key: 'area', label: 'Area', group: 'Location', getValue: (r) => r.area || '', width: 15 },
+  { key: 'location', label: 'Location', group: 'Location', getValue: (r) => r.location || '', width: 30 },
+
+  // Specifications
+  { key: 'dimension', label: 'Dimensions', group: 'Specifications', getValue: (r) => r.dimensions || r.dimension || '', width: 14 },
+  { key: 'sqft', label: 'Sq.Ft', group: 'Specifications', getValue: (r) => r.total_sqft || 0, width: 10, numFmt: '#,##0.00' },
+  { key: 'illumination', label: 'Illumination', group: 'Specifications', getValue: (r) => r.illumination_type || r.illumination || '', width: 14 },
+
+  // Pricing
+  { key: 'card_rate', label: 'Card Rate', group: 'Pricing', getValue: (r) => r.card_rate || 0, width: 14, numFmt: '₹#,##0' },
+
+  // Ownership
+  { key: 'ownership', label: 'Ownership', group: 'Ownership', getValue: (r) => r.ownership || '', width: 14 },
+  { key: 'is_public', label: 'Public', group: 'Ownership', getValue: (r) => r.is_public ? 'Yes' : 'No', width: 10 },
+
+  // Geo Coordinates
+  { key: 'latitude', label: 'Latitude', group: 'Geo Coordinates', getValue: (r) => r.latitude ?? '', width: 14, numFmt: '0.000000' },
+  { key: 'longitude', label: 'Longitude', group: 'Geo Coordinates', getValue: (r) => r.longitude ?? '', width: 14, numFmt: '0.000000' },
+];
+
+export const DEFAULT_ASSET_CUSTOM_FIELDS = [
+  'sno', 'asset_id', 'media_type', 'status', 'city', 'area', 'location',
+  'dimension', 'sqft', 'illumination', 'card_rate',
+];
+
+export const ASSET_FIELD_GROUPS = [...new Set(ALL_ASSET_EXPORT_FIELDS.map(f => f.group))];
+
+export async function generateMediaAssetsCustomExcel(
+  rows: any[],
+  selectedFieldKeys: string[],
+  companyName?: string,
+): Promise<void> {
+  const fields = selectedFieldKeys
+    .map(key => ALL_ASSET_EXPORT_FIELDS.find(f => f.key === key))
+    .filter(Boolean) as AssetExportField[];
+
+  if (fields.length === 0) return;
+
+  const colCount = fields.length;
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Media Assets", {
+    pageSetup: { paperSize: 9, orientation: "landscape", fitToPage: true },
+  });
+
+  worksheet.columns = fields.map(f => ({ width: f.width || 14 }));
+
+  let currentRow = 1;
+
+  // Title row
+  worksheet.mergeCells(currentRow, 1, currentRow, colCount);
+  const titleCell = worksheet.getRow(currentRow).getCell(1);
+  titleCell.value = `${companyName || 'GO-ADS 360°'} – MEDIA ASSETS INVENTORY`;
+  titleCell.font = { size: 16, bold: true, color: { argb: "FFFFFFFF" } };
+  titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E3A8A" } };
+  titleCell.alignment = { horizontal: "center", vertical: "middle" };
+  worksheet.getRow(currentRow).height = 30;
+  currentRow++;
+
+  // Info row
+  worksheet.mergeCells(currentRow, 1, currentRow, colCount);
+  const infoCell = worksheet.getRow(currentRow).getCell(1);
+  infoCell.value = `Generated: ${format(new Date(), "dd MMM yyyy HH:mm")} | Total: ${rows.length} assets | Columns: ${fields.length}`;
+  infoCell.font = { size: 11, italic: true };
+  infoCell.alignment = { horizontal: "center" };
+  worksheet.getRow(currentRow).height = 20;
+  currentRow++;
+
+  // Summary row
+  currentRow++;
+  const available = rows.filter(r => (r.status || '').toLowerCase() === 'available').length;
+  const booked = rows.filter(r => (r.status || '').toLowerCase() === 'booked').length;
+  const other = rows.length - available - booked;
+  worksheet.getRow(currentRow).values = [
+    "Total:", rows.length, "", "Available:", available, "", "Booked:", booked, "", "Other:", other,
+  ];
+  worksheet.getRow(currentRow).font = { bold: true };
+  worksheet.getRow(currentRow).height = 22;
+  currentRow += 2;
+
+  // Header row
+  const headerRow = worksheet.getRow(currentRow);
+  headerRow.values = fields.map(f => f.label);
+  headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+  headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF3B82F6" } };
+  headerRow.alignment = { horizontal: "center", vertical: "middle" };
+  headerRow.height = 24;
+  headerRow.eachCell(cell => {
+    cell.border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
+  });
+  worksheet.views = [{ state: 'frozen', ySplit: currentRow }];
+  currentRow++;
+
+  // Data rows
+  rows.forEach((row, idx) => {
+    const r = worksheet.getRow(currentRow);
+    r.values = fields.map(f => f.getValue(row, idx));
+
+    fields.forEach((f, colIdx) => {
+      if (f.numFmt) {
+        r.getCell(colIdx + 1).numFmt = f.numFmt;
+      }
+    });
+
+    const status = (row.status || '').toLowerCase();
+    if (status === 'available') {
+      r.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F5E9' } };
+    } else if (status === 'booked') {
+      r.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFEBEE' } };
+    } else if (idx % 2 === 0) {
+      r.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9FAFB' } };
+    }
+
+    r.eachCell((cell, colNum) => {
+      const field = fields[colNum - 1];
+      cell.alignment = {
+        horizontal: field?.key === 'location' ? 'left' : 'center',
+        vertical: 'middle',
+        wrapText: field?.key === 'location',
+      };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+        left: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+        bottom: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+        right: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+      };
+    });
+
+    currentRow++;
+  });
+
+  addProfessionalFooter(worksheet, colCount, currentRow);
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `MediaAssets_Inventory_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+  link.click();
+  URL.revokeObjectURL(url);
+}

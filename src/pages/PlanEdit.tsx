@@ -164,9 +164,9 @@ export default function PlanEdit() {
         gst_percent: plan.gst_percent.toString(),
         tax_type: ((plan as any).tax_type as TaxType) || 'CGST_SGST',
         notes: plan.notes || "",
+        manual_discount_amount: (plan as any).manual_discount_amount || 0,
+        manual_discount_reason: (plan as any).manual_discount_reason || "",
       });
-
-      // Fetch plan items
       const { data: items } = await supabase
         .from('plan_items')
         .select('*')

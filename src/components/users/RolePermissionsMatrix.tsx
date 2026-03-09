@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Loader2, Save, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-type AppRole = 'admin' | 'sales' | 'operations' | 'finance' | 'installation' | 'monitor' | 'user';
+type AppRole = 'admin' | 'sales' | 'operations_manager' | 'finance' | 'mounting' | 'monitoring' | 'viewer';
 
 export interface RolePermissionsMatrixRef {
   selectRole: (role: string) => void;
@@ -27,25 +27,43 @@ const MODULES = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'media_assets', label: 'Media Assets' },
   { id: 'clients', label: 'Clients' },
+  { id: 'leads', label: 'Leads' },
   { id: 'plans', label: 'Plans' },
+  { id: 'estimations', label: 'Estimations' },
+  { id: 'proformas', label: 'Proformas' },
   { id: 'campaigns', label: 'Campaigns' },
-  { id: 'operations', label: 'Operations' },
+  { id: 'monitoring', label: 'Monitoring' },
   { id: 'invoices', label: 'Invoices' },
   { id: 'expenses', label: 'Expenses' },
-  { id: 'reports', label: 'Reports' },
+  { id: 'power_bills', label: 'Power Bills' },
+  { id: 'company_settings', label: 'Company Settings' },
   { id: 'settings', label: 'Settings' },
   { id: 'users', label: 'User Management' },
+  { id: 'user_management', label: 'User Access' },
+  { id: 'role_permissions', label: 'Role Permissions' },
 ];
 
 const ROLES: { id: AppRole; label: string; color: string }[] = [
   { id: 'admin', label: 'Admin', color: 'bg-red-100 text-red-800' },
   { id: 'sales', label: 'Sales', color: 'bg-blue-100 text-blue-800' },
-  { id: 'operations', label: 'Operations', color: 'bg-green-100 text-green-800' },
+  { id: 'operations_manager', label: 'Operations Manager', color: 'bg-green-100 text-green-800' },
   { id: 'finance', label: 'Finance', color: 'bg-yellow-100 text-yellow-800' },
-  { id: 'installation', label: 'Installation', color: 'bg-purple-100 text-purple-800' },
-  { id: 'monitor', label: 'Monitor', color: 'bg-cyan-100 text-cyan-800' },
-  { id: 'user', label: 'User', color: 'bg-gray-100 text-gray-800' },
+  { id: 'mounting', label: 'Mounting', color: 'bg-purple-100 text-purple-800' },
+  { id: 'monitoring', label: 'Monitoring', color: 'bg-cyan-100 text-cyan-800' },
+  { id: 'viewer', label: 'Viewer', color: 'bg-gray-100 text-gray-800' },
 ];
+
+// Map legacy role names from System Roles cards to canonical DB roles
+const ROLE_ALIAS_MAP: Record<string, AppRole> = {
+  admin: 'admin',
+  sales: 'sales',
+  operations: 'operations_manager',
+  operations_manager: 'operations_manager',
+  finance: 'finance',
+  mounting: 'mounting',
+  monitoring: 'monitoring',
+  viewer: 'viewer',
+};
 
 export const RolePermissionsMatrix = forwardRef<RolePermissionsMatrixRef>(function RolePermissionsMatrix(_props, ref) {
   const [permissions, setPermissions] = useState<RolePermission[]>([]);

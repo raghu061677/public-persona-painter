@@ -200,6 +200,7 @@ const Marketplace = lazy(() => import("./pages/Marketplace"));
 const MarketplaceAssetDetail = lazy(() => import("./pages/MarketplaceAssetDetail"));
 const MarketplaceListings = lazy(() => import("./pages/MarketplaceListings"));
 const MarketplaceTransactions = lazy(() => import("./pages/MarketplaceTransactions"));
+const MarketplaceRequests = lazy(() => import("./pages/MarketplaceRequests"));
 const CompanyUsersSettings = lazy(() => import("./pages/CompanyUsersSettings"));
 const CompanyCodeSettings = lazy(() => import("./pages/CompanyCodeSettings"));
 const AIAssistant = lazy(() => import("./pages/AIAssistant"));

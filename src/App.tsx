@@ -231,6 +231,8 @@ const RevenueForecast = lazy(() => import("./pages/RevenueForecast"));
 const MediaAssetDuplicates = lazy(() => import("./pages/admin/MediaAssetDuplicates"));
 const PaymentConfirmations = lazy(() => import("./pages/PaymentConfirmations"));
 const AlertsSettings = lazy(() => import("./pages/AlertsSettings"));
+const AutomationRules = lazy(() => import("./pages/AutomationRules"));
+const IntelligenceDashboard = lazy(() => import("./pages/IntelligenceDashboard"));
 
 // Public website pages
 const PublicAbout = lazy(() => import("./pages/public/About"));

@@ -398,17 +398,34 @@ export default function PlanEdit() {
       const asset = availableAssets.find(a => a.id === assetId);
       
       if (pricing && asset) {
-        // Use per-asset booked_days if available, fallback to plan duration
-        const assetDays = pricing.booked_days || formData.duration_days;
-        
         const cardRate = asset.card_rate || 0;
         const baseRate = asset.base_rate || 0;
         const negotiatedPrice = pricing.negotiated_price || cardRate;
-        const printing = pricing.printing_charges || 0;
-        const mounting = pricing.mounting_charges || 0;
         
-        // Calculate pro-rata based on negotiated price using per-asset days
-        const proRata = calcProRata(negotiatedPrice, assetDays);
+        // Use per-asset dates if available, fallback to plan dates
+        const assetStartDate = pricing.start_date 
+          ? new Date(pricing.start_date) 
+          : new Date(formData.start_date);
+        const assetEndDate = pricing.end_date 
+          ? new Date(pricing.end_date) 
+          : new Date(formData.end_date);
+        const billingMode: BillingMode = pricing.billing_mode || 'PRORATA_30';
+        
+        // Use computeRentAmount to match SelectedAssetsTable calculation exactly
+        const rentResult = computeRentAmount(negotiatedPrice, assetStartDate, assetEndDate, billingMode);
+        const assetDays = rentResult.booked_days;
+        const rentAmount = rentResult.rent_amount;
+        
+        // Calculate printing cost using rate × sqft (same as SelectedAssetsTable)
+        const printingRate = pricing.printing_rate || 0;
+        const mountingRate = pricing.mounting_rate || 0;
+        const mountingMode = pricing.mounting_mode || 'sqft';
+        
+        const printingResult = calculatePrintingCost(asset, printingRate);
+        const mountingResult = calculateMountingCost(asset, mountingRate);
+        
+        const printing = printingResult.cost;
+        const mounting = mountingMode === 'fixed' ? mountingRate : mountingResult.cost;
         
         // Calculate discount: (Card Rate - Negotiated Price) pro-rated
         const discountMonthly = cardRate - negotiatedPrice;
@@ -418,17 +435,18 @@ export default function PlanEdit() {
         const profitMonthly = negotiatedPrice - baseRate;
         const profitProRata = calcProRata(profitMonthly, assetDays);
         
-        displayCost += proRata;
+        displayCost += rentAmount;
         printingCost += printing;
         mountingCost += mounting;
         totalDiscount += discountProRata;
         totalProfit += profitProRata;
-        totalBaseRent += calcProRata(baseRate, assetDays);  // Pro-rate the base rate
+        totalBaseRent += calcProRata(baseRate, assetDays);
       }
     });
 
     const subtotal = displayCost + printingCost + mountingCost;
-    const netTotal = subtotal;
+    const manualDiscount = formData.manual_discount_amount || 0;
+    const netTotal = subtotal - manualDiscount;
     const gstPercent = parseFloat(formData.gst_percent);
     const totalGst = (netTotal * gstPercent) / 100;
     
@@ -451,6 +469,7 @@ export default function PlanEdit() {
       printingCost,
       mountingCost,
       subtotal,
+      manualDiscount,
       totalDiscount,
       netTotal,
       totalProfit,

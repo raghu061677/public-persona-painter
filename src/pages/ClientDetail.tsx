@@ -519,7 +519,7 @@ export default function ClientDetail() {
                     </div>
                   )}
 
-                  {client.notes && (
+                  {client.notes && canSeeSensitive && (
                     <div className="pt-2 border-t">
                       <p className="text-sm font-medium mb-1">Notes</p>
                       <p className="text-sm text-muted-foreground">{client.notes}</p>

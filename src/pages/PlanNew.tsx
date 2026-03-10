@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +51,7 @@ export default function PlanNew() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const submittingRef = useRef(false); // Hard guard against double submit
   const [exportingProposal, setExportingProposal] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
   const [availableAssets, setAvailableAssets] = useState<any[]>([]);
@@ -370,8 +371,9 @@ export default function PlanNew() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Prevent double submit
-    if (loading) return;
+    // Prevent double submit - both state and ref guard
+    if (loading || submittingRef.current) return;
+    submittingRef.current = true;
     
     if (selectedAssets.size === 0) {
       toast({
@@ -379,6 +381,7 @@ export default function PlanNew() {
         description: "Please select at least one asset",
         variant: "destructive",
       });
+      submittingRef.current = false;
       return;
     }
 
@@ -550,6 +553,7 @@ export default function PlanNew() {
       });
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 

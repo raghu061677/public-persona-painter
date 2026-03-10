@@ -256,13 +256,9 @@ export default function PlansList() {
       }
       
       const userCompanyId = companyUserData.company_id;
-      console.log('User company_id:', userCompanyId);
-      console.log('Company type:', (companyUserData as any).companies?.type);
-      console.log('User email:', user.email);
       
       // Platform admins can see all plans, others see only their company's plans
       const isPlatformAdmin = (companyUserData as any).companies?.type === 'platform_admin';
-      console.log('Is platform admin:', isPlatformAdmin);
       
       // CRITICAL: For platform admins, don't filter by company_id to see all plans
       const query = supabase
@@ -277,26 +273,25 @@ export default function PlansList() {
       
       const { data: plansData, error: plansError } = await query;
 
-      if (plansError) {
-        console.error('Error fetching plans:', plansError);
-        toast({
-          title: "Error",
-          description: "Failed to fetch plans",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-
-      console.log('Fetched plans:', plansData?.length || 0);
-      console.log('Plans data:', plansData);
-      
       // Show user-friendly message if no plans found
       if (!plansData || plansData.length === 0) {
         console.warn('No plans found for:', {
           isPlatformAdmin,
           userCompanyId,
           userEmail: user.email
+        });
+      }
+
+      // Collect unique creator IDs and batch-fetch their profiles
+      const creatorIds = [...new Set((plansData || []).map(p => p.created_by).filter(Boolean))];
+      const profileMap: Record<string, string> = {};
+      if (creatorIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, username')
+          .in('id', creatorIds);
+        (profiles || []).forEach((p: any) => {
+          if (p.username) profileMap[p.id] = p.username;
         });
       }
 
@@ -330,7 +325,8 @@ export default function PlansList() {
           return {
             ...plan,
             total_sqft: totalSqft,
-            sqft_breakdown: sqftBreakdown
+            sqft_breakdown: sqftBreakdown,
+            employee_name: profileMap[plan.created_by] || null,
           };
         })
       );
@@ -1090,9 +1086,9 @@ export default function PlansList() {
                         <TableCell className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                              {plan.client_name?.charAt(0) || 'U'}
+                              {(plan.employee_name || 'U').charAt(0).toUpperCase()}
                             </div>
-                            <span className="font-medium">Raghu Gajula</span>
+                            <span className="font-medium">{plan.employee_name || 'Unknown'}</span>
                           </div>
                         </TableCell>
                       )}

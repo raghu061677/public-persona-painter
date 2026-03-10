@@ -792,7 +792,7 @@ export default function ReportCampaignBookingsV2() {
                   <div>
                     <p className="font-medium">Proof Progress</p>
                     <p className="text-sm text-muted-foreground">
-                      {campaignAssets.filter((a) => a.status === "Verified" || a.status === "PhotoUploaded").length} of{" "}
+                      {campaignAssets.filter((a) => a.status === "Verified" || a.status === "Completed" || a.status === "PhotoUploaded").length} of{" "}
                       {campaignAssets.length} assets have proofs
                     </p>
                   </div>

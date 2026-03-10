@@ -11,8 +11,10 @@ import { useCompany } from '@/contexts/CompanyContext';
  * - Auto-create mounting tasks when campaign starts
  */
 export function useCampaignWorkflows(campaignId: string | undefined) {
+  const { company } = useCompany();
+
   useEffect(() => {
-    if (!campaignId) return;
+    if (!campaignId || !company?.id) return;
 
     // Subscribe to campaign status changes
     const campaignChannel = supabase

@@ -29,7 +29,7 @@ export function ProofApprovalDialog({ asset, open, onOpenChange, onUpdate }: Pro
       const { error } = await supabase
         .from('campaign_assets')
         .update({
-          status: approved ? 'Verified' : 'Mounted',
+          status: approved ? 'Verified' : 'Installed',
           photos: {
             ...asset.photos,
             approvalStatus: approved ? 'approved' : 'rejected',

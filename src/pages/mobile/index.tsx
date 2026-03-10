@@ -236,8 +236,10 @@ function MobileFieldApp() {
     switch (status) {
       case 'Pending': return 'bg-yellow-500';
       case 'Assigned': return 'bg-blue-500';
-      case 'Mounted': return 'bg-cyan-500';
-      case 'PhotoUploaded': return 'bg-green-500';
+      case 'Mounted':
+      case 'Installed': return 'bg-cyan-500';
+      case 'PhotoUploaded':
+      case 'Completed': return 'bg-green-500';
       case 'Verified': return 'bg-emerald-600';
       default: return 'bg-gray-500';
     }
@@ -247,18 +249,20 @@ function MobileFieldApp() {
     switch (status) {
       case 'Pending': return <Clock className="h-4 w-4" />;
       case 'Assigned':
-      case 'Mounted': return <Upload className="h-4 w-4" />;
+      case 'Mounted':
+      case 'Installed': return <Upload className="h-4 w-4" />;
       case 'PhotoUploaded':
+      case 'Completed':
       case 'Verified': return <CheckCircle className="h-4 w-4" />;
       default: return <AlertCircle className="h-4 w-4" />;
     }
   };
 
   const pendingTasks = tasks.filter(t => 
-    t.status === 'Pending' || t.status === 'Assigned' || t.status === 'Mounted'
+    t.status === 'Pending' || t.status === 'Assigned' || t.status === 'Mounted' || t.status === 'Installed'
   );
   const completedTasks = tasks.filter(t => 
-    t.status === 'PhotoUploaded' || t.status === 'Verified'
+    t.status === 'PhotoUploaded' || t.status === 'Completed' || t.status === 'Verified'
   );
   const ongoingCampaigns = campaigns.filter(c => 
     c.status === 'InProgress'

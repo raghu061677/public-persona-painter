@@ -46,6 +46,7 @@ export function ResponsiveSidebar() {
    const [proofUploadsCount, setProofUploadsCount] = useState(0);
  
   const isCompanyAdmin = companyUser?.role === 'admin' || isAdmin;
+  const canViewSettings = rbac.canAccessModule('settings');
   const collapsed = state === "collapsed";
   const isActive = (path: string) => location.pathname === path;
 
@@ -421,19 +422,19 @@ export function ResponsiveSidebar() {
               <Separator className="my-2" />
 
               {/* SYSTEM / SETTINGS */}
-              {(isCompanyAdmin || isPlatformAdmin) && (
+               {(isCompanyAdmin || isPlatformAdmin || canViewSettings) && (
                 <>
                   {!collapsed && <SidebarGroupLabel className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">System</SidebarGroupLabel>}
                     <SidebarMenu>
                     <MenuGroup icon={Building2} label="Company Settings">
                       <MenuItem icon={Building2} label="Company Profile" href="/admin/company-settings/profile" />
                       <MenuItem icon={Palette} label="Branding / Logo" href="/admin/company-settings/branding" />
-                      <MenuItem icon={Globe} label="Email Settings" href="/admin/company-settings/email-providers" />
+                      {isCompanyAdmin && <MenuItem icon={Globe} label="Email Settings" href="/admin/company-settings/email-providers" />}
                       <MenuItem icon={Mail} label="Email Templates" href="/admin/company-settings/email-templates" />
                       <MenuItem icon={Bell} label="Reminders" href="/admin/company-settings/reminders" />
                       <MenuItem icon={AlertTriangle} label="Alerts" href="/admin/company-settings/alerts" />
-                      <MenuItem icon={Users} label="User Management" href="/admin/company-settings/users" />
-                      <MenuItem icon={Shield} label="Roles & Permissions" href="/admin/company-settings/roles" />
+                      {isCompanyAdmin && <MenuItem icon={Users} label="User Management" href="/admin/company-settings/users" />}
+                      {isCompanyAdmin && <MenuItem icon={Shield} label="Roles & Permissions" href="/admin/company-settings/roles" />}
                     </MenuGroup>
 
                     <MenuGroup icon={Settings} label="Data Management">

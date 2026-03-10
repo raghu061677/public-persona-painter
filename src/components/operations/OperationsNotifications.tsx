@@ -124,7 +124,7 @@ export function OperationsNotifications() {
     switch (status) {
       case "Assigned":
         return "assignment";
-      case "PhotoUploaded":
+      case "Completed":
         return "proof_uploaded";
       case "Verified":
         return "proof_approved";
@@ -137,7 +137,7 @@ export function OperationsNotifications() {
     switch (status) {
       case "Assigned":
         return `New mounting assignment for asset ${assetId}`;
-      case "PhotoUploaded":
+      case "Completed":
         return `Proof photos uploaded for asset ${assetId} - awaiting approval`;
       case "Verified":
         return `Proof approved for asset ${assetId}`;

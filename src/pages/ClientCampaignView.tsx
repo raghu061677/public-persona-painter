@@ -10,6 +10,7 @@ import { UnifiedPhotoGallery, UnifiedPhoto } from "@/components/common/UnifiedPh
 import { CampaignTimeline, TimelineEvent } from "@/components/portal/CampaignTimeline";
 import { useClientPortal } from "@/contexts/ClientPortalContext";
 import { format } from "date-fns";
+import { normalizeCampaignAssetStatus } from "@/lib/constants/campaignAssetStatus";
 
 interface CampaignAsset {
   id: string;
@@ -141,9 +142,10 @@ export default function ClientCampaignView() {
     ];
 
     // Add asset installation events
-    const installedCount = assets.filter(a => 
-      a.status === "Installed" || a.status === "PhotoUploaded" || a.status === "Verified"
-    ).length;
+    const installedCount = assets.filter(a => {
+      const n = normalizeCampaignAssetStatus(a.status);
+      return n === "Installed" || n === "Completed" || n === "Verified";
+    }).length;
     
     if (installedCount > 0) {
       events.push({

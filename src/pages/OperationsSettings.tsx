@@ -193,7 +193,7 @@ export default function OperationsSettings() {
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {requireApproval 
-                    ? "Photos will be marked as 'PhotoUploaded' and require manager approval to change status to 'Verified'"
+                    ? "Photos will be marked as 'Completed' and require manager approval to change status to 'Verified'"
                     : "Photos will be automatically marked as 'Verified' after all 4 photos are uploaded"
                   }
                 </p>

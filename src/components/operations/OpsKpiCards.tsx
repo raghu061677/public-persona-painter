@@ -5,6 +5,7 @@ import {
   ClipboardList, Wrench, Camera, CheckCircle2, AlertTriangle,
   Eye, CalendarCheck, ShieldCheck, Activity
 } from "lucide-react";
+import { normalizeCampaignAssetStatus } from "@/lib/constants/campaignAssetStatus";
 
 interface OpsKpiCardsProps {
   assets: any[];
@@ -32,18 +33,18 @@ export function OpsKpiCards({ assets }: OpsKpiCardsProps) {
     let total = assets.length;
 
     for (const a of assets) {
-      const s = (a.status || "Pending").toLowerCase();
+      const s = normalizeCampaignAssetStatus(a.status);
       const assignedDate = a.assigned_at ? a.assigned_at.split("T")[0] : null;
       const completedDate = a.completed_at ? a.completed_at.split("T")[0] : null;
 
       if (assignedDate === today) assignedToday++;
-      if (completedDate === today && (s === "verified" || s === "completed")) completedToday++;
+      if (completedDate === today && (s === "Verified" || s === "Completed")) completedToday++;
 
-      if (s === "pending" || s === "assigned") pendingMounting++;
-      if (s === "installed" || s === "mounted") pendingMonitoring++;
-      if (s === "photouploaded") verificationPending++;
-      if ((s === "installed" || s === "mounted") && !hasPhotos(a)) proofPending++;
-      if (s === "assigned" && a.assigned_at) {
+      if (s === "Pending" || s === "Assigned") pendingMounting++;
+      if (s === "Installed") pendingMonitoring++;
+      if (s === "Completed") verificationPending++;
+      if (s === "Installed" && !hasPhotos(a)) proofPending++;
+      if (s === "Assigned" && a.assigned_at) {
         const daysSinceAssigned = Math.floor(
           (Date.now() - new Date(a.assigned_at).getTime()) / (1000 * 60 * 60 * 24)
         );

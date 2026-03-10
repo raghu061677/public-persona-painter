@@ -8,6 +8,7 @@ import { Loader2 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getAssetDisplayCode } from '@/lib/assets/getAssetDisplayCode';
+import { normalizeCampaignAssetStatus } from '@/lib/constants/campaignAssetStatus';
 
 // Fix for default marker icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -141,12 +142,12 @@ export function OperationsMapView({ campaignId }: OperationsMapViewProps) {
   };
 
   const getStatusColor = (status: string): string => {
-    switch (status) {
+    const normalized = normalizeCampaignAssetStatus(status);
+    switch (normalized) {
       case 'Verified':
       case 'Completed':
         return '#10b981'; // green
       case 'Installed':
-      case 'Mounted':
         return '#3b82f6'; // blue
       case 'Pending':
       case 'Assigned':
@@ -252,9 +253,9 @@ export function OperationsMapView({ campaignId }: OperationsMapViewProps) {
 
   // Status counts
   const statusCounts = {
-    verified: assets.filter(a => a.installation_status === 'Verified' || a.status === 'Completed').length,
-    installed: assets.filter(a => a.installation_status === 'Installed' || a.status === 'Mounted').length,
-    pending: assets.filter(a => a.installation_status === 'Pending' || a.status === 'Assigned' || !a.installation_status).length,
+    verified: assets.filter(a => normalizeCampaignAssetStatus(a.installation_status || a.status) === 'Verified' || normalizeCampaignAssetStatus(a.installation_status || a.status) === 'Completed').length,
+    installed: assets.filter(a => normalizeCampaignAssetStatus(a.installation_status || a.status) === 'Installed').length,
+    pending: assets.filter(a => { const n = normalizeCampaignAssetStatus(a.installation_status || a.status); return n === 'Pending' || n === 'Assigned'; }).length,
   };
 
   if (loading) {

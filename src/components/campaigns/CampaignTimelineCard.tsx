@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Calendar, CheckCircle2, Circle, Clock } from "lucide-react";
 import { formatDate } from "@/utils/plans";
+import { normalizeCampaignAssetStatus, isCampaignAssetStatusAtLeast } from "@/lib/constants/campaignAssetStatus";
 
 interface TimelineEvent {
   label: string;
@@ -20,15 +21,15 @@ export function CampaignTimelineCard({ campaign, campaignAssets }: CampaignTimel
   // Calculate milestones
   const totalAssets = campaignAssets.length;
   const assignedAssets = campaignAssets.filter(a => a.assigned_at).length;
-  const mountedAssets = campaignAssets.filter(a => a.status === 'Mounted' || a.status === 'PhotoUploaded' || a.status === 'Verified').length;
-  const verifiedAssets = campaignAssets.filter(a => a.status === 'Verified').length;
+  const mountedAssets = campaignAssets.filter(a => isCampaignAssetStatusAtLeast(normalizeCampaignAssetStatus(a.status), 'Installed')).length;
+  const verifiedAssets = campaignAssets.filter(a => normalizeCampaignAssetStatus(a.status) === 'Verified').length;
 
   const firstAssignedDate = campaignAssets
     .filter(a => a.assigned_at)
     .sort((a, b) => new Date(a.assigned_at).getTime() - new Date(b.assigned_at).getTime())[0]?.assigned_at;
 
   const firstMountedDate = campaignAssets
-    .filter(a => a.status === 'Mounted' || a.status === 'PhotoUploaded' || a.status === 'Verified')
+    .filter(a => isCampaignAssetStatusAtLeast(normalizeCampaignAssetStatus(a.status), 'Installed'))
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0]?.created_at;
 
   const lastVerifiedDate = campaignAssets

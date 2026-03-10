@@ -55,12 +55,10 @@ export function getCampaignStatusColor(status: string): string {
       return 'bg-blue-500/10 text-blue-700 border-blue-500/20';
     case 'InProgress':
       return 'bg-amber-500/10 text-amber-700 border-amber-500/20';
-    case 'PhotoUploaded':
+    case 'Completed':
       return 'bg-purple-500/10 text-purple-700 border-purple-500/20';
     case 'Verified':
       return 'bg-green-500/10 text-green-700 border-green-500/20';
-    case 'Completed':
-      return 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20';
     default:
       return 'bg-muted text-muted-foreground';
   }

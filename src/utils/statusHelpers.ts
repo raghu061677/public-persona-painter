@@ -59,7 +59,7 @@ export const campaignStatusConfig: Record<CampaignStatus, {
     description: 'Work ongoing'
   },
   'PhotoUploaded': {
-    label: 'Photo Uploaded',
+    label: 'Completed',
     variant: 'default',
     description: 'Proof uploaded'
   },
@@ -115,12 +115,12 @@ export const assetInstallationStatusConfig: Record<AssetInstallationStatus, {
   },
   // Legacy values
   'Mounted': {
-    label: 'Mounted',
+    label: 'Installed',
     variant: 'default',
-    description: 'Mounted on site'
+    description: 'Installed on site'
   },
   'PhotoUploaded': {
-    label: 'Photo Uploaded',
+    label: 'Completed',
     variant: 'default',
     description: 'Proof submitted'
   },

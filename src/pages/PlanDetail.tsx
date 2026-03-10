@@ -774,6 +774,11 @@ export default function PlanDetail() {
         description: "Plan approved successfully",
       });
 
+      // Trigger email notification
+      const payload = buildPlanPayload(plan, clientDetails, company);
+      triggerEmail('plan_approved_internal', payload,
+        [{ to: company?.email || '' }], id);
+
       setShowApproveDialog(false);
       setApprovalRemarks("");
       fetchPlan();

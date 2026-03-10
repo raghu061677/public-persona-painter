@@ -28,6 +28,7 @@ import { CampaignComparisonDialog } from "@/components/campaigns/CampaignCompari
 import { CampaignHealthAlerts } from "@/components/campaigns/CampaignHealthAlerts";
 
 import { checkAndAutoGeneratePPT } from "@/lib/operations/autoGenerateProofPPT";
+import { normalizeCampaignAssetStatus } from "@/lib/constants/campaignAssetStatus";
 import { CreativeUploadSection } from "@/components/campaigns/CreativeUploadSection";
 import { useCampaignWorkflows } from "@/hooks/useCampaignWorkflows";
 import { AutoAssignMountersButton } from "@/components/campaigns/AutoAssignMountersButton";

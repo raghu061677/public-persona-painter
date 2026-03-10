@@ -10,6 +10,7 @@ import { UnifiedPhotoGallery, UnifiedPhoto } from "@/components/common/UnifiedPh
 import { CampaignTimeline, TimelineEvent } from "@/components/portal/CampaignTimeline";
 import { useClientPortal } from "@/contexts/ClientPortalContext";
 import { format } from "date-fns";
+import { normalizeCampaignAssetStatus } from "@/lib/constants/campaignAssetStatus";
 
 interface CampaignAsset {
   id: string;

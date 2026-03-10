@@ -222,6 +222,9 @@ export default function CampaignEdit() {
       return;
     }
 
+    // Store raw campaign for RBAC access check
+    setCampaignRecord(campaign);
+
     // Set campaign data
     setCampaignName(campaign.campaign_name || "");
     setClientId(campaign.client_id || "");

@@ -241,6 +241,7 @@ export default function AlertsSettings() {
   }, [loadSettings, loadTemplates]);
 
   const handleSave = async () => {
+    if (isReadOnly) { toast.error('View-only access'); return; }
     if (!settings) return;
     setSaving(true);
     try {

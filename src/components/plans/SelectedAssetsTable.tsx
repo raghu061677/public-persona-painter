@@ -536,7 +536,7 @@ export function SelectedAssetsTable({
               <div className="space-y-2">
                 <h4 className="font-medium text-sm mb-3">Select columns to display:</h4>
                 <div className="grid grid-cols-2 gap-2 max-h-96 overflow-y-auto">
-                  {ALL_COLUMNS.map((col) => (
+                  {ALL_COLUMNS.filter(col => isColumnAllowed(col)).map((col) => (
                     <div key={col} className="flex items-center space-x-2">
                       <Checkbox
                         id={col}

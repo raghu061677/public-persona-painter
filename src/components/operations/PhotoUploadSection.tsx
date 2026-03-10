@@ -20,6 +20,8 @@ const DEBUG = true;
 interface PhotoUploadSectionProps {
   campaignId: string;
   assetId: string;
+  /** Canonical media_assets.id (or legacy asset code) for consistent media_photos.asset_id writes */
+  mediaAssetId?: string;
   onUploadComplete: () => void;
 }
 
@@ -37,7 +39,7 @@ interface PreviewFile {
   previewUrl: string;
 }
 
-export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: PhotoUploadSectionProps) {
+export function PhotoUploadSection({ campaignId, assetId, mediaAssetId, onUploadComplete }: PhotoUploadSectionProps) {
   const { company } = useCompany();
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
@@ -76,39 +78,37 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
     loadWatermarkBranding();
   }, [company]);
 
-  // Load asset QR code URL and resolve the actual media_asset_id from campaign_assets
+  // Resolve canonical media asset ID and load asset data used for watermarking metadata
   useEffect(() => {
     const loadAssetInfo = async () => {
-      if (!assetId) return;
-      
-      // Get the media asset_id from campaign_assets (assetId here is campaign_assets.id)
-      const { data: campaignAsset } = await supabase
-        .from('campaign_assets')
-        .select('asset_id')
-        .eq('id', assetId)
-        .single();
-      
-      if (!campaignAsset?.asset_id) {
-        // If no campaign_asset found, assetId might already be a media_asset_id
-        setResolvedMediaAssetId(assetId);
-        return;
+      if (!assetId && !mediaAssetId) return;
+
+      // Prefer explicit mediaAssetId from parent to avoid extra RLS-sensitive lookups
+      let resolvedId = mediaAssetId || null;
+
+      // Fallback: when only campaign_assets.id is available, resolve to campaign_assets.asset_id
+      if (!resolvedId && assetId) {
+        const { data: campaignAsset } = await supabase
+          .from('campaign_assets')
+          .select('asset_id')
+          .eq('id', assetId)
+          .maybeSingle();
+
+        resolvedId = campaignAsset?.asset_id || assetId;
       }
-      
-      // Store the resolved media asset ID for use in uploads
-      setResolvedMediaAssetId(campaignAsset.asset_id);
-      
-      // Get the QR code URL and coordinates from media_assets
+
+      setResolvedMediaAssetId(resolvedId);
+
       const { data: mediaAsset } = await supabase
         .from('media_assets')
         .select('qr_code_url, latitude, longitude, google_street_view_url')
-        .eq('id', campaignAsset.asset_id)
-        .single();
-      
+        .eq('id', resolvedId)
+        .maybeSingle();
+
       if (mediaAsset?.qr_code_url) {
         setQrCodeUrl(mediaAsset.qr_code_url);
       }
 
-      // Build Street View URL from asset coordinates
       if (mediaAsset?.google_street_view_url) {
         setStreetViewUrl(mediaAsset.google_street_view_url);
       } else if (mediaAsset?.latitude && mediaAsset?.longitude) {
@@ -117,7 +117,7 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
       }
     };
     loadAssetInfo();
-  }, [assetId]);
+  }, [assetId, mediaAssetId]);
 
   // Cleanup preview URLs on unmount
   useEffect(() => {
@@ -194,7 +194,7 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
     }
 
     // Use the resolved media asset ID for storing in database
-    const uploadAssetId = resolvedMediaAssetId || assetId;
+    const uploadAssetId = mediaAssetId || resolvedMediaAssetId || assetId;
 
     const files = previewFiles.map(p => p.file);
     if (DEBUG) console.log(`Processing ${files.length} files for upload`);
@@ -342,7 +342,7 @@ export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: Ph
 
       toast({
         title: "Upload Complete",
-        description: `Successfully uploaded ${watermarkedFiles.length} watermarked proof photo${watermarkedFiles.length !== 1 ? 's' : ''}. Asset status updated to Installed.`,
+        description: `Successfully uploaded ${watermarkedFiles.length} watermarked proof photo${watermarkedFiles.length !== 1 ? 's' : ''}.`,
       });
 
       // Cleanup preview URLs

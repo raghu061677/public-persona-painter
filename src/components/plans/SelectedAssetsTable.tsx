@@ -89,11 +89,17 @@ interface SortConfig {
   direction: SortDirection;
 }
 
+// Financial columns that should be hidden from non-owners
+const FINANCIAL_COLUMNS = [
+  'base_rate', 'negotiated_price', 'daily_rate', 'rent_amount',
+  'discount', 'profit', 'printing_rate', 'printing', 'mounting', 'total',
+];
+
 interface SelectedAssetsTableProps {
   assets: any[];
   assetPricing: Record<string, any>;
-  onRemove: (assetId: string) => void;
-  onPricingUpdate: (assetId: string, field: string, value: any) => void;
+  onRemove?: ((assetId: string) => void) | undefined;
+  onPricingUpdate?: ((assetId: string, field: string, value: any) => void) | undefined;
   durationDays?: number;
   planStartDate?: Date;
   planEndDate?: Date;
@@ -101,6 +107,8 @@ interface SelectedAssetsTableProps {
   planId?: string;
   planClientId?: string;
   planClientName?: string;
+  /** When false, hides all financial columns and disables editing */
+  canViewFinancials?: boolean;
 }
 
 const ALL_COLUMNS = [

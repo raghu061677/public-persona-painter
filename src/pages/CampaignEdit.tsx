@@ -544,7 +544,7 @@ export default function CampaignEdit() {
     const newAssets: CampaignAsset[] = assets.map(asset => {
       const monthlyRate = Number(asset.card_rate) || 0;
       const totalSqft = Number(asset.total_sqft) || 0;
-      const addBillingMode: BillingMode = durationMode === 'MONTH' ? 'FULL_MONTH' : 'PRORATA_30';
+      const addBillingMode: BillingMode = 'PRORATA_30';
 
       // Use asset-wise suggested dates if available, otherwise fall back to campaign dates
       const hasAdjustedDates = asset._hasAdjustedDates && asset._suggestedStartDate;

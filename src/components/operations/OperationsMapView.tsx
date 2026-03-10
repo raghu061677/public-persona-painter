@@ -252,9 +252,9 @@ export function OperationsMapView({ campaignId }: OperationsMapViewProps) {
 
   // Status counts
   const statusCounts = {
-    verified: assets.filter(a => a.installation_status === 'Verified' || a.status === 'Completed').length,
-    installed: assets.filter(a => a.installation_status === 'Installed' || a.status === 'Mounted').length,
-    pending: assets.filter(a => a.installation_status === 'Pending' || a.status === 'Assigned' || !a.installation_status).length,
+    verified: assets.filter(a => normalizeCampaignAssetStatus(a.installation_status || a.status) === 'Verified' || normalizeCampaignAssetStatus(a.installation_status || a.status) === 'Completed').length,
+    installed: assets.filter(a => normalizeCampaignAssetStatus(a.installation_status || a.status) === 'Installed').length,
+    pending: assets.filter(a => { const n = normalizeCampaignAssetStatus(a.installation_status || a.status); return n === 'Pending' || n === 'Assigned'; }).length,
   };
 
   if (loading) {

@@ -5,6 +5,7 @@ import {
   ClipboardList, Wrench, Camera, CheckCircle2, AlertTriangle,
   Eye, CalendarCheck, ShieldCheck, Activity
 } from "lucide-react";
+import { normalizeCampaignAssetStatus } from "@/lib/constants/campaignAssetStatus";
 
 interface OpsKpiCardsProps {
   assets: any[];

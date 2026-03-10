@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, Zap, History, PlayCircle, PauseCircle, Settings2 } from "lucide-react";
 import { format } from "date-fns";

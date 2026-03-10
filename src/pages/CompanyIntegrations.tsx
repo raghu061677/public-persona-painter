@@ -4,6 +4,7 @@ import { SettingsCard, SectionHeader, InfoAlert } from "@/components/settings/zo
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Zap, CheckCircle2, XCircle } from "lucide-react";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 
 const INTEGRATIONS = [
   {

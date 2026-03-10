@@ -9,6 +9,7 @@ import { Shield, Plus, Edit, Trash2 } from "lucide-react";
 import { RolePermissionsMatrix, RolePermissionsMatrixRef } from "@/components/users/RolePermissionsMatrix";
 import { PageHeader } from "@/components/navigation/PageHeader";
 import { ROUTES, ROUTE_LABELS } from "@/config/routes";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 
 const DEFAULT_ROLES = [
   { name: "admin", label: "Administrator", description: "Full system access", color: "destructive" },

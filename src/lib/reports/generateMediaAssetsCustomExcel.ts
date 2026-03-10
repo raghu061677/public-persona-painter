@@ -55,7 +55,7 @@ export const ALL_ASSET_EXPORT_FIELDS: AssetExportField[] = [
 ];
 
 export const DEFAULT_ASSET_CUSTOM_FIELDS = [
-  'sno', 'asset_id', 'media_type', 'status', 'city', 'area', 'location',
+  'sno', 'asset_id', 'media_type', 'status', 'city', 'area', 'location', 'direction',
   'dimension', 'sqft', 'illumination', 'card_rate',
 ];
 

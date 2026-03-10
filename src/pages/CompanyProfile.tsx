@@ -89,6 +89,7 @@ export default function CompanyProfile() {
   }, [company]);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isReadOnly) { toast.error('View-only access'); return; }
     const file = e.target.files?.[0];
     if (!file || !company) return;
 

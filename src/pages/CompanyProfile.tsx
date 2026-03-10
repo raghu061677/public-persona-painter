@@ -157,6 +157,7 @@ export default function CompanyProfile() {
   };
 
   const handleSave = async () => {
+    if (isReadOnly) { toast.error('View-only access'); return; }
     if (!company) return;
 
     setSaving(true);

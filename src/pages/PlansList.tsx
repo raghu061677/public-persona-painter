@@ -1095,9 +1095,9 @@ export default function PlansList() {
                         <TableCell className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                              {plan.client_name?.charAt(0) || 'U'}
+                              {(plan.employee_name || 'U').charAt(0).toUpperCase()}
                             </div>
-                            <span className="font-medium">Raghu Gajula</span>
+                            <span className="font-medium">{plan.employee_name || 'Unknown'}</span>
                           </div>
                         </TableCell>
                       )}

@@ -223,7 +223,7 @@ export function SelectedAssetsTable({
     DEFAULT_VISIBLE
   );
 
-  const isColumnVisible = (col: string) => visibleKeys.includes(col);
+  const isColumnVisible = (col: string) => visibleKeys.includes(col) && isColumnAllowed(col);
 
   const toggleColumn = (col: string) => {
     if (visibleKeys.includes(col)) {

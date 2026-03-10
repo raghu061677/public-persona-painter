@@ -248,14 +248,12 @@ export default function CampaignDetail() {
   const pendingAssets = campaignAssets.filter(a => 
     a.status === 'Pending' || a.status === 'Assigned' || !a.status
   ).length;
-  const installedAssets = campaignAssets.filter(a => 
-    a.status === 'Installed' || 
-    a.status === 'Mounted' ||
-    a.installation_status === 'Installed' || 
-    a.installation_status === 'Completed'
-  ).length;
+  const installedAssets = campaignAssets.filter(a => {
+    const n = normalizeCampaignAssetStatus(a.status);
+    return n === 'Installed' || n === 'Completed';
+  }).length;
   const verifiedAssets = campaignAssets.filter(a => 
-    a.status === 'Verified' || a.status === 'Completed'
+    normalizeCampaignAssetStatus(a.status) === 'Verified'
   ).length;
   const totalAssets = campaignAssets.length || campaign.total_assets || 0;
   const progress = calculateProgress(totalAssets, verifiedAssets);

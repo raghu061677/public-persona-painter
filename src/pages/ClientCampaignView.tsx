@@ -141,9 +141,10 @@ export default function ClientCampaignView() {
     ];
 
     // Add asset installation events
-    const installedCount = assets.filter(a => 
-      a.status === "Installed" || a.status === "PhotoUploaded" || a.status === "Verified"
-    ).length;
+    const installedCount = assets.filter(a => {
+      const n = normalizeCampaignAssetStatus(a.status);
+      return n === "Installed" || n === "Completed" || n === "Verified";
+    }).length;
     
     if (installedCount > 0) {
       events.push({

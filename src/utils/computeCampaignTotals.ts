@@ -201,7 +201,7 @@ export function computeCampaignTotals({
      totalMonths,
      monthlyDisplayRent,
      billingPeriods,
-     totalAssets: campaignAssets.length,
+     totalAssets: activeAssets.length,
    };
  }
  

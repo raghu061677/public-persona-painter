@@ -100,6 +100,10 @@ export default function CampaignEdit() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
+  const [campaignRecord, setCampaignRecord] = useState<any>(null);
+  
+  // Enterprise RBAC access mode
+  const perms = useRecordPermissions(campaignRecord, 'campaigns');
   const [showAddAssetsDialog, setShowAddAssetsDialog] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState<CampaignAsset | null>(null);
   const [showApplyDatesDialog, setShowApplyDatesDialog] = useState(false);

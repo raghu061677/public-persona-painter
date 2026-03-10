@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Trophy, TrendingUp, Clock, CheckCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { normalizeCampaignAssetStatus, isCampaignAssetStatusAtLeast } from "@/lib/constants/campaignAssetStatus";
 
 interface TeamPerformanceProps {
   tasks: any[];
@@ -34,15 +35,15 @@ export function TeamPerformance({ tasks, loading }: TeamPerformanceProps) {
 
       existing.assigned++;
       
-      if (task.status === 'PhotoUploaded' || task.status === 'Verified') {
+      const normalized = normalizeCampaignAssetStatus(task.status);
+      if (isCampaignAssetStatusAtLeast(normalized, 'Completed')) {
         existing.completed++;
       }
       
-      if (task.status === 'Verified') {
+      if (normalized === 'Verified') {
         existing.verified++;
       }
 
-      // Calculate completion time if available
       if (task.completed_at && task.assigned_at) {
         const days = Math.ceil(
           (new Date(task.completed_at).getTime() - new Date(task.assigned_at).getTime()) / 
@@ -61,10 +62,13 @@ export function TeamPerformance({ tasks, loading }: TeamPerformanceProps) {
 
   const overallStats = useMemo(() => {
     const total = tasks.length;
-    const assigned = tasks.filter(t => t.status === 'Assigned').length;
-    const inProgress = tasks.filter(t => t.status === 'Pending' || t.status === 'Mounted').length;
-    const completed = tasks.filter(t => t.status === 'PhotoUploaded' || t.status === 'Verified').length;
-    const verified = tasks.filter(t => t.status === 'Verified').length;
+    const assigned = tasks.filter(t => normalizeCampaignAssetStatus(t.status) === 'Assigned').length;
+    const inProgress = tasks.filter(t => {
+      const n = normalizeCampaignAssetStatus(t.status);
+      return n === 'Pending' || n === 'Installed';
+    }).length;
+    const completed = tasks.filter(t => isCampaignAssetStatusAtLeast(normalizeCampaignAssetStatus(t.status), 'Completed')).length;
+    const verified = tasks.filter(t => normalizeCampaignAssetStatus(t.status) === 'Verified').length;
 
     return {
       total,
@@ -98,7 +102,6 @@ export function TeamPerformance({ tasks, loading }: TeamPerformanceProps) {
 
   return (
     <div className="space-y-6">
-      {/* Overall Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -107,9 +110,7 @@ export function TeamPerformance({ tasks, loading }: TeamPerformanceProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{overallStats.total}</div>
-            <p className="text-xs text-muted-foreground">
-              {overallStats.assigned} assigned
-            </p>
+            <p className="text-xs text-muted-foreground">{overallStats.assigned} assigned</p>
           </CardContent>
         </Card>
 
@@ -120,9 +121,7 @@ export function TeamPerformance({ tasks, loading }: TeamPerformanceProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{overallStats.inProgress}</div>
-            <p className="text-xs text-muted-foreground">
-              Active installations
-            </p>
+            <p className="text-xs text-muted-foreground">Active installations</p>
           </CardContent>
         </Card>
 
@@ -133,9 +132,7 @@ export function TeamPerformance({ tasks, loading }: TeamPerformanceProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{overallStats.completed}</div>
-            <p className="text-xs text-muted-foreground">
-              Proof uploaded
-            </p>
+            <p className="text-xs text-muted-foreground">Proof uploaded</p>
           </CardContent>
         </Card>
 
@@ -146,14 +143,11 @@ export function TeamPerformance({ tasks, loading }: TeamPerformanceProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{overallStats.verified}</div>
-            <p className="text-xs text-muted-foreground">
-              {overallStats.completionRate.toFixed(1)}% completion rate
-            </p>
+            <p className="text-xs text-muted-foreground">{overallStats.completionRate.toFixed(1)}% completion rate</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Team Leaderboard */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -163,54 +157,34 @@ export function TeamPerformance({ tasks, loading }: TeamPerformanceProps) {
         </CardHeader>
         <CardContent>
           {teamStats.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No team members assigned yet
-            </div>
+            <div className="text-center py-8 text-muted-foreground">No team members assigned yet</div>
           ) : (
             <div className="space-y-4">
               {teamStats.map((member, index) => (
                 <div key={member.name} className="flex items-center gap-4">
                   <div className="flex items-center gap-3 flex-1">
-                    <div className="text-2xl font-bold text-muted-foreground w-8">
-                      #{index + 1}
-                    </div>
-                    
+                    <div className="text-2xl font-bold text-muted-foreground w-8">#{index + 1}</div>
                     <Avatar>
-                      <AvatarFallback>
-                        {member.name.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
+                      <AvatarFallback>{member.name.substring(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
-
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{member.name}</p>
                       <div className="flex gap-2 mt-1">
-                        <Badge variant="outline" className="text-xs">
-                          {member.assigned} assigned
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {member.completed} completed
-                        </Badge>
-                        <Badge variant="outline" className="text-xs text-green-600">
-                          {member.verified} verified
-                        </Badge>
+                        <Badge variant="outline" className="text-xs">{member.assigned} assigned</Badge>
+                        <Badge variant="outline" className="text-xs">{member.completed} completed</Badge>
+                        <Badge variant="outline" className="text-xs text-green-600">{member.verified} verified</Badge>
                       </div>
                     </div>
                   </div>
-
                   <div className="w-32 space-y-1">
                     <div className="flex justify-between text-xs">
                       <span className="text-muted-foreground">Progress</span>
                       <span className="font-medium">
-                        {member.assigned > 0 
-                          ? Math.round((member.verified / member.assigned) * 100)
-                          : 0}%
+                        {member.assigned > 0 ? Math.round((member.verified / member.assigned) * 100) : 0}%
                       </span>
                     </div>
-                    <Progress 
-                      value={member.assigned > 0 ? (member.verified / member.assigned) * 100 : 0} 
-                    />
+                    <Progress value={member.assigned > 0 ? (member.verified / member.assigned) * 100 : 0} />
                   </div>
-
                   {member.avgCompletionTime > 0 && (
                     <div className="text-sm text-muted-foreground text-right">
                       <Clock className="h-3 w-3 inline mr-1" />

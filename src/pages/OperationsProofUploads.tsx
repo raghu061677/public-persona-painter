@@ -268,35 +268,27 @@ export default function OperationsProofUploads() {
   }, [assets, searchQuery, campaignFilter, statusFilter, sortField, sortDirection]);
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    const meta = getCampaignAssetStatusMeta(status);
+    const normalized = normalizeCampaignAssetStatus(status);
+    switch (normalized) {
       case "Verified":
-      case "verified":
         return (
           <Badge variant="default" className="gap-1 bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/50">
             <CheckCircle className="h-3 w-3" />
             Verified
           </Badge>
         );
-      case "PhotoUploaded":
-      case "proof_uploaded":
+      case "Completed":
         return (
           <Badge variant="secondary" className="gap-1 bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 border-cyan-500/50">
             <AlertCircle className="h-3 w-3" />
             Pending Review
           </Badge>
         );
-      case "Mounted":
-      case "installed":
-        return <Badge variant="outline" className="bg-orange-500/20 text-orange-700 border-orange-500/50">Mounted</Badge>;
-      case "Completed":
-        return (
-          <Badge variant="default" className="gap-1 bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/50">
-            <CheckCircle className="h-3 w-3" />
-            Completed
-          </Badge>
-        );
+      case "Installed":
+        return <Badge variant="outline" className="bg-orange-500/20 text-orange-700 border-orange-500/50">Installed</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline">{meta.label}</Badge>;
     }
   };
 

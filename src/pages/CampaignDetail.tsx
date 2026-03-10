@@ -639,6 +639,8 @@ export default function CampaignDetail() {
                     companyPrefix={assetCodePrefix}
                     companyName={company?.name}
                     onRefresh={refreshData}
+                    readOnly={!canEditThisCampaign}
+                  />
                   />
                 </CardContent>
               </Card>

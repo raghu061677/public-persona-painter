@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { CheckCircle2, XCircle } from "lucide-react";
+import { useEmailTrigger, buildAssetPayload } from "@/hooks/useEmailTrigger";
 
 interface ProofApprovalDialogProps {
   asset: any;
@@ -22,6 +23,7 @@ interface ProofApprovalDialogProps {
 export function ProofApprovalDialog({ asset, open, onOpenChange, onUpdate }: ProofApprovalDialogProps) {
   const [comments, setComments] = useState("");
   const [processing, setProcessing] = useState(false);
+  const { trigger: triggerEmail, ConfirmDialog: EmailConfirmDialog } = useEmailTrigger();
 
   const handleApproval = async (approved: boolean) => {
     setProcessing(true);
@@ -48,6 +50,17 @@ export function ProofApprovalDialog({ asset, open, onOpenChange, onUpdate }: Pro
           : "Mounter will be notified to re-upload photos",
       });
 
+      // Trigger email notifications
+      const assetPayload = buildAssetPayload(asset);
+      assetPayload.proof_verified_at = new Date().toISOString();
+      if (approved) {
+        triggerEmail('proof_verified_internal', assetPayload, [{ to: '' }], asset.id);
+        // Client notification (confirm mode)
+        triggerEmail('proof_verified_client', assetPayload, [{ to: '' }], asset.id);
+      } else {
+        triggerEmail('proof_rejected_internal', assetPayload, [{ to: '' }], asset.id);
+      }
+
       onOpenChange(false);
       setComments("");
       onUpdate();
@@ -72,6 +85,7 @@ export function ProofApprovalDialog({ asset, open, onOpenChange, onUpdate }: Pro
   const photos = asset?.photos || {};
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -79,7 +93,6 @@ export function ProofApprovalDialog({ asset, open, onOpenChange, onUpdate }: Pro
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Asset Info */}
           <div className="p-4 bg-muted rounded-md">
             <h3 className="font-semibold mb-2">{asset?.asset_id}</h3>
             <p className="text-sm text-muted-foreground">
@@ -87,7 +100,6 @@ export function ProofApprovalDialog({ asset, open, onOpenChange, onUpdate }: Pro
             </p>
           </div>
 
-          {/* Photos Grid */}
           <div className="grid grid-cols-2 gap-4">
             {photoTypes.map((photoType) => (
               <div key={photoType.key} className="space-y-2">
@@ -107,7 +119,6 @@ export function ProofApprovalDialog({ asset, open, onOpenChange, onUpdate }: Pro
             ))}
           </div>
 
-          {/* Comments */}
           <div className="space-y-2">
             <Label>Comments (Optional)</Label>
             <Textarea
@@ -118,7 +129,6 @@ export function ProofApprovalDialog({ asset, open, onOpenChange, onUpdate }: Pro
             />
           </div>
 
-          {/* Actions */}
           <div className="flex justify-end gap-2">
             <Button
               variant="outline"
@@ -139,5 +149,7 @@ export function ProofApprovalDialog({ asset, open, onOpenChange, onUpdate }: Pro
         </div>
       </DialogContent>
     </Dialog>
+    {EmailConfirmDialog}
+    </>
   );
 }

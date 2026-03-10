@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { generateCampaignCode } from "@/lib/codeGenerator";
+import { useEmailTrigger, buildCampaignPayload, buildPlanPayload } from "@/hooks/useEmailTrigger";
 import { useCompany } from "@/contexts/CompanyContext";
 
 interface ConvertToCampaignDialogProps {
@@ -37,6 +38,7 @@ export function ConvertToCampaignDialog({
 }: ConvertToCampaignDialogProps) {
   const navigate = useNavigate();
   const { company } = useCompany();
+  const { trigger: triggerEmail, ConfirmDialog: EmailConfirmDialog } = useEmailTrigger();
   const [loading, setLoading] = useState(false);
   const [campaignName, setCampaignName] = useState(plan?.plan_name || "");
   const [startDate, setStartDate] = useState<Date>(
@@ -200,6 +202,17 @@ export function ConvertToCampaignDialog({
         description: `Campaign ${campaignId} created successfully`,
       });
 
+      // Trigger email notifications
+      const campaignPayload = buildCampaignPayload(
+        { id: campaignId, campaign_name: campaignName, status: 'Planned', start_date: format(startDate, "yyyy-MM-dd"), end_date: format(endDate, "yyyy-MM-dd"), client_name: plan.client_name },
+        null, company
+      );
+      triggerEmail('campaign_created_internal', campaignPayload, [{ to: company?.email || '' }], campaignId);
+      // Client confirmation (confirm mode)
+      if (plan.client_email) {
+        triggerEmail('campaign_confirmed_client', campaignPayload, [{ to: plan.client_email }], campaignId);
+      }
+
       onOpenChange(false);
       navigate(`/admin/campaigns/${campaignId}`);
     } catch (error: any) {
@@ -215,6 +228,7 @@ export function ConvertToCampaignDialog({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
@@ -332,5 +346,7 @@ export function ConvertToCampaignDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    {EmailConfirmDialog}
+    </>
   );
 }

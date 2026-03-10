@@ -70,10 +70,12 @@ import { SignedROSection } from "@/components/plans/SignedROSection";
 import { SendROSigningLink } from "@/components/plans/SendROSigningLink";
 import { useRecordPermissions } from "@/hooks/useRecordAccessMode";
 import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
+import { useEmailTrigger, buildPlanPayload } from "@/hooks/useEmailTrigger";
 export default function PlanDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { company } = useCompany();
+  const { trigger: triggerEmail, ConfirmDialog: EmailConfirmDialog } = useEmailTrigger();
   const [plan, setPlan] = useState<any>(null);
   const [planItems, setPlanItems] = useState<any[]>([]);
   const [clientDetails, setClientDetails] = useState<any>(null);
@@ -724,6 +726,11 @@ export default function PlanDetail() {
         description: "Plan submitted for approval successfully",
       });
 
+      // Trigger email notification
+      const payload = buildPlanPayload(plan, clientDetails, company);
+      triggerEmail('plan_approval_requested_internal', payload, 
+        [{ to: company?.email || '' }], id);
+
       setShowSubmitDialog(false);
       setApprovalRemarks("");
       
@@ -767,6 +774,11 @@ export default function PlanDetail() {
         description: "Plan approved successfully",
       });
 
+      // Trigger email notification
+      const payload = buildPlanPayload(plan, clientDetails, company);
+      triggerEmail('plan_approved_internal', payload,
+        [{ to: company?.email || '' }], id);
+
       setShowApproveDialog(false);
       setApprovalRemarks("");
       fetchPlan();
@@ -808,6 +820,11 @@ export default function PlanDetail() {
         description: "Plan has been rejected",
         variant: "destructive",
       });
+
+      // Trigger email notification
+      const payload = buildPlanPayload(plan, clientDetails, company);
+      triggerEmail('plan_rejected_internal', payload,
+        [{ to: company?.email || '' }], id);
 
       setShowRejectDialog(false);
       setApprovalRemarks("");
@@ -964,6 +981,16 @@ export default function PlanDetail() {
         title: "Campaign Created Successfully",
         description: `Campaign created with ${result.total_items || planItems.length} assets`,
       });
+
+      // Trigger email notifications for plan conversion
+      const payload = buildPlanPayload(plan, clientDetails, company);
+      payload.campaign_code = result.campaign_id || '';
+      payload.campaign_name = plan?.plan_name || '';
+      triggerEmail('plan_converted_to_campaign_internal', payload,
+        [{ to: company?.email || '' }], id);
+      // Also trigger campaign_created_internal
+      triggerEmail('campaign_created_internal', payload,
+        [{ to: company?.email || '' }], result.campaign_id);
 
       setShowConvertDialog(false);
       
@@ -1906,6 +1933,7 @@ export default function PlanDetail() {
         </Dialog>
       </div>
     </div>
+    {EmailConfirmDialog}
     </ModuleGuard>
   );
 }

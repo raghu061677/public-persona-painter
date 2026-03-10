@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { UserPlus, Upload, Search, X } from "lucide-react";
+import { useEmailTrigger, buildAssetPayload } from "@/hooks/useEmailTrigger";
 import { useNavigate } from "react-router-dom";
 import { BulkOperationsDialog } from "./BulkOperationsDialog";
 import { checkAndAutoGeneratePPT } from "@/lib/operations/autoGenerateProofPPT";
@@ -41,6 +42,7 @@ interface OperationsBoardProps {
 
 export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix, companyName }: OperationsBoardProps) {
   const navigate = useNavigate();
+  const { trigger: triggerEmail, ConfirmDialog: EmailConfirmDialog } = useEmailTrigger();
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
   const [selectedUserId, setSelectedUserId] = useState("");
@@ -140,6 +142,14 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
       if (error) throw error;
 
       toast({ title: "Success", description: `Assigned to ${selectedUser.username}` });
+      
+      // Trigger email notification
+      const assetPayload = buildAssetPayload(selectedAsset);
+      assetPayload.assigned_to = selectedUser.username;
+      assetPayload.campaign_code = campaignId;
+      triggerEmail('asset_assigned_to_mounter_internal', assetPayload,
+        [{ to: '' }], selectedAsset.id); // Internal auto-send
+
       setAssignDialogOpen(false);
       setSelectedUserId("");
       setSelectedAsset(null);
@@ -348,6 +358,7 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
           </div>
         </DialogContent>
       </Dialog>
+      {EmailConfirmDialog}
     </div>
   );
 }

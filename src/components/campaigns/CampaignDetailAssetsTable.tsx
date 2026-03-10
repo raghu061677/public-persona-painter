@@ -663,7 +663,15 @@ export function CampaignDetailAssetsTable({
              )}
            </TableBody>
          </Table>
-       </div>
-     </div>
+      </div>
+      
+      {/* Drop Asset Dialog */}
+      <DropAssetDialog
+        open={dropDialogOpen}
+        onOpenChange={setDropDialogOpen}
+        campaignAsset={dropTarget}
+        onDropComplete={onRefresh}
+      />
+      </div>
    );
  }

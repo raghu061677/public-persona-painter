@@ -621,13 +621,12 @@ export function AddCampaignAssetsDialog({
                     return (
                       <TableRow 
                         key={asset.id}
-                        className={!info.isSelectable ? "bg-destructive/5" : ""}
+                        className={!info.isSelectable ? "bg-amber-50 dark:bg-amber-950/20" : ""}
                       >
                         <TableCell>
                           <Checkbox
                             checked={selectedAssets.has(asset.id)}
                             onCheckedChange={() => toggleAssetSelection(asset.id)}
-                            disabled={!info.isSelectable}
                           />
                         </TableCell>
                         <TableCell className="text-center font-medium text-muted-foreground">

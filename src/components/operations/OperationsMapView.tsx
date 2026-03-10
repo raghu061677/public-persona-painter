@@ -8,6 +8,7 @@ import { Loader2 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getAssetDisplayCode } from '@/lib/assets/getAssetDisplayCode';
+import { normalizeCampaignAssetStatus } from '@/lib/constants/campaignAssetStatus';
 
 // Fix for default marker icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;

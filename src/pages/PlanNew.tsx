@@ -371,8 +371,9 @@ export default function PlanNew() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Prevent double submit
-    if (loading) return;
+    // Prevent double submit - both state and ref guard
+    if (loading || submittingRef.current) return;
+    submittingRef.current = true;
     
     if (selectedAssets.size === 0) {
       toast({

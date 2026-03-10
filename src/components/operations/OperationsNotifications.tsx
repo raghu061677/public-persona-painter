@@ -124,7 +124,7 @@ export function OperationsNotifications() {
     switch (status) {
       case "Assigned":
         return "assignment";
-      case "PhotoUploaded":
+      case "Completed":
         return "proof_uploaded";
       case "Verified":
         return "proof_approved";

@@ -38,13 +38,6 @@ interface SortConfig {
   direction: SortDirection;
 }
 
-interface AssetBooking {
-  asset_id: string;
-  booked_to: string | null;
-  campaign_name: string;
-  client_name: string;
-}
-
 interface AssetSelectionTableProps {
   assets: any[];
   selectedIds: Set<string>;

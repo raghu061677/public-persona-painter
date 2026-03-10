@@ -40,7 +40,6 @@ import {
   Ban,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState as useDropState } from "react";
 import { DropAssetDialog } from "./DropAssetDialog";
  
  interface CampaignAsset {

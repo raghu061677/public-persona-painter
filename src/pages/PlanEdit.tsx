@@ -775,9 +775,10 @@ export default function PlanEdit() {
                   <ClientSelect
                     clients={clients}
                     value={formData.client_id}
-                    onSelect={handleClientSelect}
+                    onSelect={isReadOnly ? () => {} : handleClientSelect}
                     placeholder="Select client"
                     returnPath={`/admin/plans/${id}/edit`}
+                    disabled={isReadOnly}
                   />
                 </div>
                 <div className="space-y-2">

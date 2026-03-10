@@ -282,10 +282,11 @@ export default function PlansList() {
         });
       }
 
-      // Collect unique creator IDs and batch-fetch their profiles
+      // Collect unique creator IDs and batch-fetch their profiles + company_users fallback
       const creatorIds = [...new Set((plansData || []).map(p => p.created_by).filter(Boolean))];
       const profileMap: Record<string, string> = {};
       if (creatorIds.length > 0) {
+        // Try profiles first
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, username')
@@ -293,6 +294,22 @@ export default function PlansList() {
         (profiles || []).forEach((p: any) => {
           if (p.username) profileMap[p.id] = p.username;
         });
+
+        // Fallback: fetch from company_users for any missing names
+        const missingIds = creatorIds.filter(id => !profileMap[id]);
+        if (missingIds.length > 0) {
+          const { data: companyUsers } = await supabase
+            .from('company_users')
+            .select('user_id, name, email')
+            .in('user_id', missingIds);
+          (companyUsers || []).forEach((cu: any) => {
+            if (!profileMap[cu.user_id] && cu.name) {
+              profileMap[cu.user_id] = cu.name;
+            } else if (!profileMap[cu.user_id] && cu.email) {
+              profileMap[cu.user_id] = cu.email.split('@')[0];
+            }
+          });
+        }
       }
 
       // Fetch plan items with asset SQFT data for each plan

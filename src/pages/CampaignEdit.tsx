@@ -1067,6 +1067,8 @@ export default function CampaignEdit() {
               status: asset.status as Database['public']['Enums']['asset_installation_status'],
               booking_start_date: assetStartDate,
               booking_end_date: assetEndDate,
+              effective_start_date: assetStartDate,
+              effective_end_date: assetEndDate,
               billing_mode: asset.billing_mode,
               booked_days: asset.booked_days,
               daily_rate: asset.daily_rate,

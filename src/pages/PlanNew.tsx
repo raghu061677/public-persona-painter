@@ -51,6 +51,7 @@ export default function PlanNew() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const submittingRef = useRef(false); // Hard guard against double submit
   const [exportingProposal, setExportingProposal] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
   const [availableAssets, setAvailableAssets] = useState<any[]>([]);

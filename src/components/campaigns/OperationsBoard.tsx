@@ -145,11 +145,20 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
     }
   };
 
-  const handleStatusChange = async (assetId: string, newStatus: 'Pending' | 'Assigned' | 'Mounted' | 'PhotoUploaded' | 'Verified') => {
+  // Canonical status values – single source of truth matching DB enum & edge-function flows
+  type CanonicalStatus = 'Pending' | 'Assigned' | 'Installed' | 'Completed' | 'Verified';
+
+  const handleStatusChange = async (assetId: string, newStatus: CanonicalStatus) => {
     try {
+      const updateData: any = { status: newStatus };
+      // Auto-set completed_at when marking Completed or Verified
+      if (newStatus === 'Completed' || newStatus === 'Verified') {
+        updateData.completed_at = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from('campaign_assets')
-        .update({ status: newStatus })
+        .update(updateData)
         .eq('id', assetId);
 
       if (error) throw error;
@@ -180,13 +189,29 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
     }
   };
 
-  const statusOptions: Array<'Pending' | 'Assigned' | 'Mounted' | 'PhotoUploaded' | 'Verified'> = [
+  const statusOptions: CanonicalStatus[] = [
     'Pending',
     'Assigned',
-    'Mounted',
-    'PhotoUploaded',
+    'Installed',
+    'Completed',
     'Verified',
   ];
+
+  // Map legacy DB values to canonical for display
+  const normalizeStatus = (status: string): CanonicalStatus => {
+    if (status === 'Mounted' || status === 'In Progress') return 'Installed';
+    if (status === 'PhotoUploaded' || status === 'QA Pending') return 'Completed';
+    if (statusOptions.includes(status as CanonicalStatus)) return status as CanonicalStatus;
+    return 'Pending';
+  };
+
+  const statusDisplayLabels: Record<CanonicalStatus, string> = {
+    'Pending': 'Pending',
+    'Assigned': 'Assigned',
+    'Installed': 'Installed',
+    'Completed': 'Completed',
+    'Verified': 'Verified',
+  };
 
   return (
     <div className="space-y-4">
@@ -216,8 +241,8 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
                     <div className="flex items-center gap-2">
                       <Label className="text-sm">Status:</Label>
                       <Select
-                        value={asset.status}
-                        onValueChange={(value) => handleStatusChange(asset.id, value as 'Pending' | 'Assigned' | 'Mounted' | 'PhotoUploaded' | 'Verified')}
+                        value={normalizeStatus(asset.status)}
+                        onValueChange={(value) => handleStatusChange(asset.id, value as CanonicalStatus)}
                       >
                         <SelectTrigger className="w-40">
                           <SelectValue />
@@ -225,7 +250,7 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
                         <SelectContent>
                           {statusOptions.map((status) => (
                             <SelectItem key={status} value={status}>
-                              {status}
+                              {statusDisplayLabels[status]}
                             </SelectItem>
                           ))}
                         </SelectContent>

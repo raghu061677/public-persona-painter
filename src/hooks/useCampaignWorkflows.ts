@@ -86,7 +86,7 @@ export function useCampaignWorkflows(campaignId: string | undefined) {
           const newStatus = payload.new.status;
           const oldStatus = payload.old?.status;
 
-          // Auto-record expenses when asset is installed (Installed is canonical; Mounted kept for backward compat)
+          // Auto-record expenses when asset is installed (canonical: Installed; legacy: Mounted kept for backward compat)
           if ((newStatus === 'Installed' || newStatus === 'Mounted') && oldStatus !== 'Installed' && oldStatus !== 'Mounted') {
             try {
               const { data, error } = await supabase.functions.invoke('auto-record-expenses', {

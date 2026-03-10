@@ -41,6 +41,20 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DropAssetDialog } from "./DropAssetDialog";
+
+function getRemovalLabel(type?: string): string {
+  switch (type) {
+    case 'client_drop': return 'Client Dropped';
+    case 'admin_removed': return 'Admin Removed';
+    case 'damaged': return 'Damaged';
+    case 'maintenance': return 'Maintenance';
+    case 'authority_issue': return 'Authority Issue';
+    case 'site_removed': return 'Site Removed';
+    case 'replacement': return 'Replaced';
+    case 'other': return 'Removed';
+    default: return 'Dropped';
+  }
+}
  
  interface CampaignAsset {
    id: string;

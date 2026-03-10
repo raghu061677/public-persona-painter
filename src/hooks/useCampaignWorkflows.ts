@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { triggerEmailEvent, type TriggerEmailOptions } from '@/services/notifications/emailSender';
+import { useCompany } from '@/contexts/CompanyContext';
 
 /**
  * Hook to handle automated campaign workflows:

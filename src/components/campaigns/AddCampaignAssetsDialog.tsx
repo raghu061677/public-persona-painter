@@ -23,7 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Search, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, X, Clock, Check } from "lucide-react";
+import { Plus, Search, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, X, Clock, Check, Info } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -36,13 +36,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { format } from "date-fns";
-import {
-  batchCheckConflicts,
-  getAssetBookingInfo,
-  formatConflictSummary,
-  type BookingConflict,
-  type BookingDisplayStatus,
-} from "@/utils/bookingEngine";
+import { datesOverlap, toDateString } from "@/lib/availability/dateOverlap";
+import { computeFirstAvailableDate } from "@/utils/resolveAssetBookingWindow";
 
 type SortField = 'media_asset_code' | 'location' | 'city' | 'area' | 'media_type' | 'card_rate' | 'status';
 type SortDirection = 'asc' | 'desc' | null;
@@ -54,15 +49,36 @@ interface SortConfig {
 
 type StatusFilter = 'all' | 'available_for_dates' | 'available_now' | 'conflict' | 'upcoming';
 
+/**
+ * Per-asset availability info computed from actual campaign_assets bookings.
+ * Campaign-level dates are informational only — asset-wise dates are authoritative.
+ */
+interface AssetAvailabilityInfo {
+  status: 'available' | 'available_adjusted' | 'conflict' | 'upcoming';
+  /** If dates needed adjustment, this is the first available date */
+  suggestedStartDate: string | null;
+  /** Existing bookings that overlap with the requested window */
+  overlappingBookings: Array<{
+    campaignName: string;
+    startDate: string;
+    endDate: string;
+  }>;
+}
+
 interface AddCampaignAssetsDialogProps {
   open: boolean;
   onClose: () => void;
   existingAssetIds: string[];
+  /** Now accepts assets with suggested booking dates */
   onAddAssets: (assets: any[]) => void;
   campaignId?: string;
   campaignStartDate?: Date | string;
   campaignEndDate?: Date | string;
 }
+
+// Campaign statuses that represent active/valid bookings
+const BOOKING_CAMPAIGN_STATUSES = ['Draft', 'Upcoming', 'Running'];
+const EXCLUDED_CAMPAIGN_STATUSES = ['Cancelled', 'Archived', 'Completed'];
 
 export function AddCampaignAssetsDialog({
   open,
@@ -82,9 +98,14 @@ export function AddCampaignAssetsDialog({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("available_for_dates");
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [companyPrefix, setCompanyPrefix] = useState<string | null>(null);
-  const [conflictMap, setConflictMap] = useState<Map<string, BookingConflict[]>>(new Map());
-  const [checkingConflicts, setCheckingConflicts] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: null, direction: null });
+  
+  /**
+   * Asset-wise availability map — computed from campaign_assets bookings.
+   * Key: asset_id, Value: availability info with suggested dates.
+   */
+  const [availabilityMap, setAvailabilityMap] = useState<Map<string, AssetAvailabilityInfo>>(new Map());
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
   useEffect(() => {
     fetchCompanySettings();
@@ -111,16 +132,6 @@ export function AddCampaignAssetsDialog({
     }
   };
 
-  useEffect(() => {
-    if (open) {
-      fetchAllAssets();
-      setSelectedAssets(new Set());
-      setConflictMap(new Map());
-      // Default to 'available_for_dates' when dates exist, 'all' otherwise
-      setStatusFilter(campaignStartDate && campaignEndDate ? 'available_for_dates' : 'all');
-    }
-  }, [open]);
-
   const formatDateStr = (date: Date | string | undefined): string | null => {
     if (!date) return null;
     if (typeof date === 'string') return date.split('T')[0];
@@ -130,7 +141,26 @@ export function AddCampaignAssetsDialog({
   const startDateStr = formatDateStr(campaignStartDate);
   const endDateStr = formatDateStr(campaignEndDate);
 
-  const fetchAllAssets = async () => {
+  useEffect(() => {
+    if (open) {
+      fetchAllAssetsAndCheckAvailability();
+      setSelectedAssets(new Set());
+      setAvailabilityMap(new Map());
+      setStatusFilter(campaignStartDate && campaignEndDate ? 'available_for_dates' : 'all');
+    }
+  }, [open]);
+
+  /**
+   * Fetch all media assets, then check their actual bookings from campaign_assets
+   * using asset-wise dates (effective_start/end_date, booking_start/end_date).
+   * 
+   * This is the core change: we no longer use campaign-level dates for conflict detection.
+   * Instead, we look at each asset's existing bookings and compute:
+   * 1. Whether the asset has overlapping bookings
+   * 2. The first available date if there's an overlap
+   * 3. Whether the asset can still be added with adjusted dates
+   */
+  const fetchAllAssetsAndCheckAvailability = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -146,15 +176,15 @@ export function AddCampaignAssetsDialog({
 
       setAssets(filteredAssets);
 
-      // Run batch conflict check using the booking engine RPC
+      // Check asset-wise availability using campaign_assets as source of truth
       if (startDateStr && endDateStr && filteredAssets.length > 0) {
-        setCheckingConflicts(true);
+        setCheckingAvailability(true);
         try {
           const assetIds = filteredAssets.map(a => a.id);
-          const conflicts = await batchCheckConflicts(assetIds, startDateStr, endDateStr, campaignId);
-          setConflictMap(conflicts);
+          const newMap = await computeAssetWiseAvailability(assetIds, startDateStr, endDateStr, campaignId);
+          setAvailabilityMap(newMap);
         } finally {
-          setCheckingConflicts(false);
+          setCheckingAvailability(false);
         }
       }
     } catch (error: any) {
@@ -166,6 +196,134 @@ export function AddCampaignAssetsDialog({
     } finally {
       setLoading(false);
     }
+  };
+
+  /**
+   * Core availability computation using asset-wise dates from campaign_assets.
+   * For each asset, fetches existing bookings and determines:
+   * - 'available': no overlap, can use campaign dates as-is
+   * - 'available_adjusted': overlap exists but asset becomes available within the campaign period
+   * - 'conflict': asset is fully blocked for the entire requested period
+   */
+  const computeAssetWiseAvailability = async (
+    assetIds: string[],
+    reqStart: string,
+    reqEnd: string,
+    excludeCampaignId?: string
+  ): Promise<Map<string, AssetAvailabilityInfo>> => {
+    const result = new Map<string, AssetAvailabilityInfo>();
+
+    // Batch fetch existing bookings from campaign_assets using asset-wise dates
+    let query = supabase
+      .from('campaign_assets')
+      .select(`
+        asset_id,
+        effective_start_date, effective_end_date,
+        booking_start_date, booking_end_date,
+        start_date, end_date,
+        is_removed,
+        campaigns!inner(id, campaign_name, client_name, start_date, end_date, status, is_deleted)
+      `)
+      .in('asset_id', assetIds);
+
+    if (excludeCampaignId) {
+      query = query.neq('campaign_id', excludeCampaignId);
+    }
+
+    const { data: allBookings } = await query;
+
+    // Also check holds
+    const { data: allHolds } = await supabase
+      .from('asset_holds')
+      .select('id, asset_id, start_date, end_date, status, client_name')
+      .in('asset_id', assetIds)
+      .eq('status', 'ACTIVE');
+
+    // Group bookings by asset_id, resolving to asset-wise dates
+    const bookingsByAsset = new Map<string, Array<{ campaignName: string; startDate: string; endDate: string }>>();
+
+    for (const b of (allBookings || [])) {
+      const campaign = b.campaigns as any;
+      if (!campaign || campaign.is_deleted) continue;
+      if (EXCLUDED_CAMPAIGN_STATUSES.includes(campaign.status)) continue;
+
+      // Resolve using asset-wise date priority (NOT campaign dates)
+      const bStart = toDateString(b.effective_start_date) ||
+                     toDateString(b.booking_start_date) ||
+                     toDateString(b.start_date) ||
+                     toDateString(campaign.start_date);
+      const bEnd = toDateString(b.effective_end_date) ||
+                   toDateString(b.booking_end_date) ||
+                   toDateString(b.end_date) ||
+                   toDateString(campaign.end_date);
+
+      if (!bStart || !bEnd) continue;
+
+      const list = bookingsByAsset.get(b.asset_id) || [];
+      list.push({
+        campaignName: campaign.campaign_name || campaign.id,
+        startDate: bStart,
+        endDate: bEnd,
+      });
+      bookingsByAsset.set(b.asset_id, list);
+    }
+
+    // Add holds as bookings
+    for (const h of (allHolds || [])) {
+      if (!h.start_date || !h.end_date) continue;
+      const list = bookingsByAsset.get(h.asset_id) || [];
+      list.push({
+        campaignName: `Hold: ${h.client_name || 'Reserved'}`,
+        startDate: toDateString(h.start_date),
+        endDate: toDateString(h.end_date),
+      });
+      bookingsByAsset.set(h.asset_id, list);
+    }
+
+    // Compute availability for each asset
+    for (const assetId of assetIds) {
+      const existingBookings = bookingsByAsset.get(assetId) || [];
+
+      if (existingBookings.length === 0) {
+        result.set(assetId, { status: 'available', suggestedStartDate: null, overlappingBookings: [] });
+        continue;
+      }
+
+      // Find bookings that overlap with the requested range
+      const overlapping = existingBookings.filter(b =>
+        datesOverlap(b.startDate, b.endDate, reqStart, reqEnd)
+      );
+
+      if (overlapping.length === 0) {
+        result.set(assetId, { status: 'available', suggestedStartDate: null, overlappingBookings: [] });
+        continue;
+      }
+
+      // Compute first available date after all overlapping bookings end
+      const firstAvailable = computeFirstAvailableDate(
+        overlapping.map(b => ({ startDate: b.startDate, endDate: b.endDate })),
+        reqStart,
+        reqEnd
+      );
+
+      if (firstAvailable) {
+        // Asset can be added with adjusted start date
+        result.set(assetId, {
+          status: 'available_adjusted',
+          suggestedStartDate: firstAvailable,
+          overlappingBookings: overlapping,
+        });
+      } else {
+        // True conflict — asset is fully blocked for the entire period
+        result.set(assetId, {
+          status: 'conflict',
+          suggestedStartDate: null,
+          overlappingBookings: overlapping,
+        });
+      }
+    }
+
+    return result;
   };
 
   // Derive unique filter options from assets
@@ -187,19 +345,8 @@ export function AddCampaignAssetsDialog({
     [assets]
   );
 
-  /**
-   * Get booking info for an asset using the booking engine.
-   * This replaces the old getEffectiveStatus / hasConflict logic.
-   */
-  const getBookingInfo = (asset: any): { status: BookingDisplayStatus; info: ReturnType<typeof getAssetBookingInfo> } => {
-    const info = getAssetBookingInfo(
-      asset.id,
-      conflictMap,
-      asset.status,
-      asset.booking_end_date || asset.next_available_from,
-      startDateStr
-    );
-    return { status: info.displayStatus, info };
+  const getAvailInfo = (assetId: string): AssetAvailabilityInfo => {
+    return availabilityMap.get(assetId) || { status: 'available', suggestedStartDate: null, overlappingBookings: [] };
   };
 
   // Filter and sort assets
@@ -233,19 +380,19 @@ export function AddCampaignAssetsDialog({
       filtered = filtered.filter(asset => asset.media_type === mediaTypeFilter);
     }
 
-    // Status filter using booking engine
+    // Status filter using asset-wise availability
     if (statusFilter !== "all") {
       filtered = filtered.filter(asset => {
-        const { status } = getBookingInfo(asset);
+        const info = getAvailInfo(asset.id);
         switch (statusFilter) {
           case 'available_for_dates':
-            return status === 'available' || status === 'available_soon';
+            return info.status === 'available' || info.status === 'available_adjusted';
           case 'conflict':
-            return status === 'conflict';
+            return info.status === 'conflict';
           case 'available_now':
-            return status === 'available';
+            return info.status === 'available';
           case 'upcoming':
-            return status === 'upcoming' || status === 'available_soon';
+            return info.status === 'available_adjusted';
           default:
             return true;
         }
@@ -259,8 +406,8 @@ export function AddCampaignAssetsDialog({
         let bValue: any;
 
         if (sortConfig.field === 'status') {
-          aValue = getBookingInfo(a).status;
-          bValue = getBookingInfo(b).status;
+          aValue = getAvailInfo(a.id).status;
+          bValue = getAvailInfo(b.id).status;
         } else if (sortConfig.field === 'media_asset_code') {
           aValue = a.media_asset_code || a.id || '';
           bValue = b.media_asset_code || b.id || '';
@@ -279,7 +426,7 @@ export function AddCampaignAssetsDialog({
     }
 
     return filtered;
-  }, [assets, searchTerm, cityFilter, areaFilter, mediaTypeFilter, statusFilter, sortConfig, conflictMap]);
+  }, [assets, searchTerm, cityFilter, areaFilter, mediaTypeFilter, statusFilter, sortConfig, availabilityMap]);
 
   const handleSort = (field: SortField) => {
     setSortConfig(current => {
@@ -303,26 +450,33 @@ export function AddCampaignAssetsDialog({
   };
 
   const toggleAssetSelection = (assetId: string) => {
-    const { info } = getBookingInfo(assets.find(a => a.id === assetId) || {});
-    
     const newSelected = new Set(selectedAssets);
     if (newSelected.has(assetId)) {
       newSelected.delete(assetId);
     } else {
-      // Warn but allow selection for conflicting assets — user can set per-asset dates after adding
-      if (!info.isSelectable) {
-        toast({
-          title: "⚠️ Conflict with campaign-level dates",
-          description: `${formatConflictSummary(info.conflicts)}\n\nYou can still add this asset and adjust its per-asset booking dates to avoid the overlap.`,
-        });
-      }
       newSelected.add(assetId);
     }
     setSelectedAssets(newSelected);
   };
 
+  /**
+   * When adding selected assets, attach suggested booking dates per asset.
+   * Assets with adjusted dates get their booking_start_date set to the
+   * first available date instead of the campaign start date.
+   */
   const handleAddSelected = () => {
-    const assetsToAdd = assets.filter(asset => selectedAssets.has(asset.id));
+    const assetsToAdd = assets
+      .filter(asset => selectedAssets.has(asset.id))
+      .map(asset => {
+        const info = getAvailInfo(asset.id);
+        return {
+          ...asset,
+          // Attach suggested asset-wise booking dates
+          _suggestedStartDate: info.suggestedStartDate || null,
+          _hasAdjustedDates: info.status === 'available_adjusted',
+        };
+      });
+    
     onAddAssets(assetsToAdd);
     setSelectedAssets(new Set());
     onClose();
@@ -345,17 +499,18 @@ export function AddCampaignAssetsDialog({
     statusFilter !== "all" ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
-  // Counts using booking engine
-  const conflictCount = conflictMap.size;
+  // Counts
+  const conflictCount = [...availabilityMap.values()].filter(v => v.status === 'conflict').length;
+  const adjustedCount = [...availabilityMap.values()].filter(v => v.status === 'available_adjusted').length;
   const availableCount = filteredAndSortedAssets.filter(a => {
-    const s = getBookingInfo(a).status;
-    return s === 'available' || s === 'available_soon';
+    const s = getAvailInfo(a.id).status;
+    return s === 'available' || s === 'available_adjusted';
   }).length;
 
   const renderStatusBadge = (asset: any) => {
-    const { status, info } = getBookingInfo(asset);
+    const info = getAvailInfo(asset.id);
     
-    switch (status) {
+    switch (info.status) {
       case 'conflict':
         return (
           <TooltipProvider>
@@ -363,19 +518,19 @@ export function AddCampaignAssetsDialog({
               <TooltipTrigger asChild>
                 <Badge variant="outline" className="text-destructive border-destructive cursor-help">
                   <AlertTriangle className="w-3 h-3 mr-1" />
-                  Conflict
+                  Fully Booked
                 </Badge>
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
                 <div className="text-sm">
-                  <p className="font-semibold mb-1">Booking Conflict:</p>
-                  {info.conflicts.map((c, i) => (
+                  <p className="font-semibold mb-1">Asset fully booked for this period:</p>
+                  {info.overlappingBookings.map((c, i) => (
                     <div key={i} className="mb-1">
-                      <span className="font-medium">{c.campaign_name || c.source_type || 'Booking'}</span>
+                      <span className="font-medium">{c.campaignName}</span>
                       <br />
                       <span className="text-xs text-muted-foreground">
-                        {c.start_date ? format(new Date(c.start_date), 'dd MMM yyyy') : '?'} to{' '}
-                        {c.end_date ? format(new Date(c.end_date), 'dd MMM yyyy') : '?'}
+                        {format(new Date(c.startDate), 'dd MMM yyyy')} to{' '}
+                        {format(new Date(c.endDate), 'dd MMM yyyy')}
                       </span>
                     </div>
                   ))}
@@ -385,27 +540,39 @@ export function AddCampaignAssetsDialog({
           </TooltipProvider>
         );
       
-      case 'available_soon':
+      case 'available_adjusted':
         return (
-          <Badge variant="outline" className="text-blue-600 border-blue-500">
-            <Clock className="w-3 h-3 mr-1" />
-            Available From {info.availableFrom ? format(new Date(info.availableFrom), 'dd MMM') : ''}
-          </Badge>
-        );
-      
-      case 'upcoming':
-        return (
-          <Badge variant="outline" className="text-amber-600 border-amber-500">
-            <Clock className="w-3 h-3 mr-1" />
-            Upcoming
-          </Badge>
-        );
-      
-      case 'blocked':
-        return (
-          <Badge variant="outline" className="text-destructive border-destructive">
-            Blocked
-          </Badge>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="text-blue-600 border-blue-500 cursor-help">
+                  <Clock className="w-3 h-3 mr-1" />
+                  From {info.suggestedStartDate ? format(new Date(info.suggestedStartDate), 'dd MMM') : ''}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <div className="text-sm">
+                  <p className="font-semibold mb-1">
+                    Available from {info.suggestedStartDate ? format(new Date(info.suggestedStartDate), 'dd MMM yyyy') : ''}
+                  </p>
+                  <p className="text-muted-foreground mb-1">Previous booking:</p>
+                  {info.overlappingBookings.map((c, i) => (
+                    <div key={i} className="mb-1">
+                      <span className="font-medium">{c.campaignName}</span>
+                      <br />
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(c.startDate), 'dd MMM yyyy')} to{' '}
+                        {format(new Date(c.endDate), 'dd MMM yyyy')}
+                      </span>
+                    </div>
+                  ))}
+                  <p className="mt-1 text-xs text-blue-600 font-medium">
+                    ✔ Booking dates will be auto-adjusted when added
+                  </p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         );
       
       default:
@@ -424,10 +591,16 @@ export function AddCampaignAssetsDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Add Assets to Campaign
+            {adjustedCount > 0 && (
+              <Badge variant="outline" className="text-blue-600 border-blue-500">
+                <Info className="w-3 h-3 mr-1" />
+                {adjustedCount} with adjusted dates
+              </Badge>
+            )}
             {conflictCount > 0 && (
               <Badge variant="outline" className="text-destructive border-destructive">
                 <AlertTriangle className="w-3 h-3 mr-1" />
-                {conflictCount} conflict(s)
+                {conflictCount} fully booked
               </Badge>
             )}
           </DialogTitle>
@@ -454,25 +627,25 @@ export function AddCampaignAssetsDialog({
                 <SelectItem value="available_for_dates">
                   <span className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                    Available for Selected Dates
+                    Available for Dates
                   </span>
                 </SelectItem>
                 <SelectItem value="available_now">
                   <span className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                    Available Now
+                    Fully Available
                   </span>
                 </SelectItem>
                 <SelectItem value="conflict">
                   <span className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-destructive"></span>
-                    Conflicting
+                    Fully Booked
                   </span>
                 </SelectItem>
                 <SelectItem value="upcoming">
                   <span className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                    Upcoming
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    Available (Adjusted Dates)
                   </span>
                 </SelectItem>
               </SelectContent>
@@ -524,7 +697,7 @@ export function AddCampaignAssetsDialog({
               <Badge variant="secondary">{filteredAndSortedAssets.length} assets</Badge>
               <Badge variant="outline" className="text-green-600 border-green-500">{availableCount} available</Badge>
               {conflictCount > 0 && (
-                <Badge variant="outline" className="text-destructive border-destructive">{conflictCount} conflicts</Badge>
+                <Badge variant="outline" className="text-destructive border-destructive">{conflictCount} fully booked</Badge>
               )}
             </div>
           </div>
@@ -591,7 +764,7 @@ export function AddCampaignAssetsDialog({
                     </div>
                   </TableHead>
                   <TableHead 
-                    className="w-32 cursor-pointer hover:bg-muted/50 select-none"
+                    className="w-40 cursor-pointer hover:bg-muted/50 select-none"
                     onClick={() => handleSort('status')}
                   >
                     <div className="flex items-center">
@@ -602,10 +775,10 @@ export function AddCampaignAssetsDialog({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading || checkingConflicts ? (
+                {loading || checkingAvailability ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-8">
-                      {loading ? "Loading assets..." : "Checking availability..."}
+                      {loading ? "Loading assets..." : "Checking asset-wise availability..."}
                     </TableCell>
                   </TableRow>
                 ) : filteredAndSortedAssets.length === 0 ? (
@@ -616,17 +789,26 @@ export function AddCampaignAssetsDialog({
                   </TableRow>
                 ) : (
                   filteredAndSortedAssets.map((asset, index) => {
-                    const { info } = getBookingInfo(asset);
+                    const info = getAvailInfo(asset.id);
+                    const isConflict = info.status === 'conflict';
+                    const isAdjusted = info.status === 'available_adjusted';
 
                     return (
                       <TableRow 
                         key={asset.id}
-                        className={!info.isSelectable ? "bg-amber-50 dark:bg-amber-950/20" : ""}
+                        className={
+                          isConflict 
+                            ? "bg-destructive/5 dark:bg-destructive/10" 
+                            : isAdjusted 
+                              ? "bg-blue-50 dark:bg-blue-950/20" 
+                              : ""
+                        }
                       >
                         <TableCell>
                           <Checkbox
                             checked={selectedAssets.has(asset.id)}
                             onCheckedChange={() => toggleAssetSelection(asset.id)}
+                            disabled={isConflict}
                           />
                         </TableCell>
                         <TableCell className="text-center font-medium text-muted-foreground">
@@ -660,14 +842,15 @@ export function AddCampaignAssetsDialog({
           </div>
 
           <div className="flex justify-between items-center pt-4 border-t">
-            <p className="text-sm text-muted-foreground">
-              {selectedAssets.size} asset(s) selected
-              {conflictCount > 0 && (
-                <span className="ml-2 text-amber-600">
-                  • {conflictCount} asset(s) have conflicts with campaign dates — adjust per-asset dates after adding
-                </span>
+            <div className="text-sm text-muted-foreground space-y-1">
+              <p>{selectedAssets.size} asset(s) selected</p>
+              {[...selectedAssets].some(id => getAvailInfo(id).status === 'available_adjusted') && (
+                <p className="text-blue-600 flex items-center gap-1">
+                  <Info className="w-3 h-3" />
+                  Some assets will have adjusted booking start dates based on existing bookings
+                </p>
               )}
-            </p>
+            </div>
             <div className="flex gap-3">
               <Button variant="outline" onClick={onClose}>
                 Cancel

@@ -528,16 +528,33 @@ export default function CampaignEdit() {
     });
   };
 
+  /**
+   * Handle adding assets from the dialog.
+   * Uses asset-wise booking dates when available (suggested by the dialog).
+   * Campaign dates are only used as fallback for assets with no date adjustment.
+   * 
+   * RULE: Asset-wise dates are the authoritative source for booking.
+   * Campaign-level dates are informational only.
+   */
   const handleAddAssets = (assets: any[]) => {
     const campaignStart = startDate;
     const campaignEnd = endDate;
+    let adjustedCount = 0;
     
     const newAssets: CampaignAsset[] = assets.map(asset => {
       const monthlyRate = Number(asset.card_rate) || 0;
       const totalSqft = Number(asset.total_sqft) || 0;
       const addBillingMode: BillingMode = durationMode === 'MONTH' ? 'FULL_MONTH' : 'PRORATA_30';
-      const rentResult = campaignStart && campaignEnd 
-        ? computeRentAmount(monthlyRate, campaignStart, campaignEnd, addBillingMode)
+
+      // Use asset-wise suggested dates if available, otherwise fall back to campaign dates
+      const hasAdjustedDates = asset._hasAdjustedDates && asset._suggestedStartDate;
+      const assetStartDate = hasAdjustedDates ? new Date(asset._suggestedStartDate) : campaignStart;
+      const assetEndDate = campaignEnd; // End date defaults to campaign end
+
+      if (hasAdjustedDates) adjustedCount++;
+
+      const rentResult = assetStartDate && assetEndDate 
+        ? computeRentAmount(monthlyRate, assetStartDate, assetEndDate, addBillingMode)
         : { booked_days: 0, daily_rate: 0, rent_amount: 0, billing_mode: addBillingMode };
       
       return {
@@ -555,8 +572,13 @@ export default function CampaignEdit() {
         total_price: monthlyRate,
         status: 'Pending',
         isNew: true,
-        start_date: campaignStart || null,
-        end_date: campaignEnd || null,
+        // Asset-wise booking dates — authoritative source
+        start_date: assetStartDate || null,
+        end_date: assetEndDate || null,
+        booking_start_date: assetStartDate ? (typeof assetStartDate === 'string' ? assetStartDate : format(assetStartDate, 'yyyy-MM-dd')) : null,
+        booking_end_date: assetEndDate ? (typeof assetEndDate === 'string' ? assetEndDate : format(assetEndDate, 'yyyy-MM-dd')) : null,
+        effective_start_date: assetStartDate ? (typeof assetStartDate === 'string' ? assetStartDate : format(assetStartDate, 'yyyy-MM-dd')) : null,
+        effective_end_date: assetEndDate ? (typeof assetEndDate === 'string' ? assetEndDate : format(assetEndDate, 'yyyy-MM-dd')) : null,
         booked_days: rentResult.booked_days,
         billing_mode: addBillingMode,
         daily_rate: rentResult.daily_rate,
@@ -572,9 +594,14 @@ export default function CampaignEdit() {
     });
     
     setCampaignAssets(prev => [...prev, ...newAssets]);
+    
+    const description = adjustedCount > 0
+      ? `${assets.length} asset(s) added. ${adjustedCount} with auto-adjusted booking start dates.`
+      : `${assets.length} asset(s) added to campaign`;
+    
     toast({
       title: "Assets added",
-      description: `${assets.length} asset(s) added to campaign`,
+      description,
     });
   };
 

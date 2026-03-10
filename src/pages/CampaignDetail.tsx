@@ -62,7 +62,8 @@ export default function CampaignDetail() {
   
   // Enterprise RBAC access mode
   const perms = useRecordPermissions(campaign, 'campaigns');
-  const isAdmin = perms.canEditRecord;
+  const canEditThisCampaign = perms.canEditRecord;
+  const isAdmin = canEditThisCampaign; // Legacy alias - true for admin/owner/secondary owner
 
   // Enable automated workflows
   useCampaignWorkflows(id);

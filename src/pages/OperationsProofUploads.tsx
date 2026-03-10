@@ -103,7 +103,7 @@ export default function OperationsProofUploads() {
             company_id
           )
         `)
-        .in("status", ["PhotoUploaded", "Verified", "Completed", "Mounted"])
+        .in("status", ["Installed", "Completed", "Verified"])
         .order("completed_at", { ascending: false, nullsFirst: false });
 
       if (error) throw error;

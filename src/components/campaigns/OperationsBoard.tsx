@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
@@ -16,10 +17,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { UserPlus, Upload, CheckCircle2 } from "lucide-react";
+import { UserPlus, Upload, Search, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { BulkOperationsDialog } from "./BulkOperationsDialog";
 import { checkAndAutoGeneratePPT } from "@/lib/operations/autoGenerateProofPPT";
@@ -47,6 +47,7 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
   const [assigning, setAssigning] = useState(false);
   const [users, setUsers] = useState<Array<{ id: string; username: string }>>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchOperationsUsers();
@@ -84,6 +85,29 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
     }
   };
 
+  // Filter assets by search query
+  const filteredAssets = useMemo(() => {
+    if (!searchQuery.trim()) return assets;
+    const term = searchQuery.toLowerCase();
+    return assets.filter(asset => {
+      const displayCode = formatAssetDisplayCode({
+        mediaAssetCode: asset.media_asset_code,
+        fallbackId: asset.asset_id,
+        companyPrefix: assetCodePrefix,
+        companyName,
+      });
+      return (
+        displayCode?.toLowerCase().includes(term) ||
+        asset.asset_id?.toLowerCase().includes(term) ||
+        asset.location?.toLowerCase().includes(term) ||
+        asset.area?.toLowerCase().includes(term) ||
+        asset.city?.toLowerCase().includes(term) ||
+        asset.media_type?.toLowerCase().includes(term) ||
+        asset.mounter_name?.toLowerCase().includes(term)
+      );
+    });
+  }, [assets, searchQuery, assetCodePrefix, companyName]);
+
   const handleAssignMounter = async () => {
     if (!selectedAsset || !selectedUserId) {
       toast({ title: "Error", description: "Please select a mounter", variant: "destructive" });
@@ -98,7 +122,6 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
 
     setAssigning(true);
     try {
-      // Don't regress status if asset has already progressed past Assigned
       const shouldUpdateStatus = !isCampaignAssetStatusAtLeast(selectedAsset.status, 'Assigned');
 
       const updateData: any = {
@@ -163,12 +186,37 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end mb-4">
-        <BulkOperationsDialog assets={assets} onUpdate={onUpdate} />
+      {/* Search Bar + Bulk Operations */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <div className="relative flex-1 min-w-[200px] w-full sm:max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by asset code, location, media type, mounter..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
+              onClick={() => setSearchQuery("")}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {filteredAssets.length !== assets.length && (
+            <Badge variant="outline">{filteredAssets.length} of {assets.length} shown</Badge>
+          )}
+          <BulkOperationsDialog assets={assets} onUpdate={onUpdate} />
+        </div>
       </div>
       
       <div className="grid gap-4">
-        {assets.map((asset) => {
+        {filteredAssets.map((asset) => {
           const normalizedStatus = normalizeCampaignAssetStatus(asset.status);
           const hasPhotos = (asset.photo_count || 0) > 0;
           const cardBorderClass = hasPhotos
@@ -228,31 +276,37 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
                       <UserPlus className="h-4 w-4 mr-2" />
                       Assign Mounter
                     </Button>
-                  ) : (
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => navigate(`/mobile/upload/${campaignId}/${asset.id}`)}
-                      >
-                        <Upload className="h-4 w-4 mr-2" />
-                        Mobile Upload
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => navigate(`/admin/operations/${campaignId}/assets/${asset.asset_id}`)}
-                      >
-                        📸 Manage Photos
-                      </Button>
-                    </div>
-                  )}
+                  ) : null}
+                  {/* Upload & Manage Photos - available to ALL users */}
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(`/mobile/upload/${campaignId}/${asset.id}`)}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(`/admin/operations/${campaignId}/assets/${asset.asset_id}`)}
+                    >
+                      📸 Manage Photos
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
           );
         })}
+
+        {filteredAssets.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            {searchQuery ? `No assets match "${searchQuery}"` : "No assets in this campaign"}
+          </div>
+        )}
       </div>
 
       {/* Assign Dialog */}

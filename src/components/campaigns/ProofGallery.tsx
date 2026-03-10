@@ -237,7 +237,7 @@ export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
                     )}
                     {uploadedCount} Photos
                   </Badge>
-                  {(asset.status === 'PhotoUploaded' || asset.status === 'Completed') && uploadedCount >= 4 && onUpdate && (
+                  {(normalizeCampaignAssetStatus(asset.status) === 'Completed') && uploadedCount >= 4 && onUpdate && (
                     <Button
                       size="sm"
                       onClick={() => setApprovalAsset(asset)}

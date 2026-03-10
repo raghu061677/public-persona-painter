@@ -722,6 +722,15 @@ export default function PlanEdit() {
     }
   };
 
+  // Block edit page entirely for non-owners — redirect to detail view
+  if (planRecord && perms.isBlocked) {
+    navigate(`/admin/plans/${id}`);
+    return null;
+  }
+
+  // For read-only users, disable all form interactions
+  const isReadOnly = perms.isReadOnly;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-7xl">
@@ -735,14 +744,14 @@ export default function PlanEdit() {
         </Button>
 
         {/* Restricted Mode Banner */}
-        {perms.isReadOnly && <RestrictedBanner module="plan" />}
+        {isReadOnly && <RestrictedBanner module="plan" />}
 
         <div className="mb-8 space-y-2">
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-            {perms.isReadOnly ? 'View Plan' : 'Edit Plan'}
+            {isReadOnly ? 'View Plan' : 'Edit Plan'}
           </h1>
           <p className="text-muted-foreground text-sm sm:text-base">
-            {perms.isReadOnly ? 'Read-only summary view' : 'Update plan details and modify asset selection'}
+            {isReadOnly ? 'Read-only summary view — financial details and editing are restricted' : 'Update plan details and modify asset selection'}
           </p>
         </div>
 

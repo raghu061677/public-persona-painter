@@ -46,8 +46,15 @@ export default function IntelligenceDashboard() {
   };
 
   const loadVacantAssets = async () => {
-    const { data } = await supabase.from("media_assets").select("id, city, area, media_type, card_rate, status, next_available_from").eq("status", "Available").order("card_rate", { ascending: false }).limit(20);
-    setVacantAssets(data || []);
+    // Use campaign_assets overlap logic instead of stale media_assets.status
+    // For the intelligence dashboard, fetch all assets and let the availability engine classify
+    const { data } = await supabase.from("media_assets").select("id, city, area, media_type, card_rate, status, next_available_from").order("card_rate", { ascending: false }).limit(100);
+    // Filter to those not currently in any active campaign_assets
+    const allIds = (data || []).map(a => a.id);
+    const today = new Date().toISOString().split('T')[0];
+    const { data: booked } = await supabase.from("campaign_assets").select("asset_id").in("asset_id", allIds.slice(0, 100)).eq("is_removed", false).lte("effective_start_date", today).gte("effective_end_date", today);
+    const bookedSet = new Set((booked || []).map(b => b.asset_id));
+    setVacantAssets((data || []).filter(a => !bookedSet.has(a.id)).slice(0, 20));
   };
 
   const loadEndingCampaigns = async () => {

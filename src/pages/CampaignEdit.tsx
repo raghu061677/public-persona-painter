@@ -55,6 +55,8 @@ import { ApplyDatesToAssetsDialog } from "@/components/campaigns/ApplyDatesToAss
 import { computeCampaignTotals } from "@/utils/computeCampaignTotals";
 import { BulkPrintingDialog } from "@/components/plans/BulkPrintingDialog";
 import { BulkMountingDialog } from "@/components/plans/BulkMountingDialog";
+import { useRecordPermissions } from "@/hooks/useRecordAccessMode";
+import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
 
 // Campaign asset interface
 interface CampaignAsset {
@@ -98,6 +100,10 @@ export default function CampaignEdit() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
+  const [campaignRecord, setCampaignRecord] = useState<any>(null);
+  
+  // Enterprise RBAC access mode
+  const perms = useRecordPermissions(campaignRecord, 'campaigns');
   const [showAddAssetsDialog, setShowAddAssetsDialog] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState<CampaignAsset | null>(null);
   const [showApplyDatesDialog, setShowApplyDatesDialog] = useState(false);
@@ -215,6 +221,9 @@ export default function CampaignEdit() {
       navigate('/admin/campaigns');
       return;
     }
+
+    // Store raw campaign for RBAC access check
+    setCampaignRecord(campaign);
 
     // Set campaign data
     setCampaignName(campaign.campaign_name || "");
@@ -1090,6 +1099,12 @@ export default function CampaignEdit() {
         </div>
       </div>
     );
+  }
+
+  // Block edit page for non-owners — redirect to detail view
+  if (campaignRecord && !perms.canEditRecord) {
+    navigate(`/admin/campaigns/${id}`);
+    return null;
   }
 
   const { subtotal, printingTotal, mountingTotal, grossAmount, totalAmount, gstAmount, grandTotal, effectiveGstPercent, durationDays } = calculateTotals();

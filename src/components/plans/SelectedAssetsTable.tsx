@@ -89,11 +89,17 @@ interface SortConfig {
   direction: SortDirection;
 }
 
+// Financial columns that should be hidden from non-owners
+const FINANCIAL_COLUMNS = [
+  'base_rate', 'negotiated_price', 'daily_rate', 'rent_amount',
+  'discount', 'profit', 'printing_rate', 'printing', 'mounting', 'total',
+];
+
 interface SelectedAssetsTableProps {
   assets: any[];
   assetPricing: Record<string, any>;
-  onRemove: (assetId: string) => void;
-  onPricingUpdate: (assetId: string, field: string, value: any) => void;
+  onRemove?: ((assetId: string) => void) | undefined;
+  onPricingUpdate?: ((assetId: string, field: string, value: any) => void) | undefined;
   durationDays?: number;
   planStartDate?: Date;
   planEndDate?: Date;
@@ -101,6 +107,8 @@ interface SelectedAssetsTableProps {
   planId?: string;
   planClientId?: string;
   planClientName?: string;
+  /** When false, hides all financial columns and disables editing */
+  canViewFinancials?: boolean;
 }
 
 const ALL_COLUMNS = [
@@ -182,7 +190,13 @@ export function SelectedAssetsTable({
   planId,
   planClientId,
   planClientName,
+  canViewFinancials = true,
 }: SelectedAssetsTableProps) {
+  // Filter visible columns based on financial access
+  const isColumnAllowed = (col: string) => {
+    if (!canViewFinancials && FINANCIAL_COLUMNS.includes(col)) return false;
+    return true;
+  };
   const [loadingRates, setLoadingRates] = useState<Set<string>>(new Set());
   const [showBulkSettingsDialog, setShowBulkSettingsDialog] = useState(false);
   const [gettingSuggestion, setGettingSuggestion] = useState<string | null>(null);
@@ -209,7 +223,7 @@ export function SelectedAssetsTable({
     DEFAULT_VISIBLE
   );
 
-  const isColumnVisible = (col: string) => visibleKeys.includes(col);
+  const isColumnVisible = (col: string) => visibleKeys.includes(col) && isColumnAllowed(col);
 
   const toggleColumn = (col: string) => {
     if (visibleKeys.includes(col)) {
@@ -522,7 +536,7 @@ export function SelectedAssetsTable({
               <div className="space-y-2">
                 <h4 className="font-medium text-sm mb-3">Select columns to display:</h4>
                 <div className="grid grid-cols-2 gap-2 max-h-96 overflow-y-auto">
-                  {ALL_COLUMNS.map((col) => (
+                  {ALL_COLUMNS.filter(col => isColumnAllowed(col)).map((col) => (
                     <div key={col} className="flex items-center space-x-2">
                       <Checkbox
                         id={col}
@@ -611,7 +625,7 @@ export function SelectedAssetsTable({
               {isColumnVisible('printing') && <TableHead className="w-48">Printing Cost</TableHead>}
               {isColumnVisible('mounting') && <TableHead className="w-48">Mounting Cost</TableHead>}
               {isColumnVisible('total') && <TableHead className="text-right">Line Total</TableHead>}
-              <TableHead className="w-12"></TableHead>
+              {onRemove && <TableHead className="w-12"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1195,6 +1209,7 @@ export function SelectedAssetsTable({
                         {formatCurrency(lineTotal)}
                       </TableCell>
                     )}
+                    {onRemove && (
                     <TableCell>
                       <Button
                         size="icon"
@@ -1205,6 +1220,7 @@ export function SelectedAssetsTable({
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>
+                    )}
                   </TableRow>
                 );
               })

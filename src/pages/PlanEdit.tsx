@@ -722,6 +722,15 @@ export default function PlanEdit() {
     }
   };
 
+  // Block edit page entirely for non-owners — redirect to detail view
+  if (planRecord && perms.isBlocked) {
+    navigate(`/admin/plans/${id}`);
+    return null;
+  }
+
+  // For read-only users, disable all form interactions
+  const isReadOnly = perms.isReadOnly;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-7xl">
@@ -735,18 +744,18 @@ export default function PlanEdit() {
         </Button>
 
         {/* Restricted Mode Banner */}
-        {perms.isReadOnly && <RestrictedBanner module="plan" />}
+        {isReadOnly && <RestrictedBanner module="plan" />}
 
         <div className="mb-8 space-y-2">
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-            {perms.isReadOnly ? 'View Plan' : 'Edit Plan'}
+            {isReadOnly ? 'View Plan' : 'Edit Plan'}
           </h1>
           <p className="text-muted-foreground text-sm sm:text-base">
-            {perms.isReadOnly ? 'Read-only summary view' : 'Update plan details and modify asset selection'}
+            {isReadOnly ? 'Read-only summary view — financial details and editing are restricted' : 'Update plan details and modify asset selection'}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={isReadOnly ? (e) => e.preventDefault() : handleSubmit} className="space-y-8">
           {/* Top 3-Column Grid: Plan Details | Campaign Period | Plan Summary */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Plan Details */}
@@ -766,9 +775,10 @@ export default function PlanEdit() {
                   <ClientSelect
                     clients={clients}
                     value={formData.client_id}
-                    onSelect={handleClientSelect}
+                    onSelect={isReadOnly ? () => {} : handleClientSelect}
                     placeholder="Select client"
                     returnPath={`/admin/plans/${id}/edit`}
+                    disabled={isReadOnly}
                   />
                 </div>
                 <div className="space-y-2">
@@ -779,6 +789,7 @@ export default function PlanEdit() {
                     onChange={(e) => setFormData(prev => ({ ...prev, plan_name: e.target.value }))}
                     placeholder="e.g., Q1 2025 Campaign"
                     className="h-10"
+                    disabled={isReadOnly}
                   />
                 </div>
                 <div className="space-y-2">
@@ -973,20 +984,21 @@ export default function PlanEdit() {
               <SelectedAssetsTable
                 assets={selectedAssetsArray}
                 assetPricing={assetPricing}
-                onRemove={perms.isReadOnly ? undefined : removeAsset}
-                onPricingUpdate={perms.isReadOnly ? undefined : updateAssetPricing}
+                onRemove={isReadOnly ? undefined : removeAsset}
+                onPricingUpdate={isReadOnly ? undefined : updateAssetPricing}
                 durationDays={durationDays}
                 planStartDate={formData.start_date instanceof Date ? formData.start_date : new Date(formData.start_date)}
                 planEndDate={formData.end_date instanceof Date ? formData.end_date : new Date(formData.end_date)}
                 planId={formData.id}
                 planClientId={formData.client_id}
                 planClientName={formData.client_name}
+                canViewFinancials={perms.canViewFinancials}
               />
             </CardContent>
           </Card>
 
           {/* Available Assets - Hidden in read-only mode */}
-          {perms.canEditRecord && (
+          {!isReadOnly && perms.canEditRecord && (
           <Card className="rounded-2xl shadow-md hover:shadow-lg transition-all duration-200">
             <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/20 dark:to-blue-900/20">
               <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-700 dark:text-slate-200">
@@ -1007,7 +1019,7 @@ export default function PlanEdit() {
           )}
 
           {/* Actions - Hidden for non-owners */}
-          {perms.canEditRecord && (
+          {!isReadOnly && perms.canEditRecord && (
           <div className="flex justify-end gap-4 pt-4 pb-8">
             <Button
               type="button"

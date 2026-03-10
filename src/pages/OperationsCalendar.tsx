@@ -188,17 +188,17 @@ export default function OperationsCalendar() {
 
     switch (status) {
       case 'Verified':
-        backgroundColor = '#22c55e'; // green
+        backgroundColor = '#22c55e';
         break;
-      case 'PhotoUploaded':
-      case 'Mounted':
-        backgroundColor = '#f59e0b'; // amber
+      case 'Completed':
+      case 'Installed':
+        backgroundColor = '#f59e0b';
         break;
       case 'Assigned':
-        backgroundColor = '#8b5cf6'; // purple
+        backgroundColor = '#8b5cf6';
         break;
       case 'Pending':
-        backgroundColor = '#6b7280'; // gray
+        backgroundColor = '#6b7280';
         break;
     }
 

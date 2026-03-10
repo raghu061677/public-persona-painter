@@ -16,20 +16,28 @@ Deno.serve(async (req: Request) => {
 
   const rawBody = await req.text();
 
-  // Validate HMAC — only system/cron callers allowed
-  try {
-    await requireHmac(req, rawBody);
-  } catch (err) {
-    if (err instanceof AuthError) {
-      return new Response(JSON.stringify({ error: err.message }), {
-        status: err.statusCode,
+  // Auth: Accept either HMAC headers OR a simple cron secret (for pg_cron which can't compute HMAC)
+  const cronSecret = req.headers.get('X-Cron-Secret');
+  const expectedSecret = Deno.env.get('CRON_HMAC_SECRET');
+
+  if (cronSecret && expectedSecret && cronSecret === expectedSecret) {
+    // pg_cron simple secret auth — valid
+  } else {
+    // Fall back to full HMAC validation
+    try {
+      await requireHmac(req, rawBody);
+    } catch (err) {
+      if (err instanceof AuthError) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: err.statusCode,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
   }
 
   const serviceClient = supabaseServiceClient();

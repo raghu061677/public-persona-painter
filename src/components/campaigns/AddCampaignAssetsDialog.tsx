@@ -663,8 +663,8 @@ export function AddCampaignAssetsDialog({
             <p className="text-sm text-muted-foreground">
               {selectedAssets.size} asset(s) selected
               {conflictCount > 0 && (
-                <span className="ml-2 text-destructive">
-                  • {conflictCount} asset(s) unavailable due to conflicts
+                <span className="ml-2 text-amber-600">
+                  • {conflictCount} asset(s) have conflicts with campaign dates — adjust per-asset dates after adding
                 </span>
               )}
             </p>

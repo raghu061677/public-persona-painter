@@ -142,6 +142,14 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
       if (error) throw error;
 
       toast({ title: "Success", description: `Assigned to ${selectedUser.username}` });
+      
+      // Trigger email notification
+      const assetPayload = buildAssetPayload(selectedAsset);
+      assetPayload.assigned_to = selectedUser.username;
+      assetPayload.campaign_code = campaignId;
+      triggerEmail('asset_assigned_to_mounter_internal', assetPayload,
+        [{ to: '' }], selectedAsset.id); // Internal auto-send
+
       setAssignDialogOpen(false);
       setSelectedUserId("");
       setSelectedAsset(null);

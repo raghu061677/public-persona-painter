@@ -202,6 +202,17 @@ export function ConvertToCampaignDialog({
         description: `Campaign ${campaignId} created successfully`,
       });
 
+      // Trigger email notifications
+      const campaignPayload = buildCampaignPayload(
+        { id: campaignId, campaign_name: campaignName, status: 'Planned', start_date: format(startDate, "yyyy-MM-dd"), end_date: format(endDate, "yyyy-MM-dd"), client_name: plan.client_name },
+        null, company
+      );
+      triggerEmail('campaign_created_internal', campaignPayload, [{ to: company?.email || '' }], campaignId);
+      // Client confirmation (confirm mode)
+      if (plan.client_email) {
+        triggerEmail('campaign_confirmed_client', campaignPayload, [{ to: plan.client_email }], campaignId);
+      }
+
       onOpenChange(false);
       navigate(`/admin/campaigns/${campaignId}`);
     } catch (error: any) {

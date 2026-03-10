@@ -50,6 +50,17 @@ export function ProofApprovalDialog({ asset, open, onOpenChange, onUpdate }: Pro
           : "Mounter will be notified to re-upload photos",
       });
 
+      // Trigger email notifications
+      const assetPayload = buildAssetPayload(asset);
+      assetPayload.proof_verified_at = new Date().toISOString();
+      if (approved) {
+        triggerEmail('proof_verified_internal', assetPayload, [{ to: '' }], asset.id);
+        // Client notification (confirm mode)
+        triggerEmail('proof_verified_client', assetPayload, [{ to: '' }], asset.id);
+      } else {
+        triggerEmail('proof_rejected_internal', assetPayload, [{ to: '' }], asset.id);
+      }
+
       onOpenChange(false);
       setComments("");
       onUpdate();

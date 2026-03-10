@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { useEmailTrigger, buildPlanPayload } from "@/hooks/useEmailTrigger";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -52,6 +54,8 @@ export default function PlanNew() {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const submittingRef = useRef(false); // Hard guard against double submit
+  const { trigger: triggerEmail, ConfirmDialog: EmailConfirmDialog } = useEmailTrigger();
+  const { company } = useCompany();
   const [exportingProposal, setExportingProposal] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
   const [availableAssets, setAvailableAssets] = useState<any[]>([]);
@@ -544,6 +548,16 @@ export default function PlanNew() {
         title: "Success",
         description: "Plan created successfully",
       });
+
+      // Trigger plan_created_internal email
+      try {
+        const emailPayload = buildPlanPayload(plan, { name: formData.client_name, email: '' }, company);
+        triggerEmail('plan_created_internal', emailPayload,
+          [{ to: company?.email || '' }], plan.id);
+      } catch (emailErr) {
+        console.warn('[PlanNew] Email trigger failed (non-blocking):', emailErr);
+      }
+
       navigate(`/admin/plans/${plan.id}`);
     } catch (error: any) {
       toast({

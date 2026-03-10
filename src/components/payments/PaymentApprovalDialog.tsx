@@ -23,6 +23,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Phone, Mail, Check, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { useEmailTrigger, buildInvoicePayload } from "@/hooks/useEmailTrigger";
+import { useCompany } from "@/contexts/CompanyContext";
 
 interface PaymentConfirmation {
   id: string;
@@ -53,6 +55,8 @@ export function PaymentApprovalDialog({
 }: PaymentApprovalDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const { trigger: triggerEmail, ConfirmDialog: EmailConfirmDialog } = useEmailTrigger();
+  const { company } = useCompany();
 
   // Form state with defaults from claimed values
   const [amount, setAmount] = useState(confirmation.claimed_amount.toString());
@@ -166,6 +170,23 @@ export function PaymentApprovalDialog({
             console.log("Receipt notification sent:", result.data);
           }
         });
+      }
+
+      // Trigger payment email notifications
+      try {
+        const invoiceData = { id: confirmation.invoice_id, invoice_no: confirmation.invoice_no, total_amount: parsedAmount, balance_due: 0, client_name: confirmation.client_name };
+        const emailPayload = buildInvoicePayload(invoiceData, { name: confirmation.client_name }, company);
+        emailPayload.amount_paid = `₹${parsedAmount.toLocaleString('en-IN')}`;
+        triggerEmail('payment_received_internal', emailPayload, [{ to: company?.email || '' }], confirmation.invoice_id || '');
+        // Client receipt notification (confirm mode)
+        if (confirmation.client_id) {
+          const { data: client } = await supabase.from('clients').select('email, name').eq('id', confirmation.client_id).single();
+          if (client?.email) {
+            triggerEmail('payment_received_client', emailPayload, [{ to: client.email, name: client.name }], confirmation.invoice_id || '');
+          }
+        }
+      } catch (emailErr) {
+        console.warn('[PaymentApproval] Email trigger failed (non-blocking):', emailErr);
       }
 
       toast({

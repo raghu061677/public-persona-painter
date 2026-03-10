@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { triggerEmailEvent, type TriggerEmailOptions } from '@/services/notifications/emailSender';
+import { useCompany } from '@/contexts/CompanyContext';
 
 /**
  * Hook to handle automated campaign workflows:
@@ -9,8 +11,10 @@ import { toast } from '@/hooks/use-toast';
  * - Auto-create mounting tasks when campaign starts
  */
 export function useCampaignWorkflows(campaignId: string | undefined) {
+  const { company } = useCompany();
+
   useEffect(() => {
-    if (!campaignId) return;
+    if (!campaignId || !company?.id) return;
 
     // Subscribe to campaign status changes
     const campaignChannel = supabase
@@ -48,9 +52,45 @@ export function useCampaignWorkflows(campaignId: string | undefined) {
                 variant: "destructive",
               });
             }
+
+            // Trigger campaign_completed emails
+            try {
+              const campaignPayload = {
+                campaign_name: payload.new.campaign_name || '',
+                campaign_code: campaignId,
+                campaign_status: 'Completed',
+                client_name: payload.new.client_name || '',
+                campaign_start_date: payload.new.start_date || '',
+                campaign_end_date: payload.new.end_date || '',
+              };
+              // Internal notification
+              await triggerEmailEvent({
+                event_key: 'campaign_completed_internal',
+                payload: campaignPayload,
+                recipients: [{ to: company?.email || '' }],
+                company_id: company!.id,
+                source_id: campaignId,
+              });
+              // Client notification (forced auto since this is a realtime handler)
+              if (payload.new.client_id) {
+                const { data: client } = await supabase.from('clients').select('email, name').eq('id', payload.new.client_id).single();
+                if (client?.email) {
+                  await triggerEmailEvent({
+                    event_key: 'campaign_completed_client',
+                    payload: campaignPayload,
+                    recipients: [{ to: client.email, name: client.name }],
+                    company_id: company!.id,
+                    source_id: campaignId,
+                    force_send_mode: 'auto',
+                  });
+                }
+              }
+            } catch (emailErr) {
+              console.warn('[CampaignWorkflows] Completion email failed (non-blocking):', emailErr);
+            }
           }
 
-          // Create mounting tasks when campaign starts (PascalCase)
+          // Create mounting tasks + trigger emails when campaign starts
           if (newStatus === 'InProgress' && oldStatus === 'Planned') {
             try {
               const { data, error } = await supabase.functions.invoke('auto-create-mounting-tasks', {
@@ -65,6 +105,50 @@ export function useCampaignWorkflows(campaignId: string | undefined) {
               });
             } catch (error: any) {
               console.error('Auto-task creation error:', error);
+            }
+
+            // Trigger campaign_assigned_to_operations_internal
+            try {
+              await triggerEmailEvent({
+                event_key: 'campaign_assigned_to_operations_internal',
+                payload: {
+                  campaign_name: payload.new.campaign_name || '',
+                  campaign_code: campaignId,
+                  campaign_start_date: payload.new.start_date || '',
+                  campaign_end_date: payload.new.end_date || '',
+                  client_name: payload.new.client_name || '',
+                },
+                recipients: [{ to: company?.email || '' }],
+                company_id: company!.id,
+                source_id: campaignId,
+              });
+            } catch (emailErr) {
+              console.warn('[CampaignWorkflows] Ops assignment email failed:', emailErr);
+            }
+
+            // Trigger campaign_live_client
+            try {
+              if (payload.new.client_id) {
+                const { data: client } = await supabase.from('clients').select('email, name').eq('id', payload.new.client_id).single();
+                if (client?.email) {
+                  await triggerEmailEvent({
+                    event_key: 'campaign_live_client',
+                    payload: {
+                      campaign_name: payload.new.campaign_name || '',
+                      campaign_code: campaignId,
+                      campaign_start_date: payload.new.start_date || '',
+                      campaign_end_date: payload.new.end_date || '',
+                      client_name: payload.new.client_name || '',
+                    },
+                    recipients: [{ to: client.email, name: client.name }],
+                    company_id: company!.id,
+                    source_id: campaignId,
+                    force_send_mode: 'auto', // realtime handler bypasses confirm
+                  });
+                }
+              }
+            } catch (emailErr) {
+              console.warn('[CampaignWorkflows] Campaign live client email failed:', emailErr);
             }
           }
         }
@@ -86,7 +170,7 @@ export function useCampaignWorkflows(campaignId: string | undefined) {
           const newStatus = payload.new.status;
           const oldStatus = payload.old?.status;
 
-          // Auto-record expenses when asset is installed (canonical value only)
+          // Auto-record expenses + trigger installation email when asset is installed
           if (newStatus === 'Installed' && oldStatus !== 'Installed') {
             try {
               const { data, error } = await supabase.functions.invoke('auto-record-expenses', {
@@ -99,6 +183,29 @@ export function useCampaignWorkflows(campaignId: string | undefined) {
             } catch (error: any) {
               console.error('Auto-expense error:', error);
             }
+
+            // Trigger installation_completed emails
+            try {
+              const assetPayload = {
+                asset_code: payload.new.asset_id || '',
+                asset_location: payload.new.location || '',
+                asset_city: payload.new.city || '',
+                campaign_code: campaignId,
+                installation_date: new Date().toISOString().split('T')[0],
+              };
+              await triggerEmailEvent({
+                event_key: 'installation_completed_internal',
+                payload: assetPayload,
+                recipients: [{ to: company?.email || '' }],
+                company_id: company!.id,
+                source_id: payload.new.id,
+              });
+              // TODO: installation_completed_client requires campaign.client_id lookup
+              // which isn't available in the asset channel payload. 
+              // Wired via ProofApprovalDialog confirm flow instead.
+            } catch (emailErr) {
+              console.warn('[CampaignWorkflows] Installation email failed:', emailErr);
+            }
           }
         }
       )
@@ -108,5 +215,5 @@ export function useCampaignWorkflows(campaignId: string | undefined) {
       supabase.removeChannel(campaignChannel);
       supabase.removeChannel(assetChannel);
     };
-  }, [campaignId]);
+  }, [campaignId, company?.id]);
 }

@@ -615,11 +615,11 @@ export function AssetSelectionTable({
                       return <TableCell key={key} className="text-right">{formatCurrency(asset[key] || 0)}</TableCell>;
                     }
                     if (key === 'available_from') {
-                      const availability = getAssetAvailability(asset);
+                      const availability = getAssetAvailabilityInfo(asset);
                       return (
                         <TableCell key={key}>
                           {availability.available ? (
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800">
                               Available Now
                             </Badge>
                           ) : availability.availableFrom ? (
@@ -633,9 +633,9 @@ export function AssetSelectionTable({
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p className="text-sm">
-                                    Currently booked for: <strong>{availability.booking?.campaign_name}</strong>
+                                    Currently booked for: <strong>{availability.sourceNumber || 'Campaign'}</strong>
                                     <br />
-                                    Client: {availability.booking?.client_name}
+                                    Client: {availability.clientName || 'Unknown'}
                                   </p>
                                 </TooltipContent>
                               </Tooltip>

@@ -42,6 +42,7 @@ interface OperationsBoardProps {
 
 export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix, companyName }: OperationsBoardProps) {
   const navigate = useNavigate();
+  const { trigger: triggerEmail, ConfirmDialog: EmailConfirmDialog } = useEmailTrigger();
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
   const [selectedUserId, setSelectedUserId] = useState("");

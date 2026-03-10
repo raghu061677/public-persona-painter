@@ -525,8 +525,10 @@ function TaskCard({ task, campaigns, navigate, compact }: {
     switch (status) {
       case 'Pending': return 'bg-yellow-500';
       case 'Assigned': return 'bg-blue-500';
-      case 'Mounted': return 'bg-cyan-500';
-      case 'PhotoUploaded': return 'bg-green-500';
+      case 'Mounted':
+      case 'Installed': return 'bg-cyan-500';
+      case 'PhotoUploaded':
+      case 'Completed': return 'bg-green-500';
       case 'Verified': return 'bg-emerald-600';
       default: return 'bg-gray-500';
     }

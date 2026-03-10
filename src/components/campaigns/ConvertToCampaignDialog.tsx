@@ -38,6 +38,7 @@ export function ConvertToCampaignDialog({
 }: ConvertToCampaignDialogProps) {
   const navigate = useNavigate();
   const { company } = useCompany();
+  const { trigger: triggerEmail, ConfirmDialog: EmailConfirmDialog } = useEmailTrigger();
   const [loading, setLoading] = useState(false);
   const [campaignName, setCampaignName] = useState(plan?.plan_name || "");
   const [startDate, setStartDate] = useState<Date>(

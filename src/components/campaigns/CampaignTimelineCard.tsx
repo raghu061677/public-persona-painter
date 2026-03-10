@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Calendar, CheckCircle2, Circle, Clock } from "lucide-react";
 import { formatDate } from "@/utils/plans";
+import { normalizeCampaignAssetStatus, isCampaignAssetStatusAtLeast } from "@/lib/constants/campaignAssetStatus";
 
 interface TimelineEvent {
   label: string;

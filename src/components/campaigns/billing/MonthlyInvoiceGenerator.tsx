@@ -235,6 +235,8 @@ export function MonthlyInvoiceGenerator({
   const [companyState, setCompanyState] = useState<string>('');
   const [showProfitGate, setShowProfitGate] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { company } = useCompany();
+  const { trigger: triggerEmail, ConfirmDialog: EmailConfirmDialog } = useEmailTrigger();
 
   // Profitability check
   const { data: profitability } = useCampaignProfitability(campaign.id, campaign.company_id, 0);

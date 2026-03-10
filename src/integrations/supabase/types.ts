@@ -1929,6 +1929,8 @@ export type Database = {
           assigned_mounter_id: string | null
           base_rate_monthly: number | null
           billing_mode: string
+          billing_mode_override: string | null
+          billing_override_amount: number | null
           booked_days: number | null
           booking_end_date: string | null
           booking_start_date: string | null
@@ -1941,11 +1943,16 @@ export type Database = {
           dimensions: string | null
           direction: string | null
           district: string | null
+          drop_reason: string | null
+          dropped_on: string | null
+          effective_end_date: string | null
+          effective_start_date: string | null
           end_date: string | null
           id: string
           illumination_type: string | null
           installation_status: string | null
           invoice_generated_months: string[] | null
+          is_removed: boolean
           latitude: number | null
           location: string
           longitude: number | null
@@ -1985,6 +1992,8 @@ export type Database = {
           assigned_mounter_id?: string | null
           base_rate_monthly?: number | null
           billing_mode?: string
+          billing_mode_override?: string | null
+          billing_override_amount?: number | null
           booked_days?: number | null
           booking_end_date?: string | null
           booking_start_date?: string | null
@@ -1997,11 +2006,16 @@ export type Database = {
           dimensions?: string | null
           direction?: string | null
           district?: string | null
+          drop_reason?: string | null
+          dropped_on?: string | null
+          effective_end_date?: string | null
+          effective_start_date?: string | null
           end_date?: string | null
           id?: string
           illumination_type?: string | null
           installation_status?: string | null
           invoice_generated_months?: string[] | null
+          is_removed?: boolean
           latitude?: number | null
           location: string
           longitude?: number | null
@@ -2041,6 +2055,8 @@ export type Database = {
           assigned_mounter_id?: string | null
           base_rate_monthly?: number | null
           billing_mode?: string
+          billing_mode_override?: string | null
+          billing_override_amount?: number | null
           booked_days?: number | null
           booking_end_date?: string | null
           booking_start_date?: string | null
@@ -2053,11 +2069,16 @@ export type Database = {
           dimensions?: string | null
           direction?: string | null
           district?: string | null
+          drop_reason?: string | null
+          dropped_on?: string | null
+          effective_end_date?: string | null
+          effective_start_date?: string | null
           end_date?: string | null
           id?: string
           illumination_type?: string | null
           installation_status?: string | null
           invoice_generated_months?: string[] | null
+          is_removed?: boolean
           latitude?: number | null
           location?: string
           longitude?: number | null

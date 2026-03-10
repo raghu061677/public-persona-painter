@@ -256,18 +256,14 @@ export default function PlansList() {
       }
       
       const userCompanyId = companyUserData.company_id;
-      console.log('User company_id:', userCompanyId);
-      console.log('Company type:', (companyUserData as any).companies?.type);
-      console.log('User email:', user.email);
       
       // Platform admins can see all plans, others see only their company's plans
       const isPlatformAdmin = (companyUserData as any).companies?.type === 'platform_admin';
-      console.log('Is platform admin:', isPlatformAdmin);
       
       // CRITICAL: For platform admins, don't filter by company_id to see all plans
       const query = supabase
         .from('plans')
-        .select('*')
+        .select('*, profiles!plans_created_by_fkey(username)')
         .order('created_at', { ascending: false });
       
       // Only filter by company_id if not a platform admin
@@ -279,18 +275,22 @@ export default function PlansList() {
 
       if (plansError) {
         console.error('Error fetching plans:', plansError);
-        toast({
-          title: "Error",
-          description: "Failed to fetch plans",
-          variant: "destructive",
-        });
+        // Fallback: fetch without profile join if FK doesn't exist
+        const fallbackQuery = supabase
+          .from('plans')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (!isPlatformAdmin) fallbackQuery.eq('company_id', userCompanyId);
+        const { data: fallbackData } = await fallbackQuery;
+        if (fallbackData) {
+          const scopedPlans = planScopeFilter(fallbackData);
+          setPlans(scopedPlans);
+          setGlobalSearchFiltered(scopedPlans);
+        }
         setLoading(false);
         return;
       }
 
-      console.log('Fetched plans:', plansData?.length || 0);
-      console.log('Plans data:', plansData);
-      
       // Show user-friendly message if no plans found
       if (!plansData || plansData.length === 0) {
         console.warn('No plans found for:', {
@@ -327,10 +327,15 @@ export default function PlansList() {
 
           const totalSqft = sqftBreakdown.reduce((sum, item) => sum + item.sqft, 0);
 
+          // Extract employee name from joined profile
+          const profileData = (plan as any).profiles;
+          const employeeName = profileData?.username || null;
+
           return {
             ...plan,
             total_sqft: totalSqft,
-            sqft_breakdown: sqftBreakdown
+            sqft_breakdown: sqftBreakdown,
+            employee_name: employeeName,
           };
         })
       );

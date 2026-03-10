@@ -175,6 +175,7 @@ function PhoneChipsEditor({ label, value, onChange, placeholder }: {
 
 // ===== Main Page =====
 export default function AlertsSettings() {
+  const { isReadOnly } = useSettingsReadOnly();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);

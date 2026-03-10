@@ -148,9 +148,9 @@ export function computeCampaignTotals({
    const campaignPeriodEnd = maxEndDate;
    const durationDays = Math.ceil((campaignPeriodEnd.getTime() - campaignPeriodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
    
-   // Sum printing and mounting from campaign_assets
-   const printingCost = campaignAssets.reduce((sum, a) => sum + (Number(a.printing_charges) || 0), 0);
-   const mountingCost = campaignAssets.reduce((sum, a) => sum + (Number(a.mounting_charges) || 0), 0);
+   // Sum printing and mounting from campaign_assets (only non-removed for one-time charges)
+   const printingCost = activeAssets.reduce((sum, a) => sum + (Number(a.printing_charges) || 0), 0);
+   const mountingCost = activeAssets.reduce((sum, a) => sum + (Number(a.mounting_charges) || 0), 0);
    
    // Calculate gross amount (before discount)
    const grossAmount = Math.round((displayCost + printingCost + mountingCost) * 100) / 100;

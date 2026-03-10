@@ -1,0 +1,1 @@
+UPDATE campaign_assets SET billing_mode = 'PRORATA_30', rent_amount = 20500 WHERE campaign_id = 'CAM-202603-0009' AND asset_id = 'HYD-BQS-0015' AND billing_mode = 'FULL_MONTH';

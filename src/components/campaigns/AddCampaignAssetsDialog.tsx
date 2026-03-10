@@ -243,7 +243,7 @@ export function AddCampaignAssetsDialog({
           case 'conflict':
             return status === 'conflict';
           case 'available_now':
-            return status === 'available' && asset.status !== 'Booked';
+            return status === 'available';
           case 'upcoming':
             return status === 'upcoming' || status === 'available_soon';
           default:

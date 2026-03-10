@@ -24,9 +24,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { supabase } from "@/integrations/supabase/client";
 import { format, addDays, isAfter, isBefore } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useAssetAvailability } from "@/hooks/useAssetAvailability";
+import { toDateString } from "@/lib/availability";
+import type { BookingAvailability } from "@/lib/availability";
 
 type SortDirection = 'asc' | 'desc' | null;
 type SortableColumn = 'asset_id' | 'location' | 'area' | 'available_from';
@@ -34,13 +36,6 @@ type SortableColumn = 'asset_id' | 'location' | 'area' | 'available_from';
 interface SortConfig {
   column: SortableColumn | null;
   direction: SortDirection;
-}
-
-interface AssetBooking {
-  asset_id: string;
-  booked_to: string | null;
-  campaign_name: string;
-  client_name: string;
 }
 
 interface AssetSelectionTableProps {
@@ -110,8 +105,6 @@ export function AssetSelectionTable({
   const [availableFromDate, setAvailableFromDate] = useState<Date | undefined>(planStartDate);
   const [checkedAssets, setCheckedAssets] = useState<Set<string>>(new Set());
   const [sortConfig, setSortConfig] = useState<SortConfig>({ column: null, direction: null });
-  const [assetBookings, setAssetBookings] = useState<Map<string, AssetBooking>>(new Map());
-  const [loadingBookings, setLoadingBookings] = useState(false);
   
   const {
     isReady,
@@ -120,10 +113,28 @@ export function AssetSelectionTable({
     reset,
   } = useColumnPrefs('asset-selection', ALL_COLUMNS as any, DEFAULT_VISIBLE as any);
 
-  // Fetch active bookings for all assets
-  useEffect(() => {
-    fetchAssetBookings();
-  }, []);
+  // Compute date range for availability check
+  const rangeStart = useMemo(() => {
+    if (planStartDate) return toDateString(planStartDate);
+    if (availableFromDate) return toDateString(availableFromDate);
+    return toDateString(new Date());
+  }, [planStartDate, availableFromDate]);
+
+  const rangeEnd = useMemo(() => {
+    if (planEndDate) return toDateString(planEndDate);
+    // Default to 1 year from start
+    const d = new Date(rangeStart);
+    d.setFullYear(d.getFullYear() + 1);
+    return toDateString(d);
+  }, [planEndDate, rangeStart]);
+
+  // Use shared availability engine — single source of truth
+  const assetIds = useMemo(() => assets.map(a => a.id), [assets]);
+  const { getAvailability, loading: loadingBookings } = useAssetAvailability(
+    assetIds,
+    rangeStart,
+    rangeEnd
+  );
 
   // Update availableFromDate when plan dates change
   useEffect(() => {
@@ -131,52 +142,6 @@ export function AssetSelectionTable({
       setAvailableFromDate(planStartDate);
     }
   }, [planStartDate]);
-
-  const fetchAssetBookings = async () => {
-    setLoadingBookings(true);
-    try {
-      // Get all active campaign assets with their end dates
-      const { data, error } = await supabase
-        .from('campaign_assets')
-        .select(`
-          asset_id,
-          booking_end_date,
-          end_date,
-          campaigns!inner(
-            campaign_name,
-            client_name,
-            status,
-            end_date
-          )
-        `)
-        .in('campaigns.status', ['Draft', 'Upcoming', 'Running']);
-
-      if (error) throw error;
-
-      const bookingsMap = new Map<string, AssetBooking>();
-      
-      (data || []).forEach((item: any) => {
-        const endDate = item.booking_end_date || item.end_date || item.campaigns?.end_date;
-        const existing = bookingsMap.get(item.asset_id);
-        
-        // Keep the latest end date for each asset
-        if (!existing || (endDate && new Date(endDate) > new Date(existing.booked_to || ''))) {
-          bookingsMap.set(item.asset_id, {
-            asset_id: item.asset_id,
-            booked_to: endDate,
-            campaign_name: item.campaigns?.campaign_name || 'Unknown',
-            client_name: item.campaigns?.client_name || 'Unknown',
-          });
-        }
-      });
-
-      setAssetBookings(bookingsMap);
-    } catch (error) {
-      console.error('Error fetching bookings:', error);
-    } finally {
-      setLoadingBookings(false);
-    }
-  };
 
   const isColumnVisible = (key: string) => visibleKeys.includes(key);
   
@@ -191,26 +156,25 @@ export function AssetSelectionTable({
   const cities = Array.from(new Set(assets.map(a => a.city))).sort();
   const mediaTypes = Array.from(new Set(assets.map(a => a.media_type))).sort();
 
-  // Get availability info for an asset
-  const getAssetAvailability = (asset: any): { available: boolean; availableFrom: Date | null; booking?: AssetBooking } => {
-    const booking = assetBookings.get(asset.id);
+  // Get availability info for an asset using shared engine
+  const getAssetAvailabilityInfo = (asset: any) => {
+    const result = getAvailability(asset.id);
+    const isVacant = result.availability === 'Vacant';
     
-    if (asset.status === 'Available' && !booking) {
-      return { available: true, availableFrom: null };
+    // Calculate availableFrom if asset is booked
+    let availableFrom: Date | null = null;
+    if (!isVacant && result.endDate) {
+      const end = new Date(result.endDate);
+      availableFrom = addDays(end, 1);
     }
     
-    if (booking?.booked_to) {
-      const bookedTo = new Date(booking.booked_to);
-      const availableFrom = addDays(bookedTo, 1);
-      return { available: false, availableFrom, booking };
-    }
-    
-    // Asset is booked but no end date - not available
-    if (asset.status === 'Booked' || booking) {
-      return { available: false, availableFrom: null, booking };
-    }
-    
-    return { available: true, availableFrom: null };
+    return {
+      available: isVacant,
+      availableFrom,
+      availability: result.availability,
+      sourceNumber: result.sourceNumber,
+      clientName: result.clientName,
+    };
   };
 
   // Calculate asset counts by category
@@ -220,7 +184,7 @@ export function AssetSelectionTable({
     let availableByDate = 0;
 
     assets.forEach(asset => {
-      const availability = getAssetAvailability(asset);
+      const availability = getAssetAvailabilityInfo(asset);
       if (availability.available) {
         availableNow++;
       } else {
@@ -238,10 +202,10 @@ export function AssetSelectionTable({
     return {
       availableNow,
       booked,
-      availableByDate: availableNow + availableByDate, // Total available by date = currently available + becoming available
+      availableByDate: availableNow + availableByDate,
       total: assets.length,
     };
-  }, [assets, assetBookings, availableFromDate]);
+  }, [assets, availableFromDate, getAvailability]);
 
   const filteredAssets = useMemo(() => {
     return assets.filter(asset => {
@@ -254,14 +218,13 @@ export function AssetSelectionTable({
       const matchesCity = cityFilter === "all" || asset.city === cityFilter;
       const matchesType = mediaTypeFilter === "all" || asset.media_type === mediaTypeFilter;
       
-      // Availability filter logic
-      const availability = getAssetAvailability(asset);
+      // Availability filter logic using shared engine
+      const availability = getAssetAvailabilityInfo(asset);
       let matchesAvailability = true;
       
       if (availabilityFilter === 'available_now') {
         matchesAvailability = availability.available;
       } else if (availabilityFilter === 'available_by_date' && availableFromDate) {
-        // Asset is available if: currently available OR will become available before the target date
         if (availability.available) {
           matchesAvailability = true;
         } else if (availability.availableFrom) {
@@ -273,11 +236,10 @@ export function AssetSelectionTable({
       } else if (availabilityFilter === 'booked') {
         matchesAvailability = !availability.available;
       }
-      // 'all' shows everything
       
       return matchesSearch && matchesCity && matchesType && matchesAvailability;
     });
-  }, [assets, searchTerm, cityFilter, mediaTypeFilter, availabilityFilter, availableFromDate, assetBookings]);
+  }, [assets, searchTerm, cityFilter, mediaTypeFilter, availabilityFilter, availableFromDate, getAvailability]);
 
   // Get current count to display based on filter
   const getCurrentFilterCount = () => {
@@ -653,11 +615,11 @@ export function AssetSelectionTable({
                       return <TableCell key={key} className="text-right">{formatCurrency(asset[key] || 0)}</TableCell>;
                     }
                     if (key === 'available_from') {
-                      const availability = getAssetAvailability(asset);
+                      const availability = getAssetAvailabilityInfo(asset);
                       return (
                         <TableCell key={key}>
                           {availability.available ? (
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800">
                               Available Now
                             </Badge>
                           ) : availability.availableFrom ? (
@@ -671,9 +633,9 @@ export function AssetSelectionTable({
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p className="text-sm">
-                                    Currently booked for: <strong>{availability.booking?.campaign_name}</strong>
+                                    Currently booked for: <strong>{availability.sourceNumber || 'Campaign'}</strong>
                                     <br />
-                                    Client: {availability.booking?.client_name}
+                                    Client: {availability.clientName || 'Unknown'}
                                   </p>
                                 </TooltipContent>
                               </Tooltip>

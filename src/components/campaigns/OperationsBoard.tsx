@@ -20,11 +20,16 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { UserPlus, Upload, CheckCircle2 } from "lucide-react";
-import { getAssetStatusColor } from "@/utils/campaigns";
 import { useNavigate } from "react-router-dom";
 import { BulkOperationsDialog } from "./BulkOperationsDialog";
 import { checkAndAutoGeneratePPT } from "@/lib/operations/autoGenerateProofPPT";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
+import {
+  normalizeCampaignAssetStatus,
+  getCampaignAssetStatusOptions,
+  isCampaignAssetStatusAtLeast,
+  type CampaignAssetStatus,
+} from "@/lib/constants/campaignAssetStatus";
 
 interface OperationsBoardProps {
   campaignId: string;
@@ -50,7 +55,6 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
   const fetchOperationsUsers = async () => {
     setLoadingUsers(true);
     try {
-      // Fetch users with operations role
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id')
@@ -60,8 +64,6 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
 
       if (userRoles && userRoles.length > 0) {
         const userIds = userRoles.map(ur => ur.user_id);
-        
-        // Fetch profiles for these users
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('id, username')
@@ -84,31 +86,20 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
 
   const handleAssignMounter = async () => {
     if (!selectedAsset || !selectedUserId) {
-      toast({
-        title: "Error",
-        description: "Please select a mounter",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Please select a mounter", variant: "destructive" });
       return;
     }
 
     const selectedUser = users.find(u => u.id === selectedUserId);
     if (!selectedUser) {
-      toast({
-        title: "Error",
-        description: "Invalid user selection",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Invalid user selection", variant: "destructive" });
       return;
     }
 
     setAssigning(true);
     try {
       // Don't regress status if asset has already progressed past Assigned
-      const statusHierarchy = ['Pending', 'Assigned', 'Installed', 'Proof Uploaded', 'Verified'];
-      const currentIndex = statusHierarchy.indexOf(selectedAsset.status);
-      const assignedIndex = statusHierarchy.indexOf('Assigned');
-      const shouldUpdateStatus = currentIndex < assignedIndex || currentIndex === -1;
+      const shouldUpdateStatus = !isCampaignAssetStatusAtLeast(selectedAsset.status, 'Assigned');
 
       const updateData: any = {
         mounter_name: selectedUser.username,
@@ -125,33 +116,21 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
 
       if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: `Assigned to ${selectedUser.username}`,
-      });
-
+      toast({ title: "Success", description: `Assigned to ${selectedUser.username}` });
       setAssignDialogOpen(false);
       setSelectedUserId("");
       setSelectedAsset(null);
       onUpdate();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setAssigning(false);
     }
   };
 
-  // Canonical status values – single source of truth matching DB enum & edge-function flows
-  type CanonicalStatus = 'Pending' | 'Assigned' | 'Installed' | 'Completed' | 'Verified';
-
-  const handleStatusChange = async (assetId: string, newStatus: CanonicalStatus) => {
+  const handleStatusChange = async (assetId: string, newStatus: CampaignAssetStatus) => {
     try {
       const updateData: any = { status: newStatus };
-      // Auto-set completed_at when marking Completed or Verified
       if (newStatus === 'Completed' || newStatus === 'Verified') {
         updateData.completed_at = new Date().toISOString();
       }
@@ -163,14 +142,9 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
 
       if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: "Status updated successfully",
-      });
-
+      toast({ title: "Success", description: "Status updated successfully" });
       onUpdate();
-      
-      // Check if all assets are verified and auto-generate PPT if enabled
+
       if (newStatus === 'Verified') {
         const pptGenerated = await checkAndAutoGeneratePPT(campaignId);
         if (pptGenerated) {
@@ -181,37 +155,11 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
         }
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
-  const statusOptions: CanonicalStatus[] = [
-    'Pending',
-    'Assigned',
-    'Installed',
-    'Completed',
-    'Verified',
-  ];
-
-  // Map legacy DB values to canonical for display
-  const normalizeStatus = (status: string): CanonicalStatus => {
-    if (status === 'Mounted' || status === 'In Progress') return 'Installed';
-    if (status === 'PhotoUploaded' || status === 'QA Pending') return 'Completed';
-    if (statusOptions.includes(status as CanonicalStatus)) return status as CanonicalStatus;
-    return 'Pending';
-  };
-
-  const statusDisplayLabels: Record<CanonicalStatus, string> = {
-    'Pending': 'Pending',
-    'Assigned': 'Assigned',
-    'Installed': 'Installed',
-    'Completed': 'Completed',
-    'Verified': 'Verified',
-  };
+  const statusOptions = getCampaignAssetStatusOptions();
 
   return (
     <div className="space-y-4">
@@ -221,6 +169,7 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
       
       <div className="grid gap-4">
         {assets.map((asset) => {
+          const normalizedStatus = normalizeCampaignAssetStatus(asset.status);
           const hasPhotos = (asset.photo_count || 0) > 0;
           const cardBorderClass = hasPhotos
             ? 'border-l-4 border-l-green-500'
@@ -241,16 +190,16 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
                     <div className="flex items-center gap-2">
                       <Label className="text-sm">Status:</Label>
                       <Select
-                        value={normalizeStatus(asset.status)}
-                        onValueChange={(value) => handleStatusChange(asset.id, value as CanonicalStatus)}
+                        value={normalizedStatus}
+                        onValueChange={(value) => handleStatusChange(asset.id, value as CampaignAssetStatus)}
                       >
                         <SelectTrigger className="w-40">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {statusOptions.map((status) => (
-                            <SelectItem key={status} value={status}>
-                              {statusDisplayLabels[status]}
+                          {statusOptions.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -302,10 +251,11 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
               </div>
             </CardContent>
           </Card>
-        );
+          );
         })}
       </div>
 
+      {/* Assign Dialog */}
       <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -313,20 +263,20 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="mounter-select">Select Operations User</Label>
+              <Label>Select Operations User</Label>
               {loadingUsers ? (
-                <div className="text-sm text-muted-foreground">Loading users...</div>
+                <p className="text-sm text-muted-foreground">Loading users...</p>
               ) : users.length === 0 ? (
-                <div className="text-sm text-muted-foreground">No operations users found. Please assign operations role to users first.</div>
+                <p className="text-sm text-muted-foreground">No operations users found. Add users with 'operations' role.</p>
               ) : (
                 <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                  <SelectTrigger id="mounter-select">
-                    <SelectValue placeholder="Choose a user..." />
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select user" />
                   </SelectTrigger>
                   <SelectContent>
                     {users.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
-                        {user.username || 'Unnamed User'}
+                        {user.username}
                       </SelectItem>
                     ))}
                   </SelectContent>

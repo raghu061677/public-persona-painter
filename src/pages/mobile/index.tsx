@@ -28,6 +28,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { normalizeCampaignAssetStatus } from "@/lib/constants/campaignAssetStatus";
 
 type TaskStatus = Database['public']['Enums']['asset_installation_status'];
 
@@ -233,12 +234,11 @@ function MobileFieldApp() {
   };
 
   const getStatusColor = (status: TaskStatus) => {
-    switch (status) {
+    const normalized = normalizeCampaignAssetStatus(status);
+    switch (normalized) {
       case 'Pending': return 'bg-yellow-500';
       case 'Assigned': return 'bg-blue-500';
-      case 'Mounted':
       case 'Installed': return 'bg-cyan-500';
-      case 'PhotoUploaded':
       case 'Completed': return 'bg-green-500';
       case 'Verified': return 'bg-emerald-600';
       default: return 'bg-gray-500';
@@ -246,24 +246,25 @@ function MobileFieldApp() {
   };
 
   const getStatusIcon = (status: TaskStatus) => {
-    switch (status) {
+    const normalized = normalizeCampaignAssetStatus(status);
+    switch (normalized) {
       case 'Pending': return <Clock className="h-4 w-4" />;
       case 'Assigned':
-      case 'Mounted':
       case 'Installed': return <Upload className="h-4 w-4" />;
-      case 'PhotoUploaded':
       case 'Completed':
       case 'Verified': return <CheckCircle className="h-4 w-4" />;
       default: return <AlertCircle className="h-4 w-4" />;
     }
   };
 
-  const pendingTasks = tasks.filter(t => 
-    t.status === 'Pending' || t.status === 'Assigned' || t.status === 'Mounted' || t.status === 'Installed'
-  );
-  const completedTasks = tasks.filter(t => 
-    t.status === 'PhotoUploaded' || t.status === 'Completed' || t.status === 'Verified'
-  );
+  const pendingTasks = tasks.filter(t => {
+    const s = normalizeCampaignAssetStatus(t.status);
+    return s === 'Pending' || s === 'Assigned' || s === 'Installed';
+  });
+  const completedTasks = tasks.filter(t => {
+    const s = normalizeCampaignAssetStatus(t.status);
+    return s === 'Completed' || s === 'Verified';
+  });
   const ongoingCampaigns = campaigns.filter(c => 
     c.status === 'InProgress'
   );

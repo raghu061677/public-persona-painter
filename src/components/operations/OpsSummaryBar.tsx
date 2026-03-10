@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { FileText, Clock, CheckCircle, Camera, HelpCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { normalizeCampaignAssetStatus, isCampaignAssetStatusAtLeast } from "@/lib/constants/campaignAssetStatus";
 
 interface OpsSummaryBarProps {
   assets: any[];
@@ -10,11 +11,11 @@ export function OpsSummaryBar({ assets }: OpsSummaryBarProps) {
   const stats = useMemo(() => {
     let pending = 0, installed = 0, proofPending = 0, verified = 0;
     for (const a of assets) {
-      const status = a.status || "Pending";
+      const status = normalizeCampaignAssetStatus(a.status);
       if (status === "Pending" || status === "Assigned") pending++;
-      else if (status === "Installed" || status === "Mounted" || status === "InProgress") installed++;
-      else if (status === "PhotoUploaded") proofPending++;
-      else if (status === "Verified" || status === "Completed") verified++;
+      else if (status === "Installed") installed++;
+      else if (status === "Completed") proofPending++;
+      else if (status === "Verified") verified++;
       else pending++;
     }
     const total = assets.length;
@@ -25,8 +26,8 @@ export function OpsSummaryBar({ assets }: OpsSummaryBarProps) {
   const tiles = [
     { label: "Assets Shown", value: String(stats.count), icon: FileText, hint: "Total ops assets matching current filters" },
     { label: "Pending", value: String(stats.count - stats.installedDone), icon: Clock, hint: "Assets with status Pending or Assigned" },
-    { label: "Installed / Done", value: String(stats.installedDone), icon: CheckCircle, hint: "Assets Mounted, PhotoUploaded, Verified, or Completed" },
-    { label: "Proof Pending", value: String(stats.proofPending), icon: Camera, hint: "Assets with PhotoUploaded awaiting verification" },
+    { label: "Installed / Done", value: String(stats.installedDone), icon: CheckCircle, hint: "Assets Installed, Completed, or Verified" },
+    { label: "Proof Pending", value: String(stats.proofPending), icon: Camera, hint: "Assets with Completed status awaiting verification" },
   ];
 
   return (

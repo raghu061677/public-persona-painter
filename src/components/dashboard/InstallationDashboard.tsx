@@ -13,6 +13,7 @@ import {
   Camera
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { normalizeCampaignAssetStatus, getCampaignAssetStatusMeta } from "@/lib/constants/campaignAssetStatus";
 
 interface InstallationMetrics {
   totalAssignments: number;
@@ -65,10 +66,13 @@ export function InstallationDashboard() {
         new Date(a.completed_at || "").toDateString() === today
       ).length || 0;
       const pendingInstalls = assignments?.filter(
-        a => a.status === "Pending" || a.status === "Assigned"
+        a => {
+          const s = normalizeCampaignAssetStatus(a.status);
+          return s === "Pending" || s === "Assigned";
+        }
       ).length || 0;
       const proofsPending = assignments?.filter(
-        a => (a.status === "Installed" || a.status === "Mounted") && !a.photos
+        a => normalizeCampaignAssetStatus(a.status) === "Installed" && !a.photos
       ).length || 0;
 
       setMetrics({
@@ -86,15 +90,8 @@ export function InstallationDashboard() {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Verified": return "bg-green-100 text-green-800 border-green-300";
-      case "PhotoUploaded": return "bg-emerald-100 text-emerald-800 border-emerald-300";
-      case "Installed":
-      case "Mounted": return "bg-blue-100 text-blue-800 border-blue-300";
-      case "Pending": return "bg-yellow-100 text-yellow-800 border-yellow-300";
-      case "Assigned": return "bg-orange-100 text-orange-800 border-orange-300";
-      default: return "bg-gray-100 text-gray-800 border-gray-300";
-    }
+    const meta = getCampaignAssetStatusMeta(status);
+    return meta.badgeClass;
   };
 
   if (loading) {
@@ -190,7 +187,7 @@ export function InstallationDashboard() {
                           {assignment.asset_id}
                         </span>
                         <Badge className={getStatusColor(assignment.status)}>
-                          {assignment.status}
+                          {getCampaignAssetStatusMeta(assignment.status).label}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">

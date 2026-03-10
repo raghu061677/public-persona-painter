@@ -180,8 +180,10 @@ serve(withAuth(async (req) => {
   const { error: caErr } = await supabase.from("campaign_assets").insert(caPayload);
   if (caErr) return jsonError(`Failed to create campaign assets: ${caErr.message}`, 500);
 
-  // Update media_assets to Booked
-  await supabase.from("media_assets").update({ status: "Booked", booked_from: plan.start_date, booked_to: plan.end_date, current_campaign_id: campaignId }).in("id", assetIds);
+  // NOTE: media_assets.status is NO LONGER the source of truth for booking.
+  // Availability is determined dynamically from campaign_assets date overlaps.
+  // We keep a display-hint write but it's not authoritative.
+  await supabase.from("media_assets").update({ current_campaign_id: campaignId }).in("id", assetIds);
 
   // Update plan to Converted
   await supabase.from("plans").update({ status: "Converted", converted_to_campaign_id: campaignId, converted_at: new Date().toISOString() }).eq("id", planId);

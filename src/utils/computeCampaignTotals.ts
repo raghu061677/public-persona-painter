@@ -10,19 +10,25 @@
  
  const BILLING_CYCLE_DAYS = 30;
  
- export interface CampaignAsset {
-   id?: string;
-   asset_id?: string;
-   negotiated_rate?: number | null;
-   card_rate?: number | null;
-   printing_charges?: number | null;
-   mounting_charges?: number | null;
-   booking_start_date?: string | null;
-   booking_end_date?: string | null;
-   start_date?: string | null;
-   end_date?: string | null;
-   total_sqft?: number | null;
- }
+export interface CampaignAsset {
+  id?: string;
+  asset_id?: string;
+  negotiated_rate?: number | null;
+  card_rate?: number | null;
+  printing_charges?: number | null;
+  mounting_charges?: number | null;
+  booking_start_date?: string | null;
+  booking_end_date?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  total_sqft?: number | null;
+  // Drop support fields
+  is_removed?: boolean;
+  effective_start_date?: string | null;
+  effective_end_date?: string | null;
+  billing_override_amount?: number | null;
+  billing_mode_override?: string | null;
+}
  
  export interface CampaignData {
    start_date: string;
@@ -95,18 +101,32 @@ export function computeCampaignTotals({
    
    // Calculate display cost using pro-rata formula per asset with ASSET-LEVEL dates
    // Formula: (monthly_rate / 30) × asset_duration_days for each asset
+   // Dropped assets with billing overrides use the override amount
    let displayCostRaw = 0;
    let minStartDate = campaignStartDate;
    let maxEndDate = campaignEndDate;
    
+   // Count active (non-removed) assets for totalAssets
+   const activeAssets = campaignAssets.filter(a => !a.is_removed);
+   
    for (const asset of campaignAssets) {
-     // Use asset-level dates, falling back to campaign dates
-     const assetStart = asset.booking_start_date 
-       ? new Date(asset.booking_start_date) 
-       : (asset.start_date ? new Date(asset.start_date) : campaignStartDate);
-     const assetEnd = asset.booking_end_date 
-       ? new Date(asset.booking_end_date) 
-       : (asset.end_date ? new Date(asset.end_date) : campaignEndDate);
+     // For dropped assets with manual billing override, use that amount directly
+     if (asset.is_removed && asset.billing_mode_override === 'manual_override' && asset.billing_override_amount != null) {
+       displayCostRaw += Number(asset.billing_override_amount);
+       continue;
+     }
+
+     // Use effective dates (which account for drops), falling back to booking/campaign dates
+     const assetStart = asset.effective_start_date 
+       ? new Date(asset.effective_start_date) 
+       : (asset.booking_start_date 
+         ? new Date(asset.booking_start_date) 
+         : (asset.start_date ? new Date(asset.start_date) : campaignStartDate));
+     const assetEnd = asset.effective_end_date 
+       ? new Date(asset.effective_end_date) 
+       : (asset.booking_end_date 
+         ? new Date(asset.booking_end_date) 
+         : (asset.end_date ? new Date(asset.end_date) : campaignEndDate));
      
      // Calculate this asset's duration in days (inclusive)
      const assetDurationDays = Math.ceil((assetEnd.getTime() - assetStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
@@ -115,9 +135,11 @@ export function computeCampaignTotals({
      const proRataAmount = (monthlyRate / BILLING_CYCLE_DAYS) * assetDurationDays;
      displayCostRaw += proRataAmount;
      
-     // Track min/max dates for campaign period
-     if (assetStart < minStartDate) minStartDate = assetStart;
-     if (assetEnd > maxEndDate) maxEndDate = assetEnd;
+     // Track min/max dates for campaign period (only active assets)
+     if (!asset.is_removed) {
+       if (assetStart < minStartDate) minStartDate = assetStart;
+       if (assetEnd > maxEndDate) maxEndDate = assetEnd;
+     }
    }
    const displayCost = Math.round(displayCostRaw * 100) / 100;
    
@@ -126,9 +148,9 @@ export function computeCampaignTotals({
    const campaignPeriodEnd = maxEndDate;
    const durationDays = Math.ceil((campaignPeriodEnd.getTime() - campaignPeriodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
    
-   // Sum printing and mounting from campaign_assets
-   const printingCost = campaignAssets.reduce((sum, a) => sum + (Number(a.printing_charges) || 0), 0);
-   const mountingCost = campaignAssets.reduce((sum, a) => sum + (Number(a.mounting_charges) || 0), 0);
+   // Sum printing and mounting from campaign_assets (only non-removed for one-time charges)
+   const printingCost = activeAssets.reduce((sum, a) => sum + (Number(a.printing_charges) || 0), 0);
+   const mountingCost = activeAssets.reduce((sum, a) => sum + (Number(a.mounting_charges) || 0), 0);
    
    // Calculate gross amount (before discount)
    const grossAmount = Math.round((displayCost + printingCost + mountingCost) * 100) / 100;
@@ -179,7 +201,7 @@ export function computeCampaignTotals({
      totalMonths,
      monthlyDisplayRent,
      billingPeriods,
-     totalAssets: campaignAssets.length,
+     totalAssets: activeAssets.length,
    };
  }
  

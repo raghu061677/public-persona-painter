@@ -998,15 +998,21 @@ export default function CampaignEdit() {
 
       if (campaignError) throw campaignError;
 
-      // Delete removed assets from campaign_assets
+      // Soft-remove dropped assets (non-destructive — preserves history)
       if (deletedAssetIds.length > 0) {
-        const { error: deleteError } = await supabase
+        const today = new Date().toISOString().split('T')[0];
+        const { error: dropError } = await supabase
           .from('campaign_assets')
-          .delete()
+          .update({
+            is_removed: true,
+            dropped_on: today,
+            drop_reason: 'Removed during campaign edit',
+            effective_end_date: today,
+          })
           .in('id', deletedAssetIds);
         
-        if (deleteError) {
-          console.error('Error deleting assets:', deleteError);
+        if (dropError) {
+          console.error('Error soft-removing assets:', dropError);
         }
       }
 

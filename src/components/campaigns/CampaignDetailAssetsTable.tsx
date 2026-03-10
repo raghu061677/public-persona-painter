@@ -29,16 +29,18 @@
  import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
  import { formatCurrency } from "@/utils/mediaAssets";
  import { getAssetStatusColor } from "@/utils/campaigns";
- import {
-   Upload,
-   Search,
-   ArrowUpDown,
-   ArrowUp,
-   ArrowDown,
-   X,
-   Settings2,
- } from "lucide-react";
- import { cn } from "@/lib/utils";
+import {
+  Upload,
+  Search,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  X,
+  Settings2,
+  Ban,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { DropAssetDialog } from "./DropAssetDialog";
  
  interface CampaignAsset {
    id: string;
@@ -60,6 +62,13 @@
     start_date?: string;
     end_date?: string;
     photo_count?: number;
+    is_removed?: boolean;
+    dropped_on?: string;
+    drop_reason?: string;
+    effective_start_date?: string;
+    effective_end_date?: string;
+    booking_start_date?: string;
+    booking_end_date?: string;
   }
  
  type SortField =
@@ -107,13 +116,18 @@
    companyName?: string;
  }
  
- export function CampaignDetailAssetsTable({
+export function CampaignDetailAssetsTable({
    assets,
    campaignId,
    companyPrefix,
    companyName,
- }: CampaignDetailAssetsTableProps) {
+   onRefresh,
+ }: CampaignDetailAssetsTableProps & { onRefresh?: () => void }) {
    const navigate = useNavigate();
+   
+   // Drop dialog state
+   const [dropDialogOpen, setDropDialogOpen] = useState(false);
+   const [dropTarget, setDropTarget] = useState<CampaignAsset | null>(null);
    
    // State for filtering, sorting, and column visibility
    const [searchTerm, setSearchTerm] = useState("");
@@ -541,9 +555,12 @@
                  </TableCell>
                </TableRow>
              ) : (
-                filteredAndSortedAssets.map((asset) => {
+              filteredAndSortedAssets.map((asset) => {
                   const hasPhotos = (asset.photo_count || 0) > 0;
-                  const rowBorderClass = hasPhotos
+                  const isDropped = asset.is_removed === true;
+                  const rowBorderClass = isDropped
+                    ? 'border-l-4 border-l-orange-400 opacity-60'
+                    : hasPhotos
                     ? 'border-l-4 border-l-green-500'
                     : 'border-l-4 border-l-red-400';
                   return (
@@ -595,9 +612,15 @@
                    )}
                    {isColumnVisible("status") && (
                      <TableCell>
-                       <Badge className={getAssetStatusColor(asset.status)}>
-                         {asset.status}
-                       </Badge>
+                       {asset.is_removed ? (
+                         <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-300">
+                           Dropped{asset.dropped_on ? ` on ${asset.dropped_on}` : ''}
+                         </Badge>
+                       ) : (
+                         <Badge className={getAssetStatusColor(asset.status)}>
+                           {asset.status}
+                         </Badge>
+                       )}
                      </TableCell>
                    )}
                    {isColumnVisible("mounter_name") && (
@@ -605,14 +628,32 @@
                    )}
                    {isColumnVisible("actions") && (
                      <TableCell className="text-right">
-                       <Button
-                         variant="outline"
-                         size="sm"
-                         onClick={() => navigate(`/mobile/upload/${campaignId}/${asset.id}`)}
-                       >
-                         <Upload className="mr-2 h-4 w-4" />
-                         Upload
-                       </Button>
+                       <div className="flex items-center justify-end gap-1">
+                         {!asset.is_removed && (
+                           <>
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => navigate(`/mobile/upload/${campaignId}/${asset.id}`)}
+                             >
+                               <Upload className="mr-1 h-3 w-3" />
+                               Upload
+                             </Button>
+                             <Button
+                               variant="ghost"
+                               size="sm"
+                               className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                               onClick={() => { setDropTarget(asset); setDropDialogOpen(true); }}
+                               title="Drop this asset from campaign"
+                             >
+                               <Ban className="h-3.5 w-3.5" />
+                             </Button>
+                           </>
+                         )}
+                         {asset.is_removed && (
+                           <span className="text-xs text-muted-foreground italic">Dropped</span>
+                         )}
+                       </div>
                      </TableCell>
                    )}
                   </TableRow>
@@ -621,7 +662,15 @@
              )}
            </TableBody>
          </Table>
-       </div>
-     </div>
+      </div>
+      
+      {/* Drop Asset Dialog */}
+      <DropAssetDialog
+        open={dropDialogOpen}
+        onOpenChange={setDropDialogOpen}
+        campaignAsset={dropTarget}
+        onDropComplete={onRefresh}
+      />
+      </div>
    );
  }

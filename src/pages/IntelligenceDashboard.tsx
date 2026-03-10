@@ -46,8 +46,15 @@ export default function IntelligenceDashboard() {
   };
 
   const loadVacantAssets = async () => {
-    const { data } = await supabase.from("media_assets").select("id, city, area, media_type, card_rate, status, next_available_from").eq("status", "Available").order("card_rate", { ascending: false }).limit(20);
-    setVacantAssets(data || []);
+    // Use campaign_assets overlap logic instead of stale media_assets.status
+    // For the intelligence dashboard, fetch all assets and let the availability engine classify
+    const { data } = await supabase.from("media_assets").select("id, city, area, media_type, card_rate, status").order("card_rate", { ascending: false }).limit(100);
+    // Filter to those not currently in any active campaign_assets
+    const allIds = (data || []).map(a => a.id);
+    const today = new Date().toISOString().split('T')[0];
+    const { data: booked } = await supabase.from("campaign_assets").select("asset_id").in("asset_id", allIds.slice(0, 100)).eq("is_removed", false).lte("effective_start_date", today).gte("effective_end_date", today);
+    const bookedSet = new Set((booked || []).map(b => b.asset_id));
+    setVacantAssets((data || []).filter(a => !bookedSet.has(a.id)).slice(0, 20));
   };
 
   const loadEndingCampaigns = async () => {
@@ -70,16 +77,21 @@ export default function IntelligenceDashboard() {
   };
 
   const loadStats = async () => {
-    const [{ count: activeCount }, { count: vacantCount }, { count: campaignsEndingCount }, { data: revenueData }] = await Promise.all([
-      supabase.from("media_assets").select("*", { count: "exact", head: true }).eq("status", "Booked"),
-      supabase.from("media_assets").select("*", { count: "exact", head: true }).eq("status", "Available"),
+    const today = new Date().toISOString().split('T')[0];
+    // Total assets
+    const { count: totalCount } = await supabase.from("media_assets").select("*", { count: "exact", head: true });
+    // Assets with active campaign booking today (dynamic)
+    const { data: activeBookings } = await supabase.from("campaign_assets").select("asset_id").eq("is_removed", false).lte("effective_start_date", today).gte("effective_end_date", today);
+    const bookedCount = new Set((activeBookings || []).map(b => b.asset_id)).size;
+    const vacantCount = (totalCount || 0) - bookedCount;
+    const [{ count: campaignsEndingCount }, { data: revenueData }] = await Promise.all([
       supabase.from("campaigns").select("*", { count: "exact", head: true }).in("status", ["Running", "Upcoming"]),
       supabase.from("invoices").select("total_amount").eq("status", "Paid"),
     ]);
     const totalRevenue = (revenueData || []).reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
-    const total = (activeCount || 0) + (vacantCount || 0);
-    const avgOccupancy = total > 0 ? Math.round(((activeCount || 0) / total) * 100) : 0;
-    setStats({ totalRevenue, activeAssets: activeCount || 0, vacantCount: vacantCount || 0, avgOccupancy, campaignsEnding: campaignsEndingCount || 0, recommendationsCount: recommendations.length });
+    const total = totalCount || 0;
+    const avgOccupancy = total > 0 ? Math.round((bookedCount / total) * 100) : 0;
+    setStats({ totalRevenue, activeAssets: bookedCount, vacantCount, avgOccupancy, campaignsEnding: campaignsEndingCount || 0, recommendationsCount: recommendations.length });
   };
 
   const dismissRecommendation = async (id: string) => {

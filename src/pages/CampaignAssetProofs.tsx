@@ -373,6 +373,7 @@ export default function CampaignAssetProofs() {
         <PhotoUploadSection
           campaignId={campaignId}
           assetId={asset.id}
+          mediaAssetId={asset.asset_id}
           onUploadComplete={handleUploadComplete}
         />
       )}

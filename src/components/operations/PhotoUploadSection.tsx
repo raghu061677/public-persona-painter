@@ -342,7 +342,7 @@ export function PhotoUploadSection({ campaignId, assetId, mediaAssetId, onUpload
 
       toast({
         title: "Upload Complete",
-        description: `Successfully uploaded ${watermarkedFiles.length} watermarked proof photo${watermarkedFiles.length !== 1 ? 's' : ''}. Asset status updated to Installed.`,
+        description: `Successfully uploaded ${watermarkedFiles.length} watermarked proof photo${watermarkedFiles.length !== 1 ? 's' : ''}.`,
       });
 
       // Cleanup preview URLs

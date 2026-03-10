@@ -13,6 +13,7 @@ import { formatINR, generateInvoiceId } from "@/utils/finance";
 import { useCompany } from "@/contexts/CompanyContext";
 import { ProfitabilityGateDialog } from "@/components/campaigns/ProfitabilityGateDialog";
 import { useCampaignProfitability, isProfitLockEnabled, getMinMarginThreshold } from "@/hooks/useCampaignProfitability";
+import { useEmailTrigger, buildInvoicePayload } from "@/hooks/useEmailTrigger";
 
 interface Campaign {
   id: string;

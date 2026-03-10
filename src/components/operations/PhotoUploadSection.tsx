@@ -194,7 +194,7 @@ export function PhotoUploadSection({ campaignId, assetId, mediaAssetId, onUpload
     }
 
     // Use the resolved media asset ID for storing in database
-    const uploadAssetId = resolvedMediaAssetId || assetId;
+    const uploadAssetId = mediaAssetId || resolvedMediaAssetId || assetId;
 
     const files = previewFiles.map(p => p.file);
     if (DEBUG) console.log(`Processing ${files.length} files for upload`);

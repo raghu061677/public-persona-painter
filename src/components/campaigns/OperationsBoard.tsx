@@ -241,8 +241,8 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
                     <div className="flex items-center gap-2">
                       <Label className="text-sm">Status:</Label>
                       <Select
-                        value={asset.status}
-                        onValueChange={(value) => handleStatusChange(asset.id, value as 'Pending' | 'Assigned' | 'Mounted' | 'PhotoUploaded' | 'Verified')}
+                        value={normalizeStatus(asset.status)}
+                        onValueChange={(value) => handleStatusChange(asset.id, value as CanonicalStatus)}
                       >
                         <SelectTrigger className="w-40">
                           <SelectValue />
@@ -250,7 +250,7 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
                         <SelectContent>
                           {statusOptions.map((status) => (
                             <SelectItem key={status} value={status}>
-                              {status}
+                              {statusDisplayLabels[status]}
                             </SelectItem>
                           ))}
                         </SelectContent>

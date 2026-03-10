@@ -613,9 +613,15 @@ export function CampaignDetailAssetsTable({
                    )}
                    {isColumnVisible("status") && (
                      <TableCell>
-                       <Badge className={getAssetStatusColor(asset.status)}>
-                         {asset.status}
-                       </Badge>
+                       {asset.is_removed ? (
+                         <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-300">
+                           Dropped{asset.dropped_on ? ` on ${asset.dropped_on}` : ''}
+                         </Badge>
+                       ) : (
+                         <Badge className={getAssetStatusColor(asset.status)}>
+                           {asset.status}
+                         </Badge>
+                       )}
                      </TableCell>
                    )}
                    {isColumnVisible("mounter_name") && (

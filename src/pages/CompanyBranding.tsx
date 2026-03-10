@@ -12,10 +12,12 @@ import { ClientPortalPreview } from "@/components/settings/ClientPortalPreview";
 import { WatermarkCustomizer } from "@/components/settings/WatermarkCustomizer";
 import { CompanyLogo } from "@/components/branding/CompanyLogo";
 import { applyCompanyBranding, hexToHSL } from "@/lib/branding";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 
 export default function CompanyBranding() {
   const { company, refreshCompany } = useCompany();
   const { toast } = useToast();
+  const { isReadOnly } = useSettingsReadOnly();
   const [loading, setLoading] = useState(false);
   const [primaryColor, setPrimaryColor] = useState(company?.theme_color || '#1e40af');
   const [secondaryColor, setSecondaryColor] = useState(company?.secondary_color || '#10b981');

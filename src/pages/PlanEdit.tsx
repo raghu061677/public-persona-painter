@@ -789,6 +789,7 @@ export default function PlanEdit() {
                     onChange={(e) => setFormData(prev => ({ ...prev, plan_name: e.target.value }))}
                     placeholder="e.g., Q1 2025 Campaign"
                     className="h-10"
+                    disabled={isReadOnly}
                   />
                 </div>
                 <div className="space-y-2">

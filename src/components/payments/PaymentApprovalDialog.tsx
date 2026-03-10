@@ -55,6 +55,8 @@ export function PaymentApprovalDialog({
 }: PaymentApprovalDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const { trigger: triggerEmail, ConfirmDialog: EmailConfirmDialog } = useEmailTrigger();
+  const { company } = useCompany();
 
   // Form state with defaults from claimed values
   const [amount, setAmount] = useState(confirmation.claimed_amount.toString());

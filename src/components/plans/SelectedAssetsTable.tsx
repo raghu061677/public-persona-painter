@@ -625,7 +625,7 @@ export function SelectedAssetsTable({
               {isColumnVisible('printing') && <TableHead className="w-48">Printing Cost</TableHead>}
               {isColumnVisible('mounting') && <TableHead className="w-48">Mounting Cost</TableHead>}
               {isColumnVisible('total') && <TableHead className="text-right">Line Total</TableHead>}
-              <TableHead className="w-12"></TableHead>
+              {onRemove && <TableHead className="w-12"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>

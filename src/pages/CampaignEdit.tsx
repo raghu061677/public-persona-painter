@@ -333,7 +333,7 @@ export default function CampaignEdit() {
         const monthlyRate = Number(asset.negotiated_rate) || Number(asset.card_rate) || 0;
         
         // ALWAYS recalculate rent to avoid precision errors from stored rounded values
-        const effectiveBillingMode: BillingMode = (asset.billing_mode as BillingMode) || (campaign.billing_cycle === 'DAILY' ? 'PRORATA_30' : 'FULL_MONTH');
+        const effectiveBillingMode: BillingMode = (asset.billing_mode as BillingMode) || 'PRORATA_30';
         const rentResult = assetStartDate && assetEndDate 
           ? computeRentAmount(monthlyRate, assetStartDate, assetEndDate, effectiveBillingMode)
           : { booked_days: 0, daily_rate: 0, rent_amount: 0, billing_mode: effectiveBillingMode };

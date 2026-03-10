@@ -1042,5 +1042,7 @@ export function MonthlyInvoiceGenerator({
         />
       )}
     </Dialog>
+    {EmailConfirmDialog}
+    </>
   );
 }

@@ -637,6 +637,7 @@ export default function CampaignDetail() {
                     campaignId={campaign.id}
                     companyPrefix={assetCodePrefix}
                     companyName={company?.name}
+                    onRefresh={refreshData}
                   />
                 </CardContent>
               </Card>

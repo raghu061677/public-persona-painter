@@ -74,7 +74,7 @@ export async function dispatchCampaignEndingSoon(companyId: string, withinDays =
     .from('campaigns')
     .select('id, campaign_name, client_name, client_id, start_date, end_date, company_id')
     .eq('company_id', companyId)
-    .in('status', ['Running', 'InProgress', 'Active'])
+    .in('status', ['Running', 'InProgress'])
     .lte('end_date', futureDate)
     .gte('end_date', today);
 

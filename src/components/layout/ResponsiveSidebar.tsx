@@ -46,6 +46,7 @@ export function ResponsiveSidebar() {
    const [proofUploadsCount, setProofUploadsCount] = useState(0);
  
   const isCompanyAdmin = companyUser?.role === 'admin' || isAdmin;
+  const canViewSettings = rbac.canAccessModule('settings');
   const collapsed = state === "collapsed";
   const isActive = (path: string) => location.pathname === path;
 

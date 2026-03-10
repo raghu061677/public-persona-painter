@@ -982,6 +982,16 @@ export default function PlanDetail() {
         description: `Campaign created with ${result.total_items || planItems.length} assets`,
       });
 
+      // Trigger email notifications for plan conversion
+      const payload = buildPlanPayload(plan, clientDetails, company);
+      payload.campaign_code = result.campaign_id || '';
+      payload.campaign_name = plan?.plan_name || '';
+      triggerEmail('plan_converted_to_campaign_internal', payload,
+        [{ to: company?.email || '' }], id);
+      // Also trigger campaign_created_internal
+      triggerEmail('campaign_created_internal', payload,
+        [{ to: company?.email || '' }], result.campaign_id);
+
       setShowConvertDialog(false);
       
       // Redirect to new campaign

@@ -4579,60 +4579,81 @@ export type Database = {
       }
       email_outbox: {
         Row: {
+          attempt_count: number | null
           company_id: string | null
           created_at: string
           entity_id: string | null
           entity_type: string | null
+          event_key: string | null
+          failed_at: string | null
           html_rendered: string
           id: string
           last_error: string | null
+          payload_json: Json | null
           provider_config_id: string | null
           recipient_bcc: string | null
           recipient_cc: string | null
           recipient_to: string
+          recipient_type: string | null
           retry_count: number
           scheduled_at: string | null
           sent_at: string | null
+          source_id: string | null
+          source_module: string | null
           status: string
           subject_rendered: string
           template_key: string | null
           text_rendered: string | null
         }
         Insert: {
+          attempt_count?: number | null
           company_id?: string | null
           created_at?: string
           entity_id?: string | null
           entity_type?: string | null
+          event_key?: string | null
+          failed_at?: string | null
           html_rendered: string
           id?: string
           last_error?: string | null
+          payload_json?: Json | null
           provider_config_id?: string | null
           recipient_bcc?: string | null
           recipient_cc?: string | null
           recipient_to: string
+          recipient_type?: string | null
           retry_count?: number
           scheduled_at?: string | null
           sent_at?: string | null
+          source_id?: string | null
+          source_module?: string | null
           status?: string
           subject_rendered: string
           template_key?: string | null
           text_rendered?: string | null
         }
         Update: {
+          attempt_count?: number | null
           company_id?: string | null
           created_at?: string
           entity_id?: string | null
           entity_type?: string | null
+          event_key?: string | null
+          failed_at?: string | null
           html_rendered?: string
           id?: string
           last_error?: string | null
+          payload_json?: Json | null
           provider_config_id?: string | null
           recipient_bcc?: string | null
           recipient_cc?: string | null
           recipient_to?: string
+          recipient_type?: string | null
           retry_count?: number
           scheduled_at?: string | null
           sent_at?: string | null
+          source_id?: string | null
+          source_module?: string | null
           status?: string
           subject_rendered?: string
           template_key?: string | null
@@ -4878,49 +4899,64 @@ export type Database = {
       }
       email_templates: {
         Row: {
+          audience: string | null
+          category: string | null
           channel: string
           company_id: string
           created_at: string | null
+          description: string | null
           html_template: string
           id: string
           is_active: boolean | null
           is_system: boolean
+          send_mode: string | null
           subject_template: string
           template_key: string
           template_name: string
           text_template: string | null
+          trigger_event: string | null
           updated_at: string | null
           variables_json: Json | null
           version: number
         }
         Insert: {
+          audience?: string | null
+          category?: string | null
           channel?: string
           company_id: string
           created_at?: string | null
+          description?: string | null
           html_template?: string
           id?: string
           is_active?: boolean | null
           is_system?: boolean
+          send_mode?: string | null
           subject_template: string
           template_key: string
           template_name: string
           text_template?: string | null
+          trigger_event?: string | null
           updated_at?: string | null
           variables_json?: Json | null
           version?: number
         }
         Update: {
+          audience?: string | null
+          category?: string | null
           channel?: string
           company_id?: string
           created_at?: string | null
+          description?: string | null
           html_template?: string
           id?: string
           is_active?: boolean | null
           is_system?: boolean
+          send_mode?: string | null
           subject_template?: string
           template_key?: string
           template_name?: string
           text_template?: string | null
+          trigger_event?: string | null
           updated_at?: string | null
           variables_json?: Json | null
           version?: number

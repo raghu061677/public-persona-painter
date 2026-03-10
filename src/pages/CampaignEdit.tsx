@@ -55,6 +55,8 @@ import { ApplyDatesToAssetsDialog } from "@/components/campaigns/ApplyDatesToAss
 import { computeCampaignTotals } from "@/utils/computeCampaignTotals";
 import { BulkPrintingDialog } from "@/components/plans/BulkPrintingDialog";
 import { BulkMountingDialog } from "@/components/plans/BulkMountingDialog";
+import { useRecordPermissions } from "@/hooks/useRecordAccessMode";
+import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
 
 // Campaign asset interface
 interface CampaignAsset {

@@ -12924,6 +12924,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      invoke_scheduled_email_dispatch: { Args: never; Returns: undefined }
       is_company_member: { Args: { _company_id: string }; Returns: boolean }
       is_field_operations_user: { Args: { _user_id: string }; Returns: boolean }
       is_fy_locked: {

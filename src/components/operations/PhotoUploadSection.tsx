@@ -39,7 +39,7 @@ interface PreviewFile {
   previewUrl: string;
 }
 
-export function PhotoUploadSection({ campaignId, assetId, onUploadComplete }: PhotoUploadSectionProps) {
+export function PhotoUploadSection({ campaignId, assetId, mediaAssetId, onUploadComplete }: PhotoUploadSectionProps) {
   const { company } = useCompany();
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);

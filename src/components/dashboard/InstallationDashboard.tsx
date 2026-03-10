@@ -66,7 +66,10 @@ export function InstallationDashboard() {
         new Date(a.completed_at || "").toDateString() === today
       ).length || 0;
       const pendingInstalls = assignments?.filter(
-        a => a.status === "Pending" || a.status === "Assigned"
+        a => {
+          const s = normalizeCampaignAssetStatus(a.status);
+          return s === "Pending" || s === "Assigned";
+        }
       ).length || 0;
       const proofsPending = assignments?.filter(
         a => normalizeCampaignAssetStatus(a.status) === "Installed" && !a.photos

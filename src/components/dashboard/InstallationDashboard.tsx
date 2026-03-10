@@ -13,6 +13,7 @@ import {
   Camera
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { normalizeCampaignAssetStatus, getCampaignAssetStatusMeta } from "@/lib/constants/campaignAssetStatus";
 
 interface InstallationMetrics {
   totalAssignments: number;

@@ -1017,7 +1017,7 @@ export default function PlanEdit() {
           )}
 
           {/* Actions - Hidden for non-owners */}
-          {perms.canEditRecord && (
+          {!isReadOnly && perms.canEditRecord && (
           <div className="flex justify-end gap-4 pt-4 pb-8">
             <Button
               type="button"

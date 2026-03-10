@@ -105,8 +105,6 @@ export function AssetSelectionTable({
   const [availableFromDate, setAvailableFromDate] = useState<Date | undefined>(planStartDate);
   const [checkedAssets, setCheckedAssets] = useState<Set<string>>(new Set());
   const [sortConfig, setSortConfig] = useState<SortConfig>({ column: null, direction: null });
-  const [assetBookings, setAssetBookings] = useState<Map<string, AssetBooking>>(new Map());
-  const [loadingBookings, setLoadingBookings] = useState(false);
   
   const {
     isReady,
@@ -115,10 +113,28 @@ export function AssetSelectionTable({
     reset,
   } = useColumnPrefs('asset-selection', ALL_COLUMNS as any, DEFAULT_VISIBLE as any);
 
-  // Fetch active bookings for all assets
-  useEffect(() => {
-    fetchAssetBookings();
-  }, []);
+  // Compute date range for availability check
+  const rangeStart = useMemo(() => {
+    if (planStartDate) return toDateString(planStartDate);
+    if (availableFromDate) return toDateString(availableFromDate);
+    return toDateString(new Date());
+  }, [planStartDate, availableFromDate]);
+
+  const rangeEnd = useMemo(() => {
+    if (planEndDate) return toDateString(planEndDate);
+    // Default to 1 year from start
+    const d = new Date(rangeStart);
+    d.setFullYear(d.getFullYear() + 1);
+    return toDateString(d);
+  }, [planEndDate, rangeStart]);
+
+  // Use shared availability engine — single source of truth
+  const assetIds = useMemo(() => assets.map(a => a.id), [assets]);
+  const { getAvailability, loading: loadingBookings } = useAssetAvailability(
+    assetIds,
+    rangeStart,
+    rangeEnd
+  );
 
   // Update availableFromDate when plan dates change
   useEffect(() => {
@@ -126,52 +142,6 @@ export function AssetSelectionTable({
       setAvailableFromDate(planStartDate);
     }
   }, [planStartDate]);
-
-  const fetchAssetBookings = async () => {
-    setLoadingBookings(true);
-    try {
-      // Get all active campaign assets with their end dates
-      const { data, error } = await supabase
-        .from('campaign_assets')
-        .select(`
-          asset_id,
-          booking_end_date,
-          end_date,
-          campaigns!inner(
-            campaign_name,
-            client_name,
-            status,
-            end_date
-          )
-        `)
-        .in('campaigns.status', ['Draft', 'Upcoming', 'Running']);
-
-      if (error) throw error;
-
-      const bookingsMap = new Map<string, AssetBooking>();
-      
-      (data || []).forEach((item: any) => {
-        const endDate = item.booking_end_date || item.end_date || item.campaigns?.end_date;
-        const existing = bookingsMap.get(item.asset_id);
-        
-        // Keep the latest end date for each asset
-        if (!existing || (endDate && new Date(endDate) > new Date(existing.booked_to || ''))) {
-          bookingsMap.set(item.asset_id, {
-            asset_id: item.asset_id,
-            booked_to: endDate,
-            campaign_name: item.campaigns?.campaign_name || 'Unknown',
-            client_name: item.campaigns?.client_name || 'Unknown',
-          });
-        }
-      });
-
-      setAssetBookings(bookingsMap);
-    } catch (error) {
-      console.error('Error fetching bookings:', error);
-    } finally {
-      setLoadingBookings(false);
-    }
-  };
 
   const isColumnVisible = (key: string) => visibleKeys.includes(key);
   
@@ -186,26 +156,25 @@ export function AssetSelectionTable({
   const cities = Array.from(new Set(assets.map(a => a.city))).sort();
   const mediaTypes = Array.from(new Set(assets.map(a => a.media_type))).sort();
 
-  // Get availability info for an asset
-  const getAssetAvailability = (asset: any): { available: boolean; availableFrom: Date | null; booking?: AssetBooking } => {
-    const booking = assetBookings.get(asset.id);
+  // Get availability info for an asset using shared engine
+  const getAssetAvailabilityInfo = (asset: any) => {
+    const result = getAvailability(asset.id);
+    const isVacant = result.availability === 'Vacant';
     
-    if (asset.status === 'Available' && !booking) {
-      return { available: true, availableFrom: null };
+    // Calculate availableFrom if asset is booked
+    let availableFrom: Date | null = null;
+    if (!isVacant && result.endDate) {
+      const end = new Date(result.endDate);
+      availableFrom = addDays(end, 1);
     }
     
-    if (booking?.booked_to) {
-      const bookedTo = new Date(booking.booked_to);
-      const availableFrom = addDays(bookedTo, 1);
-      return { available: false, availableFrom, booking };
-    }
-    
-    // Asset is booked but no end date - not available
-    if (asset.status === 'Booked' || booking) {
-      return { available: false, availableFrom: null, booking };
-    }
-    
-    return { available: true, availableFrom: null };
+    return {
+      available: isVacant,
+      availableFrom,
+      availability: result.availability,
+      sourceNumber: result.sourceNumber,
+      clientName: result.clientName,
+    };
   };
 
   // Calculate asset counts by category

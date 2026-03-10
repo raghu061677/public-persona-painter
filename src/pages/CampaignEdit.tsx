@@ -1101,6 +1101,12 @@ export default function CampaignEdit() {
     );
   }
 
+  // Block edit page for non-owners — redirect to detail view
+  if (campaignRecord && !perms.canEditRecord) {
+    navigate(`/admin/campaigns/${id}`);
+    return null;
+  }
+
   const { subtotal, printingTotal, mountingTotal, grossAmount, totalAmount, gstAmount, grandTotal, effectiveGstPercent, durationDays } = calculateTotals();
   const existingAssetIds = campaignAssets.map(a => a.asset_id);
 

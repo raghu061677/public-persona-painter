@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { useEmailTrigger, buildInvoicePayload } from "@/hooks/useEmailTrigger";
+import { useCompany } from "@/contexts/CompanyContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,

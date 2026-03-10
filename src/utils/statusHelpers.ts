@@ -59,7 +59,7 @@ export const campaignStatusConfig: Record<CampaignStatus, {
     description: 'Work ongoing'
   },
   'PhotoUploaded': {
-    label: 'Photo Uploaded',
+    label: 'Completed',
     variant: 'default',
     description: 'Proof uploaded'
   },

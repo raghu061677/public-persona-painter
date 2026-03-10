@@ -190,7 +190,13 @@ export function SelectedAssetsTable({
   planId,
   planClientId,
   planClientName,
+  canViewFinancials = true,
 }: SelectedAssetsTableProps) {
+  // Filter visible columns based on financial access
+  const isColumnAllowed = (col: string) => {
+    if (!canViewFinancials && FINANCIAL_COLUMNS.includes(col)) return false;
+    return true;
+  };
   const [loadingRates, setLoadingRates] = useState<Set<string>>(new Set());
   const [showBulkSettingsDialog, setShowBulkSettingsDialog] = useState(false);
   const [gettingSuggestion, setGettingSuggestion] = useState<string | null>(null);

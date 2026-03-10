@@ -19,6 +19,7 @@ import { ClientPortalLayout } from "@/layouts/ClientPortalLayout";
 import { PublicLayout } from "@/layouts/PublicLayout";
 import { SettingsLayout } from "@/layouts/SettingsLayout";
 import { SettingsGuard as SG } from "@/components/rbac/SettingsGuard";
+import { SettingsPageWrapper as SPW } from "@/components/rbac/SettingsPageWrapper";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { OfflineIndicator } from "@/components/pwa/OfflineIndicator";
 import { AIAssistantChat } from "@/components/assistant/AIAssistantChat";

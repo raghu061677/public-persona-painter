@@ -54,6 +54,8 @@ export default function PlanNew() {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const submittingRef = useRef(false); // Hard guard against double submit
+  const { trigger: triggerEmail, ConfirmDialog: EmailConfirmDialog } = useEmailTrigger();
+  const { company } = useCompany();
   const [exportingProposal, setExportingProposal] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
   const [availableAssets, setAvailableAssets] = useState<any[]>([]);

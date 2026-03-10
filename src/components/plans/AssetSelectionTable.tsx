@@ -184,7 +184,7 @@ export function AssetSelectionTable({
     let availableByDate = 0;
 
     assets.forEach(asset => {
-      const availability = getAssetAvailability(asset);
+      const availability = getAssetAvailabilityInfo(asset);
       if (availability.available) {
         availableNow++;
       } else {
@@ -202,10 +202,10 @@ export function AssetSelectionTable({
     return {
       availableNow,
       booked,
-      availableByDate: availableNow + availableByDate, // Total available by date = currently available + becoming available
+      availableByDate: availableNow + availableByDate,
       total: assets.length,
     };
-  }, [assets, assetBookings, availableFromDate]);
+  }, [assets, availableFromDate, getAvailability]);
 
   const filteredAssets = useMemo(() => {
     return assets.filter(asset => {
@@ -218,14 +218,13 @@ export function AssetSelectionTable({
       const matchesCity = cityFilter === "all" || asset.city === cityFilter;
       const matchesType = mediaTypeFilter === "all" || asset.media_type === mediaTypeFilter;
       
-      // Availability filter logic
-      const availability = getAssetAvailability(asset);
+      // Availability filter logic using shared engine
+      const availability = getAssetAvailabilityInfo(asset);
       let matchesAvailability = true;
       
       if (availabilityFilter === 'available_now') {
         matchesAvailability = availability.available;
       } else if (availabilityFilter === 'available_by_date' && availableFromDate) {
-        // Asset is available if: currently available OR will become available before the target date
         if (availability.available) {
           matchesAvailability = true;
         } else if (availability.availableFrom) {
@@ -237,11 +236,10 @@ export function AssetSelectionTable({
       } else if (availabilityFilter === 'booked') {
         matchesAvailability = !availability.available;
       }
-      // 'all' shows everything
       
       return matchesSearch && matchesCity && matchesType && matchesAvailability;
     });
-  }, [assets, searchTerm, cityFilter, mediaTypeFilter, availabilityFilter, availableFromDate, assetBookings]);
+  }, [assets, searchTerm, cityFilter, mediaTypeFilter, availabilityFilter, availableFromDate, getAvailability]);
 
   // Get current count to display based on filter
   const getCurrentFilterCount = () => {

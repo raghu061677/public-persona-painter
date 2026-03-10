@@ -357,14 +357,8 @@ export default function CampaignAssetProofs() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Status</p>
-                  <Badge className={
-                    asset.status === 'Verified' ? 'bg-green-600 text-white' :
-                    asset.status === 'PhotoUploaded' ? 'bg-emerald-500 text-white' :
-                    asset.status === 'Mounted' || asset.status === 'Installed' ? 'bg-amber-500 text-white' :
-                    asset.status === 'Assigned' ? 'bg-blue-500 text-white' :
-                    'bg-slate-500 text-white'
-                  }>
-                    {asset.status === 'PhotoUploaded' ? 'Proof Uploaded' : asset.status}
+                  <Badge className={getCampaignAssetStatusMeta(asset.status).badgeClass}>
+                    {getCampaignAssetStatusMeta(asset.status).label}
                   </Badge>
                 </div>
               </div>

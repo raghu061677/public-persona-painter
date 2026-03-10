@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Image as ImageIcon, MapPin, CheckCircle, AlertCircle, Search, ArrowUpDown, ArrowUp, ArrowDown, X, Filter, Images } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { normalizeCampaignAssetStatus, getCampaignAssetStatusMeta } from "@/lib/constants/campaignAssetStatus";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";

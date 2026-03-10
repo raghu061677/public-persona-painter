@@ -237,7 +237,7 @@ export default function OperationsCalendar() {
             <span className="text-sm font-medium">Status:</span>
             <Badge className="bg-gray-600">Pending</Badge>
             <Badge className="bg-purple-600">Assigned</Badge>
-            <Badge className="bg-amber-600">Mounted/Photos Uploaded</Badge>
+            <Badge className="bg-amber-600">Installed / Completed</Badge>
             <Badge className="bg-green-600">Verified</Badge>
           </div>
         </CardContent>

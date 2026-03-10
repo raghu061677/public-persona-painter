@@ -67,23 +67,11 @@ export function getCampaignStatusColor(status: string): string {
 }
 
 /**
- * Get status color for asset installation
+ * Get status color for asset installation — delegates to shared config
  */
 export function getAssetStatusColor(status: string): string {
-  switch (status) {
-    case 'Pending':
-      return 'bg-slate-500/10 text-slate-700 border-slate-500/20';
-    case 'Assigned':
-      return 'bg-blue-500/10 text-blue-700 border-blue-500/20';
-    case 'Mounted':
-      return 'bg-amber-500/10 text-amber-700 border-amber-500/20';
-    case 'PhotoUploaded':
-      return 'bg-purple-500/10 text-purple-700 border-purple-500/20';
-    case 'Verified':
-      return 'bg-green-500/10 text-green-700 border-green-500/20';
-    default:
-      return 'bg-muted text-muted-foreground';
-  }
+  const { getCampaignAssetStatusMeta } = require("@/lib/constants/campaignAssetStatus");
+  return getCampaignAssetStatusMeta(status).badgeClass || 'bg-muted text-muted-foreground';
 }
 
 /**

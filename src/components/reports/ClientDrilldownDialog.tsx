@@ -189,9 +189,9 @@ export function ClientDrilldownDialog({
         // Calculate proof data
         const proofByCamera: ProofData[] = formattedCampaigns.map(c => {
           const campAssets = (assetData || []).filter(a => a.campaign_id === c.id);
-          const verified = campAssets.filter(a => a.status === "Verified" || a.status === "Completed").length;
-          const uploaded = campAssets.filter(a => a.status === "PhotoUploaded" || a.status === "Installed" || a.status === "Mounted").length;
-          const pending = campAssets.filter(a => a.status === "Pending" || a.status === "Assigned").length;
+          const verified = campAssets.filter(a => { const s = normalizeCampaignAssetStatus(a.status); return s === "Verified"; }).length;
+          const uploaded = campAssets.filter(a => { const s = normalizeCampaignAssetStatus(a.status); return s === "Completed" || s === "Installed"; }).length;
+          const pending = campAssets.filter(a => { const s = normalizeCampaignAssetStatus(a.status); return s === "Pending" || s === "Assigned"; }).length;
           
           return {
             campaign_id: c.id,

@@ -282,6 +282,19 @@ export default function PlansList() {
         });
       }
 
+      // Collect unique creator IDs and batch-fetch their profiles
+      const creatorIds = [...new Set((plansData || []).map(p => p.created_by).filter(Boolean))];
+      const profileMap: Record<string, string> = {};
+      if (creatorIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, username')
+          .in('id', creatorIds);
+        (profiles || []).forEach((p: any) => {
+          if (p.username) profileMap[p.id] = p.username;
+        });
+      }
+
       // Fetch plan items with asset SQFT data for each plan
       const plansWithSqft = await Promise.all(
         (plansData || []).map(async (plan) => {
@@ -309,15 +322,11 @@ export default function PlansList() {
 
           const totalSqft = sqftBreakdown.reduce((sum, item) => sum + item.sqft, 0);
 
-          // Extract employee name from joined profile
-          const profileData = (plan as any).profiles;
-          const employeeName = profileData?.username || null;
-
           return {
             ...plan,
             total_sqft: totalSqft,
             sqft_breakdown: sqftBreakdown,
-            employee_name: employeeName,
+            employee_name: profileMap[plan.created_by] || null,
           };
         })
       );

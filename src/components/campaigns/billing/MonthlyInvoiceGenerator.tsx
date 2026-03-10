@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { useEmailTrigger, buildInvoicePayload } from "@/hooks/useEmailTrigger";
+import { useCompany } from "@/contexts/CompanyContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -233,6 +235,8 @@ export function MonthlyInvoiceGenerator({
   const [companyState, setCompanyState] = useState<string>('');
   const [showProfitGate, setShowProfitGate] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { company } = useCompany();
+  const { trigger: triggerEmail, ConfirmDialog: EmailConfirmDialog } = useEmailTrigger();
 
   // Profitability check
   const { data: profitability } = useCampaignProfitability(campaign.id, campaign.company_id, 0);
@@ -665,6 +669,20 @@ export function MonthlyInvoiceGenerator({
         });
       
       await Promise.all(assetUpdates);
+
+      // Trigger email notifications for the generated invoice
+      try {
+        const invoiceData = { id: invoiceId, invoice_no: invoiceId, invoice_date: format(new Date(), 'yyyy-MM-dd'), due_date: format(dueDate, 'yyyy-MM-dd'), total_amount: totals.grandTotal, balance_due: totals.grandTotal, client_name: campaign.client_name };
+        const emailPayload = buildInvoicePayload(invoiceData, { name: campaign.client_name }, company);
+        triggerEmail('invoice_generated_internal', emailPayload, [{ to: company?.email || '' }], invoiceId);
+        // Client notification (confirm mode via template send_mode)
+        const { data: client } = await supabase.from('clients').select('email, name').eq('id', campaign.client_id).single();
+        if (client?.email) {
+          triggerEmail('invoice_generated_client', emailPayload, [{ to: client.email, name: client.name }], invoiceId);
+        }
+      } catch (emailErr) {
+        console.warn('[MonthlyInvoiceGenerator] Email trigger failed (non-blocking):', emailErr);
+      }
       
       toast({
         title: "Invoice Generated",
@@ -690,6 +708,7 @@ export function MonthlyInvoiceGenerator({
   const mountingBilledCount = billingPreviews.filter(p => p.mountingAlreadyBilled).length;
   
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -1024,5 +1043,7 @@ export function MonthlyInvoiceGenerator({
         />
       )}
     </Dialog>
+    {EmailConfirmDialog}
+    </>
   );
 }

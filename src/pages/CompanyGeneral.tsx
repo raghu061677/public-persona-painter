@@ -6,9 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Settings, Save, Calendar, Globe } from "lucide-react";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 
 export default function CompanyGeneral() {
   const { toast } = useToast();
+  const { isReadOnly } = useSettingsReadOnly();
   const [loading, setLoading] = useState(false);
 
   const handleSave = () => {

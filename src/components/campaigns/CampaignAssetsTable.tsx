@@ -1,4 +1,9 @@
 import { useState, useMemo } from "react";
+import {
+  normalizeCampaignAssetStatus,
+  getNextAllowedCampaignAssetStatuses,
+  CAMPAIGN_ASSET_STATUS_META,
+} from "@/lib/constants/campaignAssetStatus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -796,18 +801,17 @@ export function CampaignAssetsTable({
                         <div className="flex items-center gap-1">
                           <Input
                             type="number"
-                            value={asset.mounting_rate_per_sqft || ""}
-                            onChange={(e) =>
-                              onUpdateMountingRate(asset.id, Number(e.target.value))
-                            }
-                            className="h-8 w-16 text-right text-xs"
-                            placeholder="₹/sqft"
-                            step="0.5"
+                            value={asset.mounting_cost || ""}
+                            onChange={(e) => {
+                              const val = Number(e.target.value) || 0;
+                              onUpdateAsset(originalIndex, "mounting_cost", val);
+                              onUpdateAsset(originalIndex, "mounting_charges", val);
+                            }}
+                            className="h-8 w-20 text-right text-xs"
+                            placeholder="₹ Fixed"
+                            step="100"
                           />
-                          <span className="text-muted-foreground">→</span>
-                          <span className="font-medium text-green-600 min-w-[60px] text-right">
-                            {formatCurrency(asset.mounting_charges || 0)}
-                          </span>
+                          <Badge variant="outline" className="text-[10px] px-1">Fixed</Badge>
                         </div>
                       </TableCell>
                     )}
@@ -824,24 +828,34 @@ export function CampaignAssetsTable({
 
                     {isColumnVisible("status") && (
                       <TableCell>
-                        <Select
-                          value={asset.status}
-                          onValueChange={(value) =>
-                            onUpdateAsset(originalIndex, "status", value)
-                          }
-                        >
-                          <SelectTrigger className="h-8 w-28">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Pending">Pending</SelectItem>
-                            <SelectItem value="Assigned">Assigned</SelectItem>
-                            <SelectItem value="Installed">Installed</SelectItem>
-                            <SelectItem value="Mounted">Mounted</SelectItem>
-                            <SelectItem value="PhotoUploaded">Photo Uploaded</SelectItem>
-                            <SelectItem value="Verified">Verified</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        {(() => {
+                          const normalized = normalizeCampaignAssetStatus(asset.status);
+                          const currentMeta = CAMPAIGN_ASSET_STATUS_META[normalized];
+                          const nextAllowed = getNextAllowedCampaignAssetStatuses(normalized);
+                          const options = [normalized, ...nextAllowed];
+                          return (
+                            <Select
+                              value={normalized}
+                              onValueChange={(value) =>
+                                onUpdateAsset(originalIndex, "status", value)
+                              }
+                            >
+                              <SelectTrigger className={cn("h-8 w-32 text-xs", currentMeta.badgeClass)}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {options.map((s) => {
+                                  const meta = CAMPAIGN_ASSET_STATUS_META[s];
+                                  return (
+                                    <SelectItem key={s} value={s}>
+                                      <span className={cn("text-xs", meta.colorClass)}>{meta.label}</span>
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                          );
+                        })()}
                       </TableCell>
                     )}
 

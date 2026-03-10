@@ -796,18 +796,17 @@ export function CampaignAssetsTable({
                         <div className="flex items-center gap-1">
                           <Input
                             type="number"
-                            value={asset.mounting_rate_per_sqft || ""}
-                            onChange={(e) =>
-                              onUpdateMountingRate(asset.id, Number(e.target.value))
-                            }
-                            className="h-8 w-16 text-right text-xs"
-                            placeholder="₹/sqft"
-                            step="0.5"
+                            value={asset.mounting_cost || ""}
+                            onChange={(e) => {
+                              const val = Number(e.target.value) || 0;
+                              onUpdateAsset(originalIndex, "mounting_cost", val);
+                              onUpdateAsset(originalIndex, "mounting_charges", val);
+                            }}
+                            className="h-8 w-20 text-right text-xs"
+                            placeholder="₹ Fixed"
+                            step="100"
                           />
-                          <span className="text-muted-foreground">→</span>
-                          <span className="font-medium text-green-600 min-w-[60px] text-right">
-                            {formatCurrency(asset.mounting_charges || 0)}
-                          </span>
+                          <Badge variant="outline" className="text-[10px] px-1">Fixed</Badge>
                         </div>
                       </TableCell>
                     )}

@@ -90,8 +90,8 @@ export default function IntelligenceDashboard() {
     ]);
     const totalRevenue = (revenueData || []).reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
     const total = totalCount || 0;
-    const avgOccupancy = total > 0 ? Math.round(((activeCount || 0) / total) * 100) : 0;
-    setStats({ totalRevenue, activeAssets: activeCount || 0, vacantCount: vacantCount || 0, avgOccupancy, campaignsEnding: campaignsEndingCount || 0, recommendationsCount: recommendations.length });
+    const avgOccupancy = total > 0 ? Math.round((bookedCount / total) * 100) : 0;
+    setStats({ totalRevenue, activeAssets: bookedCount, vacantCount, avgOccupancy, campaignsEnding: campaignsEndingCount || 0, recommendationsCount: recommendations.length });
   };
 
   const dismissRecommendation = async (id: string) => {

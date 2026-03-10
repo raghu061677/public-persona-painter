@@ -305,20 +305,17 @@ export function AddCampaignAssetsDialog({
   const toggleAssetSelection = (assetId: string) => {
     const { info } = getBookingInfo(assets.find(a => a.id === assetId) || {});
     
-    // Block only based on RPC conflict result
-    if (!info.isSelectable) {
-      toast({
-        title: "Asset has booking conflict",
-        description: formatConflictSummary(info.conflicts),
-        variant: "destructive",
-      });
-      return;
-    }
-
     const newSelected = new Set(selectedAssets);
     if (newSelected.has(assetId)) {
       newSelected.delete(assetId);
     } else {
+      // Warn but allow selection for conflicting assets — user can set per-asset dates after adding
+      if (!info.isSelectable) {
+        toast({
+          title: "⚠️ Conflict with campaign-level dates",
+          description: `${formatConflictSummary(info.conflicts)}\n\nYou can still add this asset and adjust its per-asset booking dates to avoid the overlap.`,
+        });
+      }
       newSelected.add(assetId);
     }
     setSelectedAssets(newSelected);
@@ -624,13 +621,12 @@ export function AddCampaignAssetsDialog({
                     return (
                       <TableRow 
                         key={asset.id}
-                        className={!info.isSelectable ? "bg-destructive/5" : ""}
+                        className={!info.isSelectable ? "bg-amber-50 dark:bg-amber-950/20" : ""}
                       >
                         <TableCell>
                           <Checkbox
                             checked={selectedAssets.has(asset.id)}
                             onCheckedChange={() => toggleAssetSelection(asset.id)}
-                            disabled={!info.isSelectable}
                           />
                         </TableCell>
                         <TableCell className="text-center font-medium text-muted-foreground">
@@ -667,8 +663,8 @@ export function AddCampaignAssetsDialog({
             <p className="text-sm text-muted-foreground">
               {selectedAssets.size} asset(s) selected
               {conflictCount > 0 && (
-                <span className="ml-2 text-destructive">
-                  • {conflictCount} asset(s) unavailable due to conflicts
+                <span className="ml-2 text-amber-600">
+                  • {conflictCount} asset(s) have conflicts with campaign dates — adjust per-asset dates after adding
                 </span>
               )}
             </p>

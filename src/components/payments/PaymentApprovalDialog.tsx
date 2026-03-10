@@ -23,6 +23,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Phone, Mail, Check, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { useEmailTrigger, buildInvoicePayload } from "@/hooks/useEmailTrigger";
+import { useCompany } from "@/contexts/CompanyContext";
 
 interface PaymentConfirmation {
   id: string;

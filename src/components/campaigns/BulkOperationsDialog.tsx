@@ -19,6 +19,11 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { Users, RefreshCw } from "lucide-react";
+import {
+  CAMPAIGN_ASSET_STATUSES,
+  getCampaignAssetStatusMeta,
+  type CampaignAssetStatus,
+} from "@/lib/constants/campaignAssetStatus";
 
 interface BulkOperationsDialogProps {
   assets: any[];
@@ -44,7 +49,6 @@ export function BulkOperationsDialog({ assets, onUpdate }: BulkOperationsDialogP
   const fetchOperationsUsers = async () => {
     setLoadingUsers(true);
     try {
-      // Fetch users with operations role
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id')
@@ -54,8 +58,6 @@ export function BulkOperationsDialog({ assets, onUpdate }: BulkOperationsDialogP
 
       if (userRoles && userRoles.length > 0) {
         const userIds = userRoles.map(ur => ur.user_id);
-        
-        // Fetch profiles for these users
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('id, username')
@@ -66,11 +68,6 @@ export function BulkOperationsDialog({ assets, onUpdate }: BulkOperationsDialogP
       }
     } catch (error: any) {
       console.error('Error fetching users:', error);
-      toast({
-        title: "Warning",
-        description: "Could not load operations users",
-        variant: "destructive",
-      });
     } finally {
       setLoadingUsers(false);
     }
@@ -94,39 +91,23 @@ export function BulkOperationsDialog({ assets, onUpdate }: BulkOperationsDialogP
 
   const handleBulkOperation = async () => {
     if (selectedAssets.length === 0) {
-      toast({
-        title: "Error",
-        description: "Please select at least one asset",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Please select at least one asset", variant: "destructive" });
       return;
     }
 
     if ((operation === 'assign' || operation === 'reassign') && !selectedUserId) {
-      toast({
-        title: "Error",
-        description: "Please select a user",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Please select a user", variant: "destructive" });
       return;
     }
 
     if (operation === 'status' && !newStatus) {
-      toast({
-        title: "Error",
-        description: "Please select status",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Please select status", variant: "destructive" });
       return;
     }
 
     const selectedUser = users.find(u => u.id === selectedUserId);
     if ((operation === 'assign' || operation === 'reassign') && !selectedUser) {
-      toast({
-        title: "Error",
-        description: "Invalid user selection",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Invalid user selection", variant: "destructive" });
       return;
     }
 
@@ -150,10 +131,7 @@ export function BulkOperationsDialog({ assets, onUpdate }: BulkOperationsDialogP
       if (error) throw error;
 
       const actionText = operation === 'reassign' ? 'reassigned' : operation === 'assign' ? 'assigned' : 'updated';
-      toast({
-        title: "Success",
-        description: `Successfully ${actionText} ${selectedAssets.length} asset(s)`,
-      });
+      toast({ title: "Success", description: `Successfully ${actionText} ${selectedAssets.length} asset(s)` });
 
       setOpen(false);
       setSelectedAssets([]);
@@ -161,17 +139,11 @@ export function BulkOperationsDialog({ assets, onUpdate }: BulkOperationsDialogP
       setNewStatus("");
       onUpdate();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setProcessing(false);
     }
   };
-
-  const statusOptions = ['Pending', 'Assigned', 'Mounted', 'PhotoUploaded', 'Verified'];
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -209,18 +181,16 @@ export function BulkOperationsDialog({ assets, onUpdate }: BulkOperationsDialogP
               {loadingUsers ? (
                 <div className="text-sm text-muted-foreground">Loading users...</div>
               ) : users.length === 0 ? (
-                <div className="text-sm text-muted-foreground p-3 border rounded-md bg-muted">
-                  No operations users found. Please assign operations role to users first.
-                </div>
+                <div className="text-sm text-muted-foreground">No operations users found</div>
               ) : (
                 <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Choose a user..." />
+                    <SelectValue placeholder="Select user" />
                   </SelectTrigger>
                   <SelectContent>
                     {users.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
-                        {user.username || 'Unnamed User'}
+                        {user.username}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -237,11 +207,14 @@ export function BulkOperationsDialog({ assets, onUpdate }: BulkOperationsDialogP
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {statusOptions.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {status}
-                    </SelectItem>
-                  ))}
+                  {CAMPAIGN_ASSET_STATUSES.map((status) => {
+                    const meta = getCampaignAssetStatusMeta(status);
+                    return (
+                      <SelectItem key={status} value={status}>
+                        {meta.label}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -259,42 +232,34 @@ export function BulkOperationsDialog({ assets, onUpdate }: BulkOperationsDialogP
                 {selectedAssets.length === assets.length ? "Deselect All" : "Select All"}
               </Button>
             </div>
-            
-            <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+            <div className="max-h-60 overflow-y-auto space-y-2">
               {assets.map((asset) => (
-                <div key={asset.id} className="flex items-center space-x-2">
+                <div key={asset.id} className="flex items-center gap-2 p-2 border rounded">
                   <Checkbox
-                    id={asset.id}
                     checked={selectedAssets.includes(asset.id)}
-                    onCheckedChange={(checked) => handleSelectAsset(asset.id, checked as boolean)}
+                    onCheckedChange={(checked) => handleSelectAsset(asset.id, !!checked)}
                   />
-                  <label
-                    htmlFor={asset.id}
-                    className="text-sm flex-1 cursor-pointer"
-                  >
-                    {asset.asset_id} - {asset.location}, {asset.city}
-                  </label>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{asset.asset_id}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {asset.location}, {asset.city}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleBulkOperation} 
-              disabled={processing || ((operation === 'assign' || operation === 'reassign') && !selectedUserId) || (operation === 'status' && !newStatus)}
-            >
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button onClick={handleBulkOperation} disabled={processing}>
               {processing ? (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                   Processing...
                 </>
               ) : (
-                'Apply to Selected'
+                `Apply to ${selectedAssets.length} Asset(s)`
               )}
             </Button>
           </div>

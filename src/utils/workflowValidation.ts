@@ -1,10 +1,10 @@
 /**
  * Workflow Validation Utilities
- * Validates status transitions using actual database enum values
+ * Uses canonical campaign asset statuses from shared config.
  */
 
-// Import actual types from database
 import type { Database } from "@/integrations/supabase/types";
+import { normalizeCampaignAssetStatus, isCampaignAssetStatusAtLeast } from "@/lib/constants/campaignAssetStatus";
 
 export type CampaignStatus = Database['public']['Enums']['campaign_status'];
 export type AssetStatus = Database['public']['Enums']['asset_installation_status'];
@@ -35,9 +35,9 @@ export function canCompleteCampaign(campaign: any, assets: any[]): { can: boolea
     return { can: false, reason: 'Campaign must be in progress to complete' };
   }
 
-  const allVerified = assets.every(asset => asset.status === 'Verified');
+  const allVerified = assets.every(asset => normalizeCampaignAssetStatus(asset.status) === 'Verified');
   if (!allVerified) {
-    const unverifiedCount = assets.filter(a => a.status !== 'Verified').length;
+    const unverifiedCount = assets.filter(a => normalizeCampaignAssetStatus(a.status) !== 'Verified').length;
     return { 
       can: false, 
       reason: `${unverifiedCount} asset(s) not yet verified` 
@@ -48,14 +48,15 @@ export function canCompleteCampaign(campaign: any, assets: any[]): { can: boolea
 }
 
 /**
- * Checks if asset can have proof uploaded
+ * Checks if asset can have proof uploaded.
+ * Asset must be at least at "Installed" status.
  */
 export function canUploadProof(asset: any): { can: boolean; reason?: string } {
-  // "Installed" is canonical DB value; "Mounted" kept for backward compatibility
-  if (asset.status !== 'Installed' && asset.status !== 'Mounted') {
+  const normalized = normalizeCampaignAssetStatus(asset.status);
+  if (!isCampaignAssetStatusAtLeast(normalized, 'Installed')) {
     return { 
       can: false, 
-      reason: `Asset must be installed first (current: ${asset.status})` 
+      reason: `Asset must be installed first (current: ${normalized})` 
     };
   }
 

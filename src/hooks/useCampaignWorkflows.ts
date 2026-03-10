@@ -90,7 +90,7 @@ export function useCampaignWorkflows(campaignId: string | undefined) {
             }
           }
 
-          // Create mounting tasks when campaign starts (PascalCase)
+          // Create mounting tasks + trigger emails when campaign starts
           if (newStatus === 'InProgress' && oldStatus === 'Planned') {
             try {
               const { data, error } = await supabase.functions.invoke('auto-create-mounting-tasks', {
@@ -105,6 +105,50 @@ export function useCampaignWorkflows(campaignId: string | undefined) {
               });
             } catch (error: any) {
               console.error('Auto-task creation error:', error);
+            }
+
+            // Trigger campaign_assigned_to_operations_internal
+            try {
+              await triggerEmailEvent({
+                event_key: 'campaign_assigned_to_operations_internal',
+                payload: {
+                  campaign_name: payload.new.campaign_name || '',
+                  campaign_code: campaignId,
+                  campaign_start_date: payload.new.start_date || '',
+                  campaign_end_date: payload.new.end_date || '',
+                  client_name: payload.new.client_name || '',
+                },
+                recipients: [{ to: company?.email || '' }],
+                company_id: company!.id,
+                source_id: campaignId,
+              });
+            } catch (emailErr) {
+              console.warn('[CampaignWorkflows] Ops assignment email failed:', emailErr);
+            }
+
+            // Trigger campaign_live_client
+            try {
+              if (payload.new.client_id) {
+                const { data: client } = await supabase.from('clients').select('email, name').eq('id', payload.new.client_id).single();
+                if (client?.email) {
+                  await triggerEmailEvent({
+                    event_key: 'campaign_live_client',
+                    payload: {
+                      campaign_name: payload.new.campaign_name || '',
+                      campaign_code: campaignId,
+                      campaign_start_date: payload.new.start_date || '',
+                      campaign_end_date: payload.new.end_date || '',
+                      client_name: payload.new.client_name || '',
+                    },
+                    recipients: [{ to: client.email, name: client.name }],
+                    company_id: company!.id,
+                    source_id: campaignId,
+                    force_send_mode: 'auto', // realtime handler bypasses confirm
+                  });
+                }
+              }
+            } catch (emailErr) {
+              console.warn('[CampaignWorkflows] Campaign live client email failed:', emailErr);
             }
           }
         }

@@ -136,6 +136,7 @@ export default function CompanyProfile() {
   };
 
   const handleRemoveLogo = async () => {
+    if (isReadOnly) { toast.error('View-only access'); return; }
     if (!company || !formData.logo_url) return;
 
     try {

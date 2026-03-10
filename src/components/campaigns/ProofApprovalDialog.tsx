@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { CheckCircle2, XCircle } from "lucide-react";
+import { useEmailTrigger, buildAssetPayload } from "@/hooks/useEmailTrigger";
 
 interface ProofApprovalDialogProps {
   asset: any;

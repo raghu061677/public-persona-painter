@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { UserPlus, Upload, Search, X } from "lucide-react";
+import { useEmailTrigger, buildAssetPayload } from "@/hooks/useEmailTrigger";
 import { useNavigate } from "react-router-dom";
 import { BulkOperationsDialog } from "./BulkOperationsDialog";
 import { checkAndAutoGeneratePPT } from "@/lib/operations/autoGenerateProofPPT";

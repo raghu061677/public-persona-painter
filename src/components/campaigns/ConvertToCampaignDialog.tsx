@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { generateCampaignCode } from "@/lib/codeGenerator";
+import { useEmailTrigger, buildCampaignPayload, buildPlanPayload } from "@/hooks/useEmailTrigger";
 import { useCompany } from "@/contexts/CompanyContext";
 
 interface ConvertToCampaignDialogProps {

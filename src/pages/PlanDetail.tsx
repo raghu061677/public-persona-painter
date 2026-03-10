@@ -70,6 +70,7 @@ import { SignedROSection } from "@/components/plans/SignedROSection";
 import { SendROSigningLink } from "@/components/plans/SendROSigningLink";
 import { useRecordPermissions } from "@/hooks/useRecordAccessMode";
 import { RestrictedBanner } from "@/components/rbac/RestrictedBanner";
+import { useEmailTrigger, buildPlanPayload } from "@/hooks/useEmailTrigger";
 export default function PlanDetail() {
   const { id } = useParams();
   const navigate = useNavigate();

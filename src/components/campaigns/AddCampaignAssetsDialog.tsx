@@ -305,20 +305,17 @@ export function AddCampaignAssetsDialog({
   const toggleAssetSelection = (assetId: string) => {
     const { info } = getBookingInfo(assets.find(a => a.id === assetId) || {});
     
-    // Block only based on RPC conflict result
-    if (!info.isSelectable) {
-      toast({
-        title: "Asset has booking conflict",
-        description: formatConflictSummary(info.conflicts),
-        variant: "destructive",
-      });
-      return;
-    }
-
     const newSelected = new Set(selectedAssets);
     if (newSelected.has(assetId)) {
       newSelected.delete(assetId);
     } else {
+      // Warn but allow selection for conflicting assets — user can set per-asset dates after adding
+      if (!info.isSelectable) {
+        toast({
+          title: "⚠️ Conflict with campaign-level dates",
+          description: `${formatConflictSummary(info.conflicts)}\n\nYou can still add this asset and adjust its per-asset booking dates to avoid the overlap.`,
+        });
+      }
       newSelected.add(assetId);
     }
     setSelectedAssets(newSelected);

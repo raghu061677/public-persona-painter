@@ -281,6 +281,20 @@ export default function PlanDetail() {
       title: "Public Link Generated",
       description: "Share link copied to clipboard",
     });
+
+    // Trigger plan_shared_client email (confirm mode — will open dialog)
+    try {
+      const clientDetails = plan?.client_id ? 
+        (await supabase.from('clients').select('name, email').eq('id', plan.client_id).single()).data : null;
+      if (clientDetails?.email) {
+        const payload = buildPlanPayload(plan, clientDetails, company);
+        payload.plan_link = shareUrl;
+        triggerEmail('plan_shared_client', payload,
+          [{ to: clientDetails.email, name: clientDetails.name }], id);
+      }
+    } catch (emailErr) {
+      console.warn('[PlanDetail] Share email trigger failed (non-blocking):', emailErr);
+    }
     
     fetchPlan();
   };

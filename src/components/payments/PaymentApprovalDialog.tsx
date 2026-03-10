@@ -172,6 +172,23 @@ export function PaymentApprovalDialog({
         });
       }
 
+      // Trigger payment email notifications
+      try {
+        const invoiceData = { id: confirmation.invoice_id, invoice_no: confirmation.invoice_no, total_amount: parsedAmount, balance_due: 0, client_name: confirmation.client_name };
+        const emailPayload = buildInvoicePayload(invoiceData, { name: confirmation.client_name }, company);
+        emailPayload.amount_paid = `₹${parsedAmount.toLocaleString('en-IN')}`;
+        triggerEmail('payment_received_internal', emailPayload, [{ to: company?.email || '' }], confirmation.invoice_id || '');
+        // Client receipt notification (confirm mode)
+        if (confirmation.client_id) {
+          const { data: client } = await supabase.from('clients').select('email, name').eq('id', confirmation.client_id).single();
+          if (client?.email) {
+            triggerEmail('payment_received_client', emailPayload, [{ to: client.email, name: client.name }], confirmation.invoice_id || '');
+          }
+        }
+      } catch (emailErr) {
+        console.warn('[PaymentApproval] Email trigger failed (non-blocking):', emailErr);
+      }
+
       toast({
         title: "Payment Approved",
         description: `Payment of ₹${parsedAmount.toLocaleString("en-IN")} recorded. Receipt ${receipt?.receipt_no || ""} will be sent.`,

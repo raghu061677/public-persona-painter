@@ -52,6 +52,42 @@ export function useCampaignWorkflows(campaignId: string | undefined) {
                 variant: "destructive",
               });
             }
+
+            // Trigger campaign_completed emails
+            try {
+              const campaignPayload = {
+                campaign_name: payload.new.campaign_name || '',
+                campaign_code: campaignId,
+                campaign_status: 'Completed',
+                client_name: payload.new.client_name || '',
+                campaign_start_date: payload.new.start_date || '',
+                campaign_end_date: payload.new.end_date || '',
+              };
+              // Internal notification
+              await triggerEmailEvent({
+                event_key: 'campaign_completed_internal',
+                payload: campaignPayload,
+                recipients: [{ to: company?.email || '' }],
+                company_id: company!.id,
+                source_id: campaignId,
+              });
+              // Client notification (forced auto since this is a realtime handler)
+              if (payload.new.client_id) {
+                const { data: client } = await supabase.from('clients').select('email, name').eq('id', payload.new.client_id).single();
+                if (client?.email) {
+                  await triggerEmailEvent({
+                    event_key: 'campaign_completed_client',
+                    payload: campaignPayload,
+                    recipients: [{ to: client.email, name: client.name }],
+                    company_id: company!.id,
+                    source_id: campaignId,
+                    force_send_mode: 'auto',
+                  });
+                }
+              }
+            } catch (emailErr) {
+              console.warn('[CampaignWorkflows] Completion email failed (non-blocking):', emailErr);
+            }
           }
 
           // Create mounting tasks when campaign starts (PascalCase)

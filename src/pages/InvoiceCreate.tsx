@@ -196,6 +196,20 @@ export default function InvoiceCreate() {
 
       if (error) throw error;
 
+      // Trigger invoice email notifications
+      try {
+        const invoiceData = { id: invoiceId, invoice_no: invoiceId, invoice_date: invoiceDate, due_date: dueDate, total_amount: totalAmount, balance_due: totalAmount, client_name: selectedCampaign.client_name };
+        const emailPayload = buildInvoicePayload(invoiceData, { name: selectedCampaign.client_name }, company);
+        triggerEmail('invoice_generated_internal', emailPayload, [{ to: company?.email || '' }], invoiceId);
+        // Client notification (confirm mode)
+        const { data: client } = await supabase.from('clients').select('email, name').eq('id', selectedCampaign.client_id).single();
+        if (client?.email) {
+          triggerEmail('invoice_generated_client', emailPayload, [{ to: client.email, name: client.name }], invoiceId);
+        }
+      } catch (emailErr) {
+        console.warn('[InvoiceCreate] Email trigger failed (non-blocking):', emailErr);
+      }
+
       toast({ title: "Success", description: "Invoice created successfully" });
       navigate(`/admin/invoices/view/${encodeURIComponent(invoiceId)}`);
     } catch (error: any) {

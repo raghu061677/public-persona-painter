@@ -105,8 +105,8 @@ const navigationGroups: NavGroup[] = [
 
 export function SettingsSidebar() {
   return (
-    <div className="w-64 border-r border-border/40 bg-background h-full">
-      <ScrollArea className="h-full">
+    <div className="w-64 border-r border-border/40 bg-background h-full overflow-hidden flex flex-col">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="px-3 py-6 space-y-6">
           {navigationGroups.map((group, groupIndex) => (
             <div key={groupIndex}>

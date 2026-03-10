@@ -209,7 +209,7 @@ export default function ReportCampaignBookingsV2() {
       const campaignList: CampaignBookingData[] = filteredCampaigns.map((campaign) => {
         const assets = assetData.filter((a) => a.campaign_id === campaign.id);
         const totalAssets = assets.length;
-        const verifiedAssets = assets.filter((a) => a.status === "Verified" || a.status === "PhotoUploaded").length;
+        const verifiedAssets = assets.filter((a) => a.status === "Verified" || a.status === "Completed" || a.status === "PhotoUploaded").length;
         const proofProgress = totalAssets > 0 ? Math.round((verifiedAssets / totalAssets) * 100) : 0;
         const cities = [...new Set(assets.map((a) => a.city).filter(Boolean))];
 

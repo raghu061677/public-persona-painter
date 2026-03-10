@@ -208,7 +208,7 @@ export default function EmailTemplateManager() {
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
       ) : filtered.length === 0 ? (
-        <SettingsCard title="No Templates Found" description="No templates match your filters. Try adjusting the filters or seed default templates." />
+        <Card><CardContent className="py-12 text-center text-muted-foreground"><p>No templates match your filters. Try adjusting or seed default templates.</p></CardContent></Card>
       ) : (
         <div className="border rounded-lg overflow-hidden">
           <Table>

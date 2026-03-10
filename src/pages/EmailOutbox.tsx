@@ -48,9 +48,9 @@ export default function EmailOutbox() {
 
   const fetchOutbox = async () => {
     setLoading(true);
-    let query = supabase
+    let query = (supabase
       .from("email_outbox" as any)
-      .select("*")
+      .select("*") as any)
       .order("created_at", { ascending: false })
       .limit(200);
     if (filter !== "all") query = query.eq("status", filter);

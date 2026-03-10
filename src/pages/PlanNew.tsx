@@ -554,6 +554,7 @@ export default function PlanNew() {
     } finally {
       setLoading(false);
       submittingRef.current = false;
+    }
   };
 
   const totals = calculateTotals();

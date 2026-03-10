@@ -7730,6 +7730,7 @@ export type Database = {
       }
       notification_settings: {
         Row: {
+          alerts: Json | null
           company_id: string
           created_at: string | null
           id: string
@@ -7737,6 +7738,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          alerts?: Json | null
           company_id: string
           created_at?: string | null
           id?: string
@@ -7744,6 +7746,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          alerts?: Json | null
           company_id?: string
           created_at?: string | null
           id?: string

@@ -71,7 +71,7 @@ export function useCampaignWorkflows(campaignId: string | undefined) {
                 company_id: company!.id,
                 source_id: campaignId,
               });
-              // Client notification (forced auto since this is a realtime handler)
+              // Client notification — queued for confirm (not forced auto)
               if (payload.new.client_id) {
                 const { data: client } = await supabase.from('clients').select('email, name').eq('id', payload.new.client_id).single();
                 if (client?.email) {
@@ -81,7 +81,6 @@ export function useCampaignWorkflows(campaignId: string | undefined) {
                     recipients: [{ to: client.email, name: client.name }],
                     company_id: company!.id,
                     source_id: campaignId,
-                    force_send_mode: 'auto',
                   });
                 }
               }

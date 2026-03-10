@@ -326,8 +326,8 @@ export default function CampaignDetail() {
                 </div>
               </div>
               <div className="flex gap-2 flex-wrap">
-                {isAdmin && company && (
-                  <ActionGuard module="campaigns" action="assign">
+                {canEditThisCampaign && company && (
+                  <ActionGuard module="campaigns" action="assign" record={campaign}>
                     <AutoAssignMountersButton
                       campaignId={campaign.id}
                       companyId={company.id}

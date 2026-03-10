@@ -23,6 +23,7 @@ interface ProofApprovalDialogProps {
 export function ProofApprovalDialog({ asset, open, onOpenChange, onUpdate }: ProofApprovalDialogProps) {
   const [comments, setComments] = useState("");
   const [processing, setProcessing] = useState(false);
+  const { trigger: triggerEmail, ConfirmDialog: EmailConfirmDialog } = useEmailTrigger();
 
   const handleApproval = async (approved: boolean) => {
     setProcessing(true);

@@ -24,9 +24,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { supabase } from "@/integrations/supabase/client";
 import { format, addDays, isAfter, isBefore } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useAssetAvailability } from "@/hooks/useAssetAvailability";
+import { toDateString } from "@/lib/availability";
+import type { BookingAvailability } from "@/lib/availability";
 
 type SortDirection = 'asc' | 'desc' | null;
 type SortableColumn = 'asset_id' | 'location' | 'area' | 'available_from';

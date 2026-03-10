@@ -60,6 +60,13 @@
     start_date?: string;
     end_date?: string;
     photo_count?: number;
+    is_removed?: boolean;
+    dropped_on?: string;
+    drop_reason?: string;
+    effective_start_date?: string;
+    effective_end_date?: string;
+    booking_start_date?: string;
+    booking_end_date?: string;
   }
  
  type SortField =

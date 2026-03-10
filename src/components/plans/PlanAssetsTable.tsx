@@ -387,6 +387,8 @@ export function PlanAssetsTable({
             <DropdownMenuCheckboxItem checked={showIllumination} onCheckedChange={setShowIllumination}>
               Illumination
             </DropdownMenuCheckboxItem>
+            {canViewFinancials && (
+            <>
             <DropdownMenuCheckboxItem checked={showBaseRate} onCheckedChange={setShowBaseRate}>
               Base Rate
             </DropdownMenuCheckboxItem>
@@ -402,6 +404,8 @@ export function PlanAssetsTable({
             <DropdownMenuCheckboxItem checked={showProfit} onCheckedChange={setShowProfit}>
               Profit
             </DropdownMenuCheckboxItem>
+            </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 

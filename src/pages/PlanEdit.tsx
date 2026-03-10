@@ -982,14 +982,15 @@ export default function PlanEdit() {
               <SelectedAssetsTable
                 assets={selectedAssetsArray}
                 assetPricing={assetPricing}
-                onRemove={perms.isReadOnly ? undefined : removeAsset}
-                onPricingUpdate={perms.isReadOnly ? undefined : updateAssetPricing}
+                onRemove={isReadOnly ? undefined : removeAsset}
+                onPricingUpdate={isReadOnly ? undefined : updateAssetPricing}
                 durationDays={durationDays}
                 planStartDate={formData.start_date instanceof Date ? formData.start_date : new Date(formData.start_date)}
                 planEndDate={formData.end_date instanceof Date ? formData.end_date : new Date(formData.end_date)}
                 planId={formData.id}
                 planClientId={formData.client_id}
                 planClientName={formData.client_name}
+                canViewFinancials={perms.canViewFinancials}
               />
             </CardContent>
           </Card>

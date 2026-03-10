@@ -20,6 +20,8 @@ const DEBUG = true;
 interface PhotoUploadSectionProps {
   campaignId: string;
   assetId: string;
+  /** Canonical media_assets.id (or legacy asset code) for consistent media_photos.asset_id writes */
+  mediaAssetId?: string;
   onUploadComplete: () => void;
 }
 

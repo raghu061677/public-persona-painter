@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle, XCircle, Image as ImageIcon, CheckCircle2, Download, Loader2 } from "lucide-react";
 import { ProofApprovalDialog } from "./ProofApprovalDialog";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeCampaignAssetStatus } from "@/lib/constants/campaignAssetStatus";
 import { format } from "date-fns";
 import { getAssetDisplayCode } from "@/lib/assets/getAssetDisplayCode";
 

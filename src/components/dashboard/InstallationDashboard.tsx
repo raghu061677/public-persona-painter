@@ -187,7 +187,7 @@ export function InstallationDashboard() {
                           {assignment.asset_id}
                         </span>
                         <Badge className={getStatusColor(assignment.status)}>
-                          {assignment.status}
+                          {getCampaignAssetStatusMeta(assignment.status).label}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">

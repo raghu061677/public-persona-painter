@@ -77,14 +77,19 @@ export default function IntelligenceDashboard() {
   };
 
   const loadStats = async () => {
-    const [{ count: activeCount }, { count: vacantCount }, { count: campaignsEndingCount }, { data: revenueData }] = await Promise.all([
-      supabase.from("media_assets").select("*", { count: "exact", head: true }).eq("status", "Booked"),
-      supabase.from("media_assets").select("*", { count: "exact", head: true }).eq("status", "Available"),
+    const today = new Date().toISOString().split('T')[0];
+    // Total assets
+    const { count: totalCount } = await supabase.from("media_assets").select("*", { count: "exact", head: true });
+    // Assets with active campaign booking today (dynamic)
+    const { data: activeBookings } = await supabase.from("campaign_assets").select("asset_id").eq("is_removed", false).lte("effective_start_date", today).gte("effective_end_date", today);
+    const bookedCount = new Set((activeBookings || []).map(b => b.asset_id)).size;
+    const vacantCount = (totalCount || 0) - bookedCount;
+    const [{ count: campaignsEndingCount }, { data: revenueData }] = await Promise.all([
       supabase.from("campaigns").select("*", { count: "exact", head: true }).in("status", ["Running", "Upcoming"]),
       supabase.from("invoices").select("total_amount").eq("status", "Paid"),
     ]);
     const totalRevenue = (revenueData || []).reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
-    const total = (activeCount || 0) + (vacantCount || 0);
+    const total = totalCount || 0;
     const avgOccupancy = total > 0 ? Math.round(((activeCount || 0) / total) * 100) : 0;
     setStats({ totalRevenue, activeAssets: activeCount || 0, vacantCount: vacantCount || 0, avgOccupancy, campaignsEnding: campaignsEndingCount || 0, recommendationsCount: recommendations.length });
   };

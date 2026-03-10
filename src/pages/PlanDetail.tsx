@@ -821,6 +821,11 @@ export default function PlanDetail() {
         variant: "destructive",
       });
 
+      // Trigger email notification
+      const payload = buildPlanPayload(plan, clientDetails, company);
+      triggerEmail('plan_rejected_internal', payload,
+        [{ to: company?.email || '' }], id);
+
       setShowRejectDialog(false);
       setApprovalRemarks("");
       fetchPlan();

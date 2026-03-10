@@ -75,6 +75,7 @@ export default function PlanDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { company } = useCompany();
+  const { trigger: triggerEmail, ConfirmDialog: EmailConfirmDialog } = useEmailTrigger();
   const [plan, setPlan] = useState<any>(null);
   const [planItems, setPlanItems] = useState<any[]>([]);
   const [clientDetails, setClientDetails] = useState<any>(null);

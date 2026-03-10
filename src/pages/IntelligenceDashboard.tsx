@@ -48,7 +48,7 @@ export default function IntelligenceDashboard() {
   const loadVacantAssets = async () => {
     // Use campaign_assets overlap logic instead of stale media_assets.status
     // For the intelligence dashboard, fetch all assets and let the availability engine classify
-    const { data } = await supabase.from("media_assets").select("id, city, area, media_type, card_rate, status, next_available_from").order("card_rate", { ascending: false }).limit(100);
+    const { data } = await supabase.from("media_assets").select("id, city, area, media_type, card_rate, status").order("card_rate", { ascending: false }).limit(100);
     // Filter to those not currently in any active campaign_assets
     const allIds = (data || []).map(a => a.id);
     const today = new Date().toISOString().split('T')[0];

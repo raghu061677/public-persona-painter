@@ -996,7 +996,7 @@ export default function PlanEdit() {
           </Card>
 
           {/* Available Assets - Hidden in read-only mode */}
-          {perms.canEditRecord && (
+          {!isReadOnly && perms.canEditRecord && (
           <Card className="rounded-2xl shadow-md hover:shadow-lg transition-all duration-200">
             <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/20 dark:to-blue-900/20">
               <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-700 dark:text-slate-200">

@@ -533,7 +533,6 @@ export function PlanAssetsTable({
                 </TableHead>
               )}
               {showBillingMode && <TableHead>Billing Mode</TableHead>}
-              {canViewFinancials && (
               <TableHead 
                 className="text-right cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('card_rate')}
@@ -542,7 +541,6 @@ export function PlanAssetsTable({
                   Card Rate {getSortIcon('card_rate')}
                 </div>
               </TableHead>
-              )}
               {canViewFinancials && showBaseRate && <TableHead className="text-right">Base Rate</TableHead>}
               {canViewFinancials && (
               <TableHead 

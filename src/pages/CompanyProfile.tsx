@@ -23,9 +23,11 @@ import {
 } from "@/components/settings/zoho-style";
 import { Loader2, Upload, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 
 export default function CompanyProfile() {
   const { company, refreshCompany } = useCompany();
+  const { isReadOnly } = useSettingsReadOnly();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);

@@ -639,7 +639,7 @@ export function PlanAssetsTable({
                       {item.billing_mode || 'PRORATA_30'}
                     </TableCell>
                   )}
-                  {canViewFinancials && <TableCell className="text-right">{formatCurrency(item.card_rate)}</TableCell>}
+                  <TableCell className="text-right">{formatCurrency(item.card_rate)}</TableCell>
                   {canViewFinancials && showBaseRate && <TableCell className="text-right">{formatCurrency(baseRent)}</TableCell>}
                   {canViewFinancials && <TableCell className="text-right font-medium">{formatCurrency(effectivePrice)}</TableCell>}
                   {canViewFinancials && <TableCell className="text-right text-purple-600">{formatCurrency(proRataAmount)}</TableCell>}

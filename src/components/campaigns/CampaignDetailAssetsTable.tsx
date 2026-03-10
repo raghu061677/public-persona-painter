@@ -556,9 +556,12 @@ export function CampaignDetailAssetsTable({
                  </TableCell>
                </TableRow>
              ) : (
-                filteredAndSortedAssets.map((asset) => {
+              filteredAndSortedAssets.map((asset) => {
                   const hasPhotos = (asset.photo_count || 0) > 0;
-                  const rowBorderClass = hasPhotos
+                  const isDropped = asset.is_removed === true;
+                  const rowBorderClass = isDropped
+                    ? 'border-l-4 border-l-orange-400 opacity-60'
+                    : hasPhotos
                     ? 'border-l-4 border-l-green-500'
                     : 'border-l-4 border-l-red-400';
                   return (

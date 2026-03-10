@@ -123,11 +123,12 @@ function getRemovalLabel(type?: string): string {
    { id: "actions", label: "Actions", defaultVisible: true },
  ];
  
- interface CampaignDetailAssetsTableProps {
+interface CampaignDetailAssetsTableProps {
    assets: CampaignAsset[];
    campaignId: string;
    companyPrefix: string | null;
    companyName?: string;
+   readOnly?: boolean;
  }
  
 export function CampaignDetailAssetsTable({
@@ -136,6 +137,7 @@ export function CampaignDetailAssetsTable({
    companyPrefix,
    companyName,
    onRefresh,
+   readOnly = false,
  }: CampaignDetailAssetsTableProps & { onRefresh?: () => void }) {
    const navigate = useNavigate();
    

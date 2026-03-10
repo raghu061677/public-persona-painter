@@ -201,7 +201,7 @@ export async function dispatchDailyDigest(companyId: string): Promise<ScheduledR
       { count: overdueInvoices },
     ] = await Promise.all([
       supabase.from('campaigns').select('*', { count: 'exact', head: true })
-        .eq('company_id', companyId).in('status', ['Running', 'InProgress', 'Active']),
+        .eq('company_id', companyId).in('status', ['Running', 'InProgress']),
       supabase.from('invoices').select('*', { count: 'exact', head: true })
         .eq('company_id', companyId).eq('status', 'Sent'),
       supabase.from('invoices').select('*', { count: 'exact', head: true })

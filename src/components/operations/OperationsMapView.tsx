@@ -141,12 +141,12 @@ export function OperationsMapView({ campaignId }: OperationsMapViewProps) {
   };
 
   const getStatusColor = (status: string): string => {
-    switch (status) {
+    const normalized = normalizeCampaignAssetStatus(status);
+    switch (normalized) {
       case 'Verified':
       case 'Completed':
         return '#10b981'; // green
       case 'Installed':
-      case 'Mounted':
         return '#3b82f6'; // blue
       case 'Pending':
       case 'Assigned':

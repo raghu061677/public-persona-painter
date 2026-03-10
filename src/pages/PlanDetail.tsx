@@ -1933,6 +1933,7 @@ export default function PlanDetail() {
         </Dialog>
       </div>
     </div>
+    {EmailConfirmDialog}
     </ModuleGuard>
   );
 }

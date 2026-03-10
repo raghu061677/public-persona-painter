@@ -123,11 +123,12 @@ function getRemovalLabel(type?: string): string {
    { id: "actions", label: "Actions", defaultVisible: true },
  ];
  
- interface CampaignDetailAssetsTableProps {
+interface CampaignDetailAssetsTableProps {
    assets: CampaignAsset[];
    campaignId: string;
    companyPrefix: string | null;
    companyName?: string;
+   readOnly?: boolean;
  }
  
 export function CampaignDetailAssetsTable({
@@ -136,6 +137,7 @@ export function CampaignDetailAssetsTable({
    companyPrefix,
    companyName,
    onRefresh,
+   readOnly = false,
  }: CampaignDetailAssetsTableProps & { onRefresh?: () => void }) {
    const navigate = useNavigate();
    
@@ -663,7 +665,7 @@ export function CampaignDetailAssetsTable({
                    {isColumnVisible("actions") && (
                      <TableCell className="text-right">
                        <div className="flex items-center justify-end gap-1">
-                         {!asset.is_removed && (
+                         {!readOnly && !asset.is_removed && (
                            <>
                              <Button
                                variant="outline"
@@ -683,6 +685,9 @@ export function CampaignDetailAssetsTable({
                                <Ban className="h-3.5 w-3.5" />
                              </Button>
                            </>
+                         )}
+                         {readOnly && !asset.is_removed && (
+                           <span className="text-xs text-muted-foreground italic">View only</span>
                          )}
                          {asset.is_removed && (
                            <span className="text-xs text-muted-foreground italic">Dropped</span>

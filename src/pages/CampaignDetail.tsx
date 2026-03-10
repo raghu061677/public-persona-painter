@@ -326,8 +326,8 @@ export default function CampaignDetail() {
                 </div>
               </div>
               <div className="flex gap-2 flex-wrap">
-                {isAdmin && company && (
-                  <ActionGuard module="campaigns" action="assign">
+                {canEditThisCampaign && company && (
+                  <ActionGuard module="campaigns" action="assign" record={campaign}>
                     <AutoAssignMountersButton
                       campaignId={campaign.id}
                       companyId={company.id}
@@ -361,8 +361,8 @@ export default function CampaignDetail() {
                   <TrendingUp className="mr-2 h-4 w-4" />
                   Budget Tracker
                 </Button>
-                <ActionGuard module="campaigns" action="edit">
-                {isAdmin && !isDeleted && (
+                <ActionGuard module="campaigns" action="edit" record={campaign}>
+                {!isDeleted && (
                   <>
                     {campaign.status !== 'Completed' && new Date(campaign.end_date) < new Date() && (
                       <Button
@@ -385,8 +385,8 @@ export default function CampaignDetail() {
                   </>
                 )}
                 </ActionGuard>
-                <ActionGuard module="campaigns" action="delete">
-                {isAdmin && !isDeleted && (
+                <ActionGuard module="campaigns" action="delete" record={campaign}>
+                {!isDeleted && (
                     <Button variant="destructive" size="sm" onClick={openDeleteDialog}>
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete
@@ -639,6 +639,7 @@ export default function CampaignDetail() {
                     companyPrefix={assetCodePrefix}
                     companyName={company?.name}
                     onRefresh={refreshData}
+                    readOnly={!canEditThisCampaign}
                   />
                 </CardContent>
               </Card>

@@ -79,9 +79,9 @@ export default function EmailTemplateManager() {
 
   const fetchTemplates = async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data } = await (supabase
       .from("email_templates" as any)
-      .select("*")
+      .select("*") as any)
       .order("category", { ascending: true })
       .order("template_key");
     if (data) setTemplates(data as Template[]);

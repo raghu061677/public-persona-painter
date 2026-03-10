@@ -126,8 +126,8 @@ export function CampaignDetailAssetsTable({
    const navigate = useNavigate();
    
    // Drop dialog state
-   const [dropDialogOpen, setDropDialogOpen] = useDropState(false);
-   const [dropTarget, setDropTarget] = useDropState<CampaignAsset | null>(null);
+   const [dropDialogOpen, setDropDialogOpen] = useState(false);
+   const [dropTarget, setDropTarget] = useState<CampaignAsset | null>(null);
    
    // State for filtering, sorting, and column visibility
    const [searchTerm, setSearchTerm] = useState("");

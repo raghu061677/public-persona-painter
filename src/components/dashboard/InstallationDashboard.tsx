@@ -68,7 +68,7 @@ export function InstallationDashboard() {
         a => a.status === "Pending" || a.status === "Assigned"
       ).length || 0;
       const proofsPending = assignments?.filter(
-        a => (a.status === "Installed" || a.status === "Mounted") && !a.photos
+        a => normalizeCampaignAssetStatus(a.status) === "Installed" && !a.photos
       ).length || 0;
 
       setMetrics({

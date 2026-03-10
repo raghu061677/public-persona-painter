@@ -34,6 +34,7 @@ export default function InvoiceCreate() {
   const navigate = useNavigate();
   const { company } = useCompany();
   const companyId = company?.id;
+  const { trigger: triggerEmail, ConfirmDialog: EmailConfirmDialog } = useEmailTrigger();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
   const [loading, setLoading] = useState(true);

@@ -11,7 +11,11 @@
  *   3. Active asset_holds
  *   4. Otherwise → Vacant
  *
- * Dropped assets (is_removed=true) are excluded from availability blocking.
+ * Dropped assets (is_removed=true) are INCLUDED in overlap checks using their
+ * effective_start_date → effective_end_date window. They block dates only up to
+ * their effective_end_date (which equals dropped_on). After that date they do
+ * not block availability.
+ *
  * media_assets.status is NOT authoritative for booking — it's a display hint only.
  */
 
@@ -54,6 +58,9 @@ const EXCLUDED_CAMPAIGN_STATUSES = ['Cancelled', 'Archived', 'Completed'];
 /**
  * Resolve effective booking dates for a campaign_asset row.
  * Priority: effective_start/end_date > booking_start/end_date > start/end_date > campaign dates
+ *
+ * For dropped assets, effective_end_date is set to dropped_on, so the booking
+ * window automatically shrinks to cover only the period the asset was active.
  */
 function resolveBookingDates(
   row: any,
@@ -78,7 +85,8 @@ function resolveBookingDates(
 /**
  * Get availability for a single asset within a date range.
  * Uses campaign_assets as the source of truth.
- * Dropped assets (is_removed=true) do NOT block availability.
+ * Both active AND dropped assets are included — their effective date window
+ * determines the booking overlap, not the is_removed flag.
  */
 export async function getAssetAvailability(
   assetId: string,
@@ -89,7 +97,9 @@ export async function getAssetAvailability(
   const today = toDateString(new Date());
   const allBookings: BookingSource[] = [];
 
-  // 1. Check campaign_assets bookings — exclude removed assets
+  // 1. Check campaign_assets bookings — include ALL rows (active + dropped)
+  //    Dropped rows have effective_end_date = dropped_on, so their booking
+  //    window is already correctly truncated.
   let query = supabase
     .from('campaign_assets')
     .select(`
@@ -97,8 +107,7 @@ export async function getAssetAvailability(
       is_removed, effective_start_date, effective_end_date,
       campaigns!inner(id, campaign_name, client_name, start_date, end_date, status, is_deleted)
     `)
-    .eq('asset_id', assetId)
-    .eq('is_removed', false);
+    .eq('asset_id', assetId);
 
   if (excludeCampaignId) {
     query = query.neq('campaign_id', excludeCampaignId);
@@ -192,7 +201,7 @@ export async function getAssetAvailability(
 /**
  * Get availability for multiple assets efficiently.
  * Used by Dashboard counters, Plan Builder, Reports.
- * Dropped assets (is_removed=true) are excluded from blocking.
+ * Both active AND dropped assets are included — effective dates control the window.
  */
 export async function batchGetAssetAvailability(
   assetIds: string[],
@@ -205,7 +214,7 @@ export async function batchGetAssetAvailability(
 
   const today = toDateString(new Date());
 
-  // Fetch all active (non-removed) campaign_assets for these assets
+  // Fetch ALL campaign_assets (active + dropped) for these assets
   let query = supabase
     .from('campaign_assets')
     .select(`
@@ -213,8 +222,7 @@ export async function batchGetAssetAvailability(
       is_removed, effective_start_date, effective_end_date,
       campaigns!inner(id, campaign_name, client_name, start_date, end_date, status, is_deleted)
     `)
-    .in('asset_id', assetIds)
-    .eq('is_removed', false);
+    .in('asset_id', assetIds);
 
   if (excludeCampaignId) {
     query = query.neq('campaign_id', excludeCampaignId);
@@ -311,7 +319,7 @@ export async function batchGetAssetAvailability(
 /**
  * Get vacancy/booked counts for a company's entire inventory.
  * Used by Dashboard KPI cards.
- * Excludes dropped assets from blocking counts.
+ * Both active and dropped assets are included — effective dates control the window.
  */
 export async function getCompanyAvailabilityCounts(
   companyId: string
@@ -327,12 +335,11 @@ export async function getCompanyAvailabilityCounts(
   const allIds = (assets || []).map(a => a.id);
   if (allIds.length === 0) return { total: 0, vacant: 0, booked: 0, running: 0, upcoming: 0, blocked: 0 };
 
-  // Check active (non-removed) campaign_assets
+  // Check ALL campaign_assets (active + dropped) — effective dates control the window
   const { data: activeBookings } = await supabase
     .from('campaign_assets')
     .select('asset_id, effective_start_date, effective_end_date, booking_start_date, booking_end_date, is_removed, campaigns!inner(status, is_deleted)')
-    .in('asset_id', allIds)
-    .eq('is_removed', false);
+    .in('asset_id', allIds);
 
   // Check holds overlapping today
   const { data: activeHolds } = await supabase

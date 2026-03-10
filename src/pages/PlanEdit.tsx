@@ -755,7 +755,7 @@ export default function PlanEdit() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={isReadOnly ? (e) => e.preventDefault() : handleSubmit} className="space-y-8">
           {/* Top 3-Column Grid: Plan Details | Campaign Period | Plan Summary */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Plan Details */}

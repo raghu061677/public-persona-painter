@@ -1058,3 +1058,26 @@ input[type="number"] {
   }
 }
 
+/* Settings read-only mode — disables all interactive elements */
+.settings-read-only input:not([type="hidden"]),
+.settings-read-only textarea,
+.settings-read-only select,
+.settings-read-only [role="switch"],
+.settings-read-only [role="checkbox"],
+.settings-read-only [role="combobox"],
+.settings-read-only [role="slider"],
+.settings-read-only button[type="submit"],
+.settings-read-only button:not([data-settings-always-enabled]) {
+  pointer-events: none !important;
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+}
+/* Keep navigation and tab buttons usable */
+.settings-read-only [role="tablist"] button,
+.settings-read-only nav button,
+.settings-read-only nav a {
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  cursor: pointer !important;
+}
+

@@ -117,13 +117,18 @@ import { DropAssetDialog } from "./DropAssetDialog";
    companyName?: string;
  }
  
- export function CampaignDetailAssetsTable({
+export function CampaignDetailAssetsTable({
    assets,
    campaignId,
    companyPrefix,
    companyName,
- }: CampaignDetailAssetsTableProps) {
+   onRefresh,
+ }: CampaignDetailAssetsTableProps & { onRefresh?: () => void }) {
    const navigate = useNavigate();
+   
+   // Drop dialog state
+   const [dropDialogOpen, setDropDialogOpen] = useDropState(false);
+   const [dropTarget, setDropTarget] = useDropState<CampaignAsset | null>(null);
    
    // State for filtering, sorting, and column visibility
    const [searchTerm, setSearchTerm] = useState("");

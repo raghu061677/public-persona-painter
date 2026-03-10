@@ -59,6 +59,7 @@ export default function CompanyDirectTaxes() {
   }, [company]);
 
   const handleSave = async () => {
+    if (isReadOnly) { toast({ title: 'View-only access', variant: 'destructive' }); return; }
     if (!company) return;
 
     setLoading(true);

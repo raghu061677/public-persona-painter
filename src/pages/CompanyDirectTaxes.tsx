@@ -8,10 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calculator, Save, Loader2 } from "lucide-react";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 
 export default function CompanyDirectTaxes() {
   const { company } = useCompany();
   const { toast } = useToast();
+  const { isReadOnly } = useSettingsReadOnly();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     tds_enabled: false,
@@ -57,6 +59,7 @@ export default function CompanyDirectTaxes() {
   }, [company]);
 
   const handleSave = async () => {
+    if (isReadOnly) { toast({ title: 'View-only access', variant: 'destructive' }); return; }
     if (!company) return;
 
     setLoading(true);

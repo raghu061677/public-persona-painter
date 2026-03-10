@@ -23,9 +23,11 @@ import {
 } from "@/components/settings/zoho-style";
 import { Loader2, Upload, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 
 export default function CompanyProfile() {
   const { company, refreshCompany } = useCompany();
+  const { isReadOnly } = useSettingsReadOnly();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -87,6 +89,7 @@ export default function CompanyProfile() {
   }, [company]);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isReadOnly) { toast.error('View-only access'); return; }
     const file = e.target.files?.[0];
     if (!file || !company) return;
 
@@ -133,6 +136,7 @@ export default function CompanyProfile() {
   };
 
   const handleRemoveLogo = async () => {
+    if (isReadOnly) { toast.error('View-only access'); return; }
     if (!company || !formData.logo_url) return;
 
     try {
@@ -153,6 +157,7 @@ export default function CompanyProfile() {
   };
 
   const handleSave = async () => {
+    if (isReadOnly) { toast.error('View-only access'); return; }
     if (!company) return;
 
     setSaving(true);

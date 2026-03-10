@@ -9,10 +9,12 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Bell, Loader2 } from "lucide-react";
 import { SettingsCard, SettingsContentWrapper, SectionHeader, InputRow, InfoAlert } from "@/components/settings/zoho-style";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 
 export default function CompanyReminders() {
   const { company } = useCompany();
   const { toast } = useToast();
+  const { isReadOnly } = useSettingsReadOnly();
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -75,6 +77,7 @@ export default function CompanyReminders() {
   }, [company, toast]);
 
   const handleSave = async () => {
+    if (isReadOnly) { toast({ title: 'View-only access', variant: 'destructive' }); return; }
     if (!company) return;
 
     setLoading(true);

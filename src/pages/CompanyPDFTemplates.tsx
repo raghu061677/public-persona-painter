@@ -11,10 +11,12 @@ import { Switch } from "@/components/ui/switch";
 import { FileText, Upload } from "lucide-react";
 import { SettingsCard, SettingsContentWrapper, SectionHeader, InputRow, TwoColumnRow, InfoAlert } from "@/components/settings/zoho-style";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 
 export default function CompanyPDFTemplates() {
   const { company, refreshCompany } = useCompany();
   const { toast } = useToast();
+  const { isReadOnly } = useSettingsReadOnly();
   const [loading, setLoading] = useState(false);
 
   const [invoiceTemplate, setInvoiceTemplate] = useState({

@@ -8,10 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Calculator, Loader2 } from "lucide-react";
 import { SettingsCard, SettingsContentWrapper, SectionHeader, InputRow, InfoAlert } from "@/components/settings/zoho-style";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 
 export default function CompanyTaxes() {
   const { company, refreshCompany } = useCompany();
   const { toast } = useToast();
+  const { isReadOnly } = useSettingsReadOnly();
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -67,6 +69,7 @@ export default function CompanyTaxes() {
   }, [company, toast]);
 
   const handleSave = async () => {
+    if (isReadOnly) { toast({ title: 'View-only access', variant: 'destructive' }); return; }
     if (!company) return;
 
     setLoading(true);

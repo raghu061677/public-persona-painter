@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Save } from "lucide-react";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 
 export default function CompanySales() {
   const { company } = useCompany();
   const { toast } = useToast();
+  const { isReadOnly } = useSettingsReadOnly();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     default_campaign_duration: 3,
@@ -55,6 +57,7 @@ export default function CompanySales() {
   }, [company]);
 
   const handleSave = async () => {
+    if (isReadOnly) { toast({ title: 'View-only access', variant: 'destructive' }); return; }
     if (!company) return;
 
     setLoading(true);

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { CreditCard, Save, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 
 const PAYMENT_GATEWAYS = [
   { id: "razorpay", name: "Razorpay", status: "not_connected", logo: "💳" },
@@ -19,6 +20,7 @@ const PAYMENT_GATEWAYS = [
 export default function CompanyPayments() {
   const { company } = useCompany();
   const { toast } = useToast();
+  const { isReadOnly } = useSettingsReadOnly();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     online_payments_enabled: false,
@@ -56,6 +58,7 @@ export default function CompanyPayments() {
   }, [company]);
 
   const handleSave = async () => {
+    if (isReadOnly) { toast({ title: 'View-only access', variant: 'destructive' }); return; }
     if (!company) return;
 
     setLoading(true);

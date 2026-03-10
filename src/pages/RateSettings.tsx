@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, DollarSign, Truck, Printer, ArrowDownToLine, History, ShieldCheck } from "lucide-react";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 import { format } from "date-fns";
 import { getMinMarginThreshold, setMinMarginThreshold } from "@/hooks/useCampaignProfitability";
 import { getProfitLockSettings, setProfitLockSettings } from "@/utils/profitability";

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Bell, Mail, Send, RotateCcw, Save, Loader2, MessageSquare } from "lucide-react";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 
 // ===== Types =====
 type DigestSettings = {
@@ -174,6 +175,7 @@ function PhoneChipsEditor({ label, value, onChange, placeholder }: {
 
 // ===== Main Page =====
 export default function AlertsSettings() {
+  const { isReadOnly } = useSettingsReadOnly();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -239,6 +241,7 @@ export default function AlertsSettings() {
   }, [loadSettings, loadTemplates]);
 
   const handleSave = async () => {
+    if (isReadOnly) { toast.error('View-only access'); return; }
     if (!settings) return;
     setSaving(true);
     try {

@@ -9,10 +9,12 @@ import { Switch } from "@/components/ui/switch";
 import { Globe } from "lucide-react";
 import { SettingsCard, SettingsContentWrapper, SectionHeader, InputRow, InfoAlert } from "@/components/settings/zoho-style";
 import { ClientPortalPreview } from "@/components/settings/ClientPortalPreview";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 
 export default function CompanyClientPortal() {
   const { company } = useCompany();
   const { toast } = useToast();
+  const { isReadOnly } = useSettingsReadOnly();
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -81,6 +83,7 @@ export default function CompanyClientPortal() {
   }, [company, toast]);
 
   const handleSave = async () => {
+    if (isReadOnly) { toast({ title: 'View-only access', variant: 'destructive' }); return; }
     if (!company) return;
 
     setLoading(true);

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Code2, Plus, Copy, Eye, EyeOff, Trash2 } from "lucide-react";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 
 const API_KEYS = [
   { id: "1", name: "Production API", key: "pk_live_••••••••••••1234", created: "2024-01-15", lastUsed: "2 hours ago" },

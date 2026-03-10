@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { DollarSign, Plus, Trash2 } from "lucide-react";
 import { SettingsCard, SettingsContentWrapper, SectionHeader, InputRow, InfoAlert } from "@/components/settings/zoho-style";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface Currency {
@@ -22,6 +23,7 @@ interface Currency {
 export default function CompanyCurrencies() {
   const { company, refreshCompany } = useCompany();
   const { toast } = useToast();
+  const { isReadOnly } = useSettingsReadOnly();
   const [loading, setLoading] = useState(false);
   const [baseCurrency, setBaseCurrency] = useState("INR");
   const [currencies, setCurrencies] = useState<Currency[]>([
@@ -87,6 +89,7 @@ export default function CompanyCurrencies() {
   };
 
   const handleSave = async () => {
+    if (isReadOnly) { toast({ title: 'View-only access', variant: 'destructive' }); return; }
     if (!company) return;
 
     setLoading(true);

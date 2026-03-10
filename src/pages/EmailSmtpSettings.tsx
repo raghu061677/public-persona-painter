@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Save, Loader2, Send, CheckCircle2, XCircle, Server } from "lucide-react";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 
 const SMTP_PRESETS: Record<string, { host: string; port: number; secure: boolean }> = {
   gmail: { host: "smtp.gmail.com", port: 587, secure: true },

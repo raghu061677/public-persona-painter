@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Save, Loader2, Eye, Pencil, Plus, FileText } from "lucide-react";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 
 const DEFAULT_TEMPLATES = [
   { key: "portal_invite", name: "Portal Invite", subject: "You've been invited to {{company_name}} Portal", variables: ["client_name", "company_name", "portal_link"] },

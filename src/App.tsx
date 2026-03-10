@@ -19,6 +19,7 @@ import { ClientPortalLayout } from "@/layouts/ClientPortalLayout";
 import { PublicLayout } from "@/layouts/PublicLayout";
 import { SettingsLayout } from "@/layouts/SettingsLayout";
 import { SettingsGuard as SG } from "@/components/rbac/SettingsGuard";
+import { SettingsPageWrapper as SPW } from "@/components/rbac/SettingsPageWrapper";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { OfflineIndicator } from "@/components/pwa/OfflineIndicator";
 import { AIAssistantChat } from "@/components/assistant/AIAssistantChat";
@@ -492,42 +493,40 @@ const App = () => (
               {/* Company Settings with SettingsLayout + per-section RBAC guards */}
               <Route path="company-settings" element={<ProtectedRoute requireAuth><SettingsLayout /></ProtectedRoute>}>
                 <Route index element={<Navigate to="/admin/company-settings/profile" replace />} />
-                <Route path="profile" element={<SG section="profile"><CompanyProfile /></SG>} />
-                <Route path="branding" element={<SG section="branding"><CompanyBranding /></SG>} />
-                <Route path="roles" element={<SG section="roles"><CompanyRoles /></SG>} />
-                <Route path="users" element={<SG section="users"><CompanyUsersSettings /></SG>} />
-                <Route path="taxes" element={<SG section="taxes"><CompanyTaxes /></SG>} />
-                <Route path="direct-taxes" element={<SG section="direct_taxes"><CompanyDirectTaxes /></SG>} />
-                <Route path="einvoicing" element={<SG section="einvoicing"><CompanyEInvoicing /></SG>} />
+                <Route path="profile" element={<SG section="profile"><SPW section="profile"><CompanyProfile /></SPW></SG>} />
+                <Route path="branding" element={<SG section="branding"><SPW section="branding"><CompanyBranding /></SPW></SG>} />
+                <Route path="roles" element={<SG section="roles"><SPW section="roles"><CompanyRoles /></SPW></SG>} />
+                <Route path="users" element={<SG section="users"><SPW section="users"><CompanyUsersSettings /></SPW></SG>} />
+                <Route path="taxes" element={<SG section="taxes"><SPW section="taxes"><CompanyTaxes /></SPW></SG>} />
+                <Route path="direct-taxes" element={<SG section="direct_taxes"><SPW section="direct_taxes"><CompanyDirectTaxes /></SPW></SG>} />
+                <Route path="einvoicing" element={<SG section="einvoicing"><SPW section="einvoicing"><CompanyEInvoicing /></SPW></SG>} />
                 <Route path="e-invoicing" element={<Navigate to="/admin/company-settings/einvoicing" replace />} />
-                <Route path="general" element={<SG section="general"><CompanyGeneral /></SG>} />
-                <Route path="currencies" element={<SG section="currencies"><CompanyCurrencies /></SG>} />
-                <Route path="reminders" element={<SG section="reminders"><CompanyReminders /></SG>} />
-                <Route path="client-portal" element={<SG section="client_portal"><CompanyClientPortal /></SG>} />
-                <Route path="pdf-templates" element={<SG section="pdf_templates"><CompanyPDFTemplates /></SG>} />
-                <Route path="sales" element={<SG section="sales"><CompanySales /></SG>} />
-                <Route path="payments" element={<SG section="payments"><CompanyPayments /></SG>} />
-                <Route path="rate-settings" element={<SG section="rate_settings"><RateSettings /></SG>} />
-                <Route path="concession-contracts" element={<SG section="concession_contracts"><ConcessionContracts /></SG>} />
-                <Route path="sms-notifications" element={<SG section="sms_notifications"><CompanySMSNotifications /></SG>} />
-                <Route path="digital-signature" element={<SG section="digital_signature"><CompanyDigitalSignature /></SG>} />
-                <Route path="alerts" element={<SG section="alerts"><AlertsSettings /></SG>} />
-                <Route path="automation" element={<SG section="automation"><AutomationRules /></SG>} />
-                <Route path="workflows" element={<SG section="workflows"><CompanyWorkflows /></SG>} />
-                <Route path="integrations" element={<SG section="integrations"><CompanyIntegrations /></SG>} />
-                <Route path="developer" element={<SG section="developer"><CompanyDeveloper /></SG>} />
-                {/* Email Providers (canonical) — formerly smtp-settings */}
-                <Route path="email-providers" element={<SG section="email_providers"><EmailSmtpSettings /></SG>} />
+                <Route path="general" element={<SG section="general"><SPW section="general"><CompanyGeneral /></SPW></SG>} />
+                <Route path="currencies" element={<SG section="currencies"><SPW section="currencies"><CompanyCurrencies /></SPW></SG>} />
+                <Route path="reminders" element={<SG section="reminders"><SPW section="reminders"><CompanyReminders /></SPW></SG>} />
+                <Route path="client-portal" element={<SG section="client_portal"><SPW section="client_portal"><CompanyClientPortal /></SPW></SG>} />
+                <Route path="pdf-templates" element={<SG section="pdf_templates"><SPW section="pdf_templates"><CompanyPDFTemplates /></SPW></SG>} />
+                <Route path="sales" element={<SG section="sales"><SPW section="sales"><CompanySales /></SPW></SG>} />
+                <Route path="payments" element={<SG section="payments"><SPW section="payments"><CompanyPayments /></SPW></SG>} />
+                <Route path="rate-settings" element={<SG section="rate_settings"><SPW section="rate_settings"><RateSettings /></SPW></SG>} />
+                <Route path="concession-contracts" element={<SG section="concession_contracts"><SPW section="concession_contracts"><ConcessionContracts /></SPW></SG>} />
+                <Route path="sms-notifications" element={<SG section="sms_notifications"><SPW section="sms_notifications"><CompanySMSNotifications /></SPW></SG>} />
+                <Route path="digital-signature" element={<SG section="digital_signature"><SPW section="digital_signature"><CompanyDigitalSignature /></SPW></SG>} />
+                <Route path="alerts" element={<SG section="alerts"><SPW section="alerts"><AlertsSettings /></SPW></SG>} />
+                <Route path="automation" element={<SG section="automation"><SPW section="automation"><AutomationRules /></SPW></SG>} />
+                <Route path="workflows" element={<SG section="workflows"><SPW section="workflows"><CompanyWorkflows /></SPW></SG>} />
+                <Route path="integrations" element={<SG section="integrations"><SPW section="integrations"><CompanyIntegrations /></SPW></SG>} />
+                <Route path="developer" element={<SG section="developer"><SPW section="developer"><CompanyDeveloper /></SPW></SG>} />
+                {/* Email Providers (canonical) */}
+                <Route path="email-providers" element={<SG section="email_providers"><SPW section="email_providers"><EmailSmtpSettings /></SPW></SG>} />
                 <Route path="smtp-settings" element={<Navigate to="/admin/company-settings/email-providers" replace />} />
                 <Route path="email-notifications" element={<Navigate to="/admin/company-settings/email-providers" replace />} />
                 <Route path="email-suppressions" element={<Navigate to="/admin/company-settings/email-providers" replace />} />
-
                 {/* Email Templates (canonical) */}
-                <Route path="email-templates" element={<SG section="email_templates"><EmailTemplateEditor /></SG>} />
+                <Route path="email-templates" element={<SG section="email_templates"><SPW section="email_templates"><EmailTemplateEditor /></SPW></SG>} />
                 <Route path="email-template-manager" element={<Navigate to="/admin/company-settings/email-templates" replace />} />
-
                 {/* Email Outbox & Logs (canonical) */}
-                <Route path="email-outbox" element={<SG section="email_outbox"><EmailOutbox /></SG>} />
+                <Route path="email-outbox" element={<SG section="email_outbox"><SPW section="email_outbox"><EmailOutbox /></SPW></SG>} />
                 <Route path="email-logs" element={<Navigate to="/admin/company-settings/email-outbox" replace />} />
                 <Route path="email-delivery-logs" element={<Navigate to="/admin/company-settings/email-outbox" replace />} />
               </Route>

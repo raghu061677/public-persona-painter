@@ -20,6 +20,7 @@ const PAYMENT_GATEWAYS = [
 export default function CompanyPayments() {
   const { company } = useCompany();
   const { toast } = useToast();
+  const { isReadOnly } = useSettingsReadOnly();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     online_payments_enabled: false,

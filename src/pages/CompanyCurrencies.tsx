@@ -23,6 +23,7 @@ interface Currency {
 export default function CompanyCurrencies() {
   const { company, refreshCompany } = useCompany();
   const { toast } = useToast();
+  const { isReadOnly } = useSettingsReadOnly();
   const [loading, setLoading] = useState(false);
   const [baseCurrency, setBaseCurrency] = useState("INR");
   const [currencies, setCurrencies] = useState<Currency[]>([

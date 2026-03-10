@@ -14,6 +14,7 @@ export default function CompanyGeneral() {
   const [loading, setLoading] = useState(false);
 
   const handleSave = () => {
+    if (isReadOnly) { toast({ title: 'View-only access', variant: 'destructive' }); return; }
     setLoading(true);
     toast({
       title: "Settings Saved",

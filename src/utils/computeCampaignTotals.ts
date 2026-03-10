@@ -110,11 +110,20 @@ export function computeCampaignTotals({
    const activeAssets = campaignAssets.filter(a => !a.is_removed);
    
    for (const asset of campaignAssets) {
-     // For dropped assets with manual billing override, use that amount directly
-     if (asset.is_removed && asset.billing_mode_override === 'manual_override' && asset.billing_override_amount != null) {
-       displayCostRaw += Number(asset.billing_override_amount);
-       continue;
-     }
+    // Handle removed assets based on their billing mode
+    if (asset.is_removed) {
+      const mode = asset.billing_mode_override;
+      if (mode === 'waived') {
+        // Waived: zero billing for this asset
+        continue;
+      }
+      if (mode === 'manual_override' && asset.billing_override_amount != null) {
+        displayCostRaw += Number(asset.billing_override_amount);
+        continue;
+      }
+      // prorated / full_term: fall through to normal date-based calculation
+      // (effective_end_date is already set to drop date for prorated)
+    }
 
      // Use effective dates (which account for drops), falling back to booking/campaign dates
      const assetStart = asset.effective_start_date 

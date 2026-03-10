@@ -41,6 +41,20 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DropAssetDialog } from "./DropAssetDialog";
+
+function getRemovalLabel(type?: string): string {
+  switch (type) {
+    case 'client_drop': return 'Client Dropped';
+    case 'admin_removed': return 'Admin Removed';
+    case 'damaged': return 'Damaged';
+    case 'maintenance': return 'Maintenance';
+    case 'authority_issue': return 'Authority Issue';
+    case 'site_removed': return 'Site Removed';
+    case 'replacement': return 'Replaced';
+    case 'other': return 'Removed';
+    default: return 'Dropped';
+  }
+}
  
  interface CampaignAsset {
    id: string;
@@ -612,11 +626,31 @@ export function CampaignDetailAssetsTable({
                    )}
                    {isColumnVisible("status") && (
                      <TableCell>
-                       {asset.is_removed ? (
-                         <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-300">
-                           Dropped{asset.dropped_on ? ` on ${asset.dropped_on}` : ''}
-                         </Badge>
-                       ) : (
+                    {asset.is_removed ? (
+                          <div className="flex flex-col gap-1">
+                            <Badge variant="outline" className={
+                              (asset as any).removal_type === 'client_drop'
+                                ? "bg-orange-50 text-orange-700 border-orange-300"
+                                : (asset as any).removal_type === 'damaged'
+                                ? "bg-red-50 text-red-700 border-red-300"
+                                : (asset as any).removal_type === 'maintenance'
+                                ? "bg-yellow-50 text-yellow-700 border-yellow-300"
+                                : (asset as any).removal_type === 'authority_issue'
+                                ? "bg-purple-50 text-purple-700 border-purple-300"
+                                : "bg-slate-50 text-slate-700 border-slate-300"
+                            }>
+                              {getRemovalLabel((asset as any).removal_type)}
+                            </Badge>
+                            {asset.dropped_on && (
+                              <span className="text-[10px] text-muted-foreground">{asset.dropped_on}</span>
+                            )}
+                            {(asset as any).billing_mode_override && (
+                              <Badge variant="secondary" className="text-[10px] py-0">
+                                {(asset as any).billing_mode_override === 'waived' ? '₹ Waived' : (asset as any).billing_mode_override}
+                              </Badge>
+                            )}
+                          </div>
+                        ) : (
                          <Badge className={getAssetStatusColor(asset.status)}>
                            {asset.status}
                          </Badge>

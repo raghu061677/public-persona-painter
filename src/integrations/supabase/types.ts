@@ -1972,7 +1972,10 @@ export type Database = {
           printing_cost: number
           printing_cost_default: number | null
           printing_rate_per_sqft: number
+          removal_notes: string | null
+          removal_type: string | null
           rent_amount: number | null
+          replacement_asset_id: string | null
           start_date: string | null
           state: string | null
           status: Database["public"]["Enums"]["asset_installation_status"]
@@ -2035,7 +2038,10 @@ export type Database = {
           printing_cost?: number
           printing_cost_default?: number | null
           printing_rate_per_sqft?: number
+          removal_notes?: string | null
+          removal_type?: string | null
           rent_amount?: number | null
+          replacement_asset_id?: string | null
           start_date?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["asset_installation_status"]
@@ -2098,7 +2104,10 @@ export type Database = {
           printing_cost?: number
           printing_cost_default?: number | null
           printing_rate_per_sqft?: number
+          removal_notes?: string | null
+          removal_type?: string | null
           rent_amount?: number | null
+          replacement_asset_id?: string | null
           start_date?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["asset_installation_status"]

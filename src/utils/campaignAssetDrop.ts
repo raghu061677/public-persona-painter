@@ -1,27 +1,43 @@
 /**
- * Campaign Asset Drop Service — Non-destructive mid-campaign asset removal.
+ * Campaign Asset Drop/Removal Service — Non-destructive mid-campaign asset removal.
  *
- * Business rules:
- * - Dropped assets are soft-removed (is_removed=true), never hard-deleted
- * - effective_end_date is set to the drop date
- * - Billing auto-prorates to the drop date unless manually overridden
- * - Historical proof, photos, and financial data remain linked
- * - Other campaign assets are unaffected
+ * Supports two business cases:
+ * 1. Client Drop — client requests removal, billing defaults to prorated
+ * 2. Admin/Company Removal — operational reasons, billing defaults to waived
+ *
+ * Removal types: client_drop, admin_removed, damaged, maintenance,
+ * authority_issue, site_removed, replacement, other
+ *
+ * Billing modes: prorated, full_term, manual_override, waived
  */
 
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
 
 const BILLING_CYCLE_DAYS = 30;
 
 // ─── Types ───────────────────────────────────────────────────────
 
+export type RemovalType =
+  | 'client_drop'
+  | 'admin_removed'
+  | 'damaged'
+  | 'maintenance'
+  | 'authority_issue'
+  | 'site_removed'
+  | 'replacement'
+  | 'other';
+
+export type BillingMode = 'prorated' | 'full_term' | 'manual_override' | 'waived';
+
 export interface DropAssetParams {
   campaignAssetId: string;
   dropDate: string; // YYYY-MM-DD
   dropReason?: string;
-  billingMode?: 'prorated' | 'full_term' | 'manual_override';
+  billingMode?: BillingMode;
   billingOverrideAmount?: number | null;
+  removalType?: RemovalType;
+  removalNotes?: string;
+  replacementAssetId?: string;
 }
 
 export interface DropAssetResult {
@@ -30,6 +46,36 @@ export interface DropAssetResult {
   originalAmount?: number;
   error?: string;
 }
+
+// ─── Default Billing Mode per Removal Type ──────────────────────
+
+const REMOVAL_BILLING_DEFAULTS: Record<RemovalType, BillingMode> = {
+  client_drop: 'prorated',
+  admin_removed: 'waived',
+  damaged: 'waived',
+  maintenance: 'waived',
+  authority_issue: 'waived',
+  site_removed: 'waived',
+  replacement: 'waived',
+  other: 'prorated',
+};
+
+export function getDefaultBillingModeForRemovalType(type: RemovalType): BillingMode {
+  return REMOVAL_BILLING_DEFAULTS[type] || 'prorated';
+}
+
+// ─── Activity Log Action per Removal Type ───────────────────────
+
+const REMOVAL_LOG_ACTIONS: Record<RemovalType, string> = {
+  client_drop: 'CAMPAIGN_ASSET_CLIENT_DROPPED',
+  admin_removed: 'CAMPAIGN_ASSET_ADMIN_REMOVED',
+  damaged: 'CAMPAIGN_ASSET_DAMAGED',
+  maintenance: 'CAMPAIGN_ASSET_ADMIN_REMOVED',
+  authority_issue: 'CAMPAIGN_ASSET_ADMIN_REMOVED',
+  site_removed: 'CAMPAIGN_ASSET_ADMIN_REMOVED',
+  replacement: 'CAMPAIGN_ASSET_REPLACED',
+  other: 'CAMPAIGN_ASSET_ADMIN_REMOVED',
+};
 
 // ─── Proration Calculator ───────────────────────────────────────
 
@@ -67,12 +113,19 @@ export function calculateFullTermAmount(
 // ─── Drop Action ────────────────────────────────────────────────
 
 /**
- * Drop a single campaign asset non-destructively.
- * Sets is_removed=true, records drop date/reason, updates effective_end_date,
- * and optionally applies prorated billing.
+ * Drop/remove a single campaign asset non-destructively.
  */
 export async function dropCampaignAsset(params: DropAssetParams): Promise<DropAssetResult> {
-  const { campaignAssetId, dropDate, dropReason, billingMode = 'prorated', billingOverrideAmount } = params;
+  const {
+    campaignAssetId,
+    dropDate,
+    dropReason,
+    billingMode = 'prorated',
+    billingOverrideAmount,
+    removalType = 'client_drop',
+    removalNotes,
+    replacementAssetId,
+  } = params;
 
   try {
     // Fetch current asset data
@@ -87,7 +140,7 @@ export async function dropCampaignAsset(params: DropAssetParams): Promise<DropAs
     }
 
     if (asset.is_removed) {
-      return { success: false, error: 'Asset is already dropped' };
+      return { success: false, error: 'Asset is already removed' };
     }
 
     const effectiveStart = asset.effective_start_date || asset.booking_start_date || asset.start_date;
@@ -96,34 +149,43 @@ export async function dropCampaignAsset(params: DropAssetParams): Promise<DropAs
 
     // Calculate amounts
     const originalAmount = calculateFullTermAmount(monthlyRate, effectiveStart, effectiveEnd);
-    let proratedAmount = calculateProratedAmount(monthlyRate, effectiveStart, dropDate);
+    const proratedAmount = calculateProratedAmount(monthlyRate, effectiveStart, dropDate);
 
-    // Determine final billing
-    let finalBillingOverride: number | null = null;
-    let finalBillingMode = billingMode;
-
-    if (billingMode === 'manual_override' && billingOverrideAmount != null) {
-      finalBillingOverride = billingOverrideAmount;
-    } else if (billingMode === 'full_term') {
-      finalBillingOverride = null; // Keep original
-    }
-    // prorated → no override, rent_amount recalculated
-
-    // Update campaign_asset — soft removal
+    // Determine final billing based on mode
     const updatePayload: Record<string, any> = {
       is_removed: true,
       dropped_on: dropDate,
       drop_reason: dropReason || null,
       effective_end_date: dropDate,
-      billing_mode_override: finalBillingMode,
+      billing_mode_override: billingMode,
+      removal_type: removalType,
+      removal_notes: removalNotes || null,
     };
 
-    if (finalBillingMode === 'prorated') {
-      updatePayload.rent_amount = proratedAmount;
+    if (replacementAssetId) {
+      updatePayload.replacement_asset_id = replacementAssetId;
     }
-    if (finalBillingOverride != null) {
-      updatePayload.billing_override_amount = finalBillingOverride;
-      updatePayload.rent_amount = finalBillingOverride;
+
+    // Set rent_amount based on billing mode
+    switch (billingMode) {
+      case 'waived':
+        updatePayload.rent_amount = 0;
+        updatePayload.billing_override_amount = 0;
+        break;
+      case 'prorated':
+        updatePayload.rent_amount = proratedAmount;
+        updatePayload.billing_override_amount = null;
+        break;
+      case 'full_term':
+        // Keep original rent_amount
+        updatePayload.billing_override_amount = null;
+        break;
+      case 'manual_override':
+        if (billingOverrideAmount != null) {
+          updatePayload.rent_amount = billingOverrideAmount;
+          updatePayload.billing_override_amount = billingOverrideAmount;
+        }
+        break;
     }
 
     const { error: updateErr } = await supabase
@@ -135,10 +197,17 @@ export async function dropCampaignAsset(params: DropAssetParams): Promise<DropAs
       return { success: false, error: `Update failed: ${updateErr.message}` };
     }
 
-    // Log activity
-    try {
-      await supabase.from('activity_logs').insert({
-        action: 'CAMPAIGN_ASSET_DROPPED',
+    // Log activity with specific action per removal type
+    const logAction = REMOVAL_LOG_ACTIONS[removalType] || 'CAMPAIGN_ASSET_ADMIN_REMOVED';
+    const billingLogAction = billingMode === 'waived'
+      ? 'CAMPAIGN_ASSET_BILLING_WAIVED'
+      : billingMode === 'manual_override'
+      ? 'CAMPAIGN_ASSET_BILLING_OVERRIDDEN'
+      : null;
+
+    const logEntries: any[] = [
+      {
+        action: logAction,
         resource_type: 'campaign_asset',
         resource_id: campaignAssetId,
         resource_name: asset.asset_id,
@@ -146,12 +215,33 @@ export async function dropCampaignAsset(params: DropAssetParams): Promise<DropAs
           campaign_id: asset.campaign_id,
           drop_date: dropDate,
           drop_reason: dropReason,
-          billing_mode: finalBillingMode,
+          removal_type: removalType,
+          removal_notes: removalNotes,
+          billing_mode: billingMode,
           original_amount: originalAmount,
           prorated_amount: proratedAmount,
-          override_amount: finalBillingOverride,
+          final_amount: billingMode === 'waived' ? 0 : billingMode === 'prorated' ? proratedAmount : billingOverrideAmount,
+          replacement_asset_id: replacementAssetId,
+        },
+      },
+    ];
+
+    if (billingLogAction) {
+      logEntries.push({
+        action: billingLogAction,
+        resource_type: 'campaign_asset',
+        resource_id: campaignAssetId,
+        resource_name: asset.asset_id,
+        details: {
+          campaign_id: asset.campaign_id,
+          billing_mode: billingMode,
+          amount: billingMode === 'waived' ? 0 : billingOverrideAmount,
         },
       });
+    }
+
+    try {
+      await supabase.from('activity_logs').insert(logEntries);
     } catch {
       // Non-critical
     }

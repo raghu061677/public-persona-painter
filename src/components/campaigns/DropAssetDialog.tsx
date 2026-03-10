@@ -1,11 +1,15 @@
 /**
- * DropAssetDialog — Non-destructive mid-campaign asset drop dialog.
+ * DropAssetDialog — Non-destructive mid-campaign asset removal dialog.
  *
- * Allows dropping individual assets from a running campaign
- * without cancelling the whole campaign or hard-deleting records.
+ * Supports two distinct business cases:
+ * 1. Client Drop — client requests removal, billing defaults to prorated
+ * 2. Admin/Company Removal — operational reasons, billing defaults to waived
+ *
+ * Removal types: client_drop, admin_removed, damaged, maintenance,
+ * authority_issue, site_removed, replacement, other
  */
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +23,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, Calendar, DollarSign } from "lucide-react";
@@ -29,7 +40,21 @@ import {
   dropCampaignAsset,
   calculateProratedAmount,
   calculateFullTermAmount,
+  getDefaultBillingModeForRemovalType,
+  type RemovalType,
+  type BillingMode,
 } from "@/utils/campaignAssetDrop";
+
+const REMOVAL_TYPE_OPTIONS: { value: RemovalType; label: string; group: 'client' | 'admin' }[] = [
+  { value: 'client_drop', label: 'Client Drop', group: 'client' },
+  { value: 'admin_removed', label: 'Admin Removed', group: 'admin' },
+  { value: 'damaged', label: 'Damaged', group: 'admin' },
+  { value: 'maintenance', label: 'Maintenance', group: 'admin' },
+  { value: 'authority_issue', label: 'Authority Issue', group: 'admin' },
+  { value: 'site_removed', label: 'Site Removed', group: 'admin' },
+  { value: 'replacement', label: 'Replacement', group: 'admin' },
+  { value: 'other', label: 'Other', group: 'admin' },
+];
 
 interface DropAssetDialogProps {
   open: boolean;
@@ -59,10 +84,29 @@ export function DropAssetDialog({
   onDropComplete,
 }: DropAssetDialogProps) {
   const [dropDate, setDropDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [removalType, setRemovalType] = useState<RemovalType>("client_drop");
   const [dropReason, setDropReason] = useState("");
-  const [billingMode, setBillingMode] = useState<"prorated" | "full_term" | "manual_override">("prorated");
+  const [removalNotes, setRemovalNotes] = useState("");
+  const [billingMode, setBillingMode] = useState<BillingMode>("prorated");
   const [overrideAmount, setOverrideAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Reset billing mode when removal type changes
+  useEffect(() => {
+    setBillingMode(getDefaultBillingModeForRemovalType(removalType));
+  }, [removalType]);
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      setDropDate(format(new Date(), "yyyy-MM-dd"));
+      setRemovalType("client_drop");
+      setDropReason("");
+      setRemovalNotes("");
+      setBillingMode("prorated");
+      setOverrideAmount("");
+    }
+  }, [open]);
 
   if (!campaignAsset) return null;
 
@@ -80,7 +124,11 @@ export function DropAssetDialog({
   const displayBillingAmount =
     billingMode === "full_term" ? fullAmount
     : billingMode === "manual_override" ? (Number(overrideAmount) || 0)
+    : billingMode === "waived" ? 0
     : proratedAmount;
+
+  const removalTypeInfo = REMOVAL_TYPE_OPTIONS.find(o => o.value === removalType);
+  const isClientDrop = removalType === 'client_drop';
 
   const handleDrop = async () => {
     if (!dropDate) {
@@ -95,17 +143,21 @@ export function DropAssetDialog({
         dropReason: dropReason || undefined,
         billingMode,
         billingOverrideAmount: billingMode === "manual_override" ? Number(overrideAmount) : undefined,
+        removalType,
+        removalNotes: removalNotes || undefined,
       });
 
       if (result.success) {
         toast({
-          title: "Asset dropped successfully",
-          description: `Billing adjusted to ${formatCurrency(displayBillingAmount)}`,
+          title: isClientDrop ? "Asset dropped by client" : "Asset removed",
+          description: billingMode === 'waived'
+            ? "Billing waived for this asset"
+            : `Billing adjusted to ${formatCurrency(displayBillingAmount)}`,
         });
         onOpenChange(false);
         onDropComplete?.();
       } else {
-        toast({ title: "Drop failed", description: result.error, variant: "destructive" });
+        toast({ title: "Operation failed", description: result.error, variant: "destructive" });
       }
     } finally {
       setSubmitting(false);
@@ -114,14 +166,16 @@ export function DropAssetDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-destructive" />
-            Drop Asset from Campaign
+            {isClientDrop ? "Drop Asset (Client Request)" : "Remove Asset"}
           </DialogTitle>
           <DialogDescription>
-            This will mark the asset as dropped. It will remain in campaign history but become available for future bookings after the drop date.
+            {isClientDrop
+              ? "The client has requested removal of this asset. Billing will be prorated by default."
+              : "Remove this asset for operational reasons. Billing will be waived by default."}
           </DialogDescription>
         </DialogHeader>
 
@@ -138,10 +192,30 @@ export function DropAssetDialog({
             </div>
           </div>
 
+          {/* Removal type */}
+          <div className="space-y-1.5">
+            <Label>Removal Type</Label>
+            <Select value={removalType} onValueChange={(v) => setRemovalType(v as RemovalType)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="client_drop">Client Drop</SelectItem>
+                <SelectItem value="admin_removed">Admin Removed</SelectItem>
+                <SelectItem value="damaged">Damaged</SelectItem>
+                <SelectItem value="maintenance">Maintenance</SelectItem>
+                <SelectItem value="authority_issue">Authority Issue</SelectItem>
+                <SelectItem value="site_removed">Site Removed</SelectItem>
+                <SelectItem value="replacement">Replacement</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Drop date */}
           <div className="space-y-1.5">
             <Label htmlFor="dropDate" className="flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5" /> Drop Date
+              <Calendar className="h-3.5 w-3.5" /> Effective Removal Date
             </Label>
             <Input
               id="dropDate"
@@ -153,14 +227,25 @@ export function DropAssetDialog({
             />
           </div>
 
-          {/* Drop reason */}
+          {/* Reason */}
           <div className="space-y-1.5">
-            <Label htmlFor="dropReason">Reason (optional)</Label>
-            <Textarea
+            <Label htmlFor="dropReason">Reason</Label>
+            <Input
               id="dropReason"
-              placeholder="Client requested removal, location issue, etc."
+              placeholder={isClientDrop ? "Client requested removal" : "Operational reason"}
               value={dropReason}
               onChange={(e) => setDropReason(e.target.value)}
+            />
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-1.5">
+            <Label htmlFor="removalNotes">Additional Notes (optional)</Label>
+            <Textarea
+              id="removalNotes"
+              placeholder="Any additional context..."
+              value={removalNotes}
+              onChange={(e) => setRemovalNotes(e.target.value)}
               rows={2}
             />
           </div>
@@ -170,11 +255,17 @@ export function DropAssetDialog({
             <Label className="flex items-center gap-1.5">
               <DollarSign className="h-3.5 w-3.5" /> Billing Mode
             </Label>
-            <RadioGroup value={billingMode} onValueChange={(v) => setBillingMode(v as any)}>
+            <RadioGroup value={billingMode} onValueChange={(v) => setBillingMode(v as BillingMode)}>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="prorated" id="prorated" />
                 <Label htmlFor="prorated" className="text-sm font-normal">
-                  Prorated to drop date — {formatCurrency(proratedAmount)}
+                  Prorated to removal date — {formatCurrency(proratedAmount)}
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="waived" id="waived" />
+                <Label htmlFor="waived" className="text-sm font-normal">
+                  Waived — {formatCurrency(0)} (no charge for unused period)
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
@@ -203,7 +294,17 @@ export function DropAssetDialog({
           {/* Summary */}
           <Alert>
             <AlertDescription className="flex justify-between items-center">
-              <span className="text-sm">Final billing for this asset:</span>
+              <div className="space-y-0.5">
+                <span className="text-sm">Final billing for this asset:</span>
+                <div className="flex gap-2">
+                  <Badge variant="secondary" className="text-xs">
+                    {removalTypeInfo?.label}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {billingMode === 'waived' ? 'Waived' : billingMode}
+                  </Badge>
+                </div>
+              </div>
               <Badge variant="outline" className="text-base font-semibold">
                 {formatCurrency(displayBillingAmount)}
               </Badge>
@@ -216,7 +317,7 @@ export function DropAssetDialog({
             Cancel
           </Button>
           <Button variant="destructive" onClick={handleDrop} disabled={submitting}>
-            {submitting ? "Dropping..." : "Confirm Drop"}
+            {submitting ? "Processing..." : isClientDrop ? "Confirm Drop" : "Confirm Removal"}
           </Button>
         </DialogFooter>
       </DialogContent>

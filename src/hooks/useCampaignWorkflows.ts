@@ -170,7 +170,7 @@ export function useCampaignWorkflows(campaignId: string | undefined) {
           const newStatus = payload.new.status;
           const oldStatus = payload.old?.status;
 
-          // Auto-record expenses when asset is installed (canonical value only)
+          // Auto-record expenses + trigger installation email when asset is installed
           if (newStatus === 'Installed' && oldStatus !== 'Installed') {
             try {
               const { data, error } = await supabase.functions.invoke('auto-record-expenses', {
@@ -183,6 +183,29 @@ export function useCampaignWorkflows(campaignId: string | undefined) {
             } catch (error: any) {
               console.error('Auto-expense error:', error);
             }
+
+            // Trigger installation_completed emails
+            try {
+              const assetPayload = {
+                asset_code: payload.new.asset_id || '',
+                asset_location: payload.new.location || '',
+                asset_city: payload.new.city || '',
+                campaign_code: campaignId,
+                installation_date: new Date().toISOString().split('T')[0],
+              };
+              await triggerEmailEvent({
+                event_key: 'installation_completed_internal',
+                payload: assetPayload,
+                recipients: [{ to: company?.email || '' }],
+                company_id: company!.id,
+                source_id: payload.new.id,
+              });
+              // TODO: installation_completed_client requires campaign.client_id lookup
+              // which isn't available in the asset channel payload. 
+              // Wired via ProofApprovalDialog confirm flow instead.
+            } catch (emailErr) {
+              console.warn('[CampaignWorkflows] Installation email failed:', emailErr);
+            }
           }
         }
       )
@@ -192,5 +215,5 @@ export function useCampaignWorkflows(campaignId: string | undefined) {
       supabase.removeChannel(campaignChannel);
       supabase.removeChannel(assetChannel);
     };
-  }, [campaignId]);
+  }, [campaignId, company?.id]);
 }

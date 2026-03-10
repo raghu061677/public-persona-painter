@@ -345,5 +345,7 @@ export function ConvertToCampaignDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    {EmailConfirmDialog}
+    </>
   );
 }

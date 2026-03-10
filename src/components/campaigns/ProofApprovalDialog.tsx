@@ -152,5 +152,7 @@ export function ProofApprovalDialog({ asset, open, onOpenChange, onUpdate }: Pro
         </div>
       </DialogContent>
     </Dialog>
+    {EmailConfirmDialog}
+    </>
   );
 }

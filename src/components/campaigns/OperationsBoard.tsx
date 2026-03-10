@@ -358,6 +358,7 @@ export function OperationsBoard({ campaignId, assets, onUpdate, assetCodePrefix,
           </div>
         </DialogContent>
       </Dialog>
+      {EmailConfirmDialog}
     </div>
   );
 }

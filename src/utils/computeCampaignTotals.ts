@@ -10,19 +10,25 @@
  
  const BILLING_CYCLE_DAYS = 30;
  
- export interface CampaignAsset {
-   id?: string;
-   asset_id?: string;
-   negotiated_rate?: number | null;
-   card_rate?: number | null;
-   printing_charges?: number | null;
-   mounting_charges?: number | null;
-   booking_start_date?: string | null;
-   booking_end_date?: string | null;
-   start_date?: string | null;
-   end_date?: string | null;
-   total_sqft?: number | null;
- }
+export interface CampaignAsset {
+  id?: string;
+  asset_id?: string;
+  negotiated_rate?: number | null;
+  card_rate?: number | null;
+  printing_charges?: number | null;
+  mounting_charges?: number | null;
+  booking_start_date?: string | null;
+  booking_end_date?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  total_sqft?: number | null;
+  // Drop support fields
+  is_removed?: boolean;
+  effective_start_date?: string | null;
+  effective_end_date?: string | null;
+  billing_override_amount?: number | null;
+  billing_mode_override?: string | null;
+}
  
  export interface CampaignData {
    start_date: string;

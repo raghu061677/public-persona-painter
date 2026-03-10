@@ -1209,6 +1209,7 @@ export function SelectedAssetsTable({
                         {formatCurrency(lineTotal)}
                       </TableCell>
                     )}
+                    {onRemove && (
                     <TableCell>
                       <Button
                         size="icon"
@@ -1219,6 +1220,7 @@ export function SelectedAssetsTable({
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>
+                    )}
                   </TableRow>
                 );
               })

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Bell, Mail, Send, RotateCcw, Save, Loader2, MessageSquare } from "lucide-react";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 
 // ===== Types =====
 type DigestSettings = {

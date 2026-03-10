@@ -198,9 +198,33 @@ export function useCampaignWorkflows(campaignId: string | undefined) {
                 company_id: company!.id,
                 source_id: payload.new.id,
               });
-              // TODO: installation_completed_client requires campaign.client_id lookup
-              // which isn't available in the asset channel payload. 
-              // Wired via ProofApprovalDialog confirm flow instead.
+              // installation_completed_client — resolve client from campaign
+              try {
+                const { data: campaign } = await supabase
+                  .from('campaigns')
+                  .select('client_id, client_name, campaign_name')
+                  .eq('id', campaignId)
+                  .single();
+                if (campaign?.client_id) {
+                  const { data: client } = await supabase
+                    .from('clients').select('email, name').eq('id', campaign.client_id).single();
+                  if (client?.email) {
+                    await triggerEmailEvent({
+                      event_key: 'installation_completed_client',
+                      payload: {
+                        ...assetPayload,
+                        campaign_name: campaign.campaign_name || '',
+                        client_name: client.name || campaign.client_name || '',
+                      },
+                      recipients: [{ to: client.email, name: client.name }],
+                      company_id: company!.id,
+                      source_id: payload.new.id,
+                    });
+                  }
+                }
+              } catch (clientErr) {
+                console.warn('[CampaignWorkflows] installation_completed_client failed:', clientErr);
+              }
             } catch (emailErr) {
               console.warn('[CampaignWorkflows] Installation email failed:', emailErr);
             }

@@ -28,6 +28,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { normalizeCampaignAssetStatus } from "@/lib/constants/campaignAssetStatus";
 
 type TaskStatus = Database['public']['Enums']['asset_installation_status'];
 

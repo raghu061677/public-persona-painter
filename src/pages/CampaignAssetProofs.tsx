@@ -15,6 +15,7 @@ import { BackToCampaignButton } from "@/components/campaigns/BackToCampaignButto
 import { CampaignBreadcrumbs } from "@/components/campaigns/CampaignBreadcrumbs";
 import { CampaignContextHeader } from "@/components/campaigns/CampaignContextHeader";
 import { formatAssetDisplayCode } from "@/lib/assets/formatAssetDisplayCode";
+import { getCampaignAssetStatusMeta } from "@/lib/constants/campaignAssetStatus";
 
 interface CampaignAsset {
   id: string;

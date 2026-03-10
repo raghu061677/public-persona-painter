@@ -69,8 +69,11 @@ export function getCampaignStatusColor(status: string): string {
 /**
  * Get status color for asset installation — delegates to shared config
  */
+export { getCampaignAssetStatusMeta } from "@/lib/constants/campaignAssetStatus";
+
+import { getCampaignAssetStatusMeta } from "@/lib/constants/campaignAssetStatus";
+
 export function getAssetStatusColor(status: string): string {
-  const { getCampaignAssetStatusMeta } = require("@/lib/constants/campaignAssetStatus");
   return getCampaignAssetStatusMeta(status).badgeClass || 'bg-muted text-muted-foreground';
 }
 

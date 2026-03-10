@@ -512,7 +512,14 @@ export default function CampaignsList() {
                             {campaign.campaign_code || campaign.id}
                           </TableCell>
                           <TableCell className={`px-4 py-3 ${getCellClassName()}`}>{campaign.client_name}</TableCell>
-                          <TableCell className={`px-4 py-3 font-medium text-primary hover:underline cursor-pointer ${getCellClassName()}`} onClick={() => navigate(`/admin/campaigns/edit/${campaign.id}`)}>
+                          <TableCell className={`px-4 py-3 font-medium text-primary hover:underline cursor-pointer ${getCellClassName()}`} onClick={() => {
+                            // Non-owners go to detail view, owners/admins go to edit
+                            if (actions.canEdit(campaign)) {
+                              navigate(`/admin/campaigns/edit/${campaign.id}`);
+                            } else {
+                              navigate(`/admin/campaigns/${campaign.id}`);
+                            }
+                          }}>
                             {campaign.campaign_name}
                           </TableCell>
                           <TableCell className={`px-4 py-3 ${getCellClassName()}`}>

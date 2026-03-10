@@ -663,37 +663,36 @@ export function CampaignDetailAssetsTable({
                      <TableCell>{asset.mounter_name || "-"}</TableCell>
                    )}
                    {isColumnVisible("actions") && (
-                     <TableCell className="text-right">
-                       <div className="flex items-center justify-end gap-1">
-                         {!readOnly && !asset.is_removed && (
-                           <>
-                             <Button
-                               variant="outline"
-                               size="sm"
-                               onClick={() => navigate(`/mobile/upload/${campaignId}/${asset.id}`)}
-                             >
-                               <Upload className="mr-1 h-3 w-3" />
-                               Upload
-                             </Button>
-                             <Button
-                               variant="ghost"
-                               size="sm"
-                               className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                               onClick={() => { setDropTarget(asset); setDropDialogOpen(true); }}
-                               title="Drop this asset from campaign"
-                             >
-                               <Ban className="h-3.5 w-3.5" />
-                             </Button>
-                           </>
-                         )}
-                         {readOnly && !asset.is_removed && (
-                           <span className="text-xs text-muted-foreground italic">View only</span>
-                         )}
-                         {asset.is_removed && (
-                           <span className="text-xs text-muted-foreground italic">Dropped</span>
-                         )}
-                       </div>
-                     </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {/* Upload is available to ALL logged-in users, not tied to readOnly */}
+                          {!asset.is_removed && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate(`/mobile/upload/${campaignId}/${asset.id}`)}
+                            >
+                              <Upload className="mr-1 h-3 w-3" />
+                              Upload
+                            </Button>
+                          )}
+                          {/* Drop action restricted to owners/admins only */}
+                          {!readOnly && !asset.is_removed && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                              onClick={() => { setDropTarget(asset); setDropDialogOpen(true); }}
+                              title="Drop this asset from campaign"
+                            >
+                              <Ban className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {asset.is_removed && (
+                            <span className="text-xs text-muted-foreground italic">Dropped</span>
+                          )}
+                        </div>
+                      </TableCell>
                    )}
                   </TableRow>
                   );

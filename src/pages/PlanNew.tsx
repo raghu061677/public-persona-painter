@@ -381,6 +381,7 @@ export default function PlanNew() {
         description: "Please select at least one asset",
         variant: "destructive",
       });
+      submittingRef.current = false;
       return;
     }
 

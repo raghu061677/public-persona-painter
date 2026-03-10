@@ -387,6 +387,8 @@ export function PlanAssetsTable({
             <DropdownMenuCheckboxItem checked={showIllumination} onCheckedChange={setShowIllumination}>
               Illumination
             </DropdownMenuCheckboxItem>
+            {canViewFinancials && (
+            <>
             <DropdownMenuCheckboxItem checked={showBaseRate} onCheckedChange={setShowBaseRate}>
               Base Rate
             </DropdownMenuCheckboxItem>
@@ -402,6 +404,8 @@ export function PlanAssetsTable({
             <DropdownMenuCheckboxItem checked={showProfit} onCheckedChange={setShowProfit}>
               Profit
             </DropdownMenuCheckboxItem>
+            </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -533,7 +537,6 @@ export function PlanAssetsTable({
                 </TableHead>
               )}
               {showBillingMode && <TableHead>Billing Mode</TableHead>}
-              {canViewFinancials && (
               <TableHead 
                 className="text-right cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('card_rate')}
@@ -542,7 +545,6 @@ export function PlanAssetsTable({
                   Card Rate {getSortIcon('card_rate')}
                 </div>
               </TableHead>
-              )}
               {canViewFinancials && showBaseRate && <TableHead className="text-right">Base Rate</TableHead>}
               {canViewFinancials && (
               <TableHead 
@@ -641,7 +643,7 @@ export function PlanAssetsTable({
                       {item.billing_mode || 'PRORATA_30'}
                     </TableCell>
                   )}
-                  {canViewFinancials && <TableCell className="text-right">{formatCurrency(item.card_rate)}</TableCell>}
+                  <TableCell className="text-right">{formatCurrency(item.card_rate)}</TableCell>
                   {canViewFinancials && showBaseRate && <TableCell className="text-right">{formatCurrency(baseRent)}</TableCell>}
                   {canViewFinancials && <TableCell className="text-right font-medium">{formatCurrency(effectivePrice)}</TableCell>}
                   {canViewFinancials && <TableCell className="text-right text-purple-600">{formatCurrency(proRataAmount)}</TableCell>}

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { CreditCard, Save, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
 
 const PAYMENT_GATEWAYS = [
   { id: "razorpay", name: "Razorpay", status: "not_connected", logo: "💳" },

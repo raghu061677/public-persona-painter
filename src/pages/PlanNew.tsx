@@ -548,6 +548,16 @@ export default function PlanNew() {
         title: "Success",
         description: "Plan created successfully",
       });
+
+      // Trigger plan_created_internal email
+      try {
+        const emailPayload = buildPlanPayload(plan, { name: formData.client_name, email: '' }, company);
+        triggerEmail('plan_created_internal', emailPayload,
+          [{ to: company?.email || '' }], plan.id);
+      } catch (emailErr) {
+        console.warn('[PlanNew] Email trigger failed (non-blocking):', emailErr);
+      }
+
       navigate(`/admin/plans/${plan.id}`);
     } catch (error: any) {
       toast({

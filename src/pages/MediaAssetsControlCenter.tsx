@@ -270,7 +270,7 @@ export default function MediaAssetsControlCenter() {
     );
     toast({
       title: "Asset added",
-      description: `${asset.id} added to plan builder`,
+      description: `${asset.media_asset_code || asset.id} added to plan builder`,
     });
   }, []);
 

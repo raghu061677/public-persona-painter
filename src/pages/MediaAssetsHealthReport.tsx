@@ -27,6 +27,7 @@ import { toast } from "@/hooks/use-toast";
 
 interface HealthCheck {
   id: string;
+  media_asset_code?: string | null;
   city: string;
   media_type: string;
   has_coordinates: boolean;
@@ -68,6 +69,7 @@ export default function MediaAssetsHealthReport() {
         supabase.from('media_assets')
           .select(`
             id,
+            media_asset_code,
             city,
             media_type,
             latitude,
@@ -338,7 +340,7 @@ export default function MediaAssetsHealthReport() {
                 ) : (
                   assets.map((asset) => (
                     <TableRow key={asset.id}>
-                      <TableCell className="font-mono text-sm">{asset.id}</TableCell>
+                      <TableCell className="font-mono text-sm">{asset.media_asset_code || asset.id}</TableCell>
                       <TableCell>{asset.city}</TableCell>
                       <TableCell>{asset.media_type}</TableCell>
                       <TableCell className="text-center">
@@ -430,7 +432,7 @@ export default function MediaAssetsHealthReport() {
                     .filter(a => a.has_street_view && a.photo_count > 0)
                     .map((asset) => (
                       <TableRow key={asset.id}>
-                        <TableCell className="font-mono text-sm">{asset.id}</TableCell>
+                        <TableCell className="font-mono text-sm">{asset.media_asset_code || asset.id}</TableCell>
                         <TableCell>{asset.city}</TableCell>
                         <TableCell>{asset.media_type}</TableCell>
                         <TableCell className="max-w-xs truncate">

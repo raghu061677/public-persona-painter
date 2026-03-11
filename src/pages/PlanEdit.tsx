@@ -87,6 +87,7 @@ export default function PlanEdit() {
     payment_terms: "",
     manual_discount_amount: 0,
     manual_discount_reason: "",
+    quotation_validity_days: 7,
   });
 
   useEffect(() => {

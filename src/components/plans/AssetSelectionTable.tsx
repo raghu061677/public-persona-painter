@@ -481,6 +481,7 @@ export function AssetSelectionTable({
           {availabilityFilter === 'available_by_date' && (
             <div className="flex gap-1">
               <Button
+                type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setAvailableFromDate(addDays(new Date(), 7))}
@@ -489,6 +490,7 @@ export function AssetSelectionTable({
                 +7 days
               </Button>
               <Button
+                type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setAvailableFromDate(addDays(new Date(), 15))}
@@ -497,6 +499,7 @@ export function AssetSelectionTable({
                 +15 days
               </Button>
               <Button
+                type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setAvailableFromDate(addDays(new Date(), 30))}
@@ -553,8 +556,13 @@ export function AssetSelectionTable({
             {checkedAssets.size} asset{checkedAssets.size > 1 ? 's' : ''} selected
           </span>
           <Button
+            type="button"
             size="sm"
-            onClick={handleAddSelected}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleAddSelected();
+            }}
             className="bg-blue-600 hover:bg-blue-700"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -652,9 +660,14 @@ export function AssetSelectionTable({
                   })}
                   <TableCell className="text-right">
                     <Button
+                      type="button"
                       size="sm"
                       variant={selectedIds.has(asset.id) ? "secondary" : "outline"}
-                      onClick={() => onSelect(asset.id, asset)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onSelect(asset.id, asset);
+                      }}
                       disabled={selectedIds.has(asset.id)}
                     >
                       <Plus className="h-4 w-4" />

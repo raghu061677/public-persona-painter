@@ -84,6 +84,7 @@ export default function PlanEdit() {
     gst_percent: "18",
     tax_type: "CGST_SGST" as TaxType,
     notes: "",
+    payment_terms: "",
     manual_discount_amount: 0,
     manual_discount_reason: "",
   });

@@ -249,17 +249,18 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
 
   // ========== 3.5 CAMPAIGN SUMMARY BLOCK ==========
   if (data.totalLocations && data.totalLocations > 0) {
-    doc.setFontSize(9);
-    doc.setFont('NotoSans', 'bold');
-    doc.setTextColor(30, 58, 138);
-    doc.text('Campaign Summary', leftMargin, yPos);
-    yPos += 5;
-    doc.setFont('NotoSans', 'normal');
+    const summaryBoxY = yPos;
+    const summaryBoxW = pageWidth - leftMargin - rightMargin;
+    const halfW = summaryBoxW / 2;
+    doc.setFillColor(245, 247, 250);
+    doc.roundedRect(leftMargin, summaryBoxY, summaryBoxW, 10, 2, 2, 'F');
     doc.setFontSize(8);
+    doc.setFont('NotoSans', 'bold');
+    doc.setTextColor(30, 64, 175);
+    doc.text(`Total Media Units: ${data.totalLocations}`, leftMargin + 5, summaryBoxY + 6.5);
+    doc.text(`Total Campaign Budget: ${formatCurrencyForPDF(data.totalInr)}`, leftMargin + halfW, summaryBoxY + 6.5);
     doc.setTextColor(0, 0, 0);
-    doc.text(`Total Media Units: ${data.totalLocations}`, leftMargin, yPos);
-    doc.text(`Total Campaign Budget: ${formatCurrencyForPDF(data.totalInr)}`, leftMargin + 55, yPos);
-    yPos += 5;
+    yPos = summaryBoxY + 14;
   }
 
   yPos += 2;

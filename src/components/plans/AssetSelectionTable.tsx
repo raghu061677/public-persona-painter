@@ -553,8 +553,13 @@ export function AssetSelectionTable({
             {checkedAssets.size} asset{checkedAssets.size > 1 ? 's' : ''} selected
           </span>
           <Button
+            type="button"
             size="sm"
-            onClick={handleAddSelected}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleAddSelected();
+            }}
             className="bg-blue-600 hover:bg-blue-700"
           >
             <Plus className="h-4 w-4 mr-2" />

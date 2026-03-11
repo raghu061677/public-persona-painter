@@ -102,6 +102,7 @@ export default function PlanDetail() {
   const [exportingPPT, setExportingPPT] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportingImagesPdf, setExportingImagesPdf] = useState(false);
+  const [exportingVisualQuotation, setExportingVisualQuotation] = useState(false);
   const [exportingProposalExcel, setExportingProposalExcel] = useState(false);
   const [existingCampaignId, setExistingCampaignId] = useState<string | null>(null);
   const [campaignData, setCampaignData] = useState({

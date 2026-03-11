@@ -66,6 +66,7 @@ export default function PlanEdit() {
   const [companyState, setCompanyState] = useState<string>("");
   const [planRecord, setPlanRecord] = useState<any>(null);
   const [manualTaxOverride, setManualTaxOverride] = useState(false);
+  const submittingRef = useRef(false);
   
   // Enterprise RBAC: determine access mode for this plan
   const perms = useRecordPermissions(planRecord, 'plans');

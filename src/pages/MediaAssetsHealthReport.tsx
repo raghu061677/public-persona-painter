@@ -69,6 +69,7 @@ export default function MediaAssetsHealthReport() {
         supabase.from('media_assets')
           .select(`
             id,
+            media_asset_code,
             city,
             media_type,
             latitude,

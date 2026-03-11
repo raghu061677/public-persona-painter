@@ -77,6 +77,7 @@ export default function PlanNew() {
     months_count: 1,
     gst_percent: "18",
     notes: "",
+    payment_terms: "",
   });
 
   useEffect(() => {

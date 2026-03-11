@@ -189,6 +189,7 @@ export function EditClientDialog({
           shipping_state: formData.shipping_same_as_billing ? formData.billing_state : formData.shipping_state || null,
           shipping_pincode: formData.shipping_same_as_billing ? formData.billing_pincode?.trim() : formData.shipping_pincode?.trim() || null,
           shipping_same_as_billing: formData.shipping_same_as_billing,
+          payment_terms: formData.payment_terms?.trim() || null,
         })
         .eq('id', client.id);
 

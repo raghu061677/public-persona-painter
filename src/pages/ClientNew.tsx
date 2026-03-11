@@ -528,6 +528,14 @@ export default function ClientNew() {
 
       const newClientId = rpcResult.client_id!;
 
+      // Update payment_terms if set (RPC doesn't include this param)
+      if (formData.payment_terms) {
+        await supabase
+          .from('clients')
+          .update({ payment_terms: formData.payment_terms } as any)
+          .eq('id', newClientId);
+      }
+
       // Insert contact persons if any
       if (contactPersons.length > 0) {
         const contactsPayload = contactPersons

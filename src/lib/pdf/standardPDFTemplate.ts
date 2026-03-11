@@ -797,25 +797,16 @@ export async function generateStandardizedPDFDoc(data: PDFDocumentData): Promise
     }
   }
 
-  // Client approval
-  if (yPos + 25 > pageHeight - 10) { doc.addPage(); yPos = 20; }
+  // Approval & Signatory boxes
+  if (yPos + 60 > pageHeight - 10) { doc.addPage(); yPos = 20; }
   yPos += 5;
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Client Approval', leftMargin, yPos);
-  yPos += 5;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.text('Name: ____________________', leftMargin, yPos);
-  doc.text('Designation: ____________________', leftMargin + 70, yPos);
-  yPos += 6;
-  doc.text('Signature: ____________________', leftMargin, yPos);
-  doc.text('Date: ____________________', leftMargin + 70, yPos);
-  yPos += 8;
-  doc.setFontSize(6.5);
-  doc.text('Authorized Signatory', pageWidth - rightMargin, yPos, { align: 'right' });
 
-  await renderSellerFooterWithSignatory(doc, { name: data.companyName, gstin: data.companyGSTIN }, yPos);
+  yPos = await renderApprovalFooter(doc, yPos, {
+    companyName: data.companyName,
+    pageWidth,
+    leftMargin,
+    rightMargin,
+  });
 
   return doc;
 }

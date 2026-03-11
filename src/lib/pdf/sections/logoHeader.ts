@@ -25,6 +25,7 @@ interface DocumentDetails {
   stateCode?: string;
   salesPerson?: string;
   validity?: string;
+  campaignDuration?: string;
 }
 
 // Default Matrix Network Solutions address
@@ -340,6 +341,12 @@ export function renderDetailsGrid(
   doc.text('Campaign:', leftMargin + 3, leftY);
   const campaignLines = doc.splitTextToSize(details.displayName, colWidth - 32);
   doc.text(campaignLines[0] || '-', leftMargin + 28, leftY);
+
+  if (details.campaignDuration) {
+    leftY += 5;
+    doc.text('Duration:', leftMargin + 3, leftY);
+    doc.text(details.campaignDuration, leftMargin + 28, leftY);
+  }
 
   // Right Content - Other Details
   let rightY = yPos + 11;

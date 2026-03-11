@@ -51,6 +51,16 @@ export interface PDFDocumentData {
   // Optional overrides
   terms?: string[];
   paymentTerms?: string;
+
+  // Professional quotation metadata
+  campaignDuration?: string;        // "01 Mar 2026 – 31 Mar 2026"
+  quotationValidityDays?: number;   // e.g. 7
+  totalLocations?: number;          // asset count
+  preparedByName?: string;          // user who generated
+  preparedByRole?: string;          // user's role
+  salesContactName?: string;        // sales person name
+  salesContactPhone?: string;       // sales person phone
+  salesContactEmail?: string;       // sales person email
 }
 
 export interface PDFLineItem {
@@ -230,12 +240,31 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
       placeOfSupply: data.placeOfSupply || data.clientState,
       stateCode: data.stateCode || getStateCode(data.clientState),
       salesPerson: data.salesPerson || data.pointOfContact,
-      validity: data.validity || (data.documentType === 'ESTIMATE' || data.documentType === 'QUOTATION' ? '15 Days' : undefined),
+      validity: data.validity || (data.quotationValidityDays ? `${data.quotationValidityDays} Days` : (data.documentType === 'ESTIMATE' || data.documentType === 'QUOTATION' ? '7 Days' : undefined)),
+      campaignDuration: data.campaignDuration,
     },
     yPos
   );
 
-  yPos += 5;
+  yPos += 3;
+
+  // ========== 3.5 CAMPAIGN SUMMARY BLOCK ==========
+  if (data.totalLocations && data.totalLocations > 0) {
+    doc.setFontSize(9);
+    doc.setFont('NotoSans', 'bold');
+    doc.setTextColor(30, 58, 138);
+    doc.text('Campaign Summary', leftMargin, yPos);
+    yPos += 5;
+    doc.setFont('NotoSans', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Total Locations: ${data.totalLocations}`, leftMargin, yPos);
+    doc.text(`Total Media Units: ${data.totalLocations}`, leftMargin + 50, yPos);
+    doc.text(`Total Campaign Budget: ${formatCurrencyForPDF(data.totalInr)}`, leftMargin + 105, yPos);
+    yPos += 5;
+  }
+
+  yPos += 2;
 
   // ========== 4. OOH LINE ITEMS TABLE (098 Style) ==========
   // Table must always start below the header area.
@@ -457,7 +486,44 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   doc.setFontSize(9);
   doc.setFont('NotoSans', 'normal');
   doc.text(`Payment Terms: ${data.paymentTerms || 'Net 30 Days'}`, leftMargin, yPos);
-  yPos += 8;
+  yPos += 6;
+
+  // ========== 6.5. SALES CONTACT ==========
+  if (data.salesContactName) {
+    doc.setFontSize(9);
+    doc.setFont('NotoSans', 'bold');
+    doc.setTextColor(30, 58, 138);
+    doc.text('Sales Contact', leftMargin, yPos);
+    yPos += 5;
+    doc.setFont('NotoSans', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(0, 0, 0);
+    doc.text(data.salesContactName, leftMargin, yPos);
+    yPos += 4;
+    if (data.salesContactPhone) {
+      doc.text(`Phone: ${data.salesContactPhone}`, leftMargin, yPos);
+      yPos += 4;
+    }
+    if (data.salesContactEmail) {
+      doc.text(`Email: ${data.salesContactEmail}`, leftMargin, yPos);
+      yPos += 4;
+    }
+    yPos += 2;
+  }
+
+  // ========== 6.6. PREPARED BY ==========
+  if (data.preparedByName) {
+    doc.setFontSize(8);
+    doc.setFont('NotoSans', 'normal');
+    doc.setTextColor(80, 80, 80);
+    const preparedText = data.preparedByRole 
+      ? `Prepared By: ${data.preparedByName} (${data.preparedByRole})`
+      : `Prepared By: ${data.preparedByName}`;
+    doc.text(preparedText, leftMargin, yPos);
+    yPos += 6;
+  }
+
+  yPos += 2;
 
   // ========== 7. TERMS & CONDITIONS ==========
   // Calculate space needed for terms and signatory
@@ -511,7 +577,43 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
     yPos += 1.5;
   });
 
-  yPos += 10;
+  yPos += 8;
+
+  // ========== 7.5. CLIENT APPROVAL SECTION ==========
+  if (data.documentType === 'QUOTATION' || data.documentType === 'ESTIMATE' || data.documentType === 'PROFORMA INVOICE') {
+    // Check space
+    if (yPos + 35 > pageHeight - PAGE_MARGINS.bottom - 30) {
+      doc.addPage();
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, 0, pageWidth, 34, 'F');
+      yPos = headerRenderers.compact(doc) + 10;
+    }
+
+    doc.setFontSize(9);
+    doc.setFont('NotoSans', 'bold');
+    doc.setTextColor(30, 58, 138);
+    doc.text('Client Approval', leftMargin, yPos);
+    yPos += 6;
+
+    doc.setFont('NotoSans', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(0, 0, 0);
+
+    const approvalFields = [
+      'Name: ______________________________',
+      'Designation: ______________________________',
+      'Signature: ______________________________',
+      'Date: ______________________________',
+    ];
+    approvalFields.forEach(field => {
+      doc.text(field, leftMargin, yPos);
+      yPos += 6;
+    });
+
+    yPos += 4;
+  }
+
+  yPos += 2;
 
   // ========== 8. FOOTER: AUTHORIZED SIGNATORY (RIGHT) ==========
   // Ensure minimum space for signatory block (25mm)

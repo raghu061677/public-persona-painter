@@ -287,6 +287,39 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
     .limit(1)
     .maybeSingle();
 
+  // Fetch logged-in user info for Prepared By / Sales Contact
+  let userName = '';
+  let userRole = '';
+  let userPhone = '';
+  let userEmail = '';
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      userEmail = user.email || '';
+      
+      // Get profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username, phone')
+        .eq('id', user.id)
+        .single();
+      userName = (profile as any)?.username || user.email?.split('@')[0] || '';
+      userPhone = (profile as any)?.phone || '';
+      
+      // Get role from company_users
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .limit(1)
+        .single();
+      if (companyUser) {
+        userRole = companyUser.role || '';
+      }
+    }
+  } catch { /* ignore */ }
+
   const companyName = companyData?.name || (orgSettings as any)?.organization_name || options.companyName || 'Matrix Network Solutions';
   const companyGSTIN = companyData?.gstin || options.gstin || '36AATFM4107H2Z3';
   const companyPAN = companyData?.pan || 'AATFM4107H';
@@ -298,6 +331,14 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
   const start = plan.start_date;
   const end = plan.end_date;
   const totalDays = plan.duration_days || Math.max(1, Math.ceil((new Date(end).getTime() - new Date(start).getTime()) / (1000 * 60 * 60 * 24)));
+
+  // Format campaign duration for PDF
+  const formatDateForDisplay = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${d.getDate().toString().padStart(2, '0')} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  };
+  const campaignDuration = `${formatDateForDisplay(start)} - ${formatDateForDisplay(end)}`;
 
   // Map items to 098-style format
   const items = (planItems || []).map((item: any, index: number) => {
@@ -378,6 +419,16 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
     totalInr,
     terms: options.termsAndConditions,
     paymentTerms: (plan as any).payment_terms || clientData?.payment_terms || (orgSettings as any)?.default_payment_terms || 'Net 30 Days',
+
+    // Professional quotation metadata
+    campaignDuration,
+    quotationValidityDays: (plan as any).quotation_validity_days || 7,
+    totalLocations: (planItems || []).length,
+    preparedByName: userName || undefined,
+    preparedByRole: userRole || undefined,
+    salesContactName: userName || undefined,
+    salesContactPhone: userPhone || undefined,
+    salesContactEmail: userEmail || undefined,
   });
 }
 

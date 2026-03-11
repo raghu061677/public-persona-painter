@@ -1,0 +1,1 @@
+ALTER TABLE public.plans ADD COLUMN IF NOT EXISTS quotation_validity_days INTEGER DEFAULT 7;

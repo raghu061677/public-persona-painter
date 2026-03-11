@@ -87,6 +87,7 @@ export default function PlanEdit() {
     payment_terms: "",
     manual_discount_amount: 0,
     manual_discount_reason: "",
+    quotation_validity_days: 7,
   });
 
   useEffect(() => {
@@ -178,6 +179,7 @@ export default function PlanEdit() {
         payment_terms: (plan as any).payment_terms || "",
         manual_discount_amount: (plan as any).manual_discount_amount || 0,
         manual_discount_reason: (plan as any).manual_discount_reason || "",
+        quotation_validity_days: (plan as any).quotation_validity_days || 7,
       });
       const { data: items } = await supabase
         .from('plan_items')
@@ -550,6 +552,7 @@ export default function PlanEdit() {
           payment_terms: formData.payment_terms || null,
           manual_discount_amount: formData.manual_discount_amount || 0,
           manual_discount_reason: formData.manual_discount_reason || null,
+          quotation_validity_days: formData.quotation_validity_days || 7,
         } as any)
         .eq('id', id);
 
@@ -825,6 +828,19 @@ export default function PlanEdit() {
                   helperText="Quotation-specific terms override client default terms."
                   disabled={isReadOnly}
                 />
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Quotation Validity (Days)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={90}
+                    value={formData.quotation_validity_days}
+                    onChange={(e) => setFormData(prev => ({ ...prev, quotation_validity_days: parseInt(e.target.value) || 7 }))}
+                    className="h-10"
+                    disabled={isReadOnly}
+                  />
+                  <p className="text-xs text-muted-foreground">Number of days the quotation remains valid.</p>
+                </div>
               </div>
             </SectionCard>
 

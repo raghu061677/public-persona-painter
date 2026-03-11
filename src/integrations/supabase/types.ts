@@ -9665,6 +9665,7 @@ export type Database = {
           payment_terms: string | null
           plan_name: string
           plan_type: Database["public"]["Enums"]["plan_type"]
+          quotation_validity_days: number | null
           secondary_owner_ids: string[] | null
           sgst_amount: number | null
           sgst_percent: number | null
@@ -9711,6 +9712,7 @@ export type Database = {
           payment_terms?: string | null
           plan_name: string
           plan_type?: Database["public"]["Enums"]["plan_type"]
+          quotation_validity_days?: number | null
           secondary_owner_ids?: string[] | null
           sgst_amount?: number | null
           sgst_percent?: number | null
@@ -9757,6 +9759,7 @@ export type Database = {
           payment_terms?: string | null
           plan_name?: string
           plan_type?: Database["public"]["Enums"]["plan_type"]
+          quotation_validity_days?: number | null
           secondary_owner_ids?: string[] | null
           sgst_amount?: number | null
           sgst_percent?: number | null

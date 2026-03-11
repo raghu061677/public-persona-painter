@@ -78,6 +78,7 @@ export default function PlanNew() {
     gst_percent: "18",
     notes: "",
     payment_terms: "",
+    quotation_validity_days: 7,
   });
 
   useEffect(() => {
@@ -445,6 +446,7 @@ export default function PlanNew() {
           grand_total: grandTotal,
           notes: formData.notes,
           payment_terms: formData.payment_terms || null,
+          quotation_validity_days: formData.quotation_validity_days || 7,
           created_by: user.id,
           company_id: companyUser.company_id,
         } as any)
@@ -728,6 +730,18 @@ export default function PlanNew() {
                   onChange={(v) => setFormData(prev => ({ ...prev, payment_terms: v }))}
                   helperText="Quotation-specific terms override client default terms."
                 />
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Quotation Validity (Days)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={90}
+                    value={formData.quotation_validity_days}
+                    onChange={(e) => setFormData(prev => ({ ...prev, quotation_validity_days: parseInt(e.target.value) || 7 }))}
+                    className="h-10"
+                  />
+                  <p className="text-xs text-muted-foreground">Number of days the quotation remains valid.</p>
+                </div>
               </CardContent>
             </Card>
 

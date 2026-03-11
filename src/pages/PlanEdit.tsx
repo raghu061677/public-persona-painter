@@ -893,7 +893,7 @@ export default function PlanEdit() {
                   <Label className="text-sm font-medium">End Date *</Label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start h-10 hover:bg-muted/50">
+                      <Button type="button" variant="outline" className="w-full justify-start h-10 hover:bg-muted/50">
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {formatDate(formData.end_date)}
                       </Button>

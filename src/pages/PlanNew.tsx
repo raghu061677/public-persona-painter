@@ -722,6 +722,11 @@ export default function PlanNew() {
                     className="resize-none"
                   />
                 </div>
+                <PaymentTermsInput
+                  value={formData.payment_terms}
+                  onChange={(v) => setFormData(prev => ({ ...prev, payment_terms: v }))}
+                  helperText="Quotation-specific terms override client default terms."
+                />
               </CardContent>
             </Card>
 

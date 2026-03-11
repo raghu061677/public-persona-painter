@@ -262,6 +262,11 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
     doc.text(`Total Media Units: ${data.totalLocations}`, leftMargin + 50, yPos);
     doc.text(`Total Campaign Budget: ${formatCurrencyForPDF(data.totalInr)}`, leftMargin + 105, yPos);
     yPos += 5;
+    // Show campaign duration in days if available
+    if (data.campaignDuration) {
+      doc.text(`Campaign Duration: ${data.campaignDuration}`, leftMargin, yPos);
+      yPos += 5;
+    }
   }
 
   yPos += 2;

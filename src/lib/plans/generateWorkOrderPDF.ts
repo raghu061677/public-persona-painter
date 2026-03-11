@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { supabase } from '@/integrations/supabase/client';
 import { ensurePdfUnicodeFont } from '@/lib/pdf/fontLoader';
 import { formatCurrencyForPDF, getPrimaryContactName, getClientDisplayName, getClientAddress, getClientCity, getClientState, getClientPincode } from '@/lib/pdf/pdfHelpers';
+import { getDurationDisplay } from '@/lib/utils/campaignDuration';
 
 // ============= CONSTANTS =============
 
@@ -54,15 +55,6 @@ function formatDate(dateStr: string): string {
   } catch { return '-'; }
 }
 
-function getDurationDisplay(days: number): string {
-  if (days <= 0) return '-';
-  if (days >= 28 && days <= 31) return '1 Month';
-  if (days > 31) {
-    const months = Math.round(days / 30);
-    return `${months} Month${months > 1 ? 's' : ''}`;
-  }
-  return `${days} Days`;
-}
 
 function numberToWords(num: number): string {
   const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',

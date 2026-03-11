@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getSignedUrl } from '@/utils/storage';
 import type { ExportOptions } from '@/components/plans/ExportOptionsDialog';
 import { addWatermarkToImage, loadImageAsDataUrl } from './photoWatermark';
+import { getDurationDisplay, getDurationDisplayWithMonths, calculateCampaignDuration } from '@/lib/utils/campaignDuration';
 
 import { generateReleaseOrderPDF, type ROData, type ROLineItem } from './generateReleaseOrderPDF';
 
@@ -185,16 +186,6 @@ function getDocumentHeading(optionType: string): string {
   return headings[optionType] || 'QUOTATION';
 }
 
-// Calculate duration display
-function getDurationDisplay(days: number): string {
-  if (days <= 0) return '-';
-  if (days >= 28 && days <= 31) return '1 Month';
-  if (days > 31) {
-    const months = Math.round(days / 30);
-    return `${months} Month${months > 1 ? 's' : ''}`;
-  }
-  return `${days} Days`;
-}
 
 export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
   const { plan, planItems, options } = data;
@@ -330,7 +321,8 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
 
   const start = plan.start_date;
   const end = plan.end_date;
-  const totalDays = plan.duration_days || Math.max(1, Math.ceil((new Date(end).getTime() - new Date(start).getTime()) / (1000 * 60 * 60 * 24)));
+  const campaignDurationCalc = calculateCampaignDuration(start, end);
+  const totalDays = plan.duration_days || campaignDurationCalc.totalDays;
 
   // Format campaign duration for PDF
   const formatDateForDisplay = (dateStr: string) => {
@@ -338,7 +330,9 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return `${d.getDate().toString().padStart(2, '0')} ${months[d.getMonth()]} ${d.getFullYear()}`;
   };
-  const campaignDuration = `${formatDateForDisplay(start)} - ${formatDateForDisplay(end)}`;
+  const campaignDuration = start && end 
+    ? `${formatDateForDisplay(start)} - ${formatDateForDisplay(end)} (${getDurationDisplayWithMonths(totalDays)})`
+    : undefined;
 
   // Map items to 098-style format
   const items = (planItems || []).map((item: any, index: number) => {

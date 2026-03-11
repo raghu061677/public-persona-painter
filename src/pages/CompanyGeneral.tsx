@@ -165,6 +165,17 @@ export default function CompanyGeneral() {
           description="Set default values for various operations"
         />
 
+        <InputRow label="Default Payment Terms" description="Used only when client and plan terms are blank.">
+          <div className="w-64">
+            <PaymentTermsInput
+              value={defaultPaymentTerms}
+              onChange={setDefaultPaymentTerms}
+              label=""
+              disabled={isReadOnly}
+            />
+          </div>
+        </InputRow>
+
         <InputRow label="Default GST Rate (%)" description="Applied when creating new plans">
           <Input type="number" defaultValue="18" step="0.01" className="w-32" />
         </InputRow>

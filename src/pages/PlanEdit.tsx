@@ -46,7 +46,7 @@ import { PlanSummaryCard } from "@/components/plans/PlanSummaryCard";
 import { calcProRata, calcDiscount, calcProfit } from "@/utils/pricing";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { generateProposalExcel } from "@/lib/exports/proposalExcelExport";
-import { calculatePrintingCost, calculateMountingCost, getAssetSqft } from "@/utils/effectivePricing";
+import { calculatePrintingCost } from "@/utils/effectivePricing";
 import { computeRentAmount, BillingMode } from "@/utils/perAssetPricing";
 import { addDays } from "date-fns";
 import { useRecordPermissions } from "@/hooks/useRecordAccessMode";

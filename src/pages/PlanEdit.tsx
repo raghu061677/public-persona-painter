@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,7 @@ export default function PlanEdit() {
   const [companyState, setCompanyState] = useState<string>("");
   const [planRecord, setPlanRecord] = useState<any>(null);
   const [manualTaxOverride, setManualTaxOverride] = useState(false);
+  const submittingRef = useRef(false);
   
   // Enterprise RBAC: determine access mode for this plan
   const perms = useRecordPermissions(planRecord, 'plans');
@@ -504,6 +505,9 @@ export default function PlanEdit() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     
     if (selectedAssets.size === 0) {
       toast({
@@ -511,6 +515,7 @@ export default function PlanEdit() {
         description: "Please select at least one asset",
         variant: "destructive",
       });
+      submittingRef.current = false;
       return;
     }
 
@@ -684,6 +689,7 @@ export default function PlanEdit() {
       });
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 
@@ -869,7 +875,7 @@ export default function PlanEdit() {
                   <Label className="text-sm font-medium">Start Date *</Label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start h-10 hover:bg-muted/50">
+                      <Button type="button" variant="outline" className="w-full justify-start h-10 hover:bg-muted/50">
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {formatDate(formData.start_date)}
                       </Button>
@@ -887,7 +893,7 @@ export default function PlanEdit() {
                   <Label className="text-sm font-medium">End Date *</Label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start h-10 hover:bg-muted/50">
+                      <Button type="button" variant="outline" className="w-full justify-start h-10 hover:bg-muted/50">
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {formatDate(formData.end_date)}
                       </Button>
@@ -1052,6 +1058,8 @@ export default function PlanEdit() {
                 selectedIds={selectedAssets}
                 onSelect={toggleAssetSelection}
                 onMultiSelect={handleMultiSelect}
+                planStartDate={formData.start_date instanceof Date ? formData.start_date : new Date(formData.start_date)}
+                planEndDate={formData.end_date instanceof Date ? formData.end_date : new Date(formData.end_date)}
               />
             </CardContent>
           </Card>

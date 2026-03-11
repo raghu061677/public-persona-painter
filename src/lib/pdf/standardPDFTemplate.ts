@@ -266,6 +266,10 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
 
   yPos += 2;
 
+  // ========== 4. OOH LINE ITEMS TABLE (098 Style) ==========
+  // Table must always start below the header area.
+  const tableStartY = Math.max(yPos, 90);
+
   const tableBody = data.items.map((item) => {
     // Column 2: Location & Description
     const locationParts: string[] = [];

@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useEmailTrigger, buildPlanPayload } from "@/hooks/useEmailTrigger";
 import { useCompany } from "@/contexts/CompanyContext";
+import { PaymentTermsInput } from "@/components/shared/PaymentTermsInput";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";

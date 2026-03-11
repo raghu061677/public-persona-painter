@@ -213,6 +213,32 @@ export function ClientContactsManager({ clientId, canSeeSensitive = true, isOwne
     }
   };
 
+  const handleSetPrimary = async (contactId: string) => {
+    try {
+      // First, unset all contacts as primary for this client
+      const { error: resetError } = await supabase
+        .from("client_contacts")
+        .update({ is_primary: false })
+        .eq("client_id", clientId);
+
+      if (resetError) throw resetError;
+
+      // Then set the selected contact as primary
+      const { error: setError } = await supabase
+        .from("client_contacts")
+        .update({ is_primary: true })
+        .eq("id", contactId);
+
+      if (setError) throw setError;
+
+      toast.success("Primary contact updated");
+      loadContacts();
+    } catch (error: any) {
+      console.error("Error setting primary contact:", error);
+      toast.error(error.message || "Failed to update primary contact");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">

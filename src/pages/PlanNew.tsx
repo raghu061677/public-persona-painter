@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useEmailTrigger, buildPlanPayload } from "@/hooks/useEmailTrigger";
 import { useCompany } from "@/contexts/CompanyContext";
+import { PaymentTermsInput } from "@/components/shared/PaymentTermsInput";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -76,6 +77,7 @@ export default function PlanNew() {
     months_count: 1,
     gst_percent: "18",
     notes: "",
+    payment_terms: "",
   });
 
   useEffect(() => {
@@ -442,6 +444,7 @@ export default function PlanNew() {
           gst_amount: gstAmount,
           grand_total: grandTotal,
           notes: formData.notes,
+          payment_terms: formData.payment_terms || null,
           created_by: user.id,
           company_id: companyUser.company_id,
         } as any)
@@ -720,6 +723,11 @@ export default function PlanNew() {
                     className="resize-none"
                   />
                 </div>
+                <PaymentTermsInput
+                  value={formData.payment_terms}
+                  onChange={(v) => setFormData(prev => ({ ...prev, payment_terms: v }))}
+                  helperText="Quotation-specific terms override client default terms."
+                />
               </CardContent>
             </Card>
 

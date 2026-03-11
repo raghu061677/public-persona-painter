@@ -3436,6 +3436,7 @@ export type Database = {
           name: string
           notes: string | null
           owner_id: string | null
+          payment_terms: string | null
           phone: string | null
           search_vector: unknown
           secondary_owner_ids: string[] | null
@@ -3470,6 +3471,7 @@ export type Database = {
           name: string
           notes?: string | null
           owner_id?: string | null
+          payment_terms?: string | null
           phone?: string | null
           search_vector?: unknown
           secondary_owner_ids?: string[] | null
@@ -3504,6 +3506,7 @@ export type Database = {
           name?: string
           notes?: string | null
           owner_id?: string | null
+          payment_terms?: string | null
           phone?: string | null
           search_vector?: unknown
           secondary_owner_ids?: string[] | null
@@ -8278,6 +8281,7 @@ export type Database = {
           client_portal_settings: Json | null
           company_id: string | null
           created_at: string | null
+          default_payment_terms: string | null
           email: string | null
           gps_tolerance_meters: number | null
           gstin: string | null
@@ -8319,6 +8323,7 @@ export type Database = {
           client_portal_settings?: Json | null
           company_id?: string | null
           created_at?: string | null
+          default_payment_terms?: string | null
           email?: string | null
           gps_tolerance_meters?: number | null
           gstin?: string | null
@@ -8360,6 +8365,7 @@ export type Database = {
           client_portal_settings?: Json | null
           company_id?: string | null
           created_at?: string | null
+          default_payment_terms?: string | null
           email?: string | null
           gps_tolerance_meters?: number | null
           gstin?: string | null
@@ -9656,6 +9662,7 @@ export type Database = {
           notes: string | null
           owner_company_id: string | null
           owner_id: string | null
+          payment_terms: string | null
           plan_name: string
           plan_type: Database["public"]["Enums"]["plan_type"]
           secondary_owner_ids: string[] | null
@@ -9701,6 +9708,7 @@ export type Database = {
           notes?: string | null
           owner_company_id?: string | null
           owner_id?: string | null
+          payment_terms?: string | null
           plan_name: string
           plan_type?: Database["public"]["Enums"]["plan_type"]
           secondary_owner_ids?: string[] | null
@@ -9746,6 +9754,7 @@ export type Database = {
           notes?: string | null
           owner_company_id?: string | null
           owner_id?: string | null
+          payment_terms?: string | null
           plan_name?: string
           plan_type?: Database["public"]["Enums"]["plan_type"]
           secondary_owner_ids?: string[] | null

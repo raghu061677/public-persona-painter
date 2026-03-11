@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { PaymentTermsInput } from "@/components/shared/PaymentTermsInput";
 import { supabase } from "@/integrations/supabase/client";
 import { generateClientCode } from "@/lib/codeGenerator";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ const clientSchema = z.object({
   shipping_state: z.string().optional().or(z.literal("")),
   shipping_pincode: z.string().trim().regex(/^[0-9]{6}$/, "Pincode must be exactly 6 digits").optional().or(z.literal("")),
   shipping_same_as_billing: z.boolean(),
+  payment_terms: z.string().optional().or(z.literal("")),
 });
 
 type ClientFormData = z.infer<typeof clientSchema>;
@@ -92,6 +94,7 @@ export function EditClientDialog({
     shipping_state: "",
     shipping_pincode: "",
     shipping_same_as_billing: false,
+    payment_terms: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -120,6 +123,7 @@ export function EditClientDialog({
         shipping_state: client.shipping_state || "",
         shipping_pincode: client.shipping_pincode || "",
         shipping_same_as_billing: client.shipping_same_as_billing || false,
+        payment_terms: client.payment_terms || "",
       });
       setErrors({});
     }
@@ -186,6 +190,7 @@ export function EditClientDialog({
           shipping_state: formData.shipping_same_as_billing ? formData.billing_state : formData.shipping_state || null,
           shipping_pincode: formData.shipping_same_as_billing ? formData.billing_pincode?.trim() : formData.shipping_pincode?.trim() || null,
           shipping_same_as_billing: formData.shipping_same_as_billing,
+          payment_terms: formData.payment_terms?.trim() || null,
         })
         .eq('id', client.id);
 
@@ -357,6 +362,15 @@ export function EditClientDialog({
                 rows={3}
               />
               {errors.notes && <p className="text-sm text-destructive mt-1">{errors.notes}</p>}
+            </div>
+
+            {/* Payment Terms */}
+            <div className="col-span-2">
+              <PaymentTermsInput
+                value={formData.payment_terms || ""}
+                onChange={(v) => updateField('payment_terms', v)}
+                helperText="Used as default for new quotations and plans."
+              />
             </div>
           </div>
 

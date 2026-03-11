@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { SettingsCard, SectionHeader, InfoAlert, InputRow } from "@/components/settings/zoho-style";
 import { Button } from "@/components/ui/button";
@@ -7,20 +7,64 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Settings, Save, Calendar, Globe } from "lucide-react";
 import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
+import { PaymentTermsInput } from "@/components/shared/PaymentTermsInput";
+import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/contexts/CompanyContext";
 
 export default function CompanyGeneral() {
   const { toast } = useToast();
   const { isReadOnly } = useSettingsReadOnly();
+  const { company } = useCompany();
   const [loading, setLoading] = useState(false);
+  const [defaultPaymentTerms, setDefaultPaymentTerms] = useState("Net 30 Days");
 
-  const handleSave = () => {
+  useEffect(() => {
+    if (company?.id) {
+      supabase
+        .from('organization_settings')
+        .select('default_payment_terms')
+        .eq('company_id', company.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.default_payment_terms) {
+            setDefaultPaymentTerms(data.default_payment_terms);
+          }
+        });
+    }
+  }, [company?.id]);
+
+  const handleSave = async () => {
     if (isReadOnly) { toast({ title: 'View-only access', variant: 'destructive' }); return; }
+    if (!company?.id) return;
     setLoading(true);
-    toast({
-      title: "Settings Saved",
-      description: "General settings have been updated successfully.",
-    });
-    setLoading(false);
+    try {
+      // Upsert organization_settings for this company
+      const { data: existing } = await supabase
+        .from('organization_settings' as any)
+        .select('id')
+        .eq('company_id', company.id)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from('organization_settings' as any)
+          .update({ default_payment_terms: defaultPaymentTerms })
+          .eq('company_id', company.id);
+      } else {
+        await supabase
+          .from('organization_settings' as any)
+          .insert({ company_id: company.id, default_payment_terms: defaultPaymentTerms });
+      }
+
+      toast({
+        title: "Settings Saved",
+        description: "General settings have been updated successfully.",
+      });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to save settings", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -120,6 +164,17 @@ export default function CompanyGeneral() {
           title="Application Defaults"
           description="Set default values for various operations"
         />
+
+        <InputRow label="Default Payment Terms" description="Used only when client and plan terms are blank.">
+          <div className="w-64">
+            <PaymentTermsInput
+              value={defaultPaymentTerms}
+              onChange={setDefaultPaymentTerms}
+              label=""
+              disabled={isReadOnly}
+            />
+          </div>
+        </InputRow>
 
         <InputRow label="Default GST Rate (%)" description="Applied when creating new plans">
           <Input type="number" defaultValue="18" step="0.01" className="w-32" />

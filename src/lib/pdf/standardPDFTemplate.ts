@@ -456,7 +456,7 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   // ========== 6. PAYMENT TERMS ==========
   doc.setFontSize(9);
   doc.setFont('NotoSans', 'normal');
-  doc.text(`Payment Terms: ${data.paymentTerms || '30 Net Days'}`, leftMargin, yPos);
+  doc.text(`Payment Terms: ${data.paymentTerms || 'Net 30 Days'}`, leftMargin, yPos);
   yPos += 8;
 
   // ========== 7. TERMS & CONDITIONS ==========

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { PaymentTermsInput } from "@/components/shared/PaymentTermsInput";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -83,6 +84,7 @@ export default function PlanEdit() {
     gst_percent: "18",
     tax_type: "CGST_SGST" as TaxType,
     notes: "",
+    payment_terms: "",
     manual_discount_amount: 0,
     manual_discount_reason: "",
   });
@@ -173,6 +175,7 @@ export default function PlanEdit() {
         gst_percent: plan.gst_percent.toString(),
         tax_type: ((plan as any).tax_type as TaxType) || 'CGST_SGST',
         notes: plan.notes || "",
+        payment_terms: (plan as any).payment_terms || "",
         manual_discount_amount: (plan as any).manual_discount_amount || 0,
         manual_discount_reason: (plan as any).manual_discount_reason || "",
       });
@@ -544,6 +547,7 @@ export default function PlanEdit() {
           sgst_amount: totals.sgstAmount,
           igst_amount: totals.igstAmount,
           notes: formData.notes,
+          payment_terms: formData.payment_terms || null,
           manual_discount_amount: formData.manual_discount_amount || 0,
           manual_discount_reason: formData.manual_discount_reason || null,
         } as any)
@@ -815,6 +819,12 @@ export default function PlanEdit() {
                     className="resize-none"
                   />
                 </div>
+                <PaymentTermsInput
+                  value={formData.payment_terms}
+                  onChange={(v) => setFormData(prev => ({ ...prev, payment_terms: v }))}
+                  helperText="Quotation-specific terms override client default terms."
+                  disabled={isReadOnly}
+                />
               </div>
             </SectionCard>
 

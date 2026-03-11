@@ -430,7 +430,7 @@ export default function MediaAssetsHealthReport() {
                     .filter(a => a.has_street_view && a.photo_count > 0)
                     .map((asset) => (
                       <TableRow key={asset.id}>
-                        <TableCell className="font-mono text-sm">{asset.id}</TableCell>
+                        <TableCell className="font-mono text-sm">{asset.media_asset_code || asset.id}</TableCell>
                         <TableCell>{asset.city}</TableCell>
                         <TableCell>{asset.media_type}</TableCell>
                         <TableCell className="max-w-xs truncate">

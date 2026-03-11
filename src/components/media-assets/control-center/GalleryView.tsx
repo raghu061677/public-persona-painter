@@ -86,7 +86,7 @@ export function GalleryView({
 
             <CardContent className="p-4 space-y-2">
               <div>
-                <h3 className="font-bold text-sm truncate">{asset.id}</h3>
+                <h3 className="font-bold text-sm truncate">{asset.media_asset_code || asset.id}</h3>
                 <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
                   <MapPin className="h-3 w-3" />
                   {asset.area}, {asset.city}

@@ -187,7 +187,7 @@ export default function MediaAssetsValidation() {
                       <li key={i} className="flex items-center justify-between text-sm">
                         <span className="text-destructive">{err}</span>
                         <Button asChild variant="ghost" size="sm" className="text-primary">
-                          <Link to={`/admin/media-assets/edit/${asset.id}`}>
+                          <Link to={`/admin/media-assets/edit/${asset.media_asset_code || asset.id}`}>
                             <ExternalLink className="h-3 w-3 mr-1" />
                             Fix
                           </Link>

@@ -127,8 +127,8 @@ export function BookingRequestDialog({ open, onOpenChange, asset }: BookingReque
           {/* Asset Info */}
           <div className="bg-muted p-4 rounded-lg space-y-2">
             <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Asset ID</span>
-              <span className="text-sm font-medium">{asset.id}</span>
+              <span className="text-sm text-muted-foreground">Asset Code</span>
+              <span className="text-sm font-medium">{asset.media_asset_code || asset.id}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Type</span>

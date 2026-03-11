@@ -658,6 +658,17 @@ export default function PlanEdit() {
 
       if (itemsError) throw itemsError;
 
+      // Sync media asset booking states after plan save
+      try {
+        const { syncMultipleMediaAssetBookingStates } = await import("@/lib/availability/syncAssetStatus");
+        const affectedAssetIds = Array.from(selectedAssets);
+        if (affectedAssetIds.length > 0) {
+          await syncMultipleMediaAssetBookingStates(affectedAssetIds);
+        }
+      } catch (syncErr) {
+        console.warn('[PlanEdit] Asset status sync warning:', syncErr);
+      }
+
       toast({
         title: "Success",
         description: "Plan updated successfully",

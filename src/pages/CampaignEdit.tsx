@@ -1109,19 +1109,31 @@ export default function CampaignEdit() {
         }
       }
 
-      // Sync media asset statuses after save
+      // Sync media asset booking states after save — covers active, dropped, and replacement assets
       try {
         const { syncMultipleMediaAssetBookingStates } = await import("@/lib/availability/syncAssetStatus");
-        const allAffectedIds = [
-          ...campaignAssets.map(a => a.asset_id),
-          ...deletedAssetIds.map(id => {
-            const found = campaignAssets.find(a => a.id === id);
-            return found?.asset_id;
-          }).filter(Boolean) as string[],
-        ];
-        await syncMultipleMediaAssetBookingStates(allAffectedIds);
+        
+        // Collect asset_ids from active campaign assets
+        const activeAssetIds = campaignAssets.map(a => a.asset_id);
+        
+        // Collect asset_ids from dropped/removed assets
+        // deletedAssetIds contains campaign_asset row IDs, so we need to look up actual asset_ids
+        let droppedAssetIds: string[] = [];
+        if (deletedAssetIds.length > 0) {
+          const { data: droppedRows } = await supabase
+            .from('campaign_assets')
+            .select('asset_id')
+            .in('id', deletedAssetIds);
+          droppedAssetIds = (droppedRows || []).map(r => r.asset_id);
+        }
+        
+        const allAffectedIds = [...new Set([...activeAssetIds, ...droppedAssetIds])];
+        if (allAffectedIds.length > 0) {
+          await syncMultipleMediaAssetBookingStates(allAffectedIds);
+        }
       } catch (syncErr) {
         console.warn('[CampaignEdit] Asset status sync warning:', syncErr);
+        // Non-blocking: sync failure shouldn't prevent save success
       }
 
       toast({

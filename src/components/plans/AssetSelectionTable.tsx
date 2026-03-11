@@ -652,9 +652,14 @@ export function AssetSelectionTable({
                   })}
                   <TableCell className="text-right">
                     <Button
+                      type="button"
                       size="sm"
                       variant={selectedIds.has(asset.id) ? "secondary" : "outline"}
-                      onClick={() => onSelect(asset.id, asset)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onSelect(asset.id, asset);
+                      }}
                       disabled={selectedIds.has(asset.id)}
                     >
                       <Plus className="h-4 w-4" />

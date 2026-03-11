@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Mail, Phone, Loader2, Pencil, Check, X } from "lucide-react";
+import { Plus, Trash2, Mail, Phone, Loader2, Pencil, Check, X, Star } from "lucide-react";
 import { toast } from "sonner";
 import { Database } from "@/integrations/supabase/types";
 

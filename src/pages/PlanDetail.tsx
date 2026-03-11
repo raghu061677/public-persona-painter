@@ -527,6 +527,63 @@ export default function PlanDetail() {
     }
   };
 
+  const handleExportVisualQuotation = async () => {
+    setExportingVisualQuotation(true);
+    try {
+      const { generateVisualQuotationPDF } = await import('@/lib/exports/generateVisualQuotationPDF');
+      const defaultTerms = [
+        "Advance Payment & Purchase Order is Mandatory to start the campaign.",
+        "Printing & Mounting will be extra & GST @ 18% will be applicable extra.",
+        "Site available date may change in case of present display Renewal.",
+        "Site Availability changes every minute, please double check site available dates when you confirm the sites.",
+        "Campaign Execution takes 2 days in city and 4 days in upcountry.",
+        "Kindly ensure that your artwork is ready before confirming the sites.",
+        "In case flex / vinyl / display material is damaged, torn or vandalised, it will be your responsibility to provide us with new flex.",
+        "Renewal of site will only be entertained before 10 days of site expiry.",
+      ];
+      const options = {
+        optionType: 'quotation' as const,
+        format: 'full_detail' as const,
+        exportType: 'pdf' as const,
+        includePhotos: true,
+        companyName: plan?.plan_name || '',
+        gstin: '',
+        termsAndConditions: defaultTerms,
+      };
+
+      // Fetch plan items with media_assets join (same as UnifiedExportButton)
+      const { data: items } = await supabase
+        .from('plan_items')
+        .select(`*, media_assets!inner(total_sqft, dimensions, illumination_type, qr_code_url)`)
+        .eq('plan_id', id!)
+        .order('created_at');
+
+      const flatItems = (items || []).map((item: any) => ({
+        ...item,
+        total_sqft: item.media_assets?.total_sqft,
+        dimensions: item.media_assets?.dimensions,
+        illumination_type: item.media_assets?.illumination_type,
+      }));
+
+      const blob = await generateVisualQuotationPDF(plan, flatItems, options);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `quotation_visual_${id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({ title: 'Success', description: 'Visual Quotation PDF downloaded' });
+    } catch (error: any) {
+      console.error('Visual Quotation Export Error:', error);
+      toast({ title: 'Error', description: error.message || 'Failed to export visual quotation', variant: 'destructive' });
+    } finally {
+      setExportingVisualQuotation(false);
+    }
+  };
+
   const handleExportExcel = async (uploadToCloud = false) => {
     setExportingExcel(true);
     try {

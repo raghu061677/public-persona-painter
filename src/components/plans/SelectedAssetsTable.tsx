@@ -673,17 +673,16 @@ export function SelectedAssetsTable({
                 // Calculate printing and mounting using SQFT × Rate formula or Fixed
                 const printingRate = pricing.printing_rate || 0;
                 const mountingRate = pricing.mounting_rate || 0;
-                const mountingMode = pricing.mounting_mode || 'sqft';
+                // MOUNTING IS ALWAYS PER-ASSET DIRECT AMOUNT — never sqft-based
+                const mountingMode = pricing.mounting_mode || 'fixed';
                 const assetSqft = getAssetSqft(asset);
                 
                 const printingResult = calculatePrintingCost(asset, printingRate);
-                const mountingResult = calculateMountingCost(asset, mountingRate);
                 
-                // Get the calculated costs - respect mounting mode, fallback to stored charges
-                const printing = printingResult.cost > 0 ? printingResult.cost : (pricing.printing_charges || 0);
-                const mounting = mountingMode === 'fixed' 
-                  ? mountingRate 
-                  : (mountingResult.cost > 0 ? mountingResult.cost : (pricing.mounting_charges || 0));
+                // Get the calculated costs - printing can be sqft-based, mounting is ALWAYS fixed
+                const printing = printingResult.cost > 0 ? printingResult.cost : (pricing.mounting_charges ? 0 : (pricing.printing_charges || 0));
+                // Mounting: always use stored direct amount, never sqft × rate
+                const mounting = pricing.mounting_charges || mountingRate || 0;
                 
                 // FIXED: Row Total (Line Total) = Rent Amount + Printing + Mounting
                 // This is the pro-rated line total for the plan row

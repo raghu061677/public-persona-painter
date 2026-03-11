@@ -505,6 +505,9 @@ export default function PlanEdit() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     
     if (selectedAssets.size === 0) {
       toast({
@@ -512,6 +515,7 @@ export default function PlanEdit() {
         description: "Please select at least one asset",
         variant: "destructive",
       });
+      submittingRef.current = false;
       return;
     }
 

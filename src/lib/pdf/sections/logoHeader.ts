@@ -282,14 +282,17 @@ export function renderDetailsGrid(
   const colMidX = pageWidth / 2;
   const colWidth = (pageWidth - leftMargin - rightMargin) / 2 - 5;
 
+  // Calculate box height based on whether campaign duration exists
+  const boxHeight = details.campaignDuration ? 33 : 28;
+
   // Draw grid boxes
   doc.setDrawColor(200, 200, 200);
   doc.setLineWidth(0.3);
   
   // Left box (Document Details)
-  doc.rect(leftMargin, yPos, colWidth, 28);
+  doc.rect(leftMargin, yPos, colWidth, boxHeight);
   // Right box (Other Details)
-  doc.rect(colMidX + 2.5, yPos, colWidth, 28);
+  doc.rect(colMidX + 2.5, yPos, colWidth, boxHeight);
 
   // Get the correct header label based on document type
   let detailsLabel = '';
@@ -345,7 +348,13 @@ export function renderDetailsGrid(
   if (details.campaignDuration) {
     leftY += 5;
     doc.text('Duration:', leftMargin + 3, leftY);
-    doc.text(details.campaignDuration, leftMargin + 28, leftY);
+    // Split long duration text to fit within column
+    const durationLines = doc.splitTextToSize(details.campaignDuration, colWidth - 32);
+    doc.text(durationLines[0] || '-', leftMargin + 28, leftY);
+    if (durationLines[1]) {
+      leftY += 3.5;
+      doc.text(durationLines[1], leftMargin + 28, leftY);
+    }
   }
 
   // Right Content - Other Details
@@ -371,7 +380,7 @@ export function renderDetailsGrid(
     doc.text(details.validity, colMidX + 32, rightY);
   }
 
-  return yPos + 31;
+  return yPos + boxHeight + 3;
 }
 
 /**

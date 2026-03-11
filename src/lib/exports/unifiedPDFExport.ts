@@ -310,7 +310,7 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
     return `${d.getDate().toString().padStart(2, '0')} ${months[d.getMonth()]} ${d.getFullYear()}`;
   };
   const campaignDuration = start && end 
-    ? `${formatDateForDisplay(start)} - ${formatDateForDisplay(end)} (${getDurationDisplayWithMonths(totalDays)})`
+    ? `${formatDateForDisplay(start)} - ${formatDateForDisplay(end)} (${getDurationDisplay(totalDays)})`
     : undefined;
 
   // Map items to 098-style format

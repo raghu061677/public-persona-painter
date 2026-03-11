@@ -256,15 +256,9 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
     doc.setFont('NotoSans', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(0, 0, 0);
-    doc.text(`Total Locations: ${data.totalLocations}`, leftMargin, yPos);
-    doc.text(`Total Media Units: ${data.totalLocations}`, leftMargin + 50, yPos);
-    doc.text(`Total Campaign Budget: ${formatCurrencyForPDF(data.totalInr)}`, leftMargin + 105, yPos);
+    doc.text(`Total Media Units: ${data.totalLocations}`, leftMargin, yPos);
+    doc.text(`Total Campaign Budget: ${formatCurrencyForPDF(data.totalInr)}`, leftMargin + 55, yPos);
     yPos += 5;
-    // Show campaign duration in days if available
-    if (data.campaignDuration) {
-      doc.text(`Campaign Duration: ${data.campaignDuration}`, leftMargin, yPos);
-      yPos += 5;
-    }
   }
 
   yPos += 2;

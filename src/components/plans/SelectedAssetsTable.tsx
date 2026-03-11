@@ -1180,7 +1180,6 @@ export function SelectedAssetsTable({
                               <p className="text-xs font-semibold">Mounting = Fixed Per-Asset Amount</p>
                               <p className="text-xs">₹{mounting.toFixed(2)}</p>
                             </TooltipContent>
-                            </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </TableCell>

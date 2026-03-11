@@ -577,7 +577,43 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
     yPos += 1.5;
   });
 
-  yPos += 10;
+  yPos += 8;
+
+  // ========== 7.5. CLIENT APPROVAL SECTION ==========
+  if (data.documentType === 'QUOTATION' || data.documentType === 'ESTIMATE' || data.documentType === 'PROFORMA INVOICE') {
+    // Check space
+    if (yPos + 35 > pageHeight - PAGE_MARGINS.bottom - 30) {
+      doc.addPage();
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, 0, pageWidth, 34, 'F');
+      yPos = headerRenderers.compact(doc) + 10;
+    }
+
+    doc.setFontSize(9);
+    doc.setFont('NotoSans', 'bold');
+    doc.setTextColor(30, 58, 138);
+    doc.text('Client Approval', leftMargin, yPos);
+    yPos += 6;
+
+    doc.setFont('NotoSans', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(0, 0, 0);
+
+    const approvalFields = [
+      'Name: ______________________________',
+      'Designation: ______________________________',
+      'Signature: ______________________________',
+      'Date: ______________________________',
+    ];
+    approvalFields.forEach(field => {
+      doc.text(field, leftMargin, yPos);
+      yPos += 6;
+    });
+
+    yPos += 4;
+  }
+
+  yPos += 2;
 
   // ========== 8. FOOTER: AUTHORIZED SIGNATORY (RIGHT) ==========
   // Ensure minimum space for signatory block (25mm)

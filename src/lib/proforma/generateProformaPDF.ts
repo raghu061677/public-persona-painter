@@ -24,8 +24,6 @@ interface ProformaInvoiceData {
   grand_total: number;
 }
 
-// Campaign duration utility - use shared module
-import { getDurationDisplay } from '@/lib/utils/campaignDuration';
 
 export const generateProformaPDF = async (data: ProformaInvoiceData): Promise<Blob> => {
   // Calculate days if campaign dates exist

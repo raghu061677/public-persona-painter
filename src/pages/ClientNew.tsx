@@ -98,6 +98,7 @@ const getInitialFormData = () => ({
   state: "",
   city: "",
   notes: "",
+  payment_terms: "",
   billing_address_line1: "",
   billing_address_line2: "",
   billing_city: "",

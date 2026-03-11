@@ -92,10 +92,11 @@ export async function syncMediaAssetBookingState(assetId: string): Promise<SyncR
       }
     }
 
-    // Update the asset status
+    // Update the asset status - cast to enum type
+    const statusEnum = (newStatus === 'Upcoming' ? 'Booked' : newStatus) as 'Available' | 'Blocked' | 'Booked';
     const { error } = await supabase
       .from('media_assets')
-      .update({ status: newStatus })
+      .update({ status: statusEnum })
       .eq('id', assetId);
 
     if (error) {

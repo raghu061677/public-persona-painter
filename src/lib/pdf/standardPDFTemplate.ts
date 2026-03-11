@@ -482,7 +482,44 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   doc.setFontSize(9);
   doc.setFont('NotoSans', 'normal');
   doc.text(`Payment Terms: ${data.paymentTerms || 'Net 30 Days'}`, leftMargin, yPos);
-  yPos += 8;
+  yPos += 6;
+
+  // ========== 6.5. SALES CONTACT ==========
+  if (data.salesContactName) {
+    doc.setFontSize(9);
+    doc.setFont('NotoSans', 'bold');
+    doc.setTextColor(30, 58, 138);
+    doc.text('Sales Contact', leftMargin, yPos);
+    yPos += 5;
+    doc.setFont('NotoSans', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(0, 0, 0);
+    doc.text(data.salesContactName, leftMargin, yPos);
+    yPos += 4;
+    if (data.salesContactPhone) {
+      doc.text(`Phone: ${data.salesContactPhone}`, leftMargin, yPos);
+      yPos += 4;
+    }
+    if (data.salesContactEmail) {
+      doc.text(`Email: ${data.salesContactEmail}`, leftMargin, yPos);
+      yPos += 4;
+    }
+    yPos += 2;
+  }
+
+  // ========== 6.6. PREPARED BY ==========
+  if (data.preparedByName) {
+    doc.setFontSize(8);
+    doc.setFont('NotoSans', 'normal');
+    doc.setTextColor(80, 80, 80);
+    const preparedText = data.preparedByRole 
+      ? `Prepared By: ${data.preparedByName} (${data.preparedByRole})`
+      : `Prepared By: ${data.preparedByName}`;
+    doc.text(preparedText, leftMargin, yPos);
+    yPos += 6;
+  }
+
+  yPos += 2;
 
   // ========== 7. TERMS & CONDITIONS ==========
   // Calculate space needed for terms and signatory

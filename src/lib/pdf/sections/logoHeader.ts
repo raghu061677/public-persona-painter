@@ -25,6 +25,7 @@ interface DocumentDetails {
   stateCode?: string;
   salesPerson?: string;
   validity?: string;
+  campaignDuration?: string;
 }
 
 // Default Matrix Network Solutions address

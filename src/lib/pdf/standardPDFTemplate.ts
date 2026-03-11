@@ -8,6 +8,7 @@ import {
   createPageHeaderRenderer 
 } from './sections/logoHeader';
 import { renderSellerFooterWithSignatory } from './sections/authorizedSignatory';
+import { renderApprovalFooter } from './sections/approvalFooter';
 import { ensurePdfUnicodeFont } from './fontLoader';
 
 // ============= INTERFACES =============
@@ -248,17 +249,18 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
 
   // ========== 3.5 CAMPAIGN SUMMARY BLOCK ==========
   if (data.totalLocations && data.totalLocations > 0) {
-    doc.setFontSize(9);
-    doc.setFont('NotoSans', 'bold');
-    doc.setTextColor(30, 58, 138);
-    doc.text('Campaign Summary', leftMargin, yPos);
-    yPos += 5;
-    doc.setFont('NotoSans', 'normal');
+    const summaryBoxY = yPos;
+    const summaryBoxW = pageWidth - leftMargin - rightMargin;
+    const halfW = summaryBoxW / 2;
+    doc.setFillColor(245, 247, 250);
+    doc.roundedRect(leftMargin, summaryBoxY, summaryBoxW, 10, 2, 2, 'F');
     doc.setFontSize(8);
+    doc.setFont('NotoSans', 'bold');
+    doc.setTextColor(30, 64, 175);
+    doc.text(`Total Media Units: ${data.totalLocations}`, leftMargin + 5, summaryBoxY + 6.5);
+    doc.text(`Total Campaign Budget: ${formatCurrencyForPDF(data.totalInr)}`, leftMargin + halfW, summaryBoxY + 6.5);
     doc.setTextColor(0, 0, 0);
-    doc.text(`Total Media Units: ${data.totalLocations}`, leftMargin, yPos);
-    doc.text(`Total Campaign Budget: ${formatCurrencyForPDF(data.totalInr)}`, leftMargin + 55, yPos);
-    yPos += 5;
+    yPos = summaryBoxY + 14;
   }
 
   yPos += 2;
@@ -567,52 +569,21 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
 
   yPos += 8;
 
-  // ========== 7.5. CLIENT APPROVAL SECTION ==========
-  if (data.documentType === 'QUOTATION' || data.documentType === 'ESTIMATE' || data.documentType === 'PROFORMA INVOICE') {
-    // Check space
-    if (yPos + 35 > pageHeight - PAGE_MARGINS.bottom - 30) {
-      doc.addPage();
-      doc.setFillColor(255, 255, 255);
-      doc.rect(0, 0, pageWidth, 34, 'F');
-      yPos = headerRenderers.compact(doc) + 10;
-    }
-
-    doc.setFontSize(9);
-    doc.setFont('NotoSans', 'bold');
-    doc.setTextColor(30, 58, 138);
-    doc.text('Client Approval', leftMargin, yPos);
-    yPos += 6;
-
-    doc.setFont('NotoSans', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(0, 0, 0);
-
-    const approvalFields = [
-      'Name: ______________________________',
-      'Designation: ______________________________',
-      'Signature: ______________________________',
-      'Date: ______________________________',
-    ];
-    approvalFields.forEach(field => {
-      doc.text(field, leftMargin, yPos);
-      yPos += 6;
-    });
-
-    yPos += 4;
-  }
-
-  yPos += 2;
-
-  // ========== 8. FOOTER: AUTHORIZED SIGNATORY (RIGHT) ==========
-  // Ensure minimum space for signatory block (25mm)
-  if (yPos + 28 > pageHeight - PAGE_MARGINS.bottom) {
+  // ========== 7.5. APPROVAL & SIGNATORY BOXES (Side by Side) ==========
+  // Ensure minimum space for the two-box footer (~60mm)
+  if (yPos + 60 > pageHeight - PAGE_MARGINS.bottom) {
     doc.addPage();
     doc.setFillColor(255, 255, 255);
     doc.rect(0, 0, pageWidth, 34, 'F');
     yPos = headerRenderers.compact(doc) + 10;
   }
 
-  await renderSellerFooterWithSignatory(doc, { name: data.companyName, gstin: data.companyGSTIN }, yPos);
+  yPos = await renderApprovalFooter(doc, yPos, {
+    companyName: data.companyName,
+    pageWidth,
+    leftMargin,
+    rightMargin,
+  });
 
   return doc.output('blob');
 }
@@ -826,25 +797,16 @@ export async function generateStandardizedPDFDoc(data: PDFDocumentData): Promise
     }
   }
 
-  // Client approval
-  if (yPos + 25 > pageHeight - 10) { doc.addPage(); yPos = 20; }
+  // Approval & Signatory boxes
+  if (yPos + 60 > pageHeight - 10) { doc.addPage(); yPos = 20; }
   yPos += 5;
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Client Approval', leftMargin, yPos);
-  yPos += 5;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.text('Name: ____________________', leftMargin, yPos);
-  doc.text('Designation: ____________________', leftMargin + 70, yPos);
-  yPos += 6;
-  doc.text('Signature: ____________________', leftMargin, yPos);
-  doc.text('Date: ____________________', leftMargin + 70, yPos);
-  yPos += 8;
-  doc.setFontSize(6.5);
-  doc.text('Authorized Signatory', pageWidth - rightMargin, yPos, { align: 'right' });
 
-  await renderSellerFooterWithSignatory(doc, { name: data.companyName, gstin: data.companyGSTIN }, yPos);
+  yPos = await renderApprovalFooter(doc, yPos, {
+    companyName: data.companyName,
+    pageWidth,
+    leftMargin,
+    rightMargin,
+  });
 
   return doc;
 }

@@ -4,6 +4,7 @@ import { ensurePdfUnicodeFont } from '@/lib/pdf/fontLoader';
 import { formatCurrencyForPDF } from '@/lib/pdf/pdfHelpers';
 import stampImageUrl from '@/assets/branding/stamp_matrix.png';
 import { getDurationDisplay } from '@/lib/utils/campaignDuration';
+import { renderApprovalFooter } from '@/lib/pdf/sections/approvalFooter';
 
 // ============= INTERFACES =============
 
@@ -192,8 +193,20 @@ export async function generateReleaseOrderPDF(data: ROData): Promise<Blob> {
   // ========== SECTION 5: TERMS & CONDITIONS ==========
   yPos = renderTermsSection(doc, data, pageWidth, pageHeight, yPos);
 
-  // ========== SECTION 6: AUTHORIZATION ==========
-  renderAuthorizationSection(doc, data, pageWidth, pageHeight, yPos, stampBase64);
+  // ========== SECTION 6: APPROVAL & SIGNATORY (Reusable Two-Box Layout) ==========
+  if (yPos + 60 > pageHeight - MARGINS.bottom) {
+    doc.addPage();
+    yPos = MARGINS.top;
+  }
+
+  yPos = await renderApprovalFooter(doc, yPos, {
+    companyName: data.companyName || SERVICE_PROVIDER.name,
+    leftTitle: 'Issued By (Client)',
+    stampBase64,
+    pageWidth,
+    leftMargin: MARGINS.left,
+    rightMargin: MARGINS.right,
+  });
 
   return doc.output('blob');
 }

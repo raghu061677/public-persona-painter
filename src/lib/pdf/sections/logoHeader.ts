@@ -347,6 +347,7 @@ export function renderDetailsGrid(
 
   if (details.campaignDuration) {
     leftY += 5;
+    doc.setFont('NotoSans', 'bold');
     doc.text('Duration:', leftMargin + 3, leftY);
     // Split long duration text to fit within column
     const durationLines = doc.splitTextToSize(details.campaignDuration, colWidth - 32);
@@ -355,6 +356,7 @@ export function renderDetailsGrid(
       leftY += 3.5;
       doc.text(durationLines[1], leftMargin + 28, leftY);
     }
+    doc.setFont('NotoSans', 'normal');
   }
 
   // Right Content - Other Details

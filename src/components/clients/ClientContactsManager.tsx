@@ -376,6 +376,11 @@ export function ClientContactsManager({ clientId, canSeeSensitive = true, isOwne
                   </div>
                   {canEditContact(contact) && (
                     <div className="flex gap-1">
+                      {!contact.is_primary && (
+                        <Button variant="ghost" size="sm" title="Set as Primary" onClick={() => handleSetPrimary(contact.id)}>
+                          <Star className="h-4 w-4 text-amber-500" />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="sm" onClick={() => startEditing(contact)}>
                         <Pencil className="h-4 w-4 text-muted-foreground" />
                       </Button>

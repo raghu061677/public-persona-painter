@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 
 interface MarketplaceAsset {
   id: string;
+  media_asset_code?: string | null;
   city: string;
   area: string;
   location: string;

@@ -29,6 +29,7 @@ import { CampaignHealthAlerts } from "@/components/campaigns/CampaignHealthAlert
 
 import { checkAndAutoGeneratePPT } from "@/lib/operations/autoGenerateProofPPT";
 import { normalizeCampaignAssetStatus } from "@/lib/constants/campaignAssetStatus";
+import { computeCampaignAssetCounts, getActiveAssets } from "@/lib/availability/campaignAssetHelpers";
 import { CreativeUploadSection } from "@/components/campaigns/CreativeUploadSection";
 import { useCampaignWorkflows } from "@/hooks/useCampaignWorkflows";
 import { AutoAssignMountersButton } from "@/components/campaigns/AutoAssignMountersButton";

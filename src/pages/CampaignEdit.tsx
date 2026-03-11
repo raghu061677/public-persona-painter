@@ -1109,6 +1109,21 @@ export default function CampaignEdit() {
         }
       }
 
+      // Sync media asset statuses after save
+      try {
+        const { syncMultipleMediaAssetBookingStates } = await import("@/lib/availability/syncAssetStatus");
+        const allAffectedIds = [
+          ...campaignAssets.map(a => a.asset_id),
+          ...deletedAssetIds.map(id => {
+            const found = campaignAssets.find(a => a.id === id);
+            return found?.asset_id;
+          }).filter(Boolean) as string[],
+        ];
+        await syncMultipleMediaAssetBookingStates(allAffectedIds);
+      } catch (syncErr) {
+        console.warn('[CampaignEdit] Asset status sync warning:', syncErr);
+      }
+
       toast({
         title: "Success",
         description: "Campaign updated successfully",

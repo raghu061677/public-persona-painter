@@ -586,6 +586,13 @@ export type Database = {
             foreignKeyName: "asset_bookings_asset_id_fkey"
             columns: ["asset_id"]
             isOneToOne: false
+            referencedRelation: "asset_code_audit_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_bookings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
             referencedRelation: "asset_profitability"
             referencedColumns: ["asset_id"]
           },
@@ -801,6 +808,13 @@ export type Database = {
             foreignKeyName: "asset_expenses_asset_id_fkey"
             columns: ["asset_id"]
             isOneToOne: false
+            referencedRelation: "asset_code_audit_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
             referencedRelation: "asset_profitability"
             referencedColumns: ["asset_id"]
           },
@@ -928,6 +942,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "asset_holds_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_code_audit_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "asset_holds_asset_id_fkey"
             columns: ["asset_id"]
@@ -1124,6 +1145,13 @@ export type Database = {
           vendor_name?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "asset_maintenance_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_code_audit_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "asset_maintenance_asset_id_fkey"
             columns: ["asset_id"]
@@ -1336,6 +1364,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "asset_power_bills_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_code_audit_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "asset_power_bills_asset_id_fkey"
             columns: ["asset_id"]
@@ -1650,6 +1685,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "booking_requests_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_code_audit_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "booking_requests_asset_id_fkey"
             columns: ["asset_id"]
@@ -2083,6 +2125,13 @@ export type Database = {
             foreignKeyName: "campaign_assets_asset_id_fkey"
             columns: ["asset_id"]
             isOneToOne: false
+            referencedRelation: "asset_code_audit_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
             referencedRelation: "asset_profitability"
             referencedColumns: ["asset_id"]
           },
@@ -2443,6 +2492,13 @@ export type Database = {
             foreignKeyName: "campaign_item_faces_asset_id_fkey"
             columns: ["asset_id"]
             isOneToOne: false
+            referencedRelation: "asset_code_audit_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_item_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
             referencedRelation: "asset_profitability"
             referencedColumns: ["asset_id"]
           },
@@ -2568,6 +2624,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "campaign_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_code_audit_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "campaign_items_asset_id_fkey"
             columns: ["asset_id"]
@@ -5944,6 +6007,13 @@ export type Database = {
             foreignKeyName: "invoice_line_items_media_asset_id_fkey"
             columns: ["media_asset_id"]
             isOneToOne: false
+            referencedRelation: "asset_code_audit_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
             referencedRelation: "asset_profitability"
             referencedColumns: ["asset_id"]
           },
@@ -6685,6 +6755,13 @@ export type Database = {
             foreignKeyName: "marketplace_inquiry_assets_asset_id_fkey"
             columns: ["asset_id"]
             isOneToOne: false
+            referencedRelation: "asset_code_audit_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_inquiry_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
             referencedRelation: "asset_profitability"
             referencedColumns: ["asset_id"]
           },
@@ -6807,6 +6884,13 @@ export type Database = {
           views_count?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "marketplace_listings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_code_audit_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "marketplace_listings_asset_id_fkey"
             columns: ["asset_id"]
@@ -7164,6 +7248,13 @@ export type Database = {
           width?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "media_asset_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_code_audit_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "media_asset_faces_asset_id_fkey"
             columns: ["asset_id"]
@@ -7849,6 +7940,13 @@ export type Database = {
           status?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "operations_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_code_audit_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "operations_asset_id_fkey"
             columns: ["asset_id"]
@@ -8883,6 +8981,13 @@ export type Database = {
             foreignKeyName: "plan_item_faces_asset_id_fkey"
             columns: ["asset_id"]
             isOneToOne: false
+            referencedRelation: "asset_code_audit_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_item_faces_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
             referencedRelation: "asset_profitability"
             referencedColumns: ["asset_id"]
           },
@@ -9105,6 +9210,13 @@ export type Database = {
             foreignKeyName: "plan_items_asset_id_fkey"
             columns: ["asset_id"]
             isOneToOne: false
+            referencedRelation: "asset_code_audit_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
             referencedRelation: "asset_profitability"
             referencedColumns: ["asset_id"]
           },
@@ -9267,6 +9379,13 @@ export type Database = {
           template_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "plan_template_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_code_audit_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "plan_template_items_asset_id_fkey"
             columns: ["asset_id"]
@@ -10910,6 +11029,28 @@ export type Database = {
       }
     }
     Views: {
+      asset_code_audit_view: {
+        Row: {
+          area: string | null
+          city: string | null
+          created_at: string | null
+          current_asset_code: string | null
+          duplicate_count: number | null
+          id: string | null
+          id_is_uuid: boolean | null
+          is_city_mismatch: boolean | null
+          is_duplicate: boolean | null
+          is_malformed: boolean | null
+          is_missing: boolean | null
+          is_type_mismatch: boolean | null
+          is_uuid_like: boolean | null
+          issue_type: string | null
+          location: string | null
+          media_type: string | null
+          status: Database["public"]["Enums"]["media_asset_status"] | null
+        }
+        Relationships: []
+      }
       asset_expense_summary: {
         Row: {
           area: string | null
@@ -10924,6 +11065,13 @@ export type Database = {
           total_expenses: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "asset_expenses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "asset_code_audit_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "asset_expenses_asset_id_fkey"
             columns: ["asset_id"]
@@ -11893,13 +12041,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
-            columns: ["live_campaign_id"]
-            isOneToOne: false
-            referencedRelation: "campaign_public_share_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["next_campaign_id"]
             isOneToOne: false
             referencedRelation: "campaign_public_share_safe"
@@ -11909,7 +12050,7 @@ export type Database = {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["live_campaign_id"]
             isOneToOne: false
-            referencedRelation: "campaigns"
+            referencedRelation: "campaign_public_share_safe"
             referencedColumns: ["id"]
           },
           {
@@ -11923,7 +12064,7 @@ export type Database = {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["live_campaign_id"]
             isOneToOne: false
-            referencedRelation: "campaigns_summary_secure"
+            referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
           {
@@ -11937,7 +12078,7 @@ export type Database = {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["live_campaign_id"]
             isOneToOne: false
-            referencedRelation: "finance_eligible_campaigns"
+            referencedRelation: "campaigns_summary_secure"
             referencedColumns: ["id"]
           },
           {
@@ -11950,13 +12091,20 @@ export type Database = {
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
             columns: ["live_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_assets_campaign_id_fkey"
+            columns: ["next_campaign_id"]
             isOneToOne: false
             referencedRelation: "media_asset_forecast"
             referencedColumns: ["campaign_id"]
           },
           {
             foreignKeyName: "campaign_assets_campaign_id_fkey"
-            columns: ["next_campaign_id"]
+            columns: ["live_campaign_id"]
             isOneToOne: false
             referencedRelation: "media_asset_forecast"
             referencedColumns: ["campaign_id"]

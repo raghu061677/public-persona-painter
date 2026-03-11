@@ -27,6 +27,7 @@ import { toast } from "@/hooks/use-toast";
 
 interface HealthCheck {
   id: string;
+  media_asset_code?: string | null;
   city: string;
   media_type: string;
   has_coordinates: boolean;

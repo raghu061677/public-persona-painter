@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { PaymentTermsInput } from "@/components/shared/PaymentTermsInput";
 import { supabase } from "@/integrations/supabase/client";
 import { generateClientCode } from "@/lib/codeGenerator";
 import { Button } from "@/components/ui/button";

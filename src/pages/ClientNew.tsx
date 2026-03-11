@@ -918,21 +918,11 @@ export default function ClientNew() {
               </div>
 
               {/* Payment Terms */}
-              <div className="space-y-2">
-                <Label>Payment Terms</Label>
-                <Select defaultValue="due_on_receipt">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="due_on_receipt">Due on Receipt</SelectItem>
-                    <SelectItem value="net_15">Net 15</SelectItem>
-                    <SelectItem value="net_30">Net 30</SelectItem>
-                    <SelectItem value="net_45">Net 45</SelectItem>
-                    <SelectItem value="net_60">Net 60</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <PaymentTermsInput
+                value={formData.payment_terms}
+                onChange={(v) => updateField("payment_terms", v)}
+                helperText="Used as default for new quotations and plans."
+              />
             </CardContent>
           </Card>
         </TabsContent>

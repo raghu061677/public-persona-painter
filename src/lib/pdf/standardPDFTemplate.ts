@@ -8,6 +8,7 @@ import {
   createPageHeaderRenderer 
 } from './sections/logoHeader';
 import { renderSellerFooterWithSignatory } from './sections/authorizedSignatory';
+import { renderApprovalFooter } from './sections/approvalFooter';
 import { ensurePdfUnicodeFont } from './fontLoader';
 
 // ============= INTERFACES =============

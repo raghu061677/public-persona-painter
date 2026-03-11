@@ -185,16 +185,8 @@ function getDocumentHeading(optionType: string): string {
   return headings[optionType] || 'QUOTATION';
 }
 
-// Calculate duration display
-function getDurationDisplay(days: number): string {
-  if (days <= 0) return '-';
-  if (days >= 28 && days <= 31) return '1 Month';
-  if (days > 31) {
-    const months = Math.round(days / 30);
-    return `${months} Month${months > 1 ? 's' : ''}`;
-  }
-  return `${days} Days`;
-}
+// Campaign duration utility - use shared module
+import { getDurationDisplay, getDurationDisplayWithMonths, calculateCampaignDuration } from '@/lib/utils/campaignDuration';
 
 export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
   const { plan, planItems, options } = data;

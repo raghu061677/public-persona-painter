@@ -23,16 +23,8 @@ interface ProformaInvoiceData {
   grand_total: number;
 }
 
-// Calculate duration display
-function getDurationDisplay(days: number): string {
-  if (days <= 0) return '-';
-  if (days >= 28 && days <= 31) return '1 Month';
-  if (days > 31) {
-    const months = Math.round(days / 30);
-    return `${months} Month${months > 1 ? 's' : ''}`;
-  }
-  return `${days} Days`;
-}
+// Campaign duration utility - use shared module
+import { getDurationDisplay } from '@/lib/utils/campaignDuration';
 
 export const generateProformaPDF = async (data: ProformaInvoiceData): Promise<Blob> => {
   // Calculate days if campaign dates exist

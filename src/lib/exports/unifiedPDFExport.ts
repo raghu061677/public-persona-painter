@@ -377,7 +377,7 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
     sgst,
     totalInr,
     terms: options.termsAndConditions,
-    paymentTerms: (plan as any).payment_terms || clientData?.payment_terms || 'Net 30 Days',
+    paymentTerms: (plan as any).payment_terms || clientData?.payment_terms || (orgSettings as any)?.default_payment_terms || 'Net 30 Days',
   });
 }
 

@@ -444,6 +444,7 @@ export default function PlanNew() {
           gst_amount: gstAmount,
           grand_total: grandTotal,
           notes: formData.notes,
+          payment_terms: formData.payment_terms || null,
           created_by: user.id,
           company_id: companyUser.company_id,
         } as any)

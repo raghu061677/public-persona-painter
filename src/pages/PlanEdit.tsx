@@ -274,10 +274,12 @@ export default function PlanEdit() {
       
       // Check if this asset has a running campaign and auto-set start date
       try {
+        // Only check NON-REMOVED active bookings (dropped assets must not block)
         const { data: activeBookings } = await supabase
           .from('campaign_assets')
           .select('booking_end_date, end_date, campaigns!inner(status, is_deleted)')
           .eq('asset_id', assetId)
+          .eq('is_removed', false)
           .in('campaigns.status', ['Running', 'Planned', 'InProgress', 'Upcoming'])
           .eq('campaigns.is_deleted', false)
           .order('booking_end_date', { ascending: false })

@@ -72,7 +72,7 @@ export interface RepairProposal {
 
 const CITY_CODE_MAP: Record<string, string> = {
   'hyderabad': 'HYD',
-  'karimnagar': 'KRM',
+  'karimnagar': 'KAR',
   'warangal': 'WRL',
   'vijayawada': 'VJA',
   'visakhapatnam': 'VSK',

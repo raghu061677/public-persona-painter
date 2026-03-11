@@ -71,7 +71,8 @@ export default function OperationsCalendar() {
         .from("campaign_assets")
         .select(`
           *,
-          campaigns!inner(campaign_name, client_name, start_date, end_date)
+          campaigns!inner(campaign_name, client_name, start_date, end_date),
+          media_assets:asset_id(media_asset_code)
         `)
         .not('assigned_at', 'is', null)
         .order("assigned_at", { ascending: true });

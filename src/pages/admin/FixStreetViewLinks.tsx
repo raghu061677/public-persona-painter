@@ -20,6 +20,7 @@ import {
 
 interface AssetIssue {
   id: string;
+  media_asset_code?: string | null;
   area: string;
   location: string;
   latitude: number | null;

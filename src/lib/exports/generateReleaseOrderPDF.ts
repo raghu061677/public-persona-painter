@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { ensurePdfUnicodeFont } from '@/lib/pdf/fontLoader';
 import { formatCurrencyForPDF } from '@/lib/pdf/pdfHelpers';
 import stampImageUrl from '@/assets/branding/stamp_matrix.png';
+import { getDurationDisplay } from '@/lib/utils/campaignDuration';
 
 // ============= INTERFACES =============
 

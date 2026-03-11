@@ -632,7 +632,12 @@ export default function CampaignDetail() {
         <Card className="border-2">
           <Tabs defaultValue="assets" className="p-4">
             <TabsList className={`grid w-full max-w-4xl ${perms.canViewFinancials ? 'grid-cols-6' : 'grid-cols-5'}`}>
-              <TabsTrigger value="assets">Assets ({campaignAssets.length})</TabsTrigger>
+              <TabsTrigger value="assets">
+                Assets ({assetCounts.active})
+                {droppedAssetCount > 0 && (
+                  <span className="ml-1 text-xs text-orange-600">+{droppedAssetCount} dropped</span>
+                )}
+              </TabsTrigger>
               <TabsTrigger value="creatives">Creatives</TabsTrigger>
               <TabsTrigger value="operations">Operations</TabsTrigger>
               <TabsTrigger value="proof">Proof Gallery</TabsTrigger>

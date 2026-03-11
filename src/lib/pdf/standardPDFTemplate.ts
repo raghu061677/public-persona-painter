@@ -240,16 +240,31 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
       placeOfSupply: data.placeOfSupply || data.clientState,
       stateCode: data.stateCode || getStateCode(data.clientState),
       salesPerson: data.salesPerson || data.pointOfContact,
-      validity: data.validity || (data.documentType === 'ESTIMATE' || data.documentType === 'QUOTATION' ? '15 Days' : undefined),
+      validity: data.validity || (data.quotationValidityDays ? `${data.quotationValidityDays} Days` : (data.documentType === 'ESTIMATE' || data.documentType === 'QUOTATION' ? '7 Days' : undefined)),
+      campaignDuration: data.campaignDuration,
     },
     yPos
   );
 
-  yPos += 5;
+  yPos += 3;
 
-  // ========== 4. OOH LINE ITEMS TABLE (098 Style) ==========
-  // Table must always start below the header area.
-  const tableStartY = Math.max(yPos, 90);
+  // ========== 3.5 CAMPAIGN SUMMARY BLOCK ==========
+  if (data.totalLocations && data.totalLocations > 0) {
+    doc.setFontSize(9);
+    doc.setFont('NotoSans', 'bold');
+    doc.setTextColor(30, 58, 138);
+    doc.text('Campaign Summary', leftMargin, yPos);
+    yPos += 5;
+    doc.setFont('NotoSans', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Total Locations: ${data.totalLocations}`, leftMargin, yPos);
+    doc.text(`Total Media Units: ${data.totalLocations}`, leftMargin + 50, yPos);
+    doc.text(`Total Campaign Budget: ${formatCurrencyForPDF(data.totalInr)}`, leftMargin + 105, yPos);
+    yPos += 5;
+  }
+
+  yPos += 2;
 
   const tableBody = data.items.map((item) => {
     // Column 2: Location & Description

@@ -132,7 +132,7 @@ export async function generateMarketplacePPT(
     });
 
     // Header - smaller font for better fit
-    slide1.addText(`${asset.id} – ${asset.area} – ${asset.location}`, {
+    slide1.addText(`${asset.media_asset_code || asset.id} – ${asset.area} – ${asset.location}`, {
       x: 0.5,
       y: 0.5,
       w: 9,

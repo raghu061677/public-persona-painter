@@ -11047,7 +11047,7 @@ export type Database = {
           issue_type: string | null
           location: string | null
           media_type: string | null
-          status: Database["public"]["Enums"]["media_asset_status"] | null
+          status: string | null
         }
         Relationships: []
       }

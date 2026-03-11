@@ -51,6 +51,16 @@ export interface PDFDocumentData {
   // Optional overrides
   terms?: string[];
   paymentTerms?: string;
+
+  // Professional quotation metadata
+  campaignDuration?: string;        // "01 Mar 2026 – 31 Mar 2026"
+  quotationValidityDays?: number;   // e.g. 7
+  totalLocations?: number;          // asset count
+  preparedByName?: string;          // user who generated
+  preparedByRole?: string;          // user's role
+  salesContactName?: string;        // sales person name
+  salesContactPhone?: string;       // sales person phone
+  salesContactEmail?: string;       // sales person email
 }
 
 export interface PDFLineItem {

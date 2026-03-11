@@ -171,7 +171,7 @@ export default function MediaAssetsValidation() {
                       </Badge>
                     )}
                     <Button asChild variant="outline" size="sm">
-                      <Link to={`/admin/media-assets/edit/${asset.id}`}>
+                      <Link to={`/admin/media-assets/edit/${asset.media_asset_code || asset.id}`}>
                         <Pencil className="h-4 w-4 mr-1" />
                         Edit
                       </Link>

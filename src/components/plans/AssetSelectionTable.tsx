@@ -481,6 +481,7 @@ export function AssetSelectionTable({
           {availabilityFilter === 'available_by_date' && (
             <div className="flex gap-1">
               <Button
+                type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setAvailableFromDate(addDays(new Date(), 7))}

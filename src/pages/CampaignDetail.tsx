@@ -247,18 +247,14 @@ export default function CampaignDetail() {
     );
   }
 
-  // Calculate status counts from campaign_assets (single source of truth)
-  const pendingAssets = campaignAssets.filter(a => 
-    a.status === 'Pending' || a.status === 'Assigned' || !a.status
-  ).length;
-  const installedAssets = campaignAssets.filter(a => {
-    const n = normalizeCampaignAssetStatus(a.status);
-    return n === 'Installed' || n === 'Completed';
-  }).length;
-  const verifiedAssets = campaignAssets.filter(a => 
-    normalizeCampaignAssetStatus(a.status) === 'Verified'
-  ).length;
-  const totalAssets = campaignAssets.length || campaign.total_assets || 0;
+  // Calculate status counts from campaign_assets using centralized helpers
+  const assetCounts = computeCampaignAssetCounts(campaignAssets);
+  const activeAssets = getActiveAssets(campaignAssets);
+  const totalAssets = assetCounts.active; // Progress based on active assets only
+  const pendingAssets = assetCounts.pending;
+  const installedAssets = assetCounts.installed;
+  const verifiedAssets = assetCounts.verified;
+  const droppedAssetCount = assetCounts.dropped;
   const progress = calculateProgress(totalAssets, verifiedAssets);
 
   // Use Single Source of Truth calculator for all financial data

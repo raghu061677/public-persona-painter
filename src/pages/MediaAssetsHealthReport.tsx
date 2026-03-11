@@ -338,7 +338,7 @@ export default function MediaAssetsHealthReport() {
                 ) : (
                   assets.map((asset) => (
                     <TableRow key={asset.id}>
-                      <TableCell className="font-mono text-sm">{asset.id}</TableCell>
+                      <TableCell className="font-mono text-sm">{asset.media_asset_code || asset.id}</TableCell>
                       <TableCell>{asset.city}</TableCell>
                       <TableCell>{asset.media_type}</TableCell>
                       <TableCell className="text-center">

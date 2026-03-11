@@ -13,3 +13,17 @@ export {
   type BookingSource,
   type AssetAvailabilityResult,
 } from './getAssetAvailability';
+export {
+  syncMediaAssetBookingState,
+  syncMultipleMediaAssetBookingStates,
+  getAssetBookingTooltip,
+  type SyncResult,
+} from './syncAssetStatus';
+export {
+  getActiveAssets,
+  getDroppedAssets,
+  computeCampaignAssetCounts,
+  computeAssetBookingWindow,
+  type CampaignAssetRecord,
+  type CampaignAssetCounts,
+} from './campaignAssetHelpers';

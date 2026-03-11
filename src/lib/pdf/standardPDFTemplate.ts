@@ -617,6 +617,238 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   return doc.output('blob');
 }
 
+/**
+ * Same as generateStandardizedPDF but returns the jsPDF doc object
+ * so callers can append additional pages (e.g. visual gallery).
+ */
+export async function generateStandardizedPDFDoc(data: PDFDocumentData): Promise<jsPDF> {
+  // Re-use the same logic but intercept before blob output
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const leftMargin = PAGE_MARGINS.left;
+  const rightMargin = PAGE_MARGINS.right;
+
+  await ensurePdfUnicodeFont(doc);
+
+  const headerRenderers = createPageHeaderRenderer(
+    { name: data.companyName, gstin: data.companyGSTIN, pan: data.companyPAN },
+    data.documentType,
+    data.companyLogoBase64
+  );
+
+  let yPos = headerRenderers.full(doc);
+  yPos += 2;
+
+  yPos = renderBillShipGrid(
+    doc,
+    {
+      name: data.clientName,
+      address: data.clientAddress,
+      city: data.clientCity,
+      state: data.clientState,
+      pincode: data.clientPincode,
+      gstin: data.clientGSTIN,
+    },
+    yPos
+  );
+  yPos += 2;
+
+  yPos = renderDetailsGrid(
+    doc,
+    {
+      documentType: data.documentType,
+      documentNumber: data.documentNumber,
+      documentDate: data.documentDate,
+      displayName: data.displayName,
+      placeOfSupply: data.placeOfSupply || data.clientState,
+      stateCode: data.stateCode || getStateCode(data.clientState),
+      salesPerson: data.salesPerson || data.pointOfContact,
+      validity: data.validity || (data.quotationValidityDays ? `${data.quotationValidityDays} Days` : (data.documentType === 'ESTIMATE' || data.documentType === 'QUOTATION' ? '7 Days' : undefined)),
+      campaignDuration: data.campaignDuration,
+    },
+    yPos
+  );
+  yPos += 3;
+
+  if (data.totalLocations && data.totalLocations > 0) {
+    const summaryY = yPos;
+    const contentWidth = pageWidth - leftMargin - rightMargin;
+    doc.setFillColor(245, 247, 250);
+    doc.roundedRect(leftMargin, summaryY, contentWidth, 10, 2, 2, 'F');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 64, 175);
+    doc.text(`Total Media Units: ${data.totalLocations}`, leftMargin + 5, summaryY + 6.5);
+    doc.text(`Total Campaign Budget: ${formatCurrencyForPDF(data.totalInr)}`, pageWidth / 2, summaryY + 6.5);
+    doc.setTextColor(0, 0, 0);
+    yPos = summaryY + 14;
+  }
+
+  // Table
+  const tableHead = [['S.No', 'Location / Description', 'Media Specification', 'Booking Period', 'Commercials', 'Total Amount']];
+  const tableBody = data.items.map(item => {
+    const locationBlock = `${item.locationCode}\nArea: ${item.area}\nRoute: ${item.route}`;
+    const specBlock = `${item.mediaType}\n${item.dimension}\n${item.illumination}`;
+    const bookingBlock = `${item.fromDate} to\n${item.toDate}\n${item.duration}`;
+    const commercialsBlock = `Rent: ${formatCurrencyForPDF(item.unitPrice)}\nP: ${formatCurrencyForPDF(item.printingCost || 0)}\nM: ${formatCurrencyForPDF(item.mountingCost || 0)}`;
+    const totalBlock = formatCurrencyForPDF(item.subtotal);
+    return [item.sno.toString(), locationBlock, specBlock, bookingBlock, commercialsBlock, totalBlock];
+  });
+
+  autoTable(doc, {
+    startY: yPos,
+    head: tableHead,
+    body: tableBody,
+    theme: 'grid',
+    headStyles: { fillColor: [30, 64, 175], textColor: [255, 255, 255], fontSize: 7.5, fontStyle: 'bold', halign: 'center' },
+    bodyStyles: { fontSize: 7, textColor: [40, 40, 40], cellPadding: 2 },
+    columnStyles: {
+      0: { cellWidth: 10, halign: 'center' },
+      1: { cellWidth: 55 },
+      2: { cellWidth: 30 },
+      3: { cellWidth: 30, halign: 'center' },
+      4: { cellWidth: 30, halign: 'right' },
+      5: { cellWidth: 25, halign: 'right' },
+    },
+    margin: { left: leftMargin, right: rightMargin },
+    styles: { overflow: 'linebreak' },
+    didDrawPage: (hookData: any) => {
+      if (hookData.pageNumber > 1) {
+        doc.setFillColor(255, 255, 255);
+        doc.rect(0, 0, pageWidth, 34, 'F');
+        headerRenderers.compact(doc);
+      }
+    },
+  });
+
+  // @ts-ignore
+  yPos = doc.lastAutoTable.finalY + 5;
+
+  // Financial summary + bank details
+  const contentWidth = pageWidth - leftMargin - rightMargin;
+  if (yPos + 60 > pageHeight - 40) { doc.addPage(); yPos = 20; }
+
+  const bankColW = contentWidth * 0.55;
+  const totalsColW = contentWidth * 0.45;
+  const bankX = leftMargin;
+  const totalsX = leftMargin + bankColW + 2;
+  const boxY = yPos;
+
+  // Bank details box (same as standard template)
+  const BANK_DETAILS_LOCAL = {
+    bankName: 'HDFC Bank Limited',
+    branch: 'Karkhana Road, Secunderabad - 500009',
+    accountNo: '50200010727301',
+    ifsc: 'HDFC0001555',
+    micr: '500240026',
+  };
+  doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(0.3);
+  doc.rect(bankX, boxY, bankColW, 38, 'S');
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Bank Details:', bankX + 3, boxY + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.text(`Bank: ${BANK_DETAILS_LOCAL.bankName}`, bankX + 3, boxY + 10);
+  doc.text(`Branch: ${BANK_DETAILS_LOCAL.branch}`, bankX + 3, boxY + 14.5);
+  doc.text(`A/c No: ${BANK_DETAILS_LOCAL.accountNo}`, bankX + 3, boxY + 19);
+  doc.text(`IFSC: ${BANK_DETAILS_LOCAL.ifsc}`, bankX + 3, boxY + 23.5);
+  doc.text(`MICR: ${BANK_DETAILS_LOCAL.micr}`, bankX + 3, boxY + 28);
+
+  // Totals
+  doc.rect(totalsX, boxY, totalsColW, 38, 'S');
+  let tY = boxY + 6;
+  doc.setFontSize(7.5);
+  const summaryRows: [string, string][] = [
+    ['Subtotal:', formatCurrencyForPDF(data.untaxedAmount)],
+    ['CGST (9%):', formatCurrencyForPDF(data.cgst)],
+    ['SGST (9%):', formatCurrencyForPDF(data.sgst)],
+  ];
+  for (const [lbl, val] of summaryRows) {
+    doc.setFont('helvetica', 'normal');
+    doc.text(lbl, totalsX + 3, tY);
+    doc.text(val, totalsX + totalsColW - 3, tY, { align: 'right' });
+    tY += 5;
+  }
+  doc.setFillColor(30, 64, 175);
+  doc.rect(totalsX, tY - 2, totalsColW, 9, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('TOTAL:', totalsX + 3, tY + 4);
+  doc.text(formatCurrencyForPDF(data.totalInr), totalsX + totalsColW - 3, tY + 4, { align: 'right' });
+  doc.setTextColor(0, 0, 0);
+
+  yPos = boxY + 42;
+
+  // Payment terms
+  if (data.paymentTerms) {
+    if (yPos + 8 > pageHeight - 60) { doc.addPage(); yPos = 20; }
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Payment Terms:', leftMargin, yPos);
+    doc.setFont('helvetica', 'normal');
+    const ptLines = doc.splitTextToSize(data.paymentTerms, contentWidth - 30);
+    doc.text(ptLines, leftMargin + 28, yPos);
+    yPos += ptLines.length * 3.5 + 3;
+  }
+
+  // Sales contact
+  if (data.salesContactName) {
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Sales Contact:', leftMargin, yPos);
+    doc.setFont('helvetica', 'normal');
+    let contactStr = data.salesContactName;
+    if (data.salesContactPhone) contactStr += ` | ${data.salesContactPhone}`;
+    if (data.salesContactEmail) contactStr += ` | ${data.salesContactEmail}`;
+    doc.text(contactStr, leftMargin + 28, yPos);
+    yPos += 6;
+  }
+
+  // Terms
+  if (data.terms && data.terms.length > 0) {
+    if (yPos + 15 > pageHeight - 40) { doc.addPage(); yPos = 20; }
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Terms & Conditions:', leftMargin, yPos);
+    yPos += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    for (let i = 0; i < data.terms.length; i++) {
+      if (!data.terms[i]) continue;
+      const lines = doc.splitTextToSize(`${i + 1}. ${data.terms[i]}`, contentWidth - 5);
+      if (yPos + lines.length * 3 > pageHeight - 15) { doc.addPage(); yPos = 20; }
+      doc.text(lines, leftMargin + 2, yPos);
+      yPos += lines.length * 3 + 1;
+    }
+  }
+
+  // Client approval
+  if (yPos + 25 > pageHeight - 10) { doc.addPage(); yPos = 20; }
+  yPos += 5;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Client Approval', leftMargin, yPos);
+  yPos += 5;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.text('Name: ____________________', leftMargin, yPos);
+  doc.text('Designation: ____________________', leftMargin + 70, yPos);
+  yPos += 6;
+  doc.text('Signature: ____________________', leftMargin, yPos);
+  doc.text('Date: ____________________', leftMargin + 70, yPos);
+  yPos += 8;
+  doc.setFontSize(6.5);
+  doc.text('Authorized Signatory', pageWidth - rightMargin, yPos, { align: 'right' });
+
+  await renderSellerFooterWithSignatory(doc, { name: data.companyName, gstin: data.companyGSTIN }, yPos);
+
+  return doc;
+}
+
 // ============= HELPER FUNCTIONS =============
 
 // Get state code from state name (for Place of Supply)

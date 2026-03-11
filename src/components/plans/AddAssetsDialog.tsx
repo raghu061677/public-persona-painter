@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -30,29 +30,31 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Search, Shield } from "lucide-react";
+import { Plus, Search, Shield, Calendar } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
+import { useAssetAvailability } from "@/hooks/useAssetAvailability";
+import { toDateString } from "@/lib/availability";
+import type { BookingAvailability } from "@/lib/availability";
 
 interface AddAssetsDialogProps {
   open: boolean;
   onClose: () => void;
   existingAssetIds: string[];
   onAddAssets: (assets: any[]) => void;
-  /** Plan start date for hold overlap check */
+  /** Plan start date for availability check */
   planStartDate?: string;
-  /** Plan end date for hold overlap check */
+  /** Plan end date for availability check */
   planEndDate?: string;
 }
 
-interface HoldInfo {
-  id: string;
-  asset_id: string;
-  client_name: string | null;
-  hold_type: string;
-  start_date: string;
-  end_date: string;
-}
+const AVAILABILITY_BADGE: Record<BookingAvailability, { label: string; className: string }> = {
+  Vacant: { label: 'Available', className: 'bg-emerald-50 text-emerald-700' },
+  Running: { label: 'Running', className: 'bg-red-50 text-red-700' },
+  Upcoming: { label: 'Future Booked', className: 'bg-amber-50 text-amber-700' },
+  Booked: { label: 'Booked', className: 'bg-blue-50 text-blue-700' },
+  Blocked: { label: 'Held/Blocked', className: 'bg-purple-50 text-purple-700' },
+};
 
 export function AddAssetsDialog({
   open,
@@ -63,47 +65,57 @@ export function AddAssetsDialog({
   planEndDate,
 }: AddAssetsDialogProps) {
   const [assets, setAssets] = useState<any[]>([]);
-  const [filteredAssets, setFilteredAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [mediaTypeFilter, setMediaTypeFilter] = useState<string>("all");
+  const [availabilityFilter, setAvailabilityFilter] = useState<string>("available");
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
-  const [holdsMap, setHoldsMap] = useState<Record<string, HoldInfo>>({});
+
+  // Compute date range for availability engine
+  const rangeStart = useMemo(() => planStartDate || toDateString(new Date()), [planStartDate]);
+  const rangeEnd = useMemo(() => {
+    if (planEndDate) return planEndDate;
+    const d = new Date(rangeStart);
+    d.setFullYear(d.getFullYear() + 1);
+    return toDateString(d);
+  }, [planEndDate, rangeStart]);
+
+  // Get all asset IDs for batch availability check
+  const assetIds = useMemo(() => assets.filter(a => !existingAssetIds.includes(a.id)).map(a => a.id), [assets, existingAssetIds]);
+
+  // Use the availability engine — single source of truth
+  const { getAvailability, loading: loadingAvailability } = useAssetAvailability(
+    assetIds,
+    rangeStart,
+    rangeEnd,
+    { enabled: open && assetIds.length > 0 }
+  );
 
   useEffect(() => {
     if (open) {
-      fetchAvailableAssets();
-      if (planStartDate && planEndDate) {
-        fetchOverlappingHolds();
-      }
+      fetchAllAssets();
     }
   }, [open]);
 
-  useEffect(() => {
-    filterAssets();
-  }, [assets, searchTerm, cityFilter, mediaTypeFilter]);
-
-  const fetchAvailableAssets = async () => {
+  /**
+   * Fetch ALL media assets (not filtered by status).
+   * Availability is determined by the booking engine, not media_assets.status.
+   */
+  const fetchAllAssets = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from('media_assets')
         .select('*')
-        .eq('status', 'Available')
         .order('city', { ascending: true });
 
       if (error) throw error;
-
-      const availableAssets = data?.filter(
-        asset => !existingAssetIds.includes(asset.id)
-      ) || [];
-
-      setAssets(availableAssets);
+      setAssets(data || []);
     } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to fetch available assets",
+        description: "Failed to fetch assets",
         variant: "destructive",
       });
     } finally {
@@ -111,34 +123,16 @@ export function AddAssetsDialog({
     }
   };
 
-  const fetchOverlappingHolds = async () => {
-    if (!planStartDate || !planEndDate) return;
-    try {
-      const { data } = await supabase
-        .from("asset_holds")
-        .select("id, asset_id, client_name, hold_type, start_date, end_date")
-        .eq("status", "ACTIVE")
-        .lte("start_date", planEndDate)
-        .gte("end_date", planStartDate);
-
-      if (data) {
-        const map: Record<string, HoldInfo> = {};
-        data.forEach((h: any) => { map[h.asset_id] = h; });
-        setHoldsMap(map);
-      }
-    } catch {
-      // Non-critical; just won't show badges
-    }
-  };
-
-  const filterAssets = () => {
-    let filtered = [...assets];
+  // Filter assets excluding already-added ones
+  const displayAssets = useMemo(() => {
+    let filtered = assets.filter(a => !existingAssetIds.includes(a.id));
 
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
         asset =>
           asset.id.toLowerCase().includes(term) ||
+          asset.media_asset_code?.toLowerCase().includes(term) ||
           asset.location?.toLowerCase().includes(term) ||
           asset.area?.toLowerCase().includes(term)
       );
@@ -152,15 +146,28 @@ export function AddAssetsDialog({
       filtered = filtered.filter(asset => asset.media_type === mediaTypeFilter);
     }
 
-    setFilteredAssets(filtered);
-  };
+    // Availability filter using booking engine
+    if (availabilityFilter !== "all") {
+      filtered = filtered.filter(asset => {
+        const result = getAvailability(asset.id);
+        if (availabilityFilter === "available") return result.availability === 'Vacant';
+        if (availabilityFilter === "booked") return result.availability === 'Running' || result.availability === 'Booked' || result.availability === 'Upcoming';
+        if (availabilityFilter === "blocked") return result.availability === 'Blocked';
+        return true;
+      });
+    }
 
-  const cities = Array.from(new Set(assets.map(a => a.city).filter(Boolean)));
-  const mediaTypes = Array.from(new Set(assets.map(a => a.media_type).filter(Boolean)));
+    return filtered;
+  }, [assets, existingAssetIds, searchTerm, cityFilter, mediaTypeFilter, availabilityFilter, getAvailability]);
+
+  const cities = Array.from(new Set(assets.map(a => a.city).filter(Boolean))).sort();
+  const mediaTypes = Array.from(new Set(assets.map(a => a.media_type).filter(Boolean))).sort();
 
   const toggleAssetSelection = (assetId: string) => {
-    // Prevent selecting blocked assets
-    if (holdsMap[assetId]) return;
+    // Only allow selecting available assets
+    const result = getAvailability(assetId);
+    if (result.availability !== 'Vacant') return;
+
     const newSelected = new Set(selectedAssets);
     if (newSelected.has(assetId)) {
       newSelected.delete(assetId);
@@ -186,8 +193,8 @@ export function AddAssetsDialog({
 
         <div className="space-y-4">
           {/* Filters */}
-          <div className="flex gap-3">
-            <div className="relative flex-1">
+          <div className="flex gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by ID, location, or area..."
@@ -197,7 +204,7 @@ export function AddAssetsDialog({
               />
             </div>
             <Select value={cityFilter} onValueChange={setCityFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="City" />
               </SelectTrigger>
               <SelectContent>
@@ -208,7 +215,7 @@ export function AddAssetsDialog({
               </SelectContent>
             </Select>
             <Select value={mediaTypeFilter} onValueChange={setMediaTypeFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="Media Type" />
               </SelectTrigger>
               <SelectContent>
@@ -216,6 +223,17 @@ export function AddAssetsDialog({
                 {mediaTypes.map(type => (
                   <SelectItem key={type} value={type}>{type}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={availabilityFilter} onValueChange={setAvailabilityFilter}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Availability" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="available">Available</SelectItem>
+                <SelectItem value="booked">Booked</SelectItem>
+                <SelectItem value="blocked">Blocked</SelectItem>
+                <SelectItem value="all">All</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -232,37 +250,39 @@ export function AddAssetsDialog({
                   <TableHead>Area</TableHead>
                   <TableHead>Media Type</TableHead>
                   <TableHead className="text-right">Card Rate</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Availability</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
+                {(loading || loadingAvailability) ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8">
                       Loading assets...
                     </TableCell>
                   </TableRow>
-                ) : filteredAssets.length === 0 ? (
+                ) : displayAssets.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8">
-                      No available assets found
+                      No assets found matching filters
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredAssets.map((asset) => {
-                    const hold = holdsMap[asset.id];
-                    const isBlocked = !!hold;
+                  displayAssets.map((asset) => {
+                    const result = getAvailability(asset.id);
+                    const isAvailable = result.availability === 'Vacant';
+                    const badge = AVAILABILITY_BADGE[result.availability];
+
                     return (
                       <TableRow
                         key={asset.id}
-                        className={isBlocked ? "opacity-60 bg-purple-50/50" : undefined}
+                        className={!isAvailable ? "opacity-60" : undefined}
                       >
                         <TableCell>
                           <input
                             type="checkbox"
                             checked={selectedAssets.has(asset.id)}
                             onChange={() => toggleAssetSelection(asset.id)}
-                            disabled={isBlocked}
+                            disabled={!isAvailable}
                             className="h-4 w-4 rounded border-gray-300 disabled:cursor-not-allowed"
                           />
                         </TableCell>
@@ -275,22 +295,35 @@ export function AddAssetsDialog({
                           {formatCurrency(asset.card_rate)}
                         </TableCell>
                         <TableCell>
-                          {isBlocked ? (
+                          {!isAvailable ? (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger>
-                                  <Badge variant="outline" className="bg-purple-100 text-purple-700 text-[10px] gap-1">
-                                    <Shield className="h-3 w-3" />
-                                    Held
+                                  <Badge variant="outline" className={`${badge.className} text-[10px] gap-1`}>
+                                    {result.availability === 'Blocked' ? <Shield className="h-3 w-3" /> : <Calendar className="h-3 w-3" />}
+                                    {badge.label}
                                   </Badge>
                                 </TooltipTrigger>
-                                <TooltipContent side="left">
-                                  <p className="text-xs font-medium">
-                                    {hold.hold_type.replace("_", " ")} — {hold.client_name || "Internal"}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {hold.start_date} → {hold.end_date}
-                                  </p>
+                                <TooltipContent side="left" className="max-w-xs">
+                                  <div className="space-y-1 text-xs">
+                                    <p className="font-medium">
+                                      {result.sourceType === 'campaign' ? 'Campaign' : result.sourceType === 'hold' ? 'Hold' : 'Booking'}:
+                                      {' '}{result.sourceNumber || result.sourceId || 'Unknown'}
+                                    </p>
+                                    {result.clientName && <p>Client: {result.clientName}</p>}
+                                    {result.startDate && result.endDate && (
+                                      <p>{result.startDate} → {result.endDate}</p>
+                                    )}
+                                    {result.endDate && (
+                                      <p className="text-primary font-medium">
+                                        Available from: {(() => {
+                                          const d = new Date(result.endDate + 'T00:00:00');
+                                          d.setDate(d.getDate() + 1);
+                                          return toDateString(d);
+                                        })()}
+                                      </p>
+                                    )}
+                                  </div>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -311,11 +344,7 @@ export function AddAssetsDialog({
           <div className="flex justify-between items-center pt-4 border-t">
             <p className="text-sm text-muted-foreground">
               {selectedAssets.size} asset(s) selected
-              {Object.keys(holdsMap).length > 0 && (
-                <span className="ml-2 text-purple-600">
-                  · {Object.keys(holdsMap).length} held/blocked
-                </span>
-              )}
+              {' · '}{displayAssets.length} shown
             </p>
             <div className="flex gap-3">
               <Button variant="outline" onClick={onClose}>

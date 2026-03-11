@@ -403,10 +403,25 @@ export default function CampaignDetail() {
         {/* Installation Progress - Segmented Bar */}
         <Card className="mb-6 border">
           <CardContent className="pt-6">
+            {/* Active / Dropped / Total summary strip */}
+            <div className="flex items-center gap-4 mb-4 flex-wrap">
+              <Badge variant="outline" className="text-sm py-1 px-3 bg-green-50 text-green-700 border-green-300">
+                Active: {assetCounts.active}
+              </Badge>
+              {droppedAssetCount > 0 && (
+                <Badge variant="outline" className="text-sm py-1 px-3 bg-orange-50 text-orange-700 border-orange-300">
+                  Dropped: {droppedAssetCount}
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-sm py-1 px-3">
+                Total Records: {assetCounts.total}
+              </Badge>
+            </div>
+
             <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-semibold">Installation Progress</span>
+              <span className="text-sm font-semibold">Installation Progress (Active Assets)</span>
               <span className="text-sm text-muted-foreground">
-                {totalAssets} Total Assets
+                {totalAssets} Active Assets
               </span>
             </div>
             

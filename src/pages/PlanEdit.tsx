@@ -46,7 +46,7 @@ import { PlanSummaryCard } from "@/components/plans/PlanSummaryCard";
 import { calcProRata, calcDiscount, calcProfit } from "@/utils/pricing";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { generateProposalExcel } from "@/lib/exports/proposalExcelExport";
-import { calculatePrintingCost, calculateMountingCost, getAssetSqft } from "@/utils/effectivePricing";
+import { calculatePrintingCost } from "@/utils/effectivePricing";
 import { computeRentAmount, BillingMode } from "@/utils/perAssetPricing";
 import { addDays } from "date-fns";
 import { useRecordPermissions } from "@/hooks/useRecordAccessMode";
@@ -322,7 +322,7 @@ export default function PlanEdit() {
           mounting_charges: asset.mounting_charges || 0,
           printing_rate: 0,
           mounting_rate: 0,
-          mounting_mode: 'sqft',
+          mounting_mode: 'fixed',
           // Per-asset duration fields initialized from plan (or adjusted for bookings)
           start_date: planStart,
           end_date: planEnd,
@@ -436,17 +436,13 @@ export default function PlanEdit() {
         
         // Calculate printing cost using rate × sqft, fallback to stored charges
         const printingRate = pricing.printing_rate || 0;
-        const mountingRate = pricing.mounting_rate || 0;
-        const mountingMode = pricing.mounting_mode || 'sqft';
         
         const printingResult = calculatePrintingCost(asset, printingRate);
-        const mountingResult = calculateMountingCost(asset, mountingRate);
         
         // Use rate-based calculation if rate > 0, otherwise fallback to stored charges
         const printing = printingResult.cost > 0 ? printingResult.cost : (pricing.printing_charges || 0);
-        const mounting = mountingMode === 'fixed' 
-          ? mountingRate 
-          : (mountingResult.cost > 0 ? mountingResult.cost : (pricing.mounting_charges || 0));
+        // MOUNTING IS ALWAYS PER-ASSET DIRECT AMOUNT - never sqft-based
+        const mounting = pricing.mounting_charges || 0;
         
         // Calculate discount: (Card Rate - Negotiated Price) pro-rated
         const discountMonthly = cardRate - negotiatedPrice;

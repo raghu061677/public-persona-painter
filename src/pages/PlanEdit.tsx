@@ -204,6 +204,7 @@ export default function PlanEdit() {
             sales_price: effectivePrice,      // Keep in sync for compatibility
             printing_charges: item.printing_charges || 0,
             mounting_charges: item.mounting_charges || 0,
+            mounting_mode: 'fixed', // MOUNTING IS ALWAYS PER-ASSET DIRECT AMOUNT
             printing_rate: item.printing_rate || 0,
             mounting_rate: item.installation_rate || 0,
             discount_value: item.discount_value || 0,

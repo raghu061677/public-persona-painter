@@ -1008,7 +1008,7 @@ export default function CampaignEdit() {
           end_date: format(endDate, 'yyyy-MM-dd'),
           status,
           notes,
-          total_assets: campaignAssets.length,
+          total_assets: campaignAssets.length, // Active assets in edit state (dropped already removed from UI list)
           subtotal: subtotal,
           printing_total: printingTotal,
           mounting_total: mountingTotal,

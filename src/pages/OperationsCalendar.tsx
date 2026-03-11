@@ -86,7 +86,7 @@ export default function OperationsCalendar() {
 
         return {
           id: asset.id,
-          title: `${asset.asset_id} - ${asset.mounter_name || 'Unassigned'}`,
+          title: `${asset.media_assets?.media_asset_code || asset.asset_id} - ${asset.mounter_name || 'Unassigned'}`,
           start: assignedDate,
           end: endDate,
           resource: {

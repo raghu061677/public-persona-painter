@@ -44,7 +44,7 @@ export function GalleryAssetCard({
         <div className="h-48 overflow-hidden bg-muted">
           <img
             src={getAssetImage()}
-            alt={asset.id}
+            alt={asset.media_asset_code || asset.id}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         </div>

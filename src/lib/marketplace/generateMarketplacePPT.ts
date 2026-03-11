@@ -236,7 +236,7 @@ export async function generateMarketplacePPT(
     });
 
     // Header - smaller font
-    slide2.addText(`Asset Specifications – ${asset.id}`, {
+    slide2.addText(`Asset Specifications – ${asset.media_asset_code || asset.id}`, {
       x: 0.5,
       y: 0.5,
       w: 9,

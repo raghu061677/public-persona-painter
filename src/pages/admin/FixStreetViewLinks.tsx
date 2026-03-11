@@ -298,7 +298,7 @@ export default function FixStreetViewLinks() {
                 <TableBody>
                   {assets.map((asset) => (
                     <TableRow key={asset.id}>
-                      <TableCell className="font-medium">{asset.id}</TableCell>
+                      <TableCell className="font-medium">{asset.media_asset_code || asset.id}</TableCell>
                       <TableCell>{asset.area}</TableCell>
                       <TableCell className="max-w-[200px] truncate">{asset.location}</TableCell>
                       <TableCell>

@@ -80,7 +80,7 @@ export function MapView({ assets, onAssetClick }: MapViewProps) {
       const popupContent = `
         <div class="min-w-[250px] p-2">
           <div class="flex items-center justify-between mb-2">
-            <h3 class="font-bold text-sm">${asset.id}</h3>
+            <h3 class="font-bold text-sm">${asset.media_asset_code || asset.id}</h3>
             <span class="px-2 py-1 text-xs rounded ${
               asset.status === "Available"
                 ? "bg-green-100 text-green-800"

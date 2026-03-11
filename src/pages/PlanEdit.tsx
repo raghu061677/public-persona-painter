@@ -322,7 +322,7 @@ export default function PlanEdit() {
           mounting_charges: asset.mounting_charges || 0,
           printing_rate: 0,
           mounting_rate: 0,
-          mounting_mode: 'sqft',
+          mounting_mode: 'fixed',
           // Per-asset duration fields initialized from plan (or adjusted for bookings)
           start_date: planStart,
           end_date: planEnd,

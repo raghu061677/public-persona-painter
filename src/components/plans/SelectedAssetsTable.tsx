@@ -1171,33 +1171,15 @@ export function SelectedAssetsTable({
                                     placeholder={pricing.mounting_mode === 'fixed' ? "₹" : "₹/sqft"}
                                   />
                                 </div>
-                                <div className={`text-sm font-medium ${mountingResult.error && pricing.mounting_mode !== 'fixed' ? 'text-destructive' : 'text-green-600 dark:text-green-400'}`}>
-                                  {pricing.mounting_mode === 'fixed' ? (
-                                    formatCurrency(mountingRate)
-                                  ) : mountingResult.error ? (
-                                    <span className="flex items-center gap-1">
-                                      <AlertCircle className="h-3 w-3" />
-                                      <span className="text-xs">N/A</span>
-                                    </span>
-                                  ) : (
-                                    formatCurrency(mounting)
-                                  )}
+                                <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                                  {formatCurrency(mounting)}
                                 </div>
                               </div>
                             </TooltipTrigger>
                             <TooltipContent>
-                              {pricing.mounting_mode === 'fixed' ? (
-                                <>
-                                  <p className="text-xs font-semibold">Mounting = Fixed Price</p>
-                                  <p className="text-xs">₹{mountingRate.toFixed(2)}</p>
-                                </>
-                              ) : (
-                                <>
-                                  <p className="text-xs font-semibold">Mounting = SQFT × Rate</p>
-                                  <p className="text-xs">{assetSqft} sqft × ₹{mountingRate} = ₹{mounting.toFixed(2)}</p>
-                                  {mountingResult.error && <p className="text-xs text-destructive">{mountingResult.error}</p>}
-                                </>
-                              )}
+                              <p className="text-xs font-semibold">Mounting = Fixed Per-Asset Amount</p>
+                              <p className="text-xs">₹{mounting.toFixed(2)}</p>
+                            </TooltipContent>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>

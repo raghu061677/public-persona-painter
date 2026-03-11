@@ -41,7 +41,7 @@ export function PlanBuilderTab({ selectedAssets, onRemoveAsset }: PlanBuilderTab
                 className="flex items-center justify-between gap-2 p-2 rounded-lg border bg-card"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{asset.id}</p>
+                  <p className="text-sm font-medium truncate">{asset.media_asset_code || asset.id}</p>
                   <p className="text-xs text-muted-foreground truncate">
                     {asset.area}, {asset.city}
                   </p>

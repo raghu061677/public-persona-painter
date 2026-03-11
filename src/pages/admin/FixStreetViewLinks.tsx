@@ -20,6 +20,7 @@ import {
 
 interface AssetIssue {
   id: string;
+  media_asset_code?: string | null;
   area: string;
   location: string;
   latitude: number | null;
@@ -49,7 +50,7 @@ export default function FixStreetViewLinks() {
     try {
       const { data: allAssets, error } = await supabase
         .from('media_assets')
-        .select('id, area, location, latitude, longitude, google_street_view_url')
+        .select('id, media_asset_code, area, location, latitude, longitude, google_street_view_url')
         .order('id');
 
       if (error) throw error;
@@ -298,7 +299,7 @@ export default function FixStreetViewLinks() {
                 <TableBody>
                   {assets.map((asset) => (
                     <TableRow key={asset.id}>
-                      <TableCell className="font-medium">{asset.id}</TableCell>
+                      <TableCell className="font-medium">{asset.media_asset_code || asset.id}</TableCell>
                       <TableCell>{asset.area}</TableCell>
                       <TableCell className="max-w-[200px] truncate">{asset.location}</TableCell>
                       <TableCell>

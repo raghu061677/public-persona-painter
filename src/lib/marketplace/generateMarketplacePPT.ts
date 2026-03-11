@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 
 interface MarketplaceAsset {
   id: string;
+  media_asset_code?: string | null;
   city: string;
   area: string;
   location: string;
@@ -131,7 +132,7 @@ export async function generateMarketplacePPT(
     });
 
     // Header - smaller font for better fit
-    slide1.addText(`${asset.id} – ${asset.area} – ${asset.location}`, {
+    slide1.addText(`${asset.media_asset_code || asset.id} – ${asset.area} – ${asset.location}`, {
       x: 0.5,
       y: 0.5,
       w: 9,
@@ -235,7 +236,7 @@ export async function generateMarketplacePPT(
     });
 
     // Header - smaller font
-    slide2.addText(`Asset Specifications – ${asset.id}`, {
+    slide2.addText(`Asset Specifications – ${asset.media_asset_code || asset.id}`, {
       x: 0.5,
       y: 0.5,
       w: 9,

@@ -397,7 +397,7 @@ export default function Marketplace() {
           'create',
           'booking_request',
           selectedAsset.id,
-          `Booking request for ${selectedAsset.id}`,
+          `Booking request for ${selectedAsset.media_asset_code || selectedAsset.id}`,
           { asset_id: selectedAsset.id }
         );
       } else {
@@ -415,7 +415,7 @@ export default function Marketplace() {
             company_id: ownerCompanyId,
             name: bookingForm.clientName,
             company: bookingForm.clientName,
-            requirement: `Marketplace Enquiry for Asset ${selectedAsset.id} - ${selectedAsset.media_type} in ${selectedAsset.area}\nCampaign: ${bookingForm.campaignName}\nDates: ${bookingForm.startDate} to ${bookingForm.endDate}\nProposed Rate: ${bookingForm.proposedRate}\nNotes: ${bookingForm.notes}`,
+            requirement: `Marketplace Enquiry for Asset ${selectedAsset.media_asset_code || selectedAsset.id} - ${selectedAsset.media_type} in ${selectedAsset.area}\nCampaign: ${bookingForm.campaignName}\nDates: ${bookingForm.startDate} to ${bookingForm.endDate}\nProposed Rate: ${bookingForm.proposedRate}\nNotes: ${bookingForm.notes}`,
             location: `${selectedAsset.area}, ${selectedAsset.city}`,
             source: 'Go-Ads Website - Marketplace',
             status: 'New',

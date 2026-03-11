@@ -154,7 +154,7 @@ export function AIVacantAssetsDialog({ open, onClose, onSelectAssets }: AIVacant
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="font-medium">{rec.asset.id} - {rec.asset.location}</p>
+                        <p className="font-medium">{rec.asset.media_asset_code || rec.asset.id} — {rec.asset.location}</p>
                         <p className="text-sm text-muted-foreground">
                           {rec.asset.city}, {rec.asset.area} | {rec.asset.media_type}
                         </p>

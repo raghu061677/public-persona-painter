@@ -1356,6 +1356,13 @@ export default function PlanDetail() {
                 </DropdownMenuItem>
                 )}
 
+                {perms.canViewFinancials && (
+                <DropdownMenuItem onClick={handleExportVisualQuotation} disabled={exportingVisualQuotation}>
+                  <FileImage className="mr-2 h-4 w-4" />
+                  {exportingVisualQuotation ? "Generating..." : "Download Visual Quotation"}
+                </DropdownMenuItem>
+                )}
+
                 {perms.canViewFinancials && <DropdownMenuSeparator />}
                 
                 {/* Client Documents - Financial exports restricted */}

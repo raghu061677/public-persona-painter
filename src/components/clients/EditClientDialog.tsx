@@ -363,6 +363,15 @@ export function EditClientDialog({
               />
               {errors.notes && <p className="text-sm text-destructive mt-1">{errors.notes}</p>}
             </div>
+
+            {/* Payment Terms */}
+            <div className="col-span-2">
+              <PaymentTermsInput
+                value={formData.payment_terms || ""}
+                onChange={(v) => updateField('payment_terms', v)}
+                helperText="Used as default for new quotations and plans."
+              />
+            </div>
           </div>
 
           <Separator className="my-6" />

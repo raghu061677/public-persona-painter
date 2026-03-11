@@ -1158,7 +1158,7 @@ export function SelectedAssetsTable({
                                     onChange={(e) => {
                                       const rate = parseFormattedNumber(e.target.value);
                                       onPricingUpdate(asset.id, 'mounting_rate', rate);
-                                      const mountingMode = pricing.mounting_mode || 'sqft';
+                                      const mountingMode = pricing.mounting_mode || 'fixed';
                                       // Calculate cost based on mode
                                       if (mountingMode === 'fixed') {
                                         onPricingUpdate(asset.id, 'mounting_charges', rate);

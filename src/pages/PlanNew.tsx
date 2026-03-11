@@ -446,6 +446,7 @@ export default function PlanNew() {
           grand_total: grandTotal,
           notes: formData.notes,
           payment_terms: formData.payment_terms || null,
+          quotation_validity_days: formData.quotation_validity_days || 7,
           created_by: user.id,
           company_id: companyUser.company_id,
         } as any)

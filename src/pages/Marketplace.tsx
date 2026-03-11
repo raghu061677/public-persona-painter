@@ -397,7 +397,7 @@ export default function Marketplace() {
           'create',
           'booking_request',
           selectedAsset.id,
-          `Booking request for ${selectedAsset.id}`,
+          `Booking request for ${selectedAsset.media_asset_code || selectedAsset.id}`,
           { asset_id: selectedAsset.id }
         );
       } else {

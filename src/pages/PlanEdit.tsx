@@ -1058,6 +1058,8 @@ export default function PlanEdit() {
                 selectedIds={selectedAssets}
                 onSelect={toggleAssetSelection}
                 onMultiSelect={handleMultiSelect}
+                planStartDate={formData.start_date instanceof Date ? formData.start_date : new Date(formData.start_date)}
+                planEndDate={formData.end_date instanceof Date ? formData.end_date : new Date(formData.end_date)}
               />
             </CardContent>
           </Card>

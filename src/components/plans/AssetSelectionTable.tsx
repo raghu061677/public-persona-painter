@@ -454,6 +454,7 @@ export function AssetSelectionTable({
             <Popover>
               <PopoverTrigger asChild>
                 <Button
+                  type="button"
                   variant="outline"
                   className={cn(
                     "w-[200px] justify-start text-left font-normal",
@@ -476,43 +477,10 @@ export function AssetSelectionTable({
               </PopoverContent>
             </Popover>
           )}
-          
-          {/* Quick date presets */}
-          {availabilityFilter === 'available_by_date' && (
-            <div className="flex gap-1">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setAvailableFromDate(addDays(new Date(), 7))}
-                className="text-xs"
-              >
-                +7 days
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setAvailableFromDate(addDays(new Date(), 15))}
-                className="text-xs"
-              >
-                +15 days
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setAvailableFromDate(addDays(new Date(), 30))}
-                className="text-xs"
-              >
-                +30 days
-              </Button>
-            </div>
-          )}
-          
+...
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="icon">
+              <Button type="button" variant="outline" size="icon">
                 <Settings2 className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
@@ -520,7 +488,7 @@ export function AssetSelectionTable({
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium text-sm">Show Columns</h4>
-                  <Button variant="ghost" size="sm" onClick={reset}>
+                  <Button type="button" variant="ghost" size="sm" onClick={reset}>
                     Reset
                   </Button>
                 </div>

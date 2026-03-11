@@ -50,7 +50,7 @@ export default function FixStreetViewLinks() {
     try {
       const { data: allAssets, error } = await supabase
         .from('media_assets')
-        .select('id, area, location, latitude, longitude, google_street_view_url')
+        .select('id, media_asset_code, area, location, latitude, longitude, google_street_view_url')
         .order('id');
 
       if (error) throw error;

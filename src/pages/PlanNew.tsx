@@ -78,6 +78,7 @@ export default function PlanNew() {
     gst_percent: "18",
     notes: "",
     payment_terms: "",
+    quotation_validity_days: 7,
   });
 
   useEffect(() => {

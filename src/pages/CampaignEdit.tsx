@@ -1008,7 +1008,7 @@ export default function CampaignEdit() {
           end_date: format(endDate, 'yyyy-MM-dd'),
           status,
           notes,
-          total_assets: campaignAssets.length,
+          total_assets: campaignAssets.length, // Active assets in edit state (dropped already removed from UI list)
           subtotal: subtotal,
           printing_total: printingTotal,
           mounting_total: mountingTotal,
@@ -1107,6 +1107,21 @@ export default function CampaignEdit() {
             console.error('Error updating asset:', updateError);
           }
         }
+      }
+
+      // Sync media asset statuses after save
+      try {
+        const { syncMultipleMediaAssetBookingStates } = await import("@/lib/availability/syncAssetStatus");
+        const allAffectedIds = [
+          ...campaignAssets.map(a => a.asset_id),
+          ...deletedAssetIds.map(id => {
+            const found = campaignAssets.find(a => a.id === id);
+            return found?.asset_id;
+          }).filter(Boolean) as string[],
+        ];
+        await syncMultipleMediaAssetBookingStates(allAffectedIds);
+      } catch (syncErr) {
+        console.warn('[CampaignEdit] Asset status sync warning:', syncErr);
       }
 
       toast({

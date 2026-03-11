@@ -29,6 +29,7 @@ import { CampaignHealthAlerts } from "@/components/campaigns/CampaignHealthAlert
 
 import { checkAndAutoGeneratePPT } from "@/lib/operations/autoGenerateProofPPT";
 import { normalizeCampaignAssetStatus } from "@/lib/constants/campaignAssetStatus";
+import { computeCampaignAssetCounts, getActiveAssets } from "@/lib/availability/campaignAssetHelpers";
 import { CreativeUploadSection } from "@/components/campaigns/CreativeUploadSection";
 import { useCampaignWorkflows } from "@/hooks/useCampaignWorkflows";
 import { AutoAssignMountersButton } from "@/components/campaigns/AutoAssignMountersButton";
@@ -246,18 +247,14 @@ export default function CampaignDetail() {
     );
   }
 
-  // Calculate status counts from campaign_assets (single source of truth)
-  const pendingAssets = campaignAssets.filter(a => 
-    a.status === 'Pending' || a.status === 'Assigned' || !a.status
-  ).length;
-  const installedAssets = campaignAssets.filter(a => {
-    const n = normalizeCampaignAssetStatus(a.status);
-    return n === 'Installed' || n === 'Completed';
-  }).length;
-  const verifiedAssets = campaignAssets.filter(a => 
-    normalizeCampaignAssetStatus(a.status) === 'Verified'
-  ).length;
-  const totalAssets = campaignAssets.length || campaign.total_assets || 0;
+  // Calculate status counts from campaign_assets using centralized helpers
+  const assetCounts = computeCampaignAssetCounts(campaignAssets);
+  const activeAssets = getActiveAssets(campaignAssets);
+  const totalAssets = assetCounts.active; // Progress based on active assets only
+  const pendingAssets = assetCounts.pending;
+  const installedAssets = assetCounts.installed;
+  const verifiedAssets = assetCounts.verified;
+  const droppedAssetCount = assetCounts.dropped;
   const progress = calculateProgress(totalAssets, verifiedAssets);
 
   // Use Single Source of Truth calculator for all financial data
@@ -406,10 +403,25 @@ export default function CampaignDetail() {
         {/* Installation Progress - Segmented Bar */}
         <Card className="mb-6 border">
           <CardContent className="pt-6">
+            {/* Active / Dropped / Total summary strip */}
+            <div className="flex items-center gap-4 mb-4 flex-wrap">
+              <Badge variant="outline" className="text-sm py-1 px-3 bg-green-50 text-green-700 border-green-300">
+                Active: {assetCounts.active}
+              </Badge>
+              {droppedAssetCount > 0 && (
+                <Badge variant="outline" className="text-sm py-1 px-3 bg-orange-50 text-orange-700 border-orange-300">
+                  Dropped: {droppedAssetCount}
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-sm py-1 px-3">
+                Total Records: {assetCounts.total}
+              </Badge>
+            </div>
+
             <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-semibold">Installation Progress</span>
+              <span className="text-sm font-semibold">Installation Progress (Active Assets)</span>
               <span className="text-sm text-muted-foreground">
-                {totalAssets} Total Assets
+                {totalAssets} Active Assets
               </span>
             </div>
             
@@ -620,7 +632,12 @@ export default function CampaignDetail() {
         <Card className="border-2">
           <Tabs defaultValue="assets" className="p-4">
             <TabsList className={`grid w-full max-w-4xl ${perms.canViewFinancials ? 'grid-cols-6' : 'grid-cols-5'}`}>
-              <TabsTrigger value="assets">Assets ({campaignAssets.length})</TabsTrigger>
+              <TabsTrigger value="assets">
+                Assets ({assetCounts.active})
+                {droppedAssetCount > 0 && (
+                  <span className="ml-1 text-xs text-orange-600">+{droppedAssetCount} dropped</span>
+                )}
+              </TabsTrigger>
               <TabsTrigger value="creatives">Creatives</TabsTrigger>
               <TabsTrigger value="operations">Operations</TabsTrigger>
               <TabsTrigger value="proof">Proof Gallery</TabsTrigger>

@@ -6,6 +6,7 @@ import { getSignedUrl } from '@/utils/storage';
 import type { ExportOptions } from '@/components/plans/ExportOptionsDialog';
 import { addWatermarkToImage, loadImageAsDataUrl } from './photoWatermark';
 import { getDurationDisplay, getDurationDisplayWithMonths, calculateCampaignDuration } from '@/lib/utils/campaignDuration';
+import { resolveExportSalesperson, resolvePaymentTerms } from '@/lib/utils/exportMetadata';
 
 import { generateReleaseOrderPDF, type ROData, type ROLineItem } from './generateReleaseOrderPDF';
 

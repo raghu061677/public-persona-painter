@@ -828,6 +828,19 @@ export default function PlanEdit() {
                   helperText="Quotation-specific terms override client default terms."
                   disabled={isReadOnly}
                 />
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Quotation Validity (Days)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={90}
+                    value={formData.quotation_validity_days}
+                    onChange={(e) => setFormData(prev => ({ ...prev, quotation_validity_days: parseInt(e.target.value) || 7 }))}
+                    className="h-10"
+                    disabled={isReadOnly}
+                  />
+                  <p className="text-xs text-muted-foreground">Number of days the quotation remains valid.</p>
+                </div>
               </div>
             </SectionCard>
 

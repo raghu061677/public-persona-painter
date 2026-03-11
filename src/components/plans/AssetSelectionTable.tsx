@@ -490,6 +490,7 @@ export function AssetSelectionTable({
                 +7 days
               </Button>
               <Button
+                type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setAvailableFromDate(addDays(new Date(), 15))}

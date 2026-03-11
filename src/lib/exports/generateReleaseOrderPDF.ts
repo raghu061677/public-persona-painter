@@ -116,8 +116,6 @@ function formatDateDD_MM_YYYY(dateString: string): string {
   }
 }
 
-// Campaign duration utility - use shared module
-import { getDurationDisplay } from '@/lib/utils/campaignDuration';
 
 function numberToWords(num: number): string {
   const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',

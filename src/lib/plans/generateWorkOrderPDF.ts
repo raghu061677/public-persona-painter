@@ -471,56 +471,16 @@ export async function generateWorkOrderPDF(planId: string): Promise<Blob> {
 
   y += 8;
 
-  // ===== AUTHORIZATION / SIGNATURES =====
-  if (y + 55 > ph - MARGINS.bottom) { doc.addPage(); y = MARGINS.top; }
+  // ===== AUTHORIZATION / SIGNATURES (Reusable Two-Box Layout) =====
+  if (y + 60 > ph - MARGINS.bottom) { doc.addPage(); y = MARGINS.top; }
 
-  doc.setDrawColor(180, 180, 180);
-  doc.setLineWidth(0.3);
-
-  const sigBoxW = cw / 2 - 5;
-  const sigCol1 = lm;
-  const sigCol2 = lm + sigBoxW + 10;
-  const sigBoxH = 50;
-
-  // Left: Client Authorization (Issuer)
-  doc.rect(sigCol1, y, sigBoxW, sigBoxH);
-  doc.setFillColor(30, 58, 138);
-  doc.rect(sigCol1, y, sigBoxW, 7, 'F');
-  doc.setFontSize(9);
-  doc.setFont('NotoSans', 'bold');
-  doc.setTextColor(255, 255, 255);
-  doc.text('Client Authorization', sigCol1 + 3, y + 5);
-
-  let slY = y + 14;
-  doc.setFontSize(8);
-  doc.setFont('NotoSans', 'normal');
-  doc.setTextColor(0, 0, 0);
-  doc.text(`Name: ${contactName !== 'N/A' ? contactName : '________________________'}`, sigCol1 + 3, slY); slY += 5;
-  doc.text(`Designation: ________________________`, sigCol1 + 3, slY); slY += 5;
-  doc.text(`Company Seal:`, sigCol1 + 3, slY); slY += 8;
-  doc.text(`Signature: ________________________`, sigCol1 + 3, slY); slY += 5;
-  doc.text(`Date: ________________________`, sigCol1 + 3, slY);
-
-  // Right: Accepted by Media Owner
-  doc.rect(sigCol2, y, sigBoxW, sigBoxH);
-  doc.setFillColor(30, 58, 138);
-  doc.rect(sigCol2, y, sigBoxW, 7, 'F');
-  doc.setFontSize(9);
-  doc.setFont('NotoSans', 'bold');
-  doc.setTextColor(255, 255, 255);
-  doc.text('Accepted by Media Owner', sigCol2 + 3, y + 5);
-
-  let srY = y + 14;
-  doc.setFontSize(8);
-  doc.setTextColor(0, 0, 0);
-  doc.setFont('NotoSans', 'normal');
-  doc.text('For,', sigCol2 + 3, srY); srY += 4;
-  doc.setFont('NotoSans', 'bold');
-  doc.text(supplierName, sigCol2 + 3, srY); srY += 9;
-  doc.setFont('NotoSans', 'normal');
-  doc.text(`Signature: ________________________`, sigCol2 + 3, srY); srY += 5;
-  doc.text('Authorized Signatory', sigCol2 + 3, srY); srY += 5;
-  doc.text(`Date: ________________________`, sigCol2 + 3, srY);
+  y = await renderApprovalFooter(doc, y, {
+    companyName: supplierName,
+    leftTitle: 'Client Authorization',
+    pageWidth: pw,
+    leftMargin: lm,
+    rightMargin: rm,
+  });
 
   return doc.output('blob');
 }

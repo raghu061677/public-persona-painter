@@ -295,29 +295,27 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
+      userEmail = user.email || '';
+      
       // Get profile
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name, phone, email')
+        .select('username, phone')
         .eq('id', user.id)
         .single();
-      userName = profile?.full_name || user.email?.split('@')[0] || '';
+      userName = (profile as any)?.username || user.email?.split('@')[0] || '';
       userPhone = (profile as any)?.phone || '';
-      userEmail = profile?.email || user.email || '';
       
-      // Get role
+      // Get role from company_users
       const { data: companyUser } = await supabase
         .from('company_users')
-        .select('role, name, phone, email')
+        .select('role')
         .eq('user_id', user.id)
         .eq('status', 'active')
         .limit(1)
         .single();
       if (companyUser) {
         userRole = companyUser.role || '';
-        if (!userName && companyUser.name) userName = companyUser.name;
-        if (!userPhone && companyUser.phone) userPhone = companyUser.phone;
-        if (!userEmail && companyUser.email) userEmail = companyUser.email;
       }
     }
   } catch { /* ignore */ }

@@ -689,6 +689,7 @@ export default function PlanEdit() {
       });
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 

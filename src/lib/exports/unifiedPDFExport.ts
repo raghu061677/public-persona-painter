@@ -283,7 +283,7 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
   // Fallback: organization branding (some tenants store logo here)
   const { data: orgSettings } = await supabase
     .from('organization_settings')
-    .select('logo_url,organization_name')
+    .select('logo_url,organization_name,default_payment_terms')
     .limit(1)
     .maybeSingle();
 

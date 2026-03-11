@@ -391,32 +391,7 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   const rightColWidth = contentWidth * 0.45;
   const summaryStartX = leftMargin + leftColWidth + 5;
 
-  // ----- LEFT SIDE: Bank Details -----
-  let bankY = yPos;
-  
-  doc.setFontSize(10);
-  doc.setFont('NotoSans', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.text('Bank Details', leftMargin, bankY);
-  
-  bankY += 6;
-  doc.setFont('NotoSans', 'normal');
-  doc.setFontSize(8);
-  
-  doc.setFont('NotoSans', 'bold');
-  doc.text(BANK_DETAILS.bankName, leftMargin, bankY);
-  bankY += 4;
-  
-  doc.setFont('NotoSans', 'normal');
-  doc.text(`Branch: ${BANK_DETAILS.branch}`, leftMargin, bankY);
-  bankY += 4;
-  doc.text(`Account No: ${BANK_DETAILS.accountNo}`, leftMargin, bankY);
-  bankY += 4;
-  doc.text(`IFSC Code: ${BANK_DETAILS.ifsc}`, leftMargin, bankY);
-  bankY += 4;
-  doc.text(`MICR: ${BANK_DETAILS.micr}`, leftMargin, bankY);
-
-  // ----- RIGHT SIDE: Boxed Summary Table (matching RO style) -----
+  // ----- RIGHT SIDE: Boxed Summary Table -----
   const tableWidth = rightColWidth - 5;
   const tableX = summaryStartX;
   const col1W = tableWidth * 0.58;
@@ -431,38 +406,68 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
   ];
 
   let summaryY = yPos;
+  let totalRowBottomY = yPos;
   summaryRows.forEach((row) => {
-    // Add spacing before Total row
     if (row.highlight) {
       summaryY += 2;
     }
 
-    // Background
     if (row.highlight) {
-      doc.setFillColor(30, 64, 175); // #1E40AF
+      doc.setFillColor(30, 64, 175);
       doc.rect(tableX, summaryY, tableWidth, rowH, 'F');
     } else {
       doc.setFillColor(255, 255, 255);
       doc.rect(tableX, summaryY, tableWidth, rowH, 'F');
     }
 
-    // Borders
-    doc.setDrawColor(209, 213, 219); // #D1D5DB
+    doc.setDrawColor(209, 213, 219);
     doc.setLineWidth(0.3);
     doc.rect(tableX, summaryY, col1W, rowH, 'S');
     doc.rect(tableX + col1W, summaryY, col2W, rowH, 'S');
 
-    // Label
     doc.setFont('NotoSans', row.bold ? 'bold' : 'normal');
     doc.setFontSize(row.highlight ? 9 : 8.5);
     doc.setTextColor(row.highlight ? 255 : 17, row.highlight ? 255 : 24, row.highlight ? 255 : 39);
     doc.text(row.label, tableX + 2, summaryY + rowH - 2);
-
-    // Value (right-aligned)
     doc.text(formatCurrencyForPDF(row.value), tableX + col1W + col2W - 2, summaryY + rowH - 2, { align: 'right' });
 
     summaryY += rowH;
+    totalRowBottomY = summaryY;
   });
+
+  // ----- LEFT SIDE: Bank Details (bordered box matching summary height) -----
+  const bankBoxX = leftMargin;
+  const bankBoxWidth = leftColWidth;
+  const bankBoxHeight = totalRowBottomY - yPos;
+  const bankPad = 4;
+
+  // Draw bordered box to match the summary table height
+  doc.setDrawColor(209, 213, 219);
+  doc.setLineWidth(0.3);
+  doc.rect(bankBoxX, yPos, bankBoxWidth, bankBoxHeight, 'S');
+
+  // Title
+  doc.setFontSize(9);
+  doc.setFont('NotoSans', 'bold');
+  doc.setTextColor(30, 64, 175);
+  doc.text('Bank Details', bankBoxX + bankPad, yPos + 6);
+
+  // Bank info
+  let bankY = yPos + 12;
+  doc.setFont('NotoSans', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(17, 24, 39);
+  doc.text(BANK_DETAILS.bankName, bankBoxX + bankPad, bankY);
+  bankY += 4.5;
+
+  doc.setFont('NotoSans', 'normal');
+  doc.text(`Branch: ${BANK_DETAILS.branch}`, bankBoxX + bankPad, bankY);
+  bankY += 4.5;
+  doc.text(`A/c No: ${BANK_DETAILS.accountNo}`, bankBoxX + bankPad, bankY);
+  bankY += 4.5;
+  doc.text(`IFSC: ${BANK_DETAILS.ifsc}`, bankBoxX + bankPad, bankY);
+  bankY += 4.5;
+  doc.text(`MICR: ${BANK_DETAILS.micr}`, bankBoxX + bankPad, bankY);
 
   // Total in words below the summary table
   summaryY += 3;

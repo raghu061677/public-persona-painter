@@ -1,4 +1,5 @@
 import { generateStandardizedPDF, formatDateToDDMMYYYY } from '@/lib/pdf/standardPDFTemplate';
+import { getDurationDisplay } from '@/lib/utils/campaignDuration';
 
 interface ProformaInvoiceData {
   proforma_number: string;

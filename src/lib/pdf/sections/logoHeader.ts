@@ -342,6 +342,12 @@ export function renderDetailsGrid(
   const campaignLines = doc.splitTextToSize(details.displayName, colWidth - 32);
   doc.text(campaignLines[0] || '-', leftMargin + 28, leftY);
 
+  if (details.campaignDuration) {
+    leftY += 5;
+    doc.text('Duration:', leftMargin + 3, leftY);
+    doc.text(details.campaignDuration, leftMargin + 28, leftY);
+  }
+
   // Right Content - Other Details
   let rightY = yPos + 11;
   

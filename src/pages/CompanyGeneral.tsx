@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { SettingsCard, SectionHeader, InfoAlert, InputRow } from "@/components/settings/zoho-style";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,9 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Settings, Save, Calendar, Globe } from "lucide-react";
 import { useSettingsReadOnly } from "@/components/rbac/SettingsPageWrapper";
+import { PaymentTermsInput } from "@/components/shared/PaymentTermsInput";
+import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/contexts/CompanyContext";
 
 export default function CompanyGeneral() {
   const { toast } = useToast();

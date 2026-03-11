@@ -41,7 +41,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Sparkles, MoreVertical, Pencil, Trash2, Download, ArrowUpDown, ChevronLeft, ChevronRight, BarChart3, FileText, Mail, X } from "lucide-react";
+import { Plus, Sparkles, MoreVertical, Pencil, Trash2, Download, ArrowUpDown, ChevronLeft, ChevronRight, BarChart3, FileText, Mail, X, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -688,15 +688,30 @@ export default function ClientsList() {
           </div>
         )}
 
+        {/* Search Bar - Always visible above table */}
+        <div className="relative w-full mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by name, email, company, ID, GST, phone..."
+            className="pl-9 h-10"
+          />
+          {searchTerm && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+              onClick={() => setSearchTerm("")}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+
         {/* Filters and Columns */}
         <TableFilters
           filters={[
-            {
-              key: "search",
-              label: "Search",
-              type: "text",
-              placeholder: "Search by name, email, company, ID, GST, phone...",
-            },
             {
               key: "state",
               label: "State",

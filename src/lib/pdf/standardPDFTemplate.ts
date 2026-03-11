@@ -56,11 +56,9 @@ export interface PDFDocumentData {
   campaignDuration?: string;        // "01 Mar 2026 – 31 Mar 2026"
   quotationValidityDays?: number;   // e.g. 7
   totalLocations?: number;          // asset count
-  preparedByName?: string;          // user who generated
-  preparedByRole?: string;          // user's role
-  salesContactName?: string;        // sales person name
-  salesContactPhone?: string;       // sales person phone
-  salesContactEmail?: string;       // sales person email
+  salesContactName?: string;        // plan salesperson name
+  salesContactPhone?: string;       // plan salesperson phone
+  salesContactEmail?: string;       // plan salesperson email
 }
 
 export interface PDFLineItem {
@@ -516,17 +514,8 @@ export async function generateStandardizedPDF(data: PDFDocumentData): Promise<Bl
     yPos += 2;
   }
 
-  // ========== 6.6. PREPARED BY ==========
-  if (data.preparedByName) {
-    doc.setFontSize(8);
-    doc.setFont('NotoSans', 'normal');
-    doc.setTextColor(80, 80, 80);
-    const preparedText = data.preparedByRole 
-      ? `Prepared By: ${data.preparedByName} (${data.preparedByRole})`
-      : `Prepared By: ${data.preparedByName}`;
-    doc.text(preparedText, leftMargin, yPos);
-    yPos += 6;
-  }
+
+  yPos += 2;
 
   yPos += 2;
 

@@ -6,6 +6,7 @@ import { getSignedUrl } from '@/utils/storage';
 import type { ExportOptions } from '@/components/plans/ExportOptionsDialog';
 import { addWatermarkToImage, loadImageAsDataUrl } from './photoWatermark';
 import { getDurationDisplay, getDurationDisplayWithMonths, calculateCampaignDuration } from '@/lib/utils/campaignDuration';
+import { resolveExportSalesperson, resolvePaymentTerms } from '@/lib/utils/exportMetadata';
 
 import { generateReleaseOrderPDF, type ROData, type ROLineItem } from './generateReleaseOrderPDF';
 
@@ -278,38 +279,16 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
     .limit(1)
     .maybeSingle();
 
-  // Fetch logged-in user info for Prepared By / Sales Contact
-  let userName = '';
-  let userRole = '';
-  let userPhone = '';
-  let userEmail = '';
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      userEmail = user.email || '';
-      
-      // Get profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('username, phone')
-        .eq('id', user.id)
-        .single();
-      userName = (profile as any)?.username || user.email?.split('@')[0] || '';
-      userPhone = (profile as any)?.phone || '';
-      
-      // Get role from company_users
-      const { data: companyUser } = await supabase
-        .from('company_users')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .limit(1)
-        .single();
-      if (companyUser) {
-        userRole = companyUser.role || '';
-      }
-    }
-  } catch { /* ignore */ }
+  // Resolve salesperson from plan owner/creator (NOT logged-in user)
+  const salesperson = await resolveExportSalesperson(plan);
+  console.log('[ExportSalesperson] Resolved:', salesperson);
+
+  // Resolve payment terms with priority chain
+  const resolvedPaymentTerms = resolvePaymentTerms(
+    plan.payment_terms,
+    (clientData as any)?.payment_terms,
+    (orgSettings as any)?.default_payment_terms
+  );
 
   const companyName = companyData?.name || (orgSettings as any)?.organization_name || options.companyName || 'Matrix Network Solutions';
   const companyGSTIN = companyData?.gstin || options.gstin || '36AATFM4107H2Z3';
@@ -412,17 +391,17 @@ export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
     sgst,
     totalInr,
     terms: options.termsAndConditions,
-    paymentTerms: (plan as any).payment_terms || clientData?.payment_terms || (orgSettings as any)?.default_payment_terms || 'Net 30 Days',
+    paymentTerms: resolvedPaymentTerms,
 
     // Professional quotation metadata
     campaignDuration,
     quotationValidityDays: (plan as any).quotation_validity_days || 7,
     totalLocations: (planItems || []).length,
-    preparedByName: userName || undefined,
-    preparedByRole: userRole || undefined,
-    salesContactName: userName || undefined,
-    salesContactPhone: userPhone || undefined,
-    salesContactEmail: userEmail || undefined,
+    // Use plan salesperson, not logged-in user
+    salesContactName: salesperson.name || undefined,
+    salesContactPhone: salesperson.phone || undefined,
+    salesContactEmail: salesperson.email || undefined,
+    salesPerson: salesperson.name || undefined,
   });
 }
 

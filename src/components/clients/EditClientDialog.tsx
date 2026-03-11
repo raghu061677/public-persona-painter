@@ -122,6 +122,7 @@ export function EditClientDialog({
         shipping_state: client.shipping_state || "",
         shipping_pincode: client.shipping_pincode || "",
         shipping_same_as_billing: client.shipping_same_as_billing || false,
+        payment_terms: client.payment_terms || "",
       });
       setErrors({});
     }

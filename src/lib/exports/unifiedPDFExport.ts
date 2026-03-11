@@ -186,8 +186,6 @@ function getDocumentHeading(optionType: string): string {
   return headings[optionType] || 'QUOTATION';
 }
 
-// Campaign duration utility - use shared module
-import { getDurationDisplay, getDurationDisplayWithMonths, calculateCampaignDuration } from '@/lib/utils/campaignDuration';
 
 export async function generateUnifiedPDF(data: ExportData): Promise<Blob> {
   const { plan, planItems, options } = data;

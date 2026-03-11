@@ -179,6 +179,7 @@ export default function PlanEdit() {
         payment_terms: (plan as any).payment_terms || "",
         manual_discount_amount: (plan as any).manual_discount_amount || 0,
         manual_discount_reason: (plan as any).manual_discount_reason || "",
+        quotation_validity_days: (plan as any).quotation_validity_days || 7,
       });
       const { data: items } = await supabase
         .from('plan_items')

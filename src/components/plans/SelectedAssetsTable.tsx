@@ -1131,7 +1131,7 @@ export function SelectedAssetsTable({
                               <div className="space-y-1">
                                 <div className="flex items-center gap-1">
                                   <Select
-                                    value={pricing.mounting_mode || 'sqft'}
+                                    value={pricing.mounting_mode || 'fixed'}
                                     onValueChange={(mode: 'sqft' | 'fixed') => {
                                       onPricingUpdate(asset.id, 'mounting_mode', mode);
                                       // Recalculate mounting cost based on new mode

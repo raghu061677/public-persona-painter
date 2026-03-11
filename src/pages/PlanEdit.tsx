@@ -552,6 +552,7 @@ export default function PlanEdit() {
           payment_terms: formData.payment_terms || null,
           manual_discount_amount: formData.manual_discount_amount || 0,
           manual_discount_reason: formData.manual_discount_reason || null,
+          quotation_validity_days: formData.quotation_validity_days || 7,
         } as any)
         .eq('id', id);
 

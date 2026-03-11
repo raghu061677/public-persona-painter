@@ -348,7 +348,13 @@ export function renderDetailsGrid(
   if (details.campaignDuration) {
     leftY += 5;
     doc.text('Duration:', leftMargin + 3, leftY);
-    doc.text(details.campaignDuration, leftMargin + 28, leftY);
+    // Split long duration text to fit within column
+    const durationLines = doc.splitTextToSize(details.campaignDuration, colWidth - 32);
+    doc.text(durationLines[0] || '-', leftMargin + 28, leftY);
+    if (durationLines[1]) {
+      leftY += 3.5;
+      doc.text(durationLines[1], leftMargin + 28, leftY);
+    }
   }
 
   // Right Content - Other Details

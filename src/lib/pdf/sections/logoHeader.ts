@@ -380,7 +380,7 @@ export function renderDetailsGrid(
     doc.text(details.validity, colMidX + 32, rightY);
   }
 
-  return yPos + 31;
+  return yPos + boxHeight + 3;
 }
 
 /**

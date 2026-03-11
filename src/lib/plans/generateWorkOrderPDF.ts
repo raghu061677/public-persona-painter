@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ensurePdfUnicodeFont } from '@/lib/pdf/fontLoader';
 import { formatCurrencyForPDF, getPrimaryContactName, getClientDisplayName, getClientAddress, getClientCity, getClientState, getClientPincode } from '@/lib/pdf/pdfHelpers';
 import { getDurationDisplay } from '@/lib/utils/campaignDuration';
+import { renderApprovalFooter } from '@/lib/pdf/sections/approvalFooter';
 
 // ============= CONSTANTS =============
 

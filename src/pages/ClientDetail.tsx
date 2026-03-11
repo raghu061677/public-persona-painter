@@ -184,11 +184,12 @@ export default function ClientDetail() {
       if (plansError) throw plansError;
       setPlans(plansData || []);
 
-      // Fetch campaigns
+      // Fetch campaigns (exclude soft-deleted)
       const { data: campaignsData, error: campaignsError } = await supabase
         .from("campaigns")
         .select("*")
         .eq("client_id", id)
+        .or("is_deleted.is.null,is_deleted.eq.false")
         .order("created_at", { ascending: false });
 
       if (campaignsError) throw campaignsError;

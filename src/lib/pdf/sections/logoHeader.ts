@@ -282,14 +282,17 @@ export function renderDetailsGrid(
   const colMidX = pageWidth / 2;
   const colWidth = (pageWidth - leftMargin - rightMargin) / 2 - 5;
 
+  // Calculate box height based on whether campaign duration exists
+  const boxHeight = details.campaignDuration ? 33 : 28;
+
   // Draw grid boxes
   doc.setDrawColor(200, 200, 200);
   doc.setLineWidth(0.3);
   
   // Left box (Document Details)
-  doc.rect(leftMargin, yPos, colWidth, 28);
+  doc.rect(leftMargin, yPos, colWidth, boxHeight);
   // Right box (Other Details)
-  doc.rect(colMidX + 2.5, yPos, colWidth, 28);
+  doc.rect(colMidX + 2.5, yPos, colWidth, boxHeight);
 
   // Get the correct header label based on document type
   let detailsLabel = '';

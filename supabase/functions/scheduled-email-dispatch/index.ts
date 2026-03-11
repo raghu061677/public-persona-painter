@@ -1,50 +1,75 @@
 /**
- * scheduled-email-dispatch — Cron-triggered edge function that runs
- * all scheduled email dispatches for every active company.
+ * scheduled-email-dispatch — Cron-triggered edge function
+ * Resolves email_templates by event_key, renders with payload,
+ * and queues through the same outbox flow as all other emails.
  *
- * Protected by HMAC (system endpoint, no user JWT).
- * Designed to be called by pg_cron every hour or daily.
+ * Runs daily at 1:30 AM UTC (7:00 AM IST).
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
-import { requireHmac, AuthError, supabaseServiceClient } from '../_shared/auth.ts';
+import { AuthError, supabaseServiceClient } from '../_shared/auth.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+
+/** Simple {{variable}} renderer — mirrors frontend emailRenderer.ts */
+function renderTemplate(template: string, payload: Record<string, string>): string {
+  if (!template) return '';
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => payload[key] ?? '');
+}
+
+/** Resolve a template for an event_key + company, render with payload, return subject+html */
+async function resolveAndRender(
+  db: ReturnType<typeof createClient>,
+  companyId: string,
+  eventKey: string,
+  payload: Record<string, string>,
+): Promise<{ subject: string; html: string; templateKey: string } | null> {
+  const { data: template } = await db
+    .from('email_templates')
+    .select('template_key, subject_template, html_template, html_body, subject')
+    .eq('company_id', companyId)
+    .or(`trigger_event.eq.${eventKey},template_key.eq.${eventKey}`)
+    .eq('is_active', true)
+    .limit(1)
+    .maybeSingle();
+
+  if (!template) return null;
+
+  const subjectTpl = template.subject_template || template.subject || '';
+  const bodyTpl = template.html_template || template.html_body || '';
+
+  return {
+    subject: renderTemplate(subjectTpl, payload),
+    html: renderTemplate(bodyTpl, payload),
+    templateKey: template.template_key,
+  };
+}
+
+/** Fallback subject/body when no template exists */
+function fallback(subject: string, body: string) {
+  return { subject, html: body, templateKey: '' };
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const rawBody = await req.text();
+  await req.text(); // consume body
 
-  // Auth: Accept either HMAC headers OR a simple cron secret (for pg_cron which can't compute HMAC)
+  // Auth: simple cron secret
   const cronSecret = req.headers.get('X-Cron-Secret');
   const expectedSecret = Deno.env.get('CRON_HMAC_SECRET');
 
-  if (cronSecret && expectedSecret && cronSecret === expectedSecret) {
-    // pg_cron simple secret auth — valid
-  } else {
-    // Fall back to full HMAC validation
-    try {
-      await requireHmac(req, rawBody);
-    } catch (err) {
-      if (err instanceof AuthError) {
-        return new Response(JSON.stringify({ error: err.message }), {
-          status: err.statusCode,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+  if (!cronSecret || !expectedSecret || cronSecret !== expectedSecret) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
-  const serviceClient = supabaseServiceClient();
+  const sc = supabaseServiceClient();
 
   try {
-    // Get all active companies
-    const { data: companies, error: compErr } = await serviceClient
+    const { data: companies, error: compErr } = await sc
       .from('companies')
       .select('id, name, email')
       .eq('status', 'active');
@@ -52,74 +77,116 @@ Deno.serve(async (req: Request) => {
     if (compErr) throw compErr;
 
     const allResults: Record<string, any> = {};
+    const today = new Date().toISOString().split('T')[0];
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+    const sevenDays = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
 
     for (const company of companies || []) {
-      const companyResults: Record<string, any> = {};
+      const cr: Record<string, any> = {};
+      const cId = company.id;
 
-      // 1. Campaign start tomorrow
+      // ── 1. Campaign starting tomorrow ──
       try {
-        const { data: campaigns } = await serviceClient
+        const { data: camps } = await sc
           .from('campaigns')
           .select('id, campaign_name, client_name, start_date, end_date')
-          .eq('company_id', company.id)
-          .eq('start_date', new Date(Date.now() + 86400000).toISOString().split('T')[0])
+          .eq('company_id', cId)
+          .eq('start_date', tomorrow)
           .in('status', ['Planned', 'Upcoming', 'Draft']);
 
-        companyResults.campaign_start_tomorrow = { count: campaigns?.length || 0 };
+        cr.campaign_start_tomorrow = { count: camps?.length || 0 };
 
-        for (const c of campaigns || []) {
-          await serviceClient.from('email_outbox').insert({
-            company_id: company.id,
+        for (const c of camps || []) {
+          const payload = {
+            company_name: company.name || '',
+            campaign_name: c.campaign_name || '',
+            campaign_code: c.id,
+            client_name: c.client_name || '',
+            campaign_start_date: c.start_date || '',
+            campaign_end_date: c.end_date || '',
+          };
+          const rendered = await resolveAndRender(sc, cId, 'campaign_start_tomorrow_internal', payload)
+            || fallback(
+              `Campaign "${c.campaign_name}" starts tomorrow`,
+              `<p>Campaign <strong>${c.campaign_name}</strong> (${c.id}) for ${c.client_name} starts tomorrow (${c.start_date}).</p>`,
+            );
+
+          await sc.from('email_outbox').insert({
+            company_id: cId,
             event_key: 'campaign_start_tomorrow_internal',
+            template_key: rendered.templateKey || null,
             recipient_to: company.email || '',
-            subject: `Campaign "${c.campaign_name}" starts tomorrow`,
-            html_body: `<p>Campaign <strong>${c.campaign_name}</strong> (${c.id}) for ${c.client_name} starts tomorrow (${c.start_date}).</p>`,
+            subject_rendered: rendered.subject,
+            html_rendered: rendered.html,
+            payload_json: payload,
             status: 'queued',
             source_id: c.id,
           });
         }
       } catch (e: any) {
-        companyResults.campaign_start_tomorrow = { error: e.message };
+        cr.campaign_start_tomorrow = { error: e.message };
       }
 
-      // 2. Campaign ending soon (within 7 days)
+      // ── 2. Campaign ending within 7 days ──
       try {
-        const futureDate = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
-        const today = new Date().toISOString().split('T')[0];
-
-        const { data: campaigns } = await serviceClient
+        const { data: camps } = await sc
           .from('campaigns')
           .select('id, campaign_name, client_name, client_id, end_date')
-          .eq('company_id', company.id)
+          .eq('company_id', cId)
           .in('status', ['Running', 'InProgress'])
-          .lte('end_date', futureDate)
+          .lte('end_date', sevenDays)
           .gte('end_date', today);
 
-        companyResults.campaign_ending_soon = { count: campaigns?.length || 0 };
+        cr.campaign_ending_soon = { count: camps?.length || 0 };
 
-        for (const c of campaigns || []) {
-          // Internal
-          await serviceClient.from('email_outbox').insert({
-            company_id: company.id,
+        for (const c of camps || []) {
+          const payload = {
+            company_name: company.name || '',
+            campaign_name: c.campaign_name || '',
+            campaign_code: c.id,
+            client_name: c.client_name || '',
+            campaign_end_date: c.end_date || '',
+          };
+
+          // Internal alert
+          const intRendered = await resolveAndRender(sc, cId, 'campaign_ending_soon_internal', payload)
+            || fallback(
+              `Campaign "${c.campaign_name}" ending soon (${c.end_date})`,
+              `<p>Campaign <strong>${c.campaign_name}</strong> for ${c.client_name} ends on ${c.end_date}.</p>`,
+            );
+
+          await sc.from('email_outbox').insert({
+            company_id: cId,
             event_key: 'campaign_ending_soon_internal',
+            template_key: intRendered.templateKey || null,
             recipient_to: company.email || '',
-            subject: `Campaign "${c.campaign_name}" ending soon (${c.end_date})`,
-            html_body: `<p>Campaign <strong>${c.campaign_name}</strong> (${c.id}) for ${c.client_name} ends on ${c.end_date}.</p>`,
+            subject_rendered: intRendered.subject,
+            html_rendered: intRendered.html,
+            payload_json: payload,
             status: 'queued',
             source_id: c.id,
           });
 
           // Client notice
           if (c.client_id) {
-            const { data: client } = await serviceClient
+            const { data: client } = await sc
               .from('clients').select('email, name').eq('id', c.client_id).single();
             if (client?.email) {
-              await serviceClient.from('email_outbox').insert({
-                company_id: company.id,
+              payload.client_name = client.name || c.client_name || '';
+              const clRendered = await resolveAndRender(sc, cId, 'campaign_ending_notice_client', payload)
+                || fallback(
+                  `Your campaign "${c.campaign_name}" is ending on ${c.end_date}`,
+                  `<p>Dear ${client.name}, your campaign <strong>${c.campaign_name}</strong> ends on ${c.end_date}. Please contact us for renewal.</p>`,
+                );
+
+              await sc.from('email_outbox').insert({
+                company_id: cId,
                 event_key: 'campaign_ending_notice_client',
+                template_key: clRendered.templateKey || null,
                 recipient_to: client.email,
-                subject: `Your campaign "${c.campaign_name}" is ending on ${c.end_date}`,
-                html_body: `<p>Dear ${client.name}, your campaign <strong>${c.campaign_name}</strong> is ending on ${c.end_date}. Please contact us for renewal.</p>`,
+                subject_rendered: clRendered.subject,
+                html_rendered: clRendered.html,
+                payload_json: payload,
                 status: 'queued',
                 source_id: c.id,
               });
@@ -127,15 +194,15 @@ Deno.serve(async (req: Request) => {
           }
         }
       } catch (e: any) {
-        companyResults.campaign_ending_soon = { error: e.message };
+        cr.campaign_ending_soon = { error: e.message };
       }
 
-      // 3. Payment reminders & overdue
+      // ── 3. Payment reminders & overdue ──
       try {
-        const { data: invoices } = await serviceClient
+        const { data: invoices } = await sc
           .from('invoices')
           .select('id, invoice_no, client_id, client_name, due_date, total_amount, balance_due, status')
-          .eq('company_id', company.id)
+          .eq('company_id', cId)
           .in('status', ['Sent', 'Overdue'])
           .gt('balance_due', 0);
 
@@ -144,28 +211,43 @@ Deno.serve(async (req: Request) => {
 
         for (const inv of invoices || []) {
           if (!inv.due_date) continue;
-          const dueDate = new Date(inv.due_date);
-          const now = new Date();
-          const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / 86400000);
+          const daysUntilDue = Math.ceil((new Date(inv.due_date).getTime() - Date.now()) / 86400000);
           const isOverdue = daysUntilDue < 0;
-
           if (!isOverdue && daysUntilDue > 7) continue;
 
           const eventKey = isOverdue ? 'payment_overdue_client' : 'payment_reminder_client';
 
           if (inv.client_id) {
-            const { data: client } = await serviceClient
+            const { data: client } = await sc
               .from('clients').select('email').eq('id', inv.client_id).single();
             if (client?.email) {
               const amt = inv.balance_due ? `₹${Number(inv.balance_due).toLocaleString('en-IN')}` : '';
-              await serviceClient.from('email_outbox').insert({
-                company_id: company.id,
+              const payload = {
+                company_name: company.name || '',
+                client_name: inv.client_name || '',
+                invoice_number: inv.invoice_no || inv.id,
+                invoice_total: `₹${Number(inv.total_amount || 0).toLocaleString('en-IN')}`,
+                balance_due: amt,
+                due_date: inv.due_date,
+                amount_due: amt,
+              };
+
+              const rendered = await resolveAndRender(sc, cId, eventKey, payload)
+                || fallback(
+                  isOverdue
+                    ? `Payment overdue for Invoice ${inv.invoice_no || inv.id}`
+                    : `Payment reminder for Invoice ${inv.invoice_no || inv.id}`,
+                  `<p>Dear ${inv.client_name}, invoice ${inv.invoice_no || inv.id} has a balance of ${amt} ${isOverdue ? 'which is overdue' : `due on ${inv.due_date}`}.</p>`,
+                );
+
+              await sc.from('email_outbox').insert({
+                company_id: cId,
                 event_key: eventKey,
+                template_key: rendered.templateKey || null,
                 recipient_to: client.email,
-                subject: isOverdue
-                  ? `Payment overdue for Invoice ${inv.invoice_no || inv.id}`
-                  : `Payment reminder for Invoice ${inv.invoice_no || inv.id}`,
-                html_body: `<p>Dear ${inv.client_name}, invoice ${inv.invoice_no || inv.id} has a balance of ${amt} ${isOverdue ? 'which is overdue' : `due on ${inv.due_date}`}.</p>`,
+                subject_rendered: rendered.subject,
+                html_rendered: rendered.html,
+                payload_json: payload,
                 status: 'queued',
                 source_id: inv.id,
               });
@@ -173,72 +255,101 @@ Deno.serve(async (req: Request) => {
             }
           }
         }
-        companyResults.payment_reminders = { reminders: reminderCount, overdue: overdueCount };
+        cr.payment_reminders = { reminders: reminderCount, overdue: overdueCount };
       } catch (e: any) {
-        companyResults.payment_reminders = { error: e.message };
+        cr.payment_reminders = { error: e.message };
       }
 
-      // 4. Daily digest
+      // ── 4. Daily digest ──
       try {
         const [
           { count: activeCampaigns },
           { count: pendingInvoices },
           { count: overdueInvoices },
         ] = await Promise.all([
-          serviceClient.from('campaigns').select('*', { count: 'exact', head: true })
-            .eq('company_id', company.id).in('status', ['Running', 'InProgress']),
-          serviceClient.from('invoices').select('*', { count: 'exact', head: true })
-            .eq('company_id', company.id).eq('status', 'Sent'),
-          serviceClient.from('invoices').select('*', { count: 'exact', head: true })
-            .eq('company_id', company.id).eq('status', 'Overdue'),
+          sc.from('campaigns').select('*', { count: 'exact', head: true })
+            .eq('company_id', cId).in('status', ['Running', 'InProgress']),
+          sc.from('invoices').select('*', { count: 'exact', head: true })
+            .eq('company_id', cId).eq('status', 'Sent'),
+          sc.from('invoices').select('*', { count: 'exact', head: true })
+            .eq('company_id', cId).eq('status', 'Overdue'),
         ]);
 
-        await serviceClient.from('email_outbox').insert({
-          company_id: company.id,
-          event_key: 'daily_digest_internal',
-          recipient_to: company.email || '',
-          subject: `Go-Ads Daily Digest — ${new Date().toLocaleDateString('en-IN')}`,
-          html_body: `<p><strong>Daily Summary for ${company.name}</strong></p>
+        const payload = {
+          company_name: company.name || '',
+          active_campaigns: String(activeCampaigns || 0),
+          pending_invoices: String(pendingInvoices || 0),
+          overdue_invoices: String(overdueInvoices || 0),
+          date: new Date().toLocaleDateString('en-IN'),
+        };
+
+        const rendered = await resolveAndRender(sc, cId, 'daily_digest_internal', payload)
+          || fallback(
+            `Go-Ads Daily Digest — ${payload.date}`,
+            `<p><strong>Daily Summary for ${company.name}</strong></p>
             <ul>
               <li>Active Campaigns: ${activeCampaigns || 0}</li>
               <li>Pending Invoices: ${pendingInvoices || 0}</li>
               <li>Overdue Invoices: ${overdueInvoices || 0}</li>
             </ul>`,
+          );
+
+        await sc.from('email_outbox').insert({
+          company_id: cId,
+          event_key: 'daily_digest_internal',
+          template_key: rendered.templateKey || null,
+          recipient_to: company.email || '',
+          subject_rendered: rendered.subject,
+          html_rendered: rendered.html,
+          payload_json: payload,
           status: 'queued',
         });
-        companyResults.daily_digest = { sent: true };
+        cr.daily_digest = { sent: true };
       } catch (e: any) {
-        companyResults.daily_digest = { error: e.message };
+        cr.daily_digest = { error: e.message };
       }
 
-      // 5. Failed email alerts
+      // ── 5. Failed email alerts ──
       try {
         const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
-        const { count } = await serviceClient
+        const { count } = await sc
           .from('email_outbox')
           .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id)
+          .eq('company_id', cId)
           .eq('status', 'failed')
           .gte('created_at', oneHourAgo);
 
         if (count && count > 0) {
-          await serviceClient.from('email_outbox').insert({
-            company_id: company.id,
+          const payload = {
+            company_name: company.name || '',
+            failed_count: String(count),
+          };
+
+          const rendered = await resolveAndRender(sc, cId, 'failed_email_alert_internal', payload)
+            || fallback(
+              `⚠️ ${count} email(s) failed in the last hour`,
+              `<p>${count} email(s) failed delivery in the last hour for ${company.name}. Please check the Email Outbox.</p>`,
+            );
+
+          await sc.from('email_outbox').insert({
+            company_id: cId,
             event_key: 'failed_email_alert_internal',
+            template_key: rendered.templateKey || null,
             recipient_to: company.email || '',
-            subject: `⚠️ ${count} email(s) failed in the last hour`,
-            html_body: `<p>${count} email(s) failed delivery in the last hour for ${company.name}. Please check the Email Outbox.</p>`,
+            subject_rendered: rendered.subject,
+            html_rendered: rendered.html,
+            payload_json: payload,
             status: 'queued',
           });
-          companyResults.failed_email_alert = { failed_count: count };
+          cr.failed_email_alert = { failed_count: count };
         } else {
-          companyResults.failed_email_alert = { skipped: true };
+          cr.failed_email_alert = { skipped: true };
         }
       } catch (e: any) {
-        companyResults.failed_email_alert = { error: e.message };
+        cr.failed_email_alert = { error: e.message };
       }
 
-      allResults[company.id] = companyResults;
+      allResults[cId] = cr;
     }
 
     return new Response(JSON.stringify({

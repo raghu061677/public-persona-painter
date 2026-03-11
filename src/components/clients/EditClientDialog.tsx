@@ -93,6 +93,7 @@ export function EditClientDialog({
     shipping_state: "",
     shipping_pincode: "",
     shipping_same_as_billing: false,
+    payment_terms: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 

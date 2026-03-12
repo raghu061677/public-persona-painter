@@ -48,12 +48,12 @@ interface AddAssetsDialogProps {
   planEndDate?: string;
 }
 
-const AVAILABILITY_BADGE: Record<BookingAvailability, { label: string; className: string }> = {
-  Vacant: { label: 'Available', className: 'bg-emerald-50 text-emerald-700' },
-  Running: { label: 'Running', className: 'bg-red-50 text-red-700' },
-  Upcoming: { label: 'Future Booked', className: 'bg-amber-50 text-amber-700' },
-  Booked: { label: 'Booked', className: 'bg-blue-50 text-blue-700' },
-  Blocked: { label: 'Held/Blocked', className: 'bg-purple-50 text-purple-700' },
+const AVAILABILITY_BADGE: Record<string, { label: string; className: string }> = {
+  AVAILABLE: { label: 'Available', className: 'bg-emerald-50 text-emerald-700' },
+  RUNNING: { label: 'Running', className: 'bg-red-50 text-red-700' },
+  FUTURE_BOOKED: { label: 'Future Booked', className: 'bg-amber-50 text-amber-700' },
+  BOOKED: { label: 'Booked', className: 'bg-blue-50 text-blue-700' },
+  HELD: { label: 'Held/Blocked', className: 'bg-purple-50 text-purple-700' },
 };
 
 export function AddAssetsDialog({

@@ -26,9 +26,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, addDays, isAfter, isBefore } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useAssetAvailability } from "@/hooks/useAssetAvailability";
+import { useUnifiedAvailability } from "@/hooks/useUnifiedAvailability";
 import { toDateString } from "@/lib/availability";
-import type { BookingAvailability } from "@/lib/availability";
+import type { AvailabilityStatus } from "@/lib/availability";
 
 type SortDirection = 'asc' | 'desc' | null;
 type SortableColumn = 'asset_id' | 'location' | 'area' | 'available_from';

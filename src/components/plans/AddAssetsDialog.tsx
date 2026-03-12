@@ -33,9 +33,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Plus, Search, Shield, Calendar } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
-import { useAssetAvailability } from "@/hooks/useAssetAvailability";
+import { useUnifiedAvailability } from "@/hooks/useUnifiedAvailability";
 import { toDateString } from "@/lib/availability";
-import type { BookingAvailability } from "@/lib/availability";
+import type { AvailabilityStatus } from "@/lib/availability";
 
 interface AddAssetsDialogProps {
   open: boolean;

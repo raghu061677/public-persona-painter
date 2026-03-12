@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Eye, Trash2, FileText, Plus, Pencil, CheckCircle2, RefreshCw, CopyPlus, SlidersHorizontal } from "lucide-react";
+import { Eye, Trash2, FileText, Plus, Pencil, CheckCircle2, CalendarPlus, RefreshCw, SlidersHorizontal } from "lucide-react";
 import { CreateCampaignFromPlanDialog } from "@/components/campaigns/CreateCampaignFromPlanDialog";
 import { CampaignTemplatesDialog } from "@/components/campaigns/CampaignTemplatesDialog";
 import { BulkStatusUpdateDialog } from "@/components/campaigns/BulkStatusUpdateDialog";

@@ -47,6 +47,7 @@ interface InvoiceRecord {
   id: string;
   invoice_period_start: string | null;
   invoice_period_end: string | null;
+  billing_month: string | null;
   total_amount: number;
   balance_due: number;
   status: string;
@@ -101,7 +102,7 @@ export function CampaignBillingTab({
     try {
       const { data, error } = await supabase
         .from('invoices')
-        .select('id, invoice_period_start, invoice_period_end, total_amount, balance_due, status, due_date, is_monthly_split')
+        .select('id, invoice_period_start, invoice_period_end, billing_month, total_amount, balance_due, status, due_date, is_monthly_split')
         .eq('campaign_id', campaign.id)
         .order('invoice_period_start', { ascending: true });
 
@@ -294,14 +295,15 @@ export function CampaignBillingTab({
       // Calculate amounts using new calculator
       const amounts = calculatePeriodAmountFromTotals(period, totals, includePrinting, includeMounting);
 
-      // Check if an invoice already exists for this period
+      // Check if an invoice already exists for this period (match by billing_month key)
       const existingInvoice = monthlyInvoices.find(inv => {
-        const invStart = new Date(inv.invoice_period_start);
-        const invEnd = new Date(inv.invoice_period_end);
-        return (
-          invStart.getTime() === period.periodStart.getTime() &&
-          invEnd.getTime() === period.periodEnd.getTime()
-        );
+        if (inv.billing_month) {
+          return inv.billing_month === period.monthKey;
+        }
+        // Fallback: compare date strings
+        const invStart = inv.invoice_period_start;
+        const periodStartStr = format(period.periodStart, 'yyyy-MM-dd');
+        return invStart === periodStartStr;
       });
 
       // Fetch media_asset_code for all campaign assets
@@ -395,6 +397,7 @@ export function CampaignBillingTab({
           due_date: format(dueDate, 'yyyy-MM-dd'),
           invoice_period_start: format(period.periodStart, 'yyyy-MM-dd'),
           invoice_period_end: format(period.periodEnd, 'yyyy-MM-dd'),
+          billing_month: period.monthKey,
           is_monthly_split: true,
           sub_total: amounts.subtotal,
           gst_percent: totals.gstRate,

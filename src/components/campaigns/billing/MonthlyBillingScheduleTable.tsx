@@ -21,6 +21,7 @@ interface InvoiceRecord {
   id: string;
   invoice_period_start: string;
   invoice_period_end: string;
+  billing_month?: string | null;
   total_amount: number;
   status: string;
   due_date: string;
@@ -57,15 +58,16 @@ export function MonthlyBillingScheduleTable({
     return false; // Placeholder - would need invoice items check
   });
 
-   // Find invoice for a specific period
+   // Find invoice for a specific period - match by billing_month key to avoid timezone issues
    const getInvoiceForPeriod = (period: BillingPeriodInfo): InvoiceRecord | undefined => {
     return existingInvoices.find(inv => {
-      const invStart = new Date(inv.invoice_period_start);
-      const invEnd = new Date(inv.invoice_period_end);
-      return (
-        invStart.getTime() === period.periodStart.getTime() &&
-        invEnd.getTime() === period.periodEnd.getTime()
-      );
+      // Primary match: billing_month (e.g. "2024-03") === monthKey
+      if (inv.billing_month) {
+        return inv.billing_month === period.monthKey;
+      }
+      // Fallback: compare date strings directly (avoid timezone issues with getTime())
+      const periodStartStr = `${period.periodStart.getFullYear()}-${String(period.periodStart.getMonth() + 1).padStart(2, '0')}-${String(period.periodStart.getDate()).padStart(2, '0')}`;
+      return inv.invoice_period_start === periodStartStr;
     });
   };
 

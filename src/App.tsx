@@ -225,6 +225,7 @@ const ManageCompanies = lazy(() => import("./pages/platform/ManageCompanies"));
 const SubscriptionManagement = lazy(() => import("./pages/SubscriptionManagement"));
 const MigrateToMatrix = lazy(() => import("./pages/MigrateToMatrix"));
 const FixStreetViewLinks = lazy(() => import("./pages/admin/FixStreetViewLinks"));
+const AssetIdentityInspector = lazy(() => import("./pages/admin/AssetIdentityInspector"));
 const OperationsDashboard = lazy(() => import("./pages/OperationsDashboard"));
 const PublicCampaignTracking = lazy(() => import("./pages/PublicCampaignTracking"));
 const MounterTasks = lazy(() => import("./pages/MounterTasks"));
@@ -348,6 +349,7 @@ const App = () => (
               <Route path="platform-reports" element={<PlatformAdminGuard><ModernAppLayout><PlatformReports /></ModernAppLayout></PlatformAdminGuard>} />
               <Route path="migrate-data" element={<PlatformAdminGuard><ModernAppLayout><MigrateToMatrix /></ModernAppLayout></PlatformAdminGuard>} />
               <Route path="fix-streetview-links" element={<ProtectedRoute requireAuth><ModernAppLayout><FixStreetViewLinks /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="media-assets/identity-inspector" element={<ProtectedRoute requiredRole={['admin']}><ModernAppLayout><AssetIdentityInspector /></ModernAppLayout></ProtectedRoute>} />
               
               {/* Dead test routes — redirect to dashboard */}
               <Route path="company-testing" element={<Navigate to="/admin/dashboard" replace />} />

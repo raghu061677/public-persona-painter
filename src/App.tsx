@@ -225,6 +225,7 @@ const ManageCompanies = lazy(() => import("./pages/platform/ManageCompanies"));
 const SubscriptionManagement = lazy(() => import("./pages/SubscriptionManagement"));
 const MigrateToMatrix = lazy(() => import("./pages/MigrateToMatrix"));
 const FixStreetViewLinks = lazy(() => import("./pages/admin/FixStreetViewLinks"));
+const AssetIdentityInspector = lazy(() => import("./pages/admin/AssetIdentityInspector"));
 const OperationsDashboard = lazy(() => import("./pages/OperationsDashboard"));
 const PublicCampaignTracking = lazy(() => import("./pages/PublicCampaignTracking"));
 const MounterTasks = lazy(() => import("./pages/MounterTasks"));

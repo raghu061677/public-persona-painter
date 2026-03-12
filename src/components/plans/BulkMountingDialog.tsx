@@ -36,7 +36,8 @@ export function BulkMountingDialog({
   onBulkUpdate,
 }: BulkMountingDialogProps) {
   const [mountingValue, setMountingValue] = useState("");
-  const [mountingMode, setMountingMode] = useState<"sqft" | "fixed">("fixed");
+  // PLAN ITEMS: mounting is ALWAYS per-asset direct amount
+  const [mountingMode, setMountingMode] = useState<"fixed">("fixed");
   const [applyMode, setApplyMode] = useState<"selected" | "all">("selected");
   const [overrideExisting, setOverrideExisting] = useState(false);
 

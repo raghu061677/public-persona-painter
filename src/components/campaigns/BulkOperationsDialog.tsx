@@ -24,6 +24,7 @@ import {
   getCampaignAssetStatusMeta,
   type CampaignAssetStatus,
 } from "@/lib/constants/campaignAssetStatus";
+import { getAssetDisplayCode } from "@/lib/assets/getAssetDisplayCode";
 
 interface BulkOperationsDialogProps {
   assets: any[];
@@ -240,7 +241,7 @@ export function BulkOperationsDialog({ assets, onUpdate }: BulkOperationsDialogP
                     onCheckedChange={(checked) => handleSelectAsset(asset.id, !!checked)}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{asset.asset_id}</p>
+                    <p className="text-sm font-medium truncate">{getAssetDisplayCode({ media_asset_code: asset.media_asset_code || asset.media_assets?.media_asset_code }, asset.asset_id)}</p>
                     <p className="text-xs text-muted-foreground truncate">
                       {asset.location}, {asset.city}
                     </p>

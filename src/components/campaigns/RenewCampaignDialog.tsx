@@ -194,6 +194,7 @@ export function RenewCampaignDialog({
       const newEndStr = format(endDate, "yyyy-MM-dd");
 
       // Create new campaign — plan_id = null
+      const gstPercent = sourceCampaign.gst_percent ?? 0;
       const { error: createError } = await supabase.from("campaigns").insert({
         id: newCampaignId,
         campaign_name: `${sourceCampaign.campaign_name} (Renewal)`,
@@ -202,13 +203,16 @@ export function RenewCampaignDialog({
         company_id: sourceCampaign.company_id,
         start_date: newStartStr,
         end_date: newEndStr,
-        status: "Draft",
+        status: "Draft" as const,
         created_by: user.id,
         created_from: `renewal:${campaign.id}`,
         plan_id: null, // CRITICAL: do not copy plan_id
         total_assets: campaignAssets?.length || 0,
         billing_cycle: sourceCampaign.billing_cycle,
-        gst_percent: sourceCampaign.gst_percent,
+        gst_percent: gstPercent,
+        gst_amount: 0,
+        grand_total: 0,
+        total_amount: 0,
         notes: `Renewed from ${campaign.id}. ${notes || ""}`.trim(),
       });
       if (createError) throw createError;

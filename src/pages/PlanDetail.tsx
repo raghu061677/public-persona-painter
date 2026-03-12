@@ -706,7 +706,7 @@ export default function PlanDetail() {
           mounting_charges: item.mounting_charges || item.installation_cost || 0,
           mounting_cost: item.mounting_charges || item.installation_cost || 0,
           mounting_rate: item.installation_rate || 0,
-          mounting_mode: item.mounting_mode || 'sqft',
+          mounting_mode: 'fixed', // Plan items always use direct per-asset mounting
         };
         return {
           id: item.asset_id,

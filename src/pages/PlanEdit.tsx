@@ -366,6 +366,9 @@ export default function PlanEdit() {
         profit_percent: profit.percent,
         printing_charges: asset.printing_charges || 0,
         mounting_charges: asset.mounting_charges || 0,
+        printing_rate: 0,
+        mounting_rate: 0,
+        mounting_mode: 'fixed', // Plan items always use direct per-asset mounting
         // Per-asset duration fields initialized from plan
         start_date: planStart,
         end_date: planEnd,

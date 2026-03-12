@@ -228,10 +228,8 @@ export function BulkMountingDialog({
                         <tr key={detail.id} className="border-b border-muted">
                           <td className="py-1.5 pr-2 font-mono">{detail.code}</td>
                           <td className="text-right py-1.5 px-2">{detail.sqft.toLocaleString('en-IN')}</td>
-                          <td className="text-center py-1.5 px-2">
-                            <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                              {mountingMode === "fixed" ? "Fixed" : "/Sqft"}
-                            </span>
+                        <td className="text-center py-1.5 px-2">
+                            <span className="text-xs bg-muted px-1.5 py-0.5 rounded">Fixed</span>
                           </td>
                           <td className="text-right py-1.5 pl-2 text-green-600 font-medium">
                             ₹{detail.cost.toLocaleString("en-IN", { maximumFractionDigits: 2 })}

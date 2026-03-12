@@ -568,7 +568,8 @@ export default function CampaignsList() {
         <CreateCampaignFromPlanDialog open={showCreateDialog} onOpenChange={setShowCreateDialog} onSuccess={() => { fetchCampaigns(); navigate('/admin/campaigns'); }} />
         {deleteDialog.campaign && <DeleteCampaignDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })} campaignId={deleteDialog.campaign.id} campaignName={deleteDialog.campaign.campaign_name} onDeleted={fetchCampaigns} />}
         {extendDialog.campaign && <ExtendCampaignDialog open={extendDialog.open} onOpenChange={(open) => setExtendDialog({ ...extendDialog, open })} campaign={extendDialog.campaign} onSuccess={fetchCampaigns} />}
-        {duplicateDialog.campaign && <DuplicateCampaignDialog open={duplicateDialog.open} onOpenChange={(open) => setDuplicateDialog({ ...duplicateDialog, open })} campaign={duplicateDialog.campaign} onSuccess={fetchCampaigns} />}
+        {renewDialog.campaign && <RenewCampaignDialog open={renewDialog.open} onOpenChange={(open) => setRenewDialog({ ...renewDialog, open })} campaign={renewDialog.campaign} onSuccess={fetchCampaigns} />}
+        {completeDialog.campaign && <CompleteCampaignDialog open={completeDialog.open} onOpenChange={(open) => setCompleteDialog({ ...completeDialog, open })} campaign={completeDialog.campaign} onSuccess={fetchCampaigns} />}
 
         {/* Advanced Filters Drawer */}
         <CampaignAdvancedFilters

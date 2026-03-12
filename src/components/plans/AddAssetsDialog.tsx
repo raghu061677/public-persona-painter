@@ -164,9 +164,9 @@ export function AddAssetsDialog({
   const mediaTypes = Array.from(new Set(assets.map(a => a.media_type).filter(Boolean))).sort();
 
   const toggleAssetSelection = (assetId: string) => {
-    // Only allow selecting available assets
-    const result = getAvailability(assetId);
-    if (result.availability !== 'Vacant') return;
+    // Only allow selecting available assets (unified engine)
+    const result = getStatus(assetId);
+    if (result.availability_status !== 'AVAILABLE') return;
 
     const newSelected = new Set(selectedAssets);
     if (newSelected.has(assetId)) {

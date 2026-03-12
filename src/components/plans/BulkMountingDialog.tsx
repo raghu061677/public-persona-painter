@@ -154,25 +154,9 @@ export function BulkMountingDialog({
 
         <ScrollArea className="flex-1 max-h-[55vh] pr-4">
           <div className="space-y-4 py-4">
-          {/* Mounting Mode Selection */}
+          {/* Mounting Value Input — always direct per-asset amount */}
           <div className="space-y-2">
-            <Label>Mounting Cost Type</Label>
-            <Select value={mountingMode} onValueChange={(v) => setMountingMode(v as "sqft" | "fixed")}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sqft">Per SQFT (₹/sqft)</SelectItem>
-                <SelectItem value="fixed">Fixed Cost (₹)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Mounting Value Input */}
-          <div className="space-y-2">
-            <Label htmlFor="mountingValue">
-              {mountingMode === "fixed" ? "Mounting Cost per Asset (₹)" : "Mounting Rate per SQFT (₹)"}
-            </Label>
+            <Label htmlFor="mountingValue">Mounting Cost per Asset (₹)</Label>
             <Input
               id="mountingValue"
               type="number"

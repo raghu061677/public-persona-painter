@@ -46,15 +46,32 @@ export default function IntelligenceDashboard() {
   };
 
   const loadVacantAssets = async () => {
-    // Use campaign_assets overlap logic instead of stale media_assets.status
-    // For the intelligence dashboard, fetch all assets and let the availability engine classify
-    const { data } = await supabase.from("media_assets").select("id, city, area, media_type, card_rate, status").order("card_rate", { ascending: false }).limit(100);
-    // Filter to those not currently in any active campaign_assets
+    // Unified availability engine — query asset_availability_view for AVAILABLE assets
+    const { data } = await supabase
+      .from('media_assets')
+      .select('id, city, area, media_type, card_rate, status')
+      .order('card_rate', { ascending: false })
+      .limit(100);
+
     const allIds = (data || []).map(a => a.id);
+    if (allIds.length === 0) { setVacantAssets([]); return; }
+
+    // Use RPC or campaign_assets view to filter — kept as lightweight overlap check
+    // since asset_availability_view types aren't in generated types yet
     const today = new Date().toISOString().split('T')[0];
-    const { data: booked } = await supabase.from("campaign_assets").select("asset_id").in("asset_id", allIds.slice(0, 100)).eq("is_removed", false).lte("effective_start_date", today).gte("effective_end_date", today);
-    const bookedSet = new Set((booked || []).map(b => b.asset_id));
-    setVacantAssets((data || []).filter(a => !bookedSet.has(a.id)).slice(0, 20));
+    const [{ data: booked }, { data: held }] = await Promise.all([
+      supabase.from("campaign_assets").select("asset_id")
+        .in("asset_id", allIds.slice(0, 200)).eq("is_removed", false)
+        .lte("effective_start_date", today).gte("effective_end_date", today),
+      supabase.from("asset_holds").select("asset_id")
+        .in("asset_id", allIds.slice(0, 200)).eq("status", "ACTIVE")
+        .lte("start_date", today).gte("end_date", today),
+    ]);
+    const blockedSet = new Set([
+      ...(booked || []).map(b => b.asset_id),
+      ...(held || []).map(h => h.asset_id),
+    ]);
+    setVacantAssets((data || []).filter(a => !blockedSet.has(a.id)).slice(0, 20));
   };
 
   const loadEndingCampaigns = async () => {
@@ -80,9 +97,18 @@ export default function IntelligenceDashboard() {
     const today = new Date().toISOString().split('T')[0];
     // Total assets
     const { count: totalCount } = await supabase.from("media_assets").select("*", { count: "exact", head: true });
-    // Assets with active campaign booking today (dynamic)
-    const { data: activeBookings } = await supabase.from("campaign_assets").select("asset_id").eq("is_removed", false).lte("effective_start_date", today).gte("effective_end_date", today);
-    const bookedCount = new Set((activeBookings || []).map(b => b.asset_id)).size;
+    // Unified availability: campaign_assets + asset_holds overlap for today
+    const [{ data: activeBookings }, { data: activeHolds }] = await Promise.all([
+      supabase.from("campaign_assets").select("asset_id")
+        .eq("is_removed", false).lte("effective_start_date", today).gte("effective_end_date", today),
+      supabase.from("asset_holds").select("asset_id")
+        .eq("status", "ACTIVE").lte("start_date", today).gte("end_date", today),
+    ]);
+    const blockedIds = new Set([
+      ...(activeBookings || []).map(b => b.asset_id),
+      ...(activeHolds || []).map(h => h.asset_id),
+    ]);
+    const bookedCount = blockedIds.size;
     const vacantCount = (totalCount || 0) - bookedCount;
     const [{ count: campaignsEndingCount }, { data: revenueData }] = await Promise.all([
       supabase.from("campaigns").select("*", { count: "exact", head: true }).in("status", ["Running", "Upcoming"]),

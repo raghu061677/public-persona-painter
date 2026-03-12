@@ -26,9 +26,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, addDays, isAfter, isBefore } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useAssetAvailability } from "@/hooks/useAssetAvailability";
+import { useUnifiedAvailability } from "@/hooks/useUnifiedAvailability";
 import { toDateString } from "@/lib/availability";
-import type { BookingAvailability } from "@/lib/availability";
+import type { AvailabilityStatus } from "@/lib/availability";
 
 type SortDirection = 'asc' | 'desc' | null;
 type SortableColumn = 'asset_id' | 'location' | 'area' | 'available_from';
@@ -128,9 +128,9 @@ export function AssetSelectionTable({
     return toDateString(d);
   }, [planEndDate, rangeStart]);
 
-  // Use shared availability engine — single source of truth
+  // Use unified availability engine — single source of truth (powered by asset_availability_view)
   const assetIds = useMemo(() => assets.map(a => a.id), [assets]);
-  const { getAvailability, loading: loadingBookings } = useAssetAvailability(
+  const { getStatus, loading: loadingBookings } = useUnifiedAvailability(
     assetIds,
     rangeStart,
     rangeEnd
@@ -156,24 +156,26 @@ export function AssetSelectionTable({
   const cities = Array.from(new Set(assets.map(a => a.city))).sort();
   const mediaTypes = Array.from(new Set(assets.map(a => a.media_type))).sort();
 
-  // Get availability info for an asset using shared engine
+  // Get availability info for an asset using unified engine
   const getAssetAvailabilityInfo = (asset: any) => {
-    const result = getAvailability(asset.id);
-    const isVacant = result.availability === 'Vacant';
+    const result = getStatus(asset.id);
+    const isVacant = result.availability_status === 'AVAILABLE';
     
     // Calculate availableFrom if asset is booked
     let availableFrom: Date | null = null;
-    if (!isVacant && result.endDate) {
-      const end = new Date(result.endDate);
+    if (!isVacant && result.next_available_date) {
+      availableFrom = new Date(result.next_available_date + 'T00:00:00');
+    } else if (!isVacant && result.booking_end) {
+      const end = new Date(result.booking_end);
       availableFrom = addDays(end, 1);
     }
     
     return {
       available: isVacant,
       availableFrom,
-      availability: result.availability,
-      sourceNumber: result.sourceNumber,
-      clientName: result.clientName,
+      availability: result.availability_status,
+      sourceNumber: result.blocking_entity_name,
+      clientName: result.client_name,
     };
   };
 
@@ -205,7 +207,7 @@ export function AssetSelectionTable({
       availableByDate: availableNow + availableByDate,
       total: assets.length,
     };
-  }, [assets, availableFromDate, getAvailability]);
+  }, [assets, availableFromDate, getStatus]);
 
   const filteredAssets = useMemo(() => {
     return assets.filter(asset => {
@@ -239,7 +241,7 @@ export function AssetSelectionTable({
       
       return matchesSearch && matchesCity && matchesType && matchesAvailability;
     });
-  }, [assets, searchTerm, cityFilter, mediaTypeFilter, availabilityFilter, availableFromDate, getAvailability]);
+  }, [assets, searchTerm, cityFilter, mediaTypeFilter, availabilityFilter, availableFromDate, getStatus]);
 
   // Get current count to display based on filter
   const getCurrentFilterCount = () => {

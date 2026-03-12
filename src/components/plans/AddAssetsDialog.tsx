@@ -33,9 +33,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Plus, Search, Shield, Calendar } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/mediaAssets";
-import { useAssetAvailability } from "@/hooks/useAssetAvailability";
+import { useUnifiedAvailability } from "@/hooks/useUnifiedAvailability";
 import { toDateString } from "@/lib/availability";
-import type { BookingAvailability } from "@/lib/availability";
+import type { AvailabilityStatus } from "@/lib/availability";
 
 interface AddAssetsDialogProps {
   open: boolean;
@@ -48,12 +48,12 @@ interface AddAssetsDialogProps {
   planEndDate?: string;
 }
 
-const AVAILABILITY_BADGE: Record<BookingAvailability, { label: string; className: string }> = {
-  Vacant: { label: 'Available', className: 'bg-emerald-50 text-emerald-700' },
-  Running: { label: 'Running', className: 'bg-red-50 text-red-700' },
-  Upcoming: { label: 'Future Booked', className: 'bg-amber-50 text-amber-700' },
-  Booked: { label: 'Booked', className: 'bg-blue-50 text-blue-700' },
-  Blocked: { label: 'Held/Blocked', className: 'bg-purple-50 text-purple-700' },
+const AVAILABILITY_BADGE: Record<string, { label: string; className: string }> = {
+  AVAILABLE: { label: 'Available', className: 'bg-emerald-50 text-emerald-700' },
+  RUNNING: { label: 'Running', className: 'bg-red-50 text-red-700' },
+  FUTURE_BOOKED: { label: 'Future Booked', className: 'bg-amber-50 text-amber-700' },
+  BOOKED: { label: 'Booked', className: 'bg-blue-50 text-blue-700' },
+  HELD: { label: 'Held/Blocked', className: 'bg-purple-50 text-purple-700' },
 };
 
 export function AddAssetsDialog({
@@ -84,8 +84,8 @@ export function AddAssetsDialog({
   // Get all asset IDs for batch availability check
   const assetIds = useMemo(() => assets.filter(a => !existingAssetIds.includes(a.id)).map(a => a.id), [assets, existingAssetIds]);
 
-  // Use the availability engine — single source of truth
-  const { getAvailability, loading: loadingAvailability } = useAssetAvailability(
+  // Use unified availability engine — powered by asset_availability_view
+  const { getStatus, loading: loadingAvailability } = useUnifiedAvailability(
     assetIds,
     rangeStart,
     rangeEnd,
@@ -146,27 +146,27 @@ export function AddAssetsDialog({
       filtered = filtered.filter(asset => asset.media_type === mediaTypeFilter);
     }
 
-    // Availability filter using booking engine
+    // Availability filter using unified engine
     if (availabilityFilter !== "all") {
       filtered = filtered.filter(asset => {
-        const result = getAvailability(asset.id);
-        if (availabilityFilter === "available") return result.availability === 'Vacant';
-        if (availabilityFilter === "booked") return result.availability === 'Running' || result.availability === 'Booked' || result.availability === 'Upcoming';
-        if (availabilityFilter === "blocked") return result.availability === 'Blocked';
+        const result = getStatus(asset.id);
+        if (availabilityFilter === "available") return result.availability_status === 'AVAILABLE';
+        if (availabilityFilter === "booked") return result.availability_status === 'RUNNING' || result.availability_status === 'BOOKED' || result.availability_status === 'FUTURE_BOOKED';
+        if (availabilityFilter === "blocked") return result.availability_status === 'HELD';
         return true;
       });
     }
 
     return filtered;
-  }, [assets, existingAssetIds, searchTerm, cityFilter, mediaTypeFilter, availabilityFilter, getAvailability]);
+  }, [assets, existingAssetIds, searchTerm, cityFilter, mediaTypeFilter, availabilityFilter, getStatus]);
 
   const cities = Array.from(new Set(assets.map(a => a.city).filter(Boolean))).sort();
   const mediaTypes = Array.from(new Set(assets.map(a => a.media_type).filter(Boolean))).sort();
 
   const toggleAssetSelection = (assetId: string) => {
-    // Only allow selecting available assets
-    const result = getAvailability(assetId);
-    if (result.availability !== 'Vacant') return;
+    // Only allow selecting available assets (unified engine)
+    const result = getStatus(assetId);
+    if (result.availability_status !== 'AVAILABLE') return;
 
     const newSelected = new Set(selectedAssets);
     if (newSelected.has(assetId)) {
@@ -268,9 +268,9 @@ export function AddAssetsDialog({
                   </TableRow>
                 ) : (
                   displayAssets.map((asset) => {
-                    const result = getAvailability(asset.id);
-                    const isAvailable = result.availability === 'Vacant';
-                    const badge = AVAILABILITY_BADGE[result.availability];
+                    const result = getStatus(asset.id);
+                    const isAvailable = result.availability_status === 'AVAILABLE';
+                    const badge = AVAILABILITY_BADGE[result.availability_status];
 
                     return (
                       <TableRow
@@ -299,28 +299,24 @@ export function AddAssetsDialog({
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger>
-                                  <Badge variant="outline" className={`${badge.className} text-[10px] gap-1`}>
-                                    {result.availability === 'Blocked' ? <Shield className="h-3 w-3" /> : <Calendar className="h-3 w-3" />}
-                                    {badge.label}
+                                  <Badge variant="outline" className={`${badge?.className} text-[10px] gap-1`}>
+                                    {result.availability_status === 'HELD' ? <Shield className="h-3 w-3" /> : <Calendar className="h-3 w-3" />}
+                                    {badge?.label || result.availability_status}
                                   </Badge>
                                 </TooltipTrigger>
                                 <TooltipContent side="left" className="max-w-xs">
                                   <div className="space-y-1 text-xs">
                                     <p className="font-medium">
-                                      {result.sourceType === 'campaign' ? 'Campaign' : result.sourceType === 'hold' ? 'Hold' : 'Booking'}:
-                                      {' '}{result.sourceNumber || result.sourceId || 'Unknown'}
+                                      {result.booking_type === 'CAMPAIGN' ? 'Campaign' : result.booking_type === 'HOLD' ? 'Hold' : 'Booking'}:
+                                      {' '}{result.blocking_entity_name || result.blocking_entity_id || 'Unknown'}
                                     </p>
-                                    {result.clientName && <p>Client: {result.clientName}</p>}
-                                    {result.startDate && result.endDate && (
-                                      <p>{result.startDate} → {result.endDate}</p>
+                                    {result.client_name && <p>Client: {result.client_name}</p>}
+                                    {result.booking_start && result.booking_end && (
+                                      <p>{result.booking_start} → {result.booking_end}</p>
                                     )}
-                                    {result.endDate && (
+                                    {result.next_available_date && (
                                       <p className="text-primary font-medium">
-                                        Available from: {(() => {
-                                          const d = new Date(result.endDate + 'T00:00:00');
-                                          d.setDate(d.getDate() + 1);
-                                          return toDateString(d);
-                                        })()}
+                                        Available from: {result.next_available_date}
                                       </p>
                                     )}
                                   </div>

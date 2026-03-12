@@ -151,7 +151,7 @@ export default function MediaAssetsControlCenter() {
       });
     }
 
-    // Dynamic availability: fetch active bookings & holds overlapping today
+    // Unified availability: campaign_assets (effective dates) + holds overlapping today
     const today = new Date().toISOString().split('T')[0];
     const allAssetIds = (assetsData || []).map(a => a.id);
 
@@ -161,8 +161,9 @@ export default function MediaAssetsControlCenter() {
             .from('campaign_assets')
             .select('asset_id, campaigns:campaign_id!inner(status, is_deleted)')
             .in('asset_id', allAssetIds)
-            .lte('booking_start_date', today)
-            .gte('booking_end_date', today)
+            .eq('is_removed', false)
+            .lte('effective_start_date', today)
+            .gte('effective_end_date', today)
         : Promise.resolve({ data: [] }),
       allAssetIds.length > 0
         ? supabase

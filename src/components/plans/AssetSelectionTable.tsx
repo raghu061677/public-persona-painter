@@ -241,7 +241,7 @@ export function AssetSelectionTable({
       
       return matchesSearch && matchesCity && matchesType && matchesAvailability;
     });
-  }, [assets, searchTerm, cityFilter, mediaTypeFilter, availabilityFilter, availableFromDate, getAvailability]);
+  }, [assets, searchTerm, cityFilter, mediaTypeFilter, availabilityFilter, availableFromDate, getStatus]);
 
   // Get current count to display based on filter
   const getCurrentFilterCount = () => {

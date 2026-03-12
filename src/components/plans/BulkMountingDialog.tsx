@@ -164,7 +164,7 @@ export function BulkMountingDialog({
               step="0.5"
               value={mountingValue}
               onChange={(e) => setMountingValue(e.target.value)}
-              placeholder={mountingMode === "fixed" ? "e.g., 5000" : "e.g., 12"}
+              placeholder="e.g., 5000"
               className="text-lg"
             />
           </div>

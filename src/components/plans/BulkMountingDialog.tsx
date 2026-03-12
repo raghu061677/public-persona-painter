@@ -69,14 +69,8 @@ export function BulkMountingDialog({
       if (hasExisting && !overrideExisting) return;
 
       const sqft = getAssetSqft(asset);
-      let cost: number;
-      
-      if (mountingMode === "fixed") {
-        cost = value;
-      } else {
-        const result = calculateMountingCost(asset, value);
-        cost = result.cost;
-      }
+      // Mounting is always direct per-asset amount for plan items
+      const cost = value;
 
       details.push({
         id: asset.id,

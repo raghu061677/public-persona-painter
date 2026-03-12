@@ -299,28 +299,24 @@ export function AddAssetsDialog({
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger>
-                                  <Badge variant="outline" className={`${badge.className} text-[10px] gap-1`}>
-                                    {result.availability === 'Blocked' ? <Shield className="h-3 w-3" /> : <Calendar className="h-3 w-3" />}
-                                    {badge.label}
+                                  <Badge variant="outline" className={`${badge?.className} text-[10px] gap-1`}>
+                                    {result.availability_status === 'HELD' ? <Shield className="h-3 w-3" /> : <Calendar className="h-3 w-3" />}
+                                    {badge?.label || result.availability_status}
                                   </Badge>
                                 </TooltipTrigger>
                                 <TooltipContent side="left" className="max-w-xs">
                                   <div className="space-y-1 text-xs">
                                     <p className="font-medium">
-                                      {result.sourceType === 'campaign' ? 'Campaign' : result.sourceType === 'hold' ? 'Hold' : 'Booking'}:
-                                      {' '}{result.sourceNumber || result.sourceId || 'Unknown'}
+                                      {result.booking_type === 'CAMPAIGN' ? 'Campaign' : result.booking_type === 'HOLD' ? 'Hold' : 'Booking'}:
+                                      {' '}{result.blocking_entity_name || result.blocking_entity_id || 'Unknown'}
                                     </p>
-                                    {result.clientName && <p>Client: {result.clientName}</p>}
-                                    {result.startDate && result.endDate && (
-                                      <p>{result.startDate} → {result.endDate}</p>
+                                    {result.client_name && <p>Client: {result.client_name}</p>}
+                                    {result.booking_start && result.booking_end && (
+                                      <p>{result.booking_start} → {result.booking_end}</p>
                                     )}
-                                    {result.endDate && (
+                                    {result.next_available_date && (
                                       <p className="text-primary font-medium">
-                                        Available from: {(() => {
-                                          const d = new Date(result.endDate + 'T00:00:00');
-                                          d.setDate(d.getDate() + 1);
-                                          return toDateString(d);
-                                        })()}
+                                        Available from: {result.next_available_date}
                                       </p>
                                     )}
                                   </div>

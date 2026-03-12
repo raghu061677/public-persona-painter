@@ -89,7 +89,7 @@ export default function AssetIdentityInspector() {
       // Search by media_asset_code, id, location, area, city
       const { data, error } = await supabase
         .from("media_assets")
-        .select("id, media_asset_code, location, area, city, media_type, dimensions, total_sqft, illumination_type, status, created_at, updated_at, current_campaign_id, current_plan_id, booked_from, booked_to, next_available_date")
+        .select("id, media_asset_code, location, area, city, media_type, dimensions, total_sqft, illumination_type, status, created_at, updated_at, current_campaign_id, booked_from, booked_to")
         .or(`media_asset_code.ilike.%${q}%,id.ilike.%${q}%,location.ilike.%${q}%,area.ilike.%${q}%,city.ilike.%${q}%`)
         .order("media_asset_code")
         .limit(20);

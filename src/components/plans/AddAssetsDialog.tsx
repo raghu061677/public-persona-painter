@@ -84,8 +84,8 @@ export function AddAssetsDialog({
   // Get all asset IDs for batch availability check
   const assetIds = useMemo(() => assets.filter(a => !existingAssetIds.includes(a.id)).map(a => a.id), [assets, existingAssetIds]);
 
-  // Use the availability engine — single source of truth
-  const { getAvailability, loading: loadingAvailability } = useAssetAvailability(
+  // Use unified availability engine — powered by asset_availability_view
+  const { getStatus, loading: loadingAvailability } = useUnifiedAvailability(
     assetIds,
     rangeStart,
     rangeEnd,

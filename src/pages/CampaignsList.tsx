@@ -19,14 +19,15 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Eye, Trash2, FileText, Plus, Pencil, CheckCircle2, RefreshCw, CopyPlus, SlidersHorizontal } from "lucide-react";
+import { Eye, Trash2, FileText, Plus, Pencil, CheckCircle2, CalendarPlus, RefreshCw, SlidersHorizontal } from "lucide-react";
 import { CreateCampaignFromPlanDialog } from "@/components/campaigns/CreateCampaignFromPlanDialog";
 import { CampaignTemplatesDialog } from "@/components/campaigns/CampaignTemplatesDialog";
 import { BulkStatusUpdateDialog } from "@/components/campaigns/BulkStatusUpdateDialog";
 import { CampaignHealthAlerts } from "@/components/campaigns/CampaignHealthAlerts";
 import { DeleteCampaignDialog } from "@/components/campaigns/DeleteCampaignDialog";
 import { ExtendCampaignDialog } from "@/components/campaigns/ExtendCampaignDialog";
-import { DuplicateCampaignDialog } from "@/components/campaigns/DuplicateCampaignDialog";
+import { RenewCampaignDialog } from "@/components/campaigns/RenewCampaignDialog";
+import { CompleteCampaignDialog } from "@/components/campaigns/CompleteCampaignDialog";
 import { getCampaignStatusConfig } from "@/utils/statusBadges";
 import { getCampaignStatusColor } from "@/utils/campaigns";
 import { formatDate as formatPlanDate } from "@/utils/plans";
@@ -73,7 +74,8 @@ export default function CampaignsList() {
   const [advancedFilters, setAdvancedFilters] = useState<CampaignFilters>({ status: ["Running"] });
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; campaign: any | null }>({ open: false, campaign: null });
   const [extendDialog, setExtendDialog] = useState<{ open: boolean; campaign: any | null }>({ open: false, campaign: null });
-  const [duplicateDialog, setDuplicateDialog] = useState<{ open: boolean; campaign: any | null }>({ open: false, campaign: null });
+  const [renewDialog, setRenewDialog] = useState<{ open: boolean; campaign: any | null }>({ open: false, campaign: null });
+  const [completeDialog, setCompleteDialog] = useState<{ open: boolean; campaign: any | null }>({ open: false, campaign: null });
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
   const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("campaigns");
@@ -539,9 +541,12 @@ export default function CampaignsList() {
                               <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/campaigns/${campaign.id}`)} title="View Campaign"><Eye className="h-4 w-4" /></Button>
                               <ActionGuard module="campaigns" action="edit" record={campaign}>
                                   {['Running', 'Completed', 'Upcoming'].includes(campaign.status) && (
-                                    <Button variant="ghost" size="icon" onClick={() => setExtendDialog({ open: true, campaign })} title="Extend/Renew" className="text-primary hover:text-primary hover:bg-primary/10"><RefreshCw className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" onClick={() => setExtendDialog({ open: true, campaign })} title="Extend Campaign" className="text-primary hover:text-primary hover:bg-primary/10"><CalendarPlus className="h-4 w-4" /></Button>
                                   )}
-                                  <Button variant="ghost" size="icon" onClick={() => setDuplicateDialog({ open: true, campaign })} title="Duplicate" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"><CopyPlus className="h-4 w-4" /></Button>
+                                  <Button variant="ghost" size="icon" onClick={() => setRenewDialog({ open: true, campaign })} title="Renew as New Campaign" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"><RefreshCw className="h-4 w-4" /></Button>
+                                  {['Running', 'Upcoming'].includes(campaign.status) && (
+                                    <Button variant="ghost" size="icon" onClick={() => setCompleteDialog({ open: true, campaign })} title="Complete Campaign" className="text-green-600 hover:text-green-700 hover:bg-green-50"><CheckCircle2 className="h-4 w-4" /></Button>
+                                  )}
                                   <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/campaigns/edit/${campaign.id}`)} title="Edit"><Pencil className="h-4 w-4" /></Button>
                               </ActionGuard>
                               <ActionGuard module="campaigns" action="delete" record={campaign}>
@@ -563,7 +568,8 @@ export default function CampaignsList() {
         <CreateCampaignFromPlanDialog open={showCreateDialog} onOpenChange={setShowCreateDialog} onSuccess={() => { fetchCampaigns(); navigate('/admin/campaigns'); }} />
         {deleteDialog.campaign && <DeleteCampaignDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })} campaignId={deleteDialog.campaign.id} campaignName={deleteDialog.campaign.campaign_name} onDeleted={fetchCampaigns} />}
         {extendDialog.campaign && <ExtendCampaignDialog open={extendDialog.open} onOpenChange={(open) => setExtendDialog({ ...extendDialog, open })} campaign={extendDialog.campaign} onSuccess={fetchCampaigns} />}
-        {duplicateDialog.campaign && <DuplicateCampaignDialog open={duplicateDialog.open} onOpenChange={(open) => setDuplicateDialog({ ...duplicateDialog, open })} campaign={duplicateDialog.campaign} onSuccess={fetchCampaigns} />}
+        {renewDialog.campaign && <RenewCampaignDialog open={renewDialog.open} onOpenChange={(open) => setRenewDialog({ ...renewDialog, open })} campaign={renewDialog.campaign} onSuccess={fetchCampaigns} />}
+        {completeDialog.campaign && <CompleteCampaignDialog open={completeDialog.open} onOpenChange={(open) => setCompleteDialog({ ...completeDialog, open })} campaign={completeDialog.campaign} onSuccess={fetchCampaigns} />}
 
         {/* Advanced Filters Drawer */}
         <CampaignAdvancedFilters

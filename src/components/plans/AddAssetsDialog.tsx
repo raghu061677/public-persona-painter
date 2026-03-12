@@ -146,19 +146,19 @@ export function AddAssetsDialog({
       filtered = filtered.filter(asset => asset.media_type === mediaTypeFilter);
     }
 
-    // Availability filter using booking engine
+    // Availability filter using unified engine
     if (availabilityFilter !== "all") {
       filtered = filtered.filter(asset => {
-        const result = getAvailability(asset.id);
-        if (availabilityFilter === "available") return result.availability === 'Vacant';
-        if (availabilityFilter === "booked") return result.availability === 'Running' || result.availability === 'Booked' || result.availability === 'Upcoming';
-        if (availabilityFilter === "blocked") return result.availability === 'Blocked';
+        const result = getStatus(asset.id);
+        if (availabilityFilter === "available") return result.availability_status === 'AVAILABLE';
+        if (availabilityFilter === "booked") return result.availability_status === 'RUNNING' || result.availability_status === 'BOOKED' || result.availability_status === 'FUTURE_BOOKED';
+        if (availabilityFilter === "blocked") return result.availability_status === 'HELD';
         return true;
       });
     }
 
     return filtered;
-  }, [assets, existingAssetIds, searchTerm, cityFilter, mediaTypeFilter, availabilityFilter, getAvailability]);
+  }, [assets, existingAssetIds, searchTerm, cityFilter, mediaTypeFilter, availabilityFilter, getStatus]);
 
   const cities = Array.from(new Set(assets.map(a => a.city).filter(Boolean))).sort();
   const mediaTypes = Array.from(new Set(assets.map(a => a.media_type).filter(Boolean))).sort();

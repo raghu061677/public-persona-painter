@@ -156,24 +156,26 @@ export function AssetSelectionTable({
   const cities = Array.from(new Set(assets.map(a => a.city))).sort();
   const mediaTypes = Array.from(new Set(assets.map(a => a.media_type))).sort();
 
-  // Get availability info for an asset using shared engine
+  // Get availability info for an asset using unified engine
   const getAssetAvailabilityInfo = (asset: any) => {
-    const result = getAvailability(asset.id);
-    const isVacant = result.availability === 'Vacant';
+    const result = getStatus(asset.id);
+    const isVacant = result.availability_status === 'AVAILABLE';
     
     // Calculate availableFrom if asset is booked
     let availableFrom: Date | null = null;
-    if (!isVacant && result.endDate) {
-      const end = new Date(result.endDate);
+    if (!isVacant && result.next_available_date) {
+      availableFrom = new Date(result.next_available_date + 'T00:00:00');
+    } else if (!isVacant && result.booking_end) {
+      const end = new Date(result.booking_end);
       availableFrom = addDays(end, 1);
     }
     
     return {
       available: isVacant,
       availableFrom,
-      availability: result.availability,
-      sourceNumber: result.sourceNumber,
-      clientName: result.clientName,
+      availability: result.availability_status,
+      sourceNumber: result.blocking_entity_name,
+      clientName: result.client_name,
     };
   };
 

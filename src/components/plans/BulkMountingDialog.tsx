@@ -105,13 +105,8 @@ export function BulkMountingDialog({
       // Skip if not overriding existing
       if (hasExisting && !overrideExisting) return;
 
-      let cost: number;
-      if (mountingMode === "fixed") {
-        cost = value;
-      } else {
-        const result = calculateMountingCost(asset, value);
-        cost = result.cost;
-      }
+      // Mounting is always direct per-asset amount for plan items
+      const cost = value;
 
       // Update mounting_mode
       updates.push({ assetId: asset.id, field: "mounting_mode", value: mountingMode });

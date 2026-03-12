@@ -47,6 +47,7 @@ interface InvoiceRecord {
   id: string;
   invoice_period_start: string | null;
   invoice_period_end: string | null;
+  billing_month: string | null;
   total_amount: number;
   balance_due: number;
   status: string;

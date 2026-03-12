@@ -295,14 +295,15 @@ export function CampaignBillingTab({
       // Calculate amounts using new calculator
       const amounts = calculatePeriodAmountFromTotals(period, totals, includePrinting, includeMounting);
 
-      // Check if an invoice already exists for this period
+      // Check if an invoice already exists for this period (match by billing_month key)
       const existingInvoice = monthlyInvoices.find(inv => {
-        const invStart = new Date(inv.invoice_period_start);
-        const invEnd = new Date(inv.invoice_period_end);
-        return (
-          invStart.getTime() === period.periodStart.getTime() &&
-          invEnd.getTime() === period.periodEnd.getTime()
-        );
+        if (inv.billing_month) {
+          return inv.billing_month === period.monthKey;
+        }
+        // Fallback: compare date strings
+        const invStart = inv.invoice_period_start;
+        const periodStartStr = format(period.periodStart, 'yyyy-MM-dd');
+        return invStart === periodStartStr;
       });
 
       // Fetch media_asset_code for all campaign assets

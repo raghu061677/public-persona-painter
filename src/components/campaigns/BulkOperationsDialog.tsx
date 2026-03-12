@@ -24,6 +24,7 @@ import {
   getCampaignAssetStatusMeta,
   type CampaignAssetStatus,
 } from "@/lib/constants/campaignAssetStatus";
+import { getAssetDisplayCode } from "@/lib/assets/getAssetDisplayCode";
 
 interface BulkOperationsDialogProps {
   assets: any[];

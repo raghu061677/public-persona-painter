@@ -193,7 +193,7 @@ function MobileFieldApp() {
       const { data: vacantMediaData, error: vacantError } = await db
         .from('media_assets')
         .select('*')
-        .in('status', ['Available', 'Vacant'])
+        .eq('status', 'Available')
         .order('city', { ascending: true })
         .limit(20);
 

@@ -207,7 +207,7 @@ export function AssetSelectionTable({
       availableByDate: availableNow + availableByDate,
       total: assets.length,
     };
-  }, [assets, availableFromDate, getAvailability]);
+  }, [assets, availableFromDate, getStatus]);
 
   const filteredAssets = useMemo(() => {
     return assets.filter(asset => {

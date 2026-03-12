@@ -134,7 +134,6 @@ export function BulkMountingDialog({
 
     // Reset and close
     setMountingValue("");
-    setMountingMode("sqft");
     setApplyMode("selected");
     setOverrideExisting(false);
     onOpenChange(false);

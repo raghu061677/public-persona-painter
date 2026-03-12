@@ -541,9 +541,12 @@ export default function CampaignsList() {
                               <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/campaigns/${campaign.id}`)} title="View Campaign"><Eye className="h-4 w-4" /></Button>
                               <ActionGuard module="campaigns" action="edit" record={campaign}>
                                   {['Running', 'Completed', 'Upcoming'].includes(campaign.status) && (
-                                    <Button variant="ghost" size="icon" onClick={() => setExtendDialog({ open: true, campaign })} title="Extend/Renew" className="text-primary hover:text-primary hover:bg-primary/10"><RefreshCw className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" onClick={() => setExtendDialog({ open: true, campaign })} title="Extend Campaign" className="text-primary hover:text-primary hover:bg-primary/10"><CalendarPlus className="h-4 w-4" /></Button>
                                   )}
-                                  <Button variant="ghost" size="icon" onClick={() => setDuplicateDialog({ open: true, campaign })} title="Duplicate" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"><CopyPlus className="h-4 w-4" /></Button>
+                                  <Button variant="ghost" size="icon" onClick={() => setRenewDialog({ open: true, campaign })} title="Renew as New Campaign" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"><RefreshCw className="h-4 w-4" /></Button>
+                                  {['Running', 'Upcoming'].includes(campaign.status) && (
+                                    <Button variant="ghost" size="icon" onClick={() => setCompleteDialog({ open: true, campaign })} title="Complete Campaign" className="text-green-600 hover:text-green-700 hover:bg-green-50"><CheckCircle2 className="h-4 w-4" /></Button>
+                                  )}
                                   <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/campaigns/edit/${campaign.id}`)} title="Edit"><Pencil className="h-4 w-4" /></Button>
                               </ActionGuard>
                               <ActionGuard module="campaigns" action="delete" record={campaign}>

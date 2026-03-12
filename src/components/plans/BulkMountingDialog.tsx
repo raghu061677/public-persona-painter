@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertTriangle, Hammer } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { getAssetSqft, calculateMountingCost } from "@/utils/effectivePricing";
+import { getAssetSqft } from "@/utils/effectivePricing";
 
 interface BulkMountingDialogProps {
   open: boolean;

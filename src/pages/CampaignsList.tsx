@@ -74,7 +74,8 @@ export default function CampaignsList() {
   const [advancedFilters, setAdvancedFilters] = useState<CampaignFilters>({ status: ["Running"] });
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; campaign: any | null }>({ open: false, campaign: null });
   const [extendDialog, setExtendDialog] = useState<{ open: boolean; campaign: any | null }>({ open: false, campaign: null });
-  const [duplicateDialog, setDuplicateDialog] = useState<{ open: boolean; campaign: any | null }>({ open: false, campaign: null });
+  const [renewDialog, setRenewDialog] = useState<{ open: boolean; campaign: any | null }>({ open: false, campaign: null });
+  const [completeDialog, setCompleteDialog] = useState<{ open: boolean; campaign: any | null }>({ open: false, campaign: null });
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
   const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("campaigns");

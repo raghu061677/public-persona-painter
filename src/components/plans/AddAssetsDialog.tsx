@@ -268,9 +268,9 @@ export function AddAssetsDialog({
                   </TableRow>
                 ) : (
                   displayAssets.map((asset) => {
-                    const result = getAvailability(asset.id);
-                    const isAvailable = result.availability === 'Vacant';
-                    const badge = AVAILABILITY_BADGE[result.availability];
+                    const result = getStatus(asset.id);
+                    const isAvailable = result.availability_status === 'AVAILABLE';
+                    const badge = AVAILABILITY_BADGE[result.availability_status];
 
                     return (
                       <TableRow

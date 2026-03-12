@@ -349,6 +349,7 @@ const App = () => (
               <Route path="platform-reports" element={<PlatformAdminGuard><ModernAppLayout><PlatformReports /></ModernAppLayout></PlatformAdminGuard>} />
               <Route path="migrate-data" element={<PlatformAdminGuard><ModernAppLayout><MigrateToMatrix /></ModernAppLayout></PlatformAdminGuard>} />
               <Route path="fix-streetview-links" element={<ProtectedRoute requireAuth><ModernAppLayout><FixStreetViewLinks /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="media-assets/identity-inspector" element={<ProtectedRoute requiredRole={['admin']}><ModernAppLayout><AssetIdentityInspector /></ModernAppLayout></ProtectedRoute>} />
               
               {/* Dead test routes — redirect to dashboard */}
               <Route path="company-testing" element={<Navigate to="/admin/dashboard" replace />} />

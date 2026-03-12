@@ -102,7 +102,7 @@ export function CampaignBillingTab({
     try {
       const { data, error } = await supabase
         .from('invoices')
-        .select('id, invoice_period_start, invoice_period_end, total_amount, balance_due, status, due_date, is_monthly_split')
+        .select('id, invoice_period_start, invoice_period_end, billing_month, total_amount, balance_due, status, due_date, is_monthly_split')
         .eq('campaign_id', campaign.id)
         .order('invoice_period_start', { ascending: true });
 

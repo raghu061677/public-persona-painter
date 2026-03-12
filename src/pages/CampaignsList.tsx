@@ -26,7 +26,8 @@ import { BulkStatusUpdateDialog } from "@/components/campaigns/BulkStatusUpdateD
 import { CampaignHealthAlerts } from "@/components/campaigns/CampaignHealthAlerts";
 import { DeleteCampaignDialog } from "@/components/campaigns/DeleteCampaignDialog";
 import { ExtendCampaignDialog } from "@/components/campaigns/ExtendCampaignDialog";
-import { DuplicateCampaignDialog } from "@/components/campaigns/DuplicateCampaignDialog";
+import { RenewCampaignDialog } from "@/components/campaigns/RenewCampaignDialog";
+import { CompleteCampaignDialog } from "@/components/campaigns/CompleteCampaignDialog";
 import { getCampaignStatusConfig } from "@/utils/statusBadges";
 import { getCampaignStatusColor } from "@/utils/campaigns";
 import { formatDate as formatPlanDate } from "@/utils/plans";

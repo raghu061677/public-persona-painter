@@ -188,7 +188,8 @@ function MobileFieldApp() {
       if (campaignsError) throw campaignsError;
       setCampaigns(campaignsData || []);
 
-      // Fetch vacant media
+      // Fetch vacant media - use availability view via raw query
+      // (asset_availability_view may not be in generated types yet, so use media_assets for now)
       const { data: vacantMediaData, error: vacantError } = await db
         .from('media_assets')
         .select('*')

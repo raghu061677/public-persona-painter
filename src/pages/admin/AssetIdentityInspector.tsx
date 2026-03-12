@@ -30,7 +30,6 @@ interface InspectorAsset {
   updated_at: string;
   // Booking state
   current_campaign_id: string | null;
-  current_plan_id: string | null;
   booked_from: string | null;
   booked_to: string | null;
   next_available_date: string | null;

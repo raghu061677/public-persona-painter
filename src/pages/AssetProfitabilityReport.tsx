@@ -131,6 +131,8 @@ export default function AssetProfitabilityReport() {
           total_price
         `)
         .in('asset_id', assetIds)
+        // NOTE: This is a revenue/billing query, NOT an availability check.
+        // Intentionally uses booking_start/end for financial period overlap, not availability engine.
         .gte('booking_end_date', startDate)
         .lte('booking_start_date', endDate);
 

@@ -1,14 +1,20 @@
-import { useState } from "react";
+/**
+ * ExtendCampaignDialog — Extend the SAME campaign by pushing the end date forward.
+ *
+ * Rules:
+ *  - Same campaign ID, same history, same assets
+ *  - No invoice generation (use Billing module)
+ *  - No proof/status reset
+ *  - Availability validation required before saving
+ *  - Totals recalculated via computeCampaignTotals (SSoT)
+ */
+
+import { useState, useEffect } from "react";
 import { format, addMonths, addDays, differenceInDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -16,13 +22,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CalendarIcon, RefreshCw, Copy, CalendarPlus, FileText, Camera, IndianRupee } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { CalendarIcon, CalendarPlus, Loader2, ShieldAlert, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { generateInvoiceId } from "@/utils/finance";
-import { generateCampaignId } from "@/utils/campaigns";
+import { getAssetAvailabilityBatch, type AssetAvailabilitySummary } from "@/lib/availability";
 
 interface ExtendCampaignDialogProps {
   open: boolean;
@@ -37,902 +42,391 @@ interface ExtendCampaignDialogProps {
     status: string;
     company_id?: string;
     grand_total?: number;
-    gst_amount?: number;
-    gst_percent?: number;
   };
   onSuccess: () => void;
 }
 
-type ExtensionType = "extend" | "renew" | "copy_new";
 type DurationOption = "15days" | "1month" | "2months" | "3months" | "custom";
 
+interface ConflictInfo {
+  assetId: string;
+  assetCode: string;
+  location: string;
+  blockingEntity: string;
+  blockedDates: string;
+  nextAvailable: string | null;
+}
+
 export function ExtendCampaignDialog({
-  open,
-  onOpenChange,
-  campaign,
-  onSuccess,
+  open, onOpenChange, campaign, onSuccess,
 }: ExtendCampaignDialogProps) {
-  const [extensionType, setExtensionType] = useState<ExtensionType>("extend");
   const [durationOption, setDurationOption] = useState<DurationOption>("1month");
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>();
-  const [customStartDate, setCustomStartDate] = useState<Date | undefined>();
-  // Separate dates for copy_new mode
-  const [copyNewStartDate, setCopyNewStartDate] = useState<Date | undefined>();
-  const [copyNewEndDate, setCopyNewEndDate] = useState<Date | undefined>();
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
-  
-  // Options for renewal workflow
-  const [generateInvoice, setGenerateInvoice] = useState(true);
-  const [resetProofPhotos, setResetProofPhotos] = useState(true);
-  const [carryForwardCreatives, setCarryForwardCreatives] = useState(true);
-  const [markOriginalCompleted, setMarkOriginalCompleted] = useState(true);
+
+  // Availability validation
+  const [validating, setValidating] = useState(false);
+  const [validated, setValidated] = useState(false);
+  const [conflicts, setConflicts] = useState<ConflictInfo[]>([]);
+  const [availableCount, setAvailableCount] = useState(0);
+  const [totalAssetCount, setTotalAssetCount] = useState(0);
 
   const currentEndDate = new Date(campaign.end_date);
-  const today = new Date();
-
-  // Initialize copy_new dates when switching to that mode
-  const getDefaultCopyNewStartDate = (): Date => {
-    const dayAfterEnd = addDays(currentEndDate, 1);
-    return dayAfterEnd > today ? dayAfterEnd : today;
-  };
-
-  // For "copy_new", use explicitly set dates
-  const getNewStartDate = (): Date => {
-    if (extensionType === "copy_new") {
-      return copyNewStartDate || getDefaultCopyNewStartDate();
-    }
-    if (customStartDate) return customStartDate;
-    return extensionType === "extend" ? currentEndDate : today;
-  };
 
   const calculateNewEndDate = (): Date => {
-    // For copy_new, use explicitly set end date
-    if (extensionType === "copy_new") {
-      return copyNewEndDate || addMonths(getNewStartDate(), 1);
-    }
-    
-    const baseDate = getNewStartDate();
-    
+    const baseDate = currentEndDate;
     switch (durationOption) {
-      case "15days":
-        return addDays(baseDate, 15);
-      case "1month":
-        return addMonths(baseDate, 1);
-      case "2months":
-        return addMonths(baseDate, 2);
-      case "3months":
-        return addMonths(baseDate, 3);
-      case "custom":
-        return customEndDate || addMonths(baseDate, 1);
-      default:
-        return addMonths(baseDate, 1);
+      case "15days": return addDays(baseDate, 15);
+      case "1month": return addMonths(baseDate, 1);
+      case "2months": return addMonths(baseDate, 2);
+      case "3months": return addMonths(baseDate, 3);
+      case "custom": return customEndDate || addMonths(baseDate, 1);
+      default: return addMonths(baseDate, 1);
     }
   };
 
-  const newStartDate = getNewStartDate();
   const newEndDate = calculateNewEndDate();
-  const newDurationDays = Math.max(1, differenceInDays(newEndDate, newStartDate) + 1);
   const extensionDays = differenceInDays(newEndDate, currentEndDate);
-  
-  // Calculate renewal amount estimate based on daily rate
-  const calculateRenewalAmount = () => {
-    if (!campaign.grand_total) return 0;
-    const originalDays = differenceInDays(new Date(campaign.end_date), new Date(campaign.start_date)) + 1;
-    if (originalDays <= 0) return campaign.grand_total;
-    const dailyRate = campaign.grand_total / originalDays;
-    
-    if (extensionType === "copy_new") {
-      return Math.round(dailyRate * newDurationDays);
-    }
-    return Math.round(dailyRate * Math.max(1, extensionDays));
-  };
 
-  const renewalAmount = calculateRenewalAmount();
+  // Reset validation when dates change
+  useEffect(() => {
+    setValidated(false);
+    setConflicts([]);
+  }, [durationOption, customEndDate]);
 
-  const handleCopyAsNewCampaign = async (user: any) => {
-    // Fetch full campaign data
-    const { data: campaignData, error: fetchError } = await supabase
-      .from("campaigns")
-      .select("*")
-      .eq("id", campaign.id)
-      .single();
-
-    if (fetchError || !campaignData) {
-      throw new Error("Failed to fetch campaign details");
-    }
-
-    // Fetch campaign assets
-    const { data: campaignAssets } = await supabase
-      .from("campaign_assets")
-      .select("*")
-      .eq("campaign_id", campaign.id);
-
-    // Fetch campaign items
-    const { data: campaignItems } = await supabase
-      .from("campaign_items")
-      .select("*")
-      .eq("campaign_id", campaign.id);
-
-    // Generate new campaign ID
-    const newCampaignId = await generateCampaignId(supabase);
-    const newStartDateStr = format(newStartDate, "yyyy-MM-dd");
-    const newEndDateStr = format(newEndDate, "yyyy-MM-dd");
-
-    // Recalculate totals based on new duration
-    const originalDays = differenceInDays(new Date(campaign.end_date), new Date(campaign.start_date));
-    const durationRatio = originalDays > 0 ? newDurationDays / originalDays : 1;
-
-    const newSubtotal = Math.round((campaignData.subtotal || 0) * durationRatio);
-    const newPrintingTotal = campaignData.printing_total || 0; // One-time cost, may or may not repeat
-    const newMountingTotal = campaignData.mounting_total || 0; // One-time cost
-    const gstPercent = campaignData.gst_percent ?? 0;
-    const newTotalAmount = Math.round(newSubtotal + newPrintingTotal + newMountingTotal);
-    const newGstAmount = Math.round(newTotalAmount * gstPercent / 100);
-    const newGrandTotal = newTotalAmount + newGstAmount;
-
-    // Create new campaign
-    const { error: createError } = await supabase.from("campaigns").insert({
-      id: newCampaignId,
-      campaign_name: `${campaignData.campaign_name} (Renewal)`,
-      client_id: campaignData.client_id,
-      client_name: campaignData.client_name,
-      company_id: campaignData.company_id,
-      start_date: newStartDateStr,
-      end_date: newEndDateStr,
-      status: "Upcoming",
-      created_by: user.id,
-      created_from: `renewal:${campaign.id}`,
-      plan_id: campaignData.plan_id,
-      subtotal: newSubtotal,
-      printing_total: newPrintingTotal,
-      mounting_total: newMountingTotal,
-      total_amount: newTotalAmount,
-      gst_percent: gstPercent,
-      gst_amount: newGstAmount,
-      grand_total: newGrandTotal,
-      total_assets: campaignData.total_assets,
-      billing_cycle: campaignData.billing_cycle,
-      notes: `Renewed from ${campaign.id}. ${notes || ""}`.trim(),
-    });
-
-    if (createError) throw createError;
-
-    // Copy campaign assets with new dates and reset status
-    if (campaignAssets && campaignAssets.length > 0) {
-      const newAssets = campaignAssets.map(asset => {
-        // Destructure to remove id and other fields we want to reset
-        const { id, created_at, photos, assigned_mounter_id, mounter_name, assigned_at, completed_at, ...rest } = asset;
-        return {
-          ...rest,
-          campaign_id: newCampaignId,
-          booking_start_date: newStartDateStr,
-          booking_end_date: newEndDateStr,
-          status: "Pending" as const,
-          installation_status: "Pending",
-          photos: null,
-          assigned_mounter_id: null,
-          mounter_name: null,
-          assigned_at: null,
-          completed_at: null,
-          created_at: new Date().toISOString(),
-        };
-      });
-
-      const { error: assetsError } = await supabase.from("campaign_assets").insert(newAssets);
-      if (assetsError) {
-        console.error("Error copying campaign assets:", assetsError);
-      }
-    }
-
-    // Copy campaign items with new dates
-    if (campaignItems && campaignItems.length > 0) {
-      const newItems = campaignItems.map(item => {
-        // Destructure to remove id
-        const { id, created_at, updated_at, ...rest } = item;
-        return {
-          ...rest,
-          campaign_id: newCampaignId,
-          start_date: newStartDateStr,
-          end_date: newEndDateStr,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-      });
-
-      const { error: itemsError } = await supabase.from("campaign_items").insert(newItems);
-      if (itemsError) {
-        console.error("Error copying campaign items:", itemsError);
-      }
-    }
-
-    // Create asset bookings for new campaign
-    if (campaignAssets && campaignAssets.length > 0) {
-      const bookings = campaignAssets.map(asset => ({
-        asset_id: asset.asset_id,
-        campaign_id: newCampaignId,
-        start_date: newStartDateStr,
-        end_date: newEndDateStr,
-        booking_type: "Campaign",
-        status: "Confirmed",
-        created_by: user.id,
-      }));
-
-      await supabase.from("asset_bookings").insert(bookings);
-    }
-
-    // Log timeline event for new campaign
-    await supabase.from("campaign_timeline").insert({
-      campaign_id: newCampaignId,
-      company_id: campaignData.company_id,
-      event_type: "campaign_created",
-      event_title: "Renewal Campaign Created",
-      event_description: `New campaign created as renewal of ${campaign.id}`,
-      created_by: user.id,
-      metadata: {
-        original_campaign_id: campaign.id,
-        original_campaign_name: campaign.campaign_name,
-        renewal_type: "copy_new",
-      },
-    });
-
-    // Mark original campaign as completed if selected
-    if (markOriginalCompleted && campaign.status !== "Completed") {
-      await supabase
-        .from("campaigns")
-        .update({ 
-          status: "Completed", 
-          updated_at: new Date().toISOString(),
-          notes: `${campaignData.notes || ""}\nRenewed to ${newCampaignId}`.trim(),
-        })
-        .eq("id", campaign.id);
-
-      await supabase.from("campaign_status_history").insert({
-        campaign_id: campaign.id,
-        old_status: campaign.status as any,
-        new_status: "Completed" as const,
-        notes: `Campaign completed and renewed to ${newCampaignId}`,
-        changed_by: user.id,
-      });
-
-      // Log timeline for original
-      await supabase.from("campaign_timeline").insert({
-        campaign_id: campaign.id,
-        company_id: campaignData.company_id,
-        event_type: "campaign_renewed",
-        event_title: "Campaign Renewed",
-        event_description: `Campaign renewed. New campaign: ${newCampaignId}`,
-        created_by: user.id,
-        metadata: {
-          new_campaign_id: newCampaignId,
-          new_start_date: newStartDateStr,
-          new_end_date: newEndDateStr,
-        },
-      });
-    }
-
-    // Generate invoice for new campaign if selected
-    if (generateInvoice && campaignData.client_id) {
-      const invoiceId = await generateInvoiceId(supabase, gstPercent);
-      
-      await supabase.from("invoices").insert({
-        id: invoiceId,
-        campaign_id: newCampaignId,
-        client_id: campaignData.client_id,
-        client_name: campaignData.client_name,
-        company_id: campaignData.company_id,
-        invoice_date: new Date().toISOString().split('T')[0],
-        due_date: format(addDays(new Date(), 30), "yyyy-MM-dd"),
-        invoice_period_start: newStartDateStr,
-        invoice_period_end: newEndDateStr,
-        status: "Draft",
-        invoice_type: "renewal",
-        sub_total: newSubtotal,
-        gst_percent: gstPercent,
-        gst_amount: newGstAmount,
-        total_amount: newGrandTotal,
-        balance_due: newGrandTotal,
-        items: [{
-          description: `Campaign: ${campaignData.campaign_name} (Renewal)`,
-          period: `${format(newStartDate, "MMM dd, yyyy")} - ${format(newEndDate, "MMM dd, yyyy")}`,
-          quantity: newDurationDays,
-          unit: "days",
-          rate: newDurationDays > 0 ? Math.round(newGrandTotal / newDurationDays) : 0,
-          amount: newGrandTotal,
-        }],
-        notes: `Renewal invoice for new campaign ${newCampaignId}`,
-        created_by: user.id,
-      });
-
-      await supabase.from("campaign_timeline").insert({
-        campaign_id: newCampaignId,
-        company_id: campaignData.company_id,
-        event_type: "invoice_created",
-        event_title: "Invoice Created",
-        event_description: `Invoice ${invoiceId} created (₹${newGrandTotal.toLocaleString('en-IN')})`,
-        created_by: user.id,
-        metadata: { invoice_id: invoiceId, amount: newGrandTotal },
-      });
-    }
-
-    return newCampaignId;
-  };
-
-  const handleExtendOrRenew = async (user: any) => {
-    const newEndDateStr = format(newEndDate, "yyyy-MM-dd");
-    const extensionStartDate = format(addDays(currentEndDate, 1), "yyyy-MM-dd");
-
-    // Get full campaign data
-    const { data: campaignData } = await supabase
-      .from("campaigns")
-      .select("*, company_id, client_id, gst_percent")
-      .eq("id", campaign.id)
-      .single();
-
-    // Update the campaign end date
-    const updateData: Record<string, any> = {
-      end_date: newEndDateStr,
-      updated_at: new Date().toISOString(),
-    };
-
-    // If campaign was Completed, set it back to Running
-    if (campaign.status === "Completed") {
-      updateData.status = "Running";
-    }
-
-    const { error: updateError } = await supabase
-      .from("campaigns")
-      .update(updateData)
-      .eq("id", campaign.id);
-
-    if (updateError) throw updateError;
-
-    // Log the extension in campaign timeline
-    await supabase.from("campaign_timeline").insert({
-      campaign_id: campaign.id,
-      company_id: campaignData?.company_id,
-      event_type: extensionType === "extend" ? "campaign_extended" : "campaign_renewed",
-      event_title: extensionType === "extend" ? "Campaign Extended" : "Campaign Renewed",
-      event_description: `Campaign ${extensionType === "extend" ? "extended" : "renewed"} from ${format(currentEndDate, "MMM dd, yyyy")} to ${format(newEndDate, "MMM dd, yyyy")}. ${notes || ""}`.trim(),
-      created_by: user.id,
-      metadata: {
-        previous_end_date: campaign.end_date,
-        new_end_date: newEndDateStr,
-        extension_days: extensionDays,
-        extension_type: extensionType,
-        generate_invoice: generateInvoice,
-        reset_photos: resetProofPhotos,
-        notes: notes,
-      },
-    });
-
-    // If status was changed, log in status history
-    if (campaign.status === "Completed") {
-      await supabase.from("campaign_status_history").insert({
-        campaign_id: campaign.id,
-        old_status: "Completed",
-        new_status: "Running",
-        notes: `Campaign ${extensionType === "extend" ? "extended" : "renewed"} until ${format(newEndDate, "MMM dd, yyyy")}`,
-        changed_by: user.id,
-      });
-    }
-
-    // Update asset bookings end dates
-    await supabase
-      .from("asset_bookings")
-      .update({ end_date: newEndDateStr, updated_at: new Date().toISOString() })
-      .eq("campaign_id", campaign.id)
-      .eq("status", "Confirmed");
-
-    // Update campaign_assets booking end dates
-    await supabase
-      .from("campaign_assets")
-      .update({ booking_end_date: newEndDateStr })
-      .eq("campaign_id", campaign.id);
-
-    // Reset proof photos for new period if selected
-    if (resetProofPhotos) {
+  const handleValidateAvailability = async () => {
+    setValidating(true);
+    try {
+      // Fetch campaign assets
       const { data: assets } = await supabase
         .from("campaign_assets")
-        .select("id, photos, status")
-        .eq("campaign_id", campaign.id);
+        .select("asset_id, location, city, media_type")
+        .eq("campaign_id", campaign.id)
+        .eq("is_removed", false);
 
-      if (assets && assets.length > 0) {
-        for (const asset of assets) {
-          await supabase
-            .from("campaign_assets")
-            .update({
-              photos: null,
-              installation_status: "Pending",
-              status: "Pending",
-            })
-            .eq("id", asset.id);
+      if (!assets || assets.length === 0) {
+        setTotalAssetCount(0);
+        setAvailableCount(0);
+        setConflicts([]);
+        setValidated(true);
+        return;
+      }
 
-          if (asset.photos) {
-            await supabase.from("campaign_timeline").insert({
-              campaign_id: campaign.id,
-              company_id: campaignData?.company_id,
-              event_type: "photos_archived",
-              event_title: "Proof Photos Archived",
-              event_description: `Previous period photos archived. Ready for new proof uploads.`,
-              created_by: user.id,
-              metadata: {
-                archived_at: new Date().toISOString(),
-                period: `${campaign.start_date} to ${campaign.end_date}`,
-              },
-            });
-          }
+      const assetIds = assets.map(a => a.asset_id);
+      setTotalAssetCount(assetIds.length);
+
+      // Check availability for extension period (day after current end → new end)
+      const extensionStart = format(addDays(currentEndDate, 1), "yyyy-MM-dd");
+      const extensionEnd = format(newEndDate, "yyyy-MM-dd");
+
+      const availabilityMap = await getAssetAvailabilityBatch(
+        assetIds, extensionStart, extensionEnd, campaign.id
+      );
+
+      const conflictList: ConflictInfo[] = [];
+      let available = 0;
+
+      for (const asset of assets) {
+        const summary = availabilityMap.get(asset.asset_id);
+        if (!summary || summary.is_available_for_range) {
+          available++;
+        } else {
+          // Get the asset code
+          const { data: mediaAsset } = await supabase
+            .from("media_assets")
+            .select("media_asset_code")
+            .eq("id", asset.asset_id)
+            .single();
+
+          conflictList.push({
+            assetId: asset.asset_id,
+            assetCode: mediaAsset?.media_asset_code || asset.asset_id,
+            location: asset.location || asset.city || "Unknown",
+            blockingEntity: summary.blocking_entity_name || summary.client_name || "Another booking",
+            blockedDates: `${summary.booking_start || "?"} → ${summary.booking_end || "?"}`,
+            nextAvailable: summary.next_available_date,
+          });
         }
       }
+
+      setAvailableCount(available);
+      setConflicts(conflictList);
+      setValidated(true);
+    } catch (err) {
+      console.error("Availability validation error:", err);
+      toast({ title: "Validation Error", description: "Failed to check availability", variant: "destructive" });
+    } finally {
+      setValidating(false);
     }
-
-    // Generate invoice for renewal period if selected
-    if (generateInvoice && campaignData && campaignData.client_id) {
-      const gstPercent = campaignData.gst_percent ?? 0;
-      const invoiceId = await generateInvoiceId(supabase, gstPercent);
-      const subTotal = Math.round(renewalAmount / (1 + gstPercent / 100));
-      const gstAmount = Math.round(renewalAmount - subTotal);
-
-      const { error: invoiceError } = await supabase.from("invoices").insert({
-        id: invoiceId,
-        campaign_id: campaign.id,
-        client_id: campaignData.client_id,
-        client_name: campaign.client_name || campaignData.client_name,
-        company_id: campaignData.company_id,
-        invoice_date: new Date().toISOString().split('T')[0],
-        due_date: format(addDays(new Date(), 30), "yyyy-MM-dd"),
-        invoice_period_start: extensionStartDate,
-        invoice_period_end: newEndDateStr,
-        status: "Draft",
-        invoice_type: "renewal",
-        sub_total: subTotal,
-        gst_percent: gstPercent,
-        gst_amount: gstAmount,
-        total_amount: renewalAmount,
-        balance_due: renewalAmount,
-        items: [{
-          description: `Campaign Renewal: ${campaign.campaign_name}`,
-          period: `${format(addDays(currentEndDate, 1), "MMM dd, yyyy")} - ${format(newEndDate, "MMM dd, yyyy")}`,
-          quantity: extensionDays,
-          unit: "days",
-          rate: extensionDays > 0 ? Math.round(renewalAmount / extensionDays) : 0,
-          amount: renewalAmount,
-        }],
-        notes: `Renewal invoice for extended campaign period. ${notes || ""}`.trim(),
-        created_by: user.id,
-      });
-
-      if (invoiceError) {
-        console.error("Invoice creation error:", invoiceError);
-        toast({
-          title: "Warning",
-          description: "Campaign extended but invoice creation failed. Please create manually.",
-          variant: "destructive",
-        });
-      } else {
-        await supabase.from("campaign_timeline").insert({
-          campaign_id: campaign.id,
-          company_id: campaignData.company_id,
-          event_type: "renewal_invoice_created",
-          event_title: "Renewal Invoice Created",
-          event_description: `Invoice ${invoiceId} created for renewal period (₹${renewalAmount.toLocaleString('en-IN')})`,
-          created_by: user.id,
-          metadata: {
-            invoice_id: invoiceId,
-            amount: renewalAmount,
-            period_start: extensionStartDate,
-            period_end: newEndDateStr,
-          },
-        });
-      }
-    }
-
-    // Create billing period record for tracking
-    if (campaignData?.company_id) {
-      const monthKey = format(addDays(currentEndDate, 1), "yyyy-MM");
-      
-      const { data: existingPeriod } = await supabase
-        .from("campaign_billing_periods")
-        .select("id")
-        .eq("campaign_id", campaign.id)
-        .eq("month_key", monthKey)
-        .maybeSingle();
-      
-      if (!existingPeriod) {
-        await supabase.from("campaign_billing_periods").insert({
-          company_id: campaignData.company_id,
-          campaign_id: campaign.id,
-          period_start: extensionStartDate,
-          period_end: newEndDateStr,
-          month_key: monthKey,
-          status: generateInvoice ? "INVOICED" : "OPEN",
-        });
-      }
-    }
-
-    return null;
   };
 
   const handleSubmit = async () => {
-    setLoading(true);
+    if (!validated) {
+      toast({ title: "Validate First", description: "Please validate availability before extending.", variant: "destructive" });
+      return;
+    }
 
+    if (conflicts.length > 0) {
+      toast({ title: "Conflicts Exist", description: `${conflicts.length} asset(s) have booking conflicts. Resolve before extending.`, variant: "destructive" });
+      return;
+    }
+
+    setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      let newCampaignId: string | null = null;
+      const newEndDateStr = format(newEndDate, "yyyy-MM-dd");
 
-      if (extensionType === "copy_new") {
-        newCampaignId = await handleCopyAsNewCampaign(user);
-        toast({
-          title: "New Campaign Created",
-          description: `${newCampaignId} created with dates ${format(newStartDate, "MMM dd")} - ${format(newEndDate, "MMM dd, yyyy")}${generateInvoice ? ". Invoice created." : ""}`,
+      // Update campaign end date
+      const updateData: Record<string, any> = {
+        end_date: newEndDateStr,
+        updated_at: new Date().toISOString(),
+      };
+      // If campaign was Completed, set it back to Running
+      if (campaign.status === "Completed") {
+        updateData.status = "Running";
+      }
+
+      const { error: updateError } = await supabase
+        .from("campaigns")
+        .update(updateData)
+        .eq("id", campaign.id);
+      if (updateError) throw updateError;
+
+      // Update asset_bookings end dates
+      await supabase
+        .from("asset_bookings")
+        .update({ end_date: newEndDateStr, updated_at: new Date().toISOString() })
+        .eq("campaign_id", campaign.id)
+        .eq("status", "Confirmed");
+
+      // Update campaign_assets booking end dates
+      await supabase
+        .from("campaign_assets")
+        .update({ booking_end_date: newEndDateStr })
+        .eq("campaign_id", campaign.id)
+        .eq("is_removed", false);
+
+      // Recalculate and update campaign totals
+      const { data: campaignData } = await supabase
+        .from("campaigns")
+        .select("*, company_id, gst_percent")
+        .eq("id", campaign.id)
+        .single();
+
+      const { data: campaignAssets } = await supabase
+        .from("campaign_assets")
+        .select("*")
+        .eq("campaign_id", campaign.id)
+        .eq("is_removed", false);
+
+      if (campaignData && campaignAssets) {
+        // Dynamically import to avoid circular deps
+        const { computeCampaignTotals } = await import("@/utils/computeCampaignTotals");
+        const totals = computeCampaignTotals({
+          campaign: {
+            start_date: campaignData.start_date,
+            end_date: newEndDateStr,
+            gst_percent: campaignData.gst_percent,
+            billing_cycle: campaignData.billing_cycle,
+            manual_discount_amount: campaignData.manual_discount_amount,
+          },
+          campaignAssets,
+          manualDiscountAmount: campaignData.manual_discount_amount ?? undefined,
         });
-      } else {
-        await handleExtendOrRenew(user);
-        toast({
-          title: extensionType === "extend" ? "Campaign Extended" : "Campaign Renewed",
-          description: `${campaign.campaign_name} is now active until ${format(newEndDate, "MMM dd, yyyy")}${generateInvoice ? ". Renewal invoice created." : ""}`,
+
+        await supabase.from("campaigns").update({
+          subtotal: Math.round(totals.displayCost * 100) / 100,
+          printing_total: Math.round(totals.printingCost * 100) / 100,
+          mounting_total: Math.round(totals.mountingCost * 100) / 100,
+          total_amount: Math.round(totals.taxableAmount * 100) / 100,
+          gst_amount: Math.round(totals.gstAmount * 100) / 100,
+          grand_total: Math.round(totals.grandTotal * 100) / 100,
+        }).eq("id", campaign.id);
+      }
+
+      // Log timeline event
+      await supabase.from("campaign_timeline").insert({
+        campaign_id: campaign.id,
+        company_id: campaignData?.company_id,
+        event_type: "campaign_extended",
+        event_title: "Campaign Extended",
+        event_description: `Extended from ${format(currentEndDate, "MMM dd, yyyy")} to ${format(newEndDate, "MMM dd, yyyy")}. +${extensionDays} days. ${notes || ""}`.trim(),
+        created_by: user.id,
+        metadata: {
+          previous_end_date: campaign.end_date,
+          new_end_date: newEndDateStr,
+          extension_days: extensionDays,
+        },
+      });
+
+      // Status history if status changed
+      if (campaign.status === "Completed") {
+        await supabase.from("campaign_status_history").insert({
+          campaign_id: campaign.id,
+          old_status: "Completed",
+          new_status: "Running",
+          notes: `Campaign extended until ${format(newEndDate, "MMM dd, yyyy")}`,
+          changed_by: user.id,
         });
       }
 
+      toast({
+        title: "Campaign Extended",
+        description: `${campaign.campaign_name} extended to ${format(newEndDate, "MMM dd, yyyy")} (+${extensionDays} days)`,
+      });
+
       onSuccess();
       onOpenChange(false);
-      
-      // Reset form
-      setExtensionType("extend");
-      setDurationOption("1month");
-      setCustomEndDate(undefined);
-      setCustomStartDate(undefined);
-      setCopyNewStartDate(undefined);
-      setCopyNewEndDate(undefined);
-      setNotes("");
-      setGenerateInvoice(true);
-      setResetProofPhotos(true);
-      setCarryForwardCreatives(true);
-      setMarkOriginalCompleted(true);
+      resetForm();
     } catch (error: any) {
-      console.error("Error processing campaign:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to process campaign",
-        variant: "destructive",
-      });
+      console.error("Error extending campaign:", error);
+      toast({ title: "Error", description: error.message || "Failed to extend campaign", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
+  const resetForm = () => {
+    setDurationOption("1month");
+    setCustomEndDate(undefined);
+    setNotes("");
+    setValidated(false);
+    setConflicts([]);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
+    <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
+      <DialogContent className="sm:max-w-[560px] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <RefreshCw className="h-5 w-5 text-primary" />
-            Extend / Renew Campaign
+            <CalendarPlus className="h-5 w-5 text-primary" />
+            Extend Current Campaign
           </DialogTitle>
           <DialogDescription>
-            Extend or renew <span className="font-medium text-foreground">{campaign.campaign_name}</span> for {campaign.client_name}
+            Push the end date of <span className="font-medium text-foreground">{campaign.campaign_name}</span>. Same campaign, same history, same assets.
           </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="max-h-[60vh] pr-4">
-          <div className="space-y-6 py-4">
-            {/* Current Campaign Info */}
-            <div className="rounded-lg bg-muted p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Current Period</p>
-                  <p className="font-semibold">
-                    {format(new Date(campaign.start_date), "MMM dd")} - {format(currentEndDate, "MMM dd, yyyy")}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  <p className="font-semibold">{campaign.status}</p>
-                </div>
+          <div className="space-y-5 py-4">
+            {/* Current Info */}
+            <div className="rounded-lg bg-muted p-4 grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className="text-muted-foreground">Current Period</p>
+                <p className="font-semibold">{format(new Date(campaign.start_date), "MMM dd")} – {format(currentEndDate, "MMM dd, yyyy")}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-muted-foreground">Status</p>
+                <p className="font-semibold">{campaign.status}</p>
               </div>
             </div>
 
-            {/* Extension Type */}
+            {/* Duration */}
             <div className="space-y-3">
-              <Label>Action Type</Label>
-              <RadioGroup
-                value={extensionType}
-                onValueChange={(v) => setExtensionType(v as ExtensionType)}
-                className="space-y-3"
-              >
-                <div className={cn(
-                  "flex items-center space-x-3 rounded-lg border p-4 cursor-pointer transition-colors",
-                  extensionType === "extend" && "border-primary bg-primary/5"
-                )}>
-                  <RadioGroupItem value="extend" id="extend" />
-                  <div className="flex-1">
-                    <Label htmlFor="extend" className="cursor-pointer font-medium flex items-center gap-2">
-                      <CalendarPlus className="h-4 w-4" />
-                      Extend Current Campaign
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Add time from current end date. Same campaign ID.
-                    </p>
-                  </div>
+              <Label>Extension Duration</Label>
+              <RadioGroup value={durationOption} onValueChange={(v) => setDurationOption(v as DurationOption)} className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: "15days", label: "15 Days" },
+                    { value: "1month", label: "1 Month" },
+                    { value: "2months", label: "2 Months" },
+                    { value: "3months", label: "3 Months" },
+                  ].map((opt) => (
+                    <div key={opt.value} className={cn("flex items-center space-x-2 rounded-lg border p-3 cursor-pointer transition-colors", durationOption === opt.value && "border-primary bg-primary/5")}>
+                      <RadioGroupItem value={opt.value} id={`ext-${opt.value}`} />
+                      <Label htmlFor={`ext-${opt.value}`} className="cursor-pointer flex-1">{opt.label}</Label>
+                    </div>
+                  ))}
                 </div>
-                <div className={cn(
-                  "flex items-center space-x-3 rounded-lg border p-4 cursor-pointer transition-colors",
-                  extensionType === "renew" && "border-primary bg-primary/5"
-                )}>
-                  <RadioGroupItem value="renew" id="renew" />
-                  <div className="flex-1">
-                    <Label htmlFor="renew" className="cursor-pointer font-medium flex items-center gap-2">
-                      <RefreshCw className="h-4 w-4" />
-                      Renew (Month-on-Month)
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Add time from today. Resets proof photos. Same campaign ID.
-                    </p>
-                  </div>
-                </div>
-                <div className={cn(
-                  "flex items-center space-x-3 rounded-lg border p-4 cursor-pointer transition-colors",
-                  extensionType === "copy_new" && "border-primary bg-primary/5"
-                )}>
-                  <RadioGroupItem value="copy_new" id="copy_new" />
-                  <div className="flex-1">
-                    <Label htmlFor="copy_new" className="cursor-pointer font-medium flex items-center gap-2">
-                      <Copy className="h-4 w-4" />
-                      Copy as New Campaign
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Create a new campaign with new ID, dates & fresh invoice.
-                    </p>
-                  </div>
+                <div className={cn("flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors", durationOption === "custom" && "border-primary bg-primary/5")} onClick={() => setDurationOption("custom")}>
+                  <RadioGroupItem value="custom" id="ext-custom" />
+                  <Label htmlFor="ext-custom" className="cursor-pointer">Custom End Date</Label>
+                  {durationOption === "custom" && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="ml-auto" onClick={(e) => e.stopPropagation()}>
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {customEndDate ? format(customEndDate, "MMM dd, yyyy") : "Pick date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="end">
+                        <Calendar mode="single" selected={customEndDate} onSelect={setCustomEndDate} disabled={(date) => date <= currentEndDate} initialFocus />
+                      </PopoverContent>
+                    </Popover>
+                  )}
                 </div>
               </RadioGroup>
             </div>
 
-            {/* Date Selection for Copy New - Start & End Date pickers */}
-            {extensionType === "copy_new" && (
-              <div className="space-y-4">
-                <div className="space-y-3">
-                  <Label>New Campaign Start Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left">
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {copyNewStartDate ? format(copyNewStartDate, "MMMM dd, yyyy") : format(getDefaultCopyNewStartDate(), "MMMM dd, yyyy")}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={copyNewStartDate || getDefaultCopyNewStartDate()}
-                        onSelect={(date) => {
-                          setCopyNewStartDate(date);
-                          // Reset end date if it's before new start
-                          if (date && copyNewEndDate && copyNewEndDate <= date) {
-                            setCopyNewEndDate(addMonths(date, 1));
-                          }
-                        }}
-                        initialFocus
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                
-                <div className="space-y-3">
-                  <Label>New Campaign End Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left">
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {copyNewEndDate ? format(copyNewEndDate, "MMMM dd, yyyy") : format(addMonths(copyNewStartDate || getDefaultCopyNewStartDate(), 1), "MMMM dd, yyyy")}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={copyNewEndDate || addMonths(copyNewStartDate || getDefaultCopyNewStartDate(), 1)}
-                        onSelect={setCopyNewEndDate}
-                        disabled={(date) => date <= (copyNewStartDate || getDefaultCopyNewStartDate())}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {/* Duration Summary */}
-                <div className="rounded-lg bg-muted/50 p-3 text-sm">
-                  <span className="text-muted-foreground">Duration: </span>
-                  <span className="font-medium">{newDurationDays} days</span>
-                </div>
-              </div>
-            )}
-
-            {/* Duration Options - Only for extend/renew */}
-            {extensionType !== "copy_new" && (
-              <div className="space-y-3">
-                <Label>Duration</Label>
-                <RadioGroup
-                  value={durationOption}
-                  onValueChange={(v) => setDurationOption(v as DurationOption)}
-                  className="space-y-2"
-                >
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { value: "15days", label: "15 Days" },
-                      { value: "1month", label: "1 Month" },
-                      { value: "2months", label: "2 Months" },
-                      { value: "3months", label: "3 Months" },
-                    ].map((option) => (
-                      <div
-                        key={option.value}
-                        className={cn(
-                          "flex items-center space-x-2 rounded-lg border p-3 cursor-pointer transition-colors",
-                          durationOption === option.value && "border-primary bg-primary/5"
-                        )}
-                      >
-                        <RadioGroupItem value={option.value} id={option.value} />
-                        <Label htmlFor={option.value} className="cursor-pointer flex-1">
-                          {option.label}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {/* Custom Date Option */}
-                  <div
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
-                      durationOption === "custom" && "border-primary bg-primary/5"
-                    )}
-                    onClick={() => setDurationOption("custom")}
-                  >
-                    <RadioGroupItem value="custom" id="custom" />
-                    <Label htmlFor="custom" className="cursor-pointer">Custom End Date</Label>
-                    {durationOption === "custom" && (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="ml-auto"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {customEndDate ? format(customEndDate, "MMM dd, yyyy") : "Pick date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="end">
-                          <Calendar
-                            mode="single"
-                            selected={customEndDate}
-                            onSelect={setCustomEndDate}
-                            disabled={(date) => date <= newStartDate}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    )}
-                  </div>
-                </RadioGroup>
-              </div>
-            )}
-
-            {/* New Dates Preview */}
+            {/* New End Date Preview */}
             <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-medium text-primary">
-                  {extensionType === "copy_new" ? "New Campaign Dates" : "New End Date"}
-                </p>
-                {extensionType === "copy_new" && (
-                  <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
-                    NEW ID
-                  </span>
-                )}
-              </div>
-              <p className="text-2xl font-bold">
-                {extensionType === "copy_new" 
-                  ? `${format(newStartDate, "MMM dd")} - ${format(newEndDate, "MMM dd, yyyy")}`
-                  : format(newEndDate, "MMMM dd, yyyy")
-                }
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {extensionType === "copy_new" 
-                  ? `${newDurationDays} days duration`
-                  : `+${extensionDays} days from current end`
-                }
-              </p>
+              <p className="text-sm font-medium text-primary">New End Date</p>
+              <p className="text-2xl font-bold">{format(newEndDate, "MMMM dd, yyyy")}</p>
+              <p className="text-sm text-muted-foreground">+{extensionDays} days from current end</p>
             </div>
 
             <Separator />
 
-            {/* Workflow Options */}
-            <div className="space-y-4">
-              <Label className="text-base font-semibold">Workflow Options</Label>
-              
-              <div className="space-y-3">
-                {/* Generate Invoice checkbox removed — use Billing & Invoices module */}
-
-                {extensionType !== "copy_new" && (
-                  <div className="flex items-start gap-3 p-3 rounded-lg border">
-                    <Checkbox
-                      id="resetProofPhotos"
-                      checked={resetProofPhotos}
-                      onCheckedChange={(checked) => setResetProofPhotos(checked as boolean)}
-                    />
-                    <div className="flex-1">
-                      <Label htmlFor="resetProofPhotos" className="cursor-pointer flex items-center gap-2 font-medium">
-                        <Camera className="h-4 w-4 text-purple-500" />
-                        Reset Proof Photos
-                      </Label>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Archive current photos and allow new proof uploads for the new period
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {extensionType === "copy_new" && (
-                  <div className="flex items-start gap-3 p-3 rounded-lg border">
-                    <Checkbox
-                      id="markOriginalCompleted"
-                      checked={markOriginalCompleted}
-                      onCheckedChange={(checked) => setMarkOriginalCompleted(checked as boolean)}
-                    />
-                    <div className="flex-1">
-                      <Label htmlFor="markOriginalCompleted" className="cursor-pointer font-medium">
-                        Mark Original as Completed
-                      </Label>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Set current campaign status to "Completed"
-                      </p>
-                    </div>
-                  </div>
-                )}
+            {/* Availability Validation */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">Availability Check</Label>
+                <Button variant="outline" size="sm" onClick={handleValidateAvailability} disabled={validating}>
+                  {validating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldAlert className="mr-2 h-4 w-4" />}
+                  {validating ? "Checking..." : "Validate Availability"}
+                </Button>
               </div>
+
+              {validated && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <Badge variant={conflicts.length === 0 ? "default" : "destructive"} className={conflicts.length === 0 ? "bg-green-100 text-green-800" : ""}>
+                      {conflicts.length === 0 ? (
+                        <><CheckCircle2 className="mr-1 h-3 w-3" /> All Clear</>
+                      ) : (
+                        <><ShieldAlert className="mr-1 h-3 w-3" /> {conflicts.length} Conflict(s)</>
+                      )}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">{availableCount}/{totalAssetCount} assets available</span>
+                  </div>
+
+                  {conflicts.length > 0 && (
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2 max-h-[200px] overflow-y-auto">
+                      {conflicts.map((c) => (
+                        <div key={c.assetId} className="text-sm border-b border-destructive/10 pb-2 last:border-0">
+                          <p className="font-medium">{c.assetCode} — {c.location}</p>
+                          <p className="text-muted-foreground">Blocked by: {c.blockingEntity} ({c.blockedDates})</p>
+                          {c.nextAvailable && <p className="text-xs text-muted-foreground">Next available: {c.nextAvailable}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Notes */}
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes (Optional)</Label>
-              <Textarea
-                id="notes"
-                placeholder="Add any notes about this renewal..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="min-h-[80px]"
-              />
+              <Label>Notes (Optional)</Label>
+              <Textarea placeholder="Reason for extension..." value={notes} onChange={(e) => setNotes(e.target.value)} className="min-h-[60px]" />
+            </div>
+
+            {/* Info box: no side effects */}
+            <div className="rounded-lg bg-muted/60 p-3 text-xs text-muted-foreground space-y-1">
+              <p>✓ Proof photos and operations statuses are preserved</p>
+              <p>✓ No invoices generated — use Billing & Invoices module</p>
+              <p>✓ Campaign totals will be recalculated automatically</p>
             </div>
           </div>
         </ScrollArea>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={loading} className="min-w-[140px]">
-            {loading ? (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Processing...
-              </>
-            ) : extensionType === "copy_new" ? (
-              <>
-                <Copy className="mr-2 h-4 w-4" />
-                Create New Campaign
-              </>
-            ) : extensionType === "extend" ? (
-              <>
-                <CalendarPlus className="mr-2 h-4 w-4" />
-                Extend Campaign
-              </>
-            ) : (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Renew Campaign
-              </>
-            )}
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={loading || !validated || conflicts.length > 0} className="min-w-[140px]">
+            {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Extending...</> : <><CalendarPlus className="mr-2 h-4 w-4" />Extend Campaign</>}
           </Button>
         </DialogFooter>
       </DialogContent>

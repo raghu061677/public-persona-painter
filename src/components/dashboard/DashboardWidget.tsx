@@ -215,11 +215,23 @@ export function DashboardWidget({ widget, globalFilters }: WidgetProps) {
 
     const assetIds = allAssets.map((a: any) => a.id);
 
-    // 2. Fetch active campaign bookings overlapping today
-    const { data: bookings } = await supabase
-      .from('campaign_assets' as any)
-      .select('asset_id, campaign_id, booking_start_date, booking_end_date, campaigns:campaign_id!inner(status, is_deleted)')
-      .in('asset_id', assetIds) as any;
+    // 2. Unified availability: parallel fetch campaign bookings + holds overlapping today
+    const [{ data: bookings }, { data: holds }] = await Promise.all([
+      supabase
+        .from('campaign_assets' as any)
+        .select('asset_id, campaign_id, effective_start_date, effective_end_date, is_removed, campaigns:campaign_id!inner(status, is_deleted)')
+        .in('asset_id', assetIds)
+        .eq('is_removed', false)
+        .lte('effective_start_date', today)
+        .gte('effective_end_date', today) as any,
+      supabase
+        .from('asset_holds' as any)
+        .select('asset_id')
+        .in('asset_id', assetIds)
+        .eq('status', 'ACTIVE')
+        .lte('start_date', today)
+        .gte('end_date', today) as any,
+    ]);
 
     const bookedAssetIds = new Set<string>();
     for (const b of (bookings || [])) {
@@ -227,27 +239,14 @@ export function DashboardWidget({ widget, globalFilters }: WidgetProps) {
       if (!campaign || campaign.is_deleted) continue;
       const activeStatuses = ['Draft', 'Upcoming', 'Running'];
       if (!activeStatuses.includes(campaign.status)) continue;
-      const bStart = b.booking_start_date;
-      const bEnd = b.booking_end_date;
-      if (bStart && bEnd && bStart <= today && bEnd >= today) {
-        bookedAssetIds.add(b.asset_id);
-      }
+      bookedAssetIds.add(b.asset_id);
     }
-
-    // 3. Fetch active holds overlapping today
-    const { data: holds } = await supabase
-      .from('asset_holds' as any)
-      .select('asset_id')
-      .in('asset_id', assetIds)
-      .eq('status', 'ACTIVE')
-      .lte('start_date', today)
-      .gte('end_date', today) as any;
 
     for (const h of (holds || [])) {
       bookedAssetIds.add(h.asset_id);
     }
 
-    // 4. Truly available = all minus booked/held
+    // 3. Truly available = all minus booked/held
     const vacantCount = allAssets.filter((a: any) => !bookedAssetIds.has(a.id)).length;
 
     return {

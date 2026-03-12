@@ -97,9 +97,18 @@ export default function IntelligenceDashboard() {
     const today = new Date().toISOString().split('T')[0];
     // Total assets
     const { count: totalCount } = await supabase.from("media_assets").select("*", { count: "exact", head: true });
-    // Assets with active campaign booking today (dynamic)
-    const { data: activeBookings } = await supabase.from("campaign_assets").select("asset_id").eq("is_removed", false).lte("effective_start_date", today).gte("effective_end_date", today);
-    const bookedCount = new Set((activeBookings || []).map(b => b.asset_id)).size;
+    // Unified availability: campaign_assets + asset_holds overlap for today
+    const [{ data: activeBookings }, { data: activeHolds }] = await Promise.all([
+      supabase.from("campaign_assets").select("asset_id")
+        .eq("is_removed", false).lte("effective_start_date", today).gte("effective_end_date", today),
+      supabase.from("asset_holds").select("asset_id")
+        .eq("status", "ACTIVE").lte("start_date", today).gte("end_date", today),
+    ]);
+    const blockedIds = new Set([
+      ...(activeBookings || []).map(b => b.asset_id),
+      ...(activeHolds || []).map(h => h.asset_id),
+    ]);
+    const bookedCount = blockedIds.size;
     const vacantCount = (totalCount || 0) - bookedCount;
     const [{ count: campaignsEndingCount }, { data: revenueData }] = await Promise.all([
       supabase.from("campaigns").select("*", { count: "exact", head: true }).in("status", ["Running", "Upcoming"]),

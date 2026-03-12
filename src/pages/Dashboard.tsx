@@ -179,26 +179,39 @@ const Dashboard = () => {
         }
       });
 
-      // Fetch asset status distribution (dynamic: check bookings + holds)
+      // Unified availability: campaign_assets + asset_holds overlap for today
       const today = new Date().toISOString().split('T')[0];
       const { data: assetsByStatus } = await supabase
         .from("media_assets")
         .select("id, status")
         .eq("company_id", selectedCompanyId);
 
-      // Get active campaign bookings overlapping today
       const allAssetIds = (assetsByStatus || []).map((a: any) => a.id);
-      const { data: activeBookings } = allAssetIds.length > 0
-        ? await supabase
-            .from("campaign_assets" as any)
-            .select("asset_id, campaigns:campaign_id!inner(status, is_deleted)")
-            .in("asset_id", allAssetIds)
-            .lte("booking_start_date", today)
-            .gte("booking_end_date", today)
-        : { data: [] };
+
+      // Parallel fetch: campaign bookings + holds overlapping today
+      const [campaignResult, holdsResult] = await Promise.all([
+        allAssetIds.length > 0
+          ? supabase
+              .from("campaign_assets" as any)
+              .select("asset_id, campaigns:campaign_id!inner(status, is_deleted)")
+              .in("asset_id", allAssetIds)
+              .eq("is_removed", false)
+              .lte("effective_start_date", today)
+              .gte("effective_end_date", today)
+          : Promise.resolve({ data: [] }),
+        allAssetIds.length > 0
+          ? supabase
+              .from("asset_holds" as any)
+              .select("asset_id")
+              .in("asset_id", allAssetIds)
+              .eq("status", "ACTIVE")
+              .lte("start_date", today)
+              .gte("end_date", today)
+          : Promise.resolve({ data: [] }),
+      ]);
 
       const dynamicBookedIds = new Set<string>();
-      (activeBookings as any[] || []).forEach((b: any) => {
+      ((campaignResult.data as any[]) || []).forEach((b: any) => {
         const c = b.campaigns as any;
         if (!c || c.is_deleted) return;
         if (['Draft', 'Upcoming', 'Running'].includes(c.status)) {
@@ -206,18 +219,7 @@ const Dashboard = () => {
         }
       });
 
-      // Get active holds overlapping today
-      const { data: activeHolds } = allAssetIds.length > 0
-        ? await supabase
-            .from("asset_holds" as any)
-            .select("asset_id")
-            .in("asset_id", allAssetIds)
-            .eq("status", "ACTIVE")
-            .lte("start_date", today)
-            .gte("end_date", today)
-        : { data: [] };
-
-      (activeHolds as any[] || []).forEach((h: any) => {
+      ((holdsResult.data as any[]) || []).forEach((h: any) => {
         dynamicBookedIds.add(h.asset_id);
       });
 

@@ -128,9 +128,9 @@ export function AssetSelectionTable({
     return toDateString(d);
   }, [planEndDate, rangeStart]);
 
-  // Use shared availability engine — single source of truth
+  // Use unified availability engine — single source of truth (powered by asset_availability_view)
   const assetIds = useMemo(() => assets.map(a => a.id), [assets]);
-  const { getAvailability, loading: loadingBookings } = useAssetAvailability(
+  const { getStatus, loading: loadingBookings } = useUnifiedAvailability(
     assetIds,
     rangeStart,
     rangeEnd

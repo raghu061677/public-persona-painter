@@ -11029,6 +11029,42 @@ export type Database = {
       }
     }
     Views: {
+      asset_availability_view: {
+        Row: {
+          area: string | null
+          asset_id: string | null
+          authority: string | null
+          availability_status: string | null
+          base_rate: number | null
+          booking_end_date: string | null
+          booking_start_date: string | null
+          booking_type: string | null
+          card_rate: number | null
+          category: Database["public"]["Enums"]["media_category"] | null
+          city: string | null
+          client_name: string | null
+          company_id: string | null
+          current_campaign_id: string | null
+          current_campaign_name: string | null
+          current_plan_id: string | null
+          current_plan_name: string | null
+          display_label: string | null
+          effective_booking_end: string | null
+          effective_booking_start: string | null
+          facing: string | null
+          illumination_type: string | null
+          is_future_booking: boolean | null
+          is_held: boolean | null
+          is_running: boolean | null
+          location: string | null
+          media_asset_code: string | null
+          media_type: string | null
+          next_available_date: string | null
+          size: string | null
+          total_sqft: number | null
+        }
+        Relationships: []
+      }
       asset_code_audit_view: {
         Row: {
           area: string | null

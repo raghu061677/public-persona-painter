@@ -12,11 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertTriangle, Hammer } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { getAssetSqft, calculateMountingCost } from "@/utils/effectivePricing";
+import { getAssetSqft } from "@/utils/effectivePricing";
 
 interface BulkMountingDialogProps {
   open: boolean;
@@ -36,7 +35,8 @@ export function BulkMountingDialog({
   onBulkUpdate,
 }: BulkMountingDialogProps) {
   const [mountingValue, setMountingValue] = useState("");
-  const [mountingMode, setMountingMode] = useState<"sqft" | "fixed">("fixed");
+  // PLAN ITEMS: mounting is ALWAYS per-asset direct amount
+  const [mountingMode, setMountingMode] = useState<"fixed">("fixed");
   const [applyMode, setApplyMode] = useState<"selected" | "all">("selected");
   const [overrideExisting, setOverrideExisting] = useState(false);
 
@@ -68,14 +68,8 @@ export function BulkMountingDialog({
       if (hasExisting && !overrideExisting) return;
 
       const sqft = getAssetSqft(asset);
-      let cost: number;
-      
-      if (mountingMode === "fixed") {
-        cost = value;
-      } else {
-        const result = calculateMountingCost(asset, value);
-        cost = result.cost;
-      }
+      // Mounting is always direct per-asset amount for plan items
+      const cost = value;
 
       details.push({
         id: asset.id,
@@ -110,19 +104,12 @@ export function BulkMountingDialog({
       // Skip if not overriding existing
       if (hasExisting && !overrideExisting) return;
 
-      let cost: number;
-      if (mountingMode === "fixed") {
-        cost = value;
-      } else {
-        const result = calculateMountingCost(asset, value);
-        cost = result.cost;
-      }
+      // Mounting is always direct per-asset amount for plan items
+      const cost = value;
 
-      // Update mounting_mode
-      updates.push({ assetId: asset.id, field: "mounting_mode", value: mountingMode });
-      // Update mounting_rate
-      updates.push({ assetId: asset.id, field: "mounting_rate", value });
-      // Update mounting_charges (calculated cost)
+      // Always set fixed mode for plan items
+      updates.push({ assetId: asset.id, field: "mounting_mode", value: "fixed" });
+      updates.push({ assetId: asset.id, field: "mounting_rate", value: cost });
       updates.push({ assetId: asset.id, field: "mounting_charges", value: cost });
     });
 
@@ -146,7 +133,6 @@ export function BulkMountingDialog({
 
     // Reset and close
     setMountingValue("");
-    setMountingMode("sqft");
     setApplyMode("selected");
     setOverrideExisting(false);
     onOpenChange(false);
@@ -167,25 +153,9 @@ export function BulkMountingDialog({
 
         <ScrollArea className="flex-1 max-h-[55vh] pr-4">
           <div className="space-y-4 py-4">
-          {/* Mounting Mode Selection */}
+          {/* Mounting Value Input — always direct per-asset amount */}
           <div className="space-y-2">
-            <Label>Mounting Cost Type</Label>
-            <Select value={mountingMode} onValueChange={(v) => setMountingMode(v as "sqft" | "fixed")}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sqft">Per SQFT (₹/sqft)</SelectItem>
-                <SelectItem value="fixed">Fixed Cost (₹)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Mounting Value Input */}
-          <div className="space-y-2">
-            <Label htmlFor="mountingValue">
-              {mountingMode === "fixed" ? "Mounting Cost per Asset (₹)" : "Mounting Rate per SQFT (₹)"}
-            </Label>
+            <Label htmlFor="mountingValue">Mounting Cost per Asset (₹)</Label>
             <Input
               id="mountingValue"
               type="number"
@@ -193,7 +163,7 @@ export function BulkMountingDialog({
               step="0.5"
               value={mountingValue}
               onChange={(e) => setMountingValue(e.target.value)}
-              placeholder={mountingMode === "fixed" ? "e.g., 5000" : "e.g., 12"}
+              placeholder="e.g., 5000"
               className="text-lg"
             />
           </div>
@@ -257,10 +227,8 @@ export function BulkMountingDialog({
                         <tr key={detail.id} className="border-b border-muted">
                           <td className="py-1.5 pr-2 font-mono">{detail.code}</td>
                           <td className="text-right py-1.5 px-2">{detail.sqft.toLocaleString('en-IN')}</td>
-                          <td className="text-center py-1.5 px-2">
-                            <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                              {mountingMode === "fixed" ? "Fixed" : "/Sqft"}
-                            </span>
+                        <td className="text-center py-1.5 px-2">
+                            <span className="text-xs bg-muted px-1.5 py-0.5 rounded">Fixed</span>
                           </td>
                           <td className="text-right py-1.5 pl-2 text-green-600 font-medium">
                             ₹{detail.cost.toLocaleString("en-IN", { maximumFractionDigits: 2 })}

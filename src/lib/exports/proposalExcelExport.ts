@@ -133,18 +133,12 @@ export async function generateProposalExcel(data: ProposalExportData): Promise<B
       printingCost = roundToTwo(sqft * printingRate);
     }
     
-    // Mounting cost: use pricing.mounting_charges > pricing.mounting_cost > (sqft * mounting_rate if mode is sqft) > 0
-    const mountingRate = pricing.mounting_rate || 0;
-    const mountingMode = pricing.mounting_mode || 'sqft';
+    // Mounting cost: always use direct per-asset amount for plan items
     let mountingCost = 0;
     if (pricing.mounting_charges && pricing.mounting_charges > 0) {
       mountingCost = roundToTwo(pricing.mounting_charges);
     } else if (pricing.mounting_cost && pricing.mounting_cost > 0) {
       mountingCost = roundToTwo(pricing.mounting_cost);
-    } else if (mountingMode === 'fixed' && mountingRate > 0) {
-      mountingCost = roundToTwo(mountingRate);
-    } else if (sqft > 0 && mountingRate > 0) {
-      mountingCost = roundToTwo(sqft * mountingRate);
     }
     
     // Final Amount = Display Cost + Printing + Mounting

@@ -1128,47 +1128,20 @@ export function SelectedAssetsTable({
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="space-y-1">
+                                <div className="space-y-1">
                                 <div className="flex items-center gap-1">
-                                  <Select
-                                    value={pricing.mounting_mode || 'fixed'}
-                                    onValueChange={(mode: 'sqft' | 'fixed') => {
-                                      onPricingUpdate(asset.id, 'mounting_mode', mode);
-                                      // Recalculate mounting cost based on new mode
-                                      const rate = mountingRate;
-                                      if (mode === 'fixed') {
-                                        onPricingUpdate(asset.id, 'mounting_charges', rate);
-                                      } else {
-                                        const result = calculateMountingCost(asset, rate);
-                                        onPricingUpdate(asset.id, 'mounting_charges', result.cost);
-                                      }
-                                    }}
-                                  >
-                                    <SelectTrigger className="h-7 w-16 text-xs">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="sqft">/Sqft</SelectItem>
-                                      <SelectItem value="fixed">Fixed</SelectItem>
-                                    </SelectContent>
-                                  </Select>
+                                  <span className="text-xs text-muted-foreground px-1">₹</span>
                                   <Input
                                     type="text"
-                                    value={formatNumberWithCommas(mountingRate)}
+                                    value={formatNumberWithCommas(mounting)}
                                     onChange={(e) => {
-                                      const rate = parseFormattedNumber(e.target.value);
-                                      onPricingUpdate(asset.id, 'mounting_rate', rate);
-                                      const mountingMode = pricing.mounting_mode || 'fixed';
-                                      // Calculate cost based on mode
-                                      if (mountingMode === 'fixed') {
-                                        onPricingUpdate(asset.id, 'mounting_charges', rate);
-                                      } else {
-                                        const result = calculateMountingCost(asset, rate);
-                                        onPricingUpdate(asset.id, 'mounting_charges', result.cost);
-                                      }
+                                      const val = parseFormattedNumber(e.target.value);
+                                      onPricingUpdate(asset.id, 'mounting_rate', val);
+                                      onPricingUpdate(asset.id, 'mounting_charges', val);
+                                      onPricingUpdate(asset.id, 'mounting_mode', 'fixed');
                                     }}
-                                    className="h-7 w-20 text-sm"
-                                    placeholder={pricing.mounting_mode === 'fixed' ? "₹" : "₹/sqft"}
+                                    className="h-7 w-24 text-sm"
+                                    placeholder="₹"
                                   />
                                 </div>
                                 <div className="text-sm font-medium text-green-600 dark:text-green-400">

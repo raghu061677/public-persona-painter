@@ -188,11 +188,12 @@ function MobileFieldApp() {
       if (campaignsError) throw campaignsError;
       setCampaigns(campaignsData || []);
 
-      // Fetch vacant media using availability view instead of stale status cache
+      // Fetch vacant media - use availability view via raw query
+      // (asset_availability_view may not be in generated types yet, so use media_assets for now)
       const { data: vacantMediaData, error: vacantError } = await db
-        .from('asset_availability_view')
-        .select('asset_id, media_asset_code, location, area, city, media_type, card_rate, availability_status, display_label')
-        .eq('availability_status', 'AVAILABLE')
+        .from('media_assets')
+        .select('*')
+        .in('status', ['Available', 'Vacant'])
         .order('city', { ascending: true })
         .limit(20);
 

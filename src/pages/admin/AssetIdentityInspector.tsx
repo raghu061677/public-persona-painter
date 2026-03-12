@@ -384,10 +384,8 @@ export default function AssetIdentityInspector() {
                   <h3 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Booking State</h3>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div><span className="text-muted-foreground">Campaign:</span> <span className="ml-2 font-mono text-xs">{selectedAsset.current_campaign_id || "None"}</span></div>
-                    <div><span className="text-muted-foreground">Plan Hold:</span> <span className="ml-2 font-mono text-xs">{selectedAsset.current_plan_id || "None"}</span></div>
                     <div><span className="text-muted-foreground">Booked From:</span> <span className="ml-2">{selectedAsset.booked_from || "—"}</span></div>
                     <div><span className="text-muted-foreground">Booked To:</span> <span className="ml-2">{selectedAsset.booked_to || "—"}</span></div>
-                    <div><span className="text-muted-foreground">Next Available:</span> <span className="ml-2">{selectedAsset.next_available_date || "Now"}</span></div>
                   </div>
                 </div>
 

@@ -108,11 +108,9 @@ export function BulkMountingDialog({
       // Mounting is always direct per-asset amount for plan items
       const cost = value;
 
-      // Update mounting_mode
-      updates.push({ assetId: asset.id, field: "mounting_mode", value: mountingMode });
-      // Update mounting_rate
-      updates.push({ assetId: asset.id, field: "mounting_rate", value });
-      // Update mounting_charges (calculated cost)
+      // Always set fixed mode for plan items
+      updates.push({ assetId: asset.id, field: "mounting_mode", value: "fixed" });
+      updates.push({ assetId: asset.id, field: "mounting_rate", value: cost });
       updates.push({ assetId: asset.id, field: "mounting_charges", value: cost });
     });
 

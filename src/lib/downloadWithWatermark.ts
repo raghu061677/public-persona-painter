@@ -1,11 +1,17 @@
 /**
- * Utility for downloading images with asset watermarks
- * Adds location, dimension, and other asset details to images
+ * Utility for downloading images with configurable watermark modes
+ * 
+ * Modes:
+ *   - 'none'     → raw image, no watermark
+ *   - 'light'    → QR top-right + small badge bottom-left (default for client-facing)
+ *   - 'detailed' → QR top-right + metadata panel bottom-left (internal/admin)
  */
 
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+
+export type WatermarkMode = 'none' | 'light' | 'detailed';
 
 export interface AssetWatermarkData {
   city?: string;
@@ -23,316 +29,268 @@ interface WatermarkOptions {
   category: string;
   assetId?: string;
   qrCodeUrl?: string;
+  mode?: WatermarkMode;
 }
 
-interface WatermarkSettings {
-  position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
-  background_color: string;
-  text_color: string;
-  border_color: string;
-  show_logo: boolean;
-  logo_url?: string;
-  fields_to_show: string[];
-  panel_width: number;
-  panel_padding: number;
-  font_size: number;
+// ── Helpers ──────────────────────────────────────────────
+
+function buildFileName(assetData: AssetWatermarkData, category: string, assetId?: string, modeSuffix?: string): string {
+  const dateStr = format(new Date(), 'yyyyMMdd');
+  const loc = assetData.location
+    .replace(/[^a-zA-Z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .substring(0, 30);
+
+  const suffix = modeSuffix ? `-${modeSuffix}` : '';
+
+  if (assetData.city && assetData.area) {
+    return `${loc}-${assetData.area}-${assetData.city}-${category}${suffix}-${dateStr}.png`;
+  }
+  if (assetId) {
+    return `${assetId}-${loc}-${category}${suffix}-${dateStr}.png`;
+  }
+  return `${loc}-${category}${suffix}-${dateStr}.png`;
 }
 
-/**
- * Fetch watermark settings from database
- */
-async function getWatermarkSettings(): Promise<WatermarkSettings> {
+function triggerDownload(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+async function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = src;
+  });
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// ── QR Drawing (top-right) ───────────────────────────────
+
+async function drawQRTopRight(ctx: CanvasRenderingContext2D, qrCodeUrl: string, canvasW: number) {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
+    const qrImg = await loadImage(qrCodeUrl);
+    const qrSize = Math.min(100, canvasW * 0.1);
+    const pad = 16;
+    const cardPad = 6;
+    const labelH = 14;
+    const cardW = qrSize + cardPad * 2;
+    const cardH = qrSize + cardPad * 2 + labelH + 4;
+    const x = canvasW - cardW - pad;
+    const y = pad;
 
-    const { data: companyUser } = await supabase
-      .from('company_users' as any)
-      .select('company_id')
-      .eq('user_id', user.id)
-      .single();
+    // Shadow
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.2)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetY = 2;
 
-    if (!companyUser) throw new Error('No company found');
+    // White rounded card
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    roundRect(ctx, x, y, cardW, cardH, 8);
+    ctx.fill();
 
-    const { data, error } = await supabase
-      .from('watermark_settings' as any)
-      .select('*')
-      .eq('company_id', (companyUser as any).company_id)
-      .single();
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
 
-    if (error) throw error;
+    // Subtle border
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 1;
+    roundRect(ctx, x, y, cardW, cardH, 8);
+    ctx.stroke();
 
-    return {
-      position: (data as any).position as any,
-      background_color: (data as any).background_color,
-      text_color: (data as any).text_color,
-      border_color: (data as any).border_color,
-      show_logo: (data as any).show_logo,
-      logo_url: (data as any).logo_url,
-      fields_to_show: (data as any).fields_to_show as string[],
-      panel_width: (data as any).panel_width,
-      panel_padding: (data as any).panel_padding,
-      font_size: (data as any).font_size,
-    };
-  } catch (error) {
-    console.error('Error fetching watermark settings:', error);
-    // Return default settings
-    return {
-      position: 'bottom-right',
-      background_color: 'rgba(0, 0, 0, 0.75)',
-      text_color: 'rgba(255, 255, 255, 1)',
-      border_color: 'rgba(16, 185, 129, 0.8)',
-      show_logo: false,
-      fields_to_show: ['location', 'address', 'direction', 'dimension', 'area', 'illumination_type'],
-      panel_width: 380,
-      panel_padding: 30,
-      font_size: 16,
-    };
+    // QR image
+    ctx.drawImage(qrImg, x + cardPad, y + cardPad, qrSize, qrSize);
+
+    // Label
+    ctx.font = 'bold 9px Inter, system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('SCAN TO VERIFY', x + cardW / 2, y + cardPad + qrSize + labelH / 2 + 4);
+    ctx.textAlign = 'left';
+    ctx.restore();
+  } catch {
+    // QR not critical, skip silently
   }
 }
 
+// ── Light badge (bottom-left) ────────────────────────────
+
+function drawLightBadge(ctx: CanvasRenderingContext2D, canvasW: number, canvasH: number) {
+  const text = 'Go-Ads 360°';
+  const fontSize = Math.max(11, Math.min(14, canvasW * 0.012));
+  ctx.font = `600 ${fontSize}px Inter, system-ui, sans-serif`;
+  const textWidth = ctx.measureText(text).width;
+  const padX = 10;
+  const padY = 6;
+  const badgeW = textWidth + padX * 2;
+  const badgeH = fontSize + padY * 2;
+  const x = 16;
+  const y = canvasH - badgeH - 16;
+
+  ctx.save();
+  ctx.globalAlpha = 0.7;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  roundRect(ctx, x, y, badgeW, badgeH, badgeH / 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x + padX, y + badgeH / 2);
+  ctx.restore();
+}
+
+// ── Detailed metadata panel (bottom-left) ────────────────
+
+function drawDetailedPanel(ctx: CanvasRenderingContext2D, canvasW: number, canvasH: number, assetData: AssetWatermarkData) {
+  const fontSize = Math.max(12, Math.min(15, canvasW * 0.013));
+  const lineH = fontSize + 10;
+  const padX = 16;
+  const padY = 14;
+
+  // Collect fields that have data
+  const lines: { label: string; value: string }[] = [];
+  if (assetData.city && assetData.area) lines.push({ label: 'Location', value: `${assetData.city} – ${assetData.area}` });
+  if (assetData.location) {
+    const loc = assetData.location.length > 45 ? assetData.location.substring(0, 42) + '…' : assetData.location;
+    lines.push({ label: 'Address', value: loc });
+  }
+  if (assetData.direction) lines.push({ label: 'Direction', value: assetData.direction });
+  if (assetData.dimension) lines.push({ label: 'Size', value: assetData.dimension });
+  if (assetData.total_sqft) lines.push({ label: 'Area', value: `${assetData.total_sqft.toFixed(1)} sq.ft` });
+  if (assetData.illumination_type) lines.push({ label: 'Type', value: assetData.illumination_type });
+
+  if (lines.length === 0) return;
+
+  const panelW = Math.min(360, canvasW * 0.35);
+  const panelH = padY * 2 + lines.length * lineH + 4;
+  const x = 16;
+  const y = canvasH - panelH - 16;
+
+  ctx.save();
+
+  // Panel background
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  roundRect(ctx, x, y, panelW, panelH, 10);
+  ctx.fill();
+
+  // Subtle left accent
+  ctx.fillStyle = 'rgba(16,185,129,0.8)';
+  ctx.fillRect(x, y + 6, 3, panelH - 12);
+
+  // Draw fields
+  let ty = y + padY + fontSize;
+  const labelW = 72;
+  for (const line of lines) {
+    // Label
+    ctx.font = `600 ${fontSize - 1}px Inter, system-ui, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(line.label, x + padX, ty);
+
+    // Value
+    ctx.font = `${fontSize}px Inter, system-ui, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.fillText(line.value, x + padX + labelW, ty);
+
+    ty += lineH;
+  }
+
+  ctx.restore();
+}
+
+// ── Main Export Functions ────────────────────────────────
+
 /**
- * Downloads an image with asset details watermarked on it
- * Filename format: {City}-{Area}-{Location}-{Category}-{Date}.png
+ * Download an image with the specified watermark mode.
+ * Default mode: 'light' (QR + small badge, no metadata panel).
  */
 export async function downloadImageWithWatermark({
   assetData,
   imageUrl,
   category,
   assetId,
-  qrCodeUrl
+  qrCodeUrl,
+  mode = 'light',
 }: WatermarkOptions): Promise<void> {
   try {
+    const modeLabel = mode === 'none' ? 'original' : mode === 'light' ? 'branded' : 'detailed';
     toast({
-      title: "Preparing download...",
-      description: "Adding watermark to image",
+      title: "Preparing download…",
+      description: `Downloading ${modeLabel} image`,
     });
 
-    // Fetch watermark settings
-    const settings = await getWatermarkSettings();
+    const img = await loadImage(imageUrl);
 
-    // Create a canvas to composite the watermark
+    // For 'none' mode, just download the raw image
+    if (mode === 'none') {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+
+      return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (!blob) { reject(new Error('Blob failed')); return; }
+          triggerDownload(blob, buildFileName(assetData, category, assetId, 'original'));
+          toast({ title: "Download complete", description: "Original image saved" });
+          resolve();
+        }, 'image/png');
+      });
+    }
+
     const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Could not get canvas context');
 
-    // Load the image
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-      img.src = imageUrl;
-    });
-
-    // Set canvas size to match image
-    canvas.width = img.width;
-    canvas.height = img.height;
-
-    // Draw the original image
     ctx.drawImage(img, 0, 0);
 
-    // Use custom settings
-    const padding = settings.panel_padding;
-    const lineHeight = settings.font_size + 12;
-    const fieldsToShow = settings.fields_to_show;
-    
-    // Calculate panel height based on fields to show
-    let fieldCount = 0;
-    if (fieldsToShow.includes('location') && assetData.city && assetData.area) fieldCount++;
-    if (fieldsToShow.includes('address') && assetData.location) fieldCount++;
-    if (fieldsToShow.includes('direction') && assetData.direction) fieldCount++;
-    if (fieldsToShow.includes('dimension') && assetData.dimension) fieldCount++;
-    if (fieldsToShow.includes('area') && assetData.total_sqft) fieldCount++;
-    if ((fieldsToShow.includes('illumination_type') || fieldsToShow.includes('illumination')) && assetData.illumination_type) fieldCount++;
-    
-    const panelHeight = 35 + (fieldCount * lineHeight) + 20;
-    const panelWidth = settings.panel_width;
-    
-    // Calculate position based on settings
-    let panelX: number, panelY: number;
-    
-    switch (settings.position) {
-      case 'bottom-right':
-        panelX = canvas.width - panelWidth - padding;
-        panelY = canvas.height - panelHeight - padding;
-        break;
-      case 'bottom-left':
-        panelX = padding;
-        panelY = canvas.height - panelHeight - padding;
-        break;
-      case 'top-right':
-        panelX = canvas.width - panelWidth - padding;
-        panelY = padding;
-        break;
-      case 'top-left':
-        panelX = padding;
-        panelY = padding;
-        break;
-    }
-
-    // Draw semi-transparent overlay panel
-    ctx.fillStyle = settings.background_color;
-    ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
-
-    // Draw border
-    ctx.strokeStyle = settings.border_color;
-    ctx.lineWidth = 3;
-    ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
-
-    // Load and draw logo if enabled
-    if (settings.show_logo && settings.logo_url) {
-      try {
-        const logo = new Image();
-        logo.crossOrigin = 'anonymous';
-        await new Promise((resolve, reject) => {
-          logo.onload = resolve;
-          logo.onerror = reject;
-          logo.src = settings.logo_url!;
-        });
-        
-        const logoSize = 40;
-        ctx.drawImage(logo, panelX + 20, panelY + 15, logoSize, logoSize);
-      } catch (error) {
-        console.error('Error loading logo:', error);
-      }
-    }
-
-    let y = panelY + 35;
-    const x = panelX + 20;
-
-    // Helper function to draw text with custom colors
-    const drawText = (label: string, value: string, yPos: number) => {
-      // Label
-      ctx.font = `bold ${settings.font_size - 2}px Inter, system-ui, sans-serif`;
-      const labelColor = settings.text_color.replace('1)', '0.7)');
-      ctx.fillStyle = labelColor;
-      ctx.fillText(label, x, yPos);
-      
-      // Value
-      ctx.font = `${settings.font_size}px Inter, system-ui, sans-serif`;
-      ctx.fillStyle = settings.text_color;
-      ctx.fillText(value, x + 100, yPos);
-    };
-
-    // Draw asset details based on selected fields
-    if (fieldsToShow.includes('location') && assetData.city && assetData.area) {
-      drawText('Location:', `${assetData.city} - ${assetData.area}`, y);
-      y += lineHeight;
-    }
-
-    if (fieldsToShow.includes('address') && assetData.location) {
-      ctx.font = `${settings.font_size - 3}px Inter, system-ui, sans-serif`;
-      const labelColor = settings.text_color.replace('1)', '0.85)');
-      ctx.fillStyle = labelColor;
-      const locationText = assetData.location.length > 40 
-        ? assetData.location.substring(0, 37) + '...'
-        : assetData.location;
-      ctx.fillText(locationText, x + 100, y);
-      y += lineHeight;
-    }
-
-    if (fieldsToShow.includes('direction') && assetData.direction) {
-      drawText('Direction:', assetData.direction, y);
-      y += lineHeight;
-    }
-
-    if (fieldsToShow.includes('dimension') && assetData.dimension) {
-      drawText('Size:', assetData.dimension, y);
-      y += lineHeight;
-    }
-
-    if (fieldsToShow.includes('area') && assetData.total_sqft) {
-      drawText('Area:', `${assetData.total_sqft.toFixed(2)} sq.ft`, y);
-      y += lineHeight;
-    }
-
-    if ((fieldsToShow.includes('illumination_type') || fieldsToShow.includes('illumination')) && assetData.illumination_type) {
-      drawText('Type:', assetData.illumination_type, y);
-      y += lineHeight;
-    }
-
-    // Draw QR code if available
+    // QR code — always top-right for both light and detailed
     if (qrCodeUrl) {
-      try {
-        const qrImg = new Image();
-        qrImg.crossOrigin = 'anonymous';
-        await new Promise((resolve, reject) => {
-          qrImg.onload = resolve;
-          qrImg.onerror = reject;
-          qrImg.src = qrCodeUrl;
-        });
-        
-        // QR code size and position (always top-right corner)
-        const qrSize = Math.min(120, canvas.width * 0.12);
-        const qrPadding = 20;
-        const qrX = canvas.width - qrSize - qrPadding;
-        const qrY = qrPadding;
-        
-        // Draw white background for QR code
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-        ctx.fillRect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16);
-        
-        // Draw border around QR code
-        ctx.strokeStyle = settings.border_color;
-        ctx.lineWidth = 2;
-        ctx.strokeRect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16);
-        
-        // Draw QR code
-        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
-        
-        // Add "SCAN FOR DETAILS" label below QR
-        ctx.font = 'bold 10px Inter, system-ui, sans-serif';
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        ctx.textAlign = 'center';
-        ctx.fillText('SCAN FOR DETAILS', qrX + qrSize / 2, qrY + qrSize + 14);
-        ctx.textAlign = 'left'; // Reset
-      } catch (error) {
-        console.warn('Could not load QR code for watermark:', error);
-      }
+      await drawQRTopRight(ctx, qrCodeUrl, canvas.width);
     }
 
-    // Convert canvas to blob and download
+    if (mode === 'light') {
+      drawLightBadge(ctx, canvas.width, canvas.height);
+    } else if (mode === 'detailed') {
+      drawDetailedPanel(ctx, canvas.width, canvas.height, assetData);
+    }
+
     return new Promise((resolve, reject) => {
       canvas.toBlob((blob) => {
-        if (!blob) {
-          reject(new Error('Failed to create image blob'));
-          return;
-        }
-        
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        
-        // Generate filename: {Location}-{Area}-{City}-{Category}-{Date}.png
-        const dateStr = format(new Date(), 'yyyyMMdd');
-        const locationPart = assetData.location
-          .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special chars
-          .replace(/\s+/g, ' ') // Normalize spaces
-          .trim()
-          .substring(0, 30); // Limit length
-        
-        let fileName: string;
-        if (assetData.city && assetData.area) {
-          fileName = `${locationPart}-${assetData.area}-${assetData.city}-${category}-${dateStr}.png`;
-        } else if (assetId) {
-          fileName = `${assetId}-${locationPart}-${category}-${dateStr}.png`;
-        } else {
-          fileName = `${locationPart}-${category}-${dateStr}.png`;
-        }
-        
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        toast({
-          title: "Download complete!",
-          description: "Image with watermark saved",
-        });
-
+        if (!blob) { reject(new Error('Blob failed')); return; }
+        const suffix = mode === 'light' ? 'branded' : 'proof';
+        triggerDownload(blob, buildFileName(assetData, category, assetId, suffix));
+        toast({ title: "Download complete!", description: `${mode === 'light' ? 'Branded' : 'Detailed proof'} image saved` });
         resolve();
       }, 'image/png');
     });
@@ -341,7 +299,7 @@ export async function downloadImageWithWatermark({
     console.error('Error downloading with watermark:', error);
     toast({
       title: "Download failed",
-      description: "Could not add watermark to image",
+      description: "Could not process image",
       variant: "destructive",
     });
     throw error;

@@ -179,6 +179,7 @@ export function PhotoLightbox({ photos, initialIndex, isOpen, onClose, assetData
         imageUrl: currentPhoto.photo_url,
         category: currentPhoto.category,
         qrCodeUrl: assetData.qr_code_url,
+        mode: 'light',
       });
     } catch (error) {
       console.error('Error downloading with watermark:', error);

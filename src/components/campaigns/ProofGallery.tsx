@@ -3,7 +3,14 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle, XCircle, Image as ImageIcon, CheckCircle2, Download, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Image as ImageIcon, CheckCircle2, Download, Loader2, ChevronDown, FileImage, Stamp, FileText } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { WatermarkMode } from "@/lib/downloadWithWatermark";
 import { ProofApprovalDialog } from "./ProofApprovalDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeCampaignAssetStatus } from "@/lib/constants/campaignAssetStatus";
@@ -134,7 +141,7 @@ export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
     }
   };
 
-  const handleDownload = async (asset: any, photoUrl: string, photoType: string) => {
+  const handleDownload = async (asset: any, photoUrl: string, photoType: string, mode: WatermarkMode = 'light') => {
     try {
       const { downloadImageWithWatermark } = await import('@/lib/downloadWithWatermark');
       
@@ -151,7 +158,8 @@ export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
         imageUrl: photoUrl,
         category: photoType,
         assetId: asset.asset_id,
-        qrCodeUrl: asset.qr_code_url,
+        qrCodeUrl: assetQrMap.get(asset.asset_id),
+        mode,
       });
     } catch (error) {
       console.error('Error downloading with watermark:', error);
@@ -284,17 +292,32 @@ export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
                             className="w-full h-full object-cover cursor-pointer"
                             onClick={() => setSelectedPhoto(displayUrl)}
                           />
-                          <Button
-                            variant="secondary"
-                            size="icon"
-                            className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDownload(asset, displayUrl, photoTag);
-                            }}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="secondary"
+                                size="icon"
+                                className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem onClick={() => handleDownload(asset, displayUrl, photoTag, 'none')}>
+                                <FileImage className="h-4 w-4 mr-2" />
+                                Download Original
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDownload(asset, displayUrl, photoTag, 'light')}>
+                                <Stamp className="h-4 w-4 mr-2" />
+                                Download Branded
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDownload(asset, displayUrl, photoTag, 'detailed')}>
+                                <FileText className="h-4 w-4 mr-2" />
+                                Download Detailed
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {format(new Date(photo.uploaded_at), "MMM dd, HH:mm")}

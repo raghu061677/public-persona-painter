@@ -12,8 +12,8 @@
  *   - Running/Upcoming → Completed: when end_date < today  ← AUTO-COMPLETE
  *
  * MANUAL TRANSITIONS (via UI actions):
- *   - Any active status → Completed: via "Complete Campaign" dialog (early closure/exception)
- *   - Any active status → Cancelled: via cancellation flow
+ *   - Running → Completed: via "Complete Campaign" dialog (early closure / exception)
+ *   - Any active → Cancelled: via cancellation flow
  *   - Completed/Cancelled → Archived: via archive action
  *
  * BILLING:
@@ -26,22 +26,26 @@
  *   - created_from: stores "renewal:{parent_id}" for audit trail
  */
 
-import type { Database } from "@/integrations/supabase/types";
-
-export type CampaignStatus = Database['public']['Enums']['campaign_status'];
+/**
+ * Subset of campaign_status enum values that represent real campaign lifecycle.
+ * Legacy values (Planned, Assigned, InProgress, PhotoUploaded, Verified)
+ * exist in the DB enum but map to operational asset statuses, not campaign states.
+ */
+export type CampaignLifecycleStatus = 
+  | 'Draft' | 'Upcoming' | 'Running' | 'Completed' | 'Cancelled' | 'Archived';
 
 /** Ordered lifecycle stages */
-export const CAMPAIGN_STATUS_ORDER: CampaignStatus[] = [
+export const CAMPAIGN_STATUS_ORDER: CampaignLifecycleStatus[] = [
   'Draft', 'Upcoming', 'Running', 'Completed', 'Cancelled', 'Archived',
 ];
 
 /** Statuses considered "active" (campaign is live or pending) */
-export const ACTIVE_CAMPAIGN_STATUSES: CampaignStatus[] = [
+export const ACTIVE_CAMPAIGN_STATUSES: CampaignLifecycleStatus[] = [
   'Draft', 'Upcoming', 'Running',
 ];
 
 /** Statuses considered "terminal" (campaign is done) */
-export const TERMINAL_CAMPAIGN_STATUSES: CampaignStatus[] = [
+export const TERMINAL_CAMPAIGN_STATUSES: CampaignLifecycleStatus[] = [
   'Completed', 'Cancelled', 'Archived',
 ];
 
@@ -50,7 +54,7 @@ export const TERMINAL_CAMPAIGN_STATUSES: CampaignStatus[] = [
  * Automatic transitions (Draft→Upcoming, Upcoming→Running, Running→Completed)
  * are handled by the database RPC auto_update_campaign_status().
  */
-export const MANUAL_TRANSITIONS: Record<CampaignStatus, CampaignStatus[]> = {
+export const MANUAL_TRANSITIONS: Partial<Record<CampaignLifecycleStatus, CampaignLifecycleStatus[]>> = {
   Draft: ['Cancelled'],
   Upcoming: ['Cancelled'],
   Running: ['Completed', 'Cancelled'],
@@ -62,15 +66,15 @@ export const MANUAL_TRANSITIONS: Record<CampaignStatus, CampaignStatus[]> = {
 /**
  * Check if a manual status transition is allowed.
  */
-export function canTransitionTo(current: CampaignStatus, target: CampaignStatus): boolean {
-  return MANUAL_TRANSITIONS[current]?.includes(target) ?? false;
+export function canTransitionTo(current: string, target: string): boolean {
+  return MANUAL_TRANSITIONS[current as CampaignLifecycleStatus]?.includes(target as CampaignLifecycleStatus) ?? false;
 }
 
 /**
  * Check if campaign is in an active (non-terminal) state.
  */
-export function isCampaignActive(status: CampaignStatus): boolean {
-  return ACTIVE_CAMPAIGN_STATUSES.includes(status);
+export function isCampaignActive(status: string): boolean {
+  return ACTIVE_CAMPAIGN_STATUSES.includes(status as CampaignLifecycleStatus);
 }
 
 /**
@@ -88,12 +92,11 @@ export function shouldAutoComplete(campaign: { status: string; end_date: string 
  */
 export function isManualCompleteCase(campaign: { status: string; end_date: string }): boolean {
   if (campaign.status !== 'Running') return false;
-  // Manual complete is relevant when end_date hasn't passed yet (early closure)
   return new Date(campaign.end_date) >= new Date();
 }
 
 /**
- * Get human-readable description of why a campaign can/cannot be completed.
+ * Get human-readable context about campaign completion.
  */
 export function getCompletionContext(campaign: { status: string; end_date: string }): {
   canComplete: boolean;
@@ -103,7 +106,7 @@ export function getCompletionContext(campaign: { status: string; end_date: strin
   const endDate = new Date(campaign.end_date);
   const isPast = endDate < new Date();
 
-  if (TERMINAL_CAMPAIGN_STATUSES.includes(campaign.status as CampaignStatus)) {
+  if (TERMINAL_CAMPAIGN_STATUSES.includes(campaign.status as CampaignLifecycleStatus)) {
     return { canComplete: false, isAutoEligible: false, reason: `Campaign is already ${campaign.status}` };
   }
 

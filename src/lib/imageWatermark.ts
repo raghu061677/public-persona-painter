@@ -142,9 +142,13 @@ async function drawLogoBottomLeft(ctx: CanvasRenderingContext2D, logoUrl: string
 }
 
 /**
- * Light watermark: QR top-right + logo bottom-left.
- * No dark footer bar, no company name text, no metadata panel.
- * Preserves native GPS/camera overlays on geotag images.
+ * Light watermark applied during UPLOAD:
+ *   - QR code top-right (white rounded card)
+ *   - Matrix logo bottom-left (white rounded card)
+ *   - No dark footer bar
+ *   - No company name text
+ *   - No metadata panel
+ *   - Preserves native GPS/camera overlays
  */
 export async function addWatermark(
   imageFile: File,

@@ -2943,6 +2943,7 @@ export type Database = {
           assigned_to: string | null
           billing_cycle: string | null
           campaign_code: string | null
+          campaign_group_id: string | null
           campaign_name: string
           client_id: string
           client_name: string
@@ -2967,6 +2968,7 @@ export type Database = {
           notes: string | null
           notification_settings: Json | null
           owner_id: string | null
+          parent_campaign_id: string | null
           plan_id: string | null
           printing_total: number | null
           public_share_enabled: boolean | null
@@ -2983,6 +2985,7 @@ export type Database = {
           assigned_to?: string | null
           billing_cycle?: string | null
           campaign_code?: string | null
+          campaign_group_id?: string | null
           campaign_name: string
           client_id: string
           client_name: string
@@ -3007,6 +3010,7 @@ export type Database = {
           notes?: string | null
           notification_settings?: Json | null
           owner_id?: string | null
+          parent_campaign_id?: string | null
           plan_id?: string | null
           printing_total?: number | null
           public_share_enabled?: boolean | null
@@ -3023,6 +3027,7 @@ export type Database = {
           assigned_to?: string | null
           billing_cycle?: string | null
           campaign_code?: string | null
+          campaign_group_id?: string | null
           campaign_name?: string
           client_id?: string
           client_name?: string
@@ -3047,6 +3052,7 @@ export type Database = {
           notes?: string | null
           notification_settings?: Json | null
           owner_id?: string | null
+          parent_campaign_id?: string | null
           plan_id?: string | null
           printing_total?: number | null
           public_share_enabled?: boolean | null
@@ -3066,6 +3072,41 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_parent_campaign_id_fkey"
+            columns: ["parent_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_public_share_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_parent_campaign_id_fkey"
+            columns: ["parent_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_parent_campaign_id_fkey"
+            columns: ["parent_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns_summary_secure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_parent_campaign_id_fkey"
+            columns: ["parent_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "finance_eligible_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_parent_campaign_id_fkey"
+            columns: ["parent_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_forecast"
+            referencedColumns: ["campaign_id"]
           },
           {
             foreignKeyName: "campaigns_plan_id_fkey"

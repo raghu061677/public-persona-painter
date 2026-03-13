@@ -1,7 +1,8 @@
 /**
- * @deprecated — REPLACED by RenewCampaignDialog.tsx
- * This file is no longer used in the UI. Kept temporarily for reference.
- * Safe to delete after confirming RenewCampaignDialog works correctly.
+ * @deprecated — DEPRECATED as of 2026-03 Lifecycle Hardening.
+ * Use RenewCampaignDialog instead for creating new campaigns from existing ones.
+ * This file is retained temporarily for backward compatibility but is NOT exposed in the UI.
+ * See src/lib/constants/campaignLifecycle.ts for canonical campaign lifecycle rules.
  */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";

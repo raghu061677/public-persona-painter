@@ -193,7 +193,11 @@ export function RenewCampaignDialog({
       const newStartStr = format(startDate, "yyyy-MM-dd");
       const newEndStr = format(endDate, "yyyy-MM-dd");
 
-      // Create new campaign — plan_id = null
+      // Determine campaign_group_id for renewal chain linking
+      // If parent already has a group, reuse it; otherwise create a new one
+      const groupId = sourceCampaign.campaign_group_id || crypto.randomUUID();
+
+      // Create new campaign — plan_id = null, linked to parent via chain fields
       const gstPercent = sourceCampaign.gst_percent ?? 0;
       const { error: createError } = await supabase.from("campaigns").insert({
         id: newCampaignId,
@@ -206,6 +210,8 @@ export function RenewCampaignDialog({
         status: "Draft" as const,
         created_by: user.id,
         created_from: `renewal:${campaign.id}`,
+        parent_campaign_id: campaign.id,       // Immediate parent link
+        campaign_group_id: groupId,            // Shared group across all renewals
         plan_id: null, // CRITICAL: do not copy plan_id
         total_assets: campaignAssets?.length || 0,
         billing_cycle: sourceCampaign.billing_cycle,
@@ -214,8 +220,15 @@ export function RenewCampaignDialog({
         grand_total: 0,
         total_amount: 0,
         notes: `Renewed from ${campaign.id}. ${notes || ""}`.trim(),
-      });
+      } as any);
       if (createError) throw createError;
+
+      // Backfill campaign_group_id on the parent if it didn't have one
+      if (!sourceCampaign.campaign_group_id) {
+        await supabase.from("campaigns")
+          .update({ campaign_group_id: groupId } as any)
+          .eq("id", campaign.id);
+      }
 
       // Copy campaign assets with full reset
       if (campaignAssets && campaignAssets.length > 0) {

@@ -1,6 +1,11 @@
 /**
  * Workflow Validation Utilities
  * Uses canonical campaign asset statuses from shared config.
+ *
+ * NOTE (2026-03): Campaign lifecycle rules are centralized in
+ * src/lib/constants/campaignLifecycle.ts. This file handles
+ * operational/asset-level validation only.
+ * Invoices are NEVER generated from campaign status transitions.
  */
 
 import type { Database } from "@/integrations/supabase/types";

@@ -801,10 +801,9 @@ export function CampaignAssetsTable({
                         <div className="flex items-center gap-1">
                           <Input
                             type="number"
-                            value={asset.mounting_cost || ""}
+                            value={asset.mounting_cost ?? asset.mounting_charges ?? ""}
                             onChange={(e) => {
                               const val = Number(e.target.value) || 0;
-                              onUpdateAsset(originalIndex, "mounting_cost", val);
                               onUpdateAsset(originalIndex, "mounting_charges", val);
                             }}
                             className="h-8 w-20 text-right text-xs"

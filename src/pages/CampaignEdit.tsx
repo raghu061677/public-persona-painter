@@ -470,6 +470,13 @@ export default function CampaignEdit() {
     
     // Recalculate total_price when price fields change
     if (field === 'negotiated_rate' || field === 'printing_charges' || field === 'mounting_charges') {
+      // Keep mounting_cost in sync with mounting_charges
+      if (field === 'mounting_charges') {
+        updated[index].mounting_cost = Number(value) || 0;
+      }
+      if (field === 'printing_charges') {
+        updated[index].printing_cost = Number(value) || 0;
+      }
       const negotiated = field === 'negotiated_rate' ? Number(value) : Number(updated[index].negotiated_rate);
       const printing = field === 'printing_charges' ? Number(value) : Number(updated[index].printing_charges);
       const mounting = field === 'mounting_charges' ? Number(value) : Number(updated[index].mounting_charges);

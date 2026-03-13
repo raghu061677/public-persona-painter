@@ -1,10 +1,15 @@
 /**
  * Utility for downloading images with configurable watermark modes
  * 
+ * Visual system matches upload watermark (imageWatermark.ts):
+ *   - QR code: always top-right in white rounded card
+ *   - Logo: bottom-left in white rounded card (no company name text)
+ *   - No heavy dark footer bar
+ * 
  * Modes:
  *   - 'none'     → raw image, no watermark
- *   - 'light'    → QR top-right + small badge bottom-left (default for client-facing)
- *   - 'detailed' → QR top-right + metadata panel bottom-left (internal/admin)
+ *   - 'light'    → QR top-right + logo bottom-left (default for client-facing)
+ *   - 'detailed' → QR top-right + logo bottom-left + metadata panel bottom-left (internal/admin)
  */
 
 import { format } from "date-fns";
@@ -29,6 +34,7 @@ interface WatermarkOptions {
   category: string;
   assetId?: string;
   qrCodeUrl?: string;
+  logoUrl?: string;
   mode?: WatermarkMode;
 }
 
@@ -88,17 +94,18 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath();
 }
 
-// ── QR Drawing (top-right) ───────────────────────────────
+// ── QR Drawing (top-right) — matches upload watermark ────
 
-async function drawQRTopRight(ctx: CanvasRenderingContext2D, qrCodeUrl: string, canvasW: number) {
+async function drawQRTopRight(ctx: CanvasRenderingContext2D, qrCodeUrl: string, canvasW: number, canvasH: number) {
   try {
     const qrImg = await loadImage(qrCodeUrl);
-    const qrSize = Math.min(100, canvasW * 0.1);
-    const pad = 16;
-    const cardPad = 6;
-    const labelH = 14;
+    const qrSize = Math.min(Math.max(canvasW * 0.08, 80), 130);
+    const cardPad = 8;
+    const labelFontSize = Math.max(8, qrSize * 0.08);
+    const labelH = labelFontSize + 6;
     const cardW = qrSize + cardPad * 2;
-    const cardH = qrSize + cardPad * 2 + labelH + 4;
+    const cardH = qrSize + cardPad * 2 + labelH;
+    const pad = Math.min(canvasW, canvasH) * 0.02;
     const x = canvasW - cardW - pad;
     const y = pad;
 
@@ -127,11 +134,11 @@ async function drawQRTopRight(ctx: CanvasRenderingContext2D, qrCodeUrl: string, 
     ctx.drawImage(qrImg, x + cardPad, y + cardPad, qrSize, qrSize);
 
     // Label
-    ctx.font = 'bold 9px Inter, system-ui, sans-serif';
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.font = `bold ${labelFontSize}px Inter, system-ui, sans-serif`;
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('SCAN TO VERIFY', x + cardW / 2, y + cardPad + qrSize + labelH / 2 + 4);
+    ctx.fillText('SCAN TO VERIFY', x + cardW / 2, y + cardPad + qrSize + labelH / 2);
     ctx.textAlign = 'left';
     ctx.restore();
   } catch {
@@ -139,40 +146,50 @@ async function drawQRTopRight(ctx: CanvasRenderingContext2D, qrCodeUrl: string, 
   }
 }
 
-// ── Light badge (bottom-left) ────────────────────────────
+// ── Logo (bottom-left) — matches upload watermark ────────
 
-function drawLightBadge(ctx: CanvasRenderingContext2D, canvasW: number, canvasH: number) {
-  const text = 'Go-Ads 360°';
-  const fontSize = Math.max(11, Math.min(14, canvasW * 0.012));
-  ctx.font = `600 ${fontSize}px Inter, system-ui, sans-serif`;
-  const textWidth = ctx.measureText(text).width;
-  const padX = 10;
-  const padY = 6;
-  const badgeW = textWidth + padX * 2;
-  const badgeH = fontSize + padY * 2;
-  const x = 16;
-  const y = canvasH - badgeH - 16;
+async function drawLogoBottomLeft(ctx: CanvasRenderingContext2D, logoUrl: string, canvasW: number, canvasH: number, yOffset = 0) {
+  try {
+    const logo = await loadImage(logoUrl);
+    const maxLogoH = Math.min(Math.max(canvasH * 0.06, 36), 56);
+    const logoH = maxLogoH;
+    const logoW = (logo.width / logo.height) * logoH;
+    const cardPad = 6;
+    const cardW = logoW + cardPad * 2;
+    const cardH = logoH + cardPad * 2;
+    const pad = Math.min(canvasW, canvasH) * 0.02;
+    const x = pad;
+    const y = canvasH - cardH - pad - yOffset;
 
-  ctx.save();
-  ctx.globalAlpha = 0.7;
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  roundRect(ctx, x, y, badgeW, badgeH, badgeH / 2);
-  ctx.fill();
-  ctx.globalAlpha = 1;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.15)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 1;
 
-  ctx.fillStyle = 'rgba(255,255,255,0.9)';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(text, x + padX, y + badgeH / 2);
-  ctx.restore();
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    roundRect(ctx, x, y, cardW, cardH, 6);
+    ctx.fill();
+
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+
+    ctx.drawImage(logo, x + cardPad, y + cardPad, logoW, logoH);
+    ctx.restore();
+
+    return cardH + 8; // return height so metadata panel can stack above
+  } catch {
+    return 0;
+  }
 }
 
-// ── Detailed metadata panel (bottom-left) ────────────────
+// ── Detailed metadata panel (bottom-left, above logo) ────
 
-function drawDetailedPanel(ctx: CanvasRenderingContext2D, canvasW: number, canvasH: number, assetData: AssetWatermarkData) {
-  const fontSize = Math.max(12, Math.min(15, canvasW * 0.013));
-  const lineH = fontSize + 10;
-  const padX = 16;
-  const padY = 14;
+function drawDetailedPanel(ctx: CanvasRenderingContext2D, canvasW: number, canvasH: number, assetData: AssetWatermarkData, bottomOffset: number) {
+  const fontSize = Math.max(11, Math.min(14, canvasW * 0.012));
+  const lineH = fontSize + 8;
+  const padX = 14;
+  const padY = 12;
 
   // Collect fields that have data
   const lines: { label: string; value: string }[] = [];
@@ -188,35 +205,35 @@ function drawDetailedPanel(ctx: CanvasRenderingContext2D, canvasW: number, canva
 
   if (lines.length === 0) return;
 
-  const panelW = Math.min(360, canvasW * 0.35);
-  const panelH = padY * 2 + lines.length * lineH + 4;
-  const x = 16;
-  const y = canvasH - panelH - 16;
+  const panelW = Math.min(340, canvasW * 0.32);
+  const panelH = padY * 2 + lines.length * lineH;
+  const pad = Math.min(canvasW, canvasH) * 0.02;
+  const x = pad;
+  const y = canvasH - panelH - pad - bottomOffset;
 
   ctx.save();
 
   // Panel background
-  ctx.fillStyle = 'rgba(0,0,0,0.7)';
-  roundRect(ctx, x, y, panelW, panelH, 10);
+  ctx.fillStyle = 'rgba(0,0,0,0.65)';
+  roundRect(ctx, x, y, panelW, panelH, 8);
   ctx.fill();
 
   // Subtle left accent
   ctx.fillStyle = 'rgba(16,185,129,0.8)';
-  ctx.fillRect(x, y + 6, 3, panelH - 12);
+  roundRect(ctx, x, y + 4, 3, panelH - 8, 2);
+  ctx.fill();
 
   // Draw fields
   let ty = y + padY + fontSize;
-  const labelW = 72;
+  const labelW = 68;
   for (const line of lines) {
-    // Label
     ctx.font = `600 ${fontSize - 1}px Inter, system-ui, sans-serif`;
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
     ctx.textBaseline = 'alphabetic';
     ctx.fillText(line.label, x + padX, ty);
 
-    // Value
     ctx.font = `${fontSize}px Inter, system-ui, sans-serif`;
-    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
     ctx.fillText(line.value, x + padX + labelW, ty);
 
     ty += lineH;
@@ -228,8 +245,34 @@ function drawDetailedPanel(ctx: CanvasRenderingContext2D, canvasW: number, canva
 // ── Main Export Functions ────────────────────────────────
 
 /**
+ * Fetch organization logo URL from settings.
+ * Cached for the session.
+ */
+let _cachedLogoUrl: string | null | undefined = undefined;
+
+async function getOrgLogoUrl(): Promise<string | null> {
+  if (_cachedLogoUrl !== undefined) return _cachedLogoUrl;
+  try {
+    const { data } = await supabase
+      .from('organization_settings')
+      .select('logo_url')
+      .limit(1)
+      .single();
+    _cachedLogoUrl = data?.logo_url || null;
+  } catch {
+    _cachedLogoUrl = null;
+  }
+  return _cachedLogoUrl;
+}
+
+/**
  * Download an image with the specified watermark mode.
- * Default mode: 'light' (QR + small badge, no metadata panel).
+ * Default mode: 'light' (QR + logo, no metadata panel).
+ * 
+ * Visual system:
+ *   - QR: top-right (white card)
+ *   - Logo: bottom-left (white card, no text)
+ *   - Detailed: metadata panel stacked above logo at bottom-left
  */
 export async function downloadImageWithWatermark({
   assetData,
@@ -237,6 +280,7 @@ export async function downloadImageWithWatermark({
   category,
   assetId,
   qrCodeUrl,
+  logoUrl,
   mode = 'light',
 }: WatermarkOptions): Promise<void> {
   try {
@@ -274,15 +318,23 @@ export async function downloadImageWithWatermark({
 
     ctx.drawImage(img, 0, 0);
 
-    // QR code — always top-right for both light and detailed
+    // QR code — always top-right
     if (qrCodeUrl) {
-      await drawQRTopRight(ctx, qrCodeUrl, canvas.width);
+      await drawQRTopRight(ctx, qrCodeUrl, canvas.width, canvas.height);
     }
 
-    if (mode === 'light') {
-      drawLightBadge(ctx, canvas.width, canvas.height);
-    } else if (mode === 'detailed') {
-      drawDetailedPanel(ctx, canvas.width, canvas.height, assetData);
+    // Resolve logo URL
+    const resolvedLogoUrl = logoUrl || await getOrgLogoUrl();
+
+    // Logo — always bottom-left
+    let logoHeight = 0;
+    if (resolvedLogoUrl) {
+      logoHeight = await drawLogoBottomLeft(ctx, resolvedLogoUrl, canvas.width, canvas.height, 0);
+    }
+
+    // Detailed mode: metadata panel stacked above logo
+    if (mode === 'detailed') {
+      drawDetailedPanel(ctx, canvas.width, canvas.height, assetData, logoHeight);
     }
 
     return new Promise((resolve, reject) => {

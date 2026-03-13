@@ -21,18 +21,136 @@ async function generateStreetViewQRDataUrl(streetViewUrl: string): Promise<strin
   });
 }
 
+/** Draw a rounded rect path (does NOT fill/stroke) */
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
 /**
- * Add watermark with company logo, timestamp, and QR code to an image.
- * Footer layout: 3-column grid with fixed widths:
- *   Left (40%) — logo + org name + timestamp
- *   Center (30%) — "PROOF OF INSTALLATION"
- *   Right (30%) — single QR code card
+ * Draw QR code at top-right corner in a white rounded card.
+ */
+async function drawQRTopRight(ctx: CanvasRenderingContext2D, streetViewUrl: string, canvasW: number) {
+  try {
+    const qrDataUrl = await generateStreetViewQRDataUrl(streetViewUrl);
+
+    const qrImg = new Image();
+    qrImg.crossOrigin = 'anonymous';
+    await new Promise<void>((res, rej) => {
+      qrImg.onload = () => res();
+      qrImg.onerror = () => rej(new Error('QR load failed'));
+      qrImg.src = qrDataUrl;
+    });
+
+    const qrSize = Math.min(Math.max(canvasW * 0.08, 80), 130);
+    const cardPad = 8;
+    const labelFontSize = Math.max(8, qrSize * 0.08);
+    const labelH = labelFontSize + 6;
+    const cardW = qrSize + cardPad * 2;
+    const cardH = qrSize + cardPad * 2 + labelH;
+    const pad = Math.min(canvasW, ctx.canvas.height) * 0.02;
+    const x = canvasW - cardW - pad;
+    const y = pad;
+
+    // Shadow
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.2)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetY = 2;
+
+    // White rounded card
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    roundRect(ctx, x, y, cardW, cardH, 8);
+    ctx.fill();
+
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+
+    // Subtle border
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 1;
+    roundRect(ctx, x, y, cardW, cardH, 8);
+    ctx.stroke();
+
+    // QR image
+    ctx.drawImage(qrImg, x + cardPad, y + cardPad, qrSize, qrSize);
+
+    // Label
+    ctx.font = `bold ${labelFontSize}px Arial`;
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('SCAN FOR STREET VIEW', x + cardW / 2, y + cardPad + qrSize + labelH / 2);
+    ctx.restore();
+  } catch {
+    console.warn('Could not render QR code in watermark');
+  }
+}
+
+/**
+ * Draw company logo at bottom-left in a small white rounded card.
+ * Logo only — no company name text.
+ */
+async function drawLogoBottomLeft(ctx: CanvasRenderingContext2D, logoUrl: string, canvasW: number, canvasH: number) {
+  try {
+    const logo = new Image();
+    logo.crossOrigin = 'anonymous';
+    await new Promise<void>((res, rej) => {
+      logo.onload = () => res();
+      logo.onerror = () => rej(new Error('Logo load failed'));
+      logo.src = logoUrl;
+    });
+
+    const maxLogoH = Math.min(Math.max(canvasH * 0.06, 36), 56);
+    const logoH = maxLogoH;
+    const logoW = (logo.width / logo.height) * logoH;
+    const cardPad = 6;
+    const cardW = logoW + cardPad * 2;
+    const cardH = logoH + cardPad * 2;
+    const pad = Math.min(canvasW, canvasH) * 0.02;
+    const x = pad;
+    const y = canvasH - cardH - pad;
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.15)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 1;
+
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    roundRect(ctx, x, y, cardW, cardH, 6);
+    ctx.fill();
+
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+
+    ctx.drawImage(logo, x + cardPad, y + cardPad, logoW, logoH);
+    ctx.restore();
+  } catch {
+    // Logo loading failed — skip silently
+  }
+}
+
+/**
+ * Light watermark: QR top-right + logo bottom-left.
+ * No dark footer bar, no company name text, no metadata panel.
+ * Preserves native GPS/camera overlays on geotag images.
  */
 export async function addWatermark(
   imageFile: File,
   options: WatermarkOptions = {}
 ): Promise<File> {
-  const { logoUrl, organizationName, campaignId, assetId, streetViewUrl } = options;
+  const { logoUrl, streetViewUrl } = options;
 
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
@@ -47,170 +165,18 @@ export async function addWatermark(
       canvas.width = img.width;
       canvas.height = img.height;
 
-      // Draw original image
+      // Draw original image — preserving any native GPS/camera overlay
       ctx.drawImage(img, 0, 0);
 
-      // ── Dimensions ────────────────────────────────────────
-      const W = img.width;
-      const H = img.height;
-      const padding = Math.min(W, H) * 0.02;
-      const qrDisplaySize = Math.min(Math.max(W * 0.1, 120), 170);
-      const qrCardPad = 12;
-      const qrCardSize = qrDisplaySize + qrCardPad * 2;
-      const watermarkHeight = Math.max(qrCardSize + padding * 2 + 20, H * 0.14);
-      const footerHeight = Math.min(H * 0.025, 28);
-      const totalBarHeight = watermarkHeight + footerHeight;
-      const barY = H - totalBarHeight;
-
-      // ── Column boundaries (2-column: left 65%, right 35%) ──
-      const colLeftStart = 0;
-      const colLeftEnd = W * 0.65;
-      const colRightStart = colLeftEnd;
-      const colRightEnd = W;
-
-      // ── Background bar ────────────────────────────────────
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
-      ctx.fillRect(0, barY, W, totalBarHeight);
-
-      // ── Font sizes ────────────────────────────────────────
-      const orgFontSize = Math.max(watermarkHeight * 0.16, 13);
-      const timestampFontSize = Math.max(orgFontSize * 0.85, 11);
-      const proofFontSize = Math.max(orgFontSize * 0.95, 14);
-      const labelFontSize = Math.max(orgFontSize * 0.6, 9);
-
-      // ── Timestamp ─────────────────────────────────────────
-      const timestamp = new Date().toLocaleString('en-IN', {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-      });
-
-      const colCenterY = barY + watermarkHeight / 2;
-
-      // ════════════════════════════════════════════════════════
-      // COLUMN 1 — LEFT (0% to 40%): Logo + Org Name + Timestamp
-      // ════════════════════════════════════════════════════════
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(colLeftStart, barY, colLeftEnd - colLeftStart, watermarkHeight);
-      ctx.clip();
-
-      let textX = colLeftStart + padding * 2;
-
-      if (logoUrl) {
-        try {
-          const logo = new Image();
-          logo.crossOrigin = 'anonymous';
-          await new Promise<void>((res, rej) => {
-            logo.onload = () => res();
-            logo.onerror = () => rej(new Error('Logo load failed'));
-            logo.src = logoUrl;
-          });
-
-          const logoH = watermarkHeight * 0.55;
-          const logoW = (logo.width / logo.height) * logoH;
-          const logoCardX = colLeftStart + padding;
-          const logoCardY = colCenterY - logoH / 2 - 6;
-          const logoCardW = logoW + 12;
-          const logoCardH = logoH + 12;
-          ctx.fillStyle = 'white';
-          ctx.beginPath();
-          ctx.roundRect(logoCardX, logoCardY, logoCardW, logoCardH, 6);
-          ctx.fill();
-
-          ctx.drawImage(logo, logoCardX + 6, logoCardY + 6, logoW, logoH);
-          textX = logoCardX + logoCardW + padding;
-        } catch {
-          // skip logo
-        }
-      }
-
-      ctx.fillStyle = 'white';
-      ctx.textBaseline = 'middle';
-      ctx.textAlign = 'left';
-
-      if (organizationName) {
-        ctx.font = `bold ${orgFontSize}px Arial`;
-        ctx.fillText(organizationName, textX, colCenterY - timestampFontSize * 0.7);
-      }
-
-      ctx.font = `${timestampFontSize}px Arial`;
-      ctx.fillStyle = 'rgba(255,255,255,0.85)';
-      ctx.fillText(timestamp, textX, colCenterY + orgFontSize * 0.7);
-
-      ctx.restore();
-
-      // CENTER COLUMN REMOVED — "PROOF OF INSTALLATION" no longer rendered
-
-      // ════════════════════════════════════════════════════════
-      // COLUMN 2 — RIGHT (65% to 100%): Single QR Code in white card
-      // ════════════════════════════════════════════════════════
+      // QR code at top-right
       if (streetViewUrl) {
-        try {
-          const qrDataUrl = await generateStreetViewQRDataUrl(streetViewUrl);
-
-          const qrImg = new Image();
-          qrImg.crossOrigin = 'anonymous';
-          await new Promise<void>((res, rej) => {
-            qrImg.onload = () => res();
-            qrImg.onerror = () => rej(new Error('QR load failed'));
-            qrImg.src = qrDataUrl;
-          });
-
-          // Center the QR card within the right column
-          const rightColWidth = colRightEnd - colRightStart;
-          const totalCardHeight = qrCardSize + labelFontSize + 10;
-          const cardX = colRightStart + (rightColWidth - qrCardSize) / 2;
-          const cardY = colCenterY - totalCardHeight / 2;
-
-          // Shadow
-          ctx.shadowColor = 'rgba(0,0,0,0.25)';
-          ctx.shadowBlur = 8;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 2;
-
-          // White rounded card
-          ctx.fillStyle = 'white';
-          ctx.beginPath();
-          ctx.roundRect(cardX, cardY, qrCardSize, totalCardHeight, 10);
-          ctx.fill();
-
-          // Reset shadow
-          ctx.shadowColor = 'transparent';
-          ctx.shadowBlur = 0;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 0;
-
-          // Draw QR inside card
-          ctx.drawImage(qrImg, cardX + qrCardPad, cardY + qrCardPad, qrDisplaySize, qrDisplaySize);
-
-          // Label below QR inside card
-          ctx.fillStyle = '#333';
-          ctx.font = `bold ${labelFontSize}px Arial`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText('SCAN FOR STREET VIEW', cardX + qrCardSize / 2, cardY + qrCardPad + qrDisplaySize + labelFontSize);
-        } catch {
-          console.warn('Could not render QR code in watermark');
-        }
+        await drawQRTopRight(ctx, streetViewUrl, canvas.width);
       }
 
-      // ════════════════════════════════════════════════════════
-      // FOOTER — "Powered by Go-Ads 360 — OOH Media Platform"
-      // ════════════════════════════════════════════════════════
-      const footerFontSize = Math.max(timestampFontSize * 0.9, 12);
-      ctx.font = `${footerFontSize}px Arial`;
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(
-        'Powered by Go-Ads 360 — OOH Media Platform',
-        W / 2,
-        barY + watermarkHeight + footerHeight / 2
-      );
+      // Company logo at bottom-left (no text)
+      if (logoUrl) {
+        await drawLogoBottomLeft(ctx, logoUrl, canvas.width, canvas.height);
+      }
 
       // Convert canvas to blob
       canvas.toBlob(

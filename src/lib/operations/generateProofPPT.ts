@@ -247,7 +247,7 @@ interface CampaignAssetRow {
   mounter_name?: string;
   completed_at?: string;
   status?: string;
-  photos?: Record<string, string> | null;
+  photos?: Record<string, string> | null | any;
 }
 
 // ─── MAIN EXPORT ─────────────────────────────────────────────

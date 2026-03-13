@@ -619,6 +619,14 @@ export default function CampaignDetail() {
           <CampaignHealthAlerts campaignId={campaign.id} />
         </div>
 
+        {/* Renewal Chain / Campaign Series */}
+        <CampaignRenewalChain
+          campaignId={campaign.id}
+          campaignGroupId={campaign.campaign_group_id}
+          parentCampaignId={campaign.parent_campaign_id}
+          createdFrom={campaign.created_from}
+        />
+
         {/* Timeline and Performance - Enhanced with borders */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
           <div className="border rounded-lg p-1 bg-card/50">

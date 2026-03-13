@@ -1,3 +1,12 @@
+/**
+ * useWorkflowAutomation — Realtime workflow triggers for campaign/asset/invoice events.
+ *
+ * IMPORTANT (2026-03 Lifecycle Hardening):
+ *   - Invoices are NEVER auto-generated from campaign status changes.
+ *   - All billing is handled via the Billing & Invoices module.
+ *   - Campaign auto-completion is handled by auto_update_campaign_status() RPC.
+ *   - See src/lib/constants/campaignLifecycle.ts for canonical lifecycle rules.
+ */
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';

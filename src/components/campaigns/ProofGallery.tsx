@@ -141,7 +141,7 @@ export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
     }
   };
 
-  const handleDownload = async (asset: any, photoUrl: string, photoType: string) => {
+  const handleDownload = async (asset: any, photoUrl: string, photoType: string, mode: WatermarkMode = 'light') => {
     try {
       const { downloadImageWithWatermark } = await import('@/lib/downloadWithWatermark');
       
@@ -158,7 +158,8 @@ export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
         imageUrl: photoUrl,
         category: photoType,
         assetId: asset.asset_id,
-        qrCodeUrl: asset.qr_code_url,
+        qrCodeUrl: assetQrMap.get(asset.asset_id),
+        mode,
       });
     } catch (error) {
       console.error('Error downloading with watermark:', error);

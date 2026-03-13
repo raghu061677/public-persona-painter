@@ -292,17 +292,32 @@ export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
                             className="w-full h-full object-cover cursor-pointer"
                             onClick={() => setSelectedPhoto(displayUrl)}
                           />
-                          <Button
-                            variant="secondary"
-                            size="icon"
-                            className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDownload(asset, displayUrl, photoTag);
-                            }}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="secondary"
+                                size="icon"
+                                className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem onClick={() => handleDownload(asset, displayUrl, photoTag, 'none')}>
+                                <FileImage className="h-4 w-4 mr-2" />
+                                Download Original
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDownload(asset, displayUrl, photoTag, 'light')}>
+                                <Stamp className="h-4 w-4 mr-2" />
+                                Download Branded
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDownload(asset, displayUrl, photoTag, 'detailed')}>
+                                <FileText className="h-4 w-4 mr-2" />
+                                Download Detailed
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {format(new Date(photo.uploaded_at), "MMM dd, HH:mm")}

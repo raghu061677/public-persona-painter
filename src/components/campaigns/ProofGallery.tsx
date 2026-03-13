@@ -3,7 +3,14 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle, XCircle, Image as ImageIcon, CheckCircle2, Download, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Image as ImageIcon, CheckCircle2, Download, Loader2, ChevronDown, FileImage, Stamp, FileText } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { WatermarkMode } from "@/lib/downloadWithWatermark";
 import { ProofApprovalDialog } from "./ProofApprovalDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeCampaignAssetStatus } from "@/lib/constants/campaignAssetStatus";

@@ -147,6 +147,7 @@ export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
       
       await downloadImageWithWatermark({
         assetData: {
+          asset_code: assetCodeMap.get(asset.asset_id),
           city: asset.city,
           area: asset.area,
           location: asset.location,
@@ -154,6 +155,7 @@ export function ProofGallery({ assets, onUpdate }: ProofGalleryProps) {
           dimension: asset.dimensions,
           total_sqft: asset.total_sqft,
           illumination_type: asset.illumination_type,
+          media_type: asset.media_type,
         },
         imageUrl: photoUrl,
         category: photoType,

@@ -1,24 +1,22 @@
 /**
  * Utility for downloading images with configurable watermark modes
  * 
- * Visual system matches upload watermark (imageWatermark.ts):
- *   - QR code: always top-right in white rounded card
- *   - Logo: bottom-left in white rounded card (no company name text)
- *   - No heavy dark footer bar
- * 
  * Modes:
  *   - 'none'     → raw image, no watermark
- *   - 'light'    → QR top-right + logo bottom-left (default for client-facing)
- *   - 'detailed' → QR top-right + logo bottom-left + metadata panel bottom-left (internal/admin)
+ *   - 'light'    → QR top-right only (no logo, no metadata)
+ *   - 'detailed' → QR top-right + metadata panel top-left (no logo)
+ * 
+ * Upload images already contain Matrix branding + GPS overlays.
+ * Download watermarks must NOT duplicate logos or add heavy overlays.
  */
 
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 export type WatermarkMode = 'none' | 'light' | 'detailed';
 
 export interface AssetWatermarkData {
+  asset_code?: string;
   city?: string;
   area?: string;
   location: string;
@@ -26,6 +24,7 @@ export interface AssetWatermarkData {
   dimension?: string;
   total_sqft?: number;
   illumination_type?: string;
+  media_type?: string;
 }
 
 interface WatermarkOptions {
@@ -34,7 +33,6 @@ interface WatermarkOptions {
   category: string;
   assetId?: string;
   qrCodeUrl?: string;
-  logoUrl?: string;
   mode?: WatermarkMode;
 }
 
@@ -94,7 +92,7 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath();
 }
 
-// ── QR Drawing (top-right) — matches upload watermark ────
+// ── QR Drawing (top-right) ───────────────────────────────
 
 async function drawQRTopRight(ctx: CanvasRenderingContext2D, qrCodeUrl: string, canvasW: number, canvasH: number) {
   try {
@@ -109,13 +107,11 @@ async function drawQRTopRight(ctx: CanvasRenderingContext2D, qrCodeUrl: string, 
     const x = canvasW - cardW - pad;
     const y = pad;
 
-    // Shadow
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.2)';
     ctx.shadowBlur = 8;
     ctx.shadowOffsetY = 2;
 
-    // White rounded card
     ctx.fillStyle = 'rgba(255,255,255,0.95)';
     roundRect(ctx, x, y, cardW, cardH, 8);
     ctx.fill();
@@ -124,16 +120,13 @@ async function drawQRTopRight(ctx: CanvasRenderingContext2D, qrCodeUrl: string, 
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
 
-    // Subtle border
     ctx.strokeStyle = 'rgba(0,0,0,0.08)';
     ctx.lineWidth = 1;
     roundRect(ctx, x, y, cardW, cardH, 8);
     ctx.stroke();
 
-    // QR image
     ctx.drawImage(qrImg, x + cardPad, y + cardPad, qrSize, qrSize);
 
-    // Label
     ctx.font = `bold ${labelFontSize}px Inter, system-ui, sans-serif`;
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
     ctx.textAlign = 'center';
@@ -146,95 +139,77 @@ async function drawQRTopRight(ctx: CanvasRenderingContext2D, qrCodeUrl: string, 
   }
 }
 
-// ── Logo (bottom-left) — matches upload watermark ────────
+// ── Detailed metadata panel (top-left, white card) ───────
 
-async function drawLogoBottomLeft(ctx: CanvasRenderingContext2D, logoUrl: string, canvasW: number, canvasH: number, yOffset = 0) {
-  try {
-    const logo = await loadImage(logoUrl);
-    const maxLogoH = Math.min(Math.max(canvasH * 0.06, 36), 56);
-    const logoH = maxLogoH;
-    const logoW = (logo.width / logo.height) * logoH;
-    const cardPad = 6;
-    const cardW = logoW + cardPad * 2;
-    const cardH = logoH + cardPad * 2;
-    const pad = Math.min(canvasW, canvasH) * 0.02;
-    const x = pad;
-    const y = canvasH - cardH - pad - yOffset;
-
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.15)';
-    ctx.shadowBlur = 6;
-    ctx.shadowOffsetY = 1;
-
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    roundRect(ctx, x, y, cardW, cardH, 6);
-    ctx.fill();
-
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
-
-    ctx.drawImage(logo, x + cardPad, y + cardPad, logoW, logoH);
-    ctx.restore();
-
-    return cardH + 8; // return height so metadata panel can stack above
-  } catch {
-    return 0;
-  }
-}
-
-// ── Detailed metadata panel (bottom-left, above logo) ────
-
-function drawDetailedPanel(ctx: CanvasRenderingContext2D, canvasW: number, canvasH: number, assetData: AssetWatermarkData, bottomOffset: number) {
+function drawDetailedPanel(ctx: CanvasRenderingContext2D, canvasW: number, canvasH: number, assetData: AssetWatermarkData) {
   const fontSize = Math.max(11, Math.min(14, canvasW * 0.012));
   const lineH = fontSize + 8;
   const padX = 14;
   const padY = 12;
+  const accentW = 3;
 
   // Collect fields that have data
   const lines: { label: string; value: string }[] = [];
+  if (assetData.asset_code) lines.push({ label: 'Asset Code', value: assetData.asset_code });
   if (assetData.city && assetData.area) lines.push({ label: 'Location', value: `${assetData.city} – ${assetData.area}` });
   if (assetData.location) {
     const loc = assetData.location.length > 45 ? assetData.location.substring(0, 42) + '…' : assetData.location;
     lines.push({ label: 'Address', value: loc });
   }
   if (assetData.direction) lines.push({ label: 'Direction', value: assetData.direction });
-  if (assetData.dimension) lines.push({ label: 'Size', value: assetData.dimension });
+  if (assetData.dimension) lines.push({ label: 'Dimensions', value: assetData.dimension });
   if (assetData.total_sqft) lines.push({ label: 'Area', value: `${assetData.total_sqft.toFixed(1)} sq.ft` });
-  if (assetData.illumination_type) lines.push({ label: 'Type', value: assetData.illumination_type });
+  if (assetData.illumination_type) lines.push({ label: 'Illumination', value: assetData.illumination_type });
+  if (assetData.media_type) lines.push({ label: 'Media Type', value: assetData.media_type });
 
   if (lines.length === 0) return;
 
-  const panelW = Math.min(340, canvasW * 0.32);
+  const panelW = Math.min(360, canvasW * 0.34);
   const panelH = padY * 2 + lines.length * lineH;
   const pad = Math.min(canvasW, canvasH) * 0.02;
   const x = pad;
-  const y = canvasH - panelH - pad - bottomOffset;
+  const y = pad;
 
   ctx.save();
 
-  // Panel background
-  ctx.fillStyle = 'rgba(0,0,0,0.65)';
+  // White card background with shadow
+  ctx.shadowColor = 'rgba(0,0,0,0.15)';
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetY = 2;
+
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
   roundRect(ctx, x, y, panelW, panelH, 8);
   ctx.fill();
 
-  // Subtle left accent
-  ctx.fillStyle = 'rgba(16,185,129,0.8)';
-  roundRect(ctx, x, y + 4, 3, panelH - 8, 2);
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+
+  // Subtle border
+  ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+  ctx.lineWidth = 1;
+  roundRect(ctx, x, y, panelW, panelH, 8);
+  ctx.stroke();
+
+  // Green accent line on left edge
+  ctx.fillStyle = 'rgba(16,185,129,0.85)';
+  roundRect(ctx, x + 2, y + 6, accentW, panelH - 12, 2);
   ctx.fill();
 
   // Draw fields
   let ty = y + padY + fontSize;
-  const labelW = 68;
+  const labelW = 80;
   for (const line of lines) {
+    // Label
     ctx.font = `600 ${fontSize - 1}px Inter, system-ui, sans-serif`;
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText(line.label, x + padX, ty);
+    ctx.fillText(line.label, x + padX + accentW + 4, ty);
 
-    ctx.font = `${fontSize}px Inter, system-ui, sans-serif`;
-    ctx.fillStyle = 'rgba(255,255,255,0.92)';
-    ctx.fillText(line.value, x + padX + labelW, ty);
+    // Value
+    ctx.font = `500 ${fontSize}px Inter, system-ui, sans-serif`;
+    ctx.fillStyle = 'rgba(0,0,0,0.82)';
+    ctx.fillText(line.value, x + padX + accentW + 4 + labelW, ty);
 
     ty += lineH;
   }
@@ -245,34 +220,13 @@ function drawDetailedPanel(ctx: CanvasRenderingContext2D, canvasW: number, canva
 // ── Main Export Functions ────────────────────────────────
 
 /**
- * Fetch organization logo URL from settings.
- * Cached for the session.
- */
-let _cachedLogoUrl: string | null | undefined = undefined;
-
-async function getOrgLogoUrl(): Promise<string | null> {
-  if (_cachedLogoUrl !== undefined) return _cachedLogoUrl;
-  try {
-    const { data } = await supabase
-      .from('organization_settings')
-      .select('logo_url')
-      .limit(1)
-      .single();
-    _cachedLogoUrl = data?.logo_url || null;
-  } catch {
-    _cachedLogoUrl = null;
-  }
-  return _cachedLogoUrl;
-}
-
-/**
  * Download an image with the specified watermark mode.
- * Default mode: 'light' (QR + logo, no metadata panel).
  * 
- * Visual system:
- *   - QR: top-right (white card)
- *   - Logo: bottom-left (white card, no text)
- *   - Detailed: metadata panel stacked above logo at bottom-left
+ * - 'none': Raw original image
+ * - 'light': QR code only at top-right (default for branded download)
+ * - 'detailed': QR top-right + metadata panel top-left
+ * 
+ * No logos are added in any download mode — uploaded images already have branding.
  */
 export async function downloadImageWithWatermark({
   assetData,
@@ -280,7 +234,6 @@ export async function downloadImageWithWatermark({
   category,
   assetId,
   qrCodeUrl,
-  logoUrl,
   mode = 'light',
 }: WatermarkOptions): Promise<void> {
   try {
@@ -292,24 +245,6 @@ export async function downloadImageWithWatermark({
 
     const img = await loadImage(imageUrl);
 
-    // For 'none' mode, just download the raw image
-    if (mode === 'none') {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d')!;
-      ctx.drawImage(img, 0, 0);
-
-      return new Promise((resolve, reject) => {
-        canvas.toBlob((blob) => {
-          if (!blob) { reject(new Error('Blob failed')); return; }
-          triggerDownload(blob, buildFileName(assetData, category, assetId, 'original'));
-          toast({ title: "Download complete", description: "Original image saved" });
-          resolve();
-        }, 'image/png');
-      });
-    }
-
     const canvas = document.createElement('canvas');
     canvas.width = img.width;
     canvas.height = img.height;
@@ -318,31 +253,24 @@ export async function downloadImageWithWatermark({
 
     ctx.drawImage(img, 0, 0);
 
-    // QR code — always top-right
-    if (qrCodeUrl) {
-      await drawQRTopRight(ctx, qrCodeUrl, canvas.width, canvas.height);
-    }
+    if (mode !== 'none') {
+      // QR code — always top-right
+      if (qrCodeUrl) {
+        await drawQRTopRight(ctx, qrCodeUrl, canvas.width, canvas.height);
+      }
 
-    // Resolve logo URL
-    const resolvedLogoUrl = logoUrl || await getOrgLogoUrl();
-
-    // Logo — always bottom-left
-    let logoHeight = 0;
-    if (resolvedLogoUrl) {
-      logoHeight = await drawLogoBottomLeft(ctx, resolvedLogoUrl, canvas.width, canvas.height, 0);
-    }
-
-    // Detailed mode: metadata panel stacked above logo
-    if (mode === 'detailed') {
-      drawDetailedPanel(ctx, canvas.width, canvas.height, assetData, logoHeight);
+      // Detailed mode: metadata panel at top-left
+      if (mode === 'detailed') {
+        drawDetailedPanel(ctx, canvas.width, canvas.height, assetData);
+      }
     }
 
     return new Promise((resolve, reject) => {
       canvas.toBlob((blob) => {
         if (!blob) { reject(new Error('Blob failed')); return; }
-        const suffix = mode === 'light' ? 'branded' : 'proof';
+        const suffix = mode === 'none' ? 'original' : mode === 'light' ? 'branded' : 'proof';
         triggerDownload(blob, buildFileName(assetData, category, assetId, suffix));
-        toast({ title: "Download complete!", description: `${mode === 'light' ? 'Branded' : 'Detailed proof'} image saved` });
+        toast({ title: "Download complete!", description: `${modeLabel.charAt(0).toUpperCase() + modeLabel.slice(1)} image saved` });
         resolve();
       }, 'image/png');
     });

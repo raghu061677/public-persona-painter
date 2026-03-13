@@ -237,7 +237,7 @@ export function UnifiedPhotoGallery({
         category: photo.category,
         assetId: assetData.asset_id,
         qrCodeUrl: assetData.qr_code_url,
-        mode: 'light',
+        mode: 'none',
       });
     } catch (error) {
       console.error('Error downloading with watermark:', error);

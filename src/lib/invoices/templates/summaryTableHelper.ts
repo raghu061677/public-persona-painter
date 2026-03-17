@@ -28,7 +28,7 @@ interface SummaryTableOptions {
  * Returns { endY, totalRowBottomY } where totalRowBottomY is the bottom of the blue Total row.
  */
 export function renderInvoiceSummaryTable(options: SummaryTableOptions): { endY: number; totalRowBottomY: number } {
-  const { doc, x, y, width, subtotal, gstPercent, gstAmount, grandTotal, balanceDue, isInterState } = options;
+  const { doc, x, y, width, subtotal, gstPercent, gstAmount, grandTotal, balanceDue, paidAmount, isInterState } = options;
 
   const cgstAmount = isInterState ? 0 : gstAmount / 2;
   const sgstAmount = isInterState ? 0 : gstAmount / 2;
@@ -38,7 +38,7 @@ export function renderInvoiceSummaryTable(options: SummaryTableOptions): { endY:
   const col2W = width - col1W;
   const rowH = 6.5;
 
-  type SummaryRow = { label: string; value: number; bold?: boolean; highlight?: 'blue' | 'gray' };
+  type SummaryRow = { label: string; value: number; bold?: boolean; highlight?: 'blue' | 'gray' | 'green' | 'orange' };
 
   const rows: SummaryRow[] = [
     { label: 'Sub Total', value: subtotal },
@@ -52,6 +52,13 @@ export function renderInvoiceSummaryTable(options: SummaryTableOptions): { endY:
   }
 
   rows.push({ label: 'Total', value: grandTotal, bold: true, highlight: 'blue' });
+
+  // Add Amount Received and Balance Due if there are payments
+  const effectivePaid = paidAmount != null ? paidAmount : (grandTotal - balanceDue);
+  if (effectivePaid > 0) {
+    rows.push({ label: 'Amount Received', value: effectivePaid, bold: true, highlight: 'green' });
+    rows.push({ label: 'Balance Due', value: balanceDue, bold: true, highlight: 'orange' });
+  }
 
   let currentY = y;
   let totalRowBottomY = y;

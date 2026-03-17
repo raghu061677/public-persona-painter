@@ -135,13 +135,17 @@ export default function ReportExecutiveDashboard() {
           <KPICard title="Avg Occupancy" value={hasCampaigns ? `${k.avgOccupancy}%` : "—"} icon={<Layers className="h-4 w-4" />}
             color={!hasCampaigns ? "text-muted-foreground" : k.avgOccupancy >= 60 ? "text-emerald-600" : "text-amber-600"}
             sub={!hasCampaigns ? "No bookings in period" : "Period date-range aware"}
+            tooltip="Sum of booked days (clamped to selected period) across all assets, divided by total assets × period days. Each asset is capped at 100%."
             onClick={() => navigate("/admin/reports/ooh-kpis")} />
           <KPICard title="Top City by Booked Value" value={topCityLabel} icon={<Building2 className="h-4 w-4" />} color="text-blue-600"
             sub={topCitySub}
-            tooltip="Highest total booked value (non-negative) from campaign assets in the selected period, scoped to your company." />
-          <MiniStatCard label="Total Assets" value={k.totalAssets} icon={<Layers className="h-3.5 w-3.5" />} />
-          <MiniStatCard label="Booked (Period)" value={k.bookedAssets} icon={<Target className="h-3.5 w-3.5" />} />
-          <MiniStatCard label="Active Campaigns" value={k.activeCampaigns} icon={<Briefcase className="h-3.5 w-3.5" />} />
+            tooltip="City with the highest total booked value (total_price or rent_amount, non-negative only) from campaign assets overlapping the selected period. Company-scoped." />
+          <MiniStatCard label="Total Assets" value={k.totalAssets} icon={<Layers className="h-3.5 w-3.5" />}
+            tooltip="Count of all media assets owned by your company." />
+          <MiniStatCard label="Booked (Period)" value={k.bookedAssets} icon={<Target className="h-3.5 w-3.5" />}
+            tooltip="Count of distinct assets with at least one active booking overlapping the selected period." />
+          <MiniStatCard label="Active Campaigns" value={k.activeCampaigns} icon={<Briefcase className="h-3.5 w-3.5" />}
+            tooltip="Campaigns with status: Running, Active, Confirmed, or In Progress." />
         </div>
       </div>
 

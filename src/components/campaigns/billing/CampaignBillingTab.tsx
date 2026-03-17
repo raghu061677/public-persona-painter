@@ -551,7 +551,7 @@ export function CampaignBillingTab({
           <MonthlyBillingScheduleTable
             periods={totals.billingPeriods}
              totals={totals}
-            existingInvoices={monthlyInvoices}
+            existingInvoices={existingInvoices}
             onGenerateInvoice={handleGenerateInvoice}
             onViewInvoice={handleViewInvoice}
             isGenerating={generating}

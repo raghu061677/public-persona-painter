@@ -40,7 +40,7 @@ export interface AssetROIRow {
   revenue: number;
   cost: number;
   profit: number;
-  roiPercent: number;
+  roiPercent: number | null;
   occupancyPercent: number;
   totalSqft: number;
 }

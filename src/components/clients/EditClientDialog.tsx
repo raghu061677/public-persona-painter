@@ -200,7 +200,10 @@ export function EditClientDialog({
           shipping_pincode: formData.shipping_same_as_billing ? formData.billing_pincode?.trim() : formData.shipping_pincode?.trim() || null,
           shipping_same_as_billing: formData.shipping_same_as_billing,
           payment_terms: formData.payment_terms?.trim() || null,
-        })
+          tds_applicable: formData.tds_applicable || false,
+          default_tds_rate: formData.default_tds_rate ? parseFloat(formData.default_tds_rate) : null,
+          tds_notes: formData.tds_notes?.trim() || null,
+        } as any)
         .eq('id', client.id);
 
       if (error) throw error;

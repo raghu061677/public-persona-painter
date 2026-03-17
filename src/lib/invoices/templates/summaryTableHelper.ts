@@ -2,7 +2,7 @@
 // Matches the style used in RO and Quotation PDFs
 
 import jsPDF from 'jspdf';
-import { formatCurrency, numberToWords } from './types';
+import { formatCurrency, formatDate, numberToWords } from './types';
 
 interface SummaryTableOptions {
   doc: jsPDF;
@@ -15,6 +15,7 @@ interface SummaryTableOptions {
   grandTotal: number;
   balanceDue: number;
   paidAmount?: number;
+  paidDate?: string | null;
   isInterState?: boolean;
 }
 

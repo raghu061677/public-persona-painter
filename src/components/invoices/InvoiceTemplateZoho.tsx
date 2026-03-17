@@ -199,7 +199,20 @@
         }
         // --- End enrichment ---
 
-        setData({ invoice, client, company, campaign, items });
+        // Fetch last payment date
+        let lastPaymentDate: string | null = null;
+        if (invoice.paid_amount && parseFloat(String(invoice.paid_amount)) > 0) {
+          const { data: lastPayment } = await supabase
+            .from('payment_records')
+            .select('payment_date')
+            .eq('invoice_id', invoiceId)
+            .order('payment_date', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          lastPaymentDate = lastPayment?.payment_date || null;
+        }
+
+        setData({ invoice: { ...invoice, last_payment_date: lastPaymentDate }, client, company, campaign, items });
       } catch (error) {
         console.error('Error fetching invoice data:', error);
       } finally {

@@ -82,6 +82,17 @@ export function useReceiptGeneration() {
         throw new Error("Receipt not found");
       }
 
+      // Fetch the payment_record to get TDS amount
+      let tdsAmount = 0;
+      if (receipt.payment_record_id) {
+        const { data: paymentRecord } = await supabase
+          .from("payment_records")
+          .select("tds_amount")
+          .eq("id", receipt.payment_record_id)
+          .maybeSingle();
+        tdsAmount = Number(paymentRecord?.tds_amount) || 0;
+      }
+
       // Fetch invoice
       const { data: invoice, error: invoiceError } = await supabase
         .from("invoices")

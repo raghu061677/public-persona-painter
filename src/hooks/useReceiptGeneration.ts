@@ -2,7 +2,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { renderReceiptPDF } from "@/lib/receipts/templates/registry";
-import type { ReceiptData } from "@/lib/receipts/templates/types";
+import type { ReceiptData, PaymentHistoryItem } from "@/lib/receipts/templates/types";
 
 interface Receipt {
   id: string;
@@ -91,6 +91,45 @@ export function useReceiptGeneration() {
           .eq("id", receipt.payment_record_id)
           .maybeSingle();
         tdsAmount = Number(paymentRecord?.tds_amount) || 0;
+      }
+
+      // Fetch ALL receipts for this invoice (payment history)
+      const { data: allReceipts } = await supabase
+        .from("receipts")
+        .select("receipt_no, receipt_date, amount_received, payment_record_id, payment_method, reference_no")
+        .eq("invoice_id", receipt.invoice_id)
+        .order("receipt_date", { ascending: true });
+
+      // Build payment history with TDS amounts
+      let paymentHistory: PaymentHistoryItem[] = [];
+      if (allReceipts && allReceipts.length > 1) {
+        // Fetch TDS for all payment records in one query
+        const paymentRecordIds = allReceipts
+          .map((r: any) => r.payment_record_id)
+          .filter(Boolean);
+        
+        let tdsMap: Record<string, number> = {};
+        if (paymentRecordIds.length > 0) {
+          const { data: prRecords } = await supabase
+            .from("payment_records")
+            .select("id, tds_amount")
+            .in("id", paymentRecordIds);
+          if (prRecords) {
+            prRecords.forEach((pr: any) => {
+              tdsMap[pr.id] = Number(pr.tds_amount) || 0;
+            });
+          }
+        }
+
+        paymentHistory = allReceipts.map((r: any) => ({
+          receipt_no: r.receipt_no,
+          receipt_date: r.receipt_date,
+          amount_received: Number(r.amount_received) || 0,
+          tds_amount: r.payment_record_id ? (tdsMap[r.payment_record_id] || 0) : 0,
+          payment_method: r.payment_method || "N/A",
+          reference_no: r.reference_no || undefined,
+          is_current: r.receipt_no === receipt.receipt_no,
+        }));
       }
 
       // Fetch invoice
@@ -196,6 +235,7 @@ export function useReceiptGeneration() {
         },
         orgSettings,
         logoBase64,
+        paymentHistory: paymentHistory.length > 0 ? paymentHistory : undefined,
       };
 
       // Generate PDF

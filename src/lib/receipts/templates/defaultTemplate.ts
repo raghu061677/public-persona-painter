@@ -1,6 +1,6 @@
 // Receipt Default Template - Professional Layout
 import jsPDF from 'jspdf';
-import { ReceiptData, formatCurrency, formatDate, numberToWords, COMPANY_ADDRESS } from './types';
+import { ReceiptData, PaymentHistoryItem, formatCurrency, formatDate, numberToWords, COMPANY_ADDRESS } from './types';
 import stampImageUrl from '@/assets/branding/stamp_matrix.png';
 
 // Cache stamp image
@@ -292,6 +292,90 @@ export async function renderReceiptDefaultTemplate(data: ReceiptData): Promise<B
   doc.text(formatCurrency(balanceAfter), summaryX + summaryLabelWidth, summaryY);
 
   yPos = yPos + boxHeight + 5;
+
+  // ========== PAYMENT HISTORY TABLE (if multiple payments) ==========
+  if (data.paymentHistory && data.paymentHistory.length > 1) {
+    yPos += 5;
+    
+    // Section header
+    doc.setFillColor(30, 64, 130);
+    doc.rect(leftMargin, yPos, contentWidth, 6, 'F');
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('Payment History for this Invoice', leftMargin + 3, yPos + 4.5);
+    yPos += 6;
+
+    // Table header
+    const colX = {
+      sno: leftMargin + 2,
+      receipt: leftMargin + 12,
+      date: leftMargin + 52,
+      method: leftMargin + 82,
+      tds: leftMargin + 120,
+      amount: pageWidth - rightMargin - 2,
+    };
+    const rowH = 5.5;
+
+    doc.setFillColor(245, 245, 245);
+    doc.rect(leftMargin, yPos, contentWidth, rowH, 'F');
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(60, 60, 60);
+    doc.text('#', colX.sno, yPos + 4);
+    doc.text('Receipt No', colX.receipt, yPos + 4);
+    doc.text('Date', colX.date, yPos + 4);
+    doc.text('Method', colX.method, yPos + 4);
+    doc.text('TDS', colX.tds, yPos + 4);
+    doc.text('Amount', colX.amount, yPos + 4, { align: 'right' });
+    yPos += rowH;
+
+    let totalPaid = 0;
+    let totalTds = 0;
+
+    data.paymentHistory.forEach((p: PaymentHistoryItem, i: number) => {
+      const isCurrent = p.is_current;
+      
+      if (isCurrent) {
+        doc.setFillColor(240, 253, 244); // light green highlight
+        doc.rect(leftMargin, yPos, contentWidth, rowH, 'F');
+      }
+
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', isCurrent ? 'bold' : 'normal');
+      doc.setTextColor(0, 0, 0);
+      doc.text(String(i + 1), colX.sno, yPos + 4);
+      doc.text(p.receipt_no, colX.receipt, yPos + 4);
+      doc.text(formatDate(p.receipt_date), colX.date, yPos + 4);
+      doc.text(p.payment_method || 'N/A', colX.method, yPos + 4);
+      doc.text(p.tds_amount > 0 ? formatCurrency(p.tds_amount) : '-', colX.tds, yPos + 4);
+      doc.text(formatCurrency(p.amount_received), colX.amount, yPos + 4, { align: 'right' });
+
+      // Thin separator
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.2);
+      doc.line(leftMargin, yPos + rowH, pageWidth - rightMargin, yPos + rowH);
+
+      totalPaid += p.amount_received;
+      totalTds += p.tds_amount;
+      yPos += rowH;
+    });
+
+    // Totals row
+    doc.setFillColor(235, 235, 235);
+    doc.rect(leftMargin, yPos, contentWidth, rowH + 1, 'F');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Total Paid', colX.method, yPos + 4.5);
+    if (totalTds > 0) {
+      doc.text(formatCurrency(totalTds), colX.tds, yPos + 4.5);
+    }
+    doc.setTextColor(16, 185, 129);
+    doc.text(formatCurrency(totalPaid), colX.amount, yPos + 4.5, { align: 'right' });
+
+    yPos += rowH + 6;
+  }
 
   // ========== NOTES (if any) ==========
   if (data.receipt.notes) {

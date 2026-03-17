@@ -1,6 +1,16 @@
 // Receipt PDF Template System - Types
 import jsPDF from 'jspdf';
 
+export interface PaymentHistoryItem {
+  receipt_no: string;
+  receipt_date: string;
+  amount_received: number;
+  tds_amount: number;
+  payment_method: string;
+  reference_no?: string;
+  is_current: boolean;
+}
+
 export interface ReceiptData {
   receipt: {
     id: string;
@@ -38,6 +48,7 @@ export interface ReceiptData {
     gstin?: string;
   };
   logoBase64?: string;
+  paymentHistory?: PaymentHistoryItem[];
 }
 
 export interface ReceiptTemplateConfig {

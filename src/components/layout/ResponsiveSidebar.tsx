@@ -1,52 +1,44 @@
- import { Link, useLocation, useNavigate } from "react-router-dom";
- import { useState, useEffect, useCallback } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useRBAC } from "@/hooks/useRBAC";
 import {
-  LayoutDashboard, Building2, Map, Layers, Briefcase, Users, TrendingUp,
-  FileText, Receipt, Zap, UserCog, Palette, FileSpreadsheet,
-  Shield, DollarSign, Smartphone, Image, Settings, FileCheck, 
-  CreditCard, Globe, ShoppingBag, BarChart3, Sparkles, Menu, CheckCircle2, History, ListChecks, UserPlus, Clock, Wallet, Calendar, CalendarDays, Mail, Bell, AlertTriangle
+  LayoutDashboard, Building2, Map, UserCog, Shield, DollarSign,
+  Settings, BarChart3, FileText, Menu,
 } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
+  SidebarGroupLabel,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CompanySwitcher } from "@/components/sidebar/CompanySwitcher";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
- import { useIsMobile } from "@/hooks/use-mobile";
- import { NAV_CONFIG, findActiveSections, type NavSection, type NavItem } from "@/config/navigation";
- import { MobileAccordionNav } from "@/components/sidebar/MobileAccordionNav";
+import { MobileAccordionNav } from "@/components/sidebar/MobileAccordionNav";
+import { DesktopNavFromConfig } from "@/components/sidebar/DesktopNavFromConfig";
+import { LogOut } from "lucide-react";
 
 export function ResponsiveSidebar() {
   const location = useLocation();
-   const { state, isMobile, setOpenMobile } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const { company, isPlatformAdmin, companyUser } = useCompany();
   const rbac = useRBAC();
   const navigate = useNavigate();
   const { isAdmin, user } = useAuth();
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
-   const [proofUploadsCount, setProofUploadsCount] = useState(0);
- 
+  const [proofUploadsCount, setProofUploadsCount] = useState(0);
+
   const isCompanyAdmin = companyUser?.role === 'admin' || isAdmin;
-  const canViewSettings = rbac.canAccessModule('settings');
   const collapsed = state === "collapsed";
   const isActive = (path: string) => location.pathname === path;
 
@@ -80,36 +72,29 @@ export function ResponsiveSidebar() {
     }
   };
 
-   // Close mobile drawer on navigation
-   const handleMobileNavigate = useCallback(() => {
-     if (isMobile) {
-       setOpenMobile(false);
-     }
-   }, [isMobile, setOpenMobile]);
- 
+  // Close mobile drawer on navigation
+  const handleMobileNavigate = useCallback(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }, [isMobile, setOpenMobile]);
+
   const handleLogout = async () => {
-     handleMobileNavigate();
+    handleMobileNavigate();
     await supabase.auth.signOut();
     navigate('/auth');
   };
 
-  const MenuItem = ({ icon: Icon, label, href, badge }: { icon: any; label: string; href: string; badge?: number }) => {
+  // Simple menu item for platform admin section
+  const MenuItem = ({ icon: Icon, label, href }: { icon: any; label: string; href: string }) => {
     const active = isActive(href);
-    
     if (collapsed) {
       return (
         <Tooltip>
           <TooltipTrigger asChild>
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={active}>
-                <Link to={href}>
-                  <Icon />
-                  {badge !== undefined && badge > 0 && (
-                    <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-                      {badge > 9 ? "9+" : badge}
-                    </span>
-                  )}
-                </Link>
+                <Link to={href}><Icon /></Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </TooltipTrigger>
@@ -117,114 +102,70 @@ export function ResponsiveSidebar() {
         </Tooltip>
       );
     }
-
     return (
       <SidebarMenuItem>
         <SidebarMenuButton asChild isActive={active}>
-          <Link to={href}>
-            <Icon />
-            <span>{label}</span>
-            {badge !== undefined && badge > 0 && (
-              <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">
-                {badge > 9 ? "9+" : badge}
-              </span>
-            )}
-          </Link>
+          <Link to={href}><Icon /><span>{label}</span></Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
     );
   };
 
-  const MenuGroup = ({ 
-    icon: Icon, 
-    label, 
-    children 
-  }: { 
-    icon: any; 
-    label: string; 
-    children: React.ReactNode 
-  }) => {
-    if (collapsed) {
-      return <>{children}</>;
-    }
-
-    return (
-      <Collapsible defaultOpen className="group/collapsible">
-        <SidebarGroup>
-          <CollapsibleTrigger asChild>
-            <SidebarGroupLabel className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md px-2 py-1.5 transition-colors">
-              <div className="flex items-center gap-2">
-                <Icon className="h-4 w-4" />
-                <span>{label}</span>
-              </div>
-              <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
-            </SidebarGroupLabel>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <SidebarGroupContent>
-              <SidebarMenu className="ml-3 mt-1 space-y-1">
-                {children}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </CollapsibleContent>
-        </SidebarGroup>
-      </Collapsible>
-    );
+  // Badge counts
+  const badges: Record<string, number> = {
+    pendingApprovals: pendingApprovalsCount,
+    proofUploads: proofUploadsCount,
   };
 
-   // Mobile header with company logo/branding
-   const mobileHeader = (
-     <div className="px-4 pb-2 border-b border-border/40 mb-2">
-       <Link 
-         to="/admin/dashboard" 
-         className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-         onPointerUp={handleMobileNavigate}
-       >
-         {company?.logo_url ? (
-           <img 
-             src={company.logo_url} 
-             alt={company.name}
-             className="h-8 w-auto object-contain max-w-[140px] rounded"
-           />
-         ) : (
-           <>
-             <Shield className="h-5 w-5 text-primary" />
-             <span className="font-semibold text-foreground">
-               {company?.name || 'Go-Ads 360°'}
-             </span>
-           </>
-         )}
-       </Link>
-       <p className="text-xs text-muted-foreground mt-1">{company?.type === 'media_owner' ? 'Media Owner' : company?.type === 'agency' ? 'Agency' : 'Workspace'}</p>
-     </div>
-   );
- 
-   // Badge counts for mobile accordion
-   const badges: Record<string, number> = {
-     pendingApprovals: pendingApprovalsCount,
-     proofUploads: proofUploadsCount,
-   };
- 
-   return (
-     <Sidebar 
-       collapsible="icon" 
-       className="border-r border-border"
-       mobileContent={
-         <MobileAccordionNav 
-           badges={badges} 
-           onLogout={handleLogout} 
-         />
-       }
-       mobileHeader={mobileHeader}
-     >
+  // Mobile header with company logo/branding
+  const mobileHeader = (
+    <div className="px-4 pb-2 border-b border-border/40 mb-2">
+      <Link
+        to="/admin/dashboard"
+        className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+        onPointerUp={handleMobileNavigate}
+      >
+        {company?.logo_url ? (
+          <img
+            src={company.logo_url}
+            alt={company.name}
+            className="h-8 w-auto object-contain max-w-[140px] rounded"
+          />
+        ) : (
+          <>
+            <Shield className="h-5 w-5 text-primary" />
+            <span className="font-semibold text-foreground">
+              {company?.name || 'Go-Ads 360°'}
+            </span>
+          </>
+        )}
+      </Link>
+      <p className="text-xs text-muted-foreground mt-1">
+        {company?.type === 'media_owner' ? 'Media Owner' : company?.type === 'agency' ? 'Agency' : 'Workspace'}
+      </p>
+    </div>
+  );
+
+  return (
+    <Sidebar
+      collapsible="icon"
+      className="border-r border-border"
+      mobileContent={
+        <MobileAccordionNav
+          badges={badges}
+          onLogout={handleLogout}
+        />
+      }
+      mobileHeader={mobileHeader}
+    >
       {/* Header with Logo and Toggle */}
       <SidebarHeader className="border-b border-border/40 p-4">
         <div className="flex items-center justify-between">
           {!collapsed && (
             <Link to="/admin/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
               {company?.logo_url ? (
-                <img 
-                  src={company.logo_url} 
+                <img
+                  src={company.logo_url}
                   alt={company.name}
                   className="h-8 w-auto object-contain max-w-[140px] rounded"
                 />
@@ -241,8 +182,8 @@ export function ResponsiveSidebar() {
           {collapsed && (
             <Link to="/admin/dashboard" className="mx-auto hover:opacity-80 transition-opacity">
               {company?.logo_url ? (
-                <img 
-                  src={company.logo_url} 
+                <img
+                  src={company.logo_url}
                   alt={company.name}
                   className="h-8 w-8 object-contain rounded"
                 />
@@ -258,33 +199,18 @@ export function ResponsiveSidebar() {
       {/* Main Content */}
       <SidebarContent>
         <ScrollArea className="flex-1 ios-scroll">
-          {/* Platform Administration */}
+          {/* Platform Administration (special case — not in NAV_CONFIG) */}
           {isPlatformAdmin && company?.type === 'platform_admin' && (
             <>
               {!collapsed && <SidebarGroupLabel className="px-4">Platform Administration</SidebarGroupLabel>}
               <SidebarMenu>
                 <MenuItem icon={LayoutDashboard} label="Platform Dashboard" href="/admin/platform" />
-                
-                <MenuGroup icon={Building2} label="Companies">
-                  <MenuItem icon={Building2} label="All Companies" href="/admin/company-management" />
-                  <MenuItem icon={Shield} label="Approvals" href="/admin/approve-companies" />
-                </MenuGroup>
-
-                <MenuGroup icon={UserCog} label="Users">
-                  <MenuItem icon={UserCog} label="Platform Users" href="/admin/users" />
-                  <MenuItem icon={Shield} label="Roles & Permissions" href="/admin/platform-roles" />
-                </MenuGroup>
-
+                <MenuItem icon={Building2} label="All Companies" href="/admin/company-management" />
+                <MenuItem icon={Shield} label="Company Approvals" href="/admin/approve-companies" />
+                <MenuItem icon={UserCog} label="Platform Users" href="/admin/users" />
+                <MenuItem icon={Shield} label="Platform Roles" href="/admin/platform-roles" />
                 <MenuItem icon={DollarSign} label="Billing & Subscriptions" href="/admin/platform-reports/billing" />
-                {/* Onboarding test page removed from nav */}
-                
-                <MenuGroup icon={BarChart3} label="Platform Reports">
-                  <MenuItem icon={BarChart3} label="Multi-Tenant Reports" href="/admin/analytics-dashboard" />
-                  <MenuItem icon={Building2} label="Company Usage" href="/admin/platform-reports/company-usage" />
-                  <MenuItem icon={DollarSign} label="Billing Reports" href="/admin/platform-reports/billing" />
-                  <MenuItem icon={Map} label="Global Inventory" href="/admin/platform-reports/media-inventory" />
-                </MenuGroup>
-
+                <MenuItem icon={BarChart3} label="Multi-Tenant Reports" href="/admin/analytics-dashboard" />
                 <MenuItem icon={FileText} label="Audit Logs" href="/admin/audit-logs" />
                 <MenuItem icon={Settings} label="Platform Settings" href="/admin/platform-admin-setup" />
               </SidebarMenu>
@@ -292,176 +218,26 @@ export function ResponsiveSidebar() {
             </>
           )}
 
-          {/* MEDIA INVENTORY */}
+          {/* Tenant Company Navigation — driven entirely from NAV_CONFIG */}
           {company && company.type !== 'platform_admin' && (
-            <>
-              <SidebarMenu>
-                <MenuItem icon={LayoutDashboard} label="Dashboard" href="/admin/dashboard" />
-              </SidebarMenu>
-              <Separator className="my-2" />
-
-              {!collapsed && <SidebarGroupLabel className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">Media Inventory</SidebarGroupLabel>}
-              <SidebarMenu>
-                <MenuItem icon={Map} label="Media Assets" href="/admin/media-assets" />
-                <MenuItem icon={Calendar} label="Media Availability" href="/admin/reports/vacant-media" />
-                {(isCompanyAdmin || companyUser?.role === 'finance') && (
-                  <MenuItem icon={FileCheck} label="Asset Validation" href="/admin/media-assets-validation" />
-                )}
-              </SidebarMenu>
-              <Separator className="my-2" />
-
-              {/* SALES & CAMPAIGNS */}
-              {!collapsed && <SidebarGroupLabel className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">Sales & Campaigns</SidebarGroupLabel>}
-              <SidebarMenu>
-                <MenuItem icon={UserPlus} label="Leads" href="/admin/leads" />
-                {(isCompanyAdmin || companyUser?.role === 'sales') && (
-                  <MenuItem icon={UserPlus} label="Merge Review" href="/admin/leads/merge-review" />
-                )}
-                <MenuItem icon={Users} label="Clients" href="/admin/clients" />
-                <MenuItem icon={ShoppingBag} label="Booking Requests" href="/admin/booking-requests" />
-                <MenuItem icon={Layers} label="Plans" href="/admin/plans" />
-                <MenuItem icon={Briefcase} label="Campaigns" href="/admin/campaigns" />
-
-                <MenuGroup icon={CheckCircle2} label="Approvals">
-                  <MenuItem icon={ListChecks} label="Pending Approvals" href="/admin/approvals" badge={pendingApprovalsCount} />
-                  <MenuItem icon={History} label="Approval History" href="/admin/approval-history" />
-                  {(isCompanyAdmin || isPlatformAdmin) && (
-                    <MenuItem icon={Settings} label="Approval Rules" href="/admin/approvals/rules" />
-                  )}
-                </MenuGroup>
-              </SidebarMenu>
-              <Separator className="my-2" />
-
-              {/* OPERATIONS */}
-              {rbac.canViewModule('operations') && (
-                <>
-                  {!collapsed && <SidebarGroupLabel className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">Operations</SidebarGroupLabel>}
-                  <SidebarMenu>
-                    <MenuItem icon={TrendingUp} label="Operations" href="/admin/operations" />
-                    <MenuItem icon={Image} label="Creative Received" href="/admin/operations/creatives" />
-                    <MenuItem icon={FileCheck} label="Printing Status" href="/admin/operations/printing" />
-                    <MenuItem icon={Image} label="Proof Uploads" href="/admin/operations/proof-uploads" />
-                    <MenuItem icon={Image} label="Proof Execution" href="/admin/reports/proof-execution" />
-                  </SidebarMenu>
-                  <Separator className="my-2" />
-                </>
-              )}
-
-              {/* FINANCE */}
-              {rbac.canViewModule('finance') && (
-                <>
-                  {!collapsed && <SidebarGroupLabel className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">Finance</SidebarGroupLabel>}
-                  <SidebarMenu>
-                    <MenuItem icon={FileSpreadsheet} label="Quotations" href="/admin/estimations" />
-                    <MenuItem icon={FileText} label="Sales Orders" href="/admin/sales-orders" />
-                    <MenuItem icon={FileCheck} label="Purchase Orders" href="/admin/purchase-orders" />
-                    <MenuItem icon={FileCheck} label="Proforma Invoice" href="/admin/proformas" />
-                    <MenuItem icon={Receipt} label="Invoices" href="/admin/invoices" />
-                    <MenuItem icon={CreditCard} label="Payments" href="/admin/payments" />
-                    <MenuItem icon={DollarSign} label="Expenses" href="/admin/expenses" />
-                    <MenuItem icon={Zap} label="Power Bills" href="/admin/power-bills" />
-                    <MenuItem icon={CalendarDays} label="Month Close" href="/admin/finance/month-close" />
-                    <MenuItem icon={Layers} label="Concession Allocation" href="/admin/finance/concession-allocation" />
-                    <MenuGroup icon={Wallet} label="Payables">
-                      <MenuItem icon={Zap} label="Generate Payables" href="/admin/finance/generate-payables" />
-                      <MenuItem icon={FileText} label="Vendor Ledger" href="/admin/reports/vendor-ledger" />
-                      <MenuItem icon={FileText} label="Printer Ledger" href="/admin/reports/printer-ledger" />
-                      <MenuItem icon={Wallet} label="Ops Payables" href="/admin/reports/ops-payables" />
-                    </MenuGroup>
-                    <MenuItem icon={Wallet} label="Outstanding" href="/admin/reports/outstanding" />
-                    <MenuItem icon={Clock} label="Aging Report" href="/admin/reports/aging" />
-                  </SidebarMenu>
-                  <Separator className="my-2" />
-                </>
-              )}
-
-              {/* REPORTS */}
-              {rbac.canViewModule('reports') && (
-                <>
-                  {!collapsed && <SidebarGroupLabel className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">Reports</SidebarGroupLabel>}
-                  <SidebarMenu>
-                    <MenuGroup icon={Users} label="Booking Reports">
-                      <MenuItem icon={Users} label="Client Bookings" href="/admin/reports/client-bookings" />
-                      <MenuItem icon={Briefcase} label="Campaign Bookings" href="/admin/reports/campaigns" />
-                      <MenuItem icon={Map} label="Booked Media" href="/admin/reports/booked-media" />
-                      <MenuItem icon={CalendarDays} label="Monthly Campaigns" href="/admin/reports/monthly-campaigns" />
-                    </MenuGroup>
-                    <MenuGroup icon={TrendingUp} label="Revenue & Profitability">
-                      <MenuItem icon={TrendingUp} label="Revenue Center" href="/admin/reports/revenue" />
-                      <MenuItem icon={DollarSign} label="OOH Revenue" href="/admin/reports/ooh-revenue" />
-                      <MenuItem icon={BarChart3} label="Asset Profitability" href="/admin/reports/profitability" />
-                      <MenuItem icon={Briefcase} label="Campaign Profitability" href="/admin/reports/campaign-profitability" />
-                      <MenuItem icon={TrendingUp} label="OOH KPIs" href="/admin/reports/ooh-kpis" />
-                    </MenuGroup>
-                    <MenuGroup icon={DollarSign} label="Financial Reports">
-                      <MenuItem icon={DollarSign} label="Financial Summary" href="/admin/reports/financial" />
-                      <MenuItem icon={Wallet} label="Cash Flow Forecast" href="/admin/reports/cashflow-forecast" />
-                      <MenuItem icon={DollarSign} label="Expense Allocation" href="/admin/reports/expense-allocation" />
-                      <MenuItem icon={Layers} label="Concession Risk" href="/admin/reports/concession-risk" />
-                      <MenuItem icon={Clock} label="Aging by Client" href="/admin/reports/aging-by-client" />
-                      <MenuItem icon={FileText} label="TDS Dashboard" href="/admin/reports/tds" />
-                    </MenuGroup>
-                    <MenuGroup icon={TrendingUp} label="Operations Reports">
-                      <MenuItem icon={FileCheck} label="Proof Execution" href="/admin/reports/proof-execution" />
-                      <MenuItem icon={Wallet} label="Ops Billables" href="/admin/reports/ops-billables" />
-                      <MenuItem icon={TrendingUp} label="Ops Margin" href="/admin/reports/ops-margin" />
-                    </MenuGroup>
-                    <MenuItem icon={Mail} label="Email Monitoring" href="/admin/reports/email-monitoring" />
-                    <MenuItem icon={LayoutDashboard} label="Executive Dashboard" href="/admin/reports/executive" />
-                  </SidebarMenu>
-                  <Separator className="my-2" />
-                </>
-              )}
-
-              {/* TOOLS */}
-              {!collapsed && <SidebarGroupLabel className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">Tools</SidebarGroupLabel>}
-              <SidebarMenu>
-                <MenuItem icon={Sparkles} label="AI Assistant" href="/admin/ai-assistant" />
-                <MenuItem icon={Image} label="Photo Library" href="/admin/photo-library" />
-                <MenuItem icon={Smartphone} label="Mobile Field App" href="/mobile" />
-                <MenuItem icon={Globe} label="Marketplace" href="/marketplace" />
-              </SidebarMenu>
-              <Separator className="my-2" />
-
-              {/* SYSTEM / SETTINGS */}
-               {(isCompanyAdmin || isPlatformAdmin || canViewSettings) && (
-                <>
-                  {!collapsed && <SidebarGroupLabel className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">System</SidebarGroupLabel>}
-                    <SidebarMenu>
-                    <MenuGroup icon={Building2} label="Company Settings">
-                      <MenuItem icon={Building2} label="Company Profile" href="/admin/company-settings/profile" />
-                      <MenuItem icon={Palette} label="Branding / Logo" href="/admin/company-settings/branding" />
-                      {isCompanyAdmin && <MenuItem icon={Globe} label="Email Settings" href="/admin/company-settings/email-providers" />}
-                      <MenuItem icon={Mail} label="Email Templates" href="/admin/company-settings/email-templates" />
-                      <MenuItem icon={Bell} label="Reminders" href="/admin/company-settings/reminders" />
-                      <MenuItem icon={AlertTriangle} label="Alerts" href="/admin/company-settings/alerts" />
-                      {isCompanyAdmin && <MenuItem icon={Users} label="User Management" href="/admin/company-settings/users" />}
-                      {isCompanyAdmin && <MenuItem icon={Shield} label="Roles & Permissions" href="/admin/company-settings/roles" />}
-                    </MenuGroup>
-
-                    <MenuGroup icon={Settings} label="Data Management">
-                      <MenuItem icon={FileCheck} label="Import Data" href="/admin/import-data" />
-                      <MenuItem icon={FileCheck} label="Export Data" href="/admin/export-data" />
-                    </MenuGroup>
-
-                    <MenuItem icon={CreditCard} label="Subscription" href="/admin/company-settings" />
-                  </SidebarMenu>
-                </>
-              )}
-            </>
+            <DesktopNavFromConfig
+              collapsed={collapsed}
+              badges={badges}
+              onLogout={handleLogout}
+            />
           )}
         </ScrollArea>
       </SidebarContent>
 
-      {/* Footer */}
+      {/* Footer — Logout only */}
       <SidebarFooter className="border-t border-border/40 p-2">
         {!collapsed ? (
           <Button
             variant="ghost"
             onClick={handleLogout}
-            className="w-full justify-start gap-2"
+            className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/8"
           >
-            <Shield className="h-4 w-4" />
+            <LogOut className="h-4 w-4" />
             <span>Logout</span>
           </Button>
         ) : (
@@ -471,9 +247,9 @@ export function ResponsiveSidebar() {
                 variant="ghost"
                 size="icon"
                 onClick={handleLogout}
-                className="mx-auto"
+                className="mx-auto text-muted-foreground hover:text-destructive"
               >
-                <Shield className="h-4 w-4" />
+                <LogOut className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="right">Logout</TooltipContent>

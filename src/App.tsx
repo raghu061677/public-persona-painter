@@ -117,6 +117,7 @@ const ReportTDS = lazy(() => import("./pages/ReportTDS"));
 const ReportVendorLedger = lazy(() => import("./pages/ReportVendorLedger"));
 const ReportPrinterLedger = lazy(() => import("./pages/ReportPrinterLedger"));
 const MediaAvailabilityReport = lazy(() => import("./pages/admin/reports/MediaAvailabilityReport"));
+const EmailMonitoringDashboard = lazy(() => import("./pages/admin/reports/EmailMonitoringDashboard"));
 const PhotoGallery = lazy(() => import("./pages/PhotoGallery"));
 // ImportData and ExportData removed — redirect to data-export-import
 // const ImportData = lazy(() => import("./pages/ImportData"));

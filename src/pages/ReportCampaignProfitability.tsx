@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { SortableTableHead, useSortableData } from "@/components/common/SortableTableHead";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -41,9 +42,11 @@ export default function ReportCampaignProfitability() {
     );
   }
 
-  const data = ooh.campaignProfitability.filter(c =>
+  const filtered = ooh.campaignProfitability.filter(c =>
     !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.clientName.toLowerCase().includes(search.toLowerCase())
   );
+
+  const { sortedData: data, sortConfig: profitSortConfig, handleSort: handleProfitSort } = useSortableData(filtered, { key: "revenue", direction: "desc" });
 
   const totalRevenue = data.reduce((s, c) => s + c.revenue, 0);
   const totalCost = data.reduce((s, c) => s + c.directCost, 0);
@@ -146,19 +149,19 @@ export default function ReportCampaignProfitability() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Campaign</TableHead>
-                      <TableHead>Client</TableHead>
-                      <TableHead>Start</TableHead>
-                      <TableHead>End</TableHead>
-                      <TableHead className="text-right">Assets</TableHead>
-                      <TableHead className="text-right">Revenue</TableHead>
-                      <TableHead className="text-right">Printing</TableHead>
-                      <TableHead className="text-right">Mounting</TableHead>
-                      <TableHead className="text-right">Alloc. Exp.</TableHead>
-                      <TableHead className="text-right">Total Cost</TableHead>
-                      <TableHead className="text-right">Net Profit</TableHead>
-                      <TableHead className="text-right">Margin</TableHead>
-                      <TableHead>Status</TableHead>
+                      <SortableTableHead sortKey="name" currentSort={profitSortConfig} onSort={handleProfitSort}>Campaign</SortableTableHead>
+                      <SortableTableHead sortKey="clientName" currentSort={profitSortConfig} onSort={handleProfitSort}>Client</SortableTableHead>
+                      <SortableTableHead sortKey="startDate" currentSort={profitSortConfig} onSort={handleProfitSort}>Start</SortableTableHead>
+                      <SortableTableHead sortKey="endDate" currentSort={profitSortConfig} onSort={handleProfitSort}>End</SortableTableHead>
+                      <SortableTableHead sortKey="assetCount" currentSort={profitSortConfig} onSort={handleProfitSort} align="right">Assets</SortableTableHead>
+                      <SortableTableHead sortKey="revenue" currentSort={profitSortConfig} onSort={handleProfitSort} align="right">Revenue</SortableTableHead>
+                      <SortableTableHead sortKey="printingCost" currentSort={profitSortConfig} onSort={handleProfitSort} align="right">Printing</SortableTableHead>
+                      <SortableTableHead sortKey="mountingCost" currentSort={profitSortConfig} onSort={handleProfitSort} align="right">Mounting</SortableTableHead>
+                      <SortableTableHead sortKey="allocatedExpenses" currentSort={profitSortConfig} onSort={handleProfitSort} align="right">Alloc. Exp.</SortableTableHead>
+                      <SortableTableHead sortKey="directCost" currentSort={profitSortConfig} onSort={handleProfitSort} align="right">Total Cost</SortableTableHead>
+                      <SortableTableHead sortKey="netProfit" currentSort={profitSortConfig} onSort={handleProfitSort} align="right">Net Profit</SortableTableHead>
+                      <SortableTableHead sortKey="margin" currentSort={profitSortConfig} onSort={handleProfitSort} align="right">Margin</SortableTableHead>
+                      <SortableTableHead sortKey="status" currentSort={profitSortConfig} onSort={handleProfitSort}>Status</SortableTableHead>
                       <TableHead className="text-right">Action</TableHead>
                     </TableRow>
                   </TableHeader>

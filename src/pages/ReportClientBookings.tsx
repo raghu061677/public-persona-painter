@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SortableTableHead } from "@/components/common/SortableTableHead";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -487,9 +488,22 @@ export default function ReportClientBookings() {
               <TableRow>
                 <TableHead className="w-8" />
                 {COLUMNS.filter((c) => visibleColumns.includes(c.key)).map((col) => (
-                  <TableHead key={col.key} className={col.key === "total_campaigns" || col.key === "total_assets" ? "text-right" : ""}>
+                  <SortableTableHead
+                    key={col.key}
+                    sortKey={col.key}
+                    currentSort={sortConfig.field === col.key ? { key: col.key, direction: sortConfig.direction } : null}
+                    onSort={(key) => {
+                      setSortConfig((prev: any) => {
+                        if (prev.field === key) {
+                          return { field: key, direction: prev.direction === "asc" ? "desc" : "asc" };
+                        }
+                        return { field: key, direction: "asc" };
+                      });
+                    }}
+                    align={col.key === "total_campaigns" || col.key === "total_assets" ? "right" : "left"}
+                  >
                     {col.label}
-                  </TableHead>
+                  </SortableTableHead>
                 ))}
               </TableRow>
             </TableHeader>

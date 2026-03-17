@@ -113,7 +113,7 @@ export function useOOHIntelligence() {
     setLoading(true);
     try {
       const [cmpRes, caRes, maRes, invRes, expRes] = await Promise.all([
-        supabase.from("campaigns").select("id, name, client_id, status, start_date, end_date, clients(name)").eq("company_id", company.id),
+        supabase.from("campaigns").select("id, campaign_name, client_id, client_name, status, start_date, end_date").eq("company_id", company.id),
         supabase.from("campaign_assets").select("id, campaign_id, asset_id, city, area, location, media_type, card_rate, negotiated_rate, printing_cost, mounting_cost, total_price, rent_amount, total_sqft, booking_start_date, booking_end_date, direction, dimensions"),
         supabase.from("media_assets").select("id, city, area, media_type, total_sqft, status, company_id").eq("company_id", company.id),
         supabase.from("invoices").select("id, campaign_id, total_amount, status").eq("company_id", company.id),
@@ -145,7 +145,7 @@ export function useOOHIntelligence() {
       if (!overlaps) return false;
       if (statusFilter && c.status !== statusFilter) return false;
       if (clientFilter) {
-        const cn = (c as any).clients?.name || "";
+        const cn = c.client_name || "";
         if (!cn.toLowerCase().includes(clientFilter.toLowerCase())) return false;
       }
       return true;
@@ -200,8 +200,8 @@ export function useOOHIntelligence() {
 
         return {
           id: c.id,
-          name: c.name || c.id,
-          clientName: (c as any).clients?.name || "—",
+          name: c.campaign_name || c.id,
+          clientName: c.client_name || "—",
           startDate: c.start_date,
           endDate: c.end_date,
           assetCount: filteredA.length,

@@ -1,6 +1,27 @@
 // Receipt Default Template - Professional Layout
 import jsPDF from 'jspdf';
 import { ReceiptData, formatCurrency, formatDate, numberToWords, COMPANY_ADDRESS } from './types';
+import stampImageUrl from '@/assets/branding/stamp_matrix.png';
+
+// Cache stamp image
+let cachedStampBase64: string | null = null;
+async function loadStampImage(): Promise<string | undefined> {
+  if (cachedStampBase64) return cachedStampBase64;
+  try {
+    const res = await fetch(stampImageUrl);
+    if (!res.ok) return undefined;
+    const blob = await res.blob();
+    cachedStampBase64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    return cachedStampBase64 || undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export async function renderReceiptDefaultTemplate(data: ReceiptData): Promise<Blob> {
   const doc = new jsPDF({

@@ -440,6 +440,7 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
     gstAmount,
     grandTotal,
     balanceDue,
+    paidAmount: parseFloat(data.invoice.paid_amount) || 0,
     isInterState,
   });
 

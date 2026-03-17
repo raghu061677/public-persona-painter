@@ -10610,6 +10610,86 @@ export type Database = {
         }
         Relationships: []
       }
+      tax_settings: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          default_tds_rate: number | null
+          einvoicing_api_key: string | null
+          einvoicing_api_secret: string | null
+          einvoicing_enabled: boolean | null
+          enable_einvoicing: boolean | null
+          enable_eway_bill: boolean | null
+          eway_bill_api_key: string | null
+          eway_bill_api_secret: string | null
+          eway_bill_enabled: boolean | null
+          gstin: string | null
+          id: string
+          msme_number: string | null
+          msme_registered: boolean | null
+          pan: string | null
+          tan_number: string | null
+          tds_applicable: boolean | null
+          tds_enabled: boolean | null
+          tds_percentage: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          default_tds_rate?: number | null
+          einvoicing_api_key?: string | null
+          einvoicing_api_secret?: string | null
+          einvoicing_enabled?: boolean | null
+          enable_einvoicing?: boolean | null
+          enable_eway_bill?: boolean | null
+          eway_bill_api_key?: string | null
+          eway_bill_api_secret?: string | null
+          eway_bill_enabled?: boolean | null
+          gstin?: string | null
+          id?: string
+          msme_number?: string | null
+          msme_registered?: boolean | null
+          pan?: string | null
+          tan_number?: string | null
+          tds_applicable?: boolean | null
+          tds_enabled?: boolean | null
+          tds_percentage?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          default_tds_rate?: number | null
+          einvoicing_api_key?: string | null
+          einvoicing_api_secret?: string | null
+          einvoicing_enabled?: boolean | null
+          enable_einvoicing?: boolean | null
+          enable_eway_bill?: boolean | null
+          eway_bill_api_key?: string | null
+          eway_bill_api_secret?: string | null
+          eway_bill_enabled?: boolean | null
+          gstin?: string | null
+          id?: string
+          msme_number?: string | null
+          msme_registered?: boolean | null
+          pan?: string | null
+          tan_number?: string | null
+          tds_applicable?: boolean | null
+          tds_enabled?: boolean | null
+          tds_percentage?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tds_ledger: {
         Row: {
           amount_received: number | null

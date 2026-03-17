@@ -211,6 +211,9 @@ export function EditClientDialog({
           payment_terms: formData.payment_terms?.trim() || null,
           tds_applicable: formData.tds_applicable || false,
           default_tds_rate: formData.default_tds_rate ? parseFloat(formData.default_tds_rate) : null,
+          tds_section: formData.tds_section?.trim() || null,
+          tan_number: formData.tan_number?.trim() || null,
+          finance_contact: formData.finance_contact?.trim() || null,
           tds_notes: formData.tds_notes?.trim() || null,
         } as any)
         .eq('id', client.id);

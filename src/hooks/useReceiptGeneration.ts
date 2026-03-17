@@ -235,6 +235,7 @@ export function useReceiptGeneration() {
         },
         orgSettings,
         logoBase64,
+        paymentHistory: paymentHistory.length > 0 ? paymentHistory : undefined,
       };
 
       // Generate PDF

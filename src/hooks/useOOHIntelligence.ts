@@ -348,7 +348,7 @@ export function useOOHIntelligence() {
       });
     }
     return months;
-  }, [campaigns, campaignAssets, mediaAssets]);
+  }, [campaigns, campaignAssets, mediaAssets, invoiceByCampaign]);
 
   // D) Rate Realization
   const rateRealization = useMemo((): RateRealizationRow[] => {

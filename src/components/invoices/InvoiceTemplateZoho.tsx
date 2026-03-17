@@ -199,20 +199,22 @@
         }
         // --- End enrichment ---
 
-        // Fetch last payment date
+        // Fetch last payment date and TDS totals
         let lastPaymentDate: string | null = null;
+        let totalTdsAmount = 0;
         if (invoice.paid_amount && parseFloat(String(invoice.paid_amount)) > 0) {
-          const { data: lastPayment } = await supabase
+          const { data: paymentRows } = await supabase
             .from('payment_records')
-            .select('payment_date')
+            .select('payment_date, tds_amount')
             .eq('invoice_id', invoiceId)
-            .order('payment_date', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          lastPaymentDate = lastPayment?.payment_date || null;
+            .order('payment_date', { ascending: false });
+          if (paymentRows && paymentRows.length > 0) {
+            lastPaymentDate = paymentRows[0].payment_date || null;
+            totalTdsAmount = paymentRows.reduce((sum: number, p: any) => sum + (p.tds_amount || 0), 0);
+          }
         }
 
-        setData({ invoice: { ...invoice, last_payment_date: lastPaymentDate }, client, company, campaign, items });
+        setData({ invoice: { ...invoice, last_payment_date: lastPaymentDate, total_tds_amount: totalTdsAmount }, client, company, campaign, items });
       } catch (error) {
         console.error('Error fetching invoice data:', error);
       } finally {

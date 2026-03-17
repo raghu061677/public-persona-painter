@@ -15,30 +15,28 @@ export function SidebarItem({ icon: Icon, label, href, collapsed, badge }: Sideb
   return (
     <NavLink
       to={href}
+      end={href === "/admin/dashboard"}
       className={({ isActive }) =>
         cn(
-          "group flex items-center rounded-lg text-[13px] font-medium transition-all duration-150 relative",
-          collapsed ? "justify-center p-2 mx-auto w-9 h-9" : "gap-2.5 px-3 py-[7px]",
-          // Hover
-          "hover:bg-accent/80 hover:text-accent-foreground",
-          // Active
+          "group flex items-center rounded-md text-[13px] transition-all duration-150 relative",
+          collapsed ? "justify-center p-2 mx-auto w-9 h-9" : "gap-2.5 px-3 py-[6px]",
+          // Hover — unified muted bg
+          "hover:bg-muted",
+          // Active state
           isActive && [
-            "bg-primary/8 text-primary font-semibold",
-            "shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.12)]",
-            !collapsed && "before:absolute before:left-0 before:top-[6px] before:bottom-[6px] before:w-[3px] before:bg-primary before:rounded-full"
+            "bg-primary/[0.08] text-primary font-semibold",
+            !collapsed && "border-l-[3px] border-primary ml-0 pl-[9px]",
+            collapsed && "ring-1 ring-primary/20"
           ],
-          // Inactive
-          !isActive && "text-muted-foreground/80"
+          // Inactive state
+          !isActive && "text-foreground/70 font-medium",
         )
       }
       title={collapsed ? label : undefined}
     >
-      <Icon className={cn(
-        "shrink-0 transition-colors",
-        collapsed ? "h-[18px] w-[18px]" : "h-4 w-4"
-      )} />
+      <Icon className="h-4 w-4 shrink-0" />
       {!collapsed && (
-        <span className="flex-1 truncate leading-tight">{label}</span>
+        <span className="flex-1 truncate leading-none">{label}</span>
       )}
       {!collapsed && badge !== undefined && badge > 0 && (
         <Badge 

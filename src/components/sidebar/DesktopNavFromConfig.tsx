@@ -1,5 +1,4 @@
 import { useLocation } from "react-router-dom";
-import { LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NAV_CONFIG, NavSection, NavItem } from "@/config/navigation";
 import { SidebarSection } from "@/components/sidebar/SidebarSection";
@@ -17,15 +16,11 @@ interface DesktopNavFromConfigProps {
 
 /**
  * Desktop sidebar navigation rendered from NAV_CONFIG.
- * Mirrors the same structure as MobileAccordionNav for consistency.
- * 
- * NOTE: Logout is rendered in the SidebarFooter of ResponsiveSidebar,
- * NOT here. accountItems are rendered only as Profile link.
+ * Logout is rendered in the SidebarFooter of ResponsiveSidebar.
  */
 export function DesktopNavFromConfig({ 
   collapsed, 
   badges = {}, 
-  onLogout 
 }: DesktopNavFromConfigProps) {
   const location = useLocation();
   const rbac = useRBAC();
@@ -34,7 +29,6 @@ export function DesktopNavFromConfig({
 
   const isCompanyAdmin = companyUser?.role === 'admin' || isAdmin || isPlatformAdmin;
 
-  // Check if any item in the group is active (for auto-expanding groups)
   const isGroupActive = (items: NavItem[]): boolean => {
     return items.some(item => 
       location.pathname === item.href || 
@@ -42,7 +36,6 @@ export function DesktopNavFromConfig({
     );
   };
 
-  // Check if a section or its children contain the active route
   const isSectionActive = (section: NavSection): boolean => {
     if (section.items && isGroupActive(section.items)) return true;
     if (section.children) {
@@ -59,14 +52,12 @@ export function DesktopNavFromConfig({
     return false;
   };
 
-  // Filter sections based on RBAC and admin requirements
   const shouldShowSection = (section: NavSection): boolean => {
     if (section.requiresAdmin && !isCompanyAdmin) return false;
     if (section.requiresModule && !rbac.canViewModule(section.requiresModule)) return false;
     return true;
   };
 
-  // Render a single nav item
   const renderNavItem = (item: NavItem) => {
     const badge = item.badge ? badges[item.badge] : undefined;
     return (
@@ -81,14 +72,10 @@ export function DesktopNavFromConfig({
     );
   };
 
-  // Render nested children (sub-groups within a section)
   const renderChildren = (children: NavSection[]) => {
     return children.map(child => {
       if (!shouldShowSection(child)) return null;
       
-      const childActive = child.items ? isGroupActive(child.items) : isSectionActive(child);
-      
-      // If child has its own children (deeply nested)
       if (child.children && child.children.length > 0) {
         return (
           <SidebarGroup
@@ -104,7 +91,6 @@ export function DesktopNavFromConfig({
         );
       }
       
-      // Child with direct items
       if (child.items && child.items.length > 0) {
         return (
           <SidebarGroup
@@ -112,7 +98,7 @@ export function DesktopNavFromConfig({
             icon={child.icon}
             label={child.label}
             collapsed={collapsed}
-            defaultOpen={childActive}
+            defaultOpen={child.items ? isGroupActive(child.items) : false}
           >
             {child.items.map(renderNavItem)}
           </SidebarGroup>
@@ -123,14 +109,12 @@ export function DesktopNavFromConfig({
     });
   };
 
-  // Render a top-level section
   const renderSection = (section: NavSection) => {
     if (!shouldShowSection(section)) return null;
 
     const hasDirectItems = section.items && section.items.length > 0;
     const hasChildren = section.children && section.children.length > 0;
 
-    // Section with only direct items (no nested groups)
     if (hasDirectItems && !hasChildren) {
       return (
         <SidebarSection key={section.id} label={section.label} collapsed={collapsed}>
@@ -139,7 +123,6 @@ export function DesktopNavFromConfig({
       );
     }
 
-    // Section with both direct items and children
     if (hasDirectItems && hasChildren) {
       return (
         <SidebarSection key={section.id} label={section.label} collapsed={collapsed}>
@@ -149,7 +132,6 @@ export function DesktopNavFromConfig({
       );
     }
 
-    // Section with only children (nested groups)
     if (!hasDirectItems && hasChildren) {
       return (
         <SidebarSection key={section.id} label={section.label} collapsed={collapsed}>
@@ -162,16 +144,8 @@ export function DesktopNavFromConfig({
   };
 
   return (
-    <div className="flex flex-col gap-0.5">
-      {/* Main Navigation Sections */}
+    <div className="flex flex-col">
       {NAV_CONFIG.sections.map(renderSection)}
-
-      {/* Profile link only (Logout is in SidebarFooter) */}
-      <SidebarSection label="Account" collapsed={collapsed}>
-        {NAV_CONFIG.accountItems
-          .filter(item => item.href !== "#logout")
-          .map(renderNavItem)}
-      </SidebarSection>
     </div>
   );
 }

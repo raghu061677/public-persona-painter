@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
-import { addDays, differenceInDays, format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths } from "date-fns";
+import { addDays, differenceInDays, format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths, isWithinInterval } from "date-fns";
 
 export type StrategicTimeRange = "monthly" | "quarterly" | "yearly" | "custom";
 
@@ -71,6 +71,14 @@ export interface ExecutiveKPIs {
   activeCampaigns: number;
 }
 
+/** Canonical "live" campaign statuses */
+const LIVE_CAMPAIGN_STATUSES = ["Running", "Active", "Confirmed", "In Progress", "running", "active", "confirmed", "in_progress"];
+
+/** Check if two date ranges overlap */
+function rangesOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
+  return aStart <= bEnd && aEnd >= bStart;
+}
+
 export function useStrategicIntelligence() {
   const { company } = useCompany();
   const [loading, setLoading] = useState(true);
@@ -86,6 +94,7 @@ export function useStrategicIntelligence() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [campaignAssets, setCampaignAssets] = useState<any[]>([]);
   const [mediaAssets, setMediaAssets] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
 
   const dateRange = useMemo((): DateRange => {
     const now = new Date();
@@ -101,13 +110,16 @@ export function useStrategicIntelligence() {
     if (!company?.id) return;
     setLoading(true);
     try {
-      const [invRes, payRes, expRes, cmpRes, caRes, maRes] = await Promise.all([
+      const [invRes, payRes, expRes, cmpRes, caRes, maRes, clRes] = await Promise.all([
         supabase.from("invoices").select("id, campaign_id, client_id, client_name, total_amount, status, invoice_date, due_date, payment_terms").eq("company_id", company.id),
         supabase.from("payment_records").select("id, invoice_id, amount, payment_date").eq("company_id", company.id),
         supabase.from("expenses").select("id, amount, category, expense_date, campaign_id, asset_id, vendor_name").eq("company_id", company.id),
-        supabase.from("campaigns").select("id, name, client_id, status, start_date, end_date, clients(name)").eq("company_id", company.id),
-        supabase.from("campaign_assets").select("id, campaign_id, asset_id, city, area, location, media_type, card_rate, negotiated_rate, printing_cost, mounting_cost, total_price, rent_amount, total_sqft, booking_start_date, booking_end_date"),
+        supabase.from("campaigns").select("id, name, client_id, status, start_date, end_date, company_id, clients(name)").eq("company_id", company.id),
+        // FIX #1: Scope campaign_assets via campaigns join, and exclude dropped assets
+        supabase.from("campaign_assets").select("id, campaign_id, asset_id, city, area, location, media_type, card_rate, negotiated_rate, printing_cost, mounting_cost, total_price, rent_amount, total_sqft, booking_start_date, booking_end_date, effective_start_date, effective_end_date, is_removed, campaigns!inner(company_id)").eq("campaigns.company_id", company.id).eq("is_removed", false),
         supabase.from("media_assets").select("id, city, area, media_type, total_sqft, status, card_rate, base_rate, location").eq("company_id", company.id),
+        // FIX #7: Load clients directly for accurate count
+        supabase.from("clients").select("id, name").eq("company_id", company.id),
       ]);
       setInvoices(invRes.data || []);
       setPayments(payRes.data || []);
@@ -115,6 +127,7 @@ export function useStrategicIntelligence() {
       setCampaigns(cmpRes.data || []);
       setCampaignAssets(caRes.data || []);
       setMediaAssets(maRes.data || []);
+      setClients(clRes.data || []);
     } catch (e) {
       console.error("Strategic Intelligence load error:", e);
     } finally {
@@ -123,6 +136,42 @@ export function useStrategicIntelligence() {
   }, [company?.id]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Helper: resolve booking window for a campaign asset
+  const resolveBookingWindow = (ca: any): { start: Date; end: Date } | null => {
+    const s = ca.effective_start_date || ca.booking_start_date;
+    const e = ca.effective_end_date || ca.booking_end_date;
+    if (!s || !e) return null;
+    return { start: new Date(s), end: new Date(e) };
+  };
+
+  // Filter campaign assets by date range
+  const periodCampaignAssets = useMemo(() => {
+    return campaignAssets.filter(ca => {
+      const window = resolveBookingWindow(ca);
+      if (!window) return false;
+      return rangesOverlap(window.start, window.end, dateRange.from, dateRange.to);
+    });
+  }, [campaignAssets, dateRange]);
+
+  // Filter invoices by date range
+  const periodInvoices = useMemo(() => {
+    return invoices.filter(i => {
+      if (i.status === "Draft" || i.status === "Cancelled") return false;
+      if (!i.invoice_date) return false;
+      const d = new Date(i.invoice_date);
+      return d >= dateRange.from && d <= dateRange.to;
+    });
+  }, [invoices, dateRange]);
+
+  // Filter expenses by date range
+  const periodExpenses = useMemo(() => {
+    return expenses.filter(e => {
+      if (!e.expense_date) return false;
+      const d = new Date(e.expense_date);
+      return d >= dateRange.from && d <= dateRange.to;
+    });
+  }, [expenses, dateRange]);
 
   // Payment map by invoice
   const paymentMap = useMemo(() => {
@@ -150,7 +199,6 @@ export function useStrategicIntelligence() {
       const start = idx === 0 ? today : addDays(today, buckets[idx - 1].days + 1);
       const end = addDays(today, b.days);
 
-      // Incoming: unpaid invoices with due_date in this window
       const incomingInvoices = invoices.filter(inv => {
         if (inv.status === "Draft" || inv.status === "Cancelled") return false;
         const paid = paymentMap[inv.id]?.total || 0;
@@ -165,7 +213,6 @@ export function useStrategicIntelligence() {
         return s + ((Number(inv.total_amount) || 0) - paid);
       }, 0);
 
-      // Outgoing: expenses expected in this window (simple: recurring monthly approximation)
       const monthlyExpenses = expenses.filter(e => {
         const d = e.expense_date ? new Date(e.expense_date) : null;
         if (!d) return false;
@@ -184,11 +231,9 @@ export function useStrategicIntelligence() {
     });
   }, [invoices, expenses, paymentMap]);
 
-  // Total cash flow summary
   const cashFlowTotal = useMemo(() => {
     const totalIncoming = cashFlowForecast.reduce((s, b) => s + b.incoming, 0);
     const totalOutgoing = cashFlowForecast.reduce((s, b) => s + b.outgoing, 0);
-    // Current overdue
     const today = new Date();
     const overdue = invoices.filter(inv => {
       if (inv.status === "Draft" || inv.status === "Cancelled") return false;
@@ -204,9 +249,10 @@ export function useStrategicIntelligence() {
   // ── D) Client Risk Scoring ──
   const clientRiskScores = useMemo((): ClientRiskRow[] => {
     const clientMap: Record<string, { name: string; delays: number[]; outstanding: number; realization: number[]; revenue: number; invoiceCount: number }> = {};
-    const totalRevenue = invoices.filter(i => i.status !== "Draft" && i.status !== "Cancelled").reduce((s, i) => s + (Number(i.total_amount) || 0), 0);
+    const validInvoices = invoices.filter(i => i.status !== "Draft" && i.status !== "Cancelled");
+    const totalRevenue = validInvoices.reduce((s, i) => s + (Number(i.total_amount) || 0), 0);
 
-    invoices.filter(i => i.status !== "Draft" && i.status !== "Cancelled").forEach(inv => {
+    validInvoices.forEach(inv => {
       const cid = inv.client_id || inv.client_name || "Unknown";
       const cname = inv.client_name || cid;
       if (!clientMap[cid]) clientMap[cid] = { name: cname, delays: [], outstanding: 0, realization: [], revenue: 0, invoiceCount: 0 };
@@ -219,7 +265,6 @@ export function useStrategicIntelligence() {
 
       if (outstanding > 0.01) clientMap[cid].outstanding += outstanding;
 
-      // Delay calculation
       const dueDate = inv.due_date ? new Date(inv.due_date) : (inv.invoice_date ? addDays(new Date(inv.invoice_date), 30) : null);
       if (dueDate && paid >= total * 0.99) {
         const paidDate = paymentMap[inv.id]?.lastDate ? new Date(paymentMap[inv.id].lastDate!) : null;
@@ -230,7 +275,6 @@ export function useStrategicIntelligence() {
       }
     });
 
-    // Add realization from campaign assets
     const campaignClientMap: Record<string, string> = {};
     campaigns.forEach(c => {
       const cname = (c as any).clients?.name || "";
@@ -255,11 +299,9 @@ export function useStrategicIntelligence() {
         const avgRealization = d.realization.length > 0 ? d.realization.reduce((a, b) => a + b, 0) / d.realization.length : 100;
         const revContrib = totalRevenue > 0 ? (d.revenue / totalRevenue) * 100 : 0;
 
-        // Recent delays vs older
         const trend: "improving" | "stable" | "worsening" = d.delays.length < 3 ? "stable" :
           d.delays.slice(-2).reduce((a, b) => a + b, 0) / 2 < d.delays.slice(0, -2).reduce((a, b) => a + b, 0) / (d.delays.length - 2) ? "improving" : "worsening";
 
-        // Risk scoring
         let riskScore = 0;
         if (avgDelay > 60) riskScore += 3; else if (avgDelay > 30) riskScore += 2; else if (avgDelay > 15) riskScore += 1;
         if (d.outstanding > 500000) riskScore += 2; else if (d.outstanding > 100000) riskScore += 1;
@@ -286,39 +328,42 @@ export function useStrategicIntelligence() {
       .slice(0, 20);
   }, [invoices, paymentMap, campaigns, campaignAssets]);
 
-  // ── E) Asset ROI Ranking ──
+  // ── E) Asset ROI Ranking (period-aware) ──
   const assetROI = useMemo((): AssetROIRow[] => {
-    const assetMap: Record<string, { revenue: number; printCost: number; mountCost: number; sqft: number; bookedMonths: number }> = {};
-    const now = new Date();
-    const yearStart = startOfYear(now);
-    const yearEnd = endOfYear(now);
+    const assetMap: Record<string, { revenue: number; printCost: number; mountCost: number; sqft: number; bookedDays: number }> = {};
 
-    campaignAssets.forEach(ca => {
+    periodCampaignAssets.forEach(ca => {
       const aid = ca.asset_id;
-      if (!assetMap[aid]) assetMap[aid] = { revenue: 0, printCost: 0, mountCost: 0, sqft: 0, bookedMonths: 0 };
+      if (!assetMap[aid]) assetMap[aid] = { revenue: 0, printCost: 0, mountCost: 0, sqft: 0, bookedDays: 0 };
       assetMap[aid].revenue += Number(ca.total_price) || Number(ca.rent_amount) || 0;
       assetMap[aid].printCost += Number(ca.printing_cost) || 0;
       assetMap[aid].mountCost += Number(ca.mounting_cost) || 0;
       assetMap[aid].sqft = Number(ca.total_sqft) || 0;
-      assetMap[aid].bookedMonths++;
+      const window = resolveBookingWindow(ca);
+      if (window) {
+        // Clamp to period
+        const clampedStart = window.start < dateRange.from ? dateRange.from : window.start;
+        const clampedEnd = window.end > dateRange.to ? dateRange.to : window.end;
+        assetMap[aid].bookedDays += Math.max(0, differenceInDays(clampedEnd, clampedStart) + 1);
+      }
     });
 
-    // Add expenses
-    expenses.forEach(e => {
+    // Add period expenses
+    periodExpenses.forEach(e => {
       if (e.asset_id && assetMap[e.asset_id]) {
         assetMap[e.asset_id].printCost += Number(e.amount) || 0;
       }
     });
 
-    const totalAssets = mediaAssets.length;
-    const totalMonths = 12;
+    const periodDays = Math.max(1, differenceInDays(dateRange.to, dateRange.from) + 1);
 
     return mediaAssets.map(ma => {
-      const data = assetMap[ma.id] || { revenue: 0, printCost: 0, mountCost: 0, sqft: 0, bookedMonths: 0 };
+      const data = assetMap[ma.id] || { revenue: 0, printCost: 0, mountCost: 0, sqft: 0, bookedDays: 0 };
       const cost = data.printCost + data.mountCost;
       const profit = data.revenue - cost;
-      const roi = cost > 0 ? (profit / cost) * 100 : (data.revenue > 0 ? 100 : 0);
-      const occ = totalMonths > 0 ? (data.bookedMonths / totalMonths) * 100 : 0;
+      // FIX #5: Safe ROI - 0% when no cost and no revenue, N/A-safe when cost=0 but revenue>0
+      const roi = cost > 0 ? (profit / cost) * 100 : 0;
+      const occ = (data.bookedDays / periodDays) * 100;
 
       return {
         assetId: ma.id,
@@ -334,16 +379,15 @@ export function useStrategicIntelligence() {
         totalSqft: Number(ma.total_sqft) || 0,
       };
     }).sort((a, b) => b.roiPercent - a.roiPercent);
-  }, [campaignAssets, mediaAssets, expenses]);
+  }, [periodCampaignAssets, mediaAssets, periodExpenses, dateRange]);
 
   // ── C) Concession Risk ──
   const concessionRisk = useMemo((): ConcessionRiskRow[] => {
-    // Group revenue by city from campaign assets
     const cityMap: Record<string, { revenue: number; bookedAssets: Set<string> }> = {};
-    campaignAssets.forEach(ca => {
+    periodCampaignAssets.forEach(ca => {
       const city = ca.city || "Unknown";
       if (!cityMap[city]) cityMap[city] = { revenue: 0, bookedAssets: new Set() };
-      cityMap[city].revenue += Number(ca.total_price) || Number(ca.rent_amount) || 0;
+      cityMap[city].revenue += Math.max(0, Number(ca.total_price) || Number(ca.rent_amount) || 0);
       cityMap[city].bookedAssets.add(ca.asset_id);
     });
 
@@ -356,53 +400,65 @@ export function useStrategicIntelligence() {
     return Object.entries(cityMap).map(([city, data]) => {
       const totalInCity = totalAssetsByCity[city] || 1;
       const occ = (data.bookedAssets.size / totalInCity) * 100;
-      // Concession fee placeholder - users can input manually later
-      const concessionFee = 0; // Manual input feature for Phase 3+
+      const concessionFee = 0;
       const surplus = data.revenue - concessionFee;
       const riskLevel = concessionFee === 0 ? "safe" as const :
         data.revenue < concessionFee ? "red" as const :
         data.revenue < concessionFee * 1.2 ? "amber" as const : "safe" as const;
 
-      return {
-        city,
-        concessionFee,
-        revenue: data.revenue,
-        surplus,
-        occupancyPercent: Math.min(100, Math.round(occ)),
-        riskLevel,
-      };
+      return { city, concessionFee, revenue: data.revenue, surplus, occupancyPercent: Math.min(100, Math.round(occ)), riskLevel };
     }).sort((a, b) => b.revenue - a.revenue);
-  }, [campaignAssets, mediaAssets]);
+  }, [periodCampaignAssets, mediaAssets]);
 
-  // ── F) Executive KPIs ──
+  // ── F) Executive KPIs (period-aware, consistent definitions) ──
   const executiveKPIs = useMemo((): ExecutiveKPIs => {
-    const validInvoices = invoices.filter(i => i.status !== "Draft" && i.status !== "Cancelled");
-    const annualRevenue = validInvoices.reduce((s, i) => s + (Number(i.total_amount) || 0), 0);
-    const totalReceived = validInvoices.reduce((s, i) => s + (paymentMap[i.id]?.total || 0), 0);
-    const totalExpenses = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
-    const annualProfit = totalReceived - totalExpenses;
-    const collectionRate = annualRevenue > 0 ? (totalReceived / annualRevenue) * 100 : 0;
+    // FIX #4: Unified accrual-basis definition: Revenue = invoiced, Profit = invoiced - expenses
+    const periodRevenue = periodInvoices.reduce((s, i) => s + (Number(i.total_amount) || 0), 0);
+    const periodExpenseTotal = periodExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+    const periodProfit = periodRevenue - periodExpenseTotal;
 
-    const bookedIds = new Set(campaignAssets.map(ca => ca.asset_id));
-    const avgOccupancy = mediaAssets.length > 0 ? (bookedIds.size / mediaAssets.length) * 100 : 0;
+    // Collection rate uses all-time payment data for period invoices
+    const periodReceived = periodInvoices.reduce((s, i) => s + (paymentMap[i.id]?.total || 0), 0);
+    const collectionRate = periodRevenue > 0 ? (periodReceived / periodRevenue) * 100 : 0;
 
-    // Top city
+    // FIX #3: Date-range-aware occupancy
+    const periodDays = Math.max(1, differenceInDays(dateRange.to, dateRange.from) + 1);
+    const assetBookedDays: Record<string, number> = {};
+    periodCampaignAssets.forEach(ca => {
+      const window = resolveBookingWindow(ca);
+      if (!window) return;
+      const clampedStart = window.start < dateRange.from ? dateRange.from : window.start;
+      const clampedEnd = window.end > dateRange.to ? dateRange.to : window.end;
+      const days = Math.max(0, differenceInDays(clampedEnd, clampedStart) + 1);
+      assetBookedDays[ca.asset_id] = (assetBookedDays[ca.asset_id] || 0) + days;
+    });
+    const totalOccDays = Object.values(assetBookedDays).reduce((s, d) => s + Math.min(d, periodDays), 0);
+    const avgOccupancy = mediaAssets.length > 0 ? (totalOccDays / (mediaAssets.length * periodDays)) * 100 : 0;
+
+    const bookedIds = new Set(periodCampaignAssets.map(ca => ca.asset_id));
+
+    // FIX #8: Top city - use only positive revenue from period campaign assets
     const cityRev: Record<string, number> = {};
-    campaignAssets.forEach(ca => {
+    periodCampaignAssets.forEach(ca => {
       const c = ca.city || "—";
-      cityRev[c] = (cityRev[c] || 0) + (Number(ca.total_price) || Number(ca.rent_amount) || 0);
+      const rev = Number(ca.total_price) || Number(ca.rent_amount) || 0;
+      cityRev[c] = (cityRev[c] || 0) + rev;
     });
     const topCityEntry = Object.entries(cityRev).sort((a, b) => b[1] - a[1])[0];
 
-    // Highest ROI asset
-    const topAsset = assetROI[0];
+    // FIX #5: Highest ROI asset - skip assets with 0 cost (no meaningful ROI)
+    const topAssetWithCost = assetROI.find(a => a.cost > 0);
+    const topAsset = topAssetWithCost || assetROI.find(a => a.revenue > 0);
 
-    const activeCampaigns = campaigns.filter(c => c.status === "Running" || c.status === "Active").length;
-    const uniqueClients = new Set(validInvoices.map(i => i.client_id || i.client_name).filter(Boolean));
+    // FIX #6: Active campaigns - canonical live statuses
+    const activeCampaigns = campaigns.filter(c => LIVE_CAMPAIGN_STATUSES.includes(c.status)).length;
+
+    // FIX #7: Total clients from clients table
+    const totalClients = clients.length;
 
     return {
-      annualRevenue,
-      annualProfit,
+      annualRevenue: periodRevenue,
+      annualProfit: periodProfit,
       avgOccupancy: Math.round(avgOccupancy),
       collectionRate: Math.round(collectionRate),
       topCity: topCityEntry?.[0] || "—",
@@ -411,23 +467,25 @@ export function useStrategicIntelligence() {
       highestROI: topAsset?.roiPercent || 0,
       totalAssets: mediaAssets.length,
       bookedAssets: bookedIds.size,
-      totalClients: uniqueClients.size,
+      totalClients,
       activeCampaigns,
     };
-  }, [invoices, payments, expenses, campaigns, campaignAssets, mediaAssets, assetROI, paymentMap]);
+  }, [periodInvoices, periodExpenses, campaigns, periodCampaignAssets, mediaAssets, assetROI, paymentMap, dateRange, clients]);
 
-  // Revenue trend by month (12 months)
+  // Revenue trend by month (12 months) - consistent accrual basis
   const revenueTrend = useMemo(() => {
     const now = new Date();
+    const validInvoices = invoices.filter(i => i.status !== "Draft" && i.status !== "Cancelled");
+
     return Array.from({ length: 12 }, (_, i) => {
       const d = subMonths(now, 11 - i);
       const mStart = startOfMonth(d);
       const mEnd = endOfMonth(d);
       const label = format(d, "MMM yy");
 
-      const monthInvoiced = invoices
-        .filter(inv => inv.status !== "Draft" && inv.status !== "Cancelled" && inv.invoice_date && new Date(inv.invoice_date) >= mStart && new Date(inv.invoice_date) <= mEnd)
-        .reduce((s, i) => s + (Number(i.total_amount) || 0), 0);
+      const monthInvoiced = validInvoices
+        .filter(inv => inv.invoice_date && new Date(inv.invoice_date) >= mStart && new Date(inv.invoice_date) <= mEnd)
+        .reduce((s, inv) => s + (Number(inv.total_amount) || 0), 0);
       const monthExpenses = expenses
         .filter(e => e.expense_date && new Date(e.expense_date) >= mStart && new Date(e.expense_date) <= mEnd)
         .reduce((s, e) => s + (Number(e.amount) || 0), 0);
@@ -436,18 +494,41 @@ export function useStrategicIntelligence() {
     });
   }, [invoices, expenses]);
 
-  // Client concentration
+  // Client concentration - FIX #9: also use campaign client names as fallback
   const clientConcentration = useMemo(() => {
     const map: Record<string, number> = {};
-    invoices.filter(i => i.status !== "Draft" && i.status !== "Cancelled").forEach(i => {
-      const name = i.client_name || "Unknown";
+    const validInvoices = invoices.filter(i => i.status !== "Draft" && i.status !== "Cancelled");
+
+    // Build campaign→client name map
+    const campaignClientMap: Record<string, string> = {};
+    campaigns.forEach(c => {
+      const cname = (c as any).clients?.name;
+      if (cname) campaignClientMap[c.id] = cname;
+    });
+
+    validInvoices.forEach(i => {
+      // Try invoice client_name, then look up from campaign
+      let name = i.client_name;
+      if (!name && i.campaign_id) name = campaignClientMap[i.campaign_id];
+      if (!name) name = "Unknown";
       map[name] = (map[name] || 0) + (Number(i.total_amount) || 0);
     });
+
+    // If still no invoice data, fallback to campaign asset revenue by client
+    if (Object.keys(map).length === 0) {
+      periodCampaignAssets.forEach(ca => {
+        const clientName = campaignClientMap[ca.campaign_id] || "Unknown";
+        const rev = Number(ca.total_price) || Number(ca.rent_amount) || 0;
+        map[clientName] = (map[clientName] || 0) + rev;
+      });
+    }
+
     return Object.entries(map)
+      .filter(([_, v]) => v > 0)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 8);
-  }, [invoices]);
+  }, [invoices, campaigns, periodCampaignAssets]);
 
   return {
     loading, timeRange, setTimeRange, customRange, setCustomRange, dateRange,

@@ -470,7 +470,7 @@ export function useStrategicIntelligence() {
       topCity: topCityEntry?.[0] || "—",
       topCityRevenue: topCityEntry?.[1] || 0,
       highestROIAsset: topAsset?.location || "—",
-      highestROI: topAsset?.roiPercent || 0,
+      highestROI: topAsset?.roiPercent ?? null,
       totalAssets: mediaAssets.length,
       bookedAssets: bookedIds.size,
       totalClients,

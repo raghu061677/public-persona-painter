@@ -178,19 +178,28 @@ export default function ReportExecutiveDashboard() {
         </Card>
 
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Client Revenue Concentration</CardTitle></CardHeader>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">
+              Client Revenue Concentration
+              {si.clientConcentration.basis !== "none" && (
+                <span className="ml-2 text-[10px] font-normal text-muted-foreground">
+                  Based on {si.clientConcentration.basis === "invoiced" ? "invoiced revenue" : "booked value"}
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
           <CardContent>
-            {si.clientConcentration.length > 0 ? (
+            {si.clientConcentration.data.length > 0 ? (
               <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
-                  <Pie data={si.clientConcentration} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100}
+                  <Pie data={si.clientConcentration.data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100}
                     label={({ name, percent }: any) => `${(name as string).slice(0, 12)} ${(percent * 100).toFixed(0)}%`}>
-                    {si.clientConcentration.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    {si.clientConcentration.data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                   </Pie>
                   <RTooltip formatter={(v: number) => fmt(v)} />
                 </PieChart>
               </ResponsiveContainer>
-            ) : <EmptyState message="No client revenue data available. Invoices or campaign bookings are needed to show concentration." />}
+            ) : <EmptyState message="No invoiced or booked client data in the selected period." />}
           </CardContent>
         </Card>
       </div>

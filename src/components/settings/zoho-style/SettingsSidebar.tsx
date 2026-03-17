@@ -81,7 +81,7 @@ const navigationGroups: NavGroup[] = [
       { label: "Client Portal", path: "/admin/company-settings/client-portal", icon: Globe, section: "client_portal" },
       { label: "Online Payments", path: "/admin/company-settings/payments", icon: CreditCard, section: "payments" },
       { label: "Sales", path: "/admin/company-settings/sales", icon: ShoppingCart, section: "sales" },
-      { label: "Operations", path: "/admin/operations-settings", icon: Package, section: "general" },
+      { label: "Operations", path: "/admin/company-settings/operations-settings", icon: Package, section: "general" },
       { label: "Rate Settings", path: "/admin/company-settings/rate-settings", icon: Calculator, section: "rate_settings" },
       { label: "Concession Contracts", path: "/admin/company-settings/concession-contracts", icon: Boxes, section: "concession_contracts" },
     ]

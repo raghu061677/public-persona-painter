@@ -510,7 +510,23 @@ export default function ReportBookedMedia() {
                 <TableRow>
                   <TableHead className="w-12">#</TableHead>
                   {COLUMNS.filter((c) => visibleColumns.includes(c.key)).map((col) => (
-                    <TableHead key={col.key} className="whitespace-nowrap">{col.label}</TableHead>
+                    <SortableTableHead
+                      key={col.key}
+                      sortKey={col.key}
+                      currentSort={sortConfig.field === col.key ? { key: col.key, direction: sortConfig.direction } : null}
+                      onSort={(key) => {
+                        setSortConfig((prev: any) => {
+                          if (prev.field === key) {
+                            return { field: key, direction: prev.direction === "asc" ? "desc" : "asc" };
+                          }
+                          return { field: key, direction: "asc" };
+                        });
+                      }}
+                      className="whitespace-nowrap"
+                      align={col.key === "total_sqft" || col.key === "duration_days" ? "right" : "left"}
+                    >
+                      {col.label}
+                    </SortableTableHead>
                   ))}
                 </TableRow>
               </TableHeader>

@@ -14,7 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { formatINR } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
-import { FileText, Search, Filter, Download, CheckCircle2, Clock, AlertTriangle, IndianRupee, Loader2, Pencil } from "lucide-react";
+import { FileText, Search, Filter, Download, CheckCircle2, Clock, AlertTriangle, IndianRupee, Loader2, Pencil, FileSpreadsheet } from "lucide-react";
+import { exportTDSReconciliation, type TDSExportEntry } from "@/utils/exports/excel/exportTDSReconciliation";
 
 interface TDSEntry {
   id: string;
@@ -154,22 +155,55 @@ export default function ReportTDS() {
     }
   };
 
-  const exportCSV = () => {
-    const headers = ["Client", "Invoice", "FY", "Quarter", "Section", "TDS Amount", "Invoice Amount", "Received", "Certificate No", "Form 16A", "26AS", "Verified", "Status", "Follow-up Notes"];
-    const rows = filtered.map(e => [
-      e.client_name, e.invoice_id, e.financial_year, e.quarter, e.tds_section || "",
-      e.tds_amount, e.invoice_amount, e.amount_received, e.tds_certificate_no || "",
-      e.form16a_received ? "Yes" : "No", e.reflected_in_26as ? "Yes" : "No",
-      e.verified ? "Yes" : "No", e.status, e.followup_notes || "",
-    ]);
-    const csv = [headers.join(","), ...rows.map(r => r.map(v => `"${v}"`).join(","))].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `TDS_Report_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportExcel = async () => {
+    if (filtered.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+    setExporting(true);
+    try {
+      // Fetch invoice dates for enrichment
+      const invoiceIds = [...new Set(filtered.map(e => e.invoice_id))];
+      let invoiceDateMap: Record<string, string> = {};
+      if (invoiceIds.length > 0) {
+        const { data: invoices } = await supabase
+          .from("invoices")
+          .select("id, invoice_date")
+          .in("id", invoiceIds);
+        invoiceDateMap = Object.fromEntries(
+          (invoices || []).map((inv: any) => [inv.id, inv.invoice_date])
+        );
+      }
+
+      const exportEntries: TDSExportEntry[] = filtered.map(e => ({
+        client_name: e.client_name || "",
+        invoice_id: e.invoice_id,
+        invoice_date: invoiceDateMap[e.invoice_id] || e.created_at,
+        financial_year: e.financial_year,
+        quarter: e.quarter,
+        invoice_amount: e.invoice_amount,
+        amount_received: e.amount_received,
+        tds_amount: e.tds_amount,
+        tds_section: e.tds_section,
+        deduction_date: e.created_at,
+        form16a_received: e.form16a_received,
+        reflected_in_26as: e.reflected_in_26as,
+        verified: e.verified,
+        status: e.status,
+        followup_notes: e.followup_notes,
+        tds_certificate_no: e.tds_certificate_no,
+      }));
+
+      await exportTDSReconciliation(exportEntries, fyFilter !== "all" ? fyFilter : undefined);
+      toast.success("TDS Reconciliation Excel exported");
+    } catch (err: any) {
+      console.error("TDS export error:", err);
+      toast.error("Export failed");
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -180,8 +214,9 @@ export default function ReportTDS() {
           <h1 className="text-2xl font-bold">TDS Report & Reconciliation</h1>
           <p className="text-muted-foreground">Track TDS deductions, Form 16A receipts, and 26AS verification</p>
         </div>
-        <Button variant="outline" onClick={exportCSV}>
-          <Download className="h-4 w-4 mr-2" /> Export CSV
+        <Button variant="outline" onClick={handleExportExcel} disabled={exporting}>
+          {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileSpreadsheet className="h-4 w-4 mr-2" />}
+          {exporting ? "Exporting..." : "Export Excel"}
         </Button>
       </div>
 

@@ -106,21 +106,23 @@ export default function ReportExecutiveDashboard() {
         <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
           <KPICard title="Invoiced Revenue" value={hasInvoices ? fmt(k.annualRevenue) : "—"} icon={<DollarSign className="h-4 w-4" />} color="text-blue-600"
             sub={!hasInvoices ? "No invoices in period" : undefined}
+            tooltip="Sum of total_amount from all non-Draft, non-Cancelled invoices whose invoice_date falls within the selected period."
             onClick={() => navigate("/admin/reports/financial")} />
           <KPICard title="Net Profit" value={hasInvoices ? fmt(k.annualProfit) : "—"} icon={<TrendingUp className="h-4 w-4" />}
             color={!hasInvoices ? "text-muted-foreground" : k.annualProfit >= 0 ? "text-emerald-600" : "text-red-600"}
-            sub="Invoiced Revenue − Expenses" />
+            sub="Invoiced Revenue − Expenses"
+            tooltip="Invoiced Revenue minus sum of all expenses whose expense_date falls within the selected period. Note: if expense records are incomplete, profit may be overstated." />
           <KPICard
             title="Collection Rate"
             value={hasInvoices ? `${k.collectionRate}%` : "—"}
             icon={<Percent className="h-4 w-4" />}
             color={!hasInvoices ? "text-muted-foreground" : k.collectionRate >= 80 ? "text-emerald-600" : "text-amber-600"}
             sub={hasInvoices ? "Cash collected ÷ Invoiced Revenue" : "No invoices"}
-            tooltip="Cash-based: Total payments received divided by total invoiced amount for the selected period."
+            tooltip="Total cash collected against invoices in the selected period, regardless of when the payment was made, divided by Invoiced Revenue. This is a cash-on-accrual hybrid metric."
           />
           <KPICard title="Best ROI Asset" value={roiValue} icon={<Award className="h-4 w-4" />} color={roiColor}
             sub={roiSub}
-            tooltip="ROI = (Booked Value − Direct Cost) ÷ Direct Cost × 100. Assets without cost data are excluded." />
+            tooltip="(Booked Value − Direct Cost) ÷ Direct Cost × 100. Only assets with direct cost > 0 are ranked. Assets without printing or mounting cost data are excluded and shown as N/A." />
         </div>
       </div>
 

@@ -399,6 +399,7 @@ export function ResponsiveSidebar() {
                       <MenuItem icon={DollarSign} label="Expense Allocation" href="/admin/reports/expense-allocation" />
                       <MenuItem icon={Layers} label="Concession Risk" href="/admin/reports/concession-risk" />
                       <MenuItem icon={Clock} label="Aging by Client" href="/admin/reports/aging-by-client" />
+                      <MenuItem icon={FileText} label="TDS Report" href="/admin/reports/tds" />
                     </MenuGroup>
                     <MenuGroup icon={TrendingUp} label="Operations Reports">
                       <MenuItem icon={FileCheck} label="Proof Execution" href="/admin/reports/proof-execution" />

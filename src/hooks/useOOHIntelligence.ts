@@ -200,8 +200,8 @@ export function useOOHIntelligence() {
 
         return {
           id: c.id,
-          name: c.name || c.id,
-          clientName: (c as any).clients?.name || "—",
+          name: c.campaign_name || c.id,
+          clientName: c.client_name || "—",
           startDate: c.start_date,
           endDate: c.end_date,
           assetCount: filteredA.length,

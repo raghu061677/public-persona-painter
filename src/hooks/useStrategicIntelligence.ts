@@ -444,18 +444,17 @@ export function useStrategicIntelligence() {
 
     const bookedIds = new Set(periodCampaignAssets.map(ca => ca.asset_id));
 
-    // FIX #8: Top city - use only positive revenue from period campaign assets
+    // STRICT: Top city - sanitize to non-negative booked values only
     const cityRev: Record<string, number> = {};
     periodCampaignAssets.forEach(ca => {
       const c = ca.city || "—";
-      const rev = Number(ca.total_price) || Number(ca.rent_amount) || 0;
-      cityRev[c] = (cityRev[c] || 0) + rev;
+      const rev = Math.max(0, Number(ca.total_price) || Number(ca.rent_amount) || 0);
+      if (rev > 0) cityRev[c] = (cityRev[c] || 0) + rev;
     });
     const topCityEntry = Object.entries(cityRev).sort((a, b) => b[1] - a[1])[0];
 
-    // FIX #5: Highest ROI asset - skip assets with 0 cost (no meaningful ROI)
-    const topAssetWithCost = assetROI.find(a => a.cost > 0);
-    const topAsset = topAssetWithCost || assetROI.find(a => a.revenue > 0);
+    // STRICT: Best ROI - only assets with cost > 0 and non-null ROI
+    const topAsset = assetROI.find(a => a.cost > 0 && a.roiPercent !== null);
 
     // FIX #6: Active campaigns - canonical live statuses
     const activeCampaigns = campaigns.filter(c => LIVE_CAMPAIGN_STATUSES.includes(c.status)).length;

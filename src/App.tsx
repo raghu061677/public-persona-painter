@@ -434,6 +434,7 @@ const App = () => (
               <Route path="reports/ops-margin" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportOpsMargin /></ModernAppLayout></ProtectedRoute>} />
               <Route path="reports/vendor-ledger" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportVendorLedger /></ModernAppLayout></ProtectedRoute>} />
               <Route path="reports/printer-ledger" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportPrinterLedger /></ModernAppLayout></ProtectedRoute>} />
+              <Route path="reports/tds" element={<ProtectedRoute requireAuth><ModernAppLayout><ReportTDS /></ModernAppLayout></ProtectedRoute>} />
               <Route path="approvals" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalsQueue /></ModernAppLayout></ProtectedRoute>} />
               <Route path="approval-history" element={<ProtectedRoute requireAuth><ModernAppLayout><ApprovalHistory /></ModernAppLayout></ProtectedRoute>} />
               <Route path="approvals/rules" element={<RoleGuard requireCompanyRole="company_admin"><ModernAppLayout><ApprovalRulesSettings /></ModernAppLayout></RoleGuard>} />

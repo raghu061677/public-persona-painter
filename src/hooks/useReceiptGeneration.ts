@@ -122,20 +122,31 @@ export function useReceiptGeneration() {
         .limit(1)
         .maybeSingle();
 
-      // Determine logo URL: prefer company logo, then org settings
-      const logoUrl = companyData?.logo_url || orgSettings?.logo_url;
+      // Determine logo URL: prefer org settings (proper image), then company logo
+      // Skip data:image/gif logos as jsPDF can't render them properly
+      const rawCompanyLogo = companyData?.logo_url;
+      const rawOrgLogo = orgSettings?.logo_url;
+      const logoUrl = (rawCompanyLogo && !rawCompanyLogo.startsWith('data:image/gif')) 
+        ? rawCompanyLogo 
+        : (rawOrgLogo && !rawOrgLogo.startsWith('data:image/gif')) 
+          ? rawOrgLogo 
+          : null;
 
       // Fetch logo if available
       let logoBase64: string | undefined;
-      if (logoUrl && !logoUrl.startsWith('data:image/gif')) {
+      if (logoUrl) {
         try {
-          const response = await fetch(logoUrl);
-          const blob = await response.blob();
-          logoBase64 = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-          });
+          if (logoUrl.startsWith('data:')) {
+            logoBase64 = logoUrl;
+          } else {
+            const response = await fetch(logoUrl);
+            const blob = await response.blob();
+            logoBase64 = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
+          }
         } catch (e) {
           console.warn("Could not load logo:", e);
         }

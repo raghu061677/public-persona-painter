@@ -535,6 +535,10 @@ const App = () => (
                 <Route path="email-outbox" element={<SG section="email_outbox"><SPW section="email_outbox"><EmailOutbox /></SPW></SG>} />
                 <Route path="email-logs" element={<Navigate to="/admin/company-settings/email-outbox" replace />} />
                 <Route path="email-delivery-logs" element={<Navigate to="/admin/company-settings/email-outbox" replace />} />
+                {/* Operations Settings (within settings layout) */}
+                <Route path="operations-settings" element={<SG section="general"><SPW section="general"><OperationsSettings /></SPW></SG>} />
+                {/* Number Series / Code Management (within settings layout) */}
+                <Route path="number-series" element={<SG section="general"><SPW section="general"><CodeManagement /></SPW></SG>} />
               </Route>
             </Route>
             {/* ===== END GLOBAL ADMIN AUTH GATE ===== */}

@@ -2,7 +2,7 @@
 // Matches the style used in RO and Quotation PDFs
 
 import jsPDF from 'jspdf';
-import { formatCurrency, numberToWords } from './types';
+import { formatCurrency, formatDate, numberToWords } from './types';
 
 interface SummaryTableOptions {
   doc: jsPDF;
@@ -15,6 +15,7 @@ interface SummaryTableOptions {
   grandTotal: number;
   balanceDue: number;
   paidAmount?: number;
+  paidDate?: string | null;
   isInterState?: boolean;
 }
 
@@ -28,7 +29,7 @@ interface SummaryTableOptions {
  * Returns { endY, totalRowBottomY } where totalRowBottomY is the bottom of the blue Total row.
  */
 export function renderInvoiceSummaryTable(options: SummaryTableOptions): { endY: number; totalRowBottomY: number } {
-  const { doc, x, y, width, subtotal, gstPercent, gstAmount, grandTotal, balanceDue, paidAmount, isInterState } = options;
+  const { doc, x, y, width, subtotal, gstPercent, gstAmount, grandTotal, balanceDue, paidAmount, paidDate, isInterState } = options;
 
   const cgstAmount = isInterState ? 0 : gstAmount / 2;
   const sgstAmount = isInterState ? 0 : gstAmount / 2;
@@ -56,7 +57,8 @@ export function renderInvoiceSummaryTable(options: SummaryTableOptions): { endY:
   // Add Amount Received and Balance Due if there are payments
   const effectivePaid = paidAmount != null ? paidAmount : (grandTotal - balanceDue);
   if (effectivePaid > 0) {
-    rows.push({ label: 'Amount Received', value: effectivePaid, bold: true, highlight: 'green' });
+    const dateStr = paidDate ? ` (${formatDate(paidDate)})` : '';
+    rows.push({ label: `Amount Received${dateStr}`, value: effectivePaid, bold: true, highlight: 'green' });
     rows.push({ label: 'Balance Due', value: balanceDue, bold: true, highlight: 'orange' });
   }
 

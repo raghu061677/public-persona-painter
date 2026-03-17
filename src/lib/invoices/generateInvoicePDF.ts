@@ -268,6 +268,19 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
     });
   }
 
+  // Fetch last payment date for this invoice
+  let lastPaymentDate: string | null = null;
+  if (invoice.paid_amount && parseFloat(String(invoice.paid_amount)) > 0) {
+    const { data: lastPayment } = await supabase
+      .from('payment_records')
+      .select('payment_date')
+      .eq('invoice_id', invoiceId)
+      .order('payment_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    lastPaymentDate = lastPayment?.payment_date || null;
+  }
+
   // Load logo
   let logoBase64: string | null = null;
   const logoUrl = companyData?.logo_url || orgSettings?.logo_url;
@@ -278,7 +291,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
   }
 
   const data: InvoiceData = {
-    invoice,
+    invoice: { ...invoice, last_payment_date: lastPaymentDate },
     client,
     campaign,
     items: enrichedItems,

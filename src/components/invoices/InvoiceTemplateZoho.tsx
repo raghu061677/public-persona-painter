@@ -199,7 +199,20 @@
         }
         // --- End enrichment ---
 
-        setData({ invoice, client, company, campaign, items });
+        // Fetch last payment date
+        let lastPaymentDate: string | null = null;
+        if (invoice.paid_amount && parseFloat(String(invoice.paid_amount)) > 0) {
+          const { data: lastPayment } = await supabase
+            .from('payment_records')
+            .select('payment_date')
+            .eq('invoice_id', invoiceId)
+            .order('payment_date', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          lastPaymentDate = lastPayment?.payment_date || null;
+        }
+
+        setData({ invoice: { ...invoice, last_payment_date: lastPaymentDate }, client, company, campaign, items });
       } catch (error) {
         console.error('Error fetching invoice data:', error);
       } finally {
@@ -219,7 +232,9 @@
    const igst = invoice.igst_amount || 0;
    const grandTotal = parseFloat(invoice.total_amount) || subtotal;
    const balanceDue = invoice.balance_due != null ? parseFloat(invoice.balance_due) : grandTotal;
-   const clientName = client?.name || 'Client';
+    const paidAmount = parseFloat(String(invoice.paid_amount)) || 0;
+    const lastPaymentDate = invoice.last_payment_date;
+    const clientName = client?.name || 'Client';
    // Build complete billing address with all parts
    const billingAddressParts = [
      client?.billing_address_line1 || client?.address || '',
@@ -353,8 +368,11 @@
              <tbody>
                <tr><td className="py-1">Sub Total</td><td className="py-1 text-right font-medium">{formatINR(subtotal)}</td></tr>
                {igst > 0 ? <tr><td className="py-1">IGST @ 18%</td><td className="py-1 text-right">{formatINR(igst)}</td></tr> : <><tr><td className="py-1">CGST @ 9%</td><td className="py-1 text-right">{formatINR(cgst)}</td></tr><tr><td className="py-1">SGST @ 9%</td><td className="py-1 text-right">{formatINR(sgst)}</td></tr></>}
-               <tr className="border-t border-border"><td className="py-2 font-bold">Total</td><td className="py-2 text-right font-bold text-lg">{formatINR(grandTotal)}</td></tr>
-               <tr><td className="py-1 font-bold text-destructive">Balance Due</td><td className="py-1 text-right font-bold text-destructive">{formatINR(balanceDue)}</td></tr>
+                <tr className="border-t border-border bg-primary/5"><td className="py-2 font-bold text-primary">Total</td><td className="py-2 text-right font-bold text-lg">{formatINR(grandTotal)}</td></tr>
+                {paidAmount > 0 && (
+                  <tr className="bg-green-50"><td className="py-1 font-bold text-green-600">Amount Received{lastPaymentDate ? ` (${formatDate(lastPaymentDate)})` : ''}</td><td className="py-1 text-right font-bold text-green-600">{formatINR(paidAmount)}</td></tr>
+                )}
+                <tr className={paidAmount > 0 ? "bg-orange-50" : ""}><td className="py-1 font-bold text-orange-600">Balance Due</td><td className="py-1 text-right font-bold text-orange-600">{formatINR(balanceDue)}</td></tr>
              </tbody>
            </table>
          </div>

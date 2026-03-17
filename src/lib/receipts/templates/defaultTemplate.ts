@@ -1,6 +1,27 @@
 // Receipt Default Template - Professional Layout
 import jsPDF from 'jspdf';
 import { ReceiptData, formatCurrency, formatDate, numberToWords, COMPANY_ADDRESS } from './types';
+import stampImageUrl from '@/assets/branding/stamp_matrix.png';
+
+// Cache stamp image
+let cachedStampBase64: string | null = null;
+async function loadStampImage(): Promise<string | undefined> {
+  if (cachedStampBase64) return cachedStampBase64;
+  try {
+    const res = await fetch(stampImageUrl);
+    if (!res.ok) return undefined;
+    const blob = await res.blob();
+    cachedStampBase64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    return cachedStampBase64 || undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export async function renderReceiptDefaultTemplate(data: ReceiptData): Promise<Blob> {
   const doc = new jsPDF({
@@ -304,19 +325,29 @@ export async function renderReceiptDefaultTemplate(data: ReceiptData): Promise<B
   // ========== AUTHORIZED SIGNATORY (Bottom-right anchored) ==========
   const signY = Math.max(yPos, 230);
   const signX = pageWidth - rightMargin - 50;
+  const signCenterX = signX + 25;
 
   doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('helvetica', 'normal');
   doc.setTextColor(0, 0, 0);
-  doc.text(`For ${companyName}`, signX, signY);
+  doc.text(`For ${companyName}`, signCenterX, signY, { align: 'center' });
+
+  // Stamp & Signature image
+  const stampBase64 = await loadStampImage();
+  if (stampBase64) {
+    try {
+      const stampSize = 28;
+      doc.addImage(stampBase64, 'PNG', signCenterX - stampSize / 2, signY + 3, stampSize, stampSize);
+    } catch {}
+  }
 
   doc.setDrawColor(150, 150, 150);
   doc.setLineWidth(0.3);
-  doc.line(signX, signY + 15, signX + 50, signY + 15);
+  doc.line(signX, signY + 33, signX + 50, signY + 33);
 
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
-  doc.text('Authorized Signatory', signX + 10, signY + 19);
+  doc.text('Authorized Signatory', signCenterX, signY + 37, { align: 'center' });
 
   // Footer
   const footerY = 285;

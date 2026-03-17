@@ -57,7 +57,8 @@ export function renderInvoiceSummaryTable(options: SummaryTableOptions): { endY:
   // Add Amount Received and Balance Due if there are payments
   const effectivePaid = paidAmount != null ? paidAmount : (grandTotal - balanceDue);
   if (effectivePaid > 0) {
-    rows.push({ label: 'Amount Received', value: effectivePaid, bold: true, highlight: 'green' });
+    const dateStr = paidDate ? ` (${formatDate(paidDate)})` : '';
+    rows.push({ label: `Amount Received${dateStr}`, value: effectivePaid, bold: true, highlight: 'green' });
     rows.push({ label: 'Balance Due', value: balanceDue, bold: true, highlight: 'orange' });
   }
 

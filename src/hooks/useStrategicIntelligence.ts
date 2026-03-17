@@ -40,7 +40,7 @@ export interface AssetROIRow {
   revenue: number;
   cost: number;
   profit: number;
-  roiPercent: number;
+  roiPercent: number | null;
   occupancyPercent: number;
   totalSqft: number;
 }
@@ -64,7 +64,7 @@ export interface ExecutiveKPIs {
   topCity: string;
   topCityRevenue: number;
   highestROIAsset: string;
-  highestROI: number;
+  highestROI: number | null;   // null = no valid cost data
   totalAssets: number;
   bookedAssets: number;
   totalClients: number;
@@ -361,8 +361,8 @@ export function useStrategicIntelligence() {
       const data = assetMap[ma.id] || { revenue: 0, printCost: 0, mountCost: 0, sqft: 0, bookedDays: 0 };
       const cost = data.printCost + data.mountCost;
       const profit = data.revenue - cost;
-      // FIX #5: Safe ROI - 0% when no cost and no revenue, N/A-safe when cost=0 but revenue>0
-      const roi = cost > 0 ? (profit / cost) * 100 : 0;
+      // STRICT FIX: ROI = null when cost <= 0 (excluded from ranking)
+      const roi = cost > 0 ? (profit / cost) * 100 : null;
       const occ = (data.bookedDays / periodDays) * 100;
 
       return {
@@ -374,11 +374,18 @@ export function useStrategicIntelligence() {
         revenue: data.revenue,
         cost,
         profit,
-        roiPercent: Math.round(roi),
+        roiPercent: roi !== null ? Math.round(roi) : null,
         occupancyPercent: Math.min(100, Math.round(occ)),
         totalSqft: Number(ma.total_sqft) || 0,
       };
-    }).sort((a, b) => b.roiPercent - a.roiPercent);
+    })
+    // Only rank assets with valid (non-null) ROI
+    .sort((a, b) => {
+      if (a.roiPercent === null && b.roiPercent === null) return 0;
+      if (a.roiPercent === null) return 1;
+      if (b.roiPercent === null) return -1;
+      return b.roiPercent - a.roiPercent;
+    });
   }, [periodCampaignAssets, mediaAssets, periodExpenses, dateRange]);
 
   // ── C) Concession Risk ──
@@ -437,18 +444,17 @@ export function useStrategicIntelligence() {
 
     const bookedIds = new Set(periodCampaignAssets.map(ca => ca.asset_id));
 
-    // FIX #8: Top city - use only positive revenue from period campaign assets
+    // STRICT: Top city - sanitize to non-negative booked values only
     const cityRev: Record<string, number> = {};
     periodCampaignAssets.forEach(ca => {
       const c = ca.city || "—";
-      const rev = Number(ca.total_price) || Number(ca.rent_amount) || 0;
-      cityRev[c] = (cityRev[c] || 0) + rev;
+      const rev = Math.max(0, Number(ca.total_price) || Number(ca.rent_amount) || 0);
+      if (rev > 0) cityRev[c] = (cityRev[c] || 0) + rev;
     });
     const topCityEntry = Object.entries(cityRev).sort((a, b) => b[1] - a[1])[0];
 
-    // FIX #5: Highest ROI asset - skip assets with 0 cost (no meaningful ROI)
-    const topAssetWithCost = assetROI.find(a => a.cost > 0);
-    const topAsset = topAssetWithCost || assetROI.find(a => a.revenue > 0);
+    // STRICT: Best ROI - only assets with cost > 0 and non-null ROI
+    const topAsset = assetROI.find(a => a.cost > 0 && a.roiPercent !== null);
 
     // FIX #6: Active campaigns - canonical live statuses
     const activeCampaigns = campaigns.filter(c => LIVE_CAMPAIGN_STATUSES.includes(c.status)).length;
@@ -464,7 +470,7 @@ export function useStrategicIntelligence() {
       topCity: topCityEntry?.[0] || "—",
       topCityRevenue: topCityEntry?.[1] || 0,
       highestROIAsset: topAsset?.location || "—",
-      highestROI: topAsset?.roiPercent || 0,
+      highestROI: topAsset?.roiPercent ?? null,
       totalAssets: mediaAssets.length,
       bookedAssets: bookedIds.size,
       totalClients,

@@ -1,6 +1,6 @@
 // Receipt Modern Template - Clean Minimalist Layout
 import jsPDF from 'jspdf';
-import { ReceiptData, formatCurrency, formatDate, numberToWords, COMPANY_ADDRESS } from './types';
+import { ReceiptData, PaymentHistoryItem, formatCurrency, formatDate, numberToWords, COMPANY_ADDRESS } from './types';
 
 export async function renderReceiptModernTemplate(data: ReceiptData): Promise<Blob> {
   const doc = new jsPDF({

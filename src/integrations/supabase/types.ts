@@ -3470,6 +3470,7 @@ export type Database = {
           contact_person: string | null
           created_at: string | null
           created_by: string | null
+          default_tds_rate: number | null
           email: string | null
           gst_number: string | null
           id: string
@@ -3488,6 +3489,8 @@ export type Database = {
           shipping_same_as_billing: boolean | null
           shipping_state: string | null
           state: string | null
+          tds_applicable: boolean
+          tds_notes: string | null
           updated_at: string | null
           whatsapp: string | null
         }
@@ -3505,6 +3508,7 @@ export type Database = {
           contact_person?: string | null
           created_at?: string | null
           created_by?: string | null
+          default_tds_rate?: number | null
           email?: string | null
           gst_number?: string | null
           id: string
@@ -3523,6 +3527,8 @@ export type Database = {
           shipping_same_as_billing?: boolean | null
           shipping_state?: string | null
           state?: string | null
+          tds_applicable?: boolean
+          tds_notes?: string | null
           updated_at?: string | null
           whatsapp?: string | null
         }
@@ -3540,6 +3546,7 @@ export type Database = {
           contact_person?: string | null
           created_at?: string | null
           created_by?: string | null
+          default_tds_rate?: number | null
           email?: string | null
           gst_number?: string | null
           id?: string
@@ -3558,6 +3565,8 @@ export type Database = {
           shipping_same_as_billing?: boolean | null
           shipping_state?: string | null
           state?: string | null
+          tds_applicable?: boolean
+          tds_notes?: string | null
           updated_at?: string | null
           whatsapp?: string | null
         }
@@ -8718,6 +8727,8 @@ export type Database = {
           notes: string | null
           payment_date: string
           reference_no: string | null
+          tds_amount: number
+          tds_certificate_no: string | null
           updated_at: string | null
         }
         Insert: {
@@ -8736,6 +8747,8 @@ export type Database = {
           notes?: string | null
           payment_date?: string
           reference_no?: string | null
+          tds_amount?: number
+          tds_certificate_no?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -8754,6 +8767,8 @@ export type Database = {
           notes?: string | null
           payment_date?: string
           reference_no?: string | null
+          tds_amount?: number
+          tds_certificate_no?: string | null
           updated_at?: string | null
         }
         Relationships: [

@@ -268,17 +268,19 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
     });
   }
 
-  // Fetch last payment date for this invoice
+  // Fetch last payment date and TDS totals for this invoice
   let lastPaymentDate: string | null = null;
+  let totalTdsAmount = 0;
   if (invoice.paid_amount && parseFloat(String(invoice.paid_amount)) > 0) {
-    const { data: lastPayment } = await supabase
+    const { data: paymentRows } = await supabase
       .from('payment_records')
-      .select('payment_date')
+      .select('payment_date, tds_amount')
       .eq('invoice_id', invoiceId)
-      .order('payment_date', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    lastPaymentDate = lastPayment?.payment_date || null;
+      .order('payment_date', { ascending: false });
+    if (paymentRows && paymentRows.length > 0) {
+      lastPaymentDate = paymentRows[0].payment_date || null;
+      totalTdsAmount = paymentRows.reduce((sum: number, p: any) => sum + (p.tds_amount || 0), 0);
+    }
   }
 
   // Load logo
@@ -291,7 +293,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
   }
 
   const data: InvoiceData = {
-    invoice: { ...invoice, last_payment_date: lastPaymentDate },
+    invoice: { ...invoice, last_payment_date: lastPaymentDate, total_tds_amount: totalTdsAmount },
     client,
     campaign,
     items: enrichedItems,

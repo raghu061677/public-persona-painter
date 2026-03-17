@@ -53,6 +53,9 @@ const clientSchema = z.object({
   shipping_pincode: z.string().trim().regex(/^[0-9]{6}$/, "Pincode must be exactly 6 digits").optional().or(z.literal("")),
   shipping_same_as_billing: z.boolean(),
   payment_terms: z.string().optional().or(z.literal("")),
+  tds_applicable: z.boolean().optional(),
+  default_tds_rate: z.string().optional().or(z.literal("")),
+  tds_notes: z.string().optional().or(z.literal("")),
 });
 
 type ClientFormData = z.infer<typeof clientSchema>;
@@ -95,6 +98,9 @@ export function EditClientDialog({
     shipping_pincode: "",
     shipping_same_as_billing: false,
     payment_terms: "",
+    tds_applicable: false,
+    default_tds_rate: "",
+    tds_notes: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -124,6 +130,9 @@ export function EditClientDialog({
         shipping_pincode: client.shipping_pincode || "",
         shipping_same_as_billing: client.shipping_same_as_billing || false,
         payment_terms: client.payment_terms || "",
+        tds_applicable: client.tds_applicable || false,
+        default_tds_rate: client.default_tds_rate != null ? String(client.default_tds_rate) : "",
+        tds_notes: client.tds_notes || "",
       });
       setErrors({});
     }
@@ -191,7 +200,10 @@ export function EditClientDialog({
           shipping_pincode: formData.shipping_same_as_billing ? formData.billing_pincode?.trim() : formData.shipping_pincode?.trim() || null,
           shipping_same_as_billing: formData.shipping_same_as_billing,
           payment_terms: formData.payment_terms?.trim() || null,
-        })
+          tds_applicable: formData.tds_applicable || false,
+          default_tds_rate: formData.default_tds_rate ? parseFloat(formData.default_tds_rate) : null,
+          tds_notes: formData.tds_notes?.trim() || null,
+        } as any)
         .eq('id', client.id);
 
       if (error) throw error;
@@ -371,6 +383,52 @@ export function EditClientDialog({
                 onChange={(v) => updateField('payment_terms', v)}
                 helperText="Used as default for new quotations and plans."
               />
+            </div>
+          </div>
+
+          <Separator className="my-6" />
+
+          {/* TDS Settings */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">TDS Settings</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 flex items-center space-x-2">
+                <Checkbox
+                  id="tds-applicable"
+                  checked={formData.tds_applicable || false}
+                  onCheckedChange={(checked) => {
+                    setFormData(prev => ({ ...prev, tds_applicable: !!checked }));
+                  }}
+                />
+                <Label htmlFor="tds-applicable" className="text-sm font-normal cursor-pointer">
+                  Client deducts TDS on payments
+                </Label>
+              </div>
+
+              {formData.tds_applicable && (
+                <>
+                  <div>
+                    <Label>Default TDS Rate (%)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={formData.default_tds_rate}
+                      onChange={(e) => updateField('default_tds_rate', e.target.value)}
+                      placeholder="e.g. 2"
+                    />
+                  </div>
+                  <div>
+                    <Label>TDS Notes</Label>
+                    <Input
+                      value={formData.tds_notes || ""}
+                      onChange={(e) => updateField('tds_notes', e.target.value)}
+                      placeholder="e.g. Section 194C"
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

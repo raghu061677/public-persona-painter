@@ -11,8 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
-import { Plus, Trash2, DollarSign, CreditCard, Building2, Banknote, Smartphone, CircleDot, Download, FileText, Loader2 } from "lucide-react";
+import { Plus, Trash2, DollarSign, CreditCard, Building2, Banknote, Smartphone, CircleDot, Download, Loader2, ChevronDown } from "lucide-react";
 import { formatINR } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
 import { useReceiptGeneration } from "@/hooks/useReceiptGeneration";
@@ -24,6 +25,8 @@ interface PaymentRecord {
   campaign_id: string | null;
   payment_date: string;
   amount: number;
+  tds_amount: number;
+  tds_certificate_no: string | null;
   method: string;
   reference_no: string | null;
   notes: string | null;
@@ -65,10 +68,14 @@ export function PaymentRecordingPanel({
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [clientTds, setClientTds] = useState<{ tds_applicable: boolean; default_tds_rate: number | null }>({ tds_applicable: false, default_tds_rate: null });
+  const [tdsOpen, setTdsOpen] = useState(false);
   const { generating, downloadReceiptByPaymentId } = useReceiptGeneration();
   
   const [newPayment, setNewPayment] = useState({
     amount: "",
+    tds_amount: "",
+    tds_certificate_no: "",
     payment_date: new Date().toISOString().split('T')[0],
     method: "Bank Transfer",
     reference_no: "",
@@ -77,7 +84,30 @@ export function PaymentRecordingPanel({
 
   useEffect(() => {
     fetchPayments();
+    fetchClientTdsSettings();
   }, [invoiceId]);
+
+  const fetchClientTdsSettings = async () => {
+    if (!clientId) return;
+    try {
+      const { data } = await supabase
+        .from("clients")
+        .select("tds_applicable, default_tds_rate")
+        .eq("id", clientId)
+        .maybeSingle();
+      if (data) {
+        setClientTds({
+          tds_applicable: (data as any).tds_applicable || false,
+          default_tds_rate: (data as any).default_tds_rate || null,
+        });
+        if ((data as any).tds_applicable) {
+          setTdsOpen(true);
+        }
+      }
+    } catch (e) {
+      // silently ignore
+    }
+  };
 
   const fetchPayments = async () => {
     setLoading(true);
@@ -89,7 +119,11 @@ export function PaymentRecordingPanel({
         .order("payment_date", { ascending: false });
 
       if (error) throw error;
-      setPayments(data || []);
+      setPayments((data || []).map((p: any) => ({
+        ...p,
+        tds_amount: p.tds_amount || 0,
+        tds_certificate_no: p.tds_certificate_no || null,
+      })));
     } catch (error) {
       console.error("Error fetching payments:", error);
     } finally {
@@ -98,19 +132,28 @@ export function PaymentRecordingPanel({
   };
 
   const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-  const balance = totalAmount - totalPaid;
-  const paymentProgress = totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0;
+  const totalTds = payments.reduce((sum, p) => sum + Number(p.tds_amount || 0), 0);
+  const totalSettled = totalPaid + totalTds;
+  const balance = Math.max(totalAmount - totalSettled, 0);
+  const paymentProgress = totalAmount > 0 ? (totalSettled / totalAmount) * 100 : 0;
 
   const handleAddPayment = async () => {
     const amount = parseFloat(newPayment.amount);
+    const tdsAmount = parseFloat(newPayment.tds_amount) || 0;
+    const totalSettleThis = amount + tdsAmount;
     
     if (!amount || amount <= 0) {
       toast.error("Please enter a valid payment amount");
       return;
     }
 
-    if (amount > balance + 0.01) {
-      toast.error(`Payment amount (₹${amount.toFixed(2)}) exceeds balance due (₹${balance.toFixed(2)})`);
+    if (tdsAmount < 0) {
+      toast.error("TDS amount cannot be negative");
+      return;
+    }
+
+    if (totalSettleThis > balance + 0.01) {
+      toast.error(`Payment + TDS (${formatINR(totalSettleThis)}) exceeds balance due (${formatINR(balance)})`);
       return;
     }
 
@@ -121,41 +164,31 @@ export function PaymentRecordingPanel({
 
     setSaving(true);
     try {
-      // Get authenticated user
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
         toast.error("Authentication required. Please log in and try again.");
         return;
       }
       
-      // Get company_id from invoice for RLS compliance
       const { data: invoiceData, error: invoiceFetchError } = await supabase
         .from("invoices")
         .select("company_id, client_id, campaign_id")
         .eq("id", invoiceId)
         .maybeSingle();
 
-      if (invoiceFetchError) {
-        toast.error(`Failed to fetch invoice: ${invoiceFetchError.message}`);
+      if (invoiceFetchError || !invoiceData?.company_id) {
+        toast.error("Failed to fetch invoice details");
         return;
       }
 
-      if (!invoiceData) {
-        toast.error(`Invoice "${invoiceId}" not found. Cannot record payment.`);
-        return;
-      }
-
-      if (!invoiceData.company_id) {
-        toast.error("Invoice is missing company information. Cannot record payment due to access restrictions.");
-        return;
-      }
-
-      const payload = {
+      const payload: any = {
         invoice_id: invoiceId,
         client_id: clientId || invoiceData.client_id || null,
         campaign_id: campaignId || invoiceData.campaign_id || null,
         company_id: invoiceData.company_id,
         amount: amount,
+        tds_amount: tdsAmount,
+        tds_certificate_no: newPayment.tds_certificate_no?.trim() || null,
         payment_date: newPayment.payment_date,
         method: newPayment.method,
         reference_no: newPayment.reference_no || null,
@@ -168,7 +201,6 @@ export function PaymentRecordingPanel({
         .insert(payload);
 
       if (error) {
-        console.error("Payment insert error:", error);
         const detail = [error.message, error.details, error.hint].filter(Boolean).join(" — ");
         toast.error(`Failed to add payment: ${detail}`);
         return;
@@ -178,6 +210,8 @@ export function PaymentRecordingPanel({
 
       setNewPayment({
         amount: "",
+        tds_amount: "",
+        tds_certificate_no: "",
         payment_date: new Date().toISOString().split('T')[0],
         method: "Bank Transfer",
         reference_no: "",
@@ -188,7 +222,6 @@ export function PaymentRecordingPanel({
       fetchPayments();
       onPaymentAdded?.();
     } catch (error: any) {
-      console.error("Payment error:", error);
       toast.error(error?.message || "An unexpected error occurred while adding payment");
     } finally {
       setSaving(false);
@@ -221,12 +254,23 @@ export function PaymentRecordingPanel({
   };
 
   const getStatusBadge = () => {
-    if (balance <= 0) return <Badge className="bg-green-500/10 text-green-700 border-green-500/20">Paid</Badge>;
-    if (totalPaid > 0) return <Badge className="bg-yellow-500/10 text-yellow-700 border-yellow-500/20">Partial</Badge>;
+    if (balance <= 0.01) return <Badge className="bg-green-500/10 text-green-700 border-green-500/20">Paid</Badge>;
+    if (totalPaid > 0 || totalTds > 0) return <Badge className="bg-yellow-500/10 text-yellow-700 border-yellow-500/20">Partial</Badge>;
     return <Badge className="bg-blue-500/10 text-blue-700 border-blue-500/20">Pending</Badge>;
   };
 
   const isDraftInvoice = status === "Draft";
+
+  // Pre-fill TDS when dialog opens
+  const handleDialogOpen = (open: boolean) => {
+    setDialogOpen(open);
+    if (open && clientTds.tds_applicable && clientTds.default_tds_rate && !newPayment.tds_amount) {
+      // Suggest TDS based on remaining balance
+      const suggestedTds = (balance * (clientTds.default_tds_rate / 100));
+      setNewPayment(prev => ({ ...prev, tds_amount: suggestedTds.toFixed(2) }));
+      setTdsOpen(true);
+    }
+  };
 
   return (
     <Card>
@@ -242,9 +286,9 @@ export function PaymentRecordingPanel({
               Track all payments received for this invoice
             </CardDescription>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={handleDialogOpen}>
             <DialogTrigger asChild>
-              <Button disabled={isDraftInvoice || balance <= 0}>
+              <Button disabled={isDraftInvoice || balance <= 0.01}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Payment
               </Button>
@@ -258,7 +302,7 @@ export function PaymentRecordingPanel({
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div>
-                  <Label htmlFor="amount">Amount *</Label>
+                  <Label htmlFor="amount">Amount Received *</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
                     <Input
@@ -275,6 +319,51 @@ export function PaymentRecordingPanel({
                     Max: {formatINR(balance)}
                   </p>
                 </div>
+
+                {/* TDS Section */}
+                <Collapsible open={tdsOpen || clientTds.tds_applicable} onOpenChange={setTdsOpen}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="w-full justify-between text-muted-foreground hover:text-foreground">
+                      <span className="flex items-center gap-1">
+                        TDS Deduction
+                        {clientTds.tds_applicable && (
+                          <Badge variant="outline" className="text-xs ml-1">Client TDS: {clientTds.default_tds_rate}%</Badge>
+                        )}
+                      </span>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${tdsOpen ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-3 pt-2">
+                    <div>
+                      <Label htmlFor="tdsAmount">TDS Deducted</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
+                        <Input
+                          id="tdsAmount"
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          className="pl-8"
+                          value={newPayment.tds_amount}
+                          onChange={(e) => setNewPayment({ ...newPayment, tds_amount: e.target.value })}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Amount deducted as TDS by the client
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="tdsCertNo">TDS Certificate No.</Label>
+                      <Input
+                        id="tdsCertNo"
+                        placeholder="Optional certificate number"
+                        value={newPayment.tds_certificate_no}
+                        onChange={(e) => setNewPayment({ ...newPayment, tds_certificate_no: e.target.value })}
+                      />
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
                 <div>
                   <Label htmlFor="paymentDate">Payment Date *</Label>
                   <Input
@@ -342,21 +431,27 @@ export function PaymentRecordingPanel({
           <div className="space-y-3">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Payment Progress</span>
-              <span className="font-medium">{paymentProgress.toFixed(0)}%</span>
+              <span className="font-medium">{Math.min(paymentProgress, 100).toFixed(0)}%</span>
             </div>
-            <Progress value={paymentProgress} className="h-2" />
-            <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+            <Progress value={Math.min(paymentProgress, 100)} className="h-2" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted rounded-lg">
               <div>
                 <p className="text-sm text-muted-foreground">Total Amount</p>
                 <p className="text-lg font-bold">{formatINR(totalAmount)}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Paid</p>
+                <p className="text-sm text-muted-foreground">Amount Received</p>
                 <p className="text-lg font-bold text-green-600">{formatINR(totalPaid)}</p>
               </div>
+              {totalTds > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground">TDS Deducted</p>
+                  <p className="text-lg font-bold text-blue-600">{formatINR(totalTds)}</p>
+                </div>
+              )}
               <div>
                 <p className="text-sm text-muted-foreground">Balance Due</p>
-                <p className={`text-lg font-bold ${balance > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                <p className={`text-lg font-bold ${balance > 0.01 ? 'text-orange-600' : 'text-green-600'}`}>
                   {formatINR(balance)}
                 </p>
               </div>
@@ -377,7 +472,9 @@ export function PaymentRecordingPanel({
               <TableHeader>
                 <TableRow>
                   <TableHead>Date</TableHead>
-                  <TableHead>Amount</TableHead>
+                  <TableHead>Amount Received</TableHead>
+                  {totalTds > 0 && <TableHead>TDS</TableHead>}
+                  {totalTds > 0 && <TableHead>Total Settled</TableHead>}
                   <TableHead>Method</TableHead>
                   <TableHead>Reference</TableHead>
                   <TableHead>Notes</TableHead>
@@ -391,6 +488,16 @@ export function PaymentRecordingPanel({
                     <TableCell className="font-medium text-green-600">
                       {formatINR(payment.amount)}
                     </TableCell>
+                    {totalTds > 0 && (
+                      <TableCell className="font-medium text-blue-600">
+                        {payment.tds_amount > 0 ? formatINR(payment.tds_amount) : "-"}
+                      </TableCell>
+                    )}
+                    {totalTds > 0 && (
+                      <TableCell className="font-medium">
+                        {formatINR(payment.amount + payment.tds_amount)}
+                      </TableCell>
+                    )}
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {getMethodIcon(payment.method)}
@@ -401,7 +508,9 @@ export function PaymentRecordingPanel({
                       {payment.reference_no || "-"}
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">
-                      {payment.notes || "-"}
+                      {payment.tds_certificate_no ? `TDS Cert: ${payment.tds_certificate_no}` : ""}
+                      {payment.tds_certificate_no && payment.notes ? " | " : ""}
+                      {payment.notes || (!payment.tds_certificate_no ? "-" : "")}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">

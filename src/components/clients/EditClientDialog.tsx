@@ -138,6 +138,9 @@ export function EditClientDialog({
         payment_terms: client.payment_terms || "",
         tds_applicable: client.tds_applicable || false,
         default_tds_rate: client.default_tds_rate != null ? String(client.default_tds_rate) : "",
+        tds_section: (client as any).tds_section || "",
+        tan_number: (client as any).tan_number || "",
+        finance_contact: (client as any).finance_contact || "",
         tds_notes: client.tds_notes || "",
       });
       setErrors({});

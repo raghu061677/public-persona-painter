@@ -55,6 +55,9 @@ const clientSchema = z.object({
   payment_terms: z.string().optional().or(z.literal("")),
   tds_applicable: z.boolean().optional(),
   default_tds_rate: z.string().optional().or(z.literal("")),
+  tds_section: z.string().optional().or(z.literal("")),
+  tan_number: z.string().optional().or(z.literal("")),
+  finance_contact: z.string().optional().or(z.literal("")),
   tds_notes: z.string().optional().or(z.literal("")),
 });
 

@@ -14,6 +14,7 @@ interface SummaryTableOptions {
   gstAmount: number;
   grandTotal: number;
   balanceDue: number;
+  paidAmount?: number;
   isInterState?: boolean;
 }
 

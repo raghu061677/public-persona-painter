@@ -5,7 +5,7 @@ import { useCompany } from "@/contexts/CompanyContext";
 import { useRBAC } from "@/hooks/useRBAC";
 import {
   LayoutDashboard, Building2, Map, UserCog, Shield, DollarSign,
-  Settings, BarChart3, FileText, Menu,
+  Settings, BarChart3, FileText, LogOut,
 } from "lucide-react";
 import {
   Sidebar,
@@ -26,7 +26,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MobileAccordionNav } from "@/components/sidebar/MobileAccordionNav";
 import { DesktopNavFromConfig } from "@/components/sidebar/DesktopNavFromConfig";
-import { LogOut } from "lucide-react";
 
 export function ResponsiveSidebar() {
   const location = useLocation();
@@ -42,7 +41,6 @@ export function ResponsiveSidebar() {
   const collapsed = state === "collapsed";
   const isActive = (path: string) => location.pathname === path;
 
-  // Fetch pending approvals count
   useEffect(() => {
     if (user && company) {
       fetchPendingApprovalsCount();
@@ -72,7 +70,6 @@ export function ResponsiveSidebar() {
     }
   };
 
-  // Close mobile drawer on navigation
   const handleMobileNavigate = useCallback(() => {
     if (isMobile) {
       setOpenMobile(false);
@@ -85,7 +82,6 @@ export function ResponsiveSidebar() {
     navigate('/auth');
   };
 
-  // Simple menu item for platform admin section
   const MenuItem = ({ icon: Icon, label, href }: { icon: any; label: string; href: string }) => {
     const active = isActive(href);
     if (collapsed) {
@@ -94,7 +90,7 @@ export function ResponsiveSidebar() {
           <TooltipTrigger asChild>
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={active}>
-                <Link to={href}><Icon /></Link>
+                <Link to={href}><Icon className="h-4 w-4" /></Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </TooltipTrigger>
@@ -105,21 +101,19 @@ export function ResponsiveSidebar() {
     return (
       <SidebarMenuItem>
         <SidebarMenuButton asChild isActive={active}>
-          <Link to={href}><Icon /><span>{label}</span></Link>
+          <Link to={href}><Icon className="h-4 w-4" /><span>{label}</span></Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
     );
   };
 
-  // Badge counts
   const badges: Record<string, number> = {
     pendingApprovals: pendingApprovalsCount,
     proofUploads: proofUploadsCount,
   };
 
-  // Mobile header with company logo/branding
   const mobileHeader = (
-    <div className="px-4 pb-2 border-b border-border/40 mb-2">
+    <div className="px-4 pb-3 border-b border-border/40 mb-1">
       <Link
         to="/admin/dashboard"
         className="flex items-center gap-3 hover:opacity-80 transition-opacity"
@@ -140,7 +134,7 @@ export function ResponsiveSidebar() {
           </>
         )}
       </Link>
-      <p className="text-xs text-muted-foreground mt-1">
+      <p className="text-[11px] text-muted-foreground mt-1">
         {company?.type === 'media_owner' ? 'Media Owner' : company?.type === 'agency' ? 'Agency' : 'Workspace'}
       </p>
     </div>
@@ -149,7 +143,7 @@ export function ResponsiveSidebar() {
   return (
     <Sidebar
       collapsible="icon"
-      className="border-r border-border"
+      className="border-r border-border/60"
       mobileContent={
         <MobileAccordionNav
           badges={badges}
@@ -158,21 +152,21 @@ export function ResponsiveSidebar() {
       }
       mobileHeader={mobileHeader}
     >
-      {/* Header with Logo and Toggle */}
-      <SidebarHeader className="border-b border-border/40 p-4">
+      {/* Header */}
+      <SidebarHeader className="border-b border-border/40 px-3 py-3">
         <div className="flex items-center justify-between">
           {!collapsed && (
-            <Link to="/admin/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+            <Link to="/admin/dashboard" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity min-w-0">
               {company?.logo_url ? (
                 <img
                   src={company.logo_url}
                   alt={company.name}
-                  className="h-8 w-auto object-contain max-w-[140px] rounded"
+                  className="h-7 w-auto object-contain max-w-[130px] rounded"
                 />
               ) : (
                 <>
-                  <Shield className="h-5 w-5 text-primary" />
-                  <span className="font-semibold text-foreground">
+                  <Shield className="h-5 w-5 text-primary shrink-0" />
+                  <span className="font-semibold text-sm text-foreground truncate">
                     {company?.name || 'Go-Ads 360°'}
                   </span>
                 </>
@@ -185,7 +179,7 @@ export function ResponsiveSidebar() {
                 <img
                   src={company.logo_url}
                   alt={company.name}
-                  className="h-8 w-8 object-contain rounded"
+                  className="h-7 w-7 object-contain rounded"
                 />
               ) : (
                 <Shield className="h-5 w-5 text-primary mx-auto" />
@@ -199,10 +193,10 @@ export function ResponsiveSidebar() {
       {/* Main Content */}
       <SidebarContent>
         <ScrollArea className="flex-1 ios-scroll">
-          {/* Platform Administration (special case — not in NAV_CONFIG) */}
+          {/* Platform Administration */}
           {isPlatformAdmin && company?.type === 'platform_admin' && (
             <>
-              {!collapsed && <SidebarGroupLabel className="px-4">Platform Administration</SidebarGroupLabel>}
+              {!collapsed && <SidebarGroupLabel className="px-4 text-[11px]">Platform Administration</SidebarGroupLabel>}
               <SidebarMenu>
                 <MenuItem icon={LayoutDashboard} label="Platform Dashboard" href="/admin/platform" />
                 <MenuItem icon={Building2} label="All Companies" href="/admin/company-management" />
@@ -218,27 +212,26 @@ export function ResponsiveSidebar() {
             </>
           )}
 
-          {/* Tenant Company Navigation — driven entirely from NAV_CONFIG */}
+          {/* Tenant Company Navigation */}
           {company && company.type !== 'platform_admin' && (
             <DesktopNavFromConfig
               collapsed={collapsed}
               badges={badges}
-              onLogout={handleLogout}
             />
           )}
         </ScrollArea>
       </SidebarContent>
 
-      {/* Footer — Logout only */}
-      <SidebarFooter className="border-t border-border/40 p-2">
+      {/* Footer — clean logout */}
+      <SidebarFooter className="border-t border-border/50 p-2">
         {!collapsed ? (
           <Button
             variant="ghost"
             onClick={handleLogout}
-            className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/8"
+            className="w-full justify-start gap-2.5 h-9 text-[13px] font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10"
           >
             <LogOut className="h-4 w-4" />
-            <span>Logout</span>
+            <span>Sign out</span>
           </Button>
         ) : (
           <Tooltip>
@@ -247,12 +240,12 @@ export function ResponsiveSidebar() {
                 variant="ghost"
                 size="icon"
                 onClick={handleLogout}
-                className="mx-auto text-muted-foreground hover:text-destructive"
+                className="mx-auto h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
               >
                 <LogOut className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="right">Logout</TooltipContent>
+            <TooltipContent side="right">Sign out</TooltipContent>
           </Tooltip>
         )}
       </SidebarFooter>

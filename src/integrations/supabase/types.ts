@@ -10028,6 +10028,155 @@ export type Database = {
         }
         Relationships: []
       }
+      proforma_invoice_items: {
+        Row: {
+          area: string | null
+          asset_id: string
+          created_at: string
+          dimension_height: number
+          dimension_width: number
+          direction: string | null
+          discount: number
+          display_name: string
+          id: string
+          illumination_type: string | null
+          line_total: number
+          location: string | null
+          mounting_charge: number
+          negotiated_rate: number
+          printing_charge: number
+          proforma_invoice_id: string
+          total_sqft: number
+        }
+        Insert: {
+          area?: string | null
+          asset_id: string
+          created_at?: string
+          dimension_height?: number
+          dimension_width?: number
+          direction?: string | null
+          discount?: number
+          display_name: string
+          id?: string
+          illumination_type?: string | null
+          line_total?: number
+          location?: string | null
+          mounting_charge?: number
+          negotiated_rate?: number
+          printing_charge?: number
+          proforma_invoice_id: string
+          total_sqft?: number
+        }
+        Update: {
+          area?: string | null
+          asset_id?: string
+          created_at?: string
+          dimension_height?: number
+          dimension_width?: number
+          direction?: string | null
+          discount?: number
+          display_name?: string
+          id?: string
+          illumination_type?: string | null
+          line_total?: number
+          location?: string | null
+          mounting_charge?: number
+          negotiated_rate?: number
+          printing_charge?: number
+          proforma_invoice_id?: string
+          total_sqft?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proforma_invoice_items_proforma_invoice_id_fkey"
+            columns: ["proforma_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "proforma_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proforma_invoices: {
+        Row: {
+          additional_notes: string | null
+          campaign_end_date: string | null
+          campaign_start_date: string | null
+          cgst_amount: number
+          client_address: string | null
+          client_gstin: string | null
+          client_name: string
+          client_state: string | null
+          created_at: string
+          discount_total: number
+          grand_total: number
+          id: string
+          mounting_total: number
+          plan_name: string | null
+          printing_total: number
+          proforma_date: string
+          proforma_number: string
+          reference_plan_id: string | null
+          sgst_amount: number
+          status: string
+          subtotal: number
+          taxable_amount: number
+          total_tax: number
+          updated_at: string
+        }
+        Insert: {
+          additional_notes?: string | null
+          campaign_end_date?: string | null
+          campaign_start_date?: string | null
+          cgst_amount?: number
+          client_address?: string | null
+          client_gstin?: string | null
+          client_name: string
+          client_state?: string | null
+          created_at?: string
+          discount_total?: number
+          grand_total?: number
+          id?: string
+          mounting_total?: number
+          plan_name?: string | null
+          printing_total?: number
+          proforma_date?: string
+          proforma_number: string
+          reference_plan_id?: string | null
+          sgst_amount?: number
+          status?: string
+          subtotal?: number
+          taxable_amount?: number
+          total_tax?: number
+          updated_at?: string
+        }
+        Update: {
+          additional_notes?: string | null
+          campaign_end_date?: string | null
+          campaign_start_date?: string | null
+          cgst_amount?: number
+          client_address?: string | null
+          client_gstin?: string | null
+          client_name?: string
+          client_state?: string | null
+          created_at?: string
+          discount_total?: number
+          grand_total?: number
+          id?: string
+          mounting_total?: number
+          plan_name?: string | null
+          printing_total?: number
+          proforma_date?: string
+          proforma_number?: string
+          reference_plan_id?: string | null
+          sgst_amount?: number
+          status?: string
+          subtotal?: number
+          taxable_amount?: number
+          total_tax?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       rate_limits: {
         Row: {
           blocked_until: string | null

@@ -713,11 +713,12 @@ function AutomationHealthPanel({ companyId }: { companyId?: string }) {
         .order("created_at", { ascending: false });
 
       // Query auto_reminder_settings
-      const { data: reminderSettings } = await supabase
+      const { data: reminderRaw } = await supabase
         .from("auto_reminder_settings" as any)
         .select("*")
         .limit(1)
         .maybeSingle();
+      const reminderSettings = reminderRaw as any;
 
       const automationJobs = [
         {

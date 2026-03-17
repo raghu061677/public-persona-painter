@@ -113,6 +113,7 @@ const ReportAgingByClient = lazy(() => import("./pages/ReportAgingByClient"));
 const ReportOpsPayables = lazy(() => import("./pages/ReportOpsPayables"));
 const ReportOpsBillables = lazy(() => import("./pages/ReportOpsBillables"));
 const ReportOpsMargin = lazy(() => import("./pages/ReportOpsMargin"));
+const ReportTDS = lazy(() => import("./pages/ReportTDS"));
 const ReportVendorLedger = lazy(() => import("./pages/ReportVendorLedger"));
 const ReportPrinterLedger = lazy(() => import("./pages/ReportPrinterLedger"));
 const MediaAvailabilityReport = lazy(() => import("./pages/admin/reports/MediaAvailabilityReport"));

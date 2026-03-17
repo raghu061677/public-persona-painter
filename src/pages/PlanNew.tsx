@@ -556,9 +556,12 @@ export default function PlanNew() {
 
       // Trigger plan_created_internal email
       try {
+        // Get current user's email as fallback recipient
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        const recipientEmail = company?.email || currentUser?.email || '';
         const emailPayload = buildPlanPayload(plan, { name: formData.client_name, email: '' }, company);
         triggerEmail('plan_created_internal', emailPayload,
-          [{ to: company?.email || '' }], plan.id);
+          [{ to: recipientEmail }], plan.id);
       } catch (emailErr) {
         console.warn('[PlanNew] Email trigger failed (non-blocking):', emailErr);
       }

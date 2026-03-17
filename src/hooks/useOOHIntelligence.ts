@@ -145,7 +145,7 @@ export function useOOHIntelligence() {
       if (!overlaps) return false;
       if (statusFilter && c.status !== statusFilter) return false;
       if (clientFilter) {
-        const cn = (c as any).clients?.name || "";
+        const cn = c.client_name || "";
         if (!cn.toLowerCase().includes(clientFilter.toLowerCase())) return false;
       }
       return true;

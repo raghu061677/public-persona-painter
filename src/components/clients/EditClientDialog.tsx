@@ -388,6 +388,52 @@ export function EditClientDialog({
 
           <Separator className="my-6" />
 
+          {/* TDS Settings */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">TDS Settings</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 flex items-center space-x-2">
+                <Checkbox
+                  id="tds-applicable"
+                  checked={formData.tds_applicable || false}
+                  onCheckedChange={(checked) => {
+                    setFormData(prev => ({ ...prev, tds_applicable: !!checked }));
+                  }}
+                />
+                <Label htmlFor="tds-applicable" className="text-sm font-normal cursor-pointer">
+                  Client deducts TDS on payments
+                </Label>
+              </div>
+
+              {formData.tds_applicable && (
+                <>
+                  <div>
+                    <Label>Default TDS Rate (%)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={formData.default_tds_rate}
+                      onChange={(e) => updateField('default_tds_rate', e.target.value)}
+                      placeholder="e.g. 2"
+                    />
+                  </div>
+                  <div>
+                    <Label>TDS Notes</Label>
+                    <Input
+                      value={formData.tds_notes || ""}
+                      onChange={(e) => updateField('tds_notes', e.target.value)}
+                      placeholder="e.g. Section 194C"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          <Separator className="my-6" />
+
           {/* Billing Address Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Billing Address</h3>

@@ -335,7 +335,11 @@ export function useOOHIntelligence() {
 
       const monthAssets = campaignAssets.filter(a => activeCmpIds.has(a.campaign_id));
       const bookedIds = new Set(monthAssets.map(a => a.asset_id));
-      const revenue = monthAssets.reduce((s, a) => s + (Number(a.total_price) || Number(a.rent_amount) || 0), 0);
+      const assetRev = monthAssets.reduce((s, a) => s + (Number(a.total_price) || Number(a.rent_amount) || Number(a.negotiated_rate) || Number(a.card_rate) || 0), 0);
+
+      // Sum invoice revenue for active campaigns this month
+      const monthInvRevenue = [...activeCmpIds].reduce((s, cid) => s + (invoiceByCampaign[cid] || 0), 0);
+      const revenue = monthInvRevenue > 0 ? monthInvRevenue : assetRev;
 
       months.push({
         month: label,

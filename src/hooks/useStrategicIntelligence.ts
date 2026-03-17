@@ -500,41 +500,71 @@ export function useStrategicIntelligence() {
     });
   }, [invoices, expenses]);
 
-  // Client concentration - FIX #9: also use campaign client names as fallback
-  const clientConcentration = useMemo(() => {
-    const map: Record<string, number> = {};
-    const validInvoices = invoices.filter(i => i.status !== "Draft" && i.status !== "Cancelled");
+  // Client concentration — dual-basis with proper name resolution
+  const clientConcentration = useMemo((): { data: { name: string; value: number }[]; basis: "invoiced" | "booked" | "none" } => {
+    // Build lookup maps for client name resolution
+    const clientNameById: Record<string, string> = {};
+    clients.forEach(c => { if (c.id && c.name) clientNameById[c.id] = c.name; });
 
-    // Build campaign→client name map
     const campaignClientMap: Record<string, string> = {};
+    const campaignClientIdMap: Record<string, string> = {};
     campaigns.forEach(c => {
-      const cname = (c as any).clients?.name;
-      if (cname) campaignClientMap[c.id] = cname;
+      const joined = (c as any).clients?.name;
+      if (joined) campaignClientMap[c.id] = joined;
+      if (c.client_id) campaignClientIdMap[c.id] = c.client_id;
     });
 
-    validInvoices.forEach(i => {
-      // Try invoice client_name, then look up from campaign
-      let name = i.client_name;
-      if (!name && i.campaign_id) name = campaignClientMap[i.campaign_id];
-      if (!name) name = "Unknown";
-      map[name] = (map[name] || 0) + (Number(i.total_amount) || 0);
+    // Resolve name with priority: clients.name > campaign.clients.name > invoice.client_name > "Unknown Client"
+    const resolveName = (clientId?: string, campaignId?: string, fallbackName?: string): string => {
+      if (clientId && clientNameById[clientId]) return clientNameById[clientId];
+      if (campaignId && campaignClientMap[campaignId]) return campaignClientMap[campaignId];
+      if (campaignId && campaignClientIdMap[campaignId] && clientNameById[campaignClientIdMap[campaignId]])
+        return clientNameById[campaignClientIdMap[campaignId]];
+      if (fallbackName && fallbackName.trim()) return fallbackName.trim();
+      return "Unknown Client";
+    };
+
+    const aggregate = (map: Record<string, number>): { name: string; value: number }[] => {
+      const entries = Object.entries(map)
+        .filter(([_, v]) => v > 0)
+        .sort((a, b) => b[1] - a[1]);
+      if (entries.length <= 5) return entries.map(([name, value]) => ({ name, value }));
+      const top5 = entries.slice(0, 5);
+      const othersValue = entries.slice(5).reduce((s, [_, v]) => s + v, 0);
+      const result = top5.map(([name, value]) => ({ name, value }));
+      if (othersValue > 0) result.push({ name: "Others", value: othersValue });
+      return result;
+    };
+
+    // A) Primary: invoiced revenue by client in selected period
+    const invoiceMap: Record<string, number> = {};
+    periodInvoices.forEach(i => {
+      const name = resolveName(i.client_id, i.campaign_id, i.client_name);
+      const amt = Number(i.total_amount) || 0;
+      if (amt > 0) invoiceMap[name] = (invoiceMap[name] || 0) + amt;
     });
 
-    // If still no invoice data, fallback to campaign asset revenue by client
-    if (Object.keys(map).length === 0) {
-      periodCampaignAssets.forEach(ca => {
-        const clientName = campaignClientMap[ca.campaign_id] || "Unknown";
-        const rev = Number(ca.total_price) || Number(ca.rent_amount) || 0;
-        map[clientName] = (map[clientName] || 0) + rev;
-      });
+    const invoiceEntries = Object.keys(invoiceMap).filter(k => k !== "Unknown Client");
+    if (invoiceEntries.length > 0) {
+      return { data: aggregate(invoiceMap), basis: "invoiced" };
     }
 
-    return Object.entries(map)
-      .filter(([_, v]) => v > 0)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 8);
-  }, [invoices, campaigns, periodCampaignAssets]);
+    // B) Fallback: booked value by client from period campaign assets
+    const bookedMap: Record<string, number> = {};
+    periodCampaignAssets.forEach(ca => {
+      const campaignId = ca.campaign_id;
+      const name = resolveName(undefined, campaignId);
+      const rev = Math.max(0, Number(ca.total_price) || Number(ca.rent_amount) || 0);
+      if (rev > 0) bookedMap[name] = (bookedMap[name] || 0) + rev;
+    });
+
+    const bookedEntries = Object.keys(bookedMap).filter(k => k !== "Unknown Client");
+    if (bookedEntries.length > 0) {
+      return { data: aggregate(bookedMap), basis: "booked" };
+    }
+
+    return { data: [], basis: "none" };
+  }, [periodInvoices, periodCampaignAssets, campaigns, clients]);
 
   return {
     loading, timeRange, setTimeRange, customRange, setCustomRange, dateRange,

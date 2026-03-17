@@ -55,6 +55,9 @@ const clientSchema = z.object({
   payment_terms: z.string().optional().or(z.literal("")),
   tds_applicable: z.boolean().optional(),
   default_tds_rate: z.string().optional().or(z.literal("")),
+  tds_section: z.string().optional().or(z.literal("")),
+  tan_number: z.string().optional().or(z.literal("")),
+  finance_contact: z.string().optional().or(z.literal("")),
   tds_notes: z.string().optional().or(z.literal("")),
 });
 
@@ -100,6 +103,9 @@ export function EditClientDialog({
     payment_terms: "",
     tds_applicable: false,
     default_tds_rate: "",
+    tds_section: "",
+    tan_number: "",
+    finance_contact: "",
     tds_notes: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -132,6 +138,9 @@ export function EditClientDialog({
         payment_terms: client.payment_terms || "",
         tds_applicable: client.tds_applicable || false,
         default_tds_rate: client.default_tds_rate != null ? String(client.default_tds_rate) : "",
+        tds_section: (client as any).tds_section || "",
+        tan_number: (client as any).tan_number || "",
+        finance_contact: (client as any).finance_contact || "",
         tds_notes: client.tds_notes || "",
       });
       setErrors({});
@@ -202,6 +211,9 @@ export function EditClientDialog({
           payment_terms: formData.payment_terms?.trim() || null,
           tds_applicable: formData.tds_applicable || false,
           default_tds_rate: formData.default_tds_rate ? parseFloat(formData.default_tds_rate) : null,
+          tds_section: formData.tds_section?.trim() || null,
+          tan_number: formData.tan_number?.trim() || null,
+          finance_contact: formData.finance_contact?.trim() || null,
           tds_notes: formData.tds_notes?.trim() || null,
         } as any)
         .eq('id', client.id);
@@ -420,11 +432,35 @@ export function EditClientDialog({
                     />
                   </div>
                   <div>
+                    <Label>TDS Section</Label>
+                    <Input
+                      value={formData.tds_section || ""}
+                      onChange={(e) => updateField('tds_section', e.target.value)}
+                      placeholder="e.g. 194C, 194J"
+                    />
+                  </div>
+                  <div>
+                    <Label>TAN Number</Label>
+                    <Input
+                      value={formData.tan_number || ""}
+                      onChange={(e) => updateField('tan_number', e.target.value)}
+                      placeholder="e.g. HYDA12345B"
+                    />
+                  </div>
+                  <div>
+                    <Label>Finance Contact</Label>
+                    <Input
+                      value={formData.finance_contact || ""}
+                      onChange={(e) => updateField('finance_contact', e.target.value)}
+                      placeholder="Name / Email / Phone"
+                    />
+                  </div>
+                  <div className="col-span-2">
                     <Label>TDS Notes</Label>
                     <Input
                       value={formData.tds_notes || ""}
                       onChange={(e) => updateField('tds_notes', e.target.value)}
-                      placeholder="e.g. Section 194C"
+                      placeholder="Additional TDS-related notes"
                     />
                   </div>
                 </>

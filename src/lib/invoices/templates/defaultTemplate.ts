@@ -512,6 +512,7 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
     grandTotal,
     balanceDue,
     paidAmount: parseFloat(data.invoice.paid_amount) || 0,
+    tdsAmount: data.invoice.total_tds_amount || 0,
     paidDate: data.invoice.last_payment_date || null,
     isInterState,
   });

@@ -14,6 +14,7 @@ interface SummaryTableOptions {
   gstAmount: number;
   grandTotal: number;
   balanceDue: number;
+  paidAmount?: number;
   isInterState?: boolean;
 }
 
@@ -27,7 +28,7 @@ interface SummaryTableOptions {
  * Returns { endY, totalRowBottomY } where totalRowBottomY is the bottom of the blue Total row.
  */
 export function renderInvoiceSummaryTable(options: SummaryTableOptions): { endY: number; totalRowBottomY: number } {
-  const { doc, x, y, width, subtotal, gstPercent, gstAmount, grandTotal, balanceDue, isInterState } = options;
+  const { doc, x, y, width, subtotal, gstPercent, gstAmount, grandTotal, balanceDue, paidAmount, isInterState } = options;
 
   const cgstAmount = isInterState ? 0 : gstAmount / 2;
   const sgstAmount = isInterState ? 0 : gstAmount / 2;
@@ -37,7 +38,7 @@ export function renderInvoiceSummaryTable(options: SummaryTableOptions): { endY:
   const col2W = width - col1W;
   const rowH = 6.5;
 
-  type SummaryRow = { label: string; value: number; bold?: boolean; highlight?: 'blue' | 'gray' };
+  type SummaryRow = { label: string; value: number; bold?: boolean; highlight?: 'blue' | 'gray' | 'green' | 'orange' };
 
   const rows: SummaryRow[] = [
     { label: 'Sub Total', value: subtotal },
@@ -52,18 +53,31 @@ export function renderInvoiceSummaryTable(options: SummaryTableOptions): { endY:
 
   rows.push({ label: 'Total', value: grandTotal, bold: true, highlight: 'blue' });
 
+  // Add Amount Received and Balance Due if there are payments
+  const effectivePaid = paidAmount != null ? paidAmount : (grandTotal - balanceDue);
+  if (effectivePaid > 0) {
+    rows.push({ label: 'Amount Received', value: effectivePaid, bold: true, highlight: 'green' });
+    rows.push({ label: 'Balance Due', value: balanceDue, bold: true, highlight: 'orange' });
+  }
+
   let currentY = y;
   let totalRowBottomY = y;
 
   rows.forEach((row) => {
-    // Add spacing before Total row
-    if (row.highlight === 'blue') {
+    // Add spacing before Total row or Amount Received row
+    if (row.highlight === 'blue' || row.highlight === 'green') {
       currentY += 2;
     }
 
     // Background fill
     if (row.highlight === 'blue') {
       doc.setFillColor(30, 64, 175); // #1E40AF
+      doc.rect(x, currentY, width, rowH, 'F');
+    } else if (row.highlight === 'green') {
+      doc.setFillColor(240, 253, 244); // Light green bg
+      doc.rect(x, currentY, width, rowH, 'F');
+    } else if (row.highlight === 'orange') {
+      doc.setFillColor(255, 247, 237); // Light orange bg
       doc.rect(x, currentY, width, rowH, 'F');
     } else if (row.highlight === 'gray') {
       doc.setFillColor(243, 244, 246); // #F3F4F6
@@ -88,9 +102,12 @@ export function renderInvoiceSummaryTable(options: SummaryTableOptions): { endY:
 
     // Text color
     const isTotal = row.highlight === 'blue';
-    const textR = isTotal ? 255 : 17;
-    const textG = isTotal ? 255 : 24;
-    const textB = isTotal ? 255 : 39;
+    const isGreen = row.highlight === 'green';
+    const isOrange = row.highlight === 'orange';
+    let textR = 17, textG = 24, textB = 39;
+    if (isTotal) { textR = 255; textG = 255; textB = 255; }
+    else if (isGreen) { textR = 22; textG = 163; textB = 74; } // green-600
+    else if (isOrange) { textR = 234; textG = 88; textB = 12; } // orange-600
 
     // Label
     doc.setFont('helvetica', row.bold ? 'bold' : 'normal');

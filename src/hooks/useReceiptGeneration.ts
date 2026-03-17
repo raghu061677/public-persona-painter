@@ -169,6 +169,7 @@ export function useReceiptGeneration() {
           receipt_no: receipt.receipt_no,
           receipt_date: receipt.receipt_date,
           amount_received: Number(receipt.amount_received) || 0,
+          tds_amount: tdsAmount,
           payment_method: receipt.payment_method || "N/A",
           reference_no: receipt.reference_no || undefined,
           notes: receipt.notes || undefined,

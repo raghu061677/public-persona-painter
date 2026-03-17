@@ -1,15 +1,8 @@
 import type { ModuleName } from "@/hooks/useRBAC";
 import {
   Database,
-  Upload,
-  Download,
-  HardDrive,
   Activity,
-  Lock,
   Mail,
-  MessageSquare,
-  UsersRound,
-  ClipboardList,
   LayoutDashboard,
   Map,
   Calendar,
@@ -39,18 +32,16 @@ import {
   Smartphone,
   Globe,
   Building2,
-  Palette,
   Shield,
-  UserCog,
   LogOut,
   User,
-  Bell,
   Wrench,
   Camera,
   Printer,
   Package,
   BookOpen,
   PieChart,
+  Megaphone,
   type LucideIcon,
 } from "lucide-react";
 
@@ -88,11 +79,11 @@ export const NAV_CONFIG: NavConfig = {
     // ─── Dashboard ───────────────────────────────────────────
     {
       id: "dashboard",
-      label: "Dashboard",
+      label: "Overview",
       icon: LayoutDashboard,
       items: [
         { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-        { label: "Executive Dashboard", href: "/admin/reports/executive", icon: PieChart },
+        { label: "Executive Summary", href: "/admin/reports/executive", icon: PieChart },
       ],
     },
 
@@ -103,7 +94,7 @@ export const NAV_CONFIG: NavConfig = {
       icon: Map,
       items: [
         { label: "Media Assets", href: "/admin/media-assets", icon: Map },
-        { label: "Media Availability", href: "/admin/reports/vacant-media", icon: Calendar },
+        { label: "Availability", href: "/admin/reports/vacant-media", icon: Calendar },
         { label: "Asset Validation", href: "/admin/media-assets-validation", icon: FileCheck },
         { label: "Photo Library", href: "/admin/photo-library", icon: Image },
       ],
@@ -128,9 +119,9 @@ export const NAV_CONFIG: NavConfig = {
           label: "Approvals",
           icon: CheckCircle2,
           items: [
-            { label: "Pending Approvals", href: "/admin/approvals", icon: ListChecks, badge: "pendingApprovals" },
-            { label: "Approval History", href: "/admin/approval-history", icon: History },
-            { label: "Approval Rules", href: "/admin/approvals/rules", icon: Settings },
+            { label: "Pending", href: "/admin/approvals", icon: ListChecks, badge: "pendingApprovals" },
+            { label: "History", href: "/admin/approval-history", icon: History },
+            { label: "Rules", href: "/admin/approvals/rules", icon: Settings },
           ],
         },
       ],
@@ -139,17 +130,17 @@ export const NAV_CONFIG: NavConfig = {
     // ─── Campaigns & Operations ──────────────────────────────
     {
       id: "campaigns-operations",
-      label: "Campaigns & Operations",
-      icon: Briefcase,
+      label: "Campaigns & Ops",
+      icon: Megaphone,
       requiresModule: "operations",
       items: [
-        { label: "Campaigns", href: "/admin/campaigns", icon: Briefcase },
-        { label: "Operations Overview", href: "/admin/operations", icon: Wrench },
-        { label: "Creative Received", href: "/admin/operations/creatives", icon: Image },
-        { label: "Printing Status", href: "/admin/operations/printing", icon: Printer },
+        { label: "Campaigns", href: "/admin/campaigns", icon: Megaphone },
+        { label: "Operations", href: "/admin/operations", icon: Wrench },
+        { label: "Creatives", href: "/admin/operations/creatives", icon: Image },
+        { label: "Printing", href: "/admin/operations/printing", icon: Printer },
         { label: "Proof Uploads", href: "/admin/operations/proof-uploads", icon: Camera, badge: "proofUploads" },
         { label: "Proof Execution", href: "/admin/reports/proof-execution", icon: FileCheck },
-        { label: "Mobile Field App", href: "/mobile", icon: Smartphone },
+        { label: "Field App", href: "/mobile", icon: Smartphone },
       ],
     },
 
@@ -189,12 +180,12 @@ export const NAV_CONFIG: NavConfig = {
           ],
         },
         {
-          id: "finance-admin",
+          id: "period-close",
           label: "Period Close",
           icon: CalendarDays,
           items: [
             { label: "Month Close", href: "/admin/finance/month-close", icon: CalendarDays },
-            { label: "Concession Allocation", href: "/admin/finance/concession-allocation", icon: Layers },
+            { label: "Concessions", href: "/admin/finance/concession-allocation", icon: Layers },
           ],
         },
       ],
@@ -209,11 +200,11 @@ export const NAV_CONFIG: NavConfig = {
       children: [
         {
           id: "booking-reports",
-          label: "Booking Reports",
+          label: "Bookings",
           icon: Users,
           items: [
             { label: "Client Bookings", href: "/admin/reports/client-bookings", icon: Users },
-            { label: "Campaign Bookings", href: "/admin/reports/campaigns", icon: Briefcase },
+            { label: "Campaign Bookings", href: "/admin/reports/campaigns", icon: Megaphone },
             { label: "Booked Media", href: "/admin/reports/booked-media", icon: Map },
             { label: "Monthly Campaigns", href: "/admin/reports/monthly-campaigns", icon: CalendarDays },
           ],
@@ -226,16 +217,16 @@ export const NAV_CONFIG: NavConfig = {
             { label: "Revenue Center", href: "/admin/reports/revenue", icon: TrendingUp },
             { label: "OOH Revenue", href: "/admin/reports/ooh-revenue", icon: DollarSign },
             { label: "Asset Profitability", href: "/admin/reports/profitability", icon: BarChart3 },
-            { label: "Campaign Profitability", href: "/admin/reports/campaign-profitability", icon: Briefcase },
+            { label: "Campaign Profitability", href: "/admin/reports/campaign-profitability", icon: Megaphone },
             { label: "OOH KPIs", href: "/admin/reports/ooh-kpis", icon: TrendingUp },
           ],
         },
         {
           id: "financial-reports",
-          label: "Financial Reports",
+          label: "Financial",
           icon: DollarSign,
           items: [
-            { label: "Financial Summary", href: "/admin/reports/financial", icon: DollarSign },
+            { label: "Summary", href: "/admin/reports/financial", icon: DollarSign },
             { label: "Cash Flow Forecast", href: "/admin/reports/cashflow-forecast", icon: Wallet },
             { label: "Expense Allocation", href: "/admin/reports/expense-allocation", icon: DollarSign },
             { label: "Concession Risk", href: "/admin/reports/concession-risk", icon: Layers },
@@ -245,7 +236,7 @@ export const NAV_CONFIG: NavConfig = {
         },
         {
           id: "operations-reports",
-          label: "Operations Reports",
+          label: "Operations",
           icon: Wrench,
           items: [
             { label: "Ops Billables", href: "/admin/reports/ops-billables", icon: Wallet },
@@ -277,17 +268,17 @@ export const NAV_CONFIG: NavConfig = {
         { label: "Company Settings", href: "/admin/company-settings", icon: Building2 },
         { label: "User Management", href: "/admin/company-settings/users", icon: Users },
         { label: "Roles & Permissions", href: "/admin/company-settings/roles", icon: Shield },
-        { label: "Data Management", href: "/admin/data-export-import", icon: Database },
+        { label: "Import / Export", href: "/admin/data-export-import", icon: Database },
         { label: "Integrations", href: "/admin/company-settings/integrations", icon: Globe },
         { label: "API & Webhooks", href: "/admin/company-settings/developer", icon: Settings },
-        { label: "Subscription", href: "/admin/company-settings", icon: CreditCard },
+        { label: "Subscription", href: "/admin/subscription", icon: CreditCard },
       ],
     },
   ],
 
-  // Account items (pinned to bottom)
+  // Account items (pinned to footer — rendered separately, NOT as a nav section)
   accountItems: [
-    { label: "Profile", href: "/settings/profile", icon: User },
+    { label: "My Profile", href: "/settings/profile", icon: User },
     { label: "Logout", href: "#logout", icon: LogOut },
   ],
 };

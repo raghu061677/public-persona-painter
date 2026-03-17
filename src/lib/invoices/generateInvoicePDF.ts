@@ -270,7 +270,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
 
   // Fetch last payment date for this invoice
   let lastPaymentDate: string | null = null;
-  if (invoice.paid_amount && parseFloat(invoice.paid_amount) > 0) {
+  if (invoice.paid_amount && parseFloat(String(invoice.paid_amount)) > 0) {
     const { data: lastPayment } = await supabase
       .from('payment_records')
       .select('payment_date')

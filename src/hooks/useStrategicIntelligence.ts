@@ -361,8 +361,8 @@ export function useStrategicIntelligence() {
       const data = assetMap[ma.id] || { revenue: 0, printCost: 0, mountCost: 0, sqft: 0, bookedDays: 0 };
       const cost = data.printCost + data.mountCost;
       const profit = data.revenue - cost;
-      // FIX #5: Safe ROI - 0% when no cost and no revenue, N/A-safe when cost=0 but revenue>0
-      const roi = cost > 0 ? (profit / cost) * 100 : 0;
+      // STRICT FIX: ROI = null when cost <= 0 (excluded from ranking)
+      const roi = cost > 0 ? (profit / cost) * 100 : null;
       const occ = (data.bookedDays / periodDays) * 100;
 
       return {
@@ -374,11 +374,18 @@ export function useStrategicIntelligence() {
         revenue: data.revenue,
         cost,
         profit,
-        roiPercent: Math.round(roi),
+        roiPercent: roi !== null ? Math.round(roi) : null,
         occupancyPercent: Math.min(100, Math.round(occ)),
         totalSqft: Number(ma.total_sqft) || 0,
       };
-    }).sort((a, b) => b.roiPercent - a.roiPercent);
+    })
+    // Only rank assets with valid (non-null) ROI
+    .sort((a, b) => {
+      if (a.roiPercent === null && b.roiPercent === null) return 0;
+      if (a.roiPercent === null) return 1;
+      if (b.roiPercent === null) return -1;
+      return b.roiPercent - a.roiPercent;
+    });
   }, [periodCampaignAssets, mediaAssets, periodExpenses, dateRange]);
 
   // ── C) Concession Risk ──

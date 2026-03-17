@@ -122,15 +122,10 @@ export function useReceiptGeneration() {
         .limit(1)
         .maybeSingle();
 
-      // Determine logo URL: prefer org settings (proper image), then company logo
-      // Skip data:image/gif logos as jsPDF can't render them properly
+      // Determine logo URL: prefer company logo, then org settings
       const rawCompanyLogo = companyData?.logo_url;
       const rawOrgLogo = orgSettings?.logo_url;
-      const logoUrl = (rawCompanyLogo && !rawCompanyLogo.startsWith('data:image/gif')) 
-        ? rawCompanyLogo 
-        : (rawOrgLogo && !rawOrgLogo.startsWith('data:image/gif')) 
-          ? rawOrgLogo 
-          : null;
+      const logoUrl = rawCompanyLogo || rawOrgLogo || null;
 
       // Fetch logo if available
       let logoBase64: string | undefined;

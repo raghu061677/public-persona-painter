@@ -1,6 +1,6 @@
 // Receipt Default Template - Professional Layout
 import jsPDF from 'jspdf';
-import { ReceiptData, formatCurrency, formatDate, numberToWords, COMPANY_ADDRESS } from './types';
+import { ReceiptData, PaymentHistoryItem, formatCurrency, formatDate, numberToWords, COMPANY_ADDRESS } from './types';
 import stampImageUrl from '@/assets/branding/stamp_matrix.png';
 
 // Cache stamp image

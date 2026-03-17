@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SortableTableHead } from "@/components/common/SortableTableHead";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -482,7 +483,23 @@ export default function ReportMonthlyCampaigns() {
               <TableRow>
                 <TableHead className="w-8" />
                 {COLUMNS.filter((c) => visibleColumns.includes(c.key)).map((col) => (
-                  <TableHead key={col.key} className="whitespace-nowrap">{col.label}</TableHead>
+                  <SortableTableHead
+                    key={col.key}
+                    sortKey={col.key}
+                    currentSort={sortConfig.field === col.key ? { key: col.key, direction: sortConfig.direction } : null}
+                    onSort={(key) => {
+                      setSortConfig((prev: any) => {
+                        if (prev.field === key) {
+                          return { field: key, direction: prev.direction === "asc" ? "desc" : "asc" };
+                        }
+                        return { field: key, direction: "asc" };
+                      });
+                    }}
+                    className="whitespace-nowrap"
+                    align={col.key === "duration_days" || col.key === "assets_booked" ? "right" : "left"}
+                  >
+                    {col.label}
+                  </SortableTableHead>
                 ))}
               </TableRow>
             </TableHeader>

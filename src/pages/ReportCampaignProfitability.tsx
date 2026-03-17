@@ -42,9 +42,11 @@ export default function ReportCampaignProfitability() {
     );
   }
 
-  const data = ooh.campaignProfitability.filter(c =>
+  const filtered = ooh.campaignProfitability.filter(c =>
     !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.clientName.toLowerCase().includes(search.toLowerCase())
   );
+
+  const { sortedData: data, sortConfig: profitSortConfig, handleSort: handleProfitSort } = useSortableData(filtered, { key: "revenue", direction: "desc" });
 
   const totalRevenue = data.reduce((s, c) => s + c.revenue, 0);
   const totalCost = data.reduce((s, c) => s + c.directCost, 0);

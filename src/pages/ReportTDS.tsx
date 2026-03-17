@@ -214,8 +214,9 @@ export default function ReportTDS() {
           <h1 className="text-2xl font-bold">TDS Report & Reconciliation</h1>
           <p className="text-muted-foreground">Track TDS deductions, Form 16A receipts, and 26AS verification</p>
         </div>
-        <Button variant="outline" onClick={exportCSV}>
-          <Download className="h-4 w-4 mr-2" /> Export CSV
+        <Button variant="outline" onClick={handleExportExcel} disabled={exporting}>
+          {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileSpreadsheet className="h-4 w-4 mr-2" />}
+          {exporting ? "Exporting..." : "Export Excel"}
         </Button>
       </div>
 

@@ -14,7 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { formatINR } from "@/utils/finance";
 import { formatDate } from "@/utils/plans";
-import { FileText, Search, Filter, Download, CheckCircle2, Clock, AlertTriangle, IndianRupee, Loader2, Pencil } from "lucide-react";
+import { FileText, Search, Filter, Download, CheckCircle2, Clock, AlertTriangle, IndianRupee, Loader2, Pencil, FileSpreadsheet } from "lucide-react";
+import { exportTDSReconciliation, type TDSExportEntry } from "@/utils/exports/excel/exportTDSReconciliation";
 
 interface TDSEntry {
   id: string;

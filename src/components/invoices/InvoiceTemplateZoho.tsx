@@ -218,7 +218,7 @@
    const sgst = invoice.sgst_amount || (invoice.gst_amount ? invoice.gst_amount / 2 : 0);
    const igst = invoice.igst_amount || 0;
    const grandTotal = parseFloat(invoice.total_amount) || subtotal;
-   const balanceDue = parseFloat(invoice.balance_due) || grandTotal;
+   const balanceDue = invoice.balance_due != null ? parseFloat(invoice.balance_due) : grandTotal;
    const clientName = client?.name || 'Client';
    // Build complete billing address with all parts
    const billingAddressParts = [

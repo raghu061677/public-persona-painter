@@ -15,6 +15,7 @@ interface SummaryTableOptions {
   grandTotal: number;
   balanceDue: number;
   paidAmount?: number;
+  tdsAmount?: number;
   paidDate?: string | null;
   isInterState?: boolean;
 }

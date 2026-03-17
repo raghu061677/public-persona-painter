@@ -98,6 +98,9 @@ export function EditClientDialog({
     shipping_pincode: "",
     shipping_same_as_billing: false,
     payment_terms: "",
+    tds_applicable: false,
+    default_tds_rate: "",
+    tds_notes: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 

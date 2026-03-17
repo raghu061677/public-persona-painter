@@ -55,11 +55,17 @@ export function renderInvoiceSummaryTable(options: SummaryTableOptions): { endY:
 
   rows.push({ label: 'Total', value: grandTotal, bold: true, highlight: 'blue' });
 
-  // Add Amount Received and Balance Due if there are payments
-  const effectivePaid = paidAmount != null ? paidAmount : (grandTotal - balanceDue);
-  if (effectivePaid > 0) {
+  // Add Amount Received, TDS, and Balance Due if there are payments
+  const effectivePaid = paidAmount != null ? paidAmount : (grandTotal - balanceDue - (tdsAmount || 0));
+  const effectiveTds = tdsAmount || 0;
+  if (effectivePaid > 0 || effectiveTds > 0) {
     const dateStr = paidDate ? ` (${formatDate(paidDate)})` : '';
-    rows.push({ label: `Amount Received${dateStr}`, value: effectivePaid, bold: true, highlight: 'green' });
+    if (effectivePaid > 0) {
+      rows.push({ label: `Amount Received${dateStr}`, value: effectivePaid, bold: true, highlight: 'green' });
+    }
+    if (effectiveTds > 0) {
+      rows.push({ label: 'TDS Deducted', value: effectiveTds, bold: true, highlight: 'green' });
+    }
     rows.push({ label: 'Balance Due', value: balanceDue, bold: true, highlight: 'orange' });
   }
 

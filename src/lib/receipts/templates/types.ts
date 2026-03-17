@@ -7,6 +7,7 @@ export interface ReceiptData {
     receipt_no: string;
     receipt_date: string;
     amount_received: number;
+    tds_amount?: number;
     payment_method: string;
     reference_no?: string;
     notes?: string;

@@ -368,8 +368,11 @@
              <tbody>
                <tr><td className="py-1">Sub Total</td><td className="py-1 text-right font-medium">{formatINR(subtotal)}</td></tr>
                {igst > 0 ? <tr><td className="py-1">IGST @ 18%</td><td className="py-1 text-right">{formatINR(igst)}</td></tr> : <><tr><td className="py-1">CGST @ 9%</td><td className="py-1 text-right">{formatINR(cgst)}</td></tr><tr><td className="py-1">SGST @ 9%</td><td className="py-1 text-right">{formatINR(sgst)}</td></tr></>}
-               <tr className="border-t border-border"><td className="py-2 font-bold">Total</td><td className="py-2 text-right font-bold text-lg">{formatINR(grandTotal)}</td></tr>
-               <tr><td className="py-1 font-bold text-destructive">Balance Due</td><td className="py-1 text-right font-bold text-destructive">{formatINR(balanceDue)}</td></tr>
+                <tr className="border-t border-border bg-primary/5"><td className="py-2 font-bold text-primary">Total</td><td className="py-2 text-right font-bold text-lg">{formatINR(grandTotal)}</td></tr>
+                {paidAmount > 0 && (
+                  <tr className="bg-green-50"><td className="py-1 font-bold text-green-600">Amount Received{lastPaymentDate ? ` (${formatDate(lastPaymentDate)})` : ''}</td><td className="py-1 text-right font-bold text-green-600">{formatINR(paidAmount)}</td></tr>
+                )}
+                <tr className={paidAmount > 0 ? "bg-orange-50" : ""}><td className="py-1 font-bold text-orange-600">Balance Due</td><td className="py-1 text-right font-bold text-orange-600">{formatINR(balanceDue)}</td></tr>
              </tbody>
            </table>
          </div>

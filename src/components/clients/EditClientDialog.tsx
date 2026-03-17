@@ -53,6 +53,9 @@ const clientSchema = z.object({
   shipping_pincode: z.string().trim().regex(/^[0-9]{6}$/, "Pincode must be exactly 6 digits").optional().or(z.literal("")),
   shipping_same_as_billing: z.boolean(),
   payment_terms: z.string().optional().or(z.literal("")),
+  tds_applicable: z.boolean().optional(),
+  default_tds_rate: z.string().optional().or(z.literal("")),
+  tds_notes: z.string().optional().or(z.literal("")),
 });
 
 type ClientFormData = z.infer<typeof clientSchema>;

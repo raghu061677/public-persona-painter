@@ -432,11 +432,35 @@ export function EditClientDialog({
                     />
                   </div>
                   <div>
+                    <Label>TDS Section</Label>
+                    <Input
+                      value={formData.tds_section || ""}
+                      onChange={(e) => updateField('tds_section', e.target.value)}
+                      placeholder="e.g. 194C, 194J"
+                    />
+                  </div>
+                  <div>
+                    <Label>TAN Number</Label>
+                    <Input
+                      value={formData.tan_number || ""}
+                      onChange={(e) => updateField('tan_number', e.target.value)}
+                      placeholder="e.g. HYDA12345B"
+                    />
+                  </div>
+                  <div>
+                    <Label>Finance Contact</Label>
+                    <Input
+                      value={formData.finance_contact || ""}
+                      onChange={(e) => updateField('finance_contact', e.target.value)}
+                      placeholder="Name / Email / Phone"
+                    />
+                  </div>
+                  <div className="col-span-2">
                     <Label>TDS Notes</Label>
                     <Input
                       value={formData.tds_notes || ""}
                       onChange={(e) => updateField('tds_notes', e.target.value)}
-                      placeholder="e.g. Section 194C"
+                      placeholder="Additional TDS-related notes"
                     />
                   </div>
                 </>

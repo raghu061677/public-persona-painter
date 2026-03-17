@@ -29,7 +29,7 @@ interface SummaryTableOptions {
  * Returns { endY, totalRowBottomY } where totalRowBottomY is the bottom of the blue Total row.
  */
 export function renderInvoiceSummaryTable(options: SummaryTableOptions): { endY: number; totalRowBottomY: number } {
-  const { doc, x, y, width, subtotal, gstPercent, gstAmount, grandTotal, balanceDue, paidAmount, isInterState } = options;
+  const { doc, x, y, width, subtotal, gstPercent, gstAmount, grandTotal, balanceDue, paidAmount, paidDate, isInterState } = options;
 
   const cgstAmount = isInterState ? 0 : gstAmount / 2;
   const sgstAmount = isInterState ? 0 : gstAmount / 2;

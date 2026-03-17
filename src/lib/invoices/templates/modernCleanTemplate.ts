@@ -397,7 +397,7 @@ export async function renderModernCleanTemplate(data: InvoiceData): Promise<Blob
   const gstPercent = parseFloat(data.invoice.gst_percent) || 0;
   const gstAmount = parseFloat(data.invoice.gst_amount) || 0;
   const grandTotal = parseFloat(data.invoice.total_amount) || 0;
-  const balanceDue = parseFloat(data.invoice.balance_due) || grandTotal;
+  const balanceDue = data.invoice.balance_due != null ? parseFloat(data.invoice.balance_due) : grandTotal;
   const isInterState = data.invoice.tax_type === 'igst';
 
   // Check page space

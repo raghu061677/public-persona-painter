@@ -469,7 +469,7 @@ export async function renderDefaultTemplate(data: InvoiceData): Promise<Blob> {
   const subtotal = parseFloat(data.invoice.sub_total) || 0;
   const gstAmount = parseFloat(data.invoice.gst_amount) || 0;
   const grandTotal = parseFloat(data.invoice.total_amount) || (subtotal + gstAmount);
-  const balanceDue = parseFloat(data.invoice.balance_due) || grandTotal;
+  const balanceDue = data.invoice.balance_due != null ? parseFloat(data.invoice.balance_due) : grandTotal;
 
   // Check page space
   if (yPos > pageHeight - 90) {

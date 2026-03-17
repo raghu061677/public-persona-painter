@@ -3472,6 +3472,7 @@ export type Database = {
           created_by: string | null
           default_tds_rate: number | null
           email: string | null
+          finance_contact: string | null
           gst_number: string | null
           id: string
           is_gst_applicable: boolean | null
@@ -3489,8 +3490,10 @@ export type Database = {
           shipping_same_as_billing: boolean | null
           shipping_state: string | null
           state: string | null
+          tan_number: string | null
           tds_applicable: boolean
           tds_notes: string | null
+          tds_section: string | null
           updated_at: string | null
           whatsapp: string | null
         }
@@ -3510,6 +3513,7 @@ export type Database = {
           created_by?: string | null
           default_tds_rate?: number | null
           email?: string | null
+          finance_contact?: string | null
           gst_number?: string | null
           id: string
           is_gst_applicable?: boolean | null
@@ -3527,8 +3531,10 @@ export type Database = {
           shipping_same_as_billing?: boolean | null
           shipping_state?: string | null
           state?: string | null
+          tan_number?: string | null
           tds_applicable?: boolean
           tds_notes?: string | null
+          tds_section?: string | null
           updated_at?: string | null
           whatsapp?: string | null
         }
@@ -3548,6 +3554,7 @@ export type Database = {
           created_by?: string | null
           default_tds_rate?: number | null
           email?: string | null
+          finance_contact?: string | null
           gst_number?: string | null
           id?: string
           is_gst_applicable?: boolean | null
@@ -3565,8 +3572,10 @@ export type Database = {
           shipping_same_as_billing?: boolean | null
           shipping_state?: string | null
           state?: string | null
+          tan_number?: string | null
           tds_applicable?: boolean
           tds_notes?: string | null
+          tds_section?: string | null
           updated_at?: string | null
           whatsapp?: string | null
         }
@@ -10600,6 +10609,90 @@ export type Database = {
           view_name?: string
         }
         Relationships: []
+      }
+      tds_ledger: {
+        Row: {
+          amount_received: number | null
+          client_id: string
+          company_id: string
+          created_at: string
+          financial_year: string
+          followup_date: string | null
+          followup_notes: string | null
+          form16a_received: boolean
+          id: string
+          invoice_amount: number | null
+          invoice_id: string
+          payment_record_id: string | null
+          quarter: string
+          reflected_in_26as: boolean
+          status: string
+          tds_amount: number
+          tds_certificate_no: string | null
+          tds_section: string | null
+          updated_at: string
+          verified: boolean
+        }
+        Insert: {
+          amount_received?: number | null
+          client_id: string
+          company_id: string
+          created_at?: string
+          financial_year: string
+          followup_date?: string | null
+          followup_notes?: string | null
+          form16a_received?: boolean
+          id?: string
+          invoice_amount?: number | null
+          invoice_id: string
+          payment_record_id?: string | null
+          quarter: string
+          reflected_in_26as?: boolean
+          status?: string
+          tds_amount?: number
+          tds_certificate_no?: string | null
+          tds_section?: string | null
+          updated_at?: string
+          verified?: boolean
+        }
+        Update: {
+          amount_received?: number | null
+          client_id?: string
+          company_id?: string
+          created_at?: string
+          financial_year?: string
+          followup_date?: string | null
+          followup_notes?: string | null
+          form16a_received?: boolean
+          id?: string
+          invoice_amount?: number | null
+          invoice_id?: string
+          payment_record_id?: string | null
+          quarter?: string
+          reflected_in_26as?: boolean
+          status?: string
+          tds_amount?: number
+          tds_certificate_no?: string | null
+          tds_section?: string | null
+          updated_at?: string
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tds_ledger_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tds_ledger_payment_record_id_fkey"
+            columns: ["payment_record_id"]
+            isOneToOne: false
+            referencedRelation: "payment_records"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       team_members: {
         Row: {

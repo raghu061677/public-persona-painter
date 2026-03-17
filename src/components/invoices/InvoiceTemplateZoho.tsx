@@ -232,7 +232,9 @@
    const igst = invoice.igst_amount || 0;
    const grandTotal = parseFloat(invoice.total_amount) || subtotal;
    const balanceDue = invoice.balance_due != null ? parseFloat(invoice.balance_due) : grandTotal;
-   const clientName = client?.name || 'Client';
+    const paidAmount = parseFloat(String(invoice.paid_amount)) || 0;
+    const lastPaymentDate = invoice.last_payment_date;
+    const clientName = client?.name || 'Client';
    // Build complete billing address with all parts
    const billingAddressParts = [
      client?.billing_address_line1 || client?.address || '',

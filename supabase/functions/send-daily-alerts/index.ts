@@ -302,22 +302,33 @@ async function sendWhatsAppMessage(phoneNumber: string, message: string): Promis
   await res.text(); // consume body
 }
 
+/** Check if request is authenticated via service role key (for cron jobs) */
+function isServiceRoleAuth(req: Request): boolean {
+  const authHeader = req.headers.get('Authorization');
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!authHeader || !serviceKey) return false;
+  const token = authHeader.replace('Bearer ', '');
+  return token === serviceKey;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
-  // HMAC validation for cron/system calls
-  try {
-    const cloned = req.clone();
-    const rawBody = await cloned.text();
-    await requireHmac(req, rawBody);
-  } catch (hmacErr) {
-    if (hmacErr instanceof AuthError) {
-      return new Response(JSON.stringify({ error: hmacErr.message }), {
-        status: hmacErr.statusCode,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+  // Accept either service role key (cron) OR HMAC (manual system calls)
+  if (!isServiceRoleAuth(req)) {
+    try {
+      const cloned = req.clone();
+      const rawBody = await cloned.text();
+      await requireHmac(req, rawBody);
+    } catch (hmacErr) {
+      if (hmacErr instanceof AuthError) {
+        return new Response(JSON.stringify({ error: hmacErr.message }), {
+          status: hmacErr.statusCode,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      throw hmacErr;
     }
-    throw hmacErr;
   }
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");

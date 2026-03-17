@@ -64,7 +64,7 @@ export interface ExecutiveKPIs {
   topCity: string;
   topCityRevenue: number;
   highestROIAsset: string;
-  highestROI: number;
+  highestROI: number | null;   // null = no valid cost data
   totalAssets: number;
   bookedAssets: number;
   totalClients: number;

@@ -406,6 +406,7 @@ export function ResponsiveSidebar() {
                       <MenuItem icon={Wallet} label="Ops Billables" href="/admin/reports/ops-billables" />
                       <MenuItem icon={TrendingUp} label="Ops Margin" href="/admin/reports/ops-margin" />
                     </MenuGroup>
+                    <MenuItem icon={Mail} label="Email Monitoring" href="/admin/reports/email-monitoring" />
                     <MenuItem icon={LayoutDashboard} label="Executive Dashboard" href="/admin/reports/executive" />
                   </SidebarMenu>
                   <Separator className="my-2" />

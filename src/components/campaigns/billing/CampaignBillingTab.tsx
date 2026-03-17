@@ -296,7 +296,8 @@ export function CampaignBillingTab({
       const amounts = calculatePeriodAmountFromTotals(period, totals, includePrinting, includeMounting);
 
       // Check if an invoice already exists for this period (match by billing_month key)
-      const existingInvoice = monthlyInvoices.find(inv => {
+      // Search ALL existing invoices (not just monthly), to avoid duplicate key constraint violations
+      const existingInvoice = existingInvoices.find(inv => {
         if (inv.billing_month) {
           return inv.billing_month === period.monthKey;
         }

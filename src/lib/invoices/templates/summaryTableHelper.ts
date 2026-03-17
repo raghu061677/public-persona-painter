@@ -64,14 +64,20 @@ export function renderInvoiceSummaryTable(options: SummaryTableOptions): { endY:
   let totalRowBottomY = y;
 
   rows.forEach((row) => {
-    // Add spacing before Total row
-    if (row.highlight === 'blue') {
+    // Add spacing before Total row or Amount Received row
+    if (row.highlight === 'blue' || row.highlight === 'green') {
       currentY += 2;
     }
 
     // Background fill
     if (row.highlight === 'blue') {
       doc.setFillColor(30, 64, 175); // #1E40AF
+      doc.rect(x, currentY, width, rowH, 'F');
+    } else if (row.highlight === 'green') {
+      doc.setFillColor(240, 253, 244); // Light green bg
+      doc.rect(x, currentY, width, rowH, 'F');
+    } else if (row.highlight === 'orange') {
+      doc.setFillColor(255, 247, 237); // Light orange bg
       doc.rect(x, currentY, width, rowH, 'F');
     } else if (row.highlight === 'gray') {
       doc.setFillColor(243, 244, 246); // #F3F4F6
@@ -96,9 +102,12 @@ export function renderInvoiceSummaryTable(options: SummaryTableOptions): { endY:
 
     // Text color
     const isTotal = row.highlight === 'blue';
-    const textR = isTotal ? 255 : 17;
-    const textG = isTotal ? 255 : 24;
-    const textB = isTotal ? 255 : 39;
+    const isGreen = row.highlight === 'green';
+    const isOrange = row.highlight === 'orange';
+    let textR = 17, textG = 24, textB = 39;
+    if (isTotal) { textR = 255; textG = 255; textB = 255; }
+    else if (isGreen) { textR = 22; textG = 163; textB = 74; } // green-600
+    else if (isOrange) { textR = 234; textG = 88; textB = 12; } // orange-600
 
     // Label
     doc.setFont('helvetica', row.bold ? 'bold' : 'normal');

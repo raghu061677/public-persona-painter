@@ -130,6 +130,9 @@ export function EditClientDialog({
         shipping_pincode: client.shipping_pincode || "",
         shipping_same_as_billing: client.shipping_same_as_billing || false,
         payment_terms: client.payment_terms || "",
+        tds_applicable: client.tds_applicable || false,
+        default_tds_rate: client.default_tds_rate != null ? String(client.default_tds_rate) : "",
+        tds_notes: client.tds_notes || "",
       });
       setErrors({});
     }

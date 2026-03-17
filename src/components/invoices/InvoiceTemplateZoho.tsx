@@ -235,6 +235,7 @@
    const grandTotal = parseFloat(invoice.total_amount) || subtotal;
    const balanceDue = invoice.balance_due != null ? parseFloat(invoice.balance_due) : grandTotal;
     const paidAmount = parseFloat(String(invoice.paid_amount)) || 0;
+    const totalTdsAmount = invoice.total_tds_amount || 0;
     const lastPaymentDate = invoice.last_payment_date;
     const clientName = client?.name || 'Client';
    // Build complete billing address with all parts

@@ -174,6 +174,84 @@ export async function renderReceiptModernTemplate(data: ReceiptData): Promise<Bl
 
   yPos = yPos + cardHeight + 15;
 
+  // ========== PAYMENT HISTORY TABLE (if multiple payments) ==========
+  if (data.paymentHistory && data.paymentHistory.length > 1) {
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(120, 120, 120);
+    doc.text('PAYMENT HISTORY', leftMargin, yPos);
+    yPos += 5;
+
+    const colX = {
+      sno: leftMargin + 2,
+      receipt: leftMargin + 10,
+      date: leftMargin + 48,
+      method: leftMargin + 78,
+      tds: leftMargin + 115,
+      amount: pageWidth - rightMargin - 2,
+    };
+    const rowH = 5.5;
+
+    // Table header
+    doc.setFillColor(248, 250, 252);
+    doc.rect(leftMargin, yPos, contentWidth, rowH, 'F');
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 100, 100);
+    doc.text('#', colX.sno, yPos + 4);
+    doc.text('Receipt No', colX.receipt, yPos + 4);
+    doc.text('Date', colX.date, yPos + 4);
+    doc.text('Method', colX.method, yPos + 4);
+    doc.text('TDS', colX.tds, yPos + 4);
+    doc.text('Amount', colX.amount, yPos + 4, { align: 'right' });
+    yPos += rowH;
+
+    let totalPaid = 0;
+    let totalTds = 0;
+
+    data.paymentHistory.forEach((p: PaymentHistoryItem, i: number) => {
+      const isCurrent = p.is_current;
+      
+      if (isCurrent) {
+        doc.setFillColor(240, 253, 244);
+        doc.rect(leftMargin, yPos, contentWidth, rowH, 'F');
+      }
+
+      doc.setFontSize(7);
+      doc.setFont('helvetica', isCurrent ? 'bold' : 'normal');
+      doc.setTextColor(0, 0, 0);
+      doc.text(String(i + 1), colX.sno, yPos + 4);
+      doc.text(p.receipt_no, colX.receipt, yPos + 4);
+      doc.text(formatDate(p.receipt_date), colX.date, yPos + 4);
+      doc.text(p.payment_method || 'N/A', colX.method, yPos + 4);
+      doc.text(p.tds_amount > 0 ? formatCurrency(p.tds_amount) : '-', colX.tds, yPos + 4);
+      doc.text(formatCurrency(p.amount_received), colX.amount, yPos + 4, { align: 'right' });
+
+      doc.setDrawColor(235, 235, 235);
+      doc.setLineWidth(0.2);
+      doc.line(leftMargin, yPos + rowH, pageWidth - rightMargin, yPos + rowH);
+
+      totalPaid += p.amount_received;
+      totalTds += p.tds_amount;
+      yPos += rowH;
+    });
+
+    // Totals row
+    doc.setFillColor(240, 240, 240);
+    doc.rect(leftMargin, yPos, contentWidth, rowH + 1, 'F');
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Total Paid', colX.method, yPos + 4.5);
+    if (totalTds > 0) {
+      doc.text(formatCurrency(totalTds), colX.tds, yPos + 4.5);
+    }
+    doc.setTextColor(16, 185, 129);
+    doc.text(formatCurrency(totalPaid), colX.amount, yPos + 4.5, { align: 'right' });
+
+    yPos += rowH + 8;
+  }
+
   // ========== BALANCE SUMMARY ==========
   const summaryBoxWidth = 80;
   const summaryBoxX = pageWidth - rightMargin - summaryBoxWidth;

@@ -103,6 +103,9 @@ export function EditClientDialog({
     payment_terms: "",
     tds_applicable: false,
     default_tds_rate: "",
+    tds_section: "",
+    tan_number: "",
+    finance_contact: "",
     tds_notes: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});

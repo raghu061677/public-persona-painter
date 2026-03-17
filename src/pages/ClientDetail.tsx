@@ -861,7 +861,15 @@ export default function ClientDetail() {
 
                       return (
                         <TableRow key={invoice.id}>
-                          <TableCell className="font-medium">{invoice.id}</TableCell>
+                          <TableCell className="font-medium">
+                            <a
+                              href={`/admin/invoices/${invoice.id}`}
+                              onClick={(e) => { e.preventDefault(); navigate(`/admin/invoices/${invoice.id}`); }}
+                              className="text-primary hover:underline cursor-pointer"
+                            >
+                              {invoice.id}
+                            </a>
+                          </TableCell>
                           <TableCell>
                             {new Date(invoice.invoice_date).toLocaleDateString('en-US', {
                               month: 'short',

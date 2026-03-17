@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Briefcase, Calendar, DollarSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SortableTableHead, useSortableData } from "@/components/common/SortableTableHead";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 interface Campaign {
   id: string;
@@ -28,6 +31,7 @@ interface Campaign {
 export default function ReportCampaignBookings() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -71,8 +75,20 @@ export default function ReportCampaignBookings() {
     }
   };
 
-  const totalRevenue = campaigns.reduce((sum, c) => sum + c.grand_total, 0);
-  const activeCampaigns = campaigns.filter(c => c.status === 'InProgress').length;
+  const filtered = useMemo(() => {
+    if (!search) return campaigns;
+    const term = search.toLowerCase();
+    return campaigns.filter(c =>
+      c.campaign_name?.toLowerCase().includes(term) ||
+      c.client_name?.toLowerCase().includes(term) ||
+      c.status?.toLowerCase().includes(term)
+    );
+  }, [campaigns, search]);
+
+  const { sortedData, sortConfig, handleSort } = useSortableData(filtered, { key: "start_date", direction: "desc" });
+
+  const totalRevenue = sortedData.reduce((sum, c) => sum + (c.grand_total || 0), 0);
+  const activeCampaigns = sortedData.filter(c => c.status === 'InProgress').length;
 
   return (
     <div className="h-full flex flex-col space-y-6 p-8">
@@ -90,7 +106,7 @@ export default function ReportCampaignBookings() {
             <Briefcase className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{campaigns.length}</div>
+            <div className="text-2xl font-bold">{sortedData.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -115,13 +131,21 @@ export default function ReportCampaignBookings() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Briefcase className="h-5 w-5" />
-            Campaign Booking Analytics
-          </CardTitle>
-          <CardDescription>
-            View booking details and performance per campaign
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Briefcase className="h-5 w-5" />
+                Campaign Booking Analytics
+              </CardTitle>
+              <CardDescription>
+                View booking details and performance per campaign
+              </CardDescription>
+            </div>
+            <div className="relative w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search campaigns..." className="pl-9 h-9" />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -130,7 +154,7 @@ export default function ReportCampaignBookings() {
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
-          ) : campaigns.length === 0 ? (
+          ) : sortedData.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Briefcase className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-lg font-medium">No data available</p>
@@ -142,16 +166,16 @@ export default function ReportCampaignBookings() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Campaign</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>Assets</TableHead>
-                  <TableHead>Revenue</TableHead>
-                  <TableHead>Status</TableHead>
+                  <SortableTableHead sortKey="campaign_name" currentSort={sortConfig} onSort={handleSort}>Campaign</SortableTableHead>
+                  <SortableTableHead sortKey="client_name" currentSort={sortConfig} onSort={handleSort}>Client</SortableTableHead>
+                  <SortableTableHead sortKey="start_date" currentSort={sortConfig} onSort={handleSort}>Start Date</SortableTableHead>
+                  <SortableTableHead sortKey="total_assets" currentSort={sortConfig} onSort={handleSort} align="right">Assets</SortableTableHead>
+                  <SortableTableHead sortKey="grand_total" currentSort={sortConfig} onSort={handleSort} align="right">Revenue</SortableTableHead>
+                  <SortableTableHead sortKey="status" currentSort={sortConfig} onSort={handleSort}>Status</SortableTableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {campaigns.map((campaign) => (
+                {sortedData.map((campaign) => (
                   <TableRow key={campaign.id}>
                     <TableCell className="font-medium">{campaign.campaign_name}</TableCell>
                     <TableCell>{campaign.client_name}</TableCell>
@@ -161,8 +185,8 @@ export default function ReportCampaignBookings() {
                         {new Date(campaign.start_date).toLocaleDateString()}
                       </div>
                     </TableCell>
-                    <TableCell>{campaign.total_assets || 0}</TableCell>
-                    <TableCell>₹{campaign.grand_total.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{campaign.total_assets || 0}</TableCell>
+                    <TableCell className="text-right">₹{(campaign.grand_total || 0).toLocaleString()}</TableCell>
                     <TableCell>{getStatusBadge(campaign.status)}</TableCell>
                   </TableRow>
                 ))}

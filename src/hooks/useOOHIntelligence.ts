@@ -289,7 +289,17 @@ export function useOOHIntelligence() {
     const bookedAssetIds = new Set(filteredAssets.map(a => a.asset_id));
     const bookedAssets = bookedAssetIds.size;
     const occupancyPercent = totalAssets > 0 ? (bookedAssets / totalAssets) * 100 : 0;
-    const totalRevenue = filteredAssets.reduce((s, a) => s + (Number(a.total_price) || Number(a.rent_amount) || 0), 0);
+
+    // Calculate asset-level revenue with full fallback chain
+    const assetRevenue = filteredAssets.reduce((s, a) => s + (Number(a.total_price) || Number(a.rent_amount) || Number(a.negotiated_rate) || Number(a.card_rate) || 0), 0);
+
+    // Sum invoice revenue for filtered campaigns
+    const invoiceRevenue = filteredCampaigns
+      .filter(c => c.status !== 'Cancelled')
+      .reduce((s, c) => s + (invoiceByCampaign[c.id] || 0), 0);
+
+    // Prefer invoice revenue when available, fallback to asset-level
+    const totalRevenue = invoiceRevenue > 0 ? invoiceRevenue : assetRevenue;
     const totalSqft = filteredAssets.reduce((s, a) => s + (Number(a.total_sqft) || 0), 0);
     return {
       totalAssets,
@@ -299,7 +309,7 @@ export function useOOHIntelligence() {
       revenuePerAsset: bookedAssets > 0 ? totalRevenue / bookedAssets : 0,
       revenuePerSqft: totalSqft > 0 ? totalRevenue / totalSqft : 0,
     };
-  }, [mediaAssets, filteredAssets]);
+  }, [mediaAssets, filteredAssets, filteredCampaigns, invoiceByCampaign]);
 
   // Occupancy trend by month
   const occupancyTrend = useMemo((): OccupancyTrend[] => {
@@ -325,7 +335,11 @@ export function useOOHIntelligence() {
 
       const monthAssets = campaignAssets.filter(a => activeCmpIds.has(a.campaign_id));
       const bookedIds = new Set(monthAssets.map(a => a.asset_id));
-      const revenue = monthAssets.reduce((s, a) => s + (Number(a.total_price) || Number(a.rent_amount) || 0), 0);
+      const assetRev = monthAssets.reduce((s, a) => s + (Number(a.total_price) || Number(a.rent_amount) || Number(a.negotiated_rate) || Number(a.card_rate) || 0), 0);
+
+      // Sum invoice revenue for active campaigns this month
+      const monthInvRevenue = [...activeCmpIds].reduce((s, cid) => s + (invoiceByCampaign[cid] || 0), 0);
+      const revenue = monthInvRevenue > 0 ? monthInvRevenue : assetRev;
 
       months.push({
         month: label,
@@ -334,7 +348,7 @@ export function useOOHIntelligence() {
       });
     }
     return months;
-  }, [campaigns, campaignAssets, mediaAssets]);
+  }, [campaigns, campaignAssets, mediaAssets, invoiceByCampaign]);
 
   // D) Rate Realization
   const rateRealization = useMemo((): RateRealizationRow[] => {

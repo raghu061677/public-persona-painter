@@ -2,7 +2,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { renderReceiptPDF } from "@/lib/receipts/templates/registry";
-import type { ReceiptData } from "@/lib/receipts/templates/types";
+import type { ReceiptData, PaymentHistoryItem } from "@/lib/receipts/templates/types";
 
 interface Receipt {
   id: string;

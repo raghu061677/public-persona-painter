@@ -89,7 +89,7 @@ const navigationGroups: NavGroup[] = [
   {
     title: "Customization",
     items: [
-      { label: "Number Series", path: "/admin/code-management", icon: Hash, section: "general" },
+      { label: "Number Series", path: "/admin/company-settings/number-series", icon: Hash, section: "general" },
       { label: "PDF Templates", path: "/admin/company-settings/pdf-templates", icon: FileType, section: "pdf_templates" },
       { label: "SMS Notifications", path: "/admin/company-settings/sms-notifications", icon: MessageSquare, section: "sms_notifications" },
       { label: "Digital Signature", path: "/admin/company-settings/digital-signature", icon: FileSignature, section: "digital_signature" },

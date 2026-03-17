@@ -293,7 +293,7 @@ export async function generateInvoicePDF(invoiceId: string, templateKey?: string
   }
 
   const data: InvoiceData = {
-    invoice: { ...invoice, last_payment_date: lastPaymentDate },
+    invoice: { ...invoice, last_payment_date: lastPaymentDate, total_tds_amount: totalTdsAmount },
     client,
     campaign,
     items: enrichedItems,

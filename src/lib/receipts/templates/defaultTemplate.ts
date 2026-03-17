@@ -192,10 +192,14 @@ export async function renderReceiptDefaultTemplate(data: ReceiptData): Promise<B
   yPos = yPos + clientBoxHeight + 10;
 
   // ========== PAYMENT DETAILS BOX ==========
+  const tdsAmount = data.receipt.tds_amount || 0;
+  const totalSettled = data.receipt.amount_received + tdsAmount;
+  const boxHeight = tdsAmount > 0 ? 60 : 50;
+
   doc.setFillColor(240, 253, 244); // Light green background
   doc.setDrawColor(16, 185, 129); // Emerald border
   doc.setLineWidth(0.5);
-  doc.rect(leftMargin, yPos, contentWidth, 50, 'FD');
+  doc.rect(leftMargin, yPos, contentWidth, boxHeight, 'FD');
 
   let paymentY = yPos + 8;
   
@@ -225,6 +229,7 @@ export async function renderReceiptDefaultTemplate(data: ReceiptData): Promise<B
 
   // Invoice Summary (right side)
   const summaryX = pageWidth / 2 + 20;
+  const summaryLabelWidth = 35;
   let summaryY = yPos + 8;
   
   doc.setFontSize(8);
@@ -234,7 +239,7 @@ export async function renderReceiptDefaultTemplate(data: ReceiptData): Promise<B
   doc.text('Invoice Total:', summaryX, summaryY);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
-  doc.text(formatCurrency(data.invoice.total_amount), summaryX + 35, summaryY);
+  doc.text(formatCurrency(data.invoice.total_amount), summaryX + summaryLabelWidth, summaryY);
   
   summaryY += 5;
   doc.setFont('helvetica', 'normal');
@@ -242,7 +247,18 @@ export async function renderReceiptDefaultTemplate(data: ReceiptData): Promise<B
   doc.text('This Payment:', summaryX, summaryY);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(16, 185, 129);
-  doc.text(formatCurrency(data.receipt.amount_received), summaryX + 35, summaryY);
+  doc.text(formatCurrency(data.receipt.amount_received), summaryX + summaryLabelWidth, summaryY);
+
+  // TDS row (only if TDS > 0)
+  if (tdsAmount > 0) {
+    summaryY += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    doc.text('TDS Deducted:', summaryX, summaryY);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(180, 100, 0); // Amber for TDS
+    doc.text(formatCurrency(tdsAmount), summaryX + summaryLabelWidth, summaryY);
+  }
   
   summaryY += 5;
   doc.setFont('helvetica', 'normal');
@@ -252,9 +268,9 @@ export async function renderReceiptDefaultTemplate(data: ReceiptData): Promise<B
   const balanceAfter = data.invoice.balance_due;
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(balanceAfter > 0 ? 220 : 16, balanceAfter > 0 ? 38 : 185, balanceAfter > 0 ? 38 : 129);
-  doc.text(formatCurrency(balanceAfter), summaryX + 35, summaryY);
+  doc.text(formatCurrency(balanceAfter), summaryX + summaryLabelWidth, summaryY);
 
-  yPos = yPos + 55;
+  yPos = yPos + boxHeight + 5;
 
   // ========== NOTES (if any) ==========
   if (data.receipt.notes) {

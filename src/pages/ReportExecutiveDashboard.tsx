@@ -382,11 +382,14 @@ function KPICard({ title, value, icon, color, sub, tooltip, onClick }: {
   );
 }
 
-function MiniStatCard({ label, value, icon, tooltip }: { label: string; value: number; icon: React.ReactNode; tooltip?: string }) {
+function MiniStatCard({ label, value, icon, tooltip, onClick }: { label: string; value: number; icon: React.ReactNode; tooltip?: string; onClick?: () => void }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border p-3">
+    <div
+      className={cn("flex items-center gap-3 rounded-lg border p-3 transition-shadow", onClick && "cursor-pointer hover:shadow-md hover:border-primary/30")}
+      onClick={onClick}
+    >
       <span className="text-muted-foreground">{icon}</span>
-      <div>
+      <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1">
           <p className="text-[10px] text-muted-foreground">{label}</p>
           {tooltip && (
@@ -400,6 +403,7 @@ function MiniStatCard({ label, value, icon, tooltip }: { label: string; value: n
         </div>
         <p className="text-lg font-bold">{value}</p>
       </div>
+      {onClick && <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
     </div>
   );
 }

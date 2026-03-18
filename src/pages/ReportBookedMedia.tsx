@@ -156,6 +156,7 @@ export default function ReportBookedMedia() {
     }
   }, [isFromExecutive]);
 
+  const [visibleColumns, setVisibleColumnsRaw] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {

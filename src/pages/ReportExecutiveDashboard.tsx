@@ -103,12 +103,14 @@ export default function ReportExecutiveDashboard() {
         revenueTrendData: si.revenueTrend,
       });
 
-      const monthLabel = format(si.dateRange.from, 'MMM_yyyy');
-      const companySlug = (company?.name || 'Report').replace(/\s+/g, '_').slice(0, 30);
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const companySlug = (company?.name || 'Report').replace(/[^a-zA-Z0-9]+/g, '_').replace(/_+$/, '').slice(0, 30);
+      const rangeLabels: Record<string, string> = { monthly: 'This-Month', quarterly: 'This-Quarter', yearly: 'This-Year', custom: 'Custom-Range' };
+      const rangeLabel = rangeLabels[si.timeRange] || 'Custom-Range';
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Executive_Summary_${companySlug}_${monthLabel}.pdf`;
+      a.download = `Executive_Summary_${companySlug}_${today}_${rangeLabel}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
 

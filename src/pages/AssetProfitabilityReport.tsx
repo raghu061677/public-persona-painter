@@ -76,9 +76,8 @@ export default function AssetProfitabilityReport() {
       if (drillState.dateTo) setEndDate(drillState.dateTo.substring(0, 10));
     }
   }, [isFromExecutive]);
-  const [cities, setCities] = useState<string[]>([]);
-  const [areas, setAreas] = useState<string[]>([]);
-  const [mediaTypes, setMediaTypes] = useState<string[]>([]);
+
+
 
   useEffect(() => {
     fetchFilterOptions();

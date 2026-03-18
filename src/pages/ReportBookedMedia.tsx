@@ -142,7 +142,20 @@ export default function ReportBookedMedia() {
     reportKey: "booked-media-report",
   });
 
-  const [visibleColumns, setVisibleColumnsRaw] = useState<string[]>(() => {
+  // Apply executive summary drill-down filters on first load
+  useEffect(() => {
+    if (isFromExecutive && !alreadyApplied && drillState) {
+      markApplied();
+      setShowDrillBanner(true);
+      if (drillState.dateFrom && drillState.dateTo) {
+        setDateRange({ from: new Date(drillState.dateFrom), to: new Date(drillState.dateTo) });
+      }
+      if (drillState.filterCity) {
+        handleFilterChange("city", drillState.filterCity);
+      }
+    }
+  }, [isFromExecutive]);
+
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {

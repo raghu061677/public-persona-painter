@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useExecutiveDrillDown } from "@/hooks/useExecutiveDrillDown";
+import { ExecutiveSummaryBanner } from "@/components/common/ExecutiveSummaryBanner";
 import { useCFODashboard, TimeRange } from "@/hooks/useCFODashboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

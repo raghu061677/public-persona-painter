@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStrategicIntelligence, StrategicTimeRange } from "@/hooks/useStrategicIntelligence";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,7 +12,7 @@ import { cn } from "@/lib/utils";
 import {
   DollarSign, TrendingUp, Percent, Building2, Target,
   Users, BarChart3, RefreshCw, Layers, ArrowUpRight,
-  Briefcase, Award, Crown, Calendar, AlertCircle, Info,
+  Briefcase, Award, Crown, Calendar, AlertCircle, Info, Download,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, Legend,
@@ -19,6 +20,9 @@ import {
   ComposedChart, Line,
 } from "recharts";
 import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
+import { generateExecutiveSummaryPDF, captureChartAsImage } from "@/lib/pdf/executiveSummaryPdf";
+import { useToast } from "@/hooks/use-toast";
 
 const fmt = (v: number) => `₹${v.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 const COLORS = ["hsl(221, 83%, 53%)", "hsl(142, 71%, 45%)", "hsl(38, 92%, 50%)", "hsl(0, 84%, 60%)", "hsl(262, 83%, 58%)", "hsl(199, 89%, 48%)", "hsl(25, 95%, 53%)", "hsl(330, 81%, 60%)"];

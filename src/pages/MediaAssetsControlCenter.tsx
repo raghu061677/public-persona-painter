@@ -41,6 +41,13 @@ export default function MediaAssetsControlCenter() {
 
   useEffect(() => {
     fetchAssets();
+
+    // Apply executive summary drill-down on first load
+    if (isFromExecutive && !alreadyApplied && drillState) {
+      markApplied();
+      setShowDrillBanner(true);
+    }
+    
     
     // Load theme from localStorage
     const savedTheme = localStorage.getItem("media-assets-theme") as ThemeMode;

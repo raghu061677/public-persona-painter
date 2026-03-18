@@ -53,6 +53,10 @@ export default function CampaignsList() {
   const { mask: maskField, canSee: canSeeField } = useSensitiveFieldMask('campaigns');
   const actions = useModuleActions('campaigns');
 
+  // Executive Summary drill-down
+  const { isFromExecutive, drillState, alreadyApplied, markApplied, clearDrillState } = useExecutiveDrillDown();
+  const [showDrillBanner, setShowDrillBanner] = useState(false);
+
   // Global List View System
   const lv = useListView("campaigns.list");
   const { handleExportExcel, handleExportPdf } = useListViewExport({
@@ -79,6 +83,20 @@ export default function CampaignsList() {
   const [renewDialog, setRenewDialog] = useState<{ open: boolean; campaign: any | null }>({ open: false, campaign: null });
   const [completeDialog, setCompleteDialog] = useState<{ open: boolean; campaign: any | null }>({ open: false, campaign: null });
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+  const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("campaigns");
+  const { settings, updateSettings, resetSettings, isReady: settingsReady } = useTableSettings("campaigns");
+
+  // Apply executive summary drill-down filters on first load
+  useEffect(() => {
+    if (isFromExecutive && !alreadyApplied && drillState) {
+      markApplied();
+      setShowDrillBanner(true);
+      if (drillState.filterStatus === "active") {
+        setAdvancedFilters(prev => ({ ...prev, status: ["Running", "Active", "Confirmed", "In Progress"] }));
+      }
+    }
+  }, [isFromExecutive]);
 
   const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("campaigns");
   const { settings, updateSettings, resetSettings, isReady: settingsReady } = useTableSettings("campaigns");

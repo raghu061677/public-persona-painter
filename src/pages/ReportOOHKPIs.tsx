@@ -26,6 +26,20 @@ const fmt = (v: number) => `₹${v.toLocaleString("en-IN", { maximumFractionDigi
 export default function ReportOOHKPIs() {
   const navigate = useNavigate();
   const ooh = useOOHIntelligence();
+  const { isFromExecutive, drillState, alreadyApplied, markApplied, clearDrillState } = useExecutiveDrillDown();
+  const [showDrillBanner, setShowDrillBanner] = useState(false);
+
+  // Apply executive summary drill-down on first load
+  useEffect(() => {
+    if (isFromExecutive && !alreadyApplied && drillState) {
+      markApplied();
+      setShowDrillBanner(true);
+      if (drillState.dateFrom && drillState.dateTo) {
+        ooh.setCustomRange({ from: new Date(drillState.dateFrom), to: new Date(drillState.dateTo) });
+        ooh.setTimeRange("custom" as any);
+      }
+    }
+  }, [isFromExecutive]);
 
   if (ooh.loading) {
     return (

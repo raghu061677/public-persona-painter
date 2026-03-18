@@ -106,9 +106,15 @@ export async function generateExecutiveSummaryPDF(data: ExecutiveSummaryPDFData)
   doc.setTextColor(...dark);
   doc.text('Executive Summary', M, y);
 
-  // Subtitle — period
-  y += 12;
+  // Strategic subtitle
+  y += 10;
   doc.setFont('NotoSans', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(...gray);
+  doc.text('Strategic performance snapshot for the selected period', M, y);
+
+  // Period label
+  y += 10;
   doc.setFontSize(13);
   doc.setTextColor(...gray);
   doc.text(data.dateRangeLabel, M, y);

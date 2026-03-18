@@ -160,6 +160,15 @@ export async function generateExecutiveSummaryPDF(data: ExecutiveSummaryPDFData)
   // Header
   y = renderPageHeader(doc, 'Performance Snapshot', data.companyName, theme, gray);
 
+  // Accrual basis badge
+  doc.setFillColor(245, 247, 250);
+  doc.roundedRect(M, y - 3, 30, 6, 1, 1, 'F');
+  doc.setFont('NotoSans', 'bold');
+  doc.setFontSize(6);
+  doc.setTextColor(...gray);
+  doc.text('ACCRUAL BASIS', M + 2, y + 1);
+  y += 7;
+
   // KPI Cards — 2 rows × 4 cols
   const kpis = [
     { label: 'Invoiced Revenue', value: formatCurrencyForPDF(data.invoicedRevenue), color: theme },

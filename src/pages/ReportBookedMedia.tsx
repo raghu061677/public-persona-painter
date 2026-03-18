@@ -151,7 +151,7 @@ export default function ReportBookedMedia() {
         setDateRange({ from: new Date(drillState.dateFrom), to: new Date(drillState.dateTo) });
       }
       if (drillState.filterCity) {
-        handleFilterChange("city", drillState.filterCity);
+        handleFilterChange("city", [drillState.filterCity]);
       }
     }
   }, [isFromExecutive]);

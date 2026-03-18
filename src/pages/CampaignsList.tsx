@@ -98,8 +98,8 @@ export default function CampaignsList() {
     }
   }, [isFromExecutive]);
 
-  const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("campaigns");
-  const { settings, updateSettings, resetSettings, isReady: settingsReady } = useTableSettings("campaigns");
+
+
 
   // Handle sorting
   const handleSort = (key: string) => {

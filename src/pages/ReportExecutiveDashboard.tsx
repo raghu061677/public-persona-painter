@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStrategicIntelligence, StrategicTimeRange } from "@/hooks/useStrategicIntelligence";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,7 +12,7 @@ import { cn } from "@/lib/utils";
 import {
   DollarSign, TrendingUp, Percent, Building2, Target,
   Users, BarChart3, RefreshCw, Layers, ArrowUpRight,
-  Briefcase, Award, Crown, Calendar, AlertCircle, Info,
+  Briefcase, Award, Crown, Calendar, AlertCircle, Info, Download,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, Legend,
@@ -19,6 +20,9 @@ import {
   ComposedChart, Line,
 } from "recharts";
 import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
+import { generateExecutiveSummaryPDF, captureChartAsImage } from "@/lib/pdf/executiveSummaryPdf";
+import { useToast } from "@/hooks/use-toast";
 
 const fmt = (v: number) => `₹${v.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 const COLORS = ["hsl(221, 83%, 53%)", "hsl(142, 71%, 45%)", "hsl(38, 92%, 50%)", "hsl(0, 84%, 60%)", "hsl(262, 83%, 58%)", "hsl(199, 89%, 48%)", "hsl(25, 95%, 53%)", "hsl(330, 81%, 60%)"];
@@ -35,6 +39,87 @@ function EmptyState({ message }: { message: string }) {
 export default function ReportExecutiveDashboard() {
   const navigate = useNavigate();
   const si = useStrategicIntelligence();
+  const { company } = useCompany();
+  const { toast } = useToast();
+  const [exporting, setExporting] = useState(false);
+
+  const revenueTrendRef = useRef<HTMLDivElement>(null);
+  const clientPieRef = useRef<HTMLDivElement>(null);
+  const profitTrendRef = useRef<HTMLDivElement>(null);
+
+  const handleExportPDF = useCallback(async () => {
+    if (si.loading) return;
+    setExporting(true);
+    try {
+      // Capture charts as images
+      const [revImg, pieImg, profImg] = await Promise.all([
+        revenueTrendRef.current ? captureChartAsImage(revenueTrendRef.current) : null,
+        clientPieRef.current ? captureChartAsImage(clientPieRef.current) : null,
+        profitTrendRef.current ? captureChartAsImage(profitTrendRef.current) : null,
+      ]);
+
+      // Fetch logo
+      let logoBase64: string | undefined;
+      if (company?.logo_url) {
+        try {
+          const res = await fetch(company.logo_url);
+          if (res.ok) {
+            const blob = await res.blob();
+            logoBase64 = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
+          }
+        } catch { /* skip logo */ }
+      }
+
+      const k = si.executiveKPIs;
+      const dateLabel = `${format(si.dateRange.from, 'dd MMM yyyy')} – ${format(si.dateRange.to, 'dd MMM yyyy')}`;
+
+      const blob = await generateExecutiveSummaryPDF({
+        companyName: company?.name || 'Company',
+        companyLogoBase64: logoBase64,
+        themeColor: company?.theme_color || '#1e40af',
+        dateRangeLabel: dateLabel,
+        generatedAt: format(new Date(), 'dd MMM yyyy'),
+        invoicedRevenue: k.annualRevenue,
+        netProfit: k.annualProfit,
+        collectionRate: k.collectionRate,
+        avgOccupancy: k.avgOccupancy,
+        totalAssets: k.totalAssets,
+        bookedAssets: k.bookedAssets,
+        activeCampaigns: k.activeCampaigns,
+        totalClients: k.totalClients,
+        topCity: k.topCity,
+        topCityRevenue: k.topCityRevenue,
+        bestROI: k.highestROI,
+        bestROIAsset: k.highestROIAsset,
+        revenueTrendChartImage: revImg || undefined,
+        clientConcentrationChartImage: pieImg || undefined,
+        profitTrendChartImage: profImg || undefined,
+        clientConcentrationBasis: si.clientConcentration.basis,
+        clientConcentrationData: si.clientConcentration.data,
+        revenueTrendData: si.revenueTrend,
+      });
+
+      const monthLabel = format(si.dateRange.from, 'MMM_yyyy');
+      const companySlug = (company?.name || 'Report').replace(/\s+/g, '_').slice(0, 30);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Executive_Summary_${companySlug}_${monthLabel}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast({ title: "PDF Downloaded", description: "Executive Summary PDF has been generated." });
+    } catch (err: any) {
+      console.error('PDF export error:', err);
+      toast({ variant: "destructive", title: "Export Failed", description: err.message || "Failed to generate PDF" });
+    } finally {
+      setExporting(false);
+    }
+  }, [si, company, toast]);
 
   if (si.loading) {
     return (
@@ -94,6 +179,9 @@ export default function ReportExecutiveDashboard() {
             />
           )}
           <Button variant="outline" size="icon" className="h-9 w-9" onClick={si.refresh}><RefreshCw className="h-4 w-4" /></Button>
+          <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5" onClick={handleExportPDF} disabled={exporting}>
+            <Download className="h-3.5 w-3.5" /> {exporting ? "Generating…" : "Export PDF"}
+          </Button>
         </div>
       </div>
 
@@ -159,7 +247,7 @@ export default function ReportExecutiveDashboard() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">12-Month Revenue vs Expenses (Accrual)</CardTitle></CardHeader>
-          <CardContent>
+          <CardContent ref={revenueTrendRef}>
             {si.revenueTrend.some(d => d.revenue > 0 || d.expenses > 0) ? (
               <ResponsiveContainer width="100%" height={280}>
                 <ComposedChart data={si.revenueTrend}>
@@ -188,7 +276,7 @@ export default function ReportExecutiveDashboard() {
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent ref={clientPieRef}>
             {si.clientConcentration.data.length > 0 ? (
               <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
@@ -207,7 +295,7 @@ export default function ReportExecutiveDashboard() {
       {/* Profit Trend */}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Monthly Net Profit (Invoiced Revenue − Expenses)</CardTitle></CardHeader>
-        <CardContent>
+        <CardContent ref={profitTrendRef}>
           {si.revenueTrend.some(d => d.revenue > 0 || d.expenses > 0) ? (
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={si.revenueTrend}>

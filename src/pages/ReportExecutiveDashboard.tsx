@@ -247,7 +247,7 @@ export default function ReportExecutiveDashboard() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">12-Month Revenue vs Expenses (Accrual)</CardTitle></CardHeader>
-          <CardContent>
+          <CardContent ref={revenueTrendRef}>
             {si.revenueTrend.some(d => d.revenue > 0 || d.expenses > 0) ? (
               <ResponsiveContainer width="100%" height={280}>
                 <ComposedChart data={si.revenueTrend}>

@@ -133,6 +133,16 @@ export default function ClientsList() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
+  const { isFromExecutive, drillState, alreadyApplied, markApplied, clearDrillState } = useExecutiveDrillDown();
+  const [showDrillBanner, setShowDrillBanner] = useState(false);
+
+  // Apply executive summary drill-down on first load  
+  useEffect(() => {
+    if (isFromExecutive && !alreadyApplied && drillState) {
+      markApplied();
+      setShowDrillBanner(true);
+    }
+  }, [isFromExecutive]);
   
   // RBAC scope filtering for clients
   const { filterByScope: clientScopeFilter } = useScopedQuery('clients', { ownerColumn: 'created_by', additionalOwnerColumns: ['assigned_to'] });

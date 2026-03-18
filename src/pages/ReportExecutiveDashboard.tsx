@@ -143,6 +143,18 @@ export default function ReportExecutiveDashboard() {
   const topCityLabel = k.topCity !== "—" ? k.topCity : "—";
   const topCitySub = k.topCity !== "—" ? fmt(k.topCityRevenue) : "No data";
 
+  // Drill-down state payload (passed via router state)
+  const drillState = {
+    from: "executive-summary",
+    dateFrom: si.dateRange.from.toISOString(),
+    dateTo: si.dateRange.to.toISOString(),
+    timeRange: si.timeRange,
+  };
+
+  const drillTo = (path: string, extra?: Record<string, string>) => {
+    navigate(path, { state: { ...drillState, ...extra } });
+  };
+
   return (
     <div className="h-full flex flex-col space-y-5 p-6 md:p-8 overflow-auto">
       {/* Header with time range selector */}
@@ -195,11 +207,12 @@ export default function ReportExecutiveDashboard() {
           <KPICard title="Invoiced Revenue" value={hasInvoices ? fmt(k.annualRevenue) : "—"} icon={<DollarSign className="h-4 w-4" />} color="text-blue-600"
             sub={!hasInvoices ? "No invoices in period" : undefined}
             tooltip="Sum of total_amount from all non-Draft, non-Cancelled invoices whose invoice_date falls within the selected period."
-            onClick={() => navigate("/admin/reports/financial")} />
+            onClick={() => drillTo("/admin/invoices")} />
           <KPICard title="Net Profit" value={hasInvoices ? fmt(k.annualProfit) : "—"} icon={<TrendingUp className="h-4 w-4" />}
             color={!hasInvoices ? "text-muted-foreground" : k.annualProfit >= 0 ? "text-emerald-600" : "text-red-600"}
             sub="Invoiced Revenue − Expenses"
-            tooltip="Invoiced Revenue minus sum of all expenses whose expense_date falls within the selected period. Note: if expense records are incomplete, profit may be overstated." />
+            tooltip="Invoiced Revenue minus sum of all expenses whose expense_date falls within the selected period. Note: if expense records are incomplete, profit may be overstated."
+            onClick={() => drillTo("/admin/reports/financial")} />
           <KPICard
             title="Collection Rate"
             value={hasInvoices ? `${k.collectionRate}%` : "—"}
@@ -207,10 +220,12 @@ export default function ReportExecutiveDashboard() {
             color={!hasInvoices ? "text-muted-foreground" : k.collectionRate >= 80 ? "text-emerald-600" : "text-amber-600"}
             sub={hasInvoices ? "Cash collected ÷ Invoiced Revenue" : "No invoices"}
             tooltip="Total cash collected against invoices in the selected period, regardless of when the payment was made, divided by Invoiced Revenue. This is a cash-on-accrual hybrid metric."
+            onClick={() => drillTo("/admin/payments")}
           />
           <KPICard title="Best ROI Asset" value={roiValue} icon={<Award className="h-4 w-4" />} color={roiColor}
             sub={roiSub}
-            tooltip="(Booked Value − Direct Cost) ÷ Direct Cost × 100. Only assets with direct cost > 0 are ranked. Assets without printing or mounting cost data are excluded and shown as N/A." />
+            tooltip="(Booked Value − Direct Cost) ÷ Direct Cost × 100. Only assets with direct cost > 0 are ranked. Assets without printing or mounting cost data are excluded and shown as N/A."
+            onClick={() => drillTo("/admin/reports/profitability")} />
         </div>
       </div>
 
@@ -224,23 +239,28 @@ export default function ReportExecutiveDashboard() {
             color={!hasCampaigns ? "text-muted-foreground" : k.avgOccupancy >= 60 ? "text-emerald-600" : "text-amber-600"}
             sub={!hasCampaigns ? "No bookings in period" : "Period date-range aware"}
             tooltip="Sum of booked days (clamped to selected period) across all assets, divided by total assets × period days. Each asset is capped at 100%."
-            onClick={() => navigate("/admin/reports/ooh-kpis")} />
+            onClick={() => drillTo("/admin/reports/ooh-kpis")} />
           <KPICard title="Top City by Booked Value" value={topCityLabel} icon={<Building2 className="h-4 w-4" />} color="text-blue-600"
             sub={topCitySub}
-            tooltip="City with the highest total booked value (total_price or rent_amount, non-negative only) from campaign assets overlapping the selected period. Company-scoped." />
+            tooltip="City with the highest total booked value (total_price or rent_amount, non-negative only) from campaign assets overlapping the selected period. Company-scoped."
+            onClick={k.topCity !== "—" ? () => drillTo("/admin/reports/booked-media", { filterCity: k.topCity }) : undefined} />
           <MiniStatCard label="Total Assets" value={k.totalAssets} icon={<Layers className="h-3.5 w-3.5" />}
-            tooltip="Count of all media assets owned by your company." />
+            tooltip="Count of all media assets owned by your company."
+            onClick={() => drillTo("/admin/media-assets")} />
           <MiniStatCard label="Booked (Period)" value={k.bookedAssets} icon={<Target className="h-3.5 w-3.5" />}
-            tooltip="Count of distinct assets with at least one active booking overlapping the selected period." />
+            tooltip="Count of distinct assets with at least one active booking overlapping the selected period."
+            onClick={() => drillTo("/admin/reports/booked-media")} />
           <MiniStatCard label="Active Campaigns" value={k.activeCampaigns} icon={<Briefcase className="h-3.5 w-3.5" />}
-            tooltip="Campaigns with status: Running, Active, Confirmed, or In Progress." />
+            tooltip="Campaigns with status: Running, Active, Confirmed, or In Progress."
+            onClick={() => drillTo("/admin/campaigns", { filterStatus: "active" })} />
         </div>
       </div>
 
       {/* Total Clients — separate row */}
       <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
         <MiniStatCard label="Total Clients" value={k.totalClients} icon={<Users className="h-3.5 w-3.5" />}
-          tooltip="All registered clients in your company, regardless of period activity." />
+          tooltip="All registered clients in your company, regardless of period activity."
+          onClick={() => drillTo("/admin/clients")} />
       </div>
 
       {/* Charts Row */}
@@ -362,11 +382,14 @@ function KPICard({ title, value, icon, color, sub, tooltip, onClick }: {
   );
 }
 
-function MiniStatCard({ label, value, icon, tooltip }: { label: string; value: number; icon: React.ReactNode; tooltip?: string }) {
+function MiniStatCard({ label, value, icon, tooltip, onClick }: { label: string; value: number; icon: React.ReactNode; tooltip?: string; onClick?: () => void }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border p-3">
+    <div
+      className={cn("flex items-center gap-3 rounded-lg border p-3 transition-shadow", onClick && "cursor-pointer hover:shadow-md hover:border-primary/30")}
+      onClick={onClick}
+    >
       <span className="text-muted-foreground">{icon}</span>
-      <div>
+      <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1">
           <p className="text-[10px] text-muted-foreground">{label}</p>
           {tooltip && (
@@ -380,6 +403,7 @@ function MiniStatCard({ label, value, icon, tooltip }: { label: string; value: n
         </div>
         <p className="text-lg font-bold">{value}</p>
       </div>
+      {onClick && <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
     </div>
   );
 }

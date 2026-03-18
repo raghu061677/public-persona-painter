@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useExecutiveDrillDown } from "@/hooks/useExecutiveDrillDown";
 import { ExecutiveSummaryBanner } from "@/components/common/ExecutiveSummaryBanner";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard, Calendar, User, DollarSign, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";

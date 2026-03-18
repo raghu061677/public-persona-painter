@@ -39,6 +39,87 @@ function EmptyState({ message }: { message: string }) {
 export default function ReportExecutiveDashboard() {
   const navigate = useNavigate();
   const si = useStrategicIntelligence();
+  const { company } = useCompany();
+  const { toast } = useToast();
+  const [exporting, setExporting] = useState(false);
+
+  const revenueTrendRef = useRef<HTMLDivElement>(null);
+  const clientPieRef = useRef<HTMLDivElement>(null);
+  const profitTrendRef = useRef<HTMLDivElement>(null);
+
+  const handleExportPDF = useCallback(async () => {
+    if (si.loading) return;
+    setExporting(true);
+    try {
+      // Capture charts as images
+      const [revImg, pieImg, profImg] = await Promise.all([
+        revenueTrendRef.current ? captureChartAsImage(revenueTrendRef.current) : null,
+        clientPieRef.current ? captureChartAsImage(clientPieRef.current) : null,
+        profitTrendRef.current ? captureChartAsImage(profitTrendRef.current) : null,
+      ]);
+
+      // Fetch logo
+      let logoBase64: string | undefined;
+      if (company?.logo_url) {
+        try {
+          const res = await fetch(company.logo_url);
+          if (res.ok) {
+            const blob = await res.blob();
+            logoBase64 = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
+          }
+        } catch { /* skip logo */ }
+      }
+
+      const k = si.executiveKPIs;
+      const dateLabel = `${format(si.dateRange.from, 'dd MMM yyyy')} – ${format(si.dateRange.to, 'dd MMM yyyy')}`;
+
+      const blob = await generateExecutiveSummaryPDF({
+        companyName: company?.name || 'Company',
+        companyLogoBase64: logoBase64,
+        themeColor: company?.theme_color || '#1e40af',
+        dateRangeLabel: dateLabel,
+        generatedAt: format(new Date(), 'dd MMM yyyy'),
+        invoicedRevenue: k.annualRevenue,
+        netProfit: k.annualProfit,
+        collectionRate: k.collectionRate,
+        avgOccupancy: k.avgOccupancy,
+        totalAssets: k.totalAssets,
+        bookedAssets: k.bookedAssets,
+        activeCampaigns: k.activeCampaigns,
+        totalClients: k.totalClients,
+        topCity: k.topCity,
+        topCityRevenue: k.topCityRevenue,
+        bestROI: k.highestROI,
+        bestROIAsset: k.highestROIAsset,
+        revenueTrendChartImage: revImg || undefined,
+        clientConcentrationChartImage: pieImg || undefined,
+        profitTrendChartImage: profImg || undefined,
+        clientConcentrationBasis: si.clientConcentration.basis,
+        clientConcentrationData: si.clientConcentration.data,
+        revenueTrendData: si.revenueTrend,
+      });
+
+      const monthLabel = format(si.dateRange.from, 'MMM_yyyy');
+      const companySlug = (company?.name || 'Report').replace(/\s+/g, '_').slice(0, 30);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Executive_Summary_${companySlug}_${monthLabel}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast({ title: "PDF Downloaded", description: "Executive Summary PDF has been generated." });
+    } catch (err: any) {
+      console.error('PDF export error:', err);
+      toast({ variant: "destructive", title: "Export Failed", description: err.message || "Failed to generate PDF" });
+    } finally {
+      setExporting(false);
+    }
+  }, [si, company, toast]);
 
   if (si.loading) {
     return (

@@ -277,6 +277,7 @@ export default function ReportExecutiveDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent ref={clientPieRef}>
+            {si.clientConcentration.data.length > 0 ? (
               <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
                   <Pie data={si.clientConcentration.data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100}

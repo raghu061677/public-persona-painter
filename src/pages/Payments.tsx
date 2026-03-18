@@ -217,6 +217,13 @@ export default function Payments() {
 
   return (
     <div className="h-full flex flex-col space-y-6 p-8">
+      {showDrillBanner && (
+        <ExecutiveSummaryBanner
+          dateFrom={drillState?.dateFrom}
+          dateTo={drillState?.dateTo}
+          onClear={() => { setShowDrillBanner(false); setFilters({}); clearDrillState(); }}
+        />
+      )}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Payments</h1>
         <p className="text-muted-foreground">

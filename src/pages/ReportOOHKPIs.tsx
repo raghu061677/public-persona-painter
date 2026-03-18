@@ -56,6 +56,13 @@ export default function ReportOOHKPIs() {
 
   return (
     <div className="h-full flex flex-col space-y-5 p-6 md:p-8 overflow-auto">
+      {showDrillBanner && (
+        <ExecutiveSummaryBanner
+          dateFrom={drillState?.dateFrom}
+          dateTo={drillState?.dateTo}
+          onClear={() => { setShowDrillBanner(false); clearDrillState(); }}
+        />
+      )}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 sticky top-0 z-10 bg-background pb-2 -mt-2 pt-2">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">OOH KPIs</h1>

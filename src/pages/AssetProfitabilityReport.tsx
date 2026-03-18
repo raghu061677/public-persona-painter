@@ -64,6 +64,21 @@ export default function AssetProfitabilityReport() {
   const [cities, setCities] = useState<string[]>([]);
   const [areas, setAreas] = useState<string[]>([]);
   const [mediaTypes, setMediaTypes] = useState<string[]>([]);
+  const { isFromExecutive, drillState, alreadyApplied, markApplied, clearDrillState } = useExecutiveDrillDown();
+  const [showDrillBanner, setShowDrillBanner] = useState(false);
+
+  // Apply executive summary drill-down on first load
+  useEffect(() => {
+    if (isFromExecutive && !alreadyApplied && drillState) {
+      markApplied();
+      setShowDrillBanner(true);
+      if (drillState.dateFrom) setStartDate(drillState.dateFrom.substring(0, 10));
+      if (drillState.dateTo) setEndDate(drillState.dateTo.substring(0, 10));
+    }
+  }, [isFromExecutive]);
+  const [cities, setCities] = useState<string[]>([]);
+  const [areas, setAreas] = useState<string[]>([]);
+  const [mediaTypes, setMediaTypes] = useState<string[]>([]);
 
   useEffect(() => {
     fetchFilterOptions();

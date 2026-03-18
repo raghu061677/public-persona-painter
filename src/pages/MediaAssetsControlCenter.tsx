@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useExecutiveDrillDown } from "@/hooks/useExecutiveDrillDown";
+import { ExecutiveSummaryBanner } from "@/components/common/ExecutiveSummaryBanner";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,9 +36,18 @@ export default function MediaAssetsControlCenter() {
   const [isGodModeVisible, setIsGodModeVisible] = useState(false);
   const [customExportOpen, setCustomExportOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const { isFromExecutive, drillState, alreadyApplied, markApplied, clearDrillState } = useExecutiveDrillDown();
+  const [showDrillBanner, setShowDrillBanner] = useState(false);
 
   useEffect(() => {
     fetchAssets();
+
+    // Apply executive summary drill-down on first load
+    if (isFromExecutive && !alreadyApplied && drillState) {
+      markApplied();
+      setShowDrillBanner(true);
+    }
+    
     
     // Load theme from localStorage
     const savedTheme = localStorage.getItem("media-assets-theme") as ThemeMode;
@@ -283,6 +294,15 @@ export default function MediaAssetsControlCenter() {
   return (
     <ModuleGuard module="media_assets">
     <div className="min-h-screen flex flex-col bg-background">
+      {showDrillBanner && (
+        <div className="px-6 pt-4">
+          <ExecutiveSummaryBanner
+            dateFrom={drillState?.dateFrom}
+            dateTo={drillState?.dateTo}
+            onClear={() => { setShowDrillBanner(false); clearDrillState(); }}
+          />
+        </div>
+      )}
       {/* Main Content */}
       <div className="flex-1">
         <div className="flex flex-col h-[calc(100vh-3.5rem)]">

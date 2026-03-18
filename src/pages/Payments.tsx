@@ -1,4 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
+import { useExecutiveDrillDown } from "@/hooks/useExecutiveDrillDown";
+import { ExecutiveSummaryBanner } from "@/components/common/ExecutiveSummaryBanner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard, Calendar, User, DollarSign, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,12 +42,27 @@ export default function Payments() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { isFromExecutive, drillState, alreadyApplied, markApplied, clearDrillState } = useExecutiveDrillDown();
+  const [showDrillBanner, setShowDrillBanner] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState<PaymentFilters>({});
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sortField, setSortField] = useState<SortField>('invoice_date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  // Apply executive summary drill-down filters on first load
+  useEffect(() => {
+    if (isFromExecutive && !alreadyApplied && drillState) {
+      markApplied();
+      setShowDrillBanner(true);
+      if (drillState.dateFrom && drillState.dateTo) {
+        const from = drillState.dateFrom.substring(0, 10);
+        const to = drillState.dateTo.substring(0, 10);
+        setFilters(prev => ({ ...prev, invoice_between: { from, to } }));
+      }
+    }
+  }, [isFromExecutive]);
 
   useEffect(() => {
     loadPayments();
@@ -201,6 +218,13 @@ export default function Payments() {
 
   return (
     <div className="h-full flex flex-col space-y-6 p-8">
+      {showDrillBanner && (
+        <ExecutiveSummaryBanner
+          dateFrom={drillState?.dateFrom}
+          dateTo={drillState?.dateTo}
+          onClear={() => { setShowDrillBanner(false); setFilters({}); clearDrillState(); }}
+        />
+      )}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Payments</h1>
         <p className="text-muted-foreground">

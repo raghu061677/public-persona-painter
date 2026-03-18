@@ -1,4 +1,7 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useExecutiveDrillDown } from "@/hooks/useExecutiveDrillDown";
+import { ExecutiveSummaryBanner } from "@/components/common/ExecutiveSummaryBanner";
 import { useOOHIntelligence, OOHTimeRange } from "@/hooks/useOOHIntelligence";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +26,20 @@ const fmt = (v: number) => `₹${v.toLocaleString("en-IN", { maximumFractionDigi
 export default function ReportOOHKPIs() {
   const navigate = useNavigate();
   const ooh = useOOHIntelligence();
+  const { isFromExecutive, drillState, alreadyApplied, markApplied, clearDrillState } = useExecutiveDrillDown();
+  const [showDrillBanner, setShowDrillBanner] = useState(false);
+
+  // Apply executive summary drill-down on first load
+  useEffect(() => {
+    if (isFromExecutive && !alreadyApplied && drillState) {
+      markApplied();
+      setShowDrillBanner(true);
+      if (drillState.dateFrom && drillState.dateTo) {
+        ooh.setCustomRange({ from: new Date(drillState.dateFrom), to: new Date(drillState.dateTo) });
+        ooh.setTimeRange("custom" as any);
+      }
+    }
+  }, [isFromExecutive]);
 
   if (ooh.loading) {
     return (
@@ -39,6 +56,13 @@ export default function ReportOOHKPIs() {
 
   return (
     <div className="h-full flex flex-col space-y-5 p-6 md:p-8 overflow-auto">
+      {showDrillBanner && (
+        <ExecutiveSummaryBanner
+          dateFrom={drillState?.dateFrom}
+          dateTo={drillState?.dateTo}
+          onClear={() => { setShowDrillBanner(false); clearDrillState(); }}
+        />
+      )}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 sticky top-0 z-10 bg-background pb-2 -mt-2 pt-2">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">OOH KPIs</h1>

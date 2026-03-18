@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useExecutiveDrillDown } from "@/hooks/useExecutiveDrillDown";
+import { ExecutiveSummaryBanner } from "@/components/common/ExecutiveSummaryBanner";
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -62,6 +64,20 @@ export default function AssetProfitabilityReport() {
   const [cities, setCities] = useState<string[]>([]);
   const [areas, setAreas] = useState<string[]>([]);
   const [mediaTypes, setMediaTypes] = useState<string[]>([]);
+  const { isFromExecutive, drillState, alreadyApplied, markApplied, clearDrillState } = useExecutiveDrillDown();
+  const [showDrillBanner, setShowDrillBanner] = useState(false);
+
+  // Apply executive summary drill-down on first load
+  useEffect(() => {
+    if (isFromExecutive && !alreadyApplied && drillState) {
+      markApplied();
+      setShowDrillBanner(true);
+      if (drillState.dateFrom) setStartDate(drillState.dateFrom.substring(0, 10));
+      if (drillState.dateTo) setEndDate(drillState.dateTo.substring(0, 10));
+    }
+  }, [isFromExecutive]);
+
+
 
   useEffect(() => {
     fetchFilterOptions();
@@ -313,6 +329,13 @@ export default function AssetProfitabilityReport() {
 
   return (
     <div className="p-6 space-y-6">
+      {showDrillBanner && (
+        <ExecutiveSummaryBanner
+          dateFrom={drillState?.dateFrom}
+          dateTo={drillState?.dateTo}
+          onClear={() => { setShowDrillBanner(false); clearDrillState(); }}
+        />
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Asset Profitability Report</h1>

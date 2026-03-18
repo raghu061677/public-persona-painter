@@ -1,4 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { useExecutiveDrillDown } from "@/hooks/useExecutiveDrillDown";
+import { ExecutiveSummaryBanner } from "@/components/common/ExecutiveSummaryBanner";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { useScopedQuery } from "@/hooks/useScopedQuery";
@@ -51,6 +53,10 @@ export default function CampaignsList() {
   const { mask: maskField, canSee: canSeeField } = useSensitiveFieldMask('campaigns');
   const actions = useModuleActions('campaigns');
 
+  // Executive Summary drill-down
+  const { isFromExecutive, drillState, alreadyApplied, markApplied, clearDrillState } = useExecutiveDrillDown();
+  const [showDrillBanner, setShowDrillBanner] = useState(false);
+
   // Global List View System
   const lv = useListView("campaigns.list");
   const { handleExportExcel, handleExportPdf } = useListViewExport({
@@ -80,6 +86,20 @@ export default function CampaignsList() {
 
   const { density, setDensity, getRowClassName, getCellClassName } = useTableDensity("campaigns");
   const { settings, updateSettings, resetSettings, isReady: settingsReady } = useTableSettings("campaigns");
+
+  // Apply executive summary drill-down filters on first load
+  useEffect(() => {
+    if (isFromExecutive && !alreadyApplied && drillState) {
+      markApplied();
+      setShowDrillBanner(true);
+      if (drillState.filterStatus === "active") {
+        setAdvancedFilters(prev => ({ ...prev, status: ["Running", "Active", "Confirmed", "In Progress"] }));
+      }
+    }
+  }, [isFromExecutive]);
+
+
+
 
   // Handle sorting
   const handleSort = (key: string) => {
@@ -347,6 +367,14 @@ export default function CampaignsList() {
     <ModuleGuard module="campaigns">
     <div className="min-h-screen bg-background">
       <PageContainer>
+        {showDrillBanner && (
+          <ExecutiveSummaryBanner
+            dateFrom={drillState?.dateFrom}
+            dateTo={drillState?.dateTo}
+            extraLabel={drillState?.filterStatus ? `Status: ${drillState.filterStatus}` : undefined}
+            onClear={() => { setShowDrillBanner(false); setAdvancedFilters({ status: ["Running"] }); clearDrillState(); }}
+          />
+        )}
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>

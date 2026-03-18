@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useExecutiveDrillDown } from "@/hooks/useExecutiveDrillDown";
+import { ExecutiveSummaryBanner } from "@/components/common/ExecutiveSummaryBanner";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { useScopedQuery } from "@/hooks/useScopedQuery";
@@ -131,6 +133,16 @@ export default function ClientsList() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [globalSearchFiltered, setGlobalSearchFiltered] = useState<any[]>([]);
+  const { isFromExecutive, drillState, alreadyApplied, markApplied, clearDrillState } = useExecutiveDrillDown();
+  const [showDrillBanner, setShowDrillBanner] = useState(false);
+
+  // Apply executive summary drill-down on first load  
+  useEffect(() => {
+    if (isFromExecutive && !alreadyApplied && drillState) {
+      markApplied();
+      setShowDrillBanner(true);
+    }
+  }, [isFromExecutive]);
   
   // RBAC scope filtering for clients
   const { filterByScope: clientScopeFilter } = useScopedQuery('clients', { ownerColumn: 'created_by', additionalOwnerColumns: ['assigned_to'] });
@@ -626,6 +638,13 @@ export default function ClientsList() {
     <ModuleGuard module="clients">
     <div className="min-h-screen bg-background">
       <PageContainer>
+        {showDrillBanner && (
+          <ExecutiveSummaryBanner
+            dateFrom={drillState?.dateFrom}
+            dateTo={drillState?.dateTo}
+            onClear={() => { setShowDrillBanner(false); clearDrillState(); }}
+          />
+        )}
         <PageHeader
           title="Clients"
           description="Manage your client database and contact information"

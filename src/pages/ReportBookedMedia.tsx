@@ -1,4 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { useExecutiveDrillDown } from "@/hooks/useExecutiveDrillDown";
+import { ExecutiveSummaryBanner } from "@/components/common/ExecutiveSummaryBanner";
 import { DateRange } from "react-day-picker";
 import {
   MapPin,
@@ -113,6 +115,8 @@ function diffDays(start: string, end: string): number {
 export default function ReportBookedMedia() {
   const { company } = useCompany();
   const { toast } = useToast();
+  const { isFromExecutive, drillState, alreadyApplied, markApplied, clearDrillState } = useExecutiveDrillDown();
+  const [showDrillBanner, setShowDrillBanner] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [customExportOpen, setCustomExportOpen] = useState(false);
@@ -137,6 +141,20 @@ export default function ReportBookedMedia() {
     defaultSortDirection: "asc",
     reportKey: "booked-media-report",
   });
+
+  // Apply executive summary drill-down filters on first load
+  useEffect(() => {
+    if (isFromExecutive && !alreadyApplied && drillState) {
+      markApplied();
+      setShowDrillBanner(true);
+      if (drillState.dateFrom && drillState.dateTo) {
+        setDateRange({ from: new Date(drillState.dateFrom), to: new Date(drillState.dateTo) });
+      }
+      if (drillState.filterCity) {
+        handleFilterChange("city", [drillState.filterCity]);
+      }
+    }
+  }, [isFromExecutive]);
 
   const [visibleColumns, setVisibleColumnsRaw] = useState<string[]>(() => {
     try {
@@ -434,6 +452,14 @@ export default function ReportBookedMedia() {
 
   return (
     <div className="space-y-6 p-6">
+      {showDrillBanner && (
+        <ExecutiveSummaryBanner
+          dateFrom={drillState?.dateFrom}
+          dateTo={drillState?.dateTo}
+          extraLabel={drillState?.filterCity ? `City: ${drillState.filterCity}` : undefined}
+          onClear={() => { setShowDrillBanner(false); resetFilters(); clearDrillState(); }}
+        />
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Booked Media Report</h1>

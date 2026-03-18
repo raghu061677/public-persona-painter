@@ -4,6 +4,8 @@ import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { useScopedQuery } from "@/hooks/useScopedQuery";
 import { useSensitiveFieldMask } from "@/components/rbac/SensitiveField";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useExecutiveDrillDown } from "@/hooks/useExecutiveDrillDown";
+import { ExecutiveSummaryBanner } from "@/components/common/ExecutiveSummaryBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Button } from "@/components/ui/button";
@@ -43,6 +45,8 @@ export default function InvoicesList() {
   const { company } = useCompany();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { isFromExecutive, drillState, alreadyApplied, markApplied, clearDrillState } = useExecutiveDrillDown();
+  const [showDrillBanner, setShowDrillBanner] = useState(false);
 
   // RBAC scope filtering and sensitive field masking
   const { filterByScope: invoiceScopeFilter } = useScopedQuery('finance', { ownerColumn: 'created_by' });
@@ -50,6 +54,20 @@ export default function InvoicesList() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const urlFiltersAppliedRef = useRef(false);
+
+  // Apply executive summary drill-down filters on first load
+  useEffect(() => {
+    if (isFromExecutive && !alreadyApplied && drillState) {
+      markApplied();
+      setShowDrillBanner(true);
+      // Apply date range as invoice_date filter
+      if (drillState.dateFrom && drillState.dateTo) {
+        const from = drillState.dateFrom.substring(0, 10);
+        const to = drillState.dateTo.substring(0, 10);
+        lv.setFilters({ ...advancedFilters, invoice_between: { from, to } } as Record<string, any>);
+      }
+    }
+  }, [isFromExecutive]);
 
   // Sort state
   const [sortField, setSortField] = useState<SortField>('invoice_date');
@@ -378,7 +396,13 @@ export default function InvoicesList() {
     <ModuleGuard module="finance">
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        {/* Header */}
+        {showDrillBanner && (
+          <ExecutiveSummaryBanner
+            dateFrom={drillState?.dateFrom}
+            dateTo={drillState?.dateTo}
+            onClear={() => { setShowDrillBanner(false); lv.setFilters({}); clearDrillState(); }}
+          />
+        )}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           {getSetting('showHeader', true) && (
             <div className="flex-1">

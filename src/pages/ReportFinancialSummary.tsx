@@ -37,6 +37,21 @@ export default function ReportFinancialSummary() {
   const navigate = useNavigate();
   const dash = useCFODashboard();
   const [activeTab, setActiveTab] = useState("overview");
+  const { isFromExecutive, drillState, alreadyApplied, markApplied, clearDrillState } = useExecutiveDrillDown();
+  const [showDrillBanner, setShowDrillBanner] = useState(false);
+
+  // Apply executive summary drill-down on first load
+  useEffect(() => {
+    if (isFromExecutive && !alreadyApplied && drillState) {
+      markApplied();
+      setShowDrillBanner(true);
+      // CFO dashboard has its own time range - apply if possible
+      if (drillState.dateFrom && drillState.dateTo) {
+        dash.setCustomRange({ from: new Date(drillState.dateFrom), to: new Date(drillState.dateTo) });
+        dash.setTimeRange("custom" as any);
+      }
+    }
+  }, [isFromExecutive]);
 
   if (dash.loading) {
     return (

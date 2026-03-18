@@ -296,6 +296,9 @@ export default function ReportExecutiveDashboard() {
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Monthly Net Profit (Invoiced Revenue − Expenses)</CardTitle></CardHeader>
         <CardContent ref={profitTrendRef}>
+          {si.revenueTrend.some(d => d.revenue > 0 || d.expenses > 0) ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={si.revenueTrend}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                 <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `₹${(v / 1000).toFixed(0)}K`} />

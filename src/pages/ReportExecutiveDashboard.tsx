@@ -179,6 +179,9 @@ export default function ReportExecutiveDashboard() {
             />
           )}
           <Button variant="outline" size="icon" className="h-9 w-9" onClick={si.refresh}><RefreshCw className="h-4 w-4" /></Button>
+          <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5" onClick={handleExportPDF} disabled={exporting}>
+            <Download className="h-3.5 w-3.5" /> {exporting ? "Generating…" : "Export PDF"}
+          </Button>
         </div>
       </div>
 

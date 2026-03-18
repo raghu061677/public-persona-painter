@@ -115,6 +115,8 @@ function diffDays(start: string, end: string): number {
 export default function ReportBookedMedia() {
   const { company } = useCompany();
   const { toast } = useToast();
+  const { isFromExecutive, drillState, alreadyApplied, markApplied, clearDrillState } = useExecutiveDrillDown();
+  const [showDrillBanner, setShowDrillBanner] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [customExportOpen, setCustomExportOpen] = useState(false);

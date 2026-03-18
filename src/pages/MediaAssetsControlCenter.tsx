@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useExecutiveDrillDown } from "@/hooks/useExecutiveDrillDown";
+import { ExecutiveSummaryBanner } from "@/components/common/ExecutiveSummaryBanner";
 import { ModuleGuard } from "@/components/rbac/ModuleGuard";
 import { ActionGuard } from "@/components/rbac/ActionGuard";
 import { supabase } from "@/integrations/supabase/client";

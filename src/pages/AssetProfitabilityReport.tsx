@@ -329,6 +329,13 @@ export default function AssetProfitabilityReport() {
 
   return (
     <div className="p-6 space-y-6">
+      {showDrillBanner && (
+        <ExecutiveSummaryBanner
+          dateFrom={drillState?.dateFrom}
+          dateTo={drillState?.dateTo}
+          onClear={() => { setShowDrillBanner(false); clearDrillState(); }}
+        />
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Asset Profitability Report</h1>

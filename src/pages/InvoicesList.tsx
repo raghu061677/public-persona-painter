@@ -45,6 +45,8 @@ export default function InvoicesList() {
   const { company } = useCompany();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { isFromExecutive, drillState, alreadyApplied, markApplied, clearDrillState } = useExecutiveDrillDown();
+  const [showDrillBanner, setShowDrillBanner] = useState(false);
 
   // RBAC scope filtering and sensitive field masking
   const { filterByScope: invoiceScopeFilter } = useScopedQuery('finance', { ownerColumn: 'created_by' });
@@ -52,6 +54,20 @@ export default function InvoicesList() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const urlFiltersAppliedRef = useRef(false);
+
+  // Apply executive summary drill-down filters on first load
+  useEffect(() => {
+    if (isFromExecutive && !alreadyApplied && drillState) {
+      markApplied();
+      setShowDrillBanner(true);
+      // Apply date range as invoice_date filter
+      if (drillState.dateFrom && drillState.dateTo) {
+        const from = drillState.dateFrom.substring(0, 10);
+        const to = drillState.dateTo.substring(0, 10);
+        lv.setFilters({ ...advancedFilters, invoice_between: { from, to } } as Record<string, any>);
+      }
+    }
+  }, [isFromExecutive]);
 
   // Sort state
   const [sortField, setSortField] = useState<SortField>('invoice_date');

@@ -21,8 +21,9 @@ export function useExecutiveDrillDown() {
   const navigate = useNavigate();
   const appliedRef = useRef(false);
 
-  const state = (location.state as ExecutiveDrillState) || {};
-  const isFromExecutive = state.from === "executive-summary";
+  const rawState = location.state as ExecutiveDrillState | null | undefined;
+  const state = rawState || {} as ExecutiveDrillState;
+  const isFromExecutive = state?.from === "executive-summary";
 
   const clearDrillState = () => {
     // Replace current history entry to remove the state
